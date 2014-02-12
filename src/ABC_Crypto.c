@@ -272,20 +272,16 @@ exit:
 }
 
 // given a JSON string holding encrypted data, this function decrypts it
-tABC_CC ABC_CryptoDecryptJSON(const char        *szEncDataJSON,
-                              const tABC_U08Buf Key,
-                              tABC_U08Buf       *pData,
-                              tABC_Error        *pError)
+tABC_CC ABC_CryptoDecryptJSONString(const char        *szEncDataJSON,
+                                    const tABC_U08Buf Key,
+                                    tABC_U08Buf       *pData,
+                                    tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     json_t          *root   = NULL;
-    tABC_U08Buf     EncData = ABC_BUF_NULL;
-    tABC_U08Buf     IV      = ABC_BUF_NULL;
-    tABC_U08Buf     GenKey  = ABC_BUF_NULL;
-    tABC_U08Buf     Salt    = ABC_BUF_NULL;
-    tABC_CryptoSNRP *pSNRP  = NULL;
 
+    ABC_CHECK_NULL(szEncDataJSON);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(pData);
 
@@ -293,10 +289,37 @@ tABC_CC ABC_CryptoDecryptJSON(const char        *szEncDataJSON,
     root = json_loads(szEncDataJSON, 0, &error);
     ABC_CHECK_ASSERT(root != NULL, ABC_CC_DecryptError, "Error parsing JSON encrypt package");
     ABC_CHECK_ASSERT(json_is_object(root), ABC_CC_DecryptError, "Error parsing JSON encrypt package");
+
+    // decrypted the object data
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(root, Key, pData, pError));
    
-    json_t *jsonVal = json_object_get(root, JSON_ENC_TYPE_FIELD);
+exit:
+    if (root) json_decref(root);
+    
+    return cc;
+}
+
+// given a JSON object holding encrypted data, this function decrypts it
+tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
+                                    const tABC_U08Buf Key,
+                                    tABC_U08Buf       *pData,
+                                    tABC_Error        *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_U08Buf     EncData = ABC_BUF_NULL;
+    tABC_U08Buf     IV      = ABC_BUF_NULL;
+    tABC_U08Buf     GenKey  = ABC_BUF_NULL;
+    tABC_U08Buf     Salt    = ABC_BUF_NULL;
+    tABC_CryptoSNRP *pSNRP  = NULL;
+
+    ABC_CHECK_NULL(pJSON_Enc);
+    ABC_CHECK_NULL_BUF(Key);
+    ABC_CHECK_NULL(pData);
+
+    json_t *jsonVal = json_object_get(pJSON_Enc, JSON_ENC_TYPE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing type");
-    int type = json_integer_value(jsonVal);
+    int type = (int) json_integer_value(jsonVal);
     ABC_CHECK_ASSERT((ABC_CryptoType_AES256 == type || ABC_CryptoType_AES256_Scrypt == type), ABC_CC_UnknownCryptoType, "Invalid encryption type");
 
     const tABC_U08Buf *pFinalKey = &Key;
@@ -305,7 +328,7 @@ tABC_CC ABC_CryptoDecryptJSON(const char        *szEncDataJSON,
     if (ABC_CryptoType_AES256_Scrypt == type)
     {
         // Decode the SNRP
-        json_t *jsonSNRP = json_object_get(root, JSON_ENC_SNRP_FIELD);
+        json_t *jsonSNRP = json_object_get(pJSON_Enc, JSON_ENC_SNRP_FIELD);
         ABC_CHECK_ASSERT((jsonSNRP && json_is_object(jsonSNRP)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing SNRP");
         ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(jsonSNRP, &pSNRP, pError));
 
@@ -315,13 +338,13 @@ tABC_CC ABC_CryptoDecryptJSON(const char        *szEncDataJSON,
     }
 
     // get the IV
-    jsonVal = json_object_get(root, JSON_ENC_IV_FIELD);
+    jsonVal = json_object_get(pJSON_Enc, JSON_ENC_IV_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing iv");
     const char *szIV = json_string_value(jsonVal);
     ABC_CHECK_RET(ABC_CryptoHexDecode(szIV, &IV, pError));
 
     // get the encrypted data
-    jsonVal = json_object_get(root, JSON_ENC_DATA_FIELD);
+    jsonVal = json_object_get(pJSON_Enc, JSON_ENC_DATA_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing data");
     const char *szDataBase64 = json_string_value(jsonVal);
     ABC_CHECK_RET(ABC_CryptoBase64Decode(szDataBase64, &EncData, pError));
@@ -330,7 +353,6 @@ tABC_CC ABC_CryptoDecryptJSON(const char        *szEncDataJSON,
     ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(EncData, *pFinalKey, IV, pData, pError));
 
 exit:
-    if (root) json_decref(root);
     ABC_BUF_FREE(IV);
     ABC_BUF_FREE(EncData);
     ABC_BUF_FREE(GenKey);
@@ -437,9 +459,9 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     // add the sha256
     SHA256_CTX sha256Context;
     unsigned char sha256Output[SHA_256_LENGTH];
-    SHA256_Init(&sha256Context);
-    SHA256_Update(&sha256Context, ABC_BUF_PTR(UnencryptedData), totalSizeUnencrypted - SHA_256_LENGTH);
-    SHA256_Final(sha256Output, &sha256Context);
+    sc_SHA256_Init(&sha256Context);
+    sc_SHA256_Update(&sha256Context, ABC_BUF_PTR(UnencryptedData), totalSizeUnencrypted - SHA_256_LENGTH);
+    sc_SHA256_Final(sha256Output, &sha256Context);
     memcpy(pCurUnencryptedData, sha256Output, SHA_256_LENGTH);
     pCurUnencryptedData += SHA_256_LENGTH;
     //ABC_UtilHexDump("SHA_256", sha256Output,  SHA_256_LENGTH);
@@ -529,14 +551,15 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     // calc the sha256
     SHA256_CTX sha256Context;
     unsigned char sha256Output[SHA_256_LENGTH];
-    SHA256_Init(&sha256Context);
-    SHA256_Update(&sha256Context, ABC_BUF_PTR(Data), shaCheckLength);
-    SHA256_Final(sha256Output, &sha256Context);
+    sc_SHA256_Init(&sha256Context);
+    sc_SHA256_Update(&sha256Context, ABC_BUF_PTR(Data), shaCheckLength);
+    sc_SHA256_Final(sha256Output, &sha256Context);
 
     // check the sha256
     if (0 != memcmp(pSHALoc, sha256Output, SHA_256_LENGTH))
     {
-        ABC_RET_ERROR(ABC_CC_DecryptError, "Decrypted data failed SHA check");
+        // this can be specifically used by the caller to possibly determine whether the key was incorrect
+        ABC_RET_ERROR(ABC_CC_DecryptBadChecksum, "Decrypted data failed checksum (SHA) check");
     }
 
     // all is good, so create the final data
@@ -686,7 +709,7 @@ tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
     ABC_BUF_NEW(*pData, length);
 
     int rc = RAND_bytes(ABC_BUF_PTR(*pData), length);
-    unsigned long err = ERR_get_error();
+    //unsigned long err = ERR_get_error();
 
     if (rc != 1) 
     {
@@ -847,7 +870,8 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
                                 tABC_Error *pError)
 { 
     tABC_CC cc = ABC_CC_Ok;
-
+    
+    unsigned char *pData = NULL;
 
     ABC_CHECK_NULL(pszUUID);
 
@@ -855,7 +879,7 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
 
     tABC_U08Buf Data;
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(UUID_BYTE_COUNT, &Data, pError));
-    unsigned char *pData = ABC_BUF_PTR(Data);;
+    pData = ABC_BUF_PTR(Data);
 
     // put in the version
     // To put in the version, take the 7th byte and perform an and operation using 0x0f, followed by an or operation with 0x40. 
@@ -1092,17 +1116,17 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
     // get n
     jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_N_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON SNRP - missing N");
-    int N = json_integer_value(jsonVal);
+    int N = (int) json_integer_value(jsonVal);
 
     // get r
     jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_R_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON SNRP - missing r");
-    int r = json_integer_value(jsonVal);
+    int r = (int) json_integer_value(jsonVal);
 
     // get p
     jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_P_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON SNRP - missing p");
-    int p = json_integer_value(jsonVal);
+    int p = (int) json_integer_value(jsonVal);
 
     // store final values
     tABC_CryptoSNRP *pSNRP = malloc(sizeof(tABC_CryptoSNRP));

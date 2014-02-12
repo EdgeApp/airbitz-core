@@ -128,7 +128,14 @@ extern "C" {
                                                 (buf).end = (buf).p + __abc_buf_dup_size__; \
                                                 memcpy((buf).p, ptr, __abc_buf_dup_size__); \
                                             }
+#define ABC_BUF_SET(dst, src)               { (dst).p = (src).p; (dst).end = (src).end; }
 #define ABC_BUF_SET_PTR(buf, ptr, size)     { (buf).p = ptr; (buf).end = ptr + size; }
+#define ABC_BUF_ZERO(buf)                   { \
+                                                if ((buf).p != NULL) \
+                                                { \
+                                                    memset ((buf).p, 0, (((buf).end)-((buf).p))); \
+                                                } \
+                                            }
 #define ABC_CHECK_NULL_BUF(arg)             { ABC_CHECK_ASSERT(ABC_BUF_PTR(arg) != NULL, ABC_CC_NULLPtr, "NULL ABC_Buf pointer"); }
 /* example usage
 {
@@ -151,6 +158,11 @@ tABC_CC ABC_UtilCreateValueJSONString(const char *szValue,
                                       const char *szFieldName,
                                       char       **pszJSON, 
                                       tABC_Error *pError);
+
+tABC_CC ABC_UtilGetStringValueFromJSONString(const char *szJSON, 
+                                             const char *szFieldName,
+                                             char       **pszValue,
+                                             tABC_Error *pError);
 
 tABC_CC ABC_UtilCreateHexDataJSONString(const tABC_U08Buf Data,
                                         const char        *szFieldName,

@@ -91,6 +91,39 @@ exit:
     return cc;
 }
 
+// gets the specified field from a json string
+tABC_CC ABC_UtilGetStringValueFromJSONString(const char *szJSON, 
+                                             const char *szFieldName,
+                                             char       **pszValue,
+                                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    json_t *pJSON_Root = NULL;
+    json_t *pJSON_Value = NULL;
+
+    ABC_CHECK_NULL(szJSON);
+    ABC_CHECK_NULL(szFieldName);
+    ABC_CHECK_NULL(pszValue);
+
+    // decode the object
+    json_error_t error;
+    pJSON_Root = json_loads(szJSON, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    // get the field
+    pJSON_Value = json_object_get(pJSON_Root, szFieldName);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
+    *pszValue = strdup(json_string_value(pJSON_Value));
+
+exit:
+    if (pJSON_Root) json_decref(pJSON_Root);
+
+    return cc;
+}
+
+
 // creates the json package with a single field
 // the field is encoded into hex and given the specified name
 tABC_CC ABC_UtilCreateHexDataJSONString(const tABC_U08Buf Data,

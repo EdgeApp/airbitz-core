@@ -27,7 +27,7 @@ tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
                                    const char *szPassword,
                                    const char *szWalletName,
                                    const char *szCurrency,
-                                   tABC_Create_Wallet_Callback fCreateWalletCallback,
+                                   tABC_Request_Callback fRequestCallback,
                                    void *pData,
                                    tABC_Error *pError)
 {
@@ -38,7 +38,7 @@ tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szWalletName);
     ABC_CHECK_NULL(szCurrency);
-    ABC_CHECK_NULL(fCreateWalletCallback);
+    ABC_CHECK_NULL(fRequestCallback);
 
     tABC_WalletCreateInfo *pWalletCreateInfo = (tABC_WalletCreateInfo *) calloc(1, sizeof(tABC_WalletCreateInfo));
     
@@ -47,7 +47,7 @@ tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
     pWalletCreateInfo->szWalletName = strdup(szWalletName);
     pWalletCreateInfo->szCurrency = strdup(szCurrency);
     
-    pWalletCreateInfo->fCreateWalletCallback = fCreateWalletCallback;
+    pWalletCreateInfo->fRequestCallback = fRequestCallback;
     
     pWalletCreateInfo->pData = pData;
     
@@ -92,7 +92,9 @@ void *ABC_WalletCreateThreaded(void *pData)
     tABC_WalletCreateInfo *pInfo = (tABC_WalletCreateInfo *)pData;
     if (pInfo)
     {
-        tABC_CreateWalletResults results;
+        tABC_RequestResults results;
+
+        results.requestType = ABC_RequestType_CreateWallet;
         
         results.bSuccess = false;
         
@@ -103,7 +105,7 @@ void *ABC_WalletCreateThreaded(void *pData)
         // we are done so load up the info and ship it back to the caller via the callback
         results.pData = pInfo->pData;
         results.bSuccess = (CC == ABC_CC_Ok ? true : false);
-        pInfo->fCreateWalletCallback(&results);
+        pInfo->fRequestCallback(&results);
         
         // it is our responsibility to free the info struct
         (void) ABC_WalletCreateInfoFree(pInfo, NULL);
@@ -113,7 +115,7 @@ void *ABC_WalletCreateThreaded(void *pData)
 }
 
 tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
-                         tABC_Error *pError)
+                         tABC_Error            *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -124,8 +126,11 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     ABC_CHECK_NULL(pInfo);
 
-    // check that the username and password is valid by caching the user
-    ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, pInfo->szPassword, pError));
+    // get L2
+    ABC_CHECK_RET(ABC_AccountGetKey(pInfo->szUserName, pInfo->szPassword, ABC_AccountKey_L2, &L2, pError));
+
+    // get LP2
+    ABC_CHECK_RET(ABC_AccountGetKey(pInfo->szUserName, pInfo->szPassword, ABC_AccountKey_LP2, &LP2, pError));
 
     // create wallet guid
     ABC_CHECK_RET(ABC_CryptoGenUUIDString(&szUUID, pError));

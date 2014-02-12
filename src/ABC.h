@@ -32,38 +32,58 @@ extern "C" {
         /** The function completed without an error */
         ABC_CC_Ok = 0,
         /** An error occured */
-        ABC_CC_Error,
+        ABC_CC_Error = 1,
         /** Unexpected NULL pointer */
-        ABC_CC_NULLPtr,
+        ABC_CC_NULLPtr = 2,
         /** Max number of accounts have been created */
-        ABC_CC_NoAvailAccountSpace,
+        ABC_CC_NoAvailAccountSpace = 3,
         /** Could not read directory */
-        ABC_CC_DirReadError,
+        ABC_CC_DirReadError = 4,
         /** Could not open file */
-        ABC_CC_FileOpenError,
+        ABC_CC_FileOpenError = 5,
         /** Could not read from file */
-        ABC_CC_FileReadError,
+        ABC_CC_FileReadError = 6,
         /** Could not write to file */
-        ABC_CC_FileWriteError,
+        ABC_CC_FileWriteError = 7,
         /** Unknown crypto type */
-        ABC_CC_UnknownCryptoType,
+        ABC_CC_UnknownCryptoType = 8,
         /** Invalid crypto type */
-        ABC_CC_InvalidCryptoType,
+        ABC_CC_InvalidCryptoType = 9,
         /** Decryption error */
-        ABC_CC_DecryptError,
+        ABC_CC_DecryptError = 10,
+        /** Decryption failed checksum */
+        ABC_CC_DecryptBadChecksum = 11,
         /** Encryption error */
-        ABC_CC_EncryptError,
+        ABC_CC_EncryptError = 12,
         /** Scrypt error */
-        ABC_CC_ScryptError,
+        ABC_CC_ScryptError = 13,
         /** Account already exists */
-        ABC_CC_AccountAlreadyExists,
+        ABC_CC_AccountAlreadyExists = 15,
         /** Account does not exist */
-        ABC_CC_AccountDoesNotExist,
+        ABC_CC_AccountDoesNotExist = 15,
         /** JSON parsing error */
-        ABC_CC_JSONError,
+        ABC_CC_JSONError = 16,
         /** Incorrect password */
-        ABC_CC_BadPassword
+        ABC_CC_BadPassword = 17
     } tABC_CC;
+
+    /**
+     * AirBitz Request Types
+     *
+     * The requests results structure contains this
+     * identifier to indicate which request it is 
+     * associated with.
+     *
+     */
+    typedef enum eABC_RequestType
+    {
+        /** Create account request */
+        ABC_RequestType_CreateAccount = 0,
+        /** Set account recovery questions */
+        ABC_RequestType_SetAccountRecoveryQuestions,
+        /** Create wallet request */
+        ABC_RequestType_CreateWallet
+    } tABC_RequestType;
     
     /**
      * AirBitz Core Error Structure
@@ -104,42 +124,26 @@ extern "C" {
     } tABC_AsyncBitCoinInfo;
     
     /**
-     * AirBitz Core Create Account Structure
+     * AirBitz Core Request Results Structure
      *
      * This structure contains the detailed information associated
      * with a create account result.
      *
      */
-    typedef struct sABC_CreateAccountResults
+    typedef struct sABC_RequestResults
     {
+        /** request type these results are associated with */
+        tABC_RequestType    requestType;
+
         /** data pointer given by caller at initial create call time */
-        void        *pData;
+        void                *pData;
         
         /** true if successful */
-        bool        bSuccess;
+        bool                bSuccess;
         
         /** information the error if there was a failure */
-        tABC_Error  errorInfo;
-    } tABC_CreateAccountResults;
-    
-    /**
-     * AirBitz Core Create Wallet Structure
-     *
-     * This structure contains the detailed information associated
-     * with a create wallet result.
-     *
-     */
-    typedef struct sABC_CreateWalletResults
-    {
-        /** data pointer given by caller at initial create call time */
-        void        *pData;
-        
-        /** true if successful */
-        bool        bSuccess;
-        
-        /** information the error if there was a failure */
-        tABC_Error  errorInfo;
-    } tABC_CreateWalletResults;
+        tABC_Error          errorInfo;
+    } tABC_RequestResults;
     
     /**
      * AirBitz Asynchronous BitCoin event callback
@@ -151,22 +155,13 @@ extern "C" {
     typedef void (*tABC_BitCoin_Event_Callback)(const tABC_AsyncBitCoinInfo *pInfo);
     
     /**
-     * AirBitz Create Account callback
+     * AirBitz Request callback
      *
-     * This is the form of the callback that will be called when a create account
+     * This is the form of the callback that will be called when a request
      * call has completed.
      *
      */
-    typedef void (*tABC_Create_Account_Callback)(const tABC_CreateAccountResults *pResults);
-    
-    /**
-     * AirBitz Create Wallet callback
-     *
-     * This is the form of the callback that will be called when a create wallet
-     * call has completed.
-     *
-     */
-    typedef void (*tABC_Create_Wallet_Callback)(const tABC_CreateWalletResults *pResults);
+    typedef void (*tABC_Request_Callback)(const tABC_RequestResults *pResults);
     
     tABC_CC ABC_Initialize(const char                   *szRootDir,
                            tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
@@ -180,15 +175,23 @@ extern "C" {
                               const char *szRecoveryQuestions,
                               const char *szRecoveryAnswers,
                               const char *szPIN,
-                              tABC_Create_Account_Callback fCreateAccountCallback,
+                              tABC_Request_Callback fRequestCallback,
                               void *pData,
                               tABC_Error *pError);
+    
+    tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
+                                            const char *szPassword,
+                                            const char *szRecoveryQuestions,
+                                            const char *szRecoveryAnswers,
+                                            tABC_Request_Callback fRequestCallback,
+                                            void *pData,
+                                            tABC_Error *pError);
     
     tABC_CC ABC_CreateWallet(const char *szUserName,
                              const char *szPassword,
                              const char *szWalletName,
                              const char *szCurrencyCode,
-                             tABC_Create_Wallet_Callback fCreateWalletCallback,
+                             tABC_Request_Callback fRequestCallback,
                              void *pData,
                              tABC_Error *pError);
     

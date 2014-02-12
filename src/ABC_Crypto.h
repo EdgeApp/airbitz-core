@@ -53,10 +53,15 @@ extern "C" {
                                         json_t            **ppJSON_Enc,
                                         tABC_Error        *pError);
 
-    tABC_CC ABC_CryptoDecryptJSON(const char        *szEncDataJSON,
-                                  const tABC_U08Buf Key,
-                                  tABC_U08Buf       *pData,
-                                  tABC_Error        *pError);
+    tABC_CC ABC_CryptoDecryptJSONString(const char        *szEncDataJSON,
+                                        const tABC_U08Buf Key,
+                                        tABC_U08Buf       *pData,
+                                        tABC_Error        *pError);
+
+    tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
+                                        const tABC_U08Buf Key,
+                                        tABC_U08Buf       *pData,
+                                        tABC_Error        *pError);
 
     tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
                                        tABC_U08Buf   *pData,

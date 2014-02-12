@@ -32,7 +32,7 @@ extern "C" {
         const char *szPassword;
         const char *szWalletName;
         const char *szCurrency;
-        tABC_Create_Wallet_Callback fCreateWalletCallback;
+        tABC_Request_Callback fRequestCallback;
         
         /** information the error if there was a failure */
         tABC_Error  errorInfo;
@@ -44,7 +44,7 @@ extern "C" {
                                        const char *szPassword,
                                        const char *szWalletName,
                                        const char *szCurrency,
-                                       tABC_Create_Wallet_Callback fCreateWalletCallback,
+                                       tABC_Request_Callback fRequestCallback,
                                        void *pData,
                                        tABC_Error *pError);
     
