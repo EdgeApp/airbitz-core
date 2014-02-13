@@ -756,7 +756,7 @@ tABC_CC ABC_CryptoHexDecode(const char  *szDataHex,
     ABC_CHECK_NULL(szDataHex);
     ABC_CHECK_NULL(pData);
 
-    unsigned int dataLength = strlen(szDataHex) / 2;
+    unsigned int dataLength = (unsigned int) (strlen(szDataHex) / 2);
 
     ABC_BUF_NEW(*pData, dataLength);
 
@@ -826,7 +826,7 @@ tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
     bio = BIO_new_fp(stream, BIO_NOCLOSE);
     bio = BIO_push(b64, bio);
     BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); // Do not use newlines to flush buffer
-    len = BIO_read(bio, pTmpData, strlen(szDataBase64));
+    len = BIO_read(bio, pTmpData, (int) strlen(szDataBase64));
 
     if (len != decodeLen)
     {
@@ -847,7 +847,7 @@ exit:
 static 
 int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64)
 {
-    int len = strlen(szDataBase64);
+    int len = (int) strlen(szDataBase64);
     int padding = 0;
      
     if (szDataBase64[len-1] == '=' && szDataBase64[len-2] == '=') //last two chars are =
@@ -971,7 +971,7 @@ tABC_CC ABC_CryptoScrypt(const tABC_U08Buf Data,
     ABC_BUF_NEW(*pScryptData, scryptDataLength);
 
     int rc;
-    if ((rc = crypto_scrypt(ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data), ABC_BUF_PTR(Salt), ABC_BUF_SIZE(Salt), N, r, p, ABC_BUF_PTR(*pScryptData), scryptDataLength)) != 0)
+    if ((rc = crypto_scrypt(ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data), ABC_BUF_PTR(Salt), ABC_BUF_SIZE(Salt), N, (uint32_t) r, (uint32_t) p, ABC_BUF_PTR(*pScryptData), scryptDataLength)) != 0)
     {
         ABC_BUF_FREE(*pScryptData);
         ABC_RET_ERROR(ABC_CC_ScryptError, "Error generating Scrypt data");

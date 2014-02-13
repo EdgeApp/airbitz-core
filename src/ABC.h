@@ -172,8 +172,6 @@ extern "C" {
     
     tABC_CC ABC_CreateAccount(const char *szUserName,
                               const char *szPassword,
-                              const char *szRecoveryQuestions,
-                              const char *szRecoveryAnswers,
                               const char *szPIN,
                               tABC_Request_Callback fRequestCallback,
                               void *pData,

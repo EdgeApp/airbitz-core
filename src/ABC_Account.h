@@ -31,8 +31,8 @@ extern "C" {
         
         const char *szUserName;
         const char *szPassword;
-        const char *szRecoveryQuestions;
-        const char *szRecoveryAnswers;
+        //const char *szRecoveryQuestions;
+        //const char *szRecoveryAnswers;
         const char *szPIN;
         tABC_Request_Callback fRequestCallback;
         
@@ -65,8 +65,6 @@ extern "C" {
     tABC_CC ABC_AccountCreateInfoAlloc(tABC_AccountCreateInfo **ppAccountCreateInfo,
                                        const char *szUserName,
                                        const char *szPassword,
-                                       const char *szRecoveryQuestions,
-                                       const char *szRecoveryAnswers,
                                        const char *szPIN,
                                        tABC_Request_Callback fRequestCallback,
                                        void *pData,

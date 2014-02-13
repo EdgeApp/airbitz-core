@@ -13,7 +13,7 @@
 #include "ABC.h"
 #include "ABC_Util.h"
 
-#define FILEIO_MAX_PATH_LENGTH 2048
+#define ABC_FILEIO_MAX_PATH_LENGTH 2048
 
 #ifdef __cplusplus
 extern "C" {
