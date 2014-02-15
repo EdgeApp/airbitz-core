@@ -12,12 +12,12 @@
 
 #include <stdbool.h>
 
+/** The maximum buffer length for default strings in the system */
+#define ABC_MAX_STRING_LENGTH 256
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
-    /** The maximum buffer length for strings in the system */
-#define ABC_MAX_STRING_LENGTH 256
     
     /**
      * AirBitz Core Condition Codes
@@ -77,12 +77,14 @@ extern "C" {
      */
     typedef enum eABC_RequestType
     {
+        /** Account sign-in request */
+        ABC_RequestType_AccountSignIn = 0,
         /** Create account request */
-        ABC_RequestType_CreateAccount = 0,
+        ABC_RequestType_CreateAccount = 1,
         /** Set account recovery questions */
-        ABC_RequestType_SetAccountRecoveryQuestions,
+        ABC_RequestType_SetAccountRecoveryQuestions = 2,
         /** Create wallet request */
-        ABC_RequestType_CreateWallet
+        ABC_RequestType_CreateWallet = 3
     } tABC_RequestType;
     
     /**
@@ -146,6 +148,27 @@ extern "C" {
     } tABC_RequestResults;
     
     /**
+     * AirBitz Currency Structure
+     *
+     * This structure contains the id's and names of all the currencies.
+     *
+     */
+    typedef struct sABC_Currency
+    {
+        /** currency ISO 4217 code */
+        char    *szCode;
+        
+        /** currency ISO 4217 num */
+        int     num;
+        
+        /** currency description */
+        char    *szDescription;
+
+        /** currency countries */
+        char    *szCountries;
+    } tABC_Currency;
+    
+    /**
      * AirBitz Asynchronous BitCoin event callback
      *
      * This is the form of the callback that will be called when there is an
@@ -163,12 +186,21 @@ extern "C" {
      */
     typedef void (*tABC_Request_Callback)(const tABC_RequestResults *pResults);
     
+    
     tABC_CC ABC_Initialize(const char                   *szRootDir,
                            tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
                            void                         *pData,
                            const unsigned char          *pSeedData,
                            unsigned int                 seedLength,
                            tABC_Error                   *pError);
+    
+    tABC_CC ABC_ClearKeyCache(tABC_Error *pError);
+    
+    tABC_CC ABC_SignIn(const char *szUserName,
+                       const char *szPassword,
+                       tABC_Request_Callback fRequestCallback,
+                       void *pData,
+                       tABC_Error *pError);
     
     tABC_CC ABC_CreateAccount(const char *szUserName,
                               const char *szPassword,
@@ -188,12 +220,14 @@ extern "C" {
     tABC_CC ABC_CreateWallet(const char *szUserName,
                              const char *szPassword,
                              const char *szWalletName,
-                             const char *szCurrencyCode,
+                             int        currencyNum,
                              tABC_Request_Callback fRequestCallback,
                              void *pData,
                              tABC_Error *pError);
     
-    tABC_CC ABC_ClearKeyCache(tABC_Error *pError);
+    tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
+                              int *pCount,
+                             tABC_Error *pError);
     
     // temp functions
     void tempEventA();

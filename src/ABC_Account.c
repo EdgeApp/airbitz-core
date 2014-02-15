@@ -69,6 +69,8 @@ typedef struct sAccountKeys
 static unsigned int gAccountKeysCacheCount = 0;
 static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
+
+static tABC_CC ABC_AccountSignIn(tABC_AccountSignInInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountCreate(tABC_AccountCreateInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountSetRecovery(tABC_AccountSetRecoveryInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
@@ -121,22 +123,59 @@ exit:
 }
 
 // frees the account creation info structure
-tABC_CC ABC_AccountCreateInfoFree(tABC_AccountCreateInfo *pAccountCreateInfo,
-                                  tABC_Error *pError)
+void ABC_AccountCreateInfoFree(tABC_AccountCreateInfo *pAccountCreateInfo)
+{
+    if (pAccountCreateInfo)
+    {
+        free((void *)pAccountCreateInfo->szUserName);
+        free((void *)pAccountCreateInfo->szPassword);
+        free((void *)pAccountCreateInfo->szPIN);
+        
+        free(pAccountCreateInfo);
+    }
+}
+
+// allocates the account signin info structure
+tABC_CC ABC_AccountSignInInfoAlloc(tABC_AccountSignInInfo **ppAccountSignInInfo,
+                                   const char *szUserName,
+                                   const char *szPassword,
+                                   tABC_Request_Callback fRequestCallback,
+                                   void *pData,
+                                   tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_NULL(pAccountCreateInfo);
     
-    free((void *)pAccountCreateInfo->szUserName);
-    free((void *)pAccountCreateInfo->szPassword);
-    free((void *)pAccountCreateInfo->szPIN);
+    ABC_CHECK_NULL(ppAccountSignInInfo);
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(fRequestCallback);
     
-    free(pAccountCreateInfo);
+    tABC_AccountSignInInfo *pAccountSignInInfo = (tABC_AccountSignInInfo *) calloc(1, sizeof(tABC_AccountSignInInfo));
+    
+    pAccountSignInInfo->szUserName = strdup(szUserName);
+    pAccountSignInInfo->szPassword = strdup(szPassword);
+    
+    pAccountSignInInfo->fRequestCallback = fRequestCallback;
+    
+    pAccountSignInInfo->pData = pData;
+    
+    *ppAccountSignInInfo = pAccountSignInInfo;
     
 exit:
-
+    
     return cc;
+}
+
+// frees the account signin info structure
+void ABC_AccountSignInInfoFree(tABC_AccountSignInInfo *pAccountSignInInfo)
+{
+    if (pAccountSignInInfo)
+    {
+        free((void *)pAccountSignInInfo->szUserName);
+        free((void *)pAccountSignInInfo->szPassword);
+        
+        free(pAccountSignInInfo);
+    }
 }
 
 // allocates the account set recovery questions info structure
@@ -177,25 +216,55 @@ exit:
 }
 
 // frees the account set recovery questions info structure
-tABC_CC ABC_AccountSetRecoveryInfoFree(tABC_AccountSetRecoveryInfo *pAccountSetRecoveryInfo,
-                                       tABC_Error *pError)
+void ABC_AccountSetRecoveryInfoFree(tABC_AccountSetRecoveryInfo *pAccountSetRecoveryInfo)
 {
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_NULL(pAccountSetRecoveryInfo);
-    
-    free((void *)pAccountSetRecoveryInfo->szUserName);
-    free((void *)pAccountSetRecoveryInfo->szPassword);
-    free((void *)pAccountSetRecoveryInfo->szRecoveryQuestions);
-    free((void *)pAccountSetRecoveryInfo->szRecoveryAnswers);
-    
-    free(pAccountSetRecoveryInfo);
-    
-exit:
-
-    return cc;
+    if (pAccountSetRecoveryInfo)
+    {
+        free((void *)pAccountSetRecoveryInfo->szUserName);
+        free((void *)pAccountSetRecoveryInfo->szPassword);
+        free((void *)pAccountSetRecoveryInfo->szRecoveryQuestions);
+        free((void *)pAccountSetRecoveryInfo->szRecoveryAnswers);
+        
+        free(pAccountSetRecoveryInfo);
+    }
 }
 
+/**
+ * SignIn to an account. Assumes it is running in a thread.
+ *
+ * This function signs into an account.
+ * The function assumes it is in it's own thread (i.e., thread safe)
+ * The callback will be called when it has finished.
+ * The caller needs to handle potentially being in a seperate thread
+ *
+ * @param pData Structure holding all the data needed to create an account (should be a tABC_AccountSignInInfo)
+ */
+void *ABC_AccountSignInThreaded(void *pData)
+{
+    tABC_AccountSignInInfo *pInfo = (tABC_AccountSignInInfo *)pData;
+    if (pInfo)
+    {
+        tABC_RequestResults results;
+        
+        results.requestType = ABC_RequestType_AccountSignIn;
+        
+        results.bSuccess = false;
+        
+        // create the account
+        tABC_CC CC = ABC_AccountSignIn(pInfo, &(results.errorInfo));
+        results.errorInfo.code = CC;
+        
+        // we are done so load up the info and ship it back to the caller via the callback
+        results.pData = pInfo->pData;
+        results.bSuccess = (CC == ABC_CC_Ok ? true : false);
+        pInfo->fRequestCallback(&results);
+        
+        // it is our responsibility to free the info struct
+        ABC_AccountSignInInfoFree(pInfo);
+    }
+    
+    return NULL;
+}
 
 /**
  * Create a new account. Assumes it is running in a thread.
@@ -228,7 +297,7 @@ void *ABC_AccountCreateThreaded(void *pData)
         pInfo->fRequestCallback(&results);
         
         // it is our responsibility to free the info struct
-        (void) ABC_AccountCreateInfoFree(pInfo, NULL);
+        ABC_AccountCreateInfoFree(pInfo);
     }
     
     return NULL;
@@ -265,12 +334,41 @@ void *ABC_AccountSetRecoveryThreaded(void *pData)
         pInfo->fRequestCallback(&results);
         
         // it is our responsibility to free the info struct
-        (void) ABC_AccountSetRecoveryInfoFree(pInfo, NULL);
+        ABC_AccountSetRecoveryInfoFree(pInfo);
     }
     
     return NULL;
 }
 
+
+// sign in to an account
+// this cache's the keys for an account
+static
+tABC_CC ABC_AccountSignIn(tABC_AccountSignInInfo *pInfo,
+                          tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    
+    tAccountKeys    *pKeys              = NULL;
+    
+    ABC_CHECK_NULL(pInfo);
+    
+    int AccountNum = 0;
+    
+    // check locally for the account
+    ABC_CHECK_RET(ABC_AccountNumForUser(pInfo->szUserName, &AccountNum, pError));
+    if (AccountNum < 0)
+    {
+        ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "No account by that name");
+    }
+    
+    // cache up the keys
+    ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
+    
+exit:
+    
+    return cc;
+}
 
 // create and account
 static
@@ -513,10 +611,7 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountSetRecoveryInfo *pInfo,
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->P, pKeys->pSNRP1, &(pKeys->P1), pError));
     }
 
-    
-    
     // create the json objects and strings we need
-    
     
     // ERQ = AES256(RQ, L2)
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(pKeys->RQ, pKeys->L2, ABC_CryptoType_AES256, &pJSON_ERQ, pError));
@@ -862,6 +957,40 @@ exit:
     return cc;
 }
 
+// gets the account directory for a given username
+// the string is allocated so it is up to the caller to free it
+tABC_CC ABC_AccountGetDirName(const char *szUserName, char **pszDirName, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    
+    char *szDirName = NULL;
+    
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(pszDirName);
+    
+    int accountNum = -1;
+    
+    // check locally for the account
+    ABC_CHECK_RET(ABC_AccountNumForUser(szUserName, &accountNum, pError));
+    if (accountNum < 0)
+    {
+        ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "No account by that name");
+    }
+    
+    // get the account root directory string
+    szDirName = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szDirName, accountNum, pError));
+    *pszDirName = szDirName;
+    szDirName = NULL; // so we don't free it
+    
+    
+exit:
+    if (szDirName)  free(szDirName);
+    
+    return cc;
+}
+
+// copies the account directory name into the string given
 static
 tABC_CC ABC_AccountCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError)
 {
@@ -979,7 +1108,7 @@ tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Err
                 (strncmp(ACCOUNT_FOLDER_PREFIX, pFileList->apFiles[i]->szName, strlen(ACCOUNT_FOLDER_PREFIX)) == 0))
             {
                 char *szAccountNum = (char *)(pFileList->apFiles[i]->szName + strlen(ACCOUNT_FOLDER_PREFIX));
-                unsigned int AccountNum = strtol(szAccountNum, NULL, 10);
+                unsigned int AccountNum = (unsigned int) strtol(szAccountNum, NULL, 10); // 10 is for base-10
 
                 // get the username for this account
                 ABC_CHECK_RET(ABC_AccountUserForNum(AccountNum, &szCurUserName, pError));

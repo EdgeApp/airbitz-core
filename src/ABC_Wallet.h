@@ -28,10 +28,10 @@ extern "C" {
         /** data pointer given by caller at initial create call time */
         void        *pData;
         
-        const char *szUserName;
-        const char *szPassword;
-        const char *szWalletName;
-        const char *szCurrency;
+        const char  *szUserName;
+        const char  *szPassword;
+        const char  *szWalletName;
+        int         currencyNum;
         tABC_Request_Callback fRequestCallback;
         
         /** information the error if there was a failure */
@@ -43,15 +43,14 @@ extern "C" {
                                        const char *szUserName,
                                        const char *szPassword,
                                        const char *szWalletName,
-                                       const char *szCurrency,
+                                       int        currencyNum,
                                        tABC_Request_Callback fRequestCallback,
                                        void *pData,
                                        tABC_Error *pError);
     
-    tABC_CC ABC_WalletCreateInfoFree(tABC_WalletCreateInfo *pWalletCreateInfo,
-                                      tABC_Error *pError);
-    
-    void *ABC_WalletCreateThreaded(void *pData);
+    void ABC_WalletCreateInfoFree(tABC_WalletCreateInfo *pWalletCreateInfo);
+
+    void * ABC_WalletCreateThreaded(void *pData);
     
     
 #ifdef __cplusplus

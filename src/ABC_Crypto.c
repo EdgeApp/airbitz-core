@@ -864,7 +864,7 @@ Version 4 UUIDs use a scheme relying only on random numbers.
 This algorithm sets the version number (4 bits) as well as two reserved bits. 
 All other bits (the remaining 122 bits) are set using a random or pseudorandom data source. 
 Version 4 UUIDs have the form xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx where x is any hexadecimal 
-digit and y is one of 8, 9, A, or B (e.g., f47ac10b-58cc-4372-a567-0e02b2c3d479).
+digit and y is one of 8, 9, A, or B (e.g., F47AC10B-58CC-4372-A567-0E02B2E3D479).
 */
 tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
                                 tABC_Error *pError)
@@ -888,7 +888,7 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
     // 9th byte significant nibble is one of 8, 9, A, or B 
     pData[8] = (pData[8] | 0x80) & 0xbf;
 
-    sprintf(szUUID, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+    sprintf(szUUID, "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
             pData[0], pData[1], pData[2], pData[3], pData[4], pData[5], pData[6], pData[7], 
             pData[8], pData[9], pData[10], pData[11], pData[12], pData[13], pData[14], pData[15]);
 
