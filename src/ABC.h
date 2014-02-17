@@ -234,6 +234,16 @@ extern "C" {
                               int *pCount,
                              tABC_Error *pError);
     
+    tABC_CC ABC_GetPIN(const char *szUserName,
+                       const char *szPassword,
+                       char **pszPIN,
+                       tABC_Error *pError);
+    
+    tABC_CC ABC_SetPIN(const char *szUserName,
+                       const char *szPassword,
+                       const char *szPIN,
+                       tABC_Error *pError);
+    
     // temp functions
     void tempEventA();
     void tempEventB();

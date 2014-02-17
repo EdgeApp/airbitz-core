@@ -70,7 +70,8 @@ extern "C" {
     typedef enum eABC_AccountKey
     {
         ABC_AccountKey_L2,
-        ABC_AccountKey_LP2
+        ABC_AccountKey_LP2,
+        ABC_AccountKey_PIN
     } tABC_AccountKey;
     
     tABC_CC ABC_AccountSignInInfoAlloc(tABC_AccountSignInInfo **ppAccountSignInInfo,
@@ -126,6 +127,11 @@ extern "C" {
     tABC_CC ABC_AccountGetSyncDirName(const char *szUserName,
                                       char **pszDirName,
                                       tABC_Error *pError);
+    
+    tABC_CC ABC_AccountSetPIN(const char *szUserName,
+                              const char *szPassword,
+                              const char *szPIN,
+                              tABC_Error *pError);
     
 #ifdef __cplusplus
 }

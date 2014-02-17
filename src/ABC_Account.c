@@ -471,7 +471,7 @@ tABC_CC ABC_AccountCreate(tABC_AccountCreateInfo *pInfo,
     ABC_CHECK_RET(ABC_UtilCreateValueJSONString(pKeys->szPIN, JSON_ACCT_PIN_FIELD, &szJSON, pError));
     tABC_U08Buf PIN = ABC_BUF_NULL;
     ABC_BUF_SET_PTR(PIN, (unsigned char *)szJSON, strlen(szJSON) + 1);
-
+    
     // EPIN = AES256(PIN, LP2)
     ABC_CHECK_RET(ABC_CryptoEncryptJSONString(PIN, pKeys->LP2, ABC_CryptoType_AES256, &szEPIN_JSON, pError));
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EPIN_FILENAME);
@@ -1436,7 +1436,6 @@ static tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPasswo
                 ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt PIN - possibly bad password");
             }
 
-
             // decode the json to get the pin
             char *szJSON_PIN = (char *) ABC_BUF_PTR(PIN);
             ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_PIN, JSON_ACCT_PIN_FIELD, &(pKeys->szPIN), pError));
@@ -1506,6 +1505,12 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
             ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->LP2), ABC_CC_Error, "Expected to find LP2 in key cache");
             ABC_BUF_SET(*pKey, pKeys->LP2);
             break;
+            
+        case ABC_AccountKey_PIN:
+            // this should already be in the cache
+            ABC_CHECK_ASSERT(NULL != pKeys->szPIN, ABC_CC_Error, "Expected to find PIN in key cache");
+            ABC_BUF_SET_PTR(*pKey, (unsigned char *)pKeys->szPIN, sizeof(pKeys->szPIN) + 1);
+            break;
 
         default:
             ABC_RET_ERROR(ABC_CC_Error, "Unknown key type");
@@ -1515,5 +1520,56 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
 
 exit:
 
+    return cc;
+}
+
+tABC_CC ABC_AccountSetPIN(const char *szUserName,
+                          const char *szPassword,
+                          const char *szPIN,
+                          tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    
+    tAccountKeys *pKeys = NULL;
+    tABC_U08Buf LP2 = ABC_BUF_NULL;
+    char *szJSON = NULL;
+    char *szEPIN_JSON = NULL;
+    char *szAccountDir = NULL;
+    char *szFilename = NULL;
+    
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(szPIN);
+    
+    // get LP2 (this will also validate username and password as well as cache the account)
+    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_LP2, &LP2, pError));
+    
+    // get the key cache
+    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, &pKeys, pError));
+    
+    // set the new PIN in the cache
+    free(pKeys->szPIN);
+    pKeys->szPIN = strdup(szPIN);
+    
+    // create the PIN JSON
+    ABC_CHECK_RET(ABC_UtilCreateValueJSONString(pKeys->szPIN, JSON_ACCT_PIN_FIELD, &szJSON, pError));
+    tABC_U08Buf PIN = ABC_BUF_NULL;
+    ABC_BUF_SET_PTR(PIN, (unsigned char *)szJSON, strlen(szJSON) + 1);
+    
+    // EPIN = AES256(PIN, LP2)
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(PIN, pKeys->LP2, ABC_CryptoType_AES256, &szEPIN_JSON, pError));
+    
+    // write the EPIN
+    ABC_CHECK_RET(ABC_AccountGetDirName(szUserName, &szAccountDir, pError));
+    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EPIN_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEPIN_JSON, pError));
+    
+exit:
+    if (szJSON) free(szJSON);
+    if (szEPIN_JSON) free(szEPIN_JSON);
+    if (szAccountDir) free(szAccountDir);
+    if (szFilename) free(szFilename);
+    
     return cc;
 }

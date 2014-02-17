@@ -525,6 +525,65 @@ exit:
     return cc;
 }
 
+/**
+ * Get a PIN number.
+ *
+ * This function retrieves the PIN for a given account.
+ * The string is allocated and must be free'd by the caller.
+ *
+ * @param szUserName             UserName for the account
+ * @param szPassword             Password for the account
+ * @param pszPIN                 Pointer where to store allocated PIN string
+ * @param pError                 A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_GetPIN(const char *szUserName,
+                   const char *szPassword,
+                   char **pszPIN,
+                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(pszPIN);
+    
+    tABC_U08Buf PIN;
+    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_PIN, &PIN, pError));
+    
+    *pszPIN = strdup((char *)ABC_BUF_PTR(PIN));
+    
+exit:
+    
+    return cc;
+}
+
+/**
+ * Set PIN number for an account.
+ *
+ * This function sets the PIN for a given account.
+ *
+ * @param szUserName            UserName for the account
+ * @param szPassword            Password for the account
+ * @param szPIN                 PIN string
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_SetPIN(const char *szUserName,
+                   const char *szPassword,
+                   const char *szPIN,
+                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(szPIN);
+    
+    ABC_CHECK_RET(ABC_AccountSetPIN(szUserName, szPassword, szPIN, pError));
+    
+exit:
+    
+    return cc;
+}
 
 void tempEventA()
 {
