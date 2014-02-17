@@ -123,6 +123,10 @@ extern "C" {
                                   char **pszDirName,
                                   tABC_Error *pError);
     
+    tABC_CC ABC_AccountGetSyncDirName(const char *szUserName,
+                                      char **pszDirName,
+                                      tABC_Error *pError);
+    
 #ifdef __cplusplus
 }
 #endif

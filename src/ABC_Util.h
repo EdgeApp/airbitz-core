@@ -145,29 +145,53 @@ extern "C" {
     ABC_BUF_FREE(myBuf);              // frees the data in the buffer
 }
 */
-typedef ABC_BUF(unsigned char) tABC_U08Buf;
-
-void ABC_UtilHexDump(const char *szDescription, 
-                     const unsigned char *pData,
-                     unsigned int dataLength);
-
-void ABC_UtilHexDumpBuf(const char *szDescription, 
-                        tABC_U08Buf Buf);
-
-tABC_CC ABC_UtilCreateValueJSONString(const char *szValue,
-                                      const char *szFieldName,
-                                      char       **pszJSON, 
-                                      tABC_Error *pError);
-
-tABC_CC ABC_UtilGetStringValueFromJSONString(const char *szJSON, 
-                                             const char *szFieldName,
-                                             char       **pszValue,
-                                             tABC_Error *pError);
-
-tABC_CC ABC_UtilCreateHexDataJSONString(const tABC_U08Buf Data,
-                                        const char        *szFieldName,
-                                        char              **pszJSON, 
-                                        tABC_Error        *pError);
+    
+    typedef ABC_BUF(unsigned char) tABC_U08Buf;
+    
+    void ABC_UtilHexDump(const char *szDescription,
+                         const unsigned char *pData,
+                         unsigned int dataLength);
+    
+    void ABC_UtilHexDumpBuf(const char *szDescription,
+                            tABC_U08Buf Buf);
+    
+    tABC_CC ABC_UtilCreateValueJSONString(const char *szValue,
+                                          const char *szFieldName,
+                                          char       **pszJSON,
+                                          tABC_Error *pError);
+    
+    tABC_CC ABC_UtilCreateIntJSONString(int        value,
+                                        const char *szFieldName,
+                                        char       **pszJSON,
+                                        tABC_Error *pError);
+    
+    tABC_CC ABC_UtilCreateArrayJSONString(char         **aszValues,
+                                          unsigned int count,
+                                          const char   *szFieldName,
+                                          char         **pszJSON,
+                                          tABC_Error   *pError);
+    
+    tABC_CC ABC_UtilCreateHexDataJSONString(const tABC_U08Buf Data,
+                                            const char        *szFieldName,
+                                            char              **pszJSON,
+                                            tABC_Error        *pError);
+    
+    tABC_CC ABC_UtilGetStringValueFromJSONString(const char *szJSON,
+                                                 const char *szFieldName,
+                                                 char       **pszValue,
+                                                 tABC_Error *pError);
+    
+    tABC_CC ABC_UtilGetIntValueFromJSONString(const char *szJSON,
+                                              const char *szFieldName,
+                                              int       *pValue,
+                                              tABC_Error *pError);
+    
+    tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
+                                                 const char *szFieldName,
+                                                 char       ***aszValues,
+                                                 unsigned int *pCount,
+                                                 tABC_Error *pError);
+    
 
 #ifdef __cplusplus
 }

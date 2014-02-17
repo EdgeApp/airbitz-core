@@ -10,6 +10,7 @@
 #ifndef ABC_FileIO_h
 #define ABC_FileIO_h
 
+#include <jansson.h>
 #include "ABC.h"
 #include "ABC_Util.h"
 
@@ -67,6 +68,11 @@ extern "C" {
     tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
                                   char        **pszData,
                                   tABC_Error  *pError);
+    
+    tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
+                                     json_t **ppJSON_Data,
+                                     bool bMustExist,
+                                     tABC_Error  *pError);
 
     FILE *fmemopen(void *buf, 
                    size_t size, 

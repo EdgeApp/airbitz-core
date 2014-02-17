@@ -143,6 +143,7 @@ exit:
     return cc;
 }
 
+// encrypted the given data and create a json string
 tABC_CC ABC_CryptoEncryptJSONString(const tABC_U08Buf Data,
                                     const tABC_U08Buf Key,
                                     tABC_CryptoType   cryptoType,
@@ -271,6 +272,33 @@ exit:
     return cc;
 }
 
+// encrypted the given data and write the json to a file
+tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
+                                  const tABC_U08Buf Key,
+                                  tABC_CryptoType   cryptoType,
+                                  const char *szFilename,
+                                  tABC_Error        *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    
+    char *szJSON = NULL;
+    
+    ABC_CHECK_NULL_BUF(Data);
+    ABC_CHECK_NULL_BUF(Key);
+    ABC_CHECK_NULL(szFilename);
+    
+    // create the encrypted string
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(Data, Key, cryptoType, &szJSON, pError));
+    
+    // write the file
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
+    
+exit:
+    if (szJSON) free(szJSON);
+
+    return cc;
+}
+
 // given a JSON string holding encrypted data, this function decrypts it
 tABC_CC ABC_CryptoDecryptJSONString(const char        *szEncDataJSON,
                                     const tABC_U08Buf Key,
@@ -358,6 +386,32 @@ exit:
     ABC_BUF_FREE(GenKey);
     ABC_BUF_FREE(Salt);
     ABC_CryptoFreeSNRP(&pSNRP);
+    
+    return cc;
+}
+
+// given a file holding encrypted data, this function decrypts it
+tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
+                                  const tABC_U08Buf Key,
+                                  tABC_U08Buf       *pData,
+                                  tABC_Error        *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    
+    char      *szJSON_Enc = NULL;
+    
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_NULL_BUF(Key);
+    ABC_CHECK_NULL(pData);
+    
+    // read the file
+    ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON_Enc, pError));
+    
+    // decrypted it
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONString(szJSON_Enc, Key, pData, pError));
+    
+exit:
+    if (szJSON_Enc) free(szJSON_Enc);
     
     return cc;
 }

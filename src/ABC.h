@@ -45,26 +45,30 @@ extern "C" {
         ABC_CC_FileReadError = 6,
         /** Could not write to file */
         ABC_CC_FileWriteError = 7,
+        /** No such file */
+        ABC_CC_FileDoesNotExist = 8,
         /** Unknown crypto type */
-        ABC_CC_UnknownCryptoType = 8,
+        ABC_CC_UnknownCryptoType = 9,
         /** Invalid crypto type */
-        ABC_CC_InvalidCryptoType = 9,
+        ABC_CC_InvalidCryptoType = 10,
         /** Decryption error */
-        ABC_CC_DecryptError = 10,
+        ABC_CC_DecryptError = 11,
         /** Decryption failed checksum */
-        ABC_CC_DecryptBadChecksum = 11,
+        ABC_CC_DecryptBadChecksum = 12,
         /** Encryption error */
-        ABC_CC_EncryptError = 12,
+        ABC_CC_EncryptError = 13,
         /** Scrypt error */
-        ABC_CC_ScryptError = 13,
+        ABC_CC_ScryptError = 14,
         /** Account already exists */
         ABC_CC_AccountAlreadyExists = 15,
         /** Account does not exist */
-        ABC_CC_AccountDoesNotExist = 15,
+        ABC_CC_AccountDoesNotExist = 16,
         /** JSON parsing error */
-        ABC_CC_JSONError = 16,
+        ABC_CC_JSONError = 17,
         /** Incorrect password */
-        ABC_CC_BadPassword = 17
+        ABC_CC_BadPassword = 18,
+        /** Wallet already exists */
+        ABC_CC_WalletAlreadyExists = 19
     } tABC_CC;
 
     /**
@@ -221,6 +225,7 @@ extern "C" {
                              const char *szPassword,
                              const char *szWalletName,
                              int        currencyNum,
+                             unsigned int attributes,
                              tABC_Request_Callback fRequestCallback,
                              void *pData,
                              tABC_Error *pError);

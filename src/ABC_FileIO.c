@@ -16,6 +16,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <jansson.h>
 #include "ABC.h"
 #include "ABC_FileIO.h"
 #include "ABC_Util.h"
@@ -313,6 +314,53 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
 exit:
     if (fp) fclose(fp);
 
+    return cc;
+}
+
+// reads the given filename into a JSON object
+// the JSON object must be deref'ed by the caller
+// if bMustExist is false, a new empty object is created if the file doesn't exist
+tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
+                                 json_t **ppJSON_Data,
+                                 bool bMustExist,
+                                 tABC_Error  *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    
+    char *szData_JSON = NULL;
+    json_t *pJSON_Root = NULL;
+    
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_NULL(ppJSON_Data);
+    
+    // if the file exists
+    if (true == ABC_FileIOFileExist(szFilename))
+    {
+        ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szData_JSON, pError));
+        
+        // decode the json
+        json_error_t error;
+        pJSON_Root = json_loads(szData_JSON, 0, &error);
+        ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
+        ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+    }
+    else if (false == bMustExist)
+    {
+        // make a new one
+        pJSON_Root = json_object();
+    }
+    else
+    {
+        ABC_RET_ERROR(ABC_CC_FileDoesNotExist, "Could not find file");
+    }
+    
+    *ppJSON_Data = pJSON_Root;
+    pJSON_Root = NULL; // so we don't decref it
+    
+exit:
+    if (szData_JSON) free(szData_JSON);
+    if (pJSON_Root) json_decref(pJSON_Root);
+    
     return cc;
 }
 

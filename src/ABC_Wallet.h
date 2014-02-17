@@ -26,13 +26,14 @@ extern "C" {
     typedef struct sABC_WalletCreateInfo
     {
         /** data pointer given by caller at initial create call time */
-        void        *pData;
+        void                    *pData;
         
-        const char  *szUserName;
-        const char  *szPassword;
-        const char  *szWalletName;
-        int         currencyNum;
-        tABC_Request_Callback fRequestCallback;
+        const char              *szUserName;
+        const char              *szPassword;
+        const char              *szWalletName;
+        int                     currencyNum;
+        unsigned int            attributes;
+        tABC_Request_Callback   fRequestCallback;
         
         /** information the error if there was a failure */
         tABC_Error  errorInfo;
@@ -40,17 +41,20 @@ extern "C" {
     
     
     tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
-                                       const char *szUserName,
-                                       const char *szPassword,
-                                       const char *szWalletName,
-                                       int        currencyNum,
-                                       tABC_Request_Callback fRequestCallback,
-                                       void *pData,
-                                       tABC_Error *pError);
+                                      const char *szUserName,
+                                      const char *szPassword,
+                                      const char *szWalletName,
+                                      int        currencyNum,
+                                      unsigned int  attributes,
+                                      tABC_Request_Callback fRequestCallback,
+                                      void *pData,
+                                      tABC_Error *pError);
     
     void ABC_WalletCreateInfoFree(tABC_WalletCreateInfo *pWalletCreateInfo);
 
     void * ABC_WalletCreateThreaded(void *pData);
+    
+    tABC_CC ABC_WalletClearCache(tABC_Error *pError);
     
     
 #ifdef __cplusplus

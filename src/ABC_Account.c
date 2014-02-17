@@ -845,13 +845,6 @@ tABC_CC ABC_AccountCreateSync(const char *szAccountsRootDir,
     sprintf(szFilename, "%s/%s", szAccountsRootDir, ACCOUNT_SYNC_DIR);
     ABC_CHECK_RET(ABC_FileIOCreateDir(szFilename, pError));
 
-    // create initial wallets file with no entries
-    ABC_CHECK_RET(ABC_AccountCreateListJSON(JSON_ACCT_WALLETS_FIELD, "", &szDataJSON, pError));
-    sprintf(szFilename, "%s/%s/%s", szAccountsRootDir, ACCOUNT_SYNC_DIR, ACCOUNT_WALLETS_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szDataJSON, pError));
-    free(szDataJSON);
-    szDataJSON = NULL;
-
     // create initial categories file with no entries
     ABC_CHECK_RET(ABC_AccountCreateListJSON(JSON_ACCT_CATEGORIES_FIELD, "", &szDataJSON, pError));
     sprintf(szFilename, "%s/%s/%s", szAccountsRootDir, ACCOUNT_SYNC_DIR, ACCOUNT_CATEGORIES_FILENAME);
@@ -983,6 +976,30 @@ tABC_CC ABC_AccountGetDirName(const char *szUserName, char **pszDirName, tABC_Er
     *pszDirName = szDirName;
     szDirName = NULL; // so we don't free it
     
+    
+exit:
+    if (szDirName)  free(szDirName);
+    
+    return cc;
+}
+
+// gets the account sync directory for a given username
+// the string is allocated so it is up to the caller to free it
+tABC_CC ABC_AccountGetSyncDirName(const char *szUserName,
+                                  char **pszDirName,
+                                  tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    
+    char *szDirName = NULL;
+    
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(pszDirName);
+    
+    ABC_CHECK_RET(ABC_AccountGetDirName(szUserName, &szDirName, pError));
+    
+    *pszDirName = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(*pszDirName, "%s/%s", szDirName, ACCOUNT_SYNC_DIR);
     
 exit:
     if (szDirName)  free(szDirName);
