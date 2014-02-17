@@ -244,6 +244,19 @@ extern "C" {
                        const char *szPIN,
                        tABC_Error *pError);
     
+    tABC_CC ABC_GetCategories(const char *szUserName,
+                              char ***paszCategories,
+                              unsigned int *pCount,
+                              tABC_Error *pError);
+    
+    tABC_CC ABC_AddCategory(const char *szUserName,
+                            char *szCategory,
+                            tABC_Error *pError);
+    
+    tABC_CC ABC_RemoveCategory(const char *szUserName,
+                               char *szCategory,
+                               tABC_Error *pError);
+    
     // temp functions
     void tempEventA();
     void tempEventB();

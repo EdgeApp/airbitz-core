@@ -192,6 +192,9 @@ extern "C" {
                                                  unsigned int *pCount,
                                                  tABC_Error *pError);
     
+    void ABC_UtilFreeStringArray(char **aszStrings,
+                                 unsigned int count);
+    
 
 #ifdef __cplusplus
 }

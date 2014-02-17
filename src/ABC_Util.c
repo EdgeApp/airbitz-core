@@ -265,8 +265,10 @@ tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
     
     ABC_CHECK_NULL(szJSON);
     ABC_CHECK_NULL(szFieldName);
-        ABC_CHECK_NULL(aszValues);
+    ABC_CHECK_NULL(aszValues);
+    *aszValues = NULL;
     ABC_CHECK_NULL(pCount);
+    *pCount = 0;
     
     // decode the object
     json_error_t error;
@@ -308,6 +310,20 @@ exit:
     return cc;
 }
 
-
+// free's array of strings
+// note: the strings are first zero'ed out before being freed
+void ABC_UtilFreeStringArray(char **aszStrings,
+                             unsigned int count)
+{
+    if ((aszStrings != NULL) && (count > 0))
+    {
+        for (int i = 0; i < count; i++)
+        {
+            free(aszStrings[i]);
+            memset(aszStrings[i], 0, strlen(aszStrings[i]));
+        }
+        free(aszStrings);
+    }
+}
 
 

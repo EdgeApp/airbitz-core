@@ -133,6 +133,19 @@ extern "C" {
                               const char *szPIN,
                               tABC_Error *pError);
     
+    tABC_CC ABC_AccountGetCategories(const char *szUserName,
+                              char ***paszCategories,
+                              unsigned int *pCount,
+                              tABC_Error *pError);
+    
+    tABC_CC ABC_AccountAddCategory(const char *szUserName,
+                            char *szCategory,
+                            tABC_Error *pError);
+    
+    tABC_CC ABC_AccountRemoveCategory(const char *szUserName,
+                               char *szCategory,
+                               tABC_Error *pError);
+    
 #ifdef __cplusplus
 }
 #endif

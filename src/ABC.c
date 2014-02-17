@@ -585,6 +585,62 @@ exit:
     return cc;
 }
 
+/**
+ * Get the categories for an account.
+ *
+ * This function gets the categories for an account.
+ * An array of allocated strings is allocated so the user is responsible for
+ * free'ing all the elements as well as the array itself.
+ *
+ * @param szUserName            UserName for the account
+ * @param paszCategories        Pointer to store results (NULL is stored if no categories)
+ * @param pCount                Pointer to store result count (can be 0)
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_GetCategories(const char *szUserName,
+                          char ***paszCategories,
+                          unsigned int *pCount,
+                          tABC_Error *pError)
+{
+    return ABC_AccountGetCategories(szUserName, paszCategories, pCount, pError);
+}
+
+/**
+ * Add a category for an account.
+ *
+ * This function adds a category to an account.
+ * No attempt is made to avoid a duplicate entry.
+ *
+ * @param szUserName            UserName for the account
+ * @param szCategory            Category to add
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_AddCategory(const char *szUserName,
+                        char *szCategory,
+                        tABC_Error *pError)
+{
+    return ABC_AccountAddCategory(szUserName, szCategory, pError);
+}
+
+/**
+ * Remove a category from an account.
+ *
+ * This function removes a category from an account.
+ * If there is more than one category with this name, all categories by this name are removed.
+ * If the category does not exist, no error is returned.
+ *
+ * @param szUserName            UserName for the account
+ * @param szCategory            Category to remove
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_RemoveCategory(const char *szUserName,
+                           char *szCategory,
+                           tABC_Error *pError)
+{
+    return ABC_AccountRemoveCategory(szUserName, szCategory, pError);
+}
+
+
 void tempEventA()
 {
     if (gfAsyncBitCoinEventCallback)

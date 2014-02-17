@@ -775,17 +775,8 @@ void ABC_WalletFreeData(tWalletData *pData)
         pData->attributes = 0;
         pData->currencyNum = -1;
         
-        if (pData->numAccounts > 0 && pData->aszAccounts)
-        {
-            for (int i = 0; i < pData->numAccounts; i++)
-            {
-                char *szAccount = pData->aszAccounts[i];
-                memset(szAccount, 0, strlen(szAccount));
-                free(szAccount);
-            }
-            free(pData->aszAccounts);
-            pData->aszAccounts = NULL;
-        }
+        ABC_UtilFreeStringArray(pData->aszAccounts, pData->numAccounts);
+        pData->aszAccounts = NULL;
         
         ABC_BUF_ZERO(pData->MK);
         ABC_BUF_FREE(pData->MK);
