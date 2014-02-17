@@ -640,6 +640,27 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
     return ABC_AccountRemoveCategory(szUserName, szCategory, pError);
 }
 
+/**
+ * Renames a wallet.
+ *
+ * This function renames the wallet of a given UUID.
+ * If there is more than one category with this name, all categories by this name are removed.
+ * If the category does not exist, no error is returned.
+ *
+ * @param szUserName            UserName for the account associated with this wallet
+ * @param szPassword            Password for the account associated with this wallet
+ * @param szUUID                UUID of the wallet
+ * @param szNewWalletName       New name for the wallet
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_RenameWallet(const char *szUserName,
+                         const char *szPassword,
+                         const char *szUUID,
+                         const char *szNewWalletName,
+                         tABC_Error *pError)
+{
+    return ABC_WalletSetName(szUserName, szPassword, szUUID, szNewWalletName, pError);
+}
 
 void tempEventA()
 {

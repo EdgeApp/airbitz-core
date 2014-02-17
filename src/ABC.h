@@ -257,6 +257,12 @@ extern "C" {
                                char *szCategory,
                                tABC_Error *pError);
     
+    tABC_CC ABC_RenameWallet(const char *szUserName,
+                             const char *szPassword,
+                             const char *szUUID,
+                             const char *szNewWalletName,
+                             tABC_Error *pError);
+    
     // temp functions
     void tempEventA();
     void tempEventB();

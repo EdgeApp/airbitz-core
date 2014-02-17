@@ -56,6 +56,11 @@ extern "C" {
     
     tABC_CC ABC_WalletClearCache(tABC_Error *pError);
     
+    tABC_CC ABC_WalletSetName(const char *szUserName,
+                              const char *szPassword,
+                              const char *szUUID,
+                              const char *szName,
+                              tABC_Error *pError);
     
 #ifdef __cplusplus
 }
