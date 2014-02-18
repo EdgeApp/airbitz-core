@@ -24,6 +24,7 @@
 #include <jansson.h>
 #include "crypto_scrypt.h"
 #include "sha256.h"
+#include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Crypto.h"
 #include "ABC_Util.h"
@@ -92,10 +93,13 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
 
     // create our own copy so we can add to it
     ABC_BUF_DUP(NewSeed, Seed);
+    
+    //ABC_DEBUG(ABC_UtilHexDumpBuf("ABC Starting Random Seed", NewSeed));
 
     // mix in some info on our file system
     const char *szRootDir;
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRootDir, pError));
+    ABC_BUF_APPEND_PTR(NewSeed, szRootDir, strlen(szRootDir));
     struct statvfs fiData;
     if ((statvfs(szRootDir, &fiData)) >= 0 ) 
     {
@@ -131,7 +135,7 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
 
     // TODO: add more random seed data here
 
-    //ABC_UtilHexDumpBuf("Random Seed", NewSeed);
+    //ABC_DEBUG(ABC_UtilHexDumpBuf("ABC Final Random Seed", NewSeed));
 
     // seed it
     RAND_seed(ABC_BUF_PTR(NewSeed), ABC_BUF_SIZE(NewSeed));

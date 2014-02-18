@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Account.h"
 #include "ABC_Util.h"
@@ -227,6 +228,8 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
                        unsigned int                 seedLength,
                        tABC_Error                   *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_U08Buf Seed = ABC_BUF_NULL;
@@ -266,6 +269,8 @@ tABC_CC ABC_SignIn(const char *szUserName,
                    void *pData,
                    tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     tABC_CC cc = ABC_CC_Ok;
     
     tABC_AccountSignInInfo *pAccountSignInInfo = NULL;
@@ -317,6 +322,8 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
                           void *pData,
                           tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     tABC_CC cc = ABC_CC_Ok;
     
     tABC_AccountCreateInfo *pAccountCreateInfo = NULL;
@@ -374,6 +381,8 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                         void *pData,
                                         tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     tABC_CC cc = ABC_CC_Ok;
     
     tABC_AccountSetRecoveryInfo *pInfo = NULL;
@@ -436,6 +445,8 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                          void *pData,
                          tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_WalletCreateInfo *pWalletCreateInfo = NULL;
@@ -483,6 +494,8 @@ exit:
  */
 tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     tABC_CC cc = ABC_CC_Ok;
 
     ABC_CHECK_RET(ABC_AccountClearKeyCache(pError));
@@ -512,6 +525,8 @@ tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
                           int *pCount,
                           tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     tABC_CC cc = ABC_CC_Ok;
     
     ABC_CHECK_NULL(paCurrencyArray);
@@ -541,6 +556,8 @@ tABC_CC ABC_GetPIN(const char *szUserName,
                    char **pszPIN,
                    tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     tABC_CC cc = ABC_CC_Ok;
     
     ABC_CHECK_NULL(szUserName);
@@ -572,6 +589,8 @@ tABC_CC ABC_SetPIN(const char *szUserName,
                    const char *szPIN,
                    tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     tABC_CC cc = ABC_CC_Ok;
     
     ABC_CHECK_NULL(szUserName);
@@ -602,6 +621,8 @@ tABC_CC ABC_GetCategories(const char *szUserName,
                           unsigned int *pCount,
                           tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     return ABC_AccountGetCategories(szUserName, paszCategories, pCount, pError);
 }
 
@@ -619,6 +640,8 @@ tABC_CC ABC_AddCategory(const char *szUserName,
                         char *szCategory,
                         tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     return ABC_AccountAddCategory(szUserName, szCategory, pError);
 }
 
@@ -637,6 +660,8 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
                            char *szCategory,
                            tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     return ABC_AccountRemoveCategory(szUserName, szCategory, pError);
 }
 
@@ -659,6 +684,8 @@ tABC_CC ABC_RenameWallet(const char *szUserName,
                          const char *szNewWalletName,
                          tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
     return ABC_WalletSetName(szUserName, szPassword, szUUID, szNewWalletName, pError);
 }
 
