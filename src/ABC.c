@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <curl/curl.h>
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Account.h"
@@ -206,8 +207,6 @@ static tABC_Currency gaCurrencies[] = {
 static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
 static void *pAsyncBitCoinCallerData = NULL;
 
-
-
 /**
  * Initialize the AirBitz Core library.
  *
@@ -233,6 +232,17 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_U08Buf Seed = ABC_BUF_NULL;
+    
+    ABC_CHECK_NULL(szRootDir);
+    ABC_CHECK_NULL(pSeedData);
+    
+    // initialize curl
+    CURLcode curlCode;
+    if ((curlCode = curl_global_init(CURL_GLOBAL_ALL)) != 0)
+    {
+        ABC_DebugLog("Curl init failed: %d\n", curlCode);
+        ABC_RET_ERROR(ABC_CC_CurlError, "Curl init failed");
+    }
 
     gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
     pAsyncBitCoinCallerData = pData;
@@ -250,6 +260,21 @@ exit:
     ABC_BUF_FREE(Seed);
 
     return cc;
+}
+
+/**
+ * Mark the end of use of the AirBitz Core library.
+ *
+ * This function is the counter to ABC_Initialize.
+ * It should be called when all use of the library is complete.
+ *
+ */
+void ABC_Terminate()
+{
+    ABC_ClearKeyCache(NULL);
+    
+    // cleanup curl
+    curl_global_cleanup();
 }
 
 /**
@@ -515,10 +540,6 @@ exit:
  *
  * @param paCurrencyArray           Pointer in which to store the currency array
  * @param pCount                    Pointer in which to store the count of array entries
- * @param szWalletName              Wallet Name
- * @param szCurrencyCode            ISO 4217 currency code
- * @param fRequestCallback          The function that will be called when the wallet create process has finished.
- * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
@@ -687,6 +708,52 @@ tABC_CC ABC_RenameWallet(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
     
     return ABC_WalletSetName(szUserName, szPassword, szUUID, szNewWalletName, pError);
+}
+
+/**
+ * Sets the attributes on a wallet.
+ *
+ * This function sets the attributes on a given wallet to those given.
+ * The attributes would have already been set when the wallet was created so this would allow them
+ * to be changed.
+ *
+ * @param szUserName            UserName for the account associated with this wallet
+ * @param szPassword            Password for the account associated with this wallet
+ * @param szUUID                UUID of the wallet
+ * @param attributes            Attributes to be used for filtering (e.g., archive bit)
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_SetWalletAttributes(const char *szUserName,
+                                const char *szPassword,
+                                const char *szUUID,
+                                unsigned int attributes,
+                                tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
+    return ABC_WalletSetAttributes(szUserName, szPassword, szUUID, attributes, pError);
+}
+
+/**
+ * Checks the validity of the given account answers.
+ *
+ * This function sets the attributes on a given wallet to those given.
+ * The attributes would have already been set when the wallet was created so this would allow them
+ * to be changed.
+ *
+ * @param szUserName            UserName for the account associated with this wallet
+ * @param szRecoveryAnswers     Recovery answers - newline seperated
+ * @param pbValid               Pointer to boolean into which to store result
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
+                                 const char *szRecoveryAnswers,
+                                 bool *pbValid,
+                                 tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+    
+    return ABC_AccountCheckRecoveryAnswers(szUserName, szRecoveryAnswers, pbValid, pError);
 }
 
 void tempEventA()

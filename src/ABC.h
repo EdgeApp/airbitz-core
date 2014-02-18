@@ -68,7 +68,9 @@ extern "C" {
         /** Incorrect password */
         ABC_CC_BadPassword = 18,
         /** Wallet already exists */
-        ABC_CC_WalletAlreadyExists = 19
+        ABC_CC_WalletAlreadyExists = 19,
+        /** Curl library call failure */
+        ABC_CC_CurlError = 20
     } tABC_CC;
 
     /**
@@ -198,6 +200,8 @@ extern "C" {
                            unsigned int                 seedLength,
                            tABC_Error                   *pError);
     
+    void ABC_Terminate();
+    
     tABC_CC ABC_ClearKeyCache(tABC_Error *pError);
     
     tABC_CC ABC_SignIn(const char *szUserName,
@@ -262,6 +266,17 @@ extern "C" {
                              const char *szUUID,
                              const char *szNewWalletName,
                              tABC_Error *pError);
+    
+    tABC_CC ABC_SetWalletAttributes(const char *szUserName,
+                                    const char *szPassword,
+                                    const char *szUUID,
+                                    unsigned int attributes,
+                                    tABC_Error *pError);
+    
+    tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
+                                     const char *szRecoveryAnswers,
+                                     bool *pbValid,
+                                     tABC_Error *pError);
     
     // temp functions
     void tempEventA();

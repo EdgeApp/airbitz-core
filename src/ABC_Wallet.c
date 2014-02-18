@@ -55,7 +55,6 @@ static tWalletData **gaWalletsCacheArray = NULL;
 
 static tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_WalletSetCurrencyNum(const char *szUserName, const char *szPassword, const char *szUUID, int currencyNum, tABC_Error *pError);
-static tABC_CC ABC_WalletSetAttributes(const char *szUserName, const char *szPassword, const char *szUUID, unsigned int attributes, tABC_Error *pError);
 static tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, const char *szUUID, const char *szAccount, tABC_Error *pError);
 static tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError);
 static tABC_CC ABC_WalletGetRootDirName(char **pszRootDir, tABC_Error *pError);
@@ -346,7 +345,6 @@ exit:
 }
 
 // sets the attributes of a wallet
-static
 tABC_CC ABC_WalletSetAttributes(const char *szUserName, const char *szPassword, const char *szUUID, unsigned int attributes, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;

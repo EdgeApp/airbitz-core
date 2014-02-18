@@ -146,6 +146,11 @@ extern "C" {
                                char *szCategory,
                                tABC_Error *pError);
     
+    tABC_CC ABC_AccountCheckRecoveryAnswers(const char *szUserName,
+                                            const char *szRecoveryAnswers,
+                                            bool *pbValid,
+                                            tABC_Error *pError);
+    
 #ifdef __cplusplus
 }
 #endif

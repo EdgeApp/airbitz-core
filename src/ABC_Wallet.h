@@ -62,6 +62,13 @@ extern "C" {
                               const char *szName,
                               tABC_Error *pError);
     
+    tABC_CC ABC_WalletSetAttributes(const char *szUserName,
+                                    const char *szPassword,
+                                    const char *szUUID,
+                                    unsigned int attributes,
+                                    tABC_Error *pError);
+    
+    
 #ifdef __cplusplus
 }
 #endif
