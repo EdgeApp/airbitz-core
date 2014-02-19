@@ -25,8 +25,8 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include <jansson.h>
-#include "crypto_scrypt.h"
-#include "sha256.h"
+#include <scrypt/crypto_scrypt.h>
+#include <scrypt/sha256.h>
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Crypto.h"

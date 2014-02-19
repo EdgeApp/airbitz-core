@@ -1,0 +1,18 @@
+inherit lib
+
+# We are yanking source files out of the command-line utility and compiling
+# them as a static library. This may or may not be a good idea.
+build() {
+    cp $recipe_dir/*.c .
+    cp $recipe_dir/*.h .
+    $CC -c $CFLAGS crypto_scrypt.c
+    $CC -c $CFLAGS sha256.c
+    $AR rcs libscrypt.a crypto_scrypt.o sha256.o
+    mkdir -p $install_dir/lib
+    mkdir -p $install_dir/include/scrypt
+    cp libscrypt.a $install_dir/lib/
+    cp *.h $install_dir/include/scrypt/
+}
+
+include="include/scrypt/*.h"
+lib="lib/libscrypt.a"
