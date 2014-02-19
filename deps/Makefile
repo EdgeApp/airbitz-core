@@ -1,6 +1,6 @@
 BUILD_DIR ?= build
 
-default: ;
+default: abc
 
 $(BUILD_DIR)/%/tasks.mk: recipes/%
 	@ ./run.sh $* write-tasks
