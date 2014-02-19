@@ -15,7 +15,9 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/time.h>
+#ifndef __ANDROID__
 #include <sys/statvfs.h>
+#endif
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
@@ -98,6 +100,7 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     //ABC_DEBUG(ABC_UtilHexDumpBuf("ABC Starting Random Seed", NewSeed));
 
     // mix in some info on our file system
+#ifndef __ANDROID__
     const char *szRootDir;
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRootDir, pError));
     ABC_BUF_APPEND_PTR(NewSeed, szRootDir, strlen(szRootDir));
@@ -111,6 +114,7 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
         //printf("\ttotal no blocks: %i\n", fiData.f_blocks);
         //printf("\tfree blocks: %i\n", fiData.f_bfree);
     }
+#endif
 
     // add some time
     struct timeval tv;

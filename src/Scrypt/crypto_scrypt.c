@@ -32,6 +32,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "sha256.h"
 #include "sysendian.h"
