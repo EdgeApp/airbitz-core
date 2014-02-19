@@ -17,6 +17,11 @@
 extern "C" {
 #endif
 
+#define ABC_CHECK_SYS(test, name) \
+    if (!(test)) { \
+        ABC_RET_ERROR(ABC_CC_SysError, "System function "name" failed."); \
+    } else \
+
 #define ABC_RET_ERROR(err, desc) \
     { \
         if (pError) \

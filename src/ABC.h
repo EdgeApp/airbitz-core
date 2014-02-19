@@ -70,7 +70,9 @@ extern "C" {
         /** Wallet already exists */
         ABC_CC_WalletAlreadyExists = 19,
         /** Curl library call failure */
-        ABC_CC_CurlError = 20
+        ABC_CC_CurlError = 20,
+        /** An call to an external API failed  */
+        ABC_CC_SysError = 21
     } tABC_CC;
 
     /**

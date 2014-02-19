@@ -17,6 +17,7 @@
 #include <sys/time.h>
 #include <sys/statvfs.h>
 #include <openssl/bio.h>
+#include <openssl/buffer.h>
 #include <openssl/evp.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
@@ -831,73 +832,84 @@ exit:
     return cc;
 }
 
+/**
+ * Converts a buffer of binary data to a base-64 string.
+ * @param Data The passed-in data. The caller owns this.
+ * @param pszDataBase64 The returned string, which the caller must free().
+ */
 tABC_CC ABC_CryptoBase64Encode(const tABC_U08Buf Data,
                                char              **pszDataBase64,
                                tABC_Error        *pError)
 { 
     tABC_CC cc = ABC_CC_Ok;
+    BIO *bio = NULL;
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL(pszDataBase64);
 
-    BIO *bio, *b64;
-    FILE *stream;
-    unsigned int dataLength = ABC_BUF_SIZE(Data);
-    int encodedSize = 4 * ceil((double)dataLength / 3);
-
-    char *szDataBase64 = (char *)calloc(1, encodedSize + 1);
-     
-    stream = fmemopen(szDataBase64, encodedSize + 1, "w");
-    b64 = BIO_new(BIO_f_base64());
-    bio = BIO_new_fp(stream, BIO_NOCLOSE);
+    // Set up the pipleline:
+    bio = BIO_new(BIO_s_mem());
+    ABC_CHECK_SYS(bio, "BIO_new_mem_buf");
+    BIO *mem = bio;
+    BIO *b64 = BIO_new(BIO_f_base64());
+    ABC_CHECK_SYS(b64, "BIO_f_base64");
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // Do not use newlines to flush buffer
     bio = BIO_push(b64, bio);
-    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); // Ignore newlines - write everything in one line
-    BIO_write(bio, ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data));
+
+    // Push the data through:
+    int len = BIO_write(bio, ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data));
+    if (len != ABC_BUF_SIZE(Data))
+    {
+        ABC_RET_ERROR(ABC_CC_SysError, "Base64 encode has failed");
+    }
     BIO_flush(bio);
-    BIO_free_all(bio);
-    fclose(stream);
 
-    *pszDataBase64 = szDataBase64;
-     
+    // Move the data to the output:
+    BUF_MEM *bptr;
+    BIO_get_mem_ptr(mem, &bptr);
+    BIO_set_close(mem, BIO_NOCLOSE); // Do not free the actual buffer
+    *pszDataBase64 = bptr->data;
+
 exit:
-
+    if (bio) BIO_free_all(bio);
     return cc;
 }
 
+/**
+ * Converts a string of base-64 encoded data to a buffer of binary data.
+ * @param pData An un-allocated data buffer. This function will allocate
+ * memory and assign it to the buffer. The data should then be freed.
+ */
 tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
                                tABC_U08Buf  *pData,
                                tABC_Error   *pError)
 { 
     tABC_CC cc = ABC_CC_Ok;
+    BIO *bio = NULL;
 
     ABC_CHECK_NULL(szDataBase64);
     ABC_CHECK_NULL(pData);
 
-    BIO *bio, *b64;
-    int decodeLen = ABC_CryptoCalcBase64DecodeLength(szDataBase64);
-    int len = 0;
-    unsigned char *pTmpData = (unsigned char *) calloc(1, decodeLen + 1);
-
-    FILE *stream = fmemopen((void *)szDataBase64, strlen(szDataBase64), "r");
-     
-    b64 = BIO_new(BIO_f_base64());
-    bio = BIO_new_fp(stream, BIO_NOCLOSE);
+    // Set up the pipeline:
+    bio = BIO_new_mem_buf((void *)szDataBase64, (int)strlen(szDataBase64));
+    ABC_CHECK_SYS(bio, "BIO_new_mem_buf");
+    BIO *b64 = BIO_new(BIO_f_base64());
+    ABC_CHECK_SYS(b64, "BIO_f_base64");
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // Do not use newlines to flush buffer
     bio = BIO_push(b64, bio);
-    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); // Do not use newlines to flush buffer
-    len = BIO_read(bio, pTmpData, (int) strlen(szDataBase64));
 
+    // Push the data through:
+    int decodeLen = ABC_CryptoCalcBase64DecodeLength(szDataBase64);
+    unsigned char *pTmpData = (unsigned char *)calloc(1, decodeLen + 1);
+    int len = BIO_read(bio, pTmpData, (int)strlen(szDataBase64));
     if (len != decodeLen)
     {
-        ABC_RET_ERROR(ABC_CC_Error, "Base64 decode is incorrect");
+        ABC_RET_ERROR(ABC_CC_SysError, "Base64 decode is incorrect");
     }
-     
-    BIO_free_all(bio);
-    fclose(stream);
-
     ABC_BUF_SET_PTR(*pData, pTmpData, len);
      
 exit:
-
+    if (bio) BIO_free_all(bio);
     return cc;
 }
 
@@ -912,8 +924,8 @@ int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64)
     padding = 2;
     else if (szDataBase64[len-1] == '=') //last char is =
     padding = 1;
-     
-    return (int)len * 0.75 - padding;
+
+    return (3*len)/4 - padding;
 }
 
 // generates a randome UUID (version 4)
