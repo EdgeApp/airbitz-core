@@ -1,0 +1,27 @@
+depends="zlib"
+inherit lib
+
+source="https://www.openssl.org/source/openssl-1.0.1f.tar.gz"
+
+build() {
+    case $target in
+    ios-x86_64) type=darwin64-x86_64-cc ;;
+    ios-i386)   type=debug-darwin-i386-cc ;;
+    ios-*)      type=BSD-generic32 ;;
+    android-arm)type=android-armv7 ;;
+    android-x86)type=android-x86 ;;
+    *)          type=linux-generic32 ;;
+    esac
+
+    cd openssl-1.0.1f
+    if [ $target = "native" ]; then
+        ./config --prefix=$install_dir
+    else
+        ./Configure --prefix=$install_dir no-shared zlib $type "$CFLAGS"
+    fi
+    make
+    make install_sw
+}
+
+include="include/openssl/*"
+lib="lib/libcrypto.a lib/libssl.a"

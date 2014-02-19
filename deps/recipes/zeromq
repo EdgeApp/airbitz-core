@@ -1,0 +1,16 @@
+inherit lib
+
+source="http://download.zeromq.org/zeromq-4.0.3.tar.gz
+        https://raw.github.com/zeromq/cppzmq/master/zmq.hpp"
+
+build() {
+    cd zeromq-4.0.3
+    ./autogen.sh
+    ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
+    make || true # This fails, but doesn't affect anything
+    make install || true
+    cp $download_dir/zmq.hpp $install_dir/include/zmq.hpp
+}
+
+include="include/zmq.h include/zmq_utils.h include/zmq.hpp"
+lib="lib/libzmq.a"

@@ -1,0 +1,10 @@
+*** boost_1_55_0/boost/config/user.hpp	2014-02-13 15:03:10.000000000 -0800
+--- boost_1_55_0/boost/config/user.hpp	2014-02-13 15:05:35.000000000 -0800
+***************
+*** 15,19 ****
+  
+  // Android defines
+- #define __arm__ 1
+  #define _REENTRANT 1
+  #define _GLIBCXX__PTHREADS 1
+--- 15,18 ----

@@ -1,0 +1,83 @@
+inherit common
+
+# Performs an iOS-style build.
+# $1 arch name for compiler, work_dir and install_dir.
+# $2 platform (either iPhoneOS or iPhoneSimulator)
+build_ios() {
+    # Put the source in the working directory:
+    work_dir=$work_dir/ios-$1
+    mkdir -p $work_dir
+    unpack
+
+    # Establish expected variables:
+    target=ios-$1
+    install_dir=$build_dir/prefix/ios/$1
+
+    case $1 in
+    arm*)   cross=arm-apple-darwin10 ;;
+    i386)   cross=i386-apple-darwin10 ;;
+    x86_64) cross=x86_64-apple-darwin10 ;;
+    esac
+
+    # Locate Xcode build tools:
+    xcode_dir=$(xcode-select -print-path | sed -e 's@/$@@')
+    platform_dir=$xcode_dir/Platforms/${2}.platform/Developer
+
+    export AR="ar"
+    export CC="clang"
+    export CCLD="clang"
+    export CPP="clang -E"
+    export CXX="clang++"
+
+    export CFLAGS="-arch $1 -isysroot $platform_dir/SDKs/${2}7.0.sdk -miphoneos-version-min=7.0 -I${install_dir}/include"
+    export CXXFLAGS="-arch $1 -isysroot $platform_dir/SDKs/${2}7.0.sdk -miphoneos-version-min=7.0 -I${install_dir}/include"
+    export LDFLAGS="-arch $1 -isysroot $platform_dir/SDKs/${2}7.0.sdk -miphoneos-version-min=7.0 -L${install_dir}/lib"
+
+    export PATH=$platform_dir/usr/bin:$xcode_dir/usr/bin:$PATH
+    export PKG_CONFIG_PATH=$install_dir/lib/pkgconfig
+
+    cd $work_dir
+    build
+}
+build_ios_armv7() {
+    build_ios armv7 iPhoneOS
+}
+build_ios_armv7s() {
+    build_ios armv7s iPhoneOS
+}
+build_ios_arm64() {
+    build_ios arm64 iPhoneOS
+}
+build_ios_i386() {
+    build_ios i386 iPhoneSimulator
+}
+build_ios_x86_64() {
+    build_ios x86_64 iPhoneSimulator
+}
+
+arches="armv7 armv7s arm64 i386 x86_64"
+
+for arch in $arches ; do
+    deps="download"
+    for dep in $depends; do
+        deps="$deps $dep.build-ios-$arch"
+    done
+    task build-ios-$arch $deps
+done
+
+# Creates a universal binary from the various platform-specific files
+ios_universal() {
+    # Expand wildcards:
+    libs=$(cd $build_dir/prefix/ios/armv7; echo $lib)
+    for l in $libs; do
+        out_name=$work_dir/ios-universal/$l
+        in_libs=$(for arch in $arches; do
+            echo $build_dir/prefix/ios/$arch/$l
+        done)
+        mkdir -p $(dirname $out_name)
+        echo "lipo -create $in_libs -output $out_name"
+        lipo -create $in_libs -output $out_name
+    done
+}
+task ios-universal $(for arch in $arches; do echo build-ios-$arch; done)
+default=ios-universal

@@ -1,0 +1,15 @@
+inherit lib
+
+source="http://hyperrealm.com/libconfig/libconfig-1.4.9.tar.gz"
+
+build() {
+    cd libconfig-1.4.9
+    rm -r aux-build
+    autoreconf -i
+    ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
+    make
+    make install
+}
+
+include="include/libconfig.h include/libconfig.h++"
+lib="lib/libconfig.a"

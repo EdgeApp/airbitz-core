@@ -1,0 +1,39 @@
+# This recipe contains the setup tasks for unpacking and installing the NDK
+inherit common
+
+# Select the correct NDK version for the host system:
+case $(uname -sm) in
+"Linux x86_64")  system=linux-x86_64 ;;
+"Darwin x86_64") system=darwin-x86_64 ;;
+*)
+    echo "Unknown host platform!"
+    exit 1;;
+esac
+
+source="http://dl.google.com/android/ndk/android-ndk-r9c-${system}.tar.bz2"
+
+# Extracts a standalone toolchain from the NDK.
+# $1 arch name for installing the toolchain.
+# $2 NDK toolchain name.
+setup() {
+    echo Unpacking toolchain...
+    cd android-ndk-r9c
+    ./build/tools/make-standalone-toolchain.sh --toolchain=$2-4.8 --install-dir=$work_dir/$1 --system=$system
+
+    echo Patching toolchain...
+    cat $recipe_dir/to_string.h >> $work_dir/$1/include/c++/4.8/bits/basic_string.h
+}
+setup_arm() {
+    setup arm arm-linux-androideabi
+}
+setup_x86() {
+    setup x86 x86
+}
+setup_mips() {
+    setup mips mipsel-linux-android
+}
+
+task setup-arm unpack
+task setup-x86 unpack
+task setup-mips unpack
+default=setup-arm

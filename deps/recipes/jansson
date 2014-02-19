@@ -1,0 +1,13 @@
+inherit lib
+
+source="www.digip.org/jansson/releases/jansson-2.5.tar.bz2"
+
+build() {
+    cd jansson-2.5
+    ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
+    make
+    make install
+}
+
+include="include/jansson.h include/jansson_config.h"
+lib="lib/libjansson.a"

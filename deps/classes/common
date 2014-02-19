@@ -1,0 +1,31 @@
+# Common variables
+download_dir=$base_dir/download
+
+# Common tasks
+
+# Downloads all the source files mentioned in $source
+download() {
+    mkdir -p $download_dir
+    for s in $source; do
+        filename="$download_dir/$(echo $s | sed -e's@^.*/@@' -e's@\?.*$@@')"
+        [ -e $filename ] || wget -O "$filename" "$s"
+    done
+}
+task download
+
+# Unpacks the source files mentioned in $source with the .tar.* extension
+unpack() {
+    for s in $source; do
+        filename="$download_dir/$(echo $s | sed -e's@^.*/@@' -e's@\?.*$@@')"
+        if echo $filename | grep -q -e'\.tar.*$' -e'\.tgz$'; then
+            echo "Unpacking $(relative $filename) to $(relative $work_dir)..."
+            tar -C $work_dir -xf $filename
+        fi
+    done
+}
+task unpack download
+
+clean() {
+    rm -rf $work_dir
+}
+task clean

@@ -1,0 +1,27 @@
+inherit lib
+
+source="
+http://softlayer-ams.dl.sourceforge.net/project/boost/boost/1.55.0/boost_1_55_0.tar.bz2
+https://raw2.github.com/MysticTreeGames/Boost-for-Android/master/patches/boost-1_55_0/boost-1_55_0.patch
+"
+
+build() {
+    LIBRARIES=--with-libraries=date_time,filesystem,program_options,regex,signals,system,thread,iostreams
+
+    cd boost_1_55_0
+
+    echo Bootstrapping boost...
+    ./bootstrap.sh --prefix=$install_dir $LIBRARIES
+
+    echo Patching boost...
+    patch -p1 < $download_dir/boost-1_55_0.patch
+    patch -p1 < $recipe_dir/ios.patch
+    cp $recipe_dir/user-config.jam tools/build/v2/user-config.jam
+
+    echo Building boost...
+    export NO_BZIP2=1
+    ./bjam -q -d+2 toolset=clang-env link=static threading=multi install
+}
+
+include="include/boost/*"
+lib="lib/libboost_*.a"
