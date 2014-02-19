@@ -230,6 +230,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf Seed = ABC_BUF_NULL;
 
@@ -297,6 +298,7 @@ tABC_CC ABC_SignIn(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_AccountSignInInfo *pAccountSignInInfo = NULL;
 
@@ -350,6 +352,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_AccountCreateInfo *pAccountCreateInfo = NULL;
 
@@ -409,6 +412,7 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_AccountSetRecoveryInfo *pInfo = NULL;
 
@@ -473,6 +477,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_WalletCreateInfo *pWalletCreateInfo = NULL;
 
@@ -522,6 +527,7 @@ tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_RET(ABC_AccountClearKeyCache(pError));
 
@@ -549,6 +555,7 @@ tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(paCurrencyArray);
     ABC_CHECK_NULL(pCount);
@@ -580,6 +587,7 @@ tABC_CC ABC_GetPIN(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
@@ -613,6 +621,7 @@ tABC_CC ABC_SetPIN(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);

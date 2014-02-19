@@ -89,6 +89,7 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
                                 tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf NewSeed = ABC_BUF_NULL;
 
@@ -160,6 +161,7 @@ tABC_CC ABC_CryptoEncryptJSONString(const tABC_U08Buf Data,
                                     tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     json_t          *jsonRoot       = NULL;
 
@@ -184,6 +186,7 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
                                     tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf     GenKey          = ABC_BUF_NULL;
     tABC_U08Buf     Salt            = ABC_BUF_NULL;
@@ -289,6 +292,7 @@ tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
                                   tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     char *szJSON = NULL;
 
@@ -315,6 +319,7 @@ tABC_CC ABC_CryptoDecryptJSONString(const char        *szEncDataJSON,
                                     tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     json_t          *root   = NULL;
 
@@ -343,6 +348,7 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
                                     tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf     EncData = ABC_BUF_NULL;
     tABC_U08Buf     IV      = ABC_BUF_NULL;
@@ -406,6 +412,7 @@ tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
                                   tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     char      *szJSON_Enc = NULL;
 
@@ -443,6 +450,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
                                        tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf RandCount = ABC_BUF_NULL;
     tABC_U08Buf RandHeaderBytes = ABC_BUF_NULL;
@@ -551,6 +559,8 @@ exit:
 }
 
 // decrypts an encrypted aes256 package which includes data, random header/footer and sha256
+// Note: it is critical that this function returns ABC_CC_DecryptFailure if there is an issue
+//       because code is counting on this specific error to know a key is bad
 /* Package format:
     1 byte:     h (the number of random header bytes)
     h bytes:    h random header bytes
@@ -568,6 +578,7 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
                                        tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf Data = ABC_BUF_NULL;
 
@@ -577,14 +588,22 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     ABC_CHECK_NULL(pData);
 
     // start by decrypting the pacakge
-    ABC_CHECK_RET(ABC_CryptoDecryptAES256(EncData, Key, IV, &Data, pError));
+    if (ABC_CC_Ok != ABC_CryptoDecryptAES256(EncData, Key, IV, &Data, pError))
+    {
+        cc = ABC_CC_DecryptFailure;
+        if (pError)
+        {
+            pError->code = cc;
+        }
+        goto exit;
+    }
 
     // get the size of the random header section
     unsigned char headerLength = *ABC_BUF_PTR(Data);
 
     // check that we have enough data based upon this info
     unsigned int minSize = 1 + headerLength + 4 + 1 + 1 + SHA_256_LENGTH; // decrypted package must be at least this big
-    ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptError, "Decrypted data is not long enough");
+    ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
 
     // get the size of the data section
     unsigned char *pDataLengthPos = ABC_BUF_PTR(Data) + (1 + headerLength);
@@ -598,14 +617,14 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
 
     // check that we have enough data based upon this info
     minSize = 1 + headerLength + 4 + dataSecLength + 1 + SHA_256_LENGTH; // decrypted package must be at least this big
-    ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptError, "Decrypted data is not long enough");
+    ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
 
     // get the size of the random footer section
     unsigned char footerLength = *(ABC_BUF_PTR(Data) + 1 + headerLength + 4 + dataSecLength);
 
     // check that we have enough data based upon this info
     minSize = 1 + headerLength + 4 + dataSecLength + 1 + footerLength + SHA_256_LENGTH; // decrypted package must be at least this big
-    ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptError, "Decrypted data is not long enough");
+    ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
 
     // set up for the SHA check
     unsigned int shaCheckLength = 1 + headerLength + 4 + dataSecLength + 1 + footerLength; // all but the sha
@@ -622,7 +641,7 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     if (0 != memcmp(pSHALoc, sha256Output, SHA_256_LENGTH))
     {
         // this can be specifically used by the caller to possibly determine whether the key was incorrect
-        ABC_RET_ERROR(ABC_CC_DecryptBadChecksum, "Decrypted data failed checksum (SHA) check");
+        ABC_RET_ERROR(ABC_CC_DecryptFailure, "Decrypted data failed checksum (SHA) check");
     }
 
     // all is good, so create the final data
@@ -645,6 +664,7 @@ tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
                                 tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Key);
@@ -711,6 +731,7 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
                                 tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL_BUF(EncData);
     ABC_CHECK_NULL_BUF(Key);
@@ -766,6 +787,7 @@ tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
                                    tABC_Error    *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(pData);
 
@@ -790,6 +812,7 @@ tABC_CC ABC_CryptoHexEncode(const tABC_U08Buf Data,
                             tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL(pszDataHex);
@@ -815,6 +838,7 @@ tABC_CC ABC_CryptoHexDecode(const char  *szDataHex,
                             tABC_Error  *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(szDataHex);
     ABC_CHECK_NULL(pData);
@@ -846,6 +870,8 @@ tABC_CC ABC_CryptoBase64Encode(const tABC_U08Buf Data,
                                tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
     BIO *bio = NULL;
 
     ABC_CHECK_NULL_BUF(Data);
@@ -871,8 +897,8 @@ tABC_CC ABC_CryptoBase64Encode(const tABC_U08Buf Data,
     // Move the data to the output:
     BUF_MEM *bptr;
     BIO_get_mem_ptr(mem, &bptr);
-    BIO_set_close(mem, BIO_NOCLOSE); // Do not free the actual buffer
-    *pszDataBase64 = bptr->data;
+    *pszDataBase64 = calloc(1, bptr->length + 1);
+    memcpy(*pszDataBase64, bptr->data, bptr->length);
 
 exit:
     if (bio) BIO_free_all(bio);
@@ -889,6 +915,8 @@ tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
                                tABC_Error   *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
     BIO *bio = NULL;
 
     ABC_CHECK_NULL(szDataBase64);
@@ -944,6 +972,7 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     unsigned char *pData = NULL;
 
@@ -980,6 +1009,7 @@ tABC_CC ABC_CryptoScryptS1(const tABC_U08Buf Data,
                            tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL(pScryptData);
@@ -1007,6 +1037,7 @@ tABC_CC ABC_CryptoScryptSNRP(const tABC_U08Buf     Data,
                              tABC_Error            *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(pSNRP);
     ABC_CHECK_NULL(pScryptData);
@@ -1037,6 +1068,7 @@ tABC_CC ABC_CryptoScrypt(const tABC_U08Buf Data,
                          tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Salt);
@@ -1062,6 +1094,7 @@ tABC_CC ABC_CryptoCreateSNRPForClient(tABC_CryptoSNRP   **ppSNRP,
                                       tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf Salt = ABC_BUF_NULL;
 
@@ -1088,6 +1121,7 @@ tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
                                       tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf Salt = ABC_BUF_NULL;
 
@@ -1119,6 +1153,7 @@ tABC_CC ABC_CryptoCreateSNRP(const tABC_U08Buf Salt,
                              tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL_BUF(Salt);
 
@@ -1143,6 +1178,7 @@ tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
                                        tABC_Error             *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     char    *szSalt_Hex     = NULL;
 
@@ -1171,6 +1207,7 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
                                        tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf Salt = ABC_BUF_NULL;
 

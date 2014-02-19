@@ -53,8 +53,8 @@ extern "C" {
         ABC_CC_InvalidCryptoType = 10,
         /** Decryption error */
         ABC_CC_DecryptError = 11,
-        /** Decryption failed checksum */
-        ABC_CC_DecryptBadChecksum = 12,
+        /** Decryption failure due to incorrect key */
+        ABC_CC_DecryptFailure = 12,
         /** Encryption error */
         ABC_CC_EncryptError = 13,
         /** Scrypt error */

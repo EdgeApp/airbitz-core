@@ -567,7 +567,7 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountSetRecoveryInfo *pInfo,
     }
     ABC_BUF_DUP(pKeys->LRA, pKeys->L);
     ABC_BUF_APPEND_PTR(pKeys->LRA, pInfo->szRecoveryAnswers, strlen(pInfo->szRecoveryAnswers));
-    //ABC_UtilHexDumpBuf("LRA", pKeys->LRA);
+    //ABC_DEBUG(ABC_UtilHexDumpBuf("LRA", pKeys->LRA));
 
     // LRA1 = Scrypt(L + RA, SNRP1)
     if (ABC_BUF_PTR(pKeys->LRA1) != NULL)
@@ -1363,8 +1363,7 @@ static tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPasswo
     json_t       *pJSON_SNRP2   = NULL;
     json_t       *pJSON_SNRP3   = NULL;
     json_t       *pJSON_SNRP4   = NULL;
-    char         *szJSON_EPIN   = NULL;
-    tABC_U08Buf  PIN            = ABC_BUF_NULL;
+    tABC_U08Buf  PIN_JSON       = ABC_BUF_NULL;
     json_t       *pJSON_Root    = NULL;
 
     ABC_CHECK_NULL(szUserName);
@@ -1430,23 +1429,28 @@ static tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPasswo
             // LP2 = Scrypt(L + P, SNRP2)
             ABC_CHECK_RET(ABC_CryptoScryptSNRP(pFinalKeys->LP, pFinalKeys->pSNRP2, &(pFinalKeys->LP2), pError));
 
-            // load EPIN
+            // try to decrypt EPIN
             szAccountDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
             ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pFinalKeys->accountNum, pError));
             szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
             sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EPIN_FILENAME);
-            ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON_EPIN, pError));
+            tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, pFinalKeys->LP2, &PIN_JSON, pError);
 
-            // try to decrypt
-            tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONString(szJSON_EPIN, pFinalKeys->LP2, &(PIN), pError);
-            if (CC_Decrypt != ABC_CC_Ok)
+            // check the results
+            if (ABC_CC_EncryptError == CC_Decrypt)
             {
-                // a little bit of an assumption here is that we couldn't decrypt because the password was bad
-                ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt PIN - possibly bad password");
+                // the assumption here is that this specific error is due to a bad password
+                ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt PIN - bad password");
+            }
+            else if (ABC_CC_Ok != CC_Decrypt)
+            {
+                // this was an error other than just a bad key so we need to treat this like an error
+                cc = CC_Decrypt;
+                goto exit;
             }
 
             // decode the json to get the pin
-            char *szJSON_PIN = (char *) ABC_BUF_PTR(PIN);
+            char *szJSON_PIN = (char *) ABC_BUF_PTR(PIN_JSON);
             ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_PIN, JSON_ACCT_PIN_FIELD, &(pFinalKeys->szPIN), pError));
         }
         else
@@ -1481,8 +1485,7 @@ exit:
     if (pJSON_SNRP3)    json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)    json_decref(pJSON_SNRP4);
     if (pJSON_Root)     json_decref(pJSON_Root);
-    if (szJSON_EPIN)    free(szJSON_EPIN);
-    ABC_BUF_FREE(PIN);
+    ABC_BUF_FREE(PIN_JSON);
 
     return cc;
 }
@@ -1751,23 +1754,98 @@ exit:
     return cc;
 }
 
-// check that the recovery answers for a given account are valid
+/**
+ * Check that the recovery answers for a given account are valid
+ * @param pbValid true is stored in here if they are correct
+ */
 tABC_CC ABC_AccountCheckRecoveryAnswers(const char *szUserName,
                                         const char *szRecoveryAnswers,
                                         bool *pbValid,
                                         tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tAccountKeys *pKeys = NULL;
+    tABC_U08Buf LRA = ABC_BUF_NULL;
+    tABC_U08Buf LRA2 = ABC_BUF_NULL;
+    tABC_U08Buf LP2 = ABC_BUF_NULL;
+    char *szAccountSyncDir = NULL;
+    char *szFilename = NULL;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szRecoveryAnswers);
     ABC_CHECK_NULL(pbValid);
     *pbValid = false;
 
-    // TODO: complete this funcition
+    // pull this account into the cache
+    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, NULL, &pKeys, pError));
 
+    // create our LRA (L + RA) with the answers given
+    ABC_BUF_DUP(LRA, pKeys->L);
+    ABC_BUF_APPEND_PTR(LRA, szRecoveryAnswers, strlen(szRecoveryAnswers));
+
+    // if the cache has an LRA
+    if (ABC_BUF_PTR(pKeys->LRA) != NULL)
+    {
+        // check if they are equal
+        if (ABC_BUF_SIZE(LRA) == ABC_BUF_SIZE(pKeys->LRA))
+        {
+            if (0 == memcmp(ABC_BUF_PTR(LRA), ABC_BUF_PTR(pKeys->LRA), ABC_BUF_SIZE(LRA)))
+            {
+                *pbValid = true;
+            }
+        }
+    }
+    else
+    {
+        // we will need to attempt to decrypt ELP2 in order to determine whether we have the right LRA
+        // ELP2.json <- LP2 encrypted with recovery key (LRA2)
+
+        // create our LRA2 = Scrypt(L + RA, SNRP3)
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP3, &LRA2, pError));
+
+        // attempt to decode ELP2
+        ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+        szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+        sprintf(szFilename, "%s/%s", szAccountSyncDir, ACCOUNT_ELP2_FILENAME);
+        tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, LRA2, &LP2, pError);
+
+        // check the results
+        if (ABC_CC_Ok == CC_Decrypt)
+        {
+            *pbValid = true;
+        }
+        else if (ABC_CC_DecryptFailure != CC_Decrypt)
+        {
+            // this was an error other than just a bad key so we need to treat this like an error
+            cc = CC_Decrypt;
+            goto exit;
+        }
+        else
+        {
+            // clear the error because we know why it failed and we will set that in the pbValid
+            ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+        }
+
+        // if we were successful, save our keys in the cache since we spent the time to create them
+        if (*pbValid == true)
+        {
+            ABC_BUF_SET(pKeys->LRA, LRA);
+            ABC_BUF_CLEAR(LRA); // so we don't free as we exit
+            ABC_BUF_SET(pKeys->LRA2, LRA2);
+            ABC_BUF_CLEAR(LRA2); // so we don't free as we exit
+            ABC_BUF_SET(pKeys->LP2, LP2);
+            ABC_BUF_CLEAR(LP2); // so we don't free as we exit
+        }
+    }
 
 exit:
+    ABC_BUF_FREE(LRA);
+    ABC_BUF_FREE(LRA2);
+    ABC_BUF_FREE(LP2);
+    if (szAccountSyncDir) free(szAccountSyncDir);
+    if (szFilename) free(szFilename);
 
     return cc;
 }

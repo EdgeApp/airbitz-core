@@ -18,6 +18,11 @@
 extern "C" {
 #endif
 
+#define ABC_SET_ERR_CODE(err, set_code) \
+    if (err != NULL) { \
+        err->code = set_code; \
+    }
+
 #define ABC_CHECK_SYS(test, name) \
     if (!(test)) { \
         ABC_RET_ERROR(ABC_CC_SysError, "System function "name" failed."); \
