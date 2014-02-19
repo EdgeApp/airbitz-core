@@ -1,0 +1,18 @@
+depends="curl jansson libbitcoin openssl"
+inherit lib
+
+build() {
+    cd $base_dir/..
+    export TARGET=$target
+    make
+    mkdir -p $install_dir/lib
+    cp build/$target/libabc.a $install_dir/lib
+}
+
+clean() {
+    rm -rf $work_dir
+    cd $base_dir/..
+    make clean
+}
+
+lib="lib/libabc.a"
