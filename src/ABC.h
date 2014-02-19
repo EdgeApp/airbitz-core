@@ -69,10 +69,14 @@ extern "C" {
         ABC_CC_BadPassword = 18,
         /** Wallet already exists */
         ABC_CC_WalletAlreadyExists = 19,
-        /** Curl library call failure */
-        ABC_CC_CurlError = 20,
+        /** URL call failure */
+        ABC_CC_URLError = 20,
         /** An call to an external API failed  */
-        ABC_CC_SysError = 21
+        ABC_CC_SysError = 21,
+        /** No required initialization made  */
+        ABC_CC_NotInitialized = 22,
+        /** Initialization after already initializing  */
+        ABC_CC_Reinitialization = 23
     } tABC_CC;
 
     /**

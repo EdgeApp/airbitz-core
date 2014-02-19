@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <curl/curl.h>
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Account.h"
@@ -19,6 +18,9 @@
 #include "ABC_FileIO.h"
 #include "ABC_Wallet.h"
 #include "ABC_Crypto.h"
+#include "ABC_URL.h"
+
+static bool gbInitialized = false;
 
 static tABC_Currency gaCurrencies[] = {
     { "AED", 784, "United Arab Emirates dirham", "United Arab Emirates" },
@@ -236,14 +238,10 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
     ABC_CHECK_NULL(szRootDir);
     ABC_CHECK_NULL(pSeedData);
+    ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "The core library has already been initalized");
 
-    // initialize curl
-    CURLcode curlCode;
-    if ((curlCode = curl_global_init(CURL_GLOBAL_ALL)) != 0)
-    {
-        ABC_DebugLog("Curl init failed: %d\n", curlCode);
-        ABC_RET_ERROR(ABC_CC_CurlError, "Curl init failed");
-    }
+    // initialize URL system
+    ABC_CHECK_RET(ABC_URLInitialize(pError));
 
     gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
     pAsyncBitCoinCallerData = pData;
@@ -256,6 +254,8 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
     ABC_BUF_DUP_PTR(Seed, pSeedData, seedLength);
     ABC_CHECK_RET(ABC_CryptoSetRandomSeed(Seed, pError));
+
+    gbInitialized = true;
 
 exit:
     ABC_BUF_FREE(Seed);
@@ -272,10 +272,14 @@ exit:
  */
 void ABC_Terminate()
 {
-    ABC_ClearKeyCache(NULL);
+    if (gbInitialized == true)
+    {
+        ABC_ClearKeyCache(NULL);
 
-    // cleanup curl
-    curl_global_cleanup();
+        ABC_URLTerminate();
+
+        gbInitialized = false;
+    }
 }
 
 /**
@@ -302,6 +306,7 @@ tABC_CC ABC_SignIn(const char *szUserName,
 
     tABC_AccountSignInInfo *pAccountSignInInfo = NULL;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -356,6 +361,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
 
     tABC_AccountCreateInfo *pAccountCreateInfo = NULL;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -416,6 +422,7 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
 
     tABC_AccountSetRecoveryInfo *pInfo = NULL;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -481,6 +488,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
 
     tABC_WalletCreateInfo *pWalletCreateInfo = NULL;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -529,6 +537,8 @@ tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
     ABC_CHECK_RET(ABC_AccountClearKeyCache(pError));
 
     ABC_CHECK_RET(ABC_WalletClearCache(pError));
@@ -557,6 +567,7 @@ tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(paCurrencyArray);
     ABC_CHECK_NULL(pCount);
 
@@ -589,6 +600,7 @@ tABC_CC ABC_GetPIN(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(pszPIN);
@@ -623,6 +635,7 @@ tABC_CC ABC_SetPIN(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szPIN);
@@ -653,7 +666,16 @@ tABC_CC ABC_GetCategories(const char *szUserName,
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    return ABC_AccountGetCategories(szUserName, paszCategories, pCount, pError);
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_AccountGetCategories(szUserName, paszCategories, pCount, pError));
+
+exit:
+
+    return cc;
 }
 
 /**
@@ -672,8 +694,18 @@ tABC_CC ABC_AddCategory(const char *szUserName,
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    return ABC_AccountAddCategory(szUserName, szCategory, pError);
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_AccountAddCategory(szUserName, szCategory, pError));
+
+exit:
+
+    return cc;
 }
+
 
 /**
  * Remove a category from an account.
@@ -692,7 +724,16 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    return ABC_AccountRemoveCategory(szUserName, szCategory, pError);
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_AccountRemoveCategory(szUserName, szCategory, pError));
+
+exit:
+
+    return cc;
 }
 
 /**
@@ -716,7 +757,16 @@ tABC_CC ABC_RenameWallet(const char *szUserName,
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    return ABC_WalletSetName(szUserName, szPassword, szUUID, szNewWalletName, pError);
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_WalletSetName(szUserName, szPassword, szUUID, szNewWalletName, pError));
+
+exit:
+
+    return cc;
 }
 
 /**
@@ -740,7 +790,16 @@ tABC_CC ABC_SetWalletAttributes(const char *szUserName,
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    return ABC_WalletSetAttributes(szUserName, szPassword, szUUID, attributes, pError);
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_WalletSetAttributes(szUserName, szPassword, szUUID, attributes, pError));
+
+exit:
+
+    return cc;
 }
 
 /**
@@ -762,7 +821,16 @@ tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    return ABC_AccountCheckRecoveryAnswers(szUserName, szRecoveryAnswers, pbValid, pError);
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_AccountCheckRecoveryAnswers(szUserName, szRecoveryAnswers, pbValid, pError));
+
+exit:
+
+    return cc;
 }
 
 void tempEventA()
