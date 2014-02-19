@@ -10,6 +10,7 @@
 #ifndef ABC_Util_h
 #define ABC_Util_h
 
+#include <string.h>
 #include <strings.h>
 #include "ABC.h"
 
