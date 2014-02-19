@@ -52,7 +52,7 @@ extern "C" {
                                         tABC_CryptoType   cryptoType,
                                         json_t            **ppJSON_Enc,
                                         tABC_Error        *pError);
-    
+
     tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
                                       const tABC_U08Buf Key,
                                       tABC_CryptoType   cryptoType,
@@ -68,7 +68,7 @@ extern "C" {
                                         const tABC_U08Buf Key,
                                         tABC_U08Buf       *pData,
                                         tABC_Error        *pError);
-    
+
     tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
                                       const tABC_U08Buf Key,
                                       tABC_U08Buf       *pData,

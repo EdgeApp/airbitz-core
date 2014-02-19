@@ -55,19 +55,19 @@
 
 static unsigned char gaS1[] = { 0xb5, 0x86, 0x5f, 0xfb, 0x9f, 0xa7, 0xb3, 0xbf, 0xe4, 0xb2, 0x38, 0x4d, 0x47, 0xce, 0x83, 0x1e, 0xe2, 0x2a, 0x4a, 0x9d, 0x5c, 0x34, 0xc7, 0xef, 0x7d, 0x21, 0x46, 0x7c, 0xc7, 0x58, 0xf8, 0x1b };
 
-static 
+static
 tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
                                        const tABC_U08Buf Key,
                                        tABC_U08Buf       *pEncData,
                                        tABC_U08Buf       *pIV,
                                        tABC_Error        *pError);
-static 
+static
 tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
                                        const tABC_U08Buf Key,
                                        const tABC_U08Buf IV,
                                        tABC_U08Buf       *pData,
                                        tABC_Error        *pError);
-static 
+static
 tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
                                 const tABC_U08Buf Key,
                                 const tABC_U08Buf IV,
@@ -79,7 +79,7 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
                                 const tABC_U08Buf IV,
                                 tABC_U08Buf       *pData,
                                 tABC_Error        *pError);
-static 
+static
 int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64);
 
 // sets the seed for the random number generator
@@ -94,7 +94,7 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
 
     // create our own copy so we can add to it
     ABC_BUF_DUP(NewSeed, Seed);
-    
+
     //ABC_DEBUG(ABC_UtilHexDumpBuf("ABC Starting Random Seed", NewSeed));
 
     // mix in some info on our file system
@@ -102,10 +102,10 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRootDir, pError));
     ABC_BUF_APPEND_PTR(NewSeed, szRootDir, strlen(szRootDir));
     struct statvfs fiData;
-    if ((statvfs(szRootDir, &fiData)) >= 0 ) 
+    if ((statvfs(szRootDir, &fiData)) >= 0 )
     {
         ABC_BUF_APPEND_PTR(NewSeed, (unsigned char *)&fiData, sizeof(struct statvfs));
-        
+
         //printf("Disk %s: \n", szRootDir);
         //printf("\tblock size: %lu\n", fiData.f_bsize);
         //printf("\ttotal no blocks: %i\n", fiData.f_blocks);
@@ -165,7 +165,7 @@ tABC_CC ABC_CryptoEncryptJSONString(const tABC_U08Buf Data,
 
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(Data, Key, cryptoType, &jsonRoot, pError));
     *pszEncDataJSON = json_dumps(jsonRoot, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-    
+
 exit:
     if (jsonRoot)     json_decref(jsonRoot);
 
@@ -196,7 +196,7 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_ASSERT(cryptoType < ABC_CryptoType_Count, ABC_CC_UnknownCryptoType, "Invalid encryption type");
     ABC_CHECK_NULL(ppJSON_Enc);
-    
+
     if ((cryptoType == ABC_CryptoType_AES256) || (cryptoType == ABC_CryptoType_AES256_Scrypt))
     {
         const tABC_U08Buf *pFinalKey = &Key;
@@ -221,7 +221,7 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
                                            pError));
             pFinalKey = &GenKey;
         }
-        
+
         // encrypt
         ABC_CHECK_RET(ABC_CryptoEncryptAES256Package(Data,
                                                      *pFinalKey,
@@ -236,7 +236,7 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
         ABC_CHECK_RET(ABC_CryptoBase64Encode(EncData, &szDataBase64, pError));
 
         // Encoding
-        jsonRoot = json_pack("{sissss}", 
+        jsonRoot = json_pack("{sissss}",
                             JSON_ENC_TYPE_FIELD, cryptoType,
                             JSON_ENC_IV_FIELD,   szIV_Hex,
                             JSON_ENC_DATA_FIELD, szDataBase64);
@@ -253,12 +253,12 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
             ABC_CHECK_RET(ABC_CryptoCreateJSONObjectSNRP(pSNRP, &jsonSNRP, pError));
             json_object_set(jsonRoot, JSON_ENC_SNRP_FIELD, jsonSNRP);
         }
-        
+
         // assign our final result
         *ppJSON_Enc = jsonRoot;
         json_incref(jsonRoot);  // because we will decl below
     }
-    else 
+    else
     {
         ABC_RET_ERROR(ABC_CC_InvalidCryptoType, "Unsupported encryption type");
     }
@@ -285,19 +285,19 @@ tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
                                   tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    
+
     char *szJSON = NULL;
-    
+
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(szFilename);
-    
+
     // create the encrypted string
     ABC_CHECK_RET(ABC_CryptoEncryptJSONString(Data, Key, cryptoType, &szJSON, pError));
-    
+
     // write the file
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
-    
+
 exit:
     if (szJSON) free(szJSON);
 
@@ -325,10 +325,10 @@ tABC_CC ABC_CryptoDecryptJSONString(const char        *szEncDataJSON,
 
     // decrypted the object data
     ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(root, Key, pData, pError));
-   
+
 exit:
     if (root) json_decref(root);
-    
+
     return cc;
 }
 
@@ -391,7 +391,7 @@ exit:
     ABC_BUF_FREE(GenKey);
     ABC_BUF_FREE(Salt);
     ABC_CryptoFreeSNRP(&pSNRP);
-    
+
     return cc;
 }
 
@@ -402,22 +402,22 @@ tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
                                   tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    
+
     char      *szJSON_Enc = NULL;
-    
+
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(pData);
-    
+
     // read the file
     ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON_Enc, pError));
-    
+
     // decrypted it
     ABC_CHECK_RET(ABC_CryptoDecryptJSONString(szJSON_Enc, Key, pData, pError));
-    
+
 exit:
     if (szJSON_Enc) free(szJSON_Enc);
-    
+
     return cc;
 }
 
@@ -431,7 +431,7 @@ exit:
     f bytes:    f random header bytes
     32 bytes:   32 bytes SHA256 of all data up to this point
 */
-static 
+static
 tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
                                        const tABC_U08Buf Key,
                                        tABC_U08Buf       *pEncData,
@@ -472,15 +472,15 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     // calculate the size of our unencrypted buffer
     unsigned long totalSizeUnencrypted = 0;
     totalSizeUnencrypted += 1; // header count
-    totalSizeUnencrypted += nRandomHeaderBytes; // header 
+    totalSizeUnencrypted += nRandomHeaderBytes; // header
     totalSizeUnencrypted += 4; // space to hold data size
     totalSizeUnencrypted += ABC_BUF_SIZE(Data); // data
     totalSizeUnencrypted += 1; // footer count
-    totalSizeUnencrypted += nRandomFooterBytes; // footer 
+    totalSizeUnencrypted += nRandomFooterBytes; // footer
     totalSizeUnencrypted += SHA_256_LENGTH; // sha256
     //printf("total size unencrypted: %lu\n", (unsigned long) totalSizeUnencrypted);
-    
-    // allocate the unencrypted buffer 
+
+    // allocate the unencrypted buffer
     ABC_BUF_NEW(UnencryptedData, totalSizeUnencrypted);
     unsigned char *pCurUnencryptedData = ABC_BUF_PTR(UnencryptedData);
 
@@ -536,7 +536,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
 
     //ABC_UtilHexDumpBuf("Encrypted data", *pEncData);
 
-    
+
 exit:
     ABC_BUF_FREE(RandCount);
     ABC_BUF_FREE(RandHeaderBytes);
@@ -556,7 +556,7 @@ exit:
     f bytes:    f random header bytes
     32 bytes:   32 bytes SHA256 of all data up to this point
 */
-static 
+static
 tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
                                        const tABC_U08Buf Key,
                                        const tABC_U08Buf IV,
@@ -625,7 +625,7 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     unsigned char *pFinalDataPos = ABC_BUF_PTR(Data) + 1 + headerLength + 4;
     ABC_BUF_NEW(*pData, dataSecLength);
     memcpy(ABC_BUF_PTR(*pData), pFinalDataPos, dataSecLength);
-    
+
 exit:
     ABC_BUF_FREE(Data);
 
@@ -633,7 +633,7 @@ exit:
 }
 
 // encrypts the given data with AES256
-static 
+static
 tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
                                 const tABC_U08Buf Key,
                                 const tABC_U08Buf IV,
@@ -679,16 +679,16 @@ tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
     int c_len = ABC_BUF_SIZE(Data) + AES_256_BLOCK_LENGTH;
     int f_len = 0;
     unsigned char *pTmpEncData = malloc(c_len);
-    
+
     // allows reusing of 'e' for multiple encryption cycles
     EVP_EncryptInit_ex(&e_ctx, NULL, NULL, NULL, NULL);
-    
+
     // update pTmpEncData, c_len is filled with the length of pTmpEncData generated, dataLength is the size of plaintext in bytes
     EVP_EncryptUpdate(&e_ctx, pTmpEncData, &c_len, ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data));
-    
+
     // update pTmpEncData with the final remaining bytes
     EVP_EncryptFinal_ex(&e_ctx, pTmpEncData + c_len, &f_len);
-    
+
     // set final values
     ABC_BUF_SET_PTR(*pEncData, pTmpEncData, c_len + f_len);
 
@@ -739,18 +739,18 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
     EVP_DecryptInit_ex(&d_ctx, EVP_aes_256_cbc(), NULL, aKey, aIV);
 
     /* because we have padding ON, we must allocate an extra cipher block size of memory */
-    int p_len = ABC_BUF_SIZE(EncData); 
+    int p_len = ABC_BUF_SIZE(EncData);
     int f_len = 0;
     unsigned char *pTmpData = malloc(p_len + AES_256_BLOCK_LENGTH);
-    
+
     // decrypt
     EVP_DecryptInit_ex(&d_ctx, NULL, NULL, NULL, NULL);
     EVP_DecryptUpdate(&d_ctx, pTmpData, &p_len, ABC_BUF_PTR(EncData), ABC_BUF_SIZE(EncData));
     EVP_DecryptFinal_ex(&d_ctx, pTmpData + p_len, &f_len);
-    
+
     // set final values
     ABC_BUF_SET_PTR(*pData, pTmpData, p_len + f_len);
-    
+
 exit:
 
     return cc;
@@ -770,7 +770,7 @@ tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
     int rc = RAND_bytes(ABC_BUF_PTR(*pData), length);
     //unsigned long err = ERR_get_error();
 
-    if (rc != 1) 
+    if (rc != 1)
     {
         ABC_BUF_FREE(*pData);
         ABC_RET_ERROR(ABC_CC_Error, "Random data generation failed");
@@ -840,7 +840,7 @@ exit:
 tABC_CC ABC_CryptoBase64Encode(const tABC_U08Buf Data,
                                char              **pszDataBase64,
                                tABC_Error        *pError)
-{ 
+{
     tABC_CC cc = ABC_CC_Ok;
     BIO *bio = NULL;
 
@@ -883,7 +883,7 @@ exit:
 tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
                                tABC_U08Buf  *pData,
                                tABC_Error   *pError)
-{ 
+{
     tABC_CC cc = ABC_CC_Ok;
     BIO *bio = NULL;
 
@@ -907,19 +907,19 @@ tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
         ABC_RET_ERROR(ABC_CC_SysError, "Base64 decode is incorrect");
     }
     ABC_BUF_SET_PTR(*pData, pTmpData, len);
-     
+
 exit:
     if (bio) BIO_free_all(bio);
     return cc;
 }
 
 // Calculates the length of a decoded base64 string
-static 
+static
 int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64)
 {
     int len = (int) strlen(szDataBase64);
     int padding = 0;
-     
+
     if (szDataBase64[len-1] == '=' && szDataBase64[len-2] == '=') //last two chars are =
     padding = 2;
     else if (szDataBase64[len-1] == '=') //last char is =
@@ -930,17 +930,17 @@ int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64)
 
 // generates a randome UUID (version 4)
 /*
-Version 4 UUIDs use a scheme relying only on random numbers. 
-This algorithm sets the version number (4 bits) as well as two reserved bits. 
-All other bits (the remaining 122 bits) are set using a random or pseudorandom data source. 
-Version 4 UUIDs have the form xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx where x is any hexadecimal 
+Version 4 UUIDs use a scheme relying only on random numbers.
+This algorithm sets the version number (4 bits) as well as two reserved bits.
+All other bits (the remaining 122 bits) are set using a random or pseudorandom data source.
+Version 4 UUIDs have the form xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx where x is any hexadecimal
 digit and y is one of 8, 9, A, or B (e.g., F47AC10B-58CC-4372-A567-0E02B2E3D479).
 */
 tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
                                 tABC_Error *pError)
-{ 
+{
     tABC_CC cc = ABC_CC_Ok;
-    
+
     unsigned char *pData = NULL;
 
     ABC_CHECK_NULL(pszUUID);
@@ -952,14 +952,14 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
     pData = ABC_BUF_PTR(Data);
 
     // put in the version
-    // To put in the version, take the 7th byte and perform an and operation using 0x0f, followed by an or operation with 0x40. 
+    // To put in the version, take the 7th byte and perform an and operation using 0x0f, followed by an or operation with 0x40.
     pData[6] = (pData[6] & 0xf) | 0x40;
 
-    // 9th byte significant nibble is one of 8, 9, A, or B 
+    // 9th byte significant nibble is one of 8, 9, A, or B
     pData[8] = (pData[8] | 0x80) & 0xbf;
 
     sprintf(szUUID, "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
-            pData[0], pData[1], pData[2], pData[3], pData[4], pData[5], pData[6], pData[7], 
+            pData[0], pData[1], pData[2], pData[3], pData[4], pData[5], pData[6], pData[7],
             pData[8], pData[9], pData[10], pData[11], pData[12], pData[13], pData[14], pData[15]);
 
     *pszUUID = szUUID;
@@ -974,7 +974,7 @@ exit:
 tABC_CC ABC_CryptoScryptS1(const tABC_U08Buf Data,
                            tABC_U08Buf       *pScryptData,
                            tABC_Error        *pError)
-{ 
+{
     tABC_CC cc = ABC_CC_Ok;
 
     ABC_CHECK_NULL_BUF(Data);
@@ -1001,7 +1001,7 @@ tABC_CC ABC_CryptoScryptSNRP(const tABC_U08Buf     Data,
                              const tABC_CryptoSNRP *pSNRP,
                              tABC_U08Buf           *pScryptData,
                              tABC_Error            *pError)
-{ 
+{
     tABC_CC cc = ABC_CC_Ok;
 
     ABC_CHECK_NULL(pSNRP);
@@ -1031,7 +1031,7 @@ tABC_CC ABC_CryptoScrypt(const tABC_U08Buf Data,
                          unsigned int      scryptDataLength,
                          tABC_U08Buf       *pScryptData,
                          tABC_Error        *pError)
-{ 
+{
     tABC_CC cc = ABC_CC_Ok;
 
     ABC_CHECK_NULL_BUF(Data);
@@ -1053,7 +1053,7 @@ exit:
 }
 
 // allocates an SNRP struct and fills it in with the info given to be used on the client side
-// Note: the Salt buffer is copied 
+// Note: the Salt buffer is copied
 tABC_CC ABC_CryptoCreateSNRPForClient(tABC_CryptoSNRP   **ppSNRP,
                                       tABC_Error        *pError)
 {
@@ -1079,7 +1079,7 @@ exit:
 }
 
 // allocates an SNRP struct and fills it in with the info given to be used on the server side
-// Note: the Salt buffer is copied 
+// Note: the Salt buffer is copied
 tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
                                       tABC_Error        *pError)
 {
@@ -1106,7 +1106,7 @@ exit:
 
 
 // allocates an SNRP struct and fills it in with the info given
-// Note: the Salt buffer is copied 
+// Note: the Salt buffer is copied
 tABC_CC ABC_CryptoCreateSNRP(const tABC_U08Buf Salt,
                              unsigned long     N,
                              unsigned long     r,
@@ -1137,7 +1137,7 @@ exit:
 tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
                                        json_t                 **ppJSON_SNRP,
                                        tABC_Error             *pError)
-{ 
+{
     tABC_CC cc = ABC_CC_Ok;
 
     char    *szSalt_Hex     = NULL;
@@ -1149,7 +1149,7 @@ tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
     ABC_CHECK_RET(ABC_CryptoHexEncode(pSNRP->Salt, &szSalt_Hex, pError));
 
     // create the jansson object
-    *ppJSON_SNRP = json_pack("{sssisisi}", 
+    *ppJSON_SNRP = json_pack("{sssisisi}",
                              JSON_ENC_SALT_FIELD, szSalt_Hex,
                              JSON_ENC_N_FIELD, SCRYPT_DEFAULT_CLIENT_N,
                              JSON_ENC_R_FIELD, SCRYPT_DEFAULT_CLIENT_R,
@@ -1165,7 +1165,7 @@ exit:
 tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
                                        tABC_CryptoSNRP   **ppSNRP,
                                        tABC_Error        *pError)
-{ 
+{
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_U08Buf Salt = ABC_BUF_NULL;

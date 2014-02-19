@@ -18,7 +18,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
     /**
      * AirBitz Core Condition Codes
      *
@@ -79,7 +79,7 @@ extern "C" {
      * AirBitz Request Types
      *
      * The requests results structure contains this
-     * identifier to indicate which request it is 
+     * identifier to indicate which request it is
      * associated with.
      *
      */
@@ -94,7 +94,7 @@ extern "C" {
         /** Create wallet request */
         ABC_RequestType_CreateWallet = 3
     } tABC_RequestType;
-    
+
     /**
      * AirBitz Core Error Structure
      *
@@ -116,7 +116,7 @@ extern "C" {
         /** Line number in the source file in which the error occurred */
         int  nSourceLine;
     } tABC_Error;
-    
+
     /**
      * AirBitz Core Asynchronous Structure
      *
@@ -128,11 +128,11 @@ extern "C" {
     {
         /** data pointer given by caller at init */
         void    *pData;
-        
+
         /** String containing a description of the event */
         char    szDescription[ABC_MAX_STRING_LENGTH + 1];
     } tABC_AsyncBitCoinInfo;
-    
+
     /**
      * AirBitz Core Request Results Structure
      *
@@ -147,14 +147,14 @@ extern "C" {
 
         /** data pointer given by caller at initial create call time */
         void                *pData;
-        
+
         /** true if successful */
         bool                bSuccess;
-        
+
         /** information the error if there was a failure */
         tABC_Error          errorInfo;
     } tABC_RequestResults;
-    
+
     /**
      * AirBitz Currency Structure
      *
@@ -165,17 +165,17 @@ extern "C" {
     {
         /** currency ISO 4217 code */
         char    *szCode;
-        
+
         /** currency ISO 4217 num */
         int     num;
-        
+
         /** currency description */
         char    *szDescription;
 
         /** currency countries */
         char    *szCountries;
     } tABC_Currency;
-    
+
     /**
      * AirBitz Asynchronous BitCoin event callback
      *
@@ -184,7 +184,7 @@ extern "C" {
      *
      */
     typedef void (*tABC_BitCoin_Event_Callback)(const tABC_AsyncBitCoinInfo *pInfo);
-    
+
     /**
      * AirBitz Request callback
      *
@@ -193,32 +193,32 @@ extern "C" {
      *
      */
     typedef void (*tABC_Request_Callback)(const tABC_RequestResults *pResults);
-    
-    
+
+
     tABC_CC ABC_Initialize(const char                   *szRootDir,
                            tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
                            void                         *pData,
                            const unsigned char          *pSeedData,
                            unsigned int                 seedLength,
                            tABC_Error                   *pError);
-    
+
     void ABC_Terminate();
-    
+
     tABC_CC ABC_ClearKeyCache(tABC_Error *pError);
-    
+
     tABC_CC ABC_SignIn(const char *szUserName,
                        const char *szPassword,
                        tABC_Request_Callback fRequestCallback,
                        void *pData,
                        tABC_Error *pError);
-    
+
     tABC_CC ABC_CreateAccount(const char *szUserName,
                               const char *szPassword,
                               const char *szPIN,
                               tABC_Request_Callback fRequestCallback,
                               void *pData,
                               tABC_Error *pError);
-    
+
     tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                             const char *szPassword,
                                             const char *szRecoveryQuestions,
@@ -226,7 +226,7 @@ extern "C" {
                                             tABC_Request_Callback fRequestCallback,
                                             void *pData,
                                             tABC_Error *pError);
-    
+
     tABC_CC ABC_CreateWallet(const char *szUserName,
                              const char *szPassword,
                              const char *szWalletName,
@@ -235,55 +235,55 @@ extern "C" {
                              tABC_Request_Callback fRequestCallback,
                              void *pData,
                              tABC_Error *pError);
-    
+
     tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
                               int *pCount,
                              tABC_Error *pError);
-    
+
     tABC_CC ABC_GetPIN(const char *szUserName,
                        const char *szPassword,
                        char **pszPIN,
                        tABC_Error *pError);
-    
+
     tABC_CC ABC_SetPIN(const char *szUserName,
                        const char *szPassword,
                        const char *szPIN,
                        tABC_Error *pError);
-    
+
     tABC_CC ABC_GetCategories(const char *szUserName,
                               char ***paszCategories,
                               unsigned int *pCount,
                               tABC_Error *pError);
-    
+
     tABC_CC ABC_AddCategory(const char *szUserName,
                             char *szCategory,
                             tABC_Error *pError);
-    
+
     tABC_CC ABC_RemoveCategory(const char *szUserName,
                                char *szCategory,
                                tABC_Error *pError);
-    
+
     tABC_CC ABC_RenameWallet(const char *szUserName,
                              const char *szPassword,
                              const char *szUUID,
                              const char *szNewWalletName,
                              tABC_Error *pError);
-    
+
     tABC_CC ABC_SetWalletAttributes(const char *szUserName,
                                     const char *szPassword,
                                     const char *szUUID,
                                     unsigned int attributes,
                                     tABC_Error *pError);
-    
+
     tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
                                      const char *szRecoveryAnswers,
                                      bool *pbValid,
                                      tABC_Error *pError);
-    
+
     // temp functions
     void tempEventA();
     void tempEventB();
-    
+
 #ifdef __cplusplus
 }
 #endif

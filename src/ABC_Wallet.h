@@ -15,7 +15,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+
     /**
      * AirBitz Core Create Wallet Structure
      *
@@ -27,19 +27,19 @@ extern "C" {
     {
         /** data pointer given by caller at initial create call time */
         void                    *pData;
-        
+
         const char              *szUserName;
         const char              *szPassword;
         const char              *szWalletName;
         int                     currencyNum;
         unsigned int            attributes;
         tABC_Request_Callback   fRequestCallback;
-        
+
         /** information the error if there was a failure */
         tABC_Error  errorInfo;
     } tABC_WalletCreateInfo;
-    
-    
+
+
     tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
                                       const char *szUserName,
                                       const char *szPassword,
@@ -49,26 +49,26 @@ extern "C" {
                                       tABC_Request_Callback fRequestCallback,
                                       void *pData,
                                       tABC_Error *pError);
-    
+
     void ABC_WalletCreateInfoFree(tABC_WalletCreateInfo *pWalletCreateInfo);
 
     void * ABC_WalletCreateThreaded(void *pData);
-    
+
     tABC_CC ABC_WalletClearCache(tABC_Error *pError);
-    
+
     tABC_CC ABC_WalletSetName(const char *szUserName,
                               const char *szPassword,
                               const char *szUUID,
                               const char *szName,
                               tABC_Error *pError);
-    
+
     tABC_CC ABC_WalletSetAttributes(const char *szUserName,
                                     const char *szPassword,
                                     const char *szUUID,
                                     unsigned int attributes,
                                     tABC_Error *pError);
-    
-    
+
+
 #ifdef __cplusplus
 }
 #endif

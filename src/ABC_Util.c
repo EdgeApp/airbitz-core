@@ -14,13 +14,13 @@
 #include "ABC_Util.h"
 #include "ABC_Crypto.h"
 
-void ABC_UtilHexDumpBuf(const char *szDescription, 
+void ABC_UtilHexDumpBuf(const char *szDescription,
                         tABC_U08Buf Buf)
 {
     ABC_UtilHexDump(szDescription, ABC_BUF_PTR(Buf), ABC_BUF_SIZE(Buf));
 }
 
-void ABC_UtilHexDump(const char *szDescription, 
+void ABC_UtilHexDump(const char *szDescription,
                      const unsigned char *pData,
                      unsigned int dataLength)
 {
@@ -69,7 +69,7 @@ void ABC_UtilHexDump(const char *szDescription,
 // creates the json package with a single field and its value
 tABC_CC ABC_UtilCreateValueJSONString(const char *szValue,
                                       const char *szFieldName,
-                                      char       **pszJSON, 
+                                      char       **pszJSON,
                                       tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -98,20 +98,20 @@ tABC_CC ABC_UtilCreateIntJSONString(int        value,
                                     tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    
+
     json_t *pJSON_Root = NULL;
-    
+
     ABC_CHECK_NULL(szFieldName);
     ABC_CHECK_NULL(pszJSON);
-    
+
     // create the jansson object
     pJSON_Root = json_pack("{si}", szFieldName, value);
-    
+
     *pszJSON = json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-    
+
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
-    
+
     return cc;
 }
 
@@ -122,18 +122,18 @@ tABC_CC ABC_UtilCreateArrayJSONString(char         **aszValues,
                                       tABC_Error   *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    
+
     json_t *jsonItems = NULL;
     json_t *jsonItemArray = NULL;
     char *szNewItems = NULL;
-    
+
     ABC_CHECK_NULL(szFieldName);
     ABC_CHECK_NULL(pszJSON);
-    
+
     // create the json object that will be our questions
     jsonItems = json_object();
     jsonItemArray = json_array();
-    
+
     // if there are values
     if ((count > 0) && (aszValues != NULL))
     {
@@ -142,17 +142,17 @@ tABC_CC ABC_UtilCreateArrayJSONString(char         **aszValues,
             json_array_append_new(jsonItemArray, json_string(aszValues[i]));
         }
     }
-    
+
     // set our final json for the array element
     json_object_set(jsonItems, szFieldName, jsonItemArray);
-    
+
     *pszJSON = json_dumps(jsonItems, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-    
+
 exit:
     if (jsonItems)      json_decref(jsonItems);
     if (jsonItemArray)  json_decref(jsonItemArray);
     if (szNewItems)     free(szNewItems);
-    
+
     return cc;
 }
 
@@ -164,29 +164,29 @@ tABC_CC ABC_UtilCreateHexDataJSONString(const tABC_U08Buf Data,
                                         tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    
+
     char   *szData_Hex = NULL;
-    
+
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL(szFieldName);
     ABC_CHECK_NULL(pszJSON);
-    
+
     // encode the Data into a Hex string
     ABC_CHECK_RET(ABC_CryptoHexEncode(Data, &szData_Hex, pError));
-    
+
     // create the json
     ABC_CHECK_RET(ABC_UtilCreateValueJSONString(szData_Hex, szFieldName, pszJSON, pError));
-    
+
 exit:
     if (szData_Hex) free(szData_Hex);
-    
+
     return cc;
 }
 
 
 // gets the specified field from a json string
 // the user is responsible for free'ing the value
-tABC_CC ABC_UtilGetStringValueFromJSONString(const char *szJSON, 
+tABC_CC ABC_UtilGetStringValueFromJSONString(const char *szJSON,
                                              const char *szFieldName,
                                              char       **pszValue,
                                              tABC_Error *pError)
@@ -224,28 +224,28 @@ tABC_CC ABC_UtilGetIntValueFromJSONString(const char *szJSON,
                                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    
+
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
-    
+
     ABC_CHECK_NULL(szJSON);
     ABC_CHECK_NULL(szFieldName);
     ABC_CHECK_NULL(pValue);
-    
+
     // decode the object
     json_error_t error;
     pJSON_Root = json_loads(szJSON, 0, &error);
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-    
+
     // get the field
     pJSON_Value = json_object_get(pJSON_Root, szFieldName);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON int value");
     *pValue = (int) json_integer_value(pJSON_Value);
-    
+
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
-    
+
     return cc;
 }
 
@@ -258,42 +258,42 @@ tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
                                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    
+
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
     char **pArrayStrings = NULL;
-    
+
     ABC_CHECK_NULL(szJSON);
     ABC_CHECK_NULL(szFieldName);
     ABC_CHECK_NULL(aszValues);
     *aszValues = NULL;
     ABC_CHECK_NULL(pCount);
     *pCount = 0;
-    
+
     // decode the object
     json_error_t error;
     pJSON_Root = json_loads(szJSON, 0, &error);
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-    
+
     // get the field
     pJSON_Value = json_object_get(pJSON_Root, szFieldName);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_array(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON array value");
-    
+
     // get the number of elements in the array
     *pCount = (int) json_array_size(pJSON_Value);
-    
+
     if (*pCount > 0)
     {
         pArrayStrings = calloc(1, sizeof(char *) * *pCount);
-        
+
         for (int i = 0; i < *pCount; i++)
         {
             json_t *pJSON_Elem = json_array_get(pJSON_Value, i);
             ABC_CHECK_ASSERT((pJSON_Elem && json_is_string(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON string value");
             pArrayStrings[i] = strdup(json_string_value(pJSON_Elem));
         }
-        
+
         *aszValues = pArrayStrings;
         pArrayStrings = NULL;
     }
@@ -302,11 +302,11 @@ tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
         *aszValues = NULL;
     }
 
-    
+
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
     if (pArrayStrings) free(pArrayStrings);
-    
+
     return cc;
 }
 

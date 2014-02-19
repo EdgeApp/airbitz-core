@@ -33,7 +33,7 @@ tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
     ABC_CHECK_NULL(szRootDir);
     strncpy(gszRootDir, szRootDir, ABC_MAX_STRING_LENGTH);
     gszRootDir[ABC_MAX_STRING_LENGTH] = '\0';
-    
+
 #if 0
     printf("Root dir: %s\n", gszRootDir);
 
@@ -57,7 +57,7 @@ tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
     }
     ABC_FileIOFreeFileList(pFileList, NULL);
 #endif
-    
+
 exit:
 
     return cc;
@@ -70,9 +70,9 @@ tABC_CC ABC_FileIOGetRootDir(const char **pszRootDir,
     tABC_CC cc = ABC_CC_Ok;
 
     ABC_CHECK_NULL(pszRootDir);
-    
+
     *pszRootDir = gszRootDir;
-    
+
 exit:
 
     return cc;
@@ -87,9 +87,9 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
 
     ABC_CHECK_NULL(ppFileList);
     ABC_CHECK_NULL(szDir);
-    
+
     tABC_FileIOList *pFileList = (tABC_FileIOList *) calloc(1, sizeof(tABC_FileIOList));
-    
+
     DIR *dir;
     struct dirent *ent;
     if ((dir = opendir(szDir)) != NULL)
@@ -104,9 +104,9 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
             {
                 pFileList->apFiles = (tABC_FileIOFileInfo **)malloc(sizeof(tABC_FileIOFileInfo *));
             }
-            
+
             pFileList->apFiles[pFileList->nCount] = (tABC_FileIOFileInfo *) calloc(1, sizeof(tABC_FileIOFileInfo));
-            
+
             pFileList->apFiles[pFileList->nCount]->szName = strdup(ent->d_name);
             if (ent->d_type == DT_UNKNOWN)
             {
@@ -120,7 +120,7 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
             {
                 pFileList->apFiles[pFileList->nCount]->type = ABC_FileIOFileType_Regular;
             }
-            
+
             pFileList->nCount++;
         }
         closedir (dir);
@@ -129,9 +129,9 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
     {
         ABC_RET_ERROR(ABC_CC_DirReadError, "Could not read directory");
     }
-    
+
     *ppFileList = pFileList;
-    
+
 exit:
 
     return cc;
@@ -144,7 +144,7 @@ tABC_CC ABC_FileIOFreeFileList(tABC_FileIOList *pFileList,
     tABC_CC cc = ABC_CC_Ok;
 
     ABC_CHECK_NULL(pFileList);
-    
+
     if (pFileList->apFiles)
     {
         for (int i = 0; i < pFileList->nCount; i++)
@@ -160,9 +160,9 @@ tABC_CC ABC_FileIOFreeFileList(tABC_FileIOList *pFileList,
         }
     }
 
-    
+
     free(pFileList);
-    
+
 exit:
 
     return cc;
@@ -172,7 +172,7 @@ exit:
 bool ABC_FileIOFileExist(const char *szFilename)
 {
     bool bExists = false;
-    
+
     if (szFilename != NULL)
     {
         if (access(szFilename, F_OK) != -1 )
@@ -180,7 +180,7 @@ bool ABC_FileIOFileExist(const char *szFilename)
             bExists = true;
         }
     }
-    
+
     return bExists;
 }
 
@@ -195,12 +195,12 @@ tABC_CC ABC_FileIOCreateDir(const char *szDir,
     mode_t process_mask = umask(0);
     int result_code = mkdir(szDir, S_IRWXU | S_IRWXG | S_IRWXO);
     umask(process_mask);
-    
+
     if (0 != result_code)
     {
         ABC_RET_ERROR(ABC_CC_DirReadError, "Could not create directory");
     }
-    
+
 exit:
 
     return cc;
@@ -230,7 +230,7 @@ tABC_CC ABC_FileIOWriteFile(const char *szFilename,
     {
         ABC_RET_ERROR(ABC_CC_FileWriteError, "Could not write to file");
     }
-    
+
 exit:
     if (fp) fclose(fp);
 
@@ -268,8 +268,8 @@ tABC_CC ABC_FileIOWriteFileStr(const char *szFilename,
     {
         ABC_RET_ERROR(ABC_CC_FileWriteError, "Could not write to file");
     }
-    
-    
+
+
 exit:
     if (fp) fclose(fp);
 
@@ -288,29 +288,29 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
 
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(pszData);
-    
+
     // open the file
     fp = fopen(szFilename, "rb");
     if (fp == NULL)
     {
         ABC_RET_ERROR(ABC_CC_FileOpenError, "Could not open file for reading");
     }
-    
+
     // get the length
     fseek(fp, 0, SEEK_END);
     long int size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
-    
+
     // create the memory
     *pszData = calloc(1, size + 1); // +1 for the '\0'
-    
+
     // write the data
     if (fread(*pszData, 1, size, fp) != size)
     {
         free(pszData);
         ABC_RET_ERROR(ABC_CC_FileReadError, "Could not read from file");
     }
-    
+
 exit:
     if (fp) fclose(fp);
 
@@ -326,18 +326,18 @@ tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
                                  tABC_Error  *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    
+
     char *szData_JSON = NULL;
     json_t *pJSON_Root = NULL;
-    
+
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(ppJSON_Data);
-    
+
     // if the file exists
     if (true == ABC_FileIOFileExist(szFilename))
     {
         ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szData_JSON, pError));
-        
+
         // decode the json
         json_error_t error;
         pJSON_Root = json_loads(szData_JSON, 0, &error);
@@ -353,20 +353,20 @@ tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
     {
         ABC_RET_ERROR(ABC_CC_FileDoesNotExist, "Could not find file");
     }
-    
+
     *ppJSON_Data = pJSON_Root;
     pJSON_Root = NULL; // so we don't decref it
-    
+
 exit:
     if (szData_JSON) free(szData_JSON);
     if (pJSON_Root) json_decref(pJSON_Root);
-    
+
     return cc;
 }
 
 
 // **************************************************************************************
-// FMEMOPEN - this is here because iOS does not have an fmemopen and some openssl 
+// FMEMOPEN - this is here because iOS does not have an fmemopen and some openssl
 //            functions need to use a FILE * so this is here to use memory for FILE *
 // **************************************************************************************
 
@@ -380,13 +380,13 @@ typedef struct fmem fmem_t;
 static int readfn(void *handler, char *buf, int size) {
   fmem_t *mem = handler;
   size_t available = mem->size - mem->pos;
-  
+
   if (size > available) {
     size = (int) available;
   }
   memcpy(buf, mem->buffer + mem->pos, sizeof(char) * size);
   mem->pos += size;
-  
+
   return size;
 }
 
@@ -422,13 +422,13 @@ static fpos_t seekfn(void *handler, fpos_t offset, int whence) {
   return (fpos_t)pos;
 }
 
-static int closefn(void *handler) 
+static int closefn(void *handler)
 {
   free(handler);
   return 0;
 }
 
-FILE *fmemopen(void *buf, size_t size, const char *mode) 
+FILE *fmemopen(void *buf, size_t size, const char *mode)
 {
   // This data is released on fclose.
   fmem_t* mem = (fmem_t *) malloc(sizeof(fmem_t));

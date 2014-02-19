@@ -20,7 +20,7 @@
 #include "ABC_Wallet.h"
 #include "ABC_Crypto.h"
 
-static tABC_Currency gaCurrencies[] = { 
+static tABC_Currency gaCurrencies[] = {
     { "AED", 784, "United Arab Emirates dirham", "United Arab Emirates" },
     { "AFN", 971, "Afghan afghani", "Afghanistan" },
     { "ALL",   8, "Albanian lek", "Albania" },
@@ -228,14 +228,14 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
                        tABC_Error                   *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_U08Buf Seed = ABC_BUF_NULL;
-    
+
     ABC_CHECK_NULL(szRootDir);
     ABC_CHECK_NULL(pSeedData);
-    
+
     // initialize curl
     CURLcode curlCode;
     if ((curlCode = curl_global_init(CURL_GLOBAL_ALL)) != 0)
@@ -246,16 +246,16 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
     gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
     pAsyncBitCoinCallerData = pData;
-    
+
     if (szRootDir)
     {
         ABC_CHECK_RET(ABC_FileIOSetRootDir(szRootDir, pError));
     }
 
-    
+
     ABC_BUF_DUP_PTR(Seed, pSeedData, seedLength);
     ABC_CHECK_RET(ABC_CryptoSetRandomSeed(Seed, pError));
-    
+
 exit:
     ABC_BUF_FREE(Seed);
 
@@ -272,7 +272,7 @@ exit:
 void ABC_Terminate()
 {
     ABC_ClearKeyCache(NULL);
-    
+
     // cleanup curl
     curl_global_cleanup();
 }
@@ -295,24 +295,24 @@ tABC_CC ABC_SignIn(const char *szUserName,
                    tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     tABC_CC cc = ABC_CC_Ok;
-    
+
     tABC_AccountSignInInfo *pAccountSignInInfo = NULL;
-    
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(fRequestCallback);
-    
+
     ABC_CHECK_RET(ABC_AccountSignInInfoAlloc(&pAccountSignInInfo,
                                              szUserName,
                                              szPassword,
                                              fRequestCallback,
                                              pData,
                                              pError));
-    
+
     pthread_t handle;
     if (!pthread_create(&handle, NULL, ABC_AccountSignInThreaded, pAccountSignInInfo))
     {
@@ -322,9 +322,9 @@ tABC_CC ABC_SignIn(const char *szUserName,
             //printf("Thread detached successfully !!!\n");
         }
     }
-    
+
 exit:
-    
+
     return cc;
 }
 
@@ -348,11 +348,11 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
                           tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     tABC_CC cc = ABC_CC_Ok;
-    
+
     tABC_AccountCreateInfo *pAccountCreateInfo = NULL;
-    
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -360,7 +360,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_NULL(szPIN);
     ABC_CHECK_ASSERT(strlen(szPIN) > 0, ABC_CC_Error, "No PIN provided");
     ABC_CHECK_NULL(fRequestCallback);
-    
+
     ABC_CHECK_RET(ABC_AccountCreateInfoAlloc(&pAccountCreateInfo,
                                              szUserName,
                                              szPassword,
@@ -368,7 +368,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
                                              fRequestCallback,
                                              pData,
                                              pError));
-    
+
     pthread_t handle;
     if (!pthread_create(&handle, NULL, ABC_AccountCreateThreaded, pAccountCreateInfo))
     {
@@ -378,7 +378,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
             //printf("Thread detached successfully !!!\n");
         }
     }
-    
+
 exit:
 
     return cc;
@@ -387,7 +387,7 @@ exit:
 /**
  * Set the recovery questions for an account
  *
- * This function kicks off a thread to set the recovery questions for an account. 
+ * This function kicks off a thread to set the recovery questions for an account.
  * The callback will be called when it has finished.
  *
  * @param szUserName                UserName of the account
@@ -407,11 +407,11 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                         tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     tABC_CC cc = ABC_CC_Ok;
-    
+
     tABC_AccountSetRecoveryInfo *pInfo = NULL;
-    
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -421,7 +421,7 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     ABC_CHECK_NULL(szRecoveryAnswers);
     ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error, "No recovery answers provided");
     ABC_CHECK_NULL(fRequestCallback);
-    
+
     ABC_CHECK_RET(ABC_AccountSetRecoveryInfoAlloc(&pInfo,
                                                   szUserName,
                                                   szPassword,
@@ -430,7 +430,7 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                                   fRequestCallback,
                                                   pData,
                                                   pError));
-    
+
     pthread_t handle;
     if (!pthread_create(&handle, NULL, ABC_AccountSetRecoveryThreaded, pInfo))
     {
@@ -440,12 +440,12 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
             //printf("Thread detached successfully !!!\n");
         }
     }
-    
+
 exit:
 
     return cc;
 }
-    
+
 
 /**
  * Create a new wallet.
@@ -471,11 +471,11 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                          tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_WalletCreateInfo *pWalletCreateInfo = NULL;
-    
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -483,7 +483,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_CHECK_NULL(szWalletName);
     ABC_CHECK_ASSERT(strlen(szWalletName) > 0, ABC_CC_Error, "No wallet name provided");
     ABC_CHECK_NULL(fRequestCallback);
-    
+
     ABC_CHECK_RET(ABC_WalletCreateInfoAlloc(&pWalletCreateInfo,
                                             szUserName,
                                             szPassword,
@@ -493,7 +493,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                                             fRequestCallback,
                                             pData,
                                             pError));
-    
+
     pthread_t handle;
     if (!pthread_create(&handle, NULL, ABC_WalletCreateThreaded, pWalletCreateInfo))
     {
@@ -503,9 +503,9 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
             //printf("Thread detached successfully !!!\n");
         }
     }
-    
+
 exit:
-    
+
     return cc;
 }
 
@@ -520,13 +520,13 @@ exit:
 tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     tABC_CC cc = ABC_CC_Ok;
 
     ABC_CHECK_RET(ABC_AccountClearKeyCache(pError));
-    
+
     ABC_CHECK_RET(ABC_WalletClearCache(pError));
-    
+
 exit:
 
     return cc;
@@ -547,17 +547,17 @@ tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
                           tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     tABC_CC cc = ABC_CC_Ok;
-    
+
     ABC_CHECK_NULL(paCurrencyArray);
     ABC_CHECK_NULL(pCount);
-    
+
     *paCurrencyArray = gaCurrencies;
     *pCount = CURRENCY_ARRAY_COUNT;
-    
+
 exit:
-    
+
     return cc;
 }
 
@@ -578,20 +578,20 @@ tABC_CC ABC_GetPIN(const char *szUserName,
                    tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     tABC_CC cc = ABC_CC_Ok;
-    
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(pszPIN);
-    
+
     tABC_U08Buf PIN;
     ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_PIN, &PIN, pError));
-    
+
     *pszPIN = strdup((char *)ABC_BUF_PTR(PIN));
-    
+
 exit:
-    
+
     return cc;
 }
 
@@ -611,17 +611,17 @@ tABC_CC ABC_SetPIN(const char *szUserName,
                    tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     tABC_CC cc = ABC_CC_Ok;
-    
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szPIN);
-    
+
     ABC_CHECK_RET(ABC_AccountSetPIN(szUserName, szPassword, szPIN, pError));
-    
+
 exit:
-    
+
     return cc;
 }
 
@@ -643,7 +643,7 @@ tABC_CC ABC_GetCategories(const char *szUserName,
                           tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     return ABC_AccountGetCategories(szUserName, paszCategories, pCount, pError);
 }
 
@@ -662,7 +662,7 @@ tABC_CC ABC_AddCategory(const char *szUserName,
                         tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     return ABC_AccountAddCategory(szUserName, szCategory, pError);
 }
 
@@ -682,7 +682,7 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
                            tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     return ABC_AccountRemoveCategory(szUserName, szCategory, pError);
 }
 
@@ -706,7 +706,7 @@ tABC_CC ABC_RenameWallet(const char *szUserName,
                          tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     return ABC_WalletSetName(szUserName, szPassword, szUUID, szNewWalletName, pError);
 }
 
@@ -730,7 +730,7 @@ tABC_CC ABC_SetWalletAttributes(const char *szUserName,
                                 tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     return ABC_WalletSetAttributes(szUserName, szPassword, szUUID, attributes, pError);
 }
 
@@ -752,7 +752,7 @@ tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
                                  tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
-    
+
     return ABC_AccountCheckRecoveryAnswers(szUserName, szRecoveryAnswers, pbValid, pError);
 }
 
