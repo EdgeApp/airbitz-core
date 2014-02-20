@@ -12,9 +12,14 @@ build_native() {
     install_dir=$build_dir/prefix/native/$1
     cross=""
 
+    export AR=ar
+    export CC=clang
+    export CXX="clang++"
+
     export CFLAGS="-g -I${install_dir}/include"
-    export CPPFLAGS="-g -I${install_dir}/include"
+    export CXXFLAGS="-g -I${install_dir}/include"
     export LDFLAGS="-L${install_dir}/lib"
+
     export PKG_CONFIG_PATH=$install_dir/lib/pkgconfig
 
     cd $work_dir
