@@ -1,0 +1,38 @@
+inherit common
+
+# Builds a library using the native tools
+build_native() {
+    # Put the source in the working directory:
+    work_dir=$work_dir/native
+    mkdir -p $work_dir
+    unpack
+
+    # Establish expected variables:
+    target=native
+    install_dir=$build_dir/prefix/native/$1
+    cross=""
+
+    export CFLAGS="-g -I${install_dir}/include"
+    export CPPFLAGS="-g -I${install_dir}/include"
+    export LDFLAGS="-L${install_dir}/lib"
+    export PKG_CONFIG_PATH=$install_dir/lib/pkgconfig
+
+    cd $work_dir
+    build
+}
+build_android_arm() {
+    build_android arm arm-linux-androideabi
+}
+build_android_x86() {
+    build_android x86 i686-linux-android
+}
+build_android_mips() {
+    build_android mips mipsel-linux-android
+}
+
+deps="download"
+for dep in $depends; do
+    deps="$deps $dep.build-native"
+done
+task build-native $deps
+default=build-native

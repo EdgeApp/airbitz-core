@@ -1,0 +1,17 @@
+import os ;
+local AR = [ os.environ AR ] ;
+local CXX = [ os.environ CXX ] ;
+local CFLAGS = [ os.environ CFLAGS ] ;
+
+using clang : env
+:
+$(CXX)
+:
+<archiver>$(AR)
+<compileflags>$(CFLAGS)
+<compileflags>-fvisibility=hidden
+<compileflags>-fvisibility-inlines-hidden
+<compileflags>-fdata-sections
+<cxxflags>-D_REENTRANT
+<cxxflags>-D_GLIBCXX__PTHREADS
+;

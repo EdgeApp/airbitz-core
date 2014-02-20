@@ -1,0 +1,3 @@
+inherit native
+inherit android
+inherit ios

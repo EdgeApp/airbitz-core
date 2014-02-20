@@ -1,7 +1,7 @@
 TARGET ?= native
-CFLAGS += -Wall -std=c99 -D_BSD_SOURCE -I./src/Scrypt
+CFLAGS += -Wall -std=c99 -D_BSD_SOURCE
 
-sources=$(wildcard src/*.c) $(wildcard src/Scrypt/*.c)
+sources=$(wildcard src/*.c)
 
 build/$(TARGET)/libabc.a: $(patsubst src/%.c,build/$(TARGET)/%.o,$(sources))
 	$(AR) rcs $@ $^

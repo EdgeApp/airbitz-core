@@ -1,0 +1,13 @@
+inherit lib
+
+source="http://zlib.net/zlib-1.2.8.tar.gz"
+
+build() {
+    cd zlib-1.2.8
+    CHOST=$cross ./configure --static --prefix=$install_dir
+    make
+    make install
+}
+
+include="include/zconf.h include/zlib.h"
+lib="lib/libz.a"

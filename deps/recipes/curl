@@ -1,0 +1,14 @@
+depends="openssl"
+inherit lib
+
+source="http://curl.haxx.se/download/curl-7.34.0.tar.gz"
+
+build() {
+    cd curl-7.34.0
+    ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
+    make
+    make install
+}
+
+include="include/curl/*"
+lib="lib/libcurl.a"
