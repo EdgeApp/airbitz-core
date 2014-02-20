@@ -18,6 +18,7 @@
 #include "ABC_FileIO.h"
 #include "ABC_Crypto.h"
 #include "ABC_URL.h"
+#include "ABC_Debug.h"
 
 #define ACCOUNT_MAX                     1024  // maximum number of accounts
 #define ACCOUNT_DIR                     "Accounts"

@@ -22,7 +22,23 @@ extern "C" {
 
     void ABC_URLTerminate();
 
-    tABC_CC ABC_URLRequest(const char *szURL, const char *szPostData, tABC_U08Buf *pData, tABC_Error *pError);
+    tABC_CC ABC_URLRequest(const char *szURL,
+                           tABC_U08Buf *pData,
+                           tABC_Error *pError);
+
+    tABC_CC ABC_URLRequestString(const char *szURL,
+                                 char **pszResults,
+                                 tABC_Error *pError);
+
+    tABC_CC ABC_URLPost(const char *szURL,
+                        const char *szPostData,
+                        tABC_U08Buf *pData,
+                        tABC_Error *pError);
+
+    tABC_CC ABC_URLPostString(const char *szURL,
+                              const char *szPostData,
+                              char **pszResults,
+                              tABC_Error *pError);
 
 
 #ifdef __cplusplus

@@ -20,20 +20,11 @@
 
 static bool gbInitialized = false;
 
-static int test(); // temp
-static size_t curl_write_data(void *buffer, size_t size, size_t nmemb, void *userp); // temp
+static size_t ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 
-// temp
-typedef struct sCurlBuffer
-{
-    unsigned char *pBuf;
-    unsigned int curSize;
-    unsigned int curUsed;
-} tCurlBuffer;
-
-
-
-// initialize the URL system
+/**
+ * Initialize the URL system
+ */
 tABC_CC ABC_URLInitialize(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -56,7 +47,9 @@ exit:
     return cc;
 }
 
-// shut down the URL system
+/**
+ * Shut down the URL system
+ */
 void ABC_URLTerminate()
 {
     if (gbInitialized == true)
@@ -68,123 +61,232 @@ void ABC_URLTerminate()
     }
 }
 
-// makes a URL request with the given arguments
-// Data is returned in pData, caller is responsible for free'ing
-tABC_CC ABC_URLRequest(const char *szURL, const char *szPostData, tABC_U08Buf *pData, tABC_Error *pError)
+/**
+ * Makes a URL request. 
+ * @param szURL         The request URL.
+ * @param pData         The location to store the results. The caller is responsible for free'ing this.
+ */
+tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The URL system has not been initalized");
+    tABC_U08Buf Data = ABC_BUF_NULL;
+    CURL *pCurlHandle = NULL;
 
-    // TODO: write the real request here
-    
-    test(); // temp
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The URL system has not been initalized");
+    ABC_CHECK_NULL(szURL);
+    ABC_CHECK_NULL(pData);
+
+    // start with no data
+    ABC_BUF_CLEAR(*pData);
+
+    CURLcode curlCode = 0;
+    pCurlHandle = curl_easy_init();
+
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, szURL)) != 0)
+    {
+        ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
+        ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
+    }
+
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, ABC_URLCurlWriteData)) != 0)
+    {
+        ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
+        ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
+    }
+
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &Data)) != 0)
+    {
+        ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
+        ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
+    }
+
+    if ((curlCode = curl_easy_perform(pCurlHandle)) != 0)
+    {
+        ABC_DebugLog("Curl easy perform failed: %d\n", curlCode);
+        ABC_RET_ERROR(ABC_CC_URLError, "Curl easy perform failed");
+    }
+
+    // store the data in the user's buffer
+    ABC_BUF_SET(*pData, Data);
+    ABC_BUF_CLEAR(Data);
 
 exit:
+    ABC_BUF_FREE(Data);
+    curl_easy_cleanup(pCurlHandle);
     
     return cc;
 }
 
-// temp
-static int test()
+/**
+ * Makes a URL request and returns results in a string.
+ * @param szURL         The request URL.
+ * @param pszResults    The location to store the allocated string with results. 
+ *                      The caller is responsible for free'ing this.
+ */
+tABC_CC ABC_URLRequestString(const char *szURL,
+                             char **pszResults,
+                             tABC_Error *pError)
 {
-    //char *szWebPage = "http://www.guimp.com/";
-    //char *szWebPage = "http://www.joypiter.com/";
-    char *szWebPage = "http://httpbin.org/post";
-    //char *szWebPage = "https://www.google.com";
-    tCurlBuffer curlBuffer;
-    memset(&curlBuffer, 0, sizeof(tCurlBuffer));
-    CURLcode curlCode;
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    CURL *pCurlHandle = curl_easy_init();
-    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, szWebPage)) != 0)
+    tABC_U08Buf Data;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The URL system has not been initalized");
+    ABC_CHECK_NULL(szURL);
+    ABC_CHECK_NULL(pszResults);
+
+    // make the request
+    ABC_CHECK_RET(ABC_URLRequest(szURL, &Data, pError));
+
+    // add the null
+    ABC_BUF_APPEND_PTR(Data, "", 1);
+
+    // assign the results
+    *pszResults = (char *)ABC_BUF_PTR(Data);
+    ABC_BUF_CLEAR(Data);
+
+exit:
+    ABC_BUF_FREE(Data);
+
+    return cc;
+}
+
+/**
+ * Makes a URL post request.
+ * @param szURL         The request URL.
+ * @param szPostData    The data to be posted in the request
+ * @param pData         The location to store the results. The caller is responsible for free'ing this.
+ */
+tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pData, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_U08Buf Data = ABC_BUF_NULL;
+    CURL *pCurlHandle = NULL;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The URL system has not been initalized");
+    ABC_CHECK_NULL(szURL);
+    ABC_CHECK_NULL(szPostData);
+    ABC_CHECK_NULL(pData);
+
+    // start with no data
+    ABC_BUF_CLEAR(*pData);
+
+    CURLcode curlCode = 0;
+    pCurlHandle = curl_easy_init();
+    
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, szURL)) != 0)
     {
-        fprintf(stderr, "curl easy setopt failed: %d\n", curlCode);
-        return -1;
+        ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
+        ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
-    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, curl_write_data)) != 0)
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, ABC_URLCurlWriteData)) != 0)
     {
-        fprintf(stderr, "curl easy setopt failed: %d\n", curlCode);
-        return -1;
+        ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
+        ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
-
-    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &curlBuffer)) != 0)
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &Data)) != 0)
     {
-        fprintf(stderr, "curl easy setopt failed: %d\n", curlCode);
-        return -1;
+        ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
+        ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
-#if 1
-    //char szDataPost[1024];
-    //sprintf(szDataPost, "data1={ \"name\" : \"test_name\" }&password=test_password");
-    char *szDataPost="data1={\n \"name\" : \"test_name\"\n }&password=test_password";
-    printf("posting: %s\n", szDataPost);
-    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_POSTFIELDS, szDataPost)) != 0)
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_POSTFIELDS, szPostData)) != 0)
     {
-        fprintf(stderr, "curl easy setopt failed: %d\n", curlCode);
-        return -1;
+        ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
+        ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
-#endif
 
     if ((curlCode = curl_easy_perform(pCurlHandle)) != 0)
     {
-        fprintf(stderr, "curl easy perform failed: %d\n", curlCode);
-        return -1;
+        ABC_DebugLog("Curl easy perform failed: %d\n", curlCode);
+        ABC_RET_ERROR(ABC_CC_URLError, "Curl easy perform failed");
     }
 
+    // store the data in the user's buffer
+    ABC_BUF_SET(*pData, Data);
+    ABC_BUF_CLEAR(Data);
+
+exit:
+    ABC_BUF_FREE(Data);
     curl_easy_cleanup(pCurlHandle);
-
-    if ((curlBuffer.curUsed) && (curlBuffer.pBuf))
-    {
-        //hexDump("Curl data final", curlBuffer.pBuf, curlBuffer.curUsed);
-        //printf("CurSize: %d, CurUsed: %d\n", curlBuffer.curSize, curlBuffer.curUsed);
-        // add a null
-        curlBuffer.pBuf = realloc(curlBuffer.pBuf, curlBuffer.curUsed + 1);
-        curlBuffer.curSize++;
-        unsigned char *pLastByte = (curlBuffer.pBuf + curlBuffer.curSize) - 1;
-        *pLastByte = 0;
-        curlBuffer.curUsed++;
-        //hexDump("Curl data final", curlBuffer.pBuf, curlBuffer.curUsed);
-
-        // print what we go
-        printf("Curl results:\n%s\n", curlBuffer.pBuf);
-    }
-
-    return 0;
+    
+    return cc;
 }
 
-// temp
-static size_t curl_write_data(void *buffer, size_t size, size_t nmemb, void *userp)
+/**
+ * Makes a URL post request and returns results in a string.
+ * @param szURL         The request URL.
+ * @param szPostData    The data to be posted in the request
+ * @param pszResults    The location to store the allocated string with results.
+ *                      The caller is responsible for free'ing this.
+ */
+tABC_CC ABC_URLPostString(const char *szURL,
+                          const char *szPostData,
+                          char **pszResults,
+                          tABC_Error *pError)
 {
-    tCurlBuffer *pCurlBuffer = (tCurlBuffer *)userp;
-    unsigned int dataAvailLength = (unsigned int) nmemb * (unsigned int) size;
-    size_t amountWritten = 0;
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    //hexDump("Curl data", buffer, size * nmemb);
+    tABC_U08Buf Data;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The URL system has not been initalized");
+    ABC_CHECK_NULL(szURL);
+    ABC_CHECK_NULL(szPostData);
+    ABC_CHECK_NULL(pszResults);
+
+    // make the request
+    ABC_CHECK_RET(ABC_URLPost(szURL, szPostData, &Data, pError));
+
+    // add the null
+    ABC_BUF_APPEND_PTR(Data, "", 1);
+
+    // assign the results
+    *pszResults = (char *)ABC_BUF_PTR(Data);
+    ABC_BUF_CLEAR(Data);
+
+exit:
+    ABC_BUF_FREE(Data);
+    
+    return cc;
+}
+
+
+/**
+ * This is the function that gets called by CURL when it has data to be saved from a request.
+ * @param pBuffer Pointer to incoming data
+ * @param memberSize Size of the members
+ * @param numMembers Number of members in the buffer
+ * @param pUserData  User data specified initial calls
+ */
+static
+size_t ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData)
+{
+    tABC_U08Buf *pCurlBuffer = (tABC_U08Buf *)pUserData;
+    unsigned int dataAvailLength = (unsigned int) numMembers * (unsigned int) memberSize;
+    size_t amountWritten = 0;
 
     if (pCurlBuffer)
     {
-        unsigned int spaceNeeded = dataAvailLength - (pCurlBuffer->curSize - pCurlBuffer->curUsed);
-        //printf("spaceNeeded: %u\n", spaceNeeded);
-        if (pCurlBuffer->pBuf)
+        // if we don't have any buffer allocated yet
+        if (ABC_BUF_PTR(*pCurlBuffer) == NULL)
         {
-            pCurlBuffer->pBuf = realloc(pCurlBuffer->pBuf, pCurlBuffer->curSize + spaceNeeded);
-            pCurlBuffer->curSize += spaceNeeded;
+            ABC_BUF_DUP_PTR(*pCurlBuffer, pBuffer, dataAvailLength);
         }
         else
         {
-            pCurlBuffer->curSize = spaceNeeded;
-            pCurlBuffer->pBuf = malloc(pCurlBuffer->curSize);
-            pCurlBuffer->curUsed = 0;
+            ABC_BUF_APPEND_PTR(*pCurlBuffer, pBuffer, dataAvailLength);
         }
-
-        memcpy(pCurlBuffer->pBuf + pCurlBuffer->curUsed, buffer, dataAvailLength);
-        pCurlBuffer->curUsed += dataAvailLength;
         amountWritten = dataAvailLength;
     }
 
     return amountWritten;
 }
+
