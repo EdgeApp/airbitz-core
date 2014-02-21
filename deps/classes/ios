@@ -70,10 +70,8 @@ ios_universal() {
     # Expand wildcards:
     libs=$(cd $build_dir/prefix/ios/armv7; echo $lib)
     for l in $libs; do
+        in_libs=$(echo $build_dir/prefix/ios/*/$l)
         out_name=$work_dir/ios-universal/$l
-        in_libs=$(for arch in $arches; do
-            echo $build_dir/prefix/ios/$arch/$l
-        done)
         mkdir -p $(dirname $out_name)
         echo "lipo -create $in_libs -output $out_name"
         lipo -create $in_libs -output $out_name
