@@ -85,6 +85,12 @@ extern "C" {
     void ABC_WalletFreeInfoArray(tABC_WalletInfo **aWalletInfo,
                                  unsigned int nCount);
 
+    tABC_CC ABC_WalletSetOrder(const char *szUserName,
+                               const char *szPassword,
+                               char **aszUUIDArray,
+                               unsigned int countUUIDs,
+                               tABC_Error *pError);
+
 
 #ifdef __cplusplus
 }

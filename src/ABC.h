@@ -76,7 +76,9 @@ extern "C" {
         /** No required initialization made  */
         ABC_CC_NotInitialized = 22,
         /** Initialization after already initializing  */
-        ABC_CC_Reinitialization = 23
+        ABC_CC_Reinitialization = 23,
+        /** Server error  */
+        ABC_CC_ServerError = 24
     } tABC_CC;
 
     /**
@@ -321,6 +323,12 @@ extern "C" {
 
     void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
                                  unsigned int nCount);
+
+    tABC_CC ABC_SetWalletOrder(const char *szUserName,
+                               const char *szPassword,
+                               char **aszUUIDArray,
+                               unsigned int countUUIDs,
+                               tABC_Error *pError);
 
     // temp functions
     void tempEventA();

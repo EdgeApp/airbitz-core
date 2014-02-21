@@ -156,6 +156,7 @@ exit:
 
 /**
  * Makes a URL post request.
+ * Note that the content type on the post will be set to "Content-Type: application/json"
  * @param szURL         The request URL.
  * @param szPostData    The data to be posted in the request
  * @param pData         The location to store the results. The caller is responsible for free'ing this.
@@ -167,6 +168,7 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
 
     tABC_U08Buf Data = ABC_BUF_NULL;
     CURL *pCurlHandle = NULL;
+    struct curl_slist *slist = NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The URL system has not been initalized");
     ABC_CHECK_NULL(szURL);
@@ -178,31 +180,44 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
 
     CURLcode curlCode = 0;
     pCurlHandle = curl_easy_init();
-    
+
+    // set the URL
     if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, szURL)) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
+    // set the callback function for data that comes back
     if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, ABC_URLCurlWriteData)) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
+    // set the user data pointer that will be in the callback function
     if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &Data)) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
+    // set the post data
     if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_POSTFIELDS, szPostData)) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
+    // set the content type
+    slist = curl_slist_append(slist, "Content-Type: application/json");
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_HTTPHEADER, slist)) != 0)
+    {
+        ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
+        ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
+    }
+
+    // execute the command
     if ((curlCode = curl_easy_perform(pCurlHandle)) != 0)
     {
         ABC_DebugLog("Curl easy perform failed: %d\n", curlCode);
@@ -216,6 +231,7 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
 exit:
     ABC_BUF_FREE(Data);
     curl_easy_cleanup(pCurlHandle);
+    curl_slist_free_all(slist);
     
     return cc;
 }

@@ -19,6 +19,7 @@
 #include "ABC_Crypto.h"
 #include "ABC_URL.h"
 #include "ABC_Debug.h"
+#include "ABC_ServerDefs.h"
 
 #define ACCOUNT_MAX                     1024  // maximum number of accounts
 #define ACCOUNT_DIR                     "Accounts"
@@ -42,6 +43,7 @@
 #define JSON_ACCT_L1_FIELD              "L1"
 #define JSON_ACCT_P1_FIELD              "P1"
 #define JSON_ACCT_LRA1_FIELD            "LRA1"
+
 
 // holds keys for a given account
 typedef struct sAccountKeys
@@ -74,6 +76,7 @@ static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
 static tABC_CC ABC_AccountSignIn(tABC_AccountSignInInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountCreate(tABC_AccountCreateInfo *pInfo, tABC_Error *pError);
+static tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pError);
 static tABC_CC ABC_AccountSetRecovery(tABC_AccountSetRecoveryInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
 static tABC_CC ABC_AccountGetCarePackageObjects(int AccountNum, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
@@ -411,8 +414,6 @@ tABC_CC ABC_AccountCreate(tABC_AccountCreateInfo *pInfo,
     json_t          *pJSON_SNRP2        = NULL;
     json_t          *pJSON_SNRP3        = NULL;
     json_t          *pJSON_SNRP4        = NULL;
-    char            *szL1_JSON          = NULL;
-    char            *szP1_JSON          = NULL;
     char            *szCarePackage_JSON = NULL;
     char            *szEPIN_JSON        = NULL;
     char            *szJSON             = NULL;
@@ -451,7 +452,7 @@ tABC_CC ABC_AccountCreate(tABC_AccountCreateInfo *pInfo,
 
     // L1 = Scrypt(L, SNRP1)
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP1, &(pKeys->L1), pError));
-    ABC_CHECK_RET(ABC_UtilCreateHexDataJSONString(pKeys->L1, JSON_ACCT_L1_FIELD, &szL1_JSON, pError));
+    //ABC_UtilHexDumpBuf("L1", pKeys->L1);
 
     // P = password
     ABC_BUF_DUP_PTR(pKeys->P, pKeys->szPassword, strlen(pKeys->szPassword));
@@ -459,16 +460,16 @@ tABC_CC ABC_AccountCreate(tABC_AccountCreateInfo *pInfo,
 
     // P1 = Scrypt(P, SNRP1)
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->P, pKeys->pSNRP1, &(pKeys->P1), pError));
-    ABC_CHECK_RET(ABC_UtilCreateHexDataJSONString(pKeys->P1, JSON_ACCT_P1_FIELD, &szP1_JSON, pError));
+    //ABC_UtilHexDumpBuf("P1", pKeys->P1);
 
     // CarePackage = ERQ, SNRP2, SNRP3, SNRP4
     ABC_CHECK_RET(ABC_AccountCreateCarePackageJSONString(NULL, pJSON_SNRP2, pJSON_SNRP3, pJSON_SNRP4, &szCarePackage_JSON, pError));
 
     // TODO: create RepoAcctKey and ERepoAcctKey
 
-    // TODO: check with the server that the account name is available while also sending the data it will need
-    // Client sends L1, P1, RepoAcctKey and ERepoAcctKey to the server
-    // szL1_JSON, szP1_JSON
+    // check with the server that the account name is available while also sending the data it will need
+    // TODO: need to add ERepoAcctKey to the server
+    ABC_CHECK_RET(ABC_AccountServerCreate(pKeys->L1, pKeys->P1, pError));
 
     // create client side data
 
@@ -520,6 +521,8 @@ tABC_CC ABC_AccountCreate(tABC_AccountCreateInfo *pInfo,
     ABC_CHECK_RET(ABC_AccountAddToKeyCache(pKeys, pError));
     pKeys = NULL; // so we don't free what we just added to the cache
 
+    // TODO: take this opportunity to download the questions they can choose from for recovery
+
 exit:
     if (pKeys)
     {
@@ -529,14 +532,100 @@ exit:
     if (pJSON_SNRP2)        json_decref(pJSON_SNRP2);
     if (pJSON_SNRP3)        json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)        json_decref(pJSON_SNRP4);
-    if (szL1_JSON)          free(szL1_JSON);
-    if (szP1_JSON)          free(szP1_JSON);
     if (szCarePackage_JSON) free(szCarePackage_JSON);
     if (szEPIN_JSON)        free(szEPIN_JSON);
     if (szJSON)             free(szJSON);
     if (szAccountDir)       free(szAccountDir);
     if (szFilename)         free(szFilename);
 
+
+    return cc;
+}
+
+/**
+ * Creates an account on the server.
+ *
+ * This function sends information to the server to create an account.
+ * If the account was created, ABC_CC_Ok is returned.
+ * If the account already exists, ABC_CC_AccountAlreadyExists is returned.
+ *
+ * @param L1   Login hash for the account
+ * @param P1   Password hash for the account
+ */
+static
+tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szURL     = NULL;
+    char *szResults = NULL;
+    char *szPost    = NULL;
+    char *szL1_Base64 = NULL;
+    char *szP1_Base64 = NULL;
+    json_t *pJSON_Root = NULL;
+
+    ABC_CHECK_NULL_BUF(L1);
+    ABC_CHECK_NULL_BUF(P1);
+
+
+    // create the URL
+    szURL = malloc(ABC_URL_MAX_PATH_LENGTH);
+    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_ACCOUNT_CREATE_PATH);
+
+    // create base64 versions of L1 and P1
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(P1, &szP1_Base64, pError));
+
+    // create the post data
+    pJSON_Root = json_pack("{ssss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64, ABC_SERVER_JSON_P1_FIELD, szP1_Base64);
+    szPost = json_dumps(pJSON_Root, JSON_COMPACT);
+    json_decref(pJSON_Root);
+    pJSON_Root = NULL;
+    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+
+    // send the command
+    //ABC_CHECK_RET(ABC_URLPostString("http://httpbin.org/post", szPost, &szResults, pError));
+    //ABC_DebugLog("Results: %s", szResults);
+    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %s", szResults);
+
+    // decode the result
+    json_t *pJSON_Value = NULL;
+    json_error_t error;
+    pJSON_Root = json_loads(szResults, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    // get the status code
+    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
+    int statusCode = (int) json_integer_value(pJSON_Value);
+
+    // if there was a failure
+    if (ABC_Server_Code_Success != statusCode)
+    {
+        if (ABC_Server_Code_AccountExists == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists");
+        }
+        else
+        {
+            // get the message
+            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
+            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
+            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
+        }
+    }
+
+exit:
+    if (szURL)          free(szURL);
+    if (szResults)      free(szResults);
+    if (szPost)         free(szPost);
+    if (szL1_Base64)    free(szL1_Base64);
+    if (szP1_Base64)    free(szP1_Base64);
+    if (pJSON_Root)     json_decref(pJSON_Root);
+    
     return cc;
 }
 

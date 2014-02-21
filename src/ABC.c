@@ -929,6 +929,38 @@ void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
     ABC_WalletFreeInfoArray(aWalletInfo, nCount);
 }
 
+/**
+ * Set the wallet order for a specified account.
+ *
+ * This function sets the order of the wallets for an account to the order in the given 
+ * array.
+ *
+ * @param szUserName            UserName for the account associated with this wallet
+ * @param szPassword            Password for the account associated with this wallet
+ * @param aszUUIDArray          Array of UUID strings
+ * @param countUUIDs            Number of UUID's in aszUUIDArray
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_SetWalletOrder(const char *szUserName,
+                           const char *szPassword,
+                           char **aszUUIDArray,
+                           unsigned int countUUIDs,
+                           tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_WalletSetOrder(szUserName, szPassword, aszUUIDArray, countUUIDs, pError));
+
+exit:
+
+    return cc;
+}
+
 void tempEventA()
 {
     if (gfAsyncBitCoinEventCallback)

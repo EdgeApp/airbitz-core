@@ -115,7 +115,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_UtilCreateArrayJSONString(char         **aszValues,
+tABC_CC ABC_UtilCreateArrayJSONString(char   **aszValues,
                                       unsigned int count,
                                       const char   *szFieldName,
                                       char         **pszJSON,

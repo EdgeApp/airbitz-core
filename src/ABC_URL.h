@@ -13,6 +13,7 @@
 #include "ABC.h"
 #include "ABC_Util.h"
 
+#define ABC_URL_MAX_PATH_LENGTH 2048
 
 #ifdef __cplusplus
 extern "C" {

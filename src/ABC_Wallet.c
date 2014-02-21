@@ -962,3 +962,96 @@ void ABC_WalletFreeInfoArray(tABC_WalletInfo **aWalletInfo,
         free(aWalletInfo);
     }
 }
+
+/**
+ * Set the wallet order for a specified account.
+ *
+ * This function sets the order of the wallets for an account to the order in the given
+ * array.
+ *
+ * @param szUserName            UserName for the account associated with this wallet
+ * @param szPassword            Password for the account associated with this wallet
+ * @param aszUUIDArray          Array of UUID strings
+ * @param countUUIDs            Number of UUID's in aszUUIDArray
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_WalletSetOrder(const char *szUserName,
+                           const char *szPassword,
+                           char **aszUUIDArray,
+                           unsigned int countUUIDs,
+                           tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szAccountSyncDir = NULL;
+    char *szFilename = NULL;
+    char *szJSON = NULL;
+    char **aszCurUUIDs = NULL;
+    unsigned int nCurUUIDs = -1;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(aszUUIDArray);
+
+    // check the credentials
+    ABC_CHECK_RET(ABC_CheckCredentials(szUserName, szPassword, pError));
+
+    // get the local directory for this account
+    ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+
+    // load wallet the account Wallets.json
+    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szAccountSyncDir, WALLET_ACCOUNTS_WALLETS_FILENAME);
+    if (ABC_FileIOFileExist(szFilename))
+    {
+        ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON, pError));
+        ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString(szJSON, JSON_WALLET_WALLETS_FIELD, &aszCurUUIDs, &nCurUUIDs, pError));
+        free(szJSON);
+        szJSON = NULL;
+    }
+    else
+    {
+        ABC_RET_ERROR(ABC_CC_Error, "No wallets");
+    }
+
+    // make sure the count matches
+    ABC_CHECK_ASSERT(nCurUUIDs == countUUIDs, ABC_CC_Error, "Number of wallets does not match");
+
+    // make sure all of the UUIDs in the current wallet are in the new list
+    for (int nCur = 0; nCur < nCurUUIDs; nCur++)
+    {
+        char *szCurUUID = aszCurUUIDs[nCur];
+
+        // look through the ones given for this one
+        int nNew;
+        for (nNew = 0; nNew < countUUIDs; nNew++)
+        {
+            // found it
+            if (0 == strcmp(szCurUUID, aszUUIDArray[nNew]))
+            {
+                break;
+            }
+        }
+
+        // if we didn't find it
+        if (nNew >= countUUIDs)
+        {
+            ABC_RET_ERROR(ABC_CC_Error, "Wallet missing from new list");
+        }
+    }
+
+    // create JSON for new order
+    ABC_CHECK_RET(ABC_UtilCreateArrayJSONString(aszUUIDArray, countUUIDs, JSON_WALLET_WALLETS_FIELD, &szJSON, pError));
+
+    // write out the new json
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
+
+exit:
+    if (szAccountSyncDir)   free(szAccountSyncDir);
+    if (szFilename)         free(szFilename);
+    if (szJSON)             free(szJSON);
+    ABC_UtilFreeStringArray(aszCurUUIDs, nCurUUIDs);
+
+    return cc;
+}
