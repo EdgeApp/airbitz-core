@@ -462,6 +462,7 @@ exit:
  * Create a new wallet.
  *
  * This function kicks off a thread to create a new wallet. The callback will be called when it has finished.
+ * The UUID of the new wallet will be provided in the callback pRetData as a (char *).
  *
  * @param szUserName                UserName for the account
  * @param szPassword                Password for the account
@@ -831,6 +832,101 @@ tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
 exit:
 
     return cc;
+}
+
+/**
+ * Gets information on the given wallet.
+ *
+ * This function allocates and fills in a wallet info structure with the information
+ * associated with the given wallet UUID
+ *
+ * @param szUserName            UserName for the account associated with this wallet
+ * @param szPassword            Password for the account associated with this wallet
+ * @param szUUID                UUID of the wallet
+ * @param ppWalletInfo          Pointer to store the pointer of the allocated wallet info struct
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_GetWalletInfo(const char *szUserName,
+                          const char *szPassword,
+                          const char *szUUID,
+                          tABC_WalletInfo **ppWalletInfo,
+                          tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_WalletGetInfo(szUserName, szPassword, szUUID, ppWalletInfo, pError));
+
+exit:
+
+    return cc;
+}
+
+/**
+ * Free the wallet info.
+ *
+ * This function frees the wallet info struct returned from ABC_GetWalletInfo.
+ *
+ * @param pWalletInfo   Wallet info to be free'd
+ */
+void ABC_FreeWalletInfo(tABC_WalletInfo *pWalletInfo)
+
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    ABC_WalletFreeInfo(pWalletInfo);
+}
+
+/**
+ * Gets wallets for a specified account.
+ *
+ * This function allocates and fills in an array of wallet info structures with the information
+ * associated with the wallets of the given user
+ *
+ * @param szUserName            UserName for the account associated with this wallet
+ * @param szPassword            Password for the account associated with this wallet
+ * @param paWalletInfo          Pointer to store the allocated array of wallet info structs
+ * @param pCount                Pointer to store number of wallets in the array
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_GetWallets(const char *szUserName,
+                       const char *szPassword,
+                       tABC_WalletInfo ***paWalletInfo,
+                       unsigned int *pCount,
+                       tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_WalletGetWallets(szUserName, szPassword, paWalletInfo, pCount, pError));
+
+exit:
+
+    return cc;
+}
+
+/**
+ * Free the wallet info array.
+ *
+ * This function frees the wallet info array returned from ABC_GetWallets.
+ *
+ * @param aWalletInfo   Wallet info array to be free'd
+ * @param nCount        Number of elements in the array
+ */
+void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
+                             unsigned int nCount)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    ABC_WalletFreeInfoArray(aWalletInfo, nCount);
 }
 
 void tempEventA()

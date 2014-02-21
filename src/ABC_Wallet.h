@@ -68,6 +68,23 @@ extern "C" {
                                     unsigned int attributes,
                                     tABC_Error *pError);
 
+    tABC_CC ABC_WalletGetInfo(const char *szUserName,
+                              const char *szPassword,
+                              const char *szUUID,
+                              tABC_WalletInfo **ppWalletInfo,
+                              tABC_Error *pError);
+
+    void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo);
+
+    tABC_CC ABC_WalletGetWallets(const char *szUserName,
+                                 const char *szPassword,
+                                 tABC_WalletInfo ***paWalletInfo,
+                                 unsigned int *pCount,
+                                 tABC_Error *pError);
+
+    void ABC_WalletFreeInfoArray(tABC_WalletInfo **aWalletInfo,
+                                 unsigned int nCount);
+
 
 #ifdef __cplusplus
 }

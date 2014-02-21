@@ -85,10 +85,10 @@ static tABC_CC ABC_AccountCopyAccountDirName(char *szAccountDir, int AccountNum,
 static tABC_CC ABC_AccountCreateListJSON(const char *szName, const char *szItems, char **pszJSON,  tABC_Error *pError);
 static tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Error *pError);
 static tABC_CC ABC_AccountUserForNum(unsigned int AccountNum, char **pszUserName, tABC_Error *pError);
+static tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAccountKeys **ppKeys, tABC_Error *pError);
 static void    ABC_AccountFreeAccountKeys(tAccountKeys *pAccountKeys);
 static tABC_CC ABC_AccountAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *pError);
 static tABC_CC ABC_AccountKeyFromCacheByName(const char *szUserName, tAccountKeys **ppAccountKeys, tABC_Error *pError);
-static tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAccountKeys **ppKeys, tABC_Error *pError);
 static tABC_CC ABC_AccountSaveCategories(const char *szUserName, char **aszCategories, unsigned int Count, tABC_Error *pError);
 
 // allocates the account creation info structure
@@ -343,6 +343,43 @@ void *ABC_AccountSetRecoveryThreaded(void *pData)
     return NULL;
 }
 
+/**
+ * Checks if the username and password are valid.
+ *
+ * If the login info is valid, the keys for this account
+ * are also cached.
+ * If the creditials are not valid, a error will be returned
+ *
+ * @param szUserName UserName for validation
+ * @param szPassword Password for validation
+ */
+tABC_CC ABC_CheckCredentials(const char *szUserName,
+                             const char *szPassword,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+
+    int AccountNum = 0;
+
+    // check locally for the account
+    ABC_CHECK_RET(ABC_AccountNumForUser(szUserName, &AccountNum, pError));
+    if (AccountNum < 0)
+    {
+        ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "No account by that name");
+    }
+
+    // cache up the keys
+    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, NULL, pError));
+
+exit:
+    
+    return cc;
+}
+
 
 // sign in to an account
 // this cache's the keys for an account
@@ -351,20 +388,12 @@ tABC_CC ABC_AccountSignIn(tABC_AccountSignInInfo *pInfo,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(pInfo);
 
-    int AccountNum = 0;
-
-    // check locally for the account
-    ABC_CHECK_RET(ABC_AccountNumForUser(pInfo->szUserName, &AccountNum, pError));
-    if (AccountNum < 0)
-    {
-        ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "No account by that name");
-    }
-
-    // cache up the keys
-    ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, pInfo->szPassword, NULL, pError));
+    // check the credentials
+    ABC_CHECK_RET(ABC_CheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
 
 exit:
 
@@ -1353,7 +1382,8 @@ exit:
 // If a password is given, szPassword, szPIN, P, LP2 keys are retrieved and the entry is added
 //  (the initial keys are added so the password can be verified while trying to decrypt EPIN)
 // If a pointer to hold the keys is given, then it is set to those keys
-static tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAccountKeys **ppKeys, tABC_Error *pError)
+static
+tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAccountKeys **ppKeys, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -1367,6 +1397,9 @@ static tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPasswo
     json_t       *pJSON_SNRP4   = NULL;
     tABC_U08Buf  PIN_JSON       = ABC_BUF_NULL;
     json_t       *pJSON_Root    = NULL;
+    tABC_U08Buf  P              = ABC_BUF_NULL;
+    tABC_U08Buf  LP             = ABC_BUF_NULL;
+    tABC_U08Buf  LP2            = ABC_BUF_NULL;
 
     ABC_CHECK_NULL(szUserName);
 
@@ -1418,28 +1451,25 @@ static tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPasswo
         // if there is no key in the cache, let's add the keys we can with a password
         if (NULL == pFinalKeys->szPassword)
         {
-            // set the password
-            pFinalKeys->szPassword = strdup(szPassword);
-
             // P = password
-            ABC_BUF_DUP_PTR(pFinalKeys->P, pFinalKeys->szPassword, strlen(pFinalKeys->szPassword));
+            ABC_BUF_DUP_PTR(P, szPassword, strlen(szPassword));
 
             // LP = L + P
-            ABC_BUF_DUP(pFinalKeys->LP, pFinalKeys->L);
-            ABC_BUF_APPEND(pFinalKeys->LP, pFinalKeys->P);
+            ABC_BUF_DUP(LP, pFinalKeys->L);
+            ABC_BUF_APPEND(LP, P);
 
             // LP2 = Scrypt(L + P, SNRP2)
-            ABC_CHECK_RET(ABC_CryptoScryptSNRP(pFinalKeys->LP, pFinalKeys->pSNRP2, &(pFinalKeys->LP2), pError));
+            ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pFinalKeys->pSNRP2, &LP2, pError));
 
             // try to decrypt EPIN
             szAccountDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
             ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pFinalKeys->accountNum, pError));
             szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
             sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EPIN_FILENAME);
-            tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, pFinalKeys->LP2, &PIN_JSON, pError);
+            tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, LP2, &PIN_JSON, pError);
 
             // check the results
-            if (ABC_CC_EncryptError == CC_Decrypt)
+            if (ABC_CC_DecryptFailure == CC_Decrypt)
             {
                 // the assumption here is that this specific error is due to a bad password
                 ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt PIN - bad password");
@@ -1451,6 +1481,15 @@ static tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPasswo
                 goto exit;
             }
 
+            // if we got here, then the password was good so we can add what we just calculated to the keys
+            pFinalKeys->szPassword = strdup(szPassword);
+            ABC_BUF_SET(pFinalKeys->P, P);
+            ABC_BUF_CLEAR(P);
+            ABC_BUF_SET(pFinalKeys->LP, LP);
+            ABC_BUF_CLEAR(LP);
+            ABC_BUF_SET(pFinalKeys->LP2, LP2);
+            ABC_BUF_CLEAR(LP2);
+
             // decode the json to get the pin
             char *szJSON_PIN = (char *) ABC_BUF_PTR(PIN_JSON);
             ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_PIN, JSON_ACCT_PIN_FIELD, &(pFinalKeys->szPIN), pError));
@@ -1460,7 +1499,6 @@ static tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPasswo
             // make sure it is correct
             if (0 != strcmp(pFinalKeys->szPassword, szPassword))
             {
-
                 ABC_RET_ERROR(ABC_CC_BadPassword, "Password is incorrect");
             }
         }
@@ -1488,6 +1526,9 @@ exit:
     if (pJSON_SNRP4)    json_decref(pJSON_SNRP4);
     if (pJSON_Root)     json_decref(pJSON_Root);
     ABC_BUF_FREE(PIN_JSON);
+    ABC_BUF_FREE(P);
+    ABC_BUF_FREE(LP);
+    ABC_BUF_FREE(LP2);
 
     return cc;
 }

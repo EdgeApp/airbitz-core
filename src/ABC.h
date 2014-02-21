@@ -104,7 +104,9 @@ extern "C" {
      *
      * This structure contains the detailed information associated
      * with an error.
-     * All AirBitz Core functions should offer the
+     * Most AirBitz Core functions should offer the option of passing
+     * a pointer to this structure to be filled out in the event of 
+     * error.
      *
      */
     typedef struct sABC_Error
@@ -148,13 +150,12 @@ extern "C" {
     {
         /** request type these results are associated with */
         tABC_RequestType    requestType;
-
         /** data pointer given by caller at initial create call time */
         void                *pData;
-
+        /** data pointer holding return data if the request returns data */
+        void                *pRetData;
         /** true if successful */
         bool                bSuccess;
-
         /** information the error if there was a failure */
         tABC_Error          errorInfo;
     } tABC_RequestResults;
@@ -169,16 +170,36 @@ extern "C" {
     {
         /** currency ISO 4217 code */
         char    *szCode;
-
         /** currency ISO 4217 num */
         int     num;
-
         /** currency description */
         char    *szDescription;
-
         /** currency countries */
         char    *szCountries;
     } tABC_Currency;
+
+    /**
+     * AirBitz Core Wallet Structure
+     *
+     * This structure contains wallet information.
+     * All AirBitz Core functions should offer the
+     *
+     */
+    typedef struct sABC_WalletInfo
+    {
+        /** wallet UUID */
+        char            *szUUID;
+        /** wallet name */
+        char            *szName;
+        /** account associated with this wallet */
+        char            *szUserName;
+        /** wallet ISO 4217 currency code */
+        int             currencyNum;
+        /** wallet attributes */
+        unsigned int    attributes;
+        /** wallet balance */
+        unsigned int    balance;
+    } tABC_WalletInfo;
 
     /**
      * AirBitz Asynchronous BitCoin event callback
@@ -283,6 +304,23 @@ extern "C" {
                                      const char *szRecoveryAnswers,
                                      bool *pbValid,
                                      tABC_Error *pError);
+
+    tABC_CC ABC_GetWalletInfo(const char *szUserName,
+                              const char *szPassword,
+                              const char *szUUID,
+                              tABC_WalletInfo **ppWalletInfo,
+                              tABC_Error *pError);
+
+    void ABC_FreeWalletInfo(tABC_WalletInfo *pWalletInfo);
+
+    tABC_CC ABC_GetWallets(const char *szUserName,
+                           const char *szPassword,
+                           tABC_WalletInfo ***paWalletInfo,
+                           unsigned int *pCount,
+                           tABC_Error *pError);
+
+    void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
+                                 unsigned int nCount);
 
     // temp functions
     void tempEventA();

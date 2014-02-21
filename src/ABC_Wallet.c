@@ -53,7 +53,7 @@ typedef struct sWalletData
 static unsigned int gWalletsCacheCount = 0;
 static tWalletData **gaWalletsCacheArray = NULL;
 
-static tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo, tABC_Error *pError);
+static tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo, char **pszUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletSetCurrencyNum(const char *szUserName, const char *szPassword, const char *szUUID, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, const char *szUUID, const char *szAccount, tABC_Error *pError);
 static tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError);
@@ -129,13 +129,14 @@ void *ABC_WalletCreateThreaded(void *pData)
     if (pInfo)
     {
         tABC_RequestResults results;
+        memset(&results, 0, sizeof(tABC_RequestResults));
 
         results.requestType = ABC_RequestType_CreateWallet;
 
         results.bSuccess = false;
 
         // create the wallet
-        tABC_CC CC = ABC_WalletCreate(pInfo, &(results.errorInfo));
+        tABC_CC CC = ABC_WalletCreate(pInfo, (char **) &(results.pRetData), &(results.errorInfo));
         results.errorInfo.code = CC;
 
         // we are done so load up the info and ship it back to the caller via the callback
@@ -151,7 +152,15 @@ void *ABC_WalletCreateThreaded(void *pData)
 }
 
 // creates the wallet with the given info
+/**
+ * Creates the wallet with the given info.
+ *
+ * @param pInfo Pointer to wallet information
+ * @param pszUUID Pointer to hold allocated pointer to UUID string
+ */
+static
 tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
+                         char                  **pszUUID,
                          tABC_Error            *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -168,6 +177,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     tWalletData *pData = NULL;
 
     ABC_CHECK_NULL(pInfo);
+    ABC_CHECK_NULL(pszUUID);
 
     // create a new wallet data struct
     pData = calloc(1, sizeof(tWalletData));
@@ -186,6 +196,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     // create wallet guid
     ABC_CHECK_RET(ABC_CryptoGenUUIDString(&szUUID, pError));
     pData->szUUID = strdup(szUUID);
+    *pszUUID = strdup(szUUID);
     //printf("Wallet UUID: %s\n", pData->szUUID);
 
     // generate the master key for this wallet - MK_<Wallet_GUID1>
@@ -539,7 +550,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         // we need to add it
 
         // get the local directory for this account
-        ABC_CHECK_RET(ABC_AccountGetSyncDirName(pData->szUserName, &szAccountSyncDir, pError));
+        ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
 
         // create a new wallet data struct
         pData = calloc(1, sizeof(tWalletData));
@@ -777,3 +788,177 @@ void ABC_WalletFreeData(tWalletData *pData)
     }
 }
 
+/**
+ * Gets information on the given wallet.
+ *
+ * This function allocates and fills in an wallet info structure with the information
+ * associated with the given wallet UUID
+ *
+ * @param szUserName            UserName for the account associated with this wallet
+ * @param szPassword            Password for the account associated with this wallet
+ * @param szUUID                UUID of the wallet
+ * @param ppWalletInfo          Pointer to store the pointer of the allocated wallet info struct
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_WalletGetInfo(const char *szUserName,
+                          const char *szPassword,
+                          const char *szUUID,
+                          tABC_WalletInfo **ppWalletInfo,
+                          tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tWalletData     *pData = NULL;
+    tABC_WalletInfo *pInfo = NULL;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(szUUID);
+    ABC_CHECK_NULL(ppWalletInfo);
+
+    // load the wallet data into the cache
+    ABC_CHECK_RET(ABC_WalletCacheData(szUserName, szPassword, szUUID, &pData, pError));
+
+    // create the wallet info struct
+    pInfo = calloc(1, sizeof(tABC_WalletInfo));
+
+    // copy data from what was cached
+    pInfo->szUUID      = strdup(szUUID);
+    pInfo->szName      = (pData->szName != NULL ? strdup(pData->szName) : NULL);
+    pInfo->szUserName  = (pData->szUserName != NULL ? strdup(pData->szUserName) : NULL);
+    pInfo->currencyNum = pData->currencyNum;
+    pInfo->attributes  = pData->attributes;
+
+    // TODO: get the balance
+
+    // assign it to the user's pointer
+    *ppWalletInfo = pInfo;
+    pInfo = NULL;
+
+exit:
+    if (pInfo) free(pInfo);
+
+    return cc;
+}
+
+/**
+ * Free the wallet info.
+ *
+ * This function frees the info struct returned from ABC_WalletGetInfo.
+ *
+ * @param pWalletInfo   Wallet info to be free'd
+ */
+void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo)
+{
+    if (pWalletInfo != NULL)
+    {
+        free(pWalletInfo->szUUID);
+        free(pWalletInfo->szName);
+        free(pWalletInfo->szUserName);
+
+        memset(pWalletInfo, 0, sizeof(sizeof(tABC_WalletInfo)));
+
+        free(pWalletInfo);
+    }
+}
+
+/**
+ * Gets wallets for a specified account.
+ *
+ * This function allocates and fills in an array of wallet info structures with the information
+ * associated with the wallets of the given user
+ *
+ * @param szUserName            UserName for the account associated with this wallet
+ * @param szPassword            Password for the account associated with this wallet
+ * @param paWalletInfo          Pointer to store the allocated array of wallet info structs
+ * @param pCount                Pointer to store number of wallets in the array
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_WalletGetWallets(const char *szUserName,
+                             const char *szPassword,
+                             tABC_WalletInfo ***paWalletInfo,
+                             unsigned int *pCount,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szAccountSyncDir = NULL;
+    char *szFilename = NULL;
+    char *szJSON = NULL;
+    char **aszUUIDs = NULL;
+    unsigned int nUUIDs = 0;
+    tABC_WalletInfo **aWalletInfo = NULL;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(paWalletInfo);
+    *paWalletInfo = NULL;
+    ABC_CHECK_NULL(pCount);
+    *pCount = 0;
+
+    // get the local directory for this account
+    ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+
+    // load wallet the account Wallets.json
+    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szAccountSyncDir, WALLET_ACCOUNTS_WALLETS_FILENAME);
+    if (ABC_FileIOFileExist(szFilename))
+    {
+        ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON, pError));
+        ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString(szJSON, JSON_WALLET_WALLETS_FIELD, &aszUUIDs, &nUUIDs, pError));
+    }
+
+    // if we got anything
+    if (nUUIDs > 0)
+    {
+        aWalletInfo = calloc(1, sizeof(tABC_WalletInfo *) * nUUIDs);
+
+        for (int i = 0; i < nUUIDs; i++)
+        {
+            tABC_WalletInfo *pInfo = NULL;
+            ABC_CHECK_RET(ABC_WalletGetInfo(szUserName, szPassword, aszUUIDs[i], &pInfo, pError));
+
+            aWalletInfo[i] = pInfo;
+        }
+    }
+
+    // assign them
+    *pCount = nUUIDs;
+    *paWalletInfo = aWalletInfo;
+    aWalletInfo = NULL;
+
+
+exit:
+    if (szAccountSyncDir)   free(szAccountSyncDir);
+    if (szFilename)         free(szFilename);
+    if (szJSON)             free(szJSON);
+    ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
+    ABC_WalletFreeInfoArray(aWalletInfo, nUUIDs);
+
+    return cc;
+}
+
+/**
+ * Free the wallet info array.
+ *
+ * This function frees the array of wallet info structs returned from ABC_WalletGetWallets.
+ *
+ * @param aWalletInfo   Wallet info array to be free'd
+ * @param nCount        Number of elements in the array
+ */
+void ABC_WalletFreeInfoArray(tABC_WalletInfo **aWalletInfo,
+                             unsigned int nCount)
+{
+    if ((aWalletInfo != NULL) && (nCount > 0))
+    {
+        // go through all the elements
+        for (int i = 0; i < nCount; i++)
+        {
+            ABC_WalletFreeInfo(aWalletInfo[i]);
+        }
+
+        free(aWalletInfo);
+    }
+}

@@ -151,6 +151,10 @@ extern "C" {
                                             bool *pbValid,
                                             tABC_Error *pError);
 
+    tABC_CC ABC_CheckCredentials(const char *szUserName,
+                                 const char *szPassword,
+                                 tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif
