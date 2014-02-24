@@ -1116,7 +1116,7 @@ exit:
 }
 
 // allocates an SNRP struct and fills it in with the info given to be used on the server side
-// Note: the Salt buffer is copied
+// Note: the Salt buffer is copied from the global server salt
 tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
                                       tABC_Error        *pError)
 {
@@ -1127,8 +1127,9 @@ tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
 
     ABC_CHECK_NULL(ppSNRP);
 
-    // gen some salt
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(SCRYPT_DEFAULT_SALT_LENGTH, &Salt, pError));
+    // get the server salt
+    ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
+    //ABC_UtilHexDumpBuf("Salt", Salt);
 
     ABC_CHECK_RET(ABC_CryptoCreateSNRP(Salt,
                                        SCRYPT_DEFAULT_SERVER_N,
@@ -1137,7 +1138,6 @@ tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
                                        ppSNRP,
                                        pError));
 exit:
-    ABC_BUF_FREE(Salt);
 
     return cc;
 }

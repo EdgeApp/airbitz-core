@@ -40,9 +40,6 @@
 #define JSON_ACCT_CATEGORIES_FIELD      "categories"
 #define JSON_ACCT_ERQ_FIELD             "ERQ"
 #define JSON_ACCT_SNRP_FIELD_PREFIX     "SNRP"
-#define JSON_ACCT_L1_FIELD              "L1"
-#define JSON_ACCT_P1_FIELD              "P1"
-#define JSON_ACCT_LRA1_FIELD            "LRA1"
 
 
 // holds keys for a given account
@@ -78,6 +75,7 @@ static tABC_CC ABC_AccountSignIn(tABC_AccountSignInInfo *pInfo, tABC_Error *pErr
 static tABC_CC ABC_AccountCreate(tABC_AccountCreateInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pError);
 static tABC_CC ABC_AccountSetRecovery(tABC_AccountSetRecoveryInfo *pInfo, tABC_Error *pError);
+static tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
 static tABC_CC ABC_AccountGetCarePackageObjects(int AccountNum, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateSync(const char *szAccountsRootDir, tABC_Error *pError);
@@ -606,7 +604,7 @@ tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pErr
     {
         if (ABC_Server_Code_AccountExists == statusCode)
         {
-            ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists");
+            ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists on server");
         }
         else
         {
@@ -629,7 +627,15 @@ exit:
     return cc;
 }
 
-// set the recovery for an account
+/**
+ * Set the recovery questions for an account
+ *
+ * This function sets the password recovery informatin for the account.
+ * This includes sending a new care package to the server
+ *
+ * @param pInfo     Pointer to recovery information data
+ * @param pError    A pointer to the location to store the error if there is one
+ */
 static
 tABC_CC ABC_AccountSetRecovery(tABC_AccountSetRecoveryInfo *pInfo,
                                tABC_Error *pError)
@@ -641,9 +647,6 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountSetRecoveryInfo *pInfo,
     json_t          *pJSON_SNRP2        = NULL;
     json_t          *pJSON_SNRP3        = NULL;
     json_t          *pJSON_SNRP4        = NULL;
-    char            *szL1_JSON          = NULL;
-    char            *szP1_JSON          = NULL;
-    char            *szLRA1_JSON        = NULL;
     char            *szCarePackage_JSON = NULL;
     char            *szELP2_JSON        = NULL;
     char            *szELRA2_JSON       = NULL;
@@ -771,21 +774,14 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountSetRecoveryInfo *pInfo,
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage_JSON, pError));
 
-
-    // TODO: Client sends L1, P1, LRA1, CarePackage, to the server
-    // szL1_JSON, szP1_JSON, szLRA1_JSON, szCarePackage_JSON
-    ABC_CHECK_RET(ABC_UtilCreateHexDataJSONString(pKeys->L1, JSON_ACCT_L1_FIELD, &szL1_JSON, pError));
-    ABC_CHECK_RET(ABC_UtilCreateHexDataJSONString(pKeys->P1, JSON_ACCT_P1_FIELD, &szP1_JSON, pError));
-    ABC_CHECK_RET(ABC_UtilCreateHexDataJSONString(pKeys->LRA1, JSON_ACCT_LRA1_FIELD, &szLRA1_JSON, pError));
+    // Client sends L1, P1, LRA1, CarePackage, to the server
+    ABC_CHECK_RET(ABC_AccountServerSetRecovery(pKeys->L1, pKeys->P1, pKeys->LRA1, szCarePackage_JSON, pError));
 
 exit:
     if (pJSON_ERQ)          json_decref(pJSON_ERQ);
     if (pJSON_SNRP2)        json_decref(pJSON_SNRP2);
     if (pJSON_SNRP3)        json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)        json_decref(pJSON_SNRP4);
-    if (szL1_JSON)          free(szL1_JSON);
-    if (szP1_JSON)          free(szP1_JSON);
-    if (szLRA1_JSON)        free(szLRA1_JSON);
     if (szCarePackage_JSON) free(szCarePackage_JSON);
     if (szELP2_JSON)        free(szELP2_JSON);
     if (szELRA2_JSON)       free(szELRA2_JSON);
@@ -795,9 +791,118 @@ exit:
     return cc;
 }
 
+/**
+ * Set recovery questions and answers on the server.
+ *
+ * This function sends LRA1 and Care Package to the server as part
+ * of setting up the recovery data for an account
+ *
+ * @param L1            Login hash for the account
+ * @param P1            Password hash for the account
+ * @param LRA1          Scrypt'ed login and recovery answers
+ * @param szCarePackage Care Package for account
+ */
+static
+tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
 
-// creates the json care package
-// pJSON_ERQ can be null
+    char *szURL     = NULL;
+    char *szResults = NULL;
+    char *szPost    = NULL;
+    char *szL1_Base64 = NULL;
+    char *szP1_Base64 = NULL;
+    char *szLRA1_Base64 = NULL;
+    json_t *pJSON_Root = NULL;
+
+    ABC_CHECK_NULL_BUF(L1);
+    ABC_CHECK_NULL_BUF(P1);
+    ABC_CHECK_NULL_BUF(LRA1);
+    ABC_CHECK_NULL(szCarePackage);
+
+    // create the URL
+    szURL = malloc(ABC_URL_MAX_PATH_LENGTH);
+    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_UPDATE_CARE_PACKAGE_PATH);
+
+    // create base64 versions of L1, P1 and LRA1
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(P1, &szP1_Base64, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(LRA1, &szLRA1_Base64, pError));
+
+    // create the post data
+    pJSON_Root = json_pack("{ssssssss}",
+                           ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                           ABC_SERVER_JSON_P1_FIELD, szP1_Base64,
+                           ABC_SERVER_JSON_LRA1_FIELD, szLRA1_Base64,
+                           ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage);
+    szPost = json_dumps(pJSON_Root, JSON_COMPACT);
+    json_decref(pJSON_Root);
+    pJSON_Root = NULL;
+    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+
+    // send the command
+    //ABC_CHECK_RET(ABC_URLPostString("http://httpbin.org/post", szPost, &szResults, pError));
+    //ABC_DebugLog("Results: %s", szResults);
+    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %s", szResults);
+
+    // decode the result
+    json_t *pJSON_Value = NULL;
+    json_error_t error;
+    pJSON_Root = json_loads(szResults, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    // get the status code
+    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
+    int statusCode = (int) json_integer_value(pJSON_Value);
+
+    // if there was a failure
+    if (ABC_Server_Code_Success != statusCode)
+    {
+        if (ABC_Server_Code_NoAccount == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "Account does not exist on server");
+        }
+        else if (ABC_Server_Code_InvalidPassword == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_BadPassword, "Invalid password on server");
+        }
+        else
+        {
+            // get the message
+            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
+            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
+            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
+        }
+    }
+
+exit:
+    if (szURL)          free(szURL);
+    if (szResults)      free(szResults);
+    if (szPost)         free(szPost);
+    if (szL1_Base64)    free(szL1_Base64);
+    if (szP1_Base64)    free(szP1_Base64);
+    if (szLRA1_Base64)  free(szLRA1_Base64);
+    if (pJSON_Root)     json_decref(pJSON_Root);
+    
+    return cc;
+}
+
+
+/**
+ * Creates the JSON care package
+ *
+ * @param pJSON_ERQ    Pointer to ERQ JSON object
+ *                     (if this is NULL, ERQ is not added to the care package)
+ * @param pJSON_SNRP2  Pointer to SNRP2 JSON object
+ * @param pJSON_SNRP3  Pointer to SNRP3 JSON object
+ * @param pJSON_SNRP4  Pointer to SNRIP4 JSON object
+ * @param pszJSON      Pointer to store allocated JSON for care package.
+ *                     (the user is responsible for free'ing this pointer)
+ */
 static
 tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ,
                                                const json_t *pJSON_SNRP2,

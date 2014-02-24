@@ -11,11 +11,18 @@
 #define ABC_Defs_h
 
 #define ABC_SERVER_ROOT                     "http://198.61.234.21/api/v1"
+#define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
+#define ABC_SERVER_UPDATE_CARE_PACKAGE_PATH "account/carepackage/update"
+
 #define ABC_SERVER_JSON_L1_FIELD            "l1"
 #define ABC_SERVER_JSON_P1_FIELD            "p1"
-#define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
+#define ABC_SERVER_JSON_LRA1_FIELD          "lra"
+#define ABC_SERVER_JSON_CARE_PACKAGE_FIELD  "care_package"
+
 #define ABC_SERVER_JSON_MESSAGE_FIELD       "message"
 #define ABC_SERVER_JSON_STATUS_CODE_FIELD   "status_code"
+
+
 
 #ifdef __cplusplus
 extern "C" {
