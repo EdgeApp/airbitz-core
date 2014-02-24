@@ -29,9 +29,9 @@ extern "C" {
         /** data pointer given by caller at initial create call time */
         void        *pData;
 
-        const char *szUserName;
-        const char *szPassword;
-        const char *szPIN;
+        char        *szUserName;
+        char        *szPassword;
+        char        *szPIN;
         tABC_Request_Callback fRequestCallback;
 
         /** information the error if there was a failure */
@@ -43,8 +43,8 @@ extern "C" {
         /** data pointer given by caller at initial create call time */
         void        *pData;
 
-        const char *szUserName;
-        const char *szPassword;
+        char        *szUserName;
+        char        *szPassword;
         tABC_Request_Callback fRequestCallback;
 
         /** information the error if there was a failure */
@@ -56,19 +56,31 @@ extern "C" {
         /** data pointer given by caller at initial create call time */
         void        *pData;
 
-        const char *szUserName;
-        const char *szPassword;
-        const char *szRecoveryQuestions;
-        const char *szRecoveryAnswers;
+        char        *szUserName;
+        char        *szPassword;
+        char        *szRecoveryQuestions;
+        char        *szRecoveryAnswers;
         tABC_Request_Callback fRequestCallback;
 
         /** information the error if there was a failure */
         tABC_Error  errorInfo;
     } tABC_AccountSetRecoveryInfo;
 
+    typedef struct sABC_AccountQuestionsInfo
+    {
+        /** data pointer given by caller at initial create call time */
+        void        *pData;
+
+        char        *szUserName;
+        tABC_Request_Callback fRequestCallback;
+
+        /** information the error if there was a failure */
+        tABC_Error  errorInfo;
+    } tABC_AccountQuestionsInfo;
 
     typedef enum eABC_AccountKey
     {
+        ABC_AccountKey_L1,
         ABC_AccountKey_L2,
         ABC_AccountKey_LP2,
         ABC_AccountKey_PIN
@@ -151,9 +163,25 @@ extern "C" {
                                             bool *pbValid,
                                             tABC_Error *pError);
 
-    tABC_CC ABC_CheckCredentials(const char *szUserName,
-                                 const char *szPassword,
-                                 tABC_Error *pError);
+    tABC_CC ABC_AccountCheckCredentials(const char *szUserName,
+                                        const char *szPassword,
+                                        tABC_Error *pError);
+
+    tABC_CC ABC_AccountCheckValidUser(const char *szUserName,
+                                      tABC_Error *pError);
+
+    tABC_CC ABC_AccountQuestionsInfoAlloc(tABC_AccountQuestionsInfo **ppAccountQuestionsInfo,
+                                          const char *szUserName,
+                                          tABC_Request_Callback fRequestCallback,
+                                          void *pData,
+                                          tABC_Error *pError);
+
+
+    void *ABC_AccountGetQuestionChoicesThreaded(void *pData);
+
+    void ABC_AccountQuestionsInfoFree(tABC_AccountQuestionsInfo *pAccountQuestionsInfo);
+
+    void ABC_AccountFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices);
 
 #ifdef __cplusplus
 }

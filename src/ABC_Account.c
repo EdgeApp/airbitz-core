@@ -32,6 +32,7 @@
 #define ACCOUNT_CATEGORIES_FILENAME     "Categories.json"
 #define ACCOUNT_ELP2_FILENAME           "ELP2.json"
 #define ACCOUNT_ELRA2_FILENAME          "ELRA2.json"
+#define ACCOUNT_QUESTIONS_FILENAME      "Questions.json"
 
 #define JSON_ACCT_USERNAME_FIELD        "userName"
 #define JSON_ACCT_PIN_FIELD             "PIN"
@@ -40,6 +41,7 @@
 #define JSON_ACCT_CATEGORIES_FIELD      "categories"
 #define JSON_ACCT_ERQ_FIELD             "ERQ"
 #define JSON_ACCT_SNRP_FIELD_PREFIX     "SNRP"
+#define JSON_ACCT_QUESTIONS_FIELD       "questions"
 
 
 // holds keys for a given account
@@ -81,6 +83,7 @@ static tABC_CC ABC_AccountGetCarePackageObjects(int AccountNum, json_t **ppJSON_
 static tABC_CC ABC_AccountCreateSync(const char *szAccountsRootDir, tABC_Error *pError);
 static tABC_CC ABC_AccountNextAccountNum(int *pAccountNum, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateRootDir(tABC_Error *pError);
+static tABC_CC ABC_AccountGetRootDir(char **pszRootDir, tABC_Error *pError);
 static tABC_CC ABC_AccountCopyRootDirName(char *szRootDir, tABC_Error *pError);
 static tABC_CC ABC_AccountCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateListJSON(const char *szName, const char *szItems, char **pszJSON,  tABC_Error *pError);
@@ -91,6 +94,9 @@ static void    ABC_AccountFreeAccountKeys(tAccountKeys *pAccountKeys);
 static tABC_CC ABC_AccountAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *pError);
 static tABC_CC ABC_AccountKeyFromCacheByName(const char *szUserName, tAccountKeys **ppAccountKeys, tABC_Error *pError);
 static tABC_CC ABC_AccountSaveCategories(const char *szUserName, char **aszCategories, unsigned int Count, tABC_Error *pError);
+static tABC_CC ABC_AccountServerGetQuestions(tABC_U08Buf L1, json_t **ppJSON_Q, tABC_Error *pError);
+static tABC_CC ABC_AccountUpdateQuestionChoices(const char *szUserName, tABC_Error *pError);
+static tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountQuestionsInfo *pInfo, tABC_QuestionChoices **ppQuestionChoices, tABC_Error *pError);
 
 // allocates the account creation info structure
 tABC_CC ABC_AccountCreateInfoAlloc(tABC_AccountCreateInfo **ppAccountCreateInfo,
@@ -131,9 +137,24 @@ void ABC_AccountCreateInfoFree(tABC_AccountCreateInfo *pAccountCreateInfo)
 {
     if (pAccountCreateInfo)
     {
-        free((void *)pAccountCreateInfo->szUserName);
-        free((void *)pAccountCreateInfo->szPassword);
-        free((void *)pAccountCreateInfo->szPIN);
+        if (pAccountCreateInfo->szUserName)
+        {
+            memset(pAccountCreateInfo->szUserName, 0, strlen(pAccountCreateInfo->szUserName));
+
+            free((void *)pAccountCreateInfo->szUserName);
+        }
+        if (pAccountCreateInfo->szPassword)
+        {
+            memset(pAccountCreateInfo->szPassword, 0, strlen(pAccountCreateInfo->szPassword));
+
+            free((void *)pAccountCreateInfo->szPassword);
+        }
+        if (pAccountCreateInfo->szPIN)
+        {
+            memset(pAccountCreateInfo->szPIN, 0, strlen(pAccountCreateInfo->szPIN));
+
+            free((void *)pAccountCreateInfo->szPIN);
+        }
 
         free(pAccountCreateInfo);
     }
@@ -175,8 +196,18 @@ void ABC_AccountSignInInfoFree(tABC_AccountSignInInfo *pAccountSignInInfo)
 {
     if (pAccountSignInInfo)
     {
-        free((void *)pAccountSignInInfo->szUserName);
-        free((void *)pAccountSignInInfo->szPassword);
+        if (pAccountSignInInfo->szUserName)
+        {
+            memset(pAccountSignInInfo->szUserName, 0, strlen(pAccountSignInInfo->szUserName));
+
+            free((void *)pAccountSignInInfo->szUserName);
+        }
+        if (pAccountSignInInfo->szPassword)
+        {
+            memset(pAccountSignInInfo->szPassword, 0, strlen(pAccountSignInInfo->szPassword));
+
+            free((void *)pAccountSignInInfo->szPassword);
+        }
 
         free(pAccountSignInInfo);
     }
@@ -224,10 +255,30 @@ void ABC_AccountSetRecoveryInfoFree(tABC_AccountSetRecoveryInfo *pAccountSetReco
 {
     if (pAccountSetRecoveryInfo)
     {
-        free((void *)pAccountSetRecoveryInfo->szUserName);
-        free((void *)pAccountSetRecoveryInfo->szPassword);
-        free((void *)pAccountSetRecoveryInfo->szRecoveryQuestions);
-        free((void *)pAccountSetRecoveryInfo->szRecoveryAnswers);
+        if (pAccountSetRecoveryInfo->szUserName)
+        {
+            memset(pAccountSetRecoveryInfo->szUserName, 0, strlen(pAccountSetRecoveryInfo->szUserName));
+
+            free((void *)pAccountSetRecoveryInfo->szUserName);
+        }
+        if (pAccountSetRecoveryInfo->szPassword)
+        {
+            memset(pAccountSetRecoveryInfo->szPassword, 0, strlen(pAccountSetRecoveryInfo->szPassword));
+
+            free((void *)pAccountSetRecoveryInfo->szPassword);
+        }
+        if (pAccountSetRecoveryInfo->szRecoveryQuestions)
+        {
+            memset(pAccountSetRecoveryInfo->szRecoveryQuestions, 0, strlen(pAccountSetRecoveryInfo->szRecoveryQuestions));
+
+            free((void *)pAccountSetRecoveryInfo->szRecoveryQuestions);
+        }
+        if (pAccountSetRecoveryInfo->szRecoveryAnswers)
+        {
+            memset(pAccountSetRecoveryInfo->szRecoveryAnswers, 0, strlen(pAccountSetRecoveryInfo->szRecoveryAnswers));
+
+            free((void *)pAccountSetRecoveryInfo->szRecoveryAnswers);
+        }
 
         free(pAccountSetRecoveryInfo);
     }
@@ -349,20 +400,46 @@ void *ABC_AccountSetRecoveryThreaded(void *pData)
  *
  * If the login info is valid, the keys for this account
  * are also cached.
- * If the creditials are not valid, a error will be returned
+ * If the creditials are not valid, an error will be returned
  *
  * @param szUserName UserName for validation
  * @param szPassword Password for validation
  */
-tABC_CC ABC_CheckCredentials(const char *szUserName,
-                             const char *szPassword,
-                             tABC_Error *pError)
+tABC_CC ABC_AccountCheckCredentials(const char *szUserName,
+                                    const char *szPassword,
+                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
+
+    // check that this is a valid user
+    ABC_CHECK_RET(ABC_AccountCheckValidUser(szUserName, pError));
+
+    // cache up the keys
+    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, NULL, pError));
+
+exit:
+    
+    return cc;
+}
+
+/**
+ * Checks if the username is valid.
+ *
+ * If the username is not valid, an error will be returned
+ *
+ * @param szUserName UserName for validation
+ */
+tABC_CC ABC_AccountCheckValidUser(const char *szUserName,
+                                  tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
 
     int AccountNum = 0;
 
@@ -373,14 +450,10 @@ tABC_CC ABC_CheckCredentials(const char *szUserName,
         ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "No account by that name");
     }
 
-    // cache up the keys
-    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, NULL, pError));
-
 exit:
-    
+
     return cc;
 }
-
 
 // sign in to an account
 // this cache's the keys for an account
@@ -394,7 +467,7 @@ tABC_CC ABC_AccountSignIn(tABC_AccountSignInInfo *pInfo,
     ABC_CHECK_NULL(pInfo);
 
     // check the credentials
-    ABC_CHECK_RET(ABC_CheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
+    ABC_CHECK_RET(ABC_AccountCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
 
 exit:
 
@@ -519,7 +592,8 @@ tABC_CC ABC_AccountCreate(tABC_AccountCreateInfo *pInfo,
     ABC_CHECK_RET(ABC_AccountAddToKeyCache(pKeys, pError));
     pKeys = NULL; // so we don't free what we just added to the cache
 
-    // TODO: take this opportunity to download the questions they can choose from for recovery
+    // take this opportunity to download the questions they can choose from for recovery
+    ABC_CHECK_RET(ABC_AccountUpdateQuestionChoices(pInfo->szUserName, pError));
 
 exit:
     if (pKeys)
@@ -535,7 +609,6 @@ exit:
     if (szJSON)             free(szJSON);
     if (szAccountDir)       free(szAccountDir);
     if (szFilename)         free(szFilename);
-
 
     return cc;
 }
@@ -1156,6 +1229,33 @@ exit:
     return cc;
 }
 
+/**
+ * Gets the root account directory
+ *
+ * @param pszRootDir pointer to store allocated string
+ *                   (the user is responsible for free'ing)
+ */
+static
+tABC_CC ABC_AccountGetRootDir(char **pszRootDir, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_NULL(pszRootDir);
+
+    // create the account directory string
+    *pszRootDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_CHECK_RET(ABC_AccountCopyRootDirName(*pszRootDir, pError));
+
+exit:
+
+    return cc;
+}
+
+/**
+ * Copies the root account directory into the string given
+ *
+ * @param szRootDir pointer into which to copy the string
+ */
 static
 tABC_CC ABC_AccountCopyRootDirName(char *szRootDir, tABC_Error *pError)
 {
@@ -1572,7 +1672,7 @@ exit:
 }
 
 // Adds the given user to the key cache if it isn't already cached.
-// With or without a password, szUserName, L, SNRP2, SNRP3, SNRP4 keys are retrieved and added if they aren't already in the cache
+// With or without a password, szUserName, L, SNRP1, SNRP2, SNRP3, SNRP4 keys are retrieved and added if they aren't already in the cache
 // If a password is given, szPassword, szPIN, P, LP2 keys are retrieved and the entry is added
 //  (the initial keys are added so the password can be verified while trying to decrypt EPIN)
 // If a pointer to hold the keys is given, then it is set to those keys
@@ -1617,6 +1717,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
 
             // SNRP's
+            ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&(pKeys->pSNRP1), pError));
             ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP2, &(pKeys->pSNRP2), pError));
             ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP2, &(pKeys->pSNRP3), pError));
             ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP2, &(pKeys->pSNRP4), pError));
@@ -1736,7 +1837,6 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
     tAccountKeys *pKeys = NULL;
 
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(pKey);
 
     // make sure the account is in the cache
@@ -1745,6 +1845,17 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
 
     switch(keyType)
     {
+        case ABC_AccountKey_L1:
+            // L1 = Scrypt(L, SNRP1)
+            if (NULL == ABC_BUF_PTR(pKeys->L1))
+            {
+                ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->L), ABC_CC_Error, "Expected to find L in key cache");
+                ABC_CHECK_ASSERT(NULL != pKeys->pSNRP1, ABC_CC_Error, "Expected to find SNRP1 in key cache");
+                ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP1, &(pKeys->L1), pError));
+            }
+            ABC_BUF_SET(*pKey, pKeys->L1);
+            break;
+
         case ABC_AccountKey_L2:
             // L2 = Scrypt(L, SNRP4)
             if (NULL == ABC_BUF_PTR(pKeys->L2))
@@ -2086,4 +2197,367 @@ exit:
 
     return cc;
 }
+
+/**
+ * Gets the recovery question choices from the server.
+ *
+ * This function gets the recovery question choices from the server in
+ * the form of a JSON object which is an array of the choices
+ *
+ * @param L1            Login hash for the account
+ * @param ppJSON_Q      Pointer to store allocated json object
+ *                      (it is the responsibility of the caller to free the ref)
+ */
+static
+tABC_CC ABC_AccountServerGetQuestions(tABC_U08Buf L1, json_t **ppJSON_Q, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    json_t  *pJSON_Root     = NULL;
+    char    *szURL          = NULL;
+    char    *szPost         = NULL;
+    char    *szL1_Base64    = NULL;
+    char    *szResults      = NULL;
+
+    ABC_CHECK_NULL_BUF(L1);
+    ABC_CHECK_NULL(ppJSON_Q);
+    // create the URL
+    szURL = malloc(ABC_URL_MAX_PATH_LENGTH);
+    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_QUESTIONS_PATH);
+
+    // create base64 versions of L1
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
+
+    // create the post data
+    pJSON_Root = json_pack("{ss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64);
+    szPost = json_dumps(pJSON_Root, JSON_COMPACT);
+    json_decref(pJSON_Root);
+    pJSON_Root = NULL;
+    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %s", szResults);
+
+    // decode the result
+    json_t *pJSON_Value = NULL;
+    json_error_t error;
+    pJSON_Root = json_loads(szResults, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    // get the status code
+    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
+    int statusCode = (int) json_integer_value(pJSON_Value);
+
+    // if there was a failure
+    if (ABC_Server_Code_Success != statusCode)
+    {
+        if (ABC_Server_Code_NoAccount == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "Account does not exist on server");
+        }
+        else
+        {
+            // get the message
+            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
+            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
+            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
+        }
+    }
+
+    // get the questions
+    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_array(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON question results");
+    *ppJSON_Q = pJSON_Value;
+    json_incref(*ppJSON_Q);
+
+exit:
+
+    if (pJSON_Root)     json_decref(pJSON_Root);
+    if (szURL)          free(szURL);
+    if (szPost)         free(szPost);
+    if (szL1_Base64)    free(szL1_Base64);
+    if (szResults)      free(szResults);
+    
+    return cc;
+}
+
+/**
+ * Gets the recovery question choices from the server and saves them
+ * to local storage.
+ *
+ * @param szUserName UserName for a valid account to retrieve questions
+ */
+static
+tABC_CC ABC_AccountUpdateQuestionChoices(const char *szUserName, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    json_t *pJSON_Root = NULL;
+    json_t *pJSON_Q    = NULL;
+    char   *szRootDir  = NULL;
+    char   *szFilename = NULL;
+    char   *szJSON     = NULL;
+
+
+    ABC_CHECK_NULL(szUserName);
+
+    // get L1 from the key cache
+    tABC_U08Buf L1;
+    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, NULL, ABC_AccountKey_L1, &L1, pError));
+
+    // get the questions from the server
+    ABC_CHECK_RET(ABC_AccountServerGetQuestions(L1, &pJSON_Q, pError));
+
+    // create the json object that will be our questions
+    pJSON_Root = json_object();
+
+    // set our final json for the array element
+    json_object_set(pJSON_Root, JSON_ACCT_QUESTIONS_FIELD, pJSON_Q);
+
+    // create the filename for the question json
+    ABC_CHECK_RET(ABC_AccountGetRootDir(&szRootDir, pError));
+    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szRootDir, ACCOUNT_QUESTIONS_FILENAME);
+
+    // get the JSON for the file
+    szJSON = json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+
+    // write the file
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
+
+exit:
+
+    if (pJSON_Root)     json_decref(pJSON_Root);
+    if (pJSON_Q)        json_decref(pJSON_Q);
+    if (szRootDir)      free(szRootDir);
+    if (szFilename)     free(szFilename);
+    if (szJSON)         free(szJSON);
+
+    return cc;
+}
+
+// allocates the account questions info structure
+tABC_CC ABC_AccountQuestionsInfoAlloc(tABC_AccountQuestionsInfo **ppAccountQuestionsInfo,
+                                   const char *szUserName,
+                                   tABC_Request_Callback fRequestCallback,
+                                   void *pData,
+                                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_NULL(ppAccountQuestionsInfo);
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(fRequestCallback);
+
+    tABC_AccountQuestionsInfo *pAccountQuestionsInfo = (tABC_AccountQuestionsInfo *) calloc(1, sizeof(tABC_AccountQuestionsInfo));
+
+    pAccountQuestionsInfo->szUserName = strdup(szUserName);
+
+    pAccountQuestionsInfo->fRequestCallback = fRequestCallback;
+
+    pAccountQuestionsInfo->pData = pData;
+
+    *ppAccountQuestionsInfo = pAccountQuestionsInfo;
+
+exit:
+
+    return cc;
+}
+
+// frees the account signin info structure
+void ABC_AccountQuestionsInfoFree(tABC_AccountQuestionsInfo *pAccountQuestionsInfo)
+{
+    if (pAccountQuestionsInfo)
+    {
+        if (pAccountQuestionsInfo->szUserName)
+        {
+            memset(pAccountQuestionsInfo->szUserName, 0, strlen(pAccountQuestionsInfo->szUserName));
+
+            free((void *)pAccountQuestionsInfo->szUserName);
+        }
+
+        free(pAccountQuestionsInfo);
+    }
+}
+
+/**
+ * Gets the recovery question choices Assumes it is running in a thread.
+ *
+ * This function gets the recovery question choices.
+ * The function assumes it is in it's own thread (i.e., thread safe)
+ * The callback will be called when it has finished.
+ * The caller needs to handle potentially being in a seperate thread
+ *
+ * @param pData Structure holding all the data needed to create an account (should be a tABC_AccountQuestionsInfo)
+ */
+void *ABC_AccountGetQuestionChoicesThreaded(void *pData)
+{
+    tABC_AccountQuestionsInfo *pInfo = (tABC_AccountQuestionsInfo *)pData;
+    if (pInfo)
+    {
+        tABC_RequestResults results;
+
+        results.requestType = ABC_RequestType_GetQuestionChoices;
+
+        results.bSuccess = false;
+
+        // create the account
+        tABC_CC CC = ABC_AccountGetQuestionChoices(pInfo, (tABC_QuestionChoices **) &(results.pRetData), &(results.errorInfo));
+        results.errorInfo.code = CC;
+
+        // we are done so load up the info and ship it back to the caller via the callback
+        results.pData = pInfo->pData;
+        results.bSuccess = (CC == ABC_CC_Ok ? true : false);
+        pInfo->fRequestCallback(&results);
+
+        // it is our responsibility to free the info struct
+        ABC_AccountQuestionsInfoFree(pInfo);
+    }
+    
+    return NULL;
+}
+
+/**
+ * Gets the recovery question chioces with the given info.
+ *
+ * @param pInfo             Pointer to recovery question chioces information
+ * @param ppQuestionChoices Pointer to hold allocated pointer to recovery question chioces
+ */
+static
+tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountQuestionsInfo *pInfo,
+                                      tABC_QuestionChoices      **ppQuestionChoices,
+                                      tABC_Error                *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szRootDir = NULL;
+    char *szFilename = NULL;
+    json_t *pJSON_Root = NULL;
+    json_t *pJSON_Value = NULL;
+    tABC_QuestionChoices *pQuestionChoices = NULL;
+
+    ABC_CHECK_NULL(pInfo);
+    ABC_CHECK_NULL(pInfo->szUserName);
+    ABC_CHECK_NULL(ppQuestionChoices);
+
+    ABC_CHECK_RET(ABC_AccountCheckValidUser(pInfo->szUserName, pError));
+
+    // create the filename for the question json
+    ABC_CHECK_RET(ABC_AccountGetRootDir(&szRootDir, pError));
+    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szRootDir, ACCOUNT_QUESTIONS_FILENAME);
+
+    // if the file doesn't exist
+    if (false == ABC_FileIOFileExist(szFilename))
+    {
+        // get an update from the server
+        ABC_CHECK_RET(ABC_AccountUpdateQuestionChoices(pInfo->szUserName, pError));
+    }
+
+    // read in the recovery question choices json object
+    ABC_CHECK_RET(ABC_FileIOReadFileObject(szFilename, &pJSON_Root, true, pError));
+
+    // get the questions array field
+    pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_QUESTIONS_FIELD);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_array(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON array value for recovery questions");
+
+    // get the number of elements in the array
+    unsigned int count = (unsigned int) json_array_size(pJSON_Value);
+    if (count > 0)
+    {
+        // allocate the data
+        pQuestionChoices = calloc(1, sizeof(tABC_QuestionChoices));
+        pQuestionChoices->numChoices = count;
+        pQuestionChoices->aChoices = calloc(1, sizeof(tABC_QuestionChoice *) * count);
+
+        for (int i = 0; i < count; i++)
+        {
+            json_t *pJSON_Elem = json_array_get(pJSON_Value, i);
+            ABC_CHECK_ASSERT((pJSON_Elem && json_is_object(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON element value for recovery questions");
+
+            // allocate this element
+            pQuestionChoices->aChoices[i] = calloc(1, sizeof(tABC_QuestionChoice));
+
+            // get the category
+            json_t *pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_CATEGORY_FIELD);
+            ABC_CHECK_ASSERT((pJSON_Obj && json_is_string(pJSON_Obj)), ABC_CC_JSONError, "Error parsing JSON category value for recovery questions");
+            pQuestionChoices->aChoices[i]->szCategory = strdup(json_string_value(pJSON_Obj));
+
+            // get the question
+            pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_QUESTION_FIELD);
+            ABC_CHECK_ASSERT((pJSON_Obj && json_is_string(pJSON_Obj)), ABC_CC_JSONError, "Error parsing JSON question value for recovery questions");
+            pQuestionChoices->aChoices[i]->szQuestion = strdup(json_string_value(pJSON_Obj));
+
+            // get the min length
+            pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_MIN_LENGTH_FIELD);
+            ABC_CHECK_ASSERT((pJSON_Obj && json_is_integer(pJSON_Obj)), ABC_CC_JSONError, "Error parsing JSON min length value for recovery questions");
+            pQuestionChoices->aChoices[i]->minAnswerLength = (unsigned int) json_integer_value(pJSON_Obj);
+        }
+
+        // assign final data
+        *ppQuestionChoices = pQuestionChoices;
+        pQuestionChoices = NULL; // so we don't free it below
+
+    }
+    else
+    {
+        ABC_RET_ERROR(ABC_CC_JSONError, "No questions in the recovery question choices file")
+    }
+
+exit:
+    if (szRootDir)  free(szRootDir);
+    if (szFilename) free(szFilename);
+    if (pJSON_Root) json_decref(pJSON_Root);
+    if (pQuestionChoices) ABC_AccountFreeQuestionChoices(pQuestionChoices);
+    
+    return cc;
+}
+
+
+/**
+ * Free question choices.
+ *
+ * This function frees the question choices given
+ *
+ * @param pQuestionChoices  Pointer to question choices to free.
+ */
+void ABC_AccountFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices)
+{
+    if (pQuestionChoices != NULL)
+    {
+        if ((pQuestionChoices->aChoices != NULL) && (pQuestionChoices->numChoices > 0))
+        {
+            for (int i = 0; i < pQuestionChoices->numChoices; i++)
+            {
+                tABC_QuestionChoice *pChoice = pQuestionChoices->aChoices[i];
+
+                if (pChoice)
+                {
+                    if (pChoice->szQuestion)
+                    {
+                        memset(pChoice->szQuestion, 0, strlen(pChoice->szQuestion));
+                        free(pChoice->szQuestion);
+                    }
+
+                    if (pChoice->szCategory)
+                    {
+                        memset(pChoice->szCategory, 0, strlen(pChoice->szCategory));
+                        free(pChoice->szCategory);
+                    }
+                }
+            }
+
+            memset(pQuestionChoices->aChoices, 0, sizeof(tABC_QuestionChoice *) * pQuestionChoices->numChoices);
+            free(pQuestionChoices->aChoices);
+        }
+
+        memset(pQuestionChoices, 0, sizeof(tABC_QuestionChoices));
+        free(pQuestionChoices);
+    }
+}
+
 

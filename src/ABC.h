@@ -98,7 +98,9 @@ extern "C" {
         /** Set account recovery questions */
         ABC_RequestType_SetAccountRecoveryQuestions = 2,
         /** Create wallet request */
-        ABC_RequestType_CreateWallet = 3
+        ABC_RequestType_CreateWallet = 3,
+        /** Get Recovery Question Choices request */
+        ABC_RequestType_GetQuestionChoices = 4
     } tABC_RequestType;
 
     /**
@@ -202,6 +204,36 @@ extern "C" {
         /** wallet balance */
         unsigned int    balance;
     } tABC_WalletInfo;
+
+    /**
+     * AirBitz Question Choice Structure
+     *
+     * This structure contains a recovery question choice.
+     *
+     */
+    typedef struct sABC_QuestionChoice
+    {
+        /** question */
+        char            *szQuestion;
+        /** question category */
+        char            *szCategory;
+        /** miniumum length of an answer for this question */
+        unsigned int    minAnswerLength;
+    } tABC_QuestionChoice;
+
+    /**
+     * AirBitz Question Choices Structure
+     *
+     * This structure contains a recovery question choices.
+     *
+     */
+    typedef struct sABC_QuestionChoices
+    {
+        /** number of choices */
+        unsigned int        numChoices;
+        /** array of choices */
+        tABC_QuestionChoice **aChoices;
+    } tABC_QuestionChoices;
 
     /**
      * AirBitz Asynchronous BitCoin event callback
@@ -329,6 +361,13 @@ extern "C" {
                                char **aszUUIDArray,
                                unsigned int countUUIDs,
                                tABC_Error *pError);
+
+    tABC_CC ABC_GetQuestionChoices(const char *szUserName,
+                                   tABC_Request_Callback fRequestCallback,
+                                   void *pData,
+                                   tABC_Error *pError);
+
+    void ABC_FreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices);
 
     // temp functions
     void tempEventA();

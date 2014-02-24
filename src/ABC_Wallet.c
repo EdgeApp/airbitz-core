@@ -151,7 +151,6 @@ void *ABC_WalletCreateThreaded(void *pData)
     return NULL;
 }
 
-// creates the wallet with the given info
 /**
  * Creates the wallet with the given info.
  *
@@ -995,7 +994,7 @@ tABC_CC ABC_WalletSetOrder(const char *szUserName,
     ABC_CHECK_NULL(aszUUIDArray);
 
     // check the credentials
-    ABC_CHECK_RET(ABC_CheckCredentials(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_AccountCheckCredentials(szUserName, szPassword, pError));
 
     // get the local directory for this account
     ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
