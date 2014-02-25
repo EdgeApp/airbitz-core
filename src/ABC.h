@@ -78,7 +78,9 @@ extern "C" {
         /** Initialization after already initializing  */
         ABC_CC_Reinitialization = 23,
         /** Server error  */
-        ABC_CC_ServerError = 24
+        ABC_CC_ServerError = 24,
+        /** The user has not set recovery questions */
+        ABC_CC_NoRecoveryQuestions = 25
     } tABC_CC;
 
     /**
@@ -368,6 +370,10 @@ extern "C" {
                                    tABC_Error *pError);
 
     void ABC_FreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices);
+
+    tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
+                                     char **pszQuestions,
+                                     tABC_Error *pError);
 
     // temp functions
     void tempEventA();

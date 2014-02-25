@@ -1023,6 +1023,23 @@ exit:
 
 // loads the json care package for a given account number
 // if the ERQ doesn't exist, ppJSON_ERQ is set to NULL
+
+/**
+ * Loads the json care package for a given account number
+ *
+ * The JSON objects for each argument will be assigned.
+ * The function assumes any number of the arguments may be NULL,
+ * in which case, they are not set.
+ * It is also possible that there is no recovery questions, in which case
+ * the ERQ will be set to NULL.
+ *
+ * @param AccountNum   Account number of the account of interest
+ * @param ppJSON_ERQ   Pointer store ERQ JSON object (can be NULL) - caller expected to decref
+ * @param ppJSON_SNRP2 Pointer store SNRP2 JSON object (can be NULL) - caller expected to decref
+ * @param ppJSON_SNRP3 Pointer store SNRP3 JSON object (can be NULL) - caller expected to decref
+ * @param ppJSON_SNRP4 Pointer store SNRP4 JSON object (can be NULL) - caller expected to decref
+ * @param pError       A pointer to the location to store the error if there is one
+ */
 static
 tABC_CC ABC_AccountGetCarePackageObjects(int          AccountNum,
                                          json_t       **ppJSON_ERQ,
@@ -1044,9 +1061,6 @@ tABC_CC ABC_AccountGetCarePackageObjects(int          AccountNum,
     json_t *pJSON_SNRP4 = NULL;
 
     ABC_CHECK_ASSERT(AccountNum >= 0, ABC_CC_AccountDoesNotExist, "Bad account number");
-    ABC_CHECK_NULL(ppJSON_SNRP2);
-    ABC_CHECK_NULL(ppJSON_SNRP3);
-    ABC_CHECK_NULL(ppJSON_SNRP4);
 
     // get the main account directory
     szAccountDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -1066,11 +1080,8 @@ tABC_CC ABC_AccountGetCarePackageObjects(int          AccountNum,
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON care package");
 
     // get the ERQ
-    if (ppJSON_ERQ)
-    {
-        pJSON_ERQ = json_object_get(pJSON_Root, JSON_ACCT_ERQ_FIELD);
-        //ABC_CHECK_ASSERT((pJSON_ERQ && json_is_object(pJSON_ERQ)), ABC_CC_JSONError, "Error parsing JSON care package - missing ERQ");
-    }
+    pJSON_ERQ = json_object_get(pJSON_Root, JSON_ACCT_ERQ_FIELD);
+    //ABC_CHECK_ASSERT((pJSON_ERQ && json_is_object(pJSON_ERQ)), ABC_CC_JSONError, "Error parsing JSON care package - missing ERQ");
 
     szField = calloc(1, ABC_MAX_STRING_LENGTH);
 
@@ -1095,26 +1106,27 @@ tABC_CC ABC_AccountGetCarePackageObjects(int          AccountNum,
         if (pJSON_ERQ)
         {
             *ppJSON_ERQ = json_incref(pJSON_ERQ);
-            pJSON_ERQ = NULL; // don't decrment this at the end
         }
         else
         {
             *ppJSON_ERQ = NULL;
         }
     }
-    *ppJSON_SNRP2 = json_incref(pJSON_SNRP2);
-    pJSON_SNRP2 = NULL; // don't decrment this at the end
-    *ppJSON_SNRP3 = json_incref(pJSON_SNRP3);
-    pJSON_SNRP3 = NULL; // don't decrment this at the end
-    *ppJSON_SNRP4 = json_incref(pJSON_SNRP4);
-    pJSON_SNRP4 = NULL; // don't decrment this at the end
+    if (ppJSON_SNRP2)
+    {
+        *ppJSON_SNRP2 = json_incref(pJSON_SNRP2);
+    }
+    if (ppJSON_SNRP3)
+    {
+        *ppJSON_SNRP3 = json_incref(pJSON_SNRP3);
+    }
+    if (ppJSON_SNRP4)
+    {
+        *ppJSON_SNRP4 = json_incref(pJSON_SNRP4);
+    }
 
 exit:
     if (pJSON_Root)             json_decref(pJSON_Root);
-    if (pJSON_ERQ)              json_decref(pJSON_ERQ);
-    if (pJSON_SNRP2)            json_decref(pJSON_SNRP2);
-    if (pJSON_SNRP3)            json_decref(pJSON_SNRP3);
-    if (pJSON_SNRP4)            json_decref(pJSON_SNRP4);
     if (szAccountDir)           free(szAccountDir);
     if (szCarePackageFilename)  free(szCarePackageFilename);
     if (szCarePackage_JSON)     free(szCarePackage_JSON);
@@ -1685,7 +1697,6 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
     tAccountKeys *pFinalKeys    = NULL;
     char         *szFilename    = NULL;
     char         *szAccountDir  = NULL;
-    json_t       *pJSON_ERQ     = NULL;
     json_t       *pJSON_SNRP2   = NULL;
     json_t       *pJSON_SNRP3   = NULL;
     json_t       *pJSON_SNRP4   = NULL;
@@ -1815,7 +1826,6 @@ exit:
     }
     if (szFilename)     free(szFilename);
     if (szAccountDir)   free(szAccountDir);
-    if (pJSON_ERQ)      json_decref(pJSON_ERQ);
     if (pJSON_SNRP2)    json_decref(pJSON_SNRP2);
     if (pJSON_SNRP3)    json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)    json_decref(pJSON_SNRP4);
@@ -1835,6 +1845,7 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
     tABC_CC cc = ABC_CC_Ok;
 
     tAccountKeys *pKeys = NULL;
+    json_t       *pJSON_ERQ     = NULL;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(pKey);
@@ -1879,6 +1890,32 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
             ABC_BUF_SET_PTR(*pKey, (unsigned char *)pKeys->szPIN, sizeof(pKeys->szPIN) + 1);
             break;
 
+        case ABC_AccountKey_RQ:
+            // RQ - if ERQ available
+            if (NULL == ABC_BUF_PTR(pKeys->RQ))
+            {
+                // get L2
+                tABC_U08Buf L2;
+                ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_L2, &L2, pError));
+
+                // get ERQ
+                int AccountNum = -1;
+                ABC_CHECK_RET(ABC_AccountNumForUser(szUserName, &AccountNum, pError));
+                ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, &pJSON_ERQ, NULL, NULL, NULL, pError));
+
+                // RQ - if ERQ available
+                if (pJSON_ERQ != NULL)
+                {
+                    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ERQ, L2, &(pKeys->RQ), pError));
+                }
+                else
+                {
+                    ABC_RET_ERROR(ABC_CC_NoRecoveryQuestions, "There are no recovery questions for this user");
+                }
+            }
+            ABC_BUF_SET(*pKey, pKeys->RQ);
+            break;
+
         default:
             ABC_RET_ERROR(ABC_CC_Error, "Unknown key type");
             break;
@@ -1886,6 +1923,7 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
     };
 
 exit:
+    if (pJSON_ERQ)  json_decref(pJSON_ERQ);
 
     return cc;
 }
@@ -2560,4 +2598,39 @@ void ABC_AccountFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices)
     }
 }
 
+/**
+ * Get the recovery questions for a given account.
+ *
+ * The questions will be returned in a single allocated string with
+ * each questions seperated by a newline.
+ *
+ * @param szUserName                UserName for the account
+ * @param pszQuestions              Pointer into which allocated string should be stored.
+ * @param pError                    A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_AccountGetRecoveryQuestions(const char *szUserName,
+                                        char **pszQuestions,
+                                        tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
 
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(pszQuestions);
+    *pszQuestions = NULL;
+
+    // Get RQ for this user
+    tABC_U08Buf RQ;
+    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, NULL, ABC_AccountKey_RQ, &RQ, pError));
+    tABC_U08Buf FinalRQ;
+    ABC_BUF_DUP(FinalRQ, RQ);
+    ABC_BUF_APPEND_PTR(FinalRQ, "", 1);
+    *pszQuestions = (char *)ABC_BUF_PTR(FinalRQ);
+
+exit:
+
+    return cc;
+}

@@ -1011,8 +1011,6 @@ exit:
     return cc;
 }
 
-
-
 /**
  * Free question choices.
  *
@@ -1025,6 +1023,37 @@ void ABC_FreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices)
     ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_AccountFreeQuestionChoices(pQuestionChoices);
+}
+
+/**
+ * Get the recovery questions for a given account.
+ * 
+ * The questions will be returned in a single allocated string with
+ * each questions seperated by a newline.
+ *
+ * @param szUserName                UserName for the account
+ * @param pszQuestions              Pointer into which allocated string should be stored.
+ * @param pError                    A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
+                                 char **pszQuestions,
+                                 tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(pszQuestions);
+
+    ABC_CHECK_RET(ABC_AccountGetRecoveryQuestions(szUserName, pszQuestions, pError));
+
+exit:
+    
+    return cc;
 }
 
 void tempEventA()

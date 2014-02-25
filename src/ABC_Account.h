@@ -83,7 +83,8 @@ extern "C" {
         ABC_AccountKey_L1,
         ABC_AccountKey_L2,
         ABC_AccountKey_LP2,
-        ABC_AccountKey_PIN
+        ABC_AccountKey_PIN,
+        ABC_AccountKey_RQ
     } tABC_AccountKey;
 
     tABC_CC ABC_AccountSignInInfoAlloc(tABC_AccountSignInInfo **ppAccountSignInInfo,
@@ -182,6 +183,10 @@ extern "C" {
     void ABC_AccountQuestionsInfoFree(tABC_AccountQuestionsInfo *pAccountQuestionsInfo);
 
     void ABC_AccountFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices);
+
+    tABC_CC ABC_AccountGetRecoveryQuestions(const char *szUserName,
+                                            char **pszQuestions,
+                                            tABC_Error *pError);
 
 #ifdef __cplusplus
 }
