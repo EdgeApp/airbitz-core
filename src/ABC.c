@@ -304,7 +304,7 @@ tABC_CC ABC_SignIn(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_AccountSignInInfo *pAccountSignInInfo = NULL;
+    tABC_AccountRequestInfo *pAccountRequestInfo = NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
@@ -313,15 +313,20 @@ tABC_CC ABC_SignIn(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(fRequestCallback);
 
-    ABC_CHECK_RET(ABC_AccountSignInInfoAlloc(&pAccountSignInInfo,
-                                             szUserName,
-                                             szPassword,
-                                             fRequestCallback,
-                                             pData,
-                                             pError));
+    ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
+                                              ABC_RequestType_AccountSignIn,
+                                              szUserName,
+                                              szPassword,
+                                              NULL, // recovery questions
+                                              NULL, // recovery answers
+                                              NULL, // PIN
+                                              NULL, // new password
+                                              fRequestCallback,
+                                              pData,
+                                              pError));
 
     pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_AccountSignInThreaded, pAccountSignInInfo))
+    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
     {
         //printf("Thread create successfully !!!\n");
         if ( ! pthread_detach(handle) )
@@ -359,7 +364,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_AccountCreateInfo *pAccountCreateInfo = NULL;
+    tABC_AccountRequestInfo *pAccountRequestInfo = NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
@@ -370,16 +375,20 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPIN) > 0, ABC_CC_Error, "No PIN provided");
     ABC_CHECK_NULL(fRequestCallback);
 
-    ABC_CHECK_RET(ABC_AccountCreateInfoAlloc(&pAccountCreateInfo,
-                                             szUserName,
-                                             szPassword,
-                                             szPIN,
-                                             fRequestCallback,
-                                             pData,
-                                             pError));
+    ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
+                                              ABC_RequestType_CreateAccount,
+                                              szUserName,
+                                              szPassword,
+                                              NULL, // recovery questions
+                                              NULL, // recovery answers
+                                              szPIN,
+                                              NULL, // new password
+                                              fRequestCallback,
+                                              pData,
+                                              pError));
 
     pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_AccountCreateThreaded, pAccountCreateInfo))
+    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
     {
         //printf("Thread create successfully !!!\n");
         if ( ! pthread_detach(handle) )
@@ -420,7 +429,7 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_AccountSetRecoveryInfo *pInfo = NULL;
+    tABC_AccountRequestInfo *pInfo = NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
@@ -433,17 +442,20 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error, "No recovery answers provided");
     ABC_CHECK_NULL(fRequestCallback);
 
-    ABC_CHECK_RET(ABC_AccountSetRecoveryInfoAlloc(&pInfo,
-                                                  szUserName,
-                                                  szPassword,
-                                                  szRecoveryQuestions,
-                                                  szRecoveryAnswers,
-                                                  fRequestCallback,
-                                                  pData,
-                                                  pError));
+    ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pInfo,
+                                              ABC_RequestType_SetAccountRecoveryQuestions,
+                                              szUserName,
+                                              szPassword,
+                                              szRecoveryQuestions,
+                                              szRecoveryAnswers,
+                                              NULL, // PIN
+                                              NULL, // new password
+                                              fRequestCallback,
+                                              pData,
+                                              pError));
 
     pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_AccountSetRecoveryThreaded, pInfo))
+    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pInfo))
     {
         //printf("Thread create successfully !!!\n");
         if ( ! pthread_detach(handle) )
@@ -961,7 +973,6 @@ exit:
     return cc;
 }
 
-
 /**
  * Get the recovery question choices.
  *
@@ -982,22 +993,27 @@ tABC_CC ABC_GetQuestionChoices(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_AccountQuestionsInfo *pAccountQuestionsInfo = NULL;
+    tABC_AccountRequestInfo *pAccountRequestInfo = NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(fRequestCallback);
 
-
-    ABC_CHECK_RET(ABC_AccountQuestionsInfoAlloc(&pAccountQuestionsInfo,
-                                                szUserName,
-                                                fRequestCallback,
-                                                pData,
-                                                pError));
+    ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
+                                              ABC_RequestType_GetQuestionChoices,
+                                              szUserName,
+                                              NULL, // password
+                                              NULL, // recovery questions
+                                              NULL, // recovery answers
+                                              NULL, // PIN
+                                              NULL, // new password
+                                              fRequestCallback,
+                                              pData,
+                                              pError));
 
     pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_AccountGetQuestionChoicesThreaded, pAccountQuestionsInfo))
+    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
     {
         //printf("Thread create successfully !!!\n");
         if ( ! pthread_detach(handle) )
@@ -1055,6 +1071,134 @@ exit:
     
     return cc;
 }
+
+/**
+ * Change account password.
+ *
+ * This function kicks off a thread to change the password for an account.
+ * The callback will be called when it has finished.
+ *
+ * @param szUserName                UserName for the account
+ * @param szPassword                Password for the account
+ * @param szNewPassword             New Password for the account
+ * @param fRequestCallback          The function that will be called when the account create process has finished.
+ * @param pData                     Pointer to data to be returned back in callback
+ * @param pError                    A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_ChangePassword(const char *szUserName,
+                           const char *szPassword,
+                           const char *szNewPassword,
+                           tABC_Request_Callback fRequestCallback,
+                           void *pData,
+                           tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_AccountRequestInfo *pAccountRequestInfo = NULL;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szNewPassword);
+    ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
+    ABC_CHECK_NULL(fRequestCallback);
+
+    ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
+                                              ABC_RequestType_ChangePassword,
+                                              szUserName,
+                                              szPassword,
+                                              NULL, // recovery questions
+                                              NULL, // recovery answers
+                                              NULL, // PIN
+                                              szNewPassword,
+                                              fRequestCallback,
+                                              pData,
+                                              pError));
+
+    pthread_t handle;
+    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
+    {
+        //printf("Thread create successfully !!!\n");
+        if ( ! pthread_detach(handle) )
+        {
+            //printf("Thread detached successfully !!!\n");
+        }
+    }
+
+exit:
+    
+    return cc;
+}
+
+/**
+ * Change account password using recovery answers.
+ *
+ * This function kicks off a thread to change the password for an account using the
+ * recovery answers as account validation.
+ * The callback will be called when it has finished.
+ *
+ * @param szUserName                UserName for the account
+ * @param szRecoveryAnswers         Recovery answers (each answer seperated by a newline)
+ * @param szNewPassword             New Password for the account
+ * @param fRequestCallback          The function that will be called when the account create process has finished.
+ * @param pData                     Pointer to data to be returned back in callback
+ * @param pError                    A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
+                                              const char *szRecoveryAnswers,
+                                              const char *szNewPassword,
+                                              tABC_Request_Callback fRequestCallback,
+                                              void *pData,
+                                              tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_AccountRequestInfo *pAccountRequestInfo = NULL;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szRecoveryAnswers);
+    ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error, "No recovery answers provided");
+    ABC_CHECK_NULL(szNewPassword);
+    ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
+    ABC_CHECK_NULL(fRequestCallback);
+
+    ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
+                                              ABC_RequestType_ChangePassword,
+                                              szUserName,
+                                              NULL, // recovery questions
+                                              NULL, // password
+                                              szRecoveryAnswers,
+                                              NULL, // PIN
+                                              szNewPassword,
+                                              fRequestCallback,
+                                              pData,
+                                              pError));
+
+    pthread_t handle;
+    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
+    {
+        //printf("Thread create successfully !!!\n");
+        if ( ! pthread_detach(handle) )
+        {
+            //printf("Thread detached successfully !!!\n");
+        }
+    }
+
+exit:
+    
+    return cc;
+}
+
 
 void tempEventA()
 {

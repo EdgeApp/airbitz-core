@@ -18,65 +18,44 @@ extern "C" {
 #endif
 
     /**
-     * AirBitz Core Create Account Structure
+     * AirBitz Core Account Request Structure
      *
      * This structure contains the detailed information associated
-     * with creating a new account.
+     * with threaded requests on accounts
      *
      */
-    typedef struct sABC_AccountCreateInfo
+    typedef struct sABC_AccountRequestInfo
     {
-        /** data pointer given by caller at initial create call time */
-        void        *pData;
+        /** request type */
+        tABC_RequestType requestType;
 
+        /** account username */
         char        *szUserName;
+
+        /** account password */
         char        *szPassword;
-        char        *szPIN;
-        tABC_Request_Callback fRequestCallback;
 
-        /** information the error if there was a failure */
-        tABC_Error  errorInfo;
-    } tABC_AccountCreateInfo;
-
-    typedef struct sABC_AccountSignInInfo
-    {
-        /** data pointer given by caller at initial create call time */
-        void        *pData;
-
-        char        *szUserName;
-        char        *szPassword;
-        tABC_Request_Callback fRequestCallback;
-
-        /** information the error if there was a failure */
-        tABC_Error  errorInfo;
-    } tABC_AccountSignInInfo;
-
-    typedef struct sABC_AccountSetRecoveryInfo
-    {
-        /** data pointer given by caller at initial create call time */
-        void        *pData;
-
-        char        *szUserName;
-        char        *szPassword;
+        /** recovery questions (not used in all requests) */
         char        *szRecoveryQuestions;
+
+        /** recovery answers (not used in all requests) */
         char        *szRecoveryAnswers;
-        tABC_Request_Callback fRequestCallback;
 
-        /** information the error if there was a failure */
-        tABC_Error  errorInfo;
-    } tABC_AccountSetRecoveryInfo;
+        /** account PIN for create account requests */
+        char        *szPIN;
 
-    typedef struct sABC_AccountQuestionsInfo
-    {
+        /** new password for password change request */
+        char        *szNewPassword;
+
         /** data pointer given by caller at initial create call time */
         void        *pData;
 
-        char        *szUserName;
+        /** callback function when request is complete */
         tABC_Request_Callback fRequestCallback;
 
         /** information the error if there was a failure */
         tABC_Error  errorInfo;
-    } tABC_AccountQuestionsInfo;
+    } tABC_AccountRequestInfo;
 
     typedef enum eABC_AccountKey
     {
@@ -87,41 +66,21 @@ extern "C" {
         ABC_AccountKey_RQ
     } tABC_AccountKey;
 
-    tABC_CC ABC_AccountSignInInfoAlloc(tABC_AccountSignInInfo **ppAccountSignInInfo,
-                                       const char *szUserName,
-                                       const char *szPassword,
-                                       tABC_Request_Callback fRequestCallback,
-                                       void *pData,
-                                       tABC_Error *pError);
+    tABC_CC ABC_AccountRequestInfoAlloc(tABC_AccountRequestInfo **ppAccountRequestInfo,
+                                        tABC_RequestType requestType,
+                                        const char *szUserName,
+                                        const char *szPassword,
+                                        const char *szRecoveryQuestions,
+                                        const char *szRecoveryAnswers,
+                                        const char *szPIN,
+                                        const char *szNewPassword,
+                                        tABC_Request_Callback fRequestCallback,
+                                        void *pData,
+                                        tABC_Error *pError);
 
-    void ABC_AccountSignInInfoFree(tABC_AccountSignInInfo *pAccountCreateInfo);
+    void ABC_AccountRequestInfoFree(tABC_AccountRequestInfo *pAccountRequestInfo);
 
-    void *ABC_AccountSignInThreaded(void *pData);
-
-    tABC_CC ABC_AccountCreateInfoAlloc(tABC_AccountCreateInfo **ppAccountCreateInfo,
-                                       const char *szUserName,
-                                       const char *szPassword,
-                                       const char *szPIN,
-                                       tABC_Request_Callback fRequestCallback,
-                                       void *pData,
-                                       tABC_Error *pError);
-
-    void ABC_AccountCreateInfoFree(tABC_AccountCreateInfo *pAccountCreateInfo);
-
-    void *ABC_AccountCreateThreaded(void *pData);
-
-    tABC_CC ABC_AccountSetRecoveryInfoAlloc(tABC_AccountSetRecoveryInfo **ppAccountSetRecoveryInfo,
-                                            const char *szUserName,
-                                            const char *szPassword,
-                                            const char *szRecoveryQuestions,
-                                            const char *szRecoveryAnswers,
-                                            tABC_Request_Callback fRequestCallback,
-                                            void *pData,
-                                            tABC_Error *pError);
-
-    void ABC_AccountSetRecoveryInfoFree(tABC_AccountSetRecoveryInfo *pAccountSetRecoveryInfo);
-
-
+    void *ABC_AccountRequestThreaded(void *pData);
 
     void *ABC_AccountSetRecoveryThreaded(void *pData);
 
@@ -171,16 +130,6 @@ extern "C" {
     tABC_CC ABC_AccountCheckValidUser(const char *szUserName,
                                       tABC_Error *pError);
 
-    tABC_CC ABC_AccountQuestionsInfoAlloc(tABC_AccountQuestionsInfo **ppAccountQuestionsInfo,
-                                          const char *szUserName,
-                                          tABC_Request_Callback fRequestCallback,
-                                          void *pData,
-                                          tABC_Error *pError);
-
-
-    void *ABC_AccountGetQuestionChoicesThreaded(void *pData);
-
-    void ABC_AccountQuestionsInfoFree(tABC_AccountQuestionsInfo *pAccountQuestionsInfo);
 
     void ABC_AccountFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices);
 

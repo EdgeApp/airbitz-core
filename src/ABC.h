@@ -102,7 +102,9 @@ extern "C" {
         /** Create wallet request */
         ABC_RequestType_CreateWallet = 3,
         /** Get Recovery Question Choices request */
-        ABC_RequestType_GetQuestionChoices = 4
+        ABC_RequestType_GetQuestionChoices = 4,
+        /** Change password request */
+        ABC_RequestType_ChangePassword = 5
     } tABC_RequestType;
 
     /**
@@ -374,6 +376,20 @@ extern "C" {
     tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
                                      char **pszQuestions,
                                      tABC_Error *pError);
+
+    tABC_CC ABC_ChangePassword(const char *szUserName,
+                               const char *szPassword,
+                               const char *szNewPassword,
+                               tABC_Request_Callback fRequestCallback,
+                               void *pData,
+                               tABC_Error *pError);
+
+    tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
+                                                  const char *szRecoveryAnswers,
+                                                  const char *szNewPassword,
+                                                  tABC_Request_Callback fRequestCallback,
+                                                  void *pData,
+                                                  tABC_Error *pError);
 
     // temp functions
     void tempEventA();
