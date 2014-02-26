@@ -11,6 +11,7 @@
 #define ABC_Wallet_h
 
 #include "ABC.h"
+#include "ABC_Util.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -90,6 +91,11 @@ extern "C" {
                                char **aszUUIDArray,
                                unsigned int countUUIDs,
                                tABC_Error *pError);
+
+    tABC_CC ABC_WalletChangeEMKsForAccount(const char *szUserName,
+                                           tABC_U08Buf oldLP2,
+                                           tABC_U08Buf newLP2,
+                                           tABC_Error *pError);
 
 
 #ifdef __cplusplus

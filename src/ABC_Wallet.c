@@ -63,6 +63,8 @@ static tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPasswor
 static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
 static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError);
 static void    ABC_WalletFreeData(tWalletData *pData);
+static tABC_CC ABC_WalletGetUUIDs(const char *szUserName, char ***paUUIDs, unsigned int *pCount, tABC_Error *pError);
+static tABC_CC ABC_WalletChangeEMKForUUID(const char *szUserName, const char *szUUID, tABC_U08Buf oldLP2, tABC_U08Buf newLP2, tABC_Error *pError);
 
 tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
                                   const char *szUserName,
@@ -863,6 +865,51 @@ void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo)
 }
 
 /**
+ * Gets wallets UUIDs for a specified account.
+ *
+ * @param szUserName            UserName for the account associated with this wallet
+ * @param paWalletInfo          Pointer to store the allocated array of UUID strings
+ * @param pCount                Pointer to store number of UUIDs in the array
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_WalletGetUUIDs(const char *szUserName,
+                           char ***paUUIDs,
+                           unsigned int *pCount,
+                           tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szAccountSyncDir = NULL;
+    char *szFilename = NULL;
+    char *szJSON = NULL;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(paUUIDs);
+    ABC_CHECK_NULL(pCount);
+
+    // get the local directory for this account
+    ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+
+    // load wallet the account Wallets.json
+    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szAccountSyncDir, WALLET_ACCOUNTS_WALLETS_FILENAME);
+    if (ABC_FileIOFileExist(szFilename))
+    {
+        ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON, pError));
+        ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString(szJSON, JSON_WALLET_WALLETS_FIELD, paUUIDs, pCount, pError));
+    }
+
+exit:
+    if (szAccountSyncDir)   free(szAccountSyncDir);
+    if (szFilename)         free(szFilename);
+    if (szJSON)             free(szJSON);
+
+    return cc;
+}
+
+/**
  * Gets wallets for a specified account.
  *
  * This function allocates and fills in an array of wallet info structures with the information
@@ -883,9 +930,6 @@ tABC_CC ABC_WalletGetWallets(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char *szAccountSyncDir = NULL;
-    char *szFilename = NULL;
-    char *szJSON = NULL;
     char **aszUUIDs = NULL;
     unsigned int nUUIDs = 0;
     tABC_WalletInfo **aWalletInfo = NULL;
@@ -897,17 +941,8 @@ tABC_CC ABC_WalletGetWallets(const char *szUserName,
     ABC_CHECK_NULL(pCount);
     *pCount = 0;
 
-    // get the local directory for this account
-    ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
-
-    // load wallet the account Wallets.json
-    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szAccountSyncDir, WALLET_ACCOUNTS_WALLETS_FILENAME);
-    if (ABC_FileIOFileExist(szFilename))
-    {
-        ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON, pError));
-        ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString(szJSON, JSON_WALLET_WALLETS_FIELD, &aszUUIDs, &nUUIDs, pError));
-    }
+    // get the array of wallet UUIDs for this account
+    ABC_CHECK_RET(ABC_WalletGetUUIDs(szUserName, &aszUUIDs, &nUUIDs, pError));
 
     // if we got anything
     if (nUUIDs > 0)
@@ -930,9 +965,6 @@ tABC_CC ABC_WalletGetWallets(const char *szUserName,
 
 
 exit:
-    if (szAccountSyncDir)   free(szAccountSyncDir);
-    if (szFilename)         free(szFilename);
-    if (szJSON)             free(szJSON);
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
     ABC_WalletFreeInfoArray(aWalletInfo, nUUIDs);
 
@@ -1054,3 +1086,101 @@ exit:
 
     return cc;
 }
+
+/**
+ * Re-encrypted the Master Keys for the wallets for a specified account.
+ *
+ * @param szUserName    UserName for the account associated with this wallet
+ * @param oldLP2        Previous key used to encrypted the master keys
+ * @param newLP2        The new key used to encrypted the master keys
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_WalletChangeEMKsForAccount(const char *szUserName,
+                                       tABC_U08Buf oldLP2,
+                                       tABC_U08Buf newLP2,
+                                       tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char **aszUUIDs = NULL;
+    unsigned int nUUIDs = 0;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL_BUF(oldLP2);
+    ABC_CHECK_NULL_BUF(newLP2);
+
+    // TODO: This function must be protected by a mutex in some way as it is changing the keys that another thread might use
+
+    // clear the cache so no old keys will be flushed
+    ABC_CHECK_RET(ABC_WalletClearCache(pError));
+
+    // get the array of wallet UUIDs for this account
+    ABC_CHECK_RET(ABC_WalletGetUUIDs(szUserName, &aszUUIDs, &nUUIDs, pError));
+
+    // if we got anything
+    if (nUUIDs > 0)
+    {
+        for (int i = 0; i < nUUIDs; i++)
+        {
+            ABC_CHECK_RET(ABC_WalletChangeEMKForUUID(szUserName, aszUUIDs[i], oldLP2, newLP2, pError));
+        }
+    }
+
+exit:
+    ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
+
+    return cc;
+}
+
+/**
+ * Re-encrypted the Master Keys for the wallets for a specified account.
+ *
+ * @param szUserName    UserName for the account associated with this wallet
+ * @param oldLP2        Previous key used to encrypted the master keys
+ * @param newLP2        The new key used to encrypted the master keys
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_WalletChangeEMKForUUID(const char *szUserName,
+                                   const char *szUUID,
+                                   tABC_U08Buf oldLP2,
+                                   tABC_U08Buf newLP2,
+                                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_U08Buf MK = ABC_BUF_NULL;
+    char *szAccountSyncDir = NULL;
+    char *szFilename = NULL;
+    char *szJSON = NULL;
+    char **aszUUIDs = NULL;
+    unsigned int nUUIDs = 0;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szUUID);
+    ABC_CHECK_NULL_BUF(oldLP2);
+    ABC_CHECK_NULL_BUF(newLP2);
+
+    // get the local directory for this account
+    ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+
+    // get the MK using the old LP2
+    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s%s.json", szAccountSyncDir, WALLET_EMK_PREFIX, szUUID);
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, oldLP2, &MK, pError));
+
+    // write it back out using the new LP2
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(MK, newLP2, ABC_CryptoType_AES256, szFilename, pError));
+
+exit:
+    ABC_BUF_FREE(MK);
+    if (szAccountSyncDir)   free(szAccountSyncDir);
+    if (szFilename)         free(szFilename);
+    if (szJSON)             free(szJSON);
+    ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
+    
+    return cc;
+}
+

@@ -129,9 +129,12 @@ extern "C" {
                                             }
 #define ABC_BUF_DUP(dst, src)               { \
                                                 unsigned long __abc_buf_dup_size__ = (int) (((src).end)-((src).p)); \
-                                                (dst).p = malloc(__abc_buf_dup_size__); \
-                                                (dst).end = (dst).p + __abc_buf_dup_size__; \
-                                                memcpy((dst).p, (src).p, __abc_buf_dup_size__); \
+                                                if (__abc_buf_dup_size__ > 0) \
+                                                { \
+                                                    (dst).p = malloc(__abc_buf_dup_size__); \
+                                                    (dst).end = (dst).p + __abc_buf_dup_size__; \
+                                                    memcpy((dst).p, (src).p, __abc_buf_dup_size__); \
+                                                } \
                                             }
 #define ABC_BUF_DUP_PTR(buf, ptr, size)     { \
                                                 unsigned long __abc_buf_dup_size__ = (int) size; \

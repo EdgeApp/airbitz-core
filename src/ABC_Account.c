@@ -20,6 +20,7 @@
 #include "ABC_URL.h"
 #include "ABC_Debug.h"
 #include "ABC_ServerDefs.h"
+#include "ABC_Wallet.h"
 
 #define ACCOUNT_MAX                     1024  // maximum number of accounts
 #define ACCOUNT_DIR                     "Accounts"
@@ -704,6 +705,7 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
 
     // ELP2 = AES256(LP2, LRA2)
     ABC_CHECK_RET(ABC_CryptoEncryptJSONString(pKeys->LP2, pKeys->LRA2, ABC_CryptoType_AES256, &szELP2_JSON, pError));
+    //ABC_UtilHexDumpBuf("LP2", pKeys->LP2);
 
     // ELRA2 = AES256(LRA2, LP2)
     ABC_CHECK_RET(ABC_CryptoEncryptJSONString(pKeys->LRA2, pKeys->LP2, ABC_CryptoType_AES256, &szELRA2_JSON, pError));
@@ -784,15 +786,19 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     ABC_CHECK_NULL(pInfo->szUserName);
     ABC_CHECK_NULL(pInfo->szNewPassword);
 
+    // TODO: This function must be protected by a mutex in some way as it is changing the keys that another thread might use
+
     // get the account directory and set up for creating needed filenames
     ABC_CHECK_RET(ABC_AccountGetDirName(pInfo->szUserName, &szAccountDir, pError));
     szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
 
+    // get the keys for this user (note: password can be NULL for this call)
+    ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
+
     // we need to obtain the original LP2 and LRA2
     if (pInfo->szPassword != NULL)
     {
-        // get the keys for this user with the password
-        ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
+        // we had the password so we should have the LP2 key
         ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->LP2), ABC_CC_Error, "Expected to find LP2 in key cache");
         ABC_BUF_DUP(oldLP2, pKeys->LP2);
 
@@ -801,7 +807,10 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
         {
             // get the LRA2 by decrypting ELRA2
             sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELRA2_FILENAME);
-            ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pKeys->LP2, &(pKeys->LRA2), pError));
+            if (true == ABC_FileIOFileExist(szFilename))
+            {
+                ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pKeys->LP2, &(pKeys->LRA2), pError));
+            }
         }
         ABC_BUF_DUP(LRA2, pKeys->LRA2);
 
@@ -810,9 +819,6 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     }
     else
     {
-        // get the keys for this user without the password
-        ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, NULL, &pKeys, pError));
-
         // we have the recovery questions so we can make the LRA2
 
         // LRA = L + RA
@@ -826,6 +832,9 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
         // get the LP2 by decrypting ELP2 with LRA2
         sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELP2_FILENAME);
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, LRA2, &oldLP2, pError));
+
+        // create LRA1 as it will be needed for server communication later
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP1, &LRA1, pError));
     }
 
     // we now have oldLP2 and oldLRA2
@@ -863,7 +872,7 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     ABC_BUF_FREE(pKeys->LP2);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->LP, pKeys->pSNRP2, &(pKeys->LP2), pError));
 
-    // we'll need L1 for server comm L1 = Scrypt(L, SNRP1)
+    // we'll need L1 for server communication L1 = Scrypt(L, SNRP1)
     if (ABC_BUF_PTR(pKeys->L1) == NULL)
     {
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP1, &(pKeys->L1), pError));
@@ -872,15 +881,19 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     // server change password - Server will need L1, (P1 or LRA1) and new_P1
     ABC_CHECK_RET(ABC_AccountServerChangePassword(pKeys->L1, oldP1, LRA1, pKeys->P1, pError));
 
-    // TODO: change all the wallet keys - re-encrypted them with new LP2
+    // change all the wallet keys - re-encrypted them with new LP2
+    ABC_CHECK_RET(ABC_WalletChangeEMKsForAccount(pInfo->szUserName, oldLP2, pKeys->LP2, pError));
 
-    // write out new ELP2.json <- LP2 encrypted with recovery key (LRA2)
-    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELP2_FILENAME);
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(pKeys->LP2, LRA2, ABC_CryptoType_AES256, szFilename, pError));
+    if (ABC_BUF_PTR(LRA2) != NULL)
+    {
+        // write out new ELP2.json <- LP2 encrypted with recovery key (LRA2)
+        sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELP2_FILENAME);
+        ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(pKeys->LP2, LRA2, ABC_CryptoType_AES256, szFilename, pError));
 
-    // write out new ELRA2.json <- LRA2 encrypted with LP2 (L+P,S2)
-    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELRA2_FILENAME);
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(pKeys->LP2, LRA2, ABC_CryptoType_AES256, szFilename, pError));
+        // write out new ELRA2.json <- LRA2 encrypted with LP2 (L+P,S2)
+        sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELRA2_FILENAME);
+        ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(LRA2, pKeys->LP2, ABC_CryptoType_AES256, szFilename, pError));
+    }
 
     // the keys for the account have all been updated so other functions can now be called that use them
 
@@ -1865,8 +1878,8 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             // SNRP's
             ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&(pKeys->pSNRP1), pError));
             ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP2, &(pKeys->pSNRP2), pError));
-            ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP2, &(pKeys->pSNRP3), pError));
-            ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP2, &(pKeys->pSNRP4), pError));
+            ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP3, &(pKeys->pSNRP3), pError));
+            ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP4, &(pKeys->pSNRP4), pError));
 
             // L = username
             ABC_BUF_DUP_PTR(pKeys->L, pKeys->szUserName, strlen(pKeys->szUserName));
