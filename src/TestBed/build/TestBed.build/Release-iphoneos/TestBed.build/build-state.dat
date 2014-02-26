@@ -1,0 +1,865 @@
+TTestBed
+v6
+r1
+cCheck dependencies
+cCpResource /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/ResourceRules.plist build/Release-iphoneos/TestBed.app/ResourceRules.plist
+cProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-cilclihcirvakidchmdigngukbok/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7 c com.apple.compilers.llvm.clang.1_0.compiler
+cProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-haijdchxddhsikcexuaqntbbvdgb/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7s c com.apple.compilers.llvm.clang.1_0.compiler
+cProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-fopfeekhcdwlcacxzarwoyusjnes/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler
+cProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/AppDelegate.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ViewController.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ABC.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c normal armv7 c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/main.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ABC.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c normal armv7s c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/AppDelegate.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ViewController.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/main.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ABC.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ViewController.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/AppDelegate.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/main.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+cLd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed normal armv7
+cLd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed normal arm64
+cLd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed normal armv7s
+cCreateUniversalBinary /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/TestBed normal armv7\ armv7s\ arm64
+cCompileStoryboard /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Base.lproj/Main.storyboard
+cCopyStringsFile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/en.lproj/InfoPlist.strings TestBed/en.lproj/InfoPlist.strings
+cCompileAssetCatalog /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Images.xcassets
+cProcessInfoPlistFile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/Info.plist /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Info.plist
+cGenerateDSYMFile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app.dSYM /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/TestBed
+cProcessProductPackaging /Users/adamdna/Library/MobileDevice/Provisioning\ Profiles/A73E08AA-BE65-4B06-9D9A-31406365A6D6.mobileprovision /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/embedded.mobileprovision
+cTouch /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app
+cProcessProductPackaging /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/Entitlements.plist /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed.xcent
+cCodeSign /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app
+cValidate /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app
+
+N/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk
+c000000005284FDEE0000000000000110
+t1384447470
+s272
+
+N/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/Entitlements.plist
+c00000000523B5B8C0000000000000094
+t1379621772
+s148
+
+N/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/ResourceRules.plist
+c00000000523B5B8C0000000000000096
+t1379621772
+s150
+
+N/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/SDKSettings.plist
+c00000000523B5B8C000000000000036B
+t1379621772
+s875
+
+N/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/CoreServices/SystemVersion.plist
+c000000005268DA5800000000000001A0
+t1382603352
+s416
+
+N/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics
+c000000005268DA5C00000000004D63C0
+t1382603356
+s5071808
+
+N/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/Foundation.framework/Foundation
+c000000005268DA5E0000000000A92BC0
+t1382603358
+s11086784
+
+N/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/UIKit.framework/UIKit
+c000000005268DA6A00000000025A5AC0
+t1382603370
+s39475904
+
+N/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/5.0/include/module.map
+c00000000523B5BB70000000000000AC9
+t1379621815
+s2761
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m
+c0000000052DEC05C00000000000007D7
+t1390329948
+s2007
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Base.lproj/Main.storyboard
+c0000000052DEC05C0000000000000630
+t1390329948
+s1584
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c
+c0000000052E044480000000000000547
+t1390429256
+s1351
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Images.xcassets
+c0000000052DEC05C0000000000000088
+t1390329948
+s136
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Info.plist
+c0000000052DEC05C00000000000004C6
+t1390329948
+s1222
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch
+c0000000052DEC05C0000000000000158
+t1390329948
+s344
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m
+c0000000052E0444800000000000002FF
+t1390429256
+s767
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/en.lproj/InfoPlist.strings
+c0000000052DEC05C000000000000002D
+t1390329948
+s45
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m
+c0000000052DEC05C0000000000000151
+t1390329948
+s337
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app
+t1390505434
+s374
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app.dSYM
+t2
+s0
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/Base.lproj/Main.storyboardc
+t1390505433
+s170
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/Info.plist
+t1390505434
+s1290
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/PkgInfo
+t1390505434
+s8
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/ResourceRules.plist
+t1390505433
+s150
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/TestBed
+t1390505433
+s202832
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/embedded.mobileprovision
+t1390505434
+s11215
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/en.lproj/InfoPlist.strings
+t1390505433
+s42
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ABC.o
+t1390505433
+s4656
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/AppDelegate.o
+t1390505433
+s69620
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed
+t1390505433
+s55376
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed.LinkFileList
+c0000000052E16DD9000000000000025C
+t1390505433
+s604
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ViewController.o
+t1390505433
+s42124
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/main.o
+t1390505433
+s4560
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ABC.o
+t1390505433
+s4712
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/AppDelegate.o
+t1390505433
+s65168
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed
+t1390505433
+s54948
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed.LinkFileList
+c0000000052E16DD9000000000000025C
+t1390505433
+s604
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ViewController.o
+t1390505433
+s42396
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/main.o
+t1390505433
+s3872
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ABC.o
+t1390505433
+s4712
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/AppDelegate.o
+t1390505433
+s65168
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed
+t1390505433
+s54952
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed.LinkFileList
+c0000000052E16DD90000000000000260
+t1390505433
+s608
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ViewController.o
+t1390505433
+s42396
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/main.o
+t1390505433
+s3872
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed.xcent
+t1390505434
+s408
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/assetcatalog_dependencies.txt
+t1390505434
+s414
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/assetcatalog_generated_info.plist
+t1390505434
+s525
+
+N/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/com.apple.build-tools.platform.validate
+t2
+s0
+
+N/Users/adamdna/Library/MobileDevice/Provisioning Profiles/A73E08AA-BE65-4B06-9D9A-31406365A6D6.mobileprovision
+c00000000525FFE1F0000000000002BCF
+t1382022687
+s11215
+
+N/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-cilclihcirvakidchmdigngukbok/TestBed-Prefix.pch.pch
+t1390505433
+s78544
+
+N/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch.pch
+t1390505433
+s111024
+
+N/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-fopfeekhcdwlcacxzarwoyusjnes/TestBed-Prefix.pch.pch
+t1390505433
+s93440
+
+N/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch.pch
+t1390505433
+s87508
+
+N/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch.pch
+t1390505433
+s87464
+
+N/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-haijdchxddhsikcexuaqntbbvdgb/TestBed-Prefix.pch.pch
+t1390505433
+s78516
+
+CCheck dependencies
+r0
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection18"Check dependencies18"Check dependencies0b606259a591b841^cb10a359a591b841^---0#1#1#--18"Check dependencies36"21D10457-CAD2-4AA3-8DD4-537EB2AF5BA6-
+
+CCodeSign /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app
+s412198234.161986
+e412198234.393421
+r1
+xCodeSign
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection43"CodeSign build/Release-iphoneos/TestBed.app43"CodeSign build/Release-iphoneos/TestBed.app1399295aa591b841^a2b7645aa591b841^---0#0#1#-19%DVTDocumentLocation2@119"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/0000000000000000^1251"CodeSign build/Release-iphoneos/TestBed.app    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv CODESIGN_ALLOCATE /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/codesign_allocate    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    Using code signing identity "iPhone Developer: Adam Harris (79L75K9N4S)" and provisioning profile "iOS Team Provisioning Profile: *" (A73E08AA-BE65-4B06-9D9A-31406365A6D6)    codesign --force --sign 5AE43F645D95850B94B5DA83F916654DAFA20BD8 --resource-rules=/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/ResourceRules.plist --entitlements /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed.xcent /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app36"6CFD999E-B8CC-4E30-B0E0-AF7FB0E5A13B-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileAssetCatalog /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Images.xcassets
+s412198233.876810
+e412198234.081355
+r1
+xCompileAssetCatalog
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Images.xcassets
+o/* com.apple.actool.compilation-results */
+o/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/LaunchImage-700-568h@2x.png
+o/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/Assets.car
+o/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/assetcatalog_generated_info.plist
+o
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection78"CompileAssetCatalog build/Release-iphoneos/TestBed.app TestBed/Images.xcassets78"CompileAssetCatalog build/Release-iphoneos/TestBed.app TestBed/Images.xcassetsfda2e059a591b841^aed3145aa591b841^-442"/* com.apple.actool.compilation-results *//Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/LaunchImage-700-568h@2x.png/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/Assets.car/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/assetcatalog_generated_info.plist-0#0#1#-19%DVTDocumentLocation2@108"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Images.xcassets/0000000000000000^1332"CompileAssetCatalog build/Release-iphoneos/TestBed.app TestBed/Images.xcassets    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/usr/bin/actool --output-format human-readable-text --notices --warnings --export-dependency-info /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/assetcatalog_dependencies.txt --output-partial-info-plist /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/assetcatalog_generated_info.plist --app-icon AppIcon --launch-image LaunchImage --platform iphoneos --minimum-deployment-target 7.0 --target-device iphone --compress-pngs --compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Images.xcassets36"63BF6097-4F17-4CC8-9638-3194C97F336B-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ABC.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.735661
+e412198233.765593
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ABC.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c
+xnormal
+xarm64
+xc
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection94"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c164"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ABC.o TestBed/Core/ABC.c normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler5873bc59a591b841^3317c459a591b841^---0#0#1#-19%DVTDocumentLocation2@102"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c0000000000000000^3693"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ABC.o TestBed/Core/ABC.c normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c -arch arm64 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/arm64 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-fopfeekhcdwlcacxzarwoyusjnes/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ABC.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ABC.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ABC.o36"885BE535-F588-4250-8BDC-A5C842F7AB0C-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/AppDelegate.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.750397
+e412198233.814155
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/AppDelegate.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m
+xnormal
+xarm64
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection97"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m185"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/AppDelegate.o TestBed/AppDelegate.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compilerb83ac059a591b841^876cd059a591b841^---0#0#1#-19%DVTDocumentLocation2@105"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m0000000000000000^4001"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/AppDelegate.o TestBed/AppDelegate.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c -arch arm64 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/arm64 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/AppDelegate.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/AppDelegate.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/AppDelegate.o36"A8A11E84-E402-409F-86A1-C6D70ED8BA56-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ViewController.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.736627
+e412198233.805507
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ViewController.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m
+xnormal
+xarm64
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.h
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection100"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m191"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ViewController.o TestBed/ViewController.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler70b3bc59a591b841^e735ce59a591b841^---0#0#1#-19%DVTDocumentLocation2@108"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m0000000000000000^4019"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ViewController.o TestBed/ViewController.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c -arch arm64 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/arm64 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ViewController.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ViewController.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ViewController.o36"543A4492-86CA-4026-9A40-FC626B6DC1E1-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/main.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.754317
+e412198233.793737
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/main.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m
+xnormal
+xarm64
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection90"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m171"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/main.o TestBed/main.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler643dc159a591b841^1233cb59a591b841^---0#0#1#-19%DVTDocumentLocation2@98"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m0000000000000000^3959"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/main.o TestBed/main.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c -arch arm64 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/arm64 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/main.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/main.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/main.o36"323F78CE-7713-42BF-9C1E-D85B57DF69C9-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ABC.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c normal armv7 c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.703903
+e412198233.734911
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ABC.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c
+xnormal
+xarmv7
+xc
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection94"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c164"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ABC.o TestBed/Core/ABC.c normal armv7 c com.apple.compilers.llvm.clang.1_0.compilera565b459a591b841^b115bc59a591b841^---0#0#1#-19%DVTDocumentLocation2@102"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c0000000000000000^3693"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ABC.o TestBed/Core/ABC.c normal armv7 c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c -arch armv7 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-cilclihcirvakidchmdigngukbok/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ABC.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ABC.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ABC.o36"D6ABE66C-B24B-4443-85B7-5DAD83120AB9-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/AppDelegate.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.703886
+e412198233.785919
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/AppDelegate.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m
+xnormal
+xarmv7
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection97"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m185"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/AppDelegate.o TestBed/AppDelegate.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler1268b459a591b841^9432c959a591b841^---0#0#1#-19%DVTDocumentLocation2@105"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m0000000000000000^4001"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/AppDelegate.o TestBed/AppDelegate.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c -arch armv7 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/AppDelegate.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/AppDelegate.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/AppDelegate.o36"E0C65776-1AD2-4B10-A172-D9FA4AB6A80A-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ViewController.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.703894
+e412198233.774040
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ViewController.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m
+xnormal
+xarmv7
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.h
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection100"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m191"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ViewController.o TestBed/ViewController.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler3560b459a591b841^0228c659a591b841^---0#0#1#-19%DVTDocumentLocation2@108"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m0000000000000000^4019"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ViewController.o TestBed/ViewController.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c -arch armv7 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ViewController.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ViewController.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ViewController.o36"6B6996DC-3E92-470A-9DAF-1438B3A98D7A-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/main.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.703913
+e412198233.748722
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/main.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m
+xnormal
+xarmv7
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection90"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m171"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/main.o TestBed/main.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compilerd36ab459a591b841^8813c059a591b841^---0#0#1#-19%DVTDocumentLocation2@98"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m0000000000000000^3959"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/main.o TestBed/main.m normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c -arch armv7 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/main.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/main.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/main.o36"9A96D103-0FDA-4C6F-9823-9CC1940C9B4A-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ABC.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c normal armv7s c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.703917
+e412198233.734376
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ABC.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c
+xnormal
+xarmv7s
+xc
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection94"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c166"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ABC.o TestBed/Core/ABC.c normal armv7s c com.apple.compilers.llvm.clang.1_0.compiler8066b459a591b841^fc00bc59a591b841^---0#0#1#-19%DVTDocumentLocation2@102"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c0000000000000000^3700"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ABC.o TestBed/Core/ABC.c normal armv7s c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c -arch armv7s -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7s -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-haijdchxddhsikcexuaqntbbvdgb/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ABC.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ABC.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.c -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ABC.o36"7B859E10-D54D-47A7-AEB8-4B03E9E54071-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/AppDelegate.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.705028
+e412198233.791911
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/AppDelegate.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m
+xnormal
+xarmv7s
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection97"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m187"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/AppDelegate.o TestBed/AppDelegate.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler158eb459a591b841^f1baca59a591b841^---0#0#1#-19%DVTDocumentLocation2@105"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m0000000000000000^4008"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/AppDelegate.o TestBed/AppDelegate.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c -arch armv7s -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7s -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/AppDelegate.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/AppDelegate.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.m -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/AppDelegate.o36"F15DBD5F-D4E8-4F22-A253-B8C9BC406760-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ViewController.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.705023
+e412198233.786283
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ViewController.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m
+xnormal
+xarmv7s
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.h
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Core/ABC.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection100"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m193"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ViewController.o TestBed/ViewController.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler9198b459a591b841^3c4ac959a591b841^---0#0#1#-19%DVTDocumentLocation2@108"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m0000000000000000^4026"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ViewController.o TestBed/ViewController.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c -arch armv7s -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7s -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ViewController.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ViewController.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/ViewController.m -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ViewController.o36"21A9ADB6-B7E7-47D0-BFAE-0A50AAE6D630-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/main.o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.705033
+e412198233.752934
+r1
+xCompileC
+xbuild/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/main.o
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m
+xnormal
+xarmv7s
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/AppDelegate.h
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection90"Compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m173"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/main.o TestBed/main.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler9198b459a591b841^a2d2c059a591b841^---0#0#1#-19%DVTDocumentLocation2@98"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m0000000000000000^3966"CompileC build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/main.o TestBed/main.m normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c -arch armv7s -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7s -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -include /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch -MMD -MT dependencies -MF /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/main.d --serialize-diagnostics /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/main.dia -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/main.m -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/main.o36"A3C20CEB-3AEE-4BD0-A1EC-DA174EB2E0F6-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCompileStoryboard /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Base.lproj/Main.storyboard
+s412198233.876742
+e412198233.921229
+r1
+xCompileStoryboard
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Base.lproj/Main.storyboard
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection52"CompileStoryboard TestBed/Base.lproj/Main.storyboard52"CompileStoryboard TestBed/Base.lproj/Main.storyboard2f88e059a591b841^52d6eb59a591b841^---0#0#1#-19%DVTDocumentLocation2@118"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Base.lproj/Main.storyboard0000000000000000^1034"CompileStoryboard TestBed/Base.lproj/Main.storyboard    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv IBSC_MINIMUM_COMPATIBILITY_VERSION 7.0    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    setenv XCODE_DEVELOPER_USR_PATH /Applications/Xcode.app/Contents/Developer/usr/bin/..    /Applications/Xcode.app/Contents/Developer/usr/bin/ibtool --errors --warnings --notices --minimum-deployment-target 7.0 --output-format human-readable-text --compile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/Base.lproj/Main.storyboardc /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/Base.lproj/Main.storyboard36"8EA8EEFA-F767-441A-B701-B8D0A02E8A39-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCopyStringsFile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/en.lproj/InfoPlist.strings TestBed/en.lproj/InfoPlist.strings
+s412198233.876744
+e412198233.880380
+r1
+xCopyStringsFile
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/en.lproj/InfoPlist.strings
+xTestBed/en.lproj/InfoPlist.strings
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection39"Copy TestBed/en.lproj/InfoPlist.strings112"CopyStringsFile build/Release-iphoneos/TestBed.app/en.lproj/InfoPlist.strings TestBed/en.lproj/InfoPlist.strings7a8ee059a591b841^fa60e159a591b841^---0#0#1#-19%DVTDocumentLocation2@118"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/en.lproj/InfoPlist.strings0000000000000000^790"CopyStringsFile build/Release-iphoneos/TestBed.app/en.lproj/InfoPlist.strings TestBed/en.lproj/InfoPlist.strings    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    builtin-copyStrings --validate --inputencoding utf-8 --outputencoding binary --outdir /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/en.lproj -- TestBed/en.lproj/InfoPlist.strings36"8FE828AB-AB93-40A2-83B8-F4A50CF93D45-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCpResource /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/ResourceRules.plist build/Release-iphoneos/TestBed.app/ResourceRules.plist
+s412198233.640204
+e412198233.642255
+r1
+xCpResource
+x/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/ResourceRules.plist
+xbuild/Release-iphoneos/TestBed.app/ResourceRules.plist
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection59"Copy build/Release-iphoneos/TestBed.app/ResourceRules.plist187"CpResource /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/ResourceRules.plist build/Release-iphoneos/TestBed.app/ResourceRules.plist7bf7a359a591b841^f46aa459a591b841^---0#0#1#-19%DVTDocumentLocation2@138"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/ResourceRules.plist00386477deffdf42^1088"CpResource /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/ResourceRules.plist build/Release-iphoneos/TestBed.app/ResourceRules.plist    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -strip-debug-symbols -strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/strip -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/ResourceRules.plist /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app36"F6F2B364-50F5-42D9-B7B3-337BE2EB1EC3-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CCreateUniversalBinary /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/TestBed normal armv7\ armv7s\ arm64
+s412198233.861753
+e412198233.868943
+r1
+xCreateUniversalBinary
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/TestBed
+xnormal
+xarmv7 armv7s arm64
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection134"Create universal binary /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/TestBed92"CreateUniversalBinary build/Release-iphoneos/TestBed.app/TestBed normal armv7\ armv7s\ arm64a1bfdc59a591b841^5073de59a591b841^---0#0#1#-19%DVTDocumentLocation2@126"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/TestBed00386477deffdf42^1111"CreateUniversalBinary build/Release-iphoneos/TestBed.app/TestBed normal armv7\ armv7s\ arm64    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    lipo -create /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed -output /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/TestBed36"6FDDA8D7-45C8-434F-A3EC-A84375C64613-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CGenerateDSYMFile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app.dSYM /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/TestBed
+s412198234.101460
+e412198234.128716
+r1
+xGenerateDSYMFile
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app.dSYM
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/TestBed
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection116"Generate /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app.dSYM99"GenerateDSYMFile build/Release-iphoneos/TestBed.app.dSYM build/Release-iphoneos/TestBed.app/TestBed78091a5aa591b841^95f4205aa591b841^---0#0#1#-19%DVTDocumentLocation2@123"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app.dSYM00386477deffdf42^859"GenerateDSYMFile build/Release-iphoneos/TestBed.app.dSYM build/Release-iphoneos/TestBed.app/TestBed    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/dsymutil /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/TestBed -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app.dSYM36"F60EFA86-AD51-4D4B-8950-6D040E0A3908-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CLd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed normal arm64
+s412198233.822632
+e412198233.851621
+r1
+xLd
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed
+xnormal
+xarm64
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed.LinkFileList
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ABC.o
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/ViewController.o
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/AppDelegate.o
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/main.o
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/UIKit.framework/UIKit
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/Foundation.framework/Foundation
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/libobjc.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/libSystem.dylib
+d/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/5.0/lib/darwin/libclang_rt.ios.a
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreVideo.framework/CoreVideo
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreImage.framework/CoreImage
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/Security.framework/Security
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CFNetwork.framework/CFNetwork
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/OpenGLES.framework/OpenGLES
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/QuartzCore.framework/QuartzCore
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreText.framework/CoreText
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcache.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcommonCrypto.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcompiler_rt.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcopyfile.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcorecrypto.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libdispatch.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libdyld.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/liblaunch.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libmacho.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libremovefile.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_asl.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_blocks.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_c.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_configuration.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_dnssd.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_info.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_kernel.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_m.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_malloc.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_network.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_notify.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_platform.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_pthread.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_sandbox.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_stats.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libunwind.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libxpc.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/PrivateFrameworks/UIFoundation.framework/UIFoundation
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection152"Link /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed95"Ld build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed normal arm649babd259a591b841^6805da59a591b841^---0#0#1#--1640"Ld build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed normal arm64    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv IPHONEOS_DEPLOYMENT_TARGET 7.0    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -arch arm64 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -L/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -filelist /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed.LinkFileList -dead_strip -fobjc-arc -fobjc-link-runtime -miphoneos-version-min=7.0 -framework CoreGraphics -framework UIKit -framework Foundation -Xlinker -dependency_info -Xlinker /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed_dependency_info.dat -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/arm64/TestBed36"A914B63C-47BE-4897-88E1-3DA8136BD26E-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CLd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed normal armv7
+s412198233.822612
+e412198233.851652
+r1
+xLd
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed
+xnormal
+xarmv7
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed.LinkFileList
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ABC.o
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/ViewController.o
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/AppDelegate.o
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/main.o
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/UIKit.framework/UIKit
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/Foundation.framework/Foundation
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/libobjc.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/libSystem.dylib
+d/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/5.0/lib/darwin/libclang_rt.ios.a
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreVideo.framework/CoreVideo
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreImage.framework/CoreImage
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/Security.framework/Security
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CFNetwork.framework/CFNetwork
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/OpenGLES.framework/OpenGLES
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/QuartzCore.framework/QuartzCore
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreText.framework/CoreText
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcache.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcommonCrypto.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcompiler_rt.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcopyfile.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcorecrypto.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libdispatch.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libdyld.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libkeymgr.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/liblaunch.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libmacho.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libremovefile.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_asl.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_blocks.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_c.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_configuration.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_dnssd.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_info.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_kernel.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_m.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_malloc.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_network.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_notify.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_platform.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_pthread.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_sandbox.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_stats.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libunwind.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libxpc.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/PrivateFrameworks/UIFoundation.framework/UIFoundation
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection152"Link /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed95"Ld build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed normal armv7cea7d259a591b841^2409da59a591b841^---0#0#1#--1640"Ld build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed normal armv7    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv IPHONEOS_DEPLOYMENT_TARGET 7.0    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -arch armv7 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -L/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -filelist /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed.LinkFileList -dead_strip -fobjc-arc -fobjc-link-runtime -miphoneos-version-min=7.0 -framework CoreGraphics -framework UIKit -framework Foundation -Xlinker -dependency_info -Xlinker /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed_dependency_info.dat -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7/TestBed36"47EA0A78-8914-4BD3-A027-21DF86A76938-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CLd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed normal armv7s
+s412198233.822647
+e412198233.847749
+r1
+xLd
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed
+xnormal
+xarmv7s
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed.LinkFileList
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ABC.o
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/ViewController.o
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/AppDelegate.o
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/main.o
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/UIKit.framework/UIKit
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/Foundation.framework/Foundation
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/libobjc.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/libSystem.dylib
+d/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/5.0/lib/darwin/libclang_rt.ios.a
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreVideo.framework/CoreVideo
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreImage.framework/CoreImage
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/Security.framework/Security
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CFNetwork.framework/CFNetwork
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/OpenGLES.framework/OpenGLES
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/QuartzCore.framework/QuartzCore
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/Frameworks/CoreText.framework/CoreText
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcache.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcommonCrypto.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcompiler_rt.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcopyfile.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libcorecrypto.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libdispatch.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libdyld.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libkeymgr.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/liblaunch.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libmacho.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libremovefile.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_asl.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_blocks.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_c.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_configuration.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_dnssd.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_info.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_kernel.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_m.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_malloc.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_network.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_notify.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_platform.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_pthread.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_sandbox.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libsystem_stats.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libunwind.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/usr/lib/system/libxpc.dylib
+d/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/System/Library/PrivateFrameworks/UIFoundation.framework/UIFoundation
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection153"Link /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed97"Ld build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed normal armv7sebacd259a591b841^9a06d959a591b841^---0#0#1#--1646"Ld build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed normal armv7s    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv IPHONEOS_DEPLOYMENT_TARGET 7.0    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -arch armv7s -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -L/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos -filelist /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed.LinkFileList -dead_strip -fobjc-arc -fobjc-link-runtime -miphoneos-version-min=7.0 -framework CoreGraphics -framework UIKit -framework Foundation -Xlinker -dependency_info -Xlinker /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed_dependency_info.dat -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/Objects-normal/armv7s/TestBed36"825F23AF-B20E-4ECB-8ACB-442D8767A2D7-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CProcessInfoPlistFile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/Info.plist /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Info.plist
+s412198234.089814
+e412198234.092912
+r1
+xProcessInfoPlistFile
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/Info.plist
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Info.plist
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection102"Process /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Info.plist93"ProcessInfoPlistFile build/Release-iphoneos/TestBed.app/Info.plist TestBed/TestBed-Info.plist7311175aa591b841^79c9175aa591b841^---0#0#1#-19%DVTDocumentLocation2@110"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Info.plist0000000000000000^1268"ProcessInfoPlistFile build/Release-iphoneos/TestBed.app/Info.plist TestBed/TestBed-Info.plist    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    builtin-infoPlistUtility /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Info.plist -genpkginfo /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/PkgInfo -expandbuildsettings -format binary -platform iphoneos -resourcerulesfile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/ResourceRules.plist -additionalcontentfile /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/assetcatalog_generated_info.plist -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/Info.plist36"30D0A241-7DB0-498D-8A1C-2F7E36C823C0-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-cilclihcirvakidchmdigngukbok/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7 c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.652631
+e412198233.679926
+r1
+xProcessPCH
+x/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-cilclihcirvakidchmdigngukbok/TestBed-Prefix.pch.pch
+xTestBed/TestBed-Prefix.pch
+xnormal
+xarmv7
+xc
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection37"Precompile TestBed/TestBed-Prefix.pch281"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-cilclihcirvakidchmdigngukbok/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7 c com.apple.compilers.llvm.clang.1_0.compiler172ea759a591b841^fa0eae59a591b841^---0#0#1#-19%DVTDocumentLocation2@110"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch0000000000000000^3748"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-cilclihcirvakidchmdigngukbok/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7 c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c-header -arch armv7 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos --serialize-diagnostics /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-cilclihcirvakidchmdigngukbok/TestBed-Prefix.pch.dia -MMD -MT dependencies -MF /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-cilclihcirvakidchmdigngukbok/TestBed-Prefix.pch.d -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch -o /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-cilclihcirvakidchmdigngukbok/TestBed-Prefix.pch.pch36"20D2D969-CAB3-43E1-B865-A43106774845-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.659205
+e412198233.695933
+r1
+xProcessPCH
+x/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch.pch
+xTestBed/TestBed-Prefix.pch
+xnormal
+xarm64
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection37"Precompile TestBed/TestBed-Prefix.pch291"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compilerdfdfa859a591b841^9cdcb759a591b841^---0#0#1#-19%DVTDocumentLocation2@110"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch0000000000000000^4018"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c-header -arch arm64 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/arm64 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos --serialize-diagnostics /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch.dia -MMD -MT dependencies -MF /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch.d -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch -o /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-elwgrhyphiwgolfqkgfknzodpjtz/TestBed-Prefix.pch.pch36"205D8504-2307-495C-83D2-22EA7C226F6C-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-fopfeekhcdwlcacxzarwoyusjnes/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.657901
+e412198233.682798
+r1
+xProcessPCH
+x/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-fopfeekhcdwlcacxzarwoyusjnes/TestBed-Prefix.pch.pch
+xTestBed/TestBed-Prefix.pch
+xnormal
+xarm64
+xc
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection37"Precompile TestBed/TestBed-Prefix.pch281"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-fopfeekhcdwlcacxzarwoyusjnes/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler9085a859a591b841^fbcbae59a591b841^---0#0#1#-19%DVTDocumentLocation2@110"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch0000000000000000^3748"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-fopfeekhcdwlcacxzarwoyusjnes/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal arm64 c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c-header -arch arm64 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/arm64 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos --serialize-diagnostics /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-fopfeekhcdwlcacxzarwoyusjnes/TestBed-Prefix.pch.dia -MMD -MT dependencies -MF /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-fopfeekhcdwlcacxzarwoyusjnes/TestBed-Prefix.pch.d -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch -o /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-fopfeekhcdwlcacxzarwoyusjnes/TestBed-Prefix.pch.pch36"C71D6635-9BBE-44E7-9819-8467B1FECD3E-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.653844
+e412198233.690861
+r1
+xProcessPCH
+x/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch.pch
+xTestBed/TestBed-Prefix.pch
+xnormal
+xarmv7
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection37"Precompile TestBed/TestBed-Prefix.pch291"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler8e77a759a591b841^e3c4b759a591b841^---0#0#1#-19%DVTDocumentLocation2@110"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch0000000000000000^4018"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7 objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c-header -arch armv7 -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7 -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos --serialize-diagnostics /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch.dia -MMD -MT dependencies -MF /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch.d -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch -o /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gtayabqeatwgsleqndposrsgnmil/TestBed-Prefix.pch.pch36"E4790B68-13BF-4C53-92CE-A08651E4C255-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.656485
+e412198233.691146
+r1
+xProcessPCH
+x/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch.pch
+xTestBed/TestBed-Prefix.pch
+xnormal
+xarmv7s
+xobjective-c
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection37"Precompile TestBed/TestBed-Prefix.pch292"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler0729a859a591b841^fed1b759a591b841^---0#0#1#-19%DVTDocumentLocation2@110"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch0000000000000000^4021"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7s objective-c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x objective-c-header -arch armv7s -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fobjc-arc -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Wno-implicit-atomic-properties -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-receiver-is-weak -Wno-arc-repeated-use-of-weak -Wduplicate-method-match -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -Wno-selector -Wno-strict-selector-match -Wundeclared-selector -Wno-deprecated-implementations -DNS_BLOCK_ASSERTIONS=1 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wprotocol -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7s -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos --serialize-diagnostics /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch.dia -MMD -MT dependencies -MF /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch.d -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch -o /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-gzrfbhhufbluzscnwbatzocwuthl/TestBed-Prefix.pch.pch36"8D3E4002-38FA-4C01-AA8C-805AF1080254-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-haijdchxddhsikcexuaqntbbvdgb/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7s c com.apple.compilers.llvm.clang.1_0.compiler
+s412198233.655190
+e412198233.679897
+r1
+xProcessPCH
+x/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-haijdchxddhsikcexuaqntbbvdgb/TestBed-Prefix.pch.pch
+xTestBed/TestBed-Prefix.pch
+xnormal
+xarmv7s
+xc
+xcom.apple.compilers.llvm.clang.1_0.compiler
+d/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection37"Precompile TestBed/TestBed-Prefix.pch282"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-haijdchxddhsikcexuaqntbbvdgb/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7s c com.apple.compilers.llvm.clang.1_0.compilerdcd5a759a591b841^c80aae59a591b841^---0#0#1#-19%DVTDocumentLocation2@110"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch0000000000000000^3751"ProcessPCH /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-haijdchxddhsikcexuaqntbbvdgb/TestBed-Prefix.pch.pch TestBed/TestBed-Prefix.pch normal armv7s c com.apple.compilers.llvm.clang.1_0.compiler    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv LANG en_US.US-ASCII    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -x c-header -arch armv7s -fmessage-length=0 -fdiagnostics-show-note-include-stack -fmacro-backtrace-limit=0 -std=gnu99 -fmodules -fmodules-cache-path=/var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/ModuleCache -Wno-trigraphs -fpascal-strings -Os -Wno-missing-field-initializers -Wno-missing-prototypes -Werror=return-type -Werror=deprecated-objc-isa-usage -Werror=objc-root-class -Wno-missing-braces -Wparentheses -Wswitch -Wunused-function -Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value -Wempty-body -Wuninitialized -Wno-unknown-pragmas -Wno-shadow -Wno-four-char-constants -Wno-conversion -Wconstant-conversion -Wint-conversion -Wbool-conversion -Wenum-conversion -Wshorten-64-to-32 -Wpointer-sign -Wno-newline-eof -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk -fstrict-aliasing -Wdeprecated-declarations -g -fvisibility=hidden -Wno-sign-conversion -miphoneos-version-min=7.0 -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-generated-files.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-own-target-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-all-target-headers.hmap -iquote /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed-project-headers.hmap -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/include -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources/armv7s -I/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/DerivedSources -F/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos --serialize-diagnostics /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-haijdchxddhsikcexuaqntbbvdgb/TestBed-Prefix.pch.dia -MMD -MT dependencies -MF /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-haijdchxddhsikcexuaqntbbvdgb/TestBed-Prefix.pch.d -c /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed/TestBed-Prefix.pch -o /var/folders/lp/xjn9ybcj5xx9dv93w6mbl7lh0000gp/C/com.apple.DeveloperTools/5.0.2-5A3005/Xcode/SharedPrecompiledHeaders/TestBed-Prefix-haijdchxddhsikcexuaqntbbvdgb/TestBed-Prefix.pch.pch36"4AA5C8BF-3195-4F98-87CF-522AEC46BB6E-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CProcessProductPackaging /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/Entitlements.plist /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed.xcent
+s412198234.150509
+e412198234.153460
+r1
+xProcessProductPackaging
+x/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/Entitlements.plist
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed.xcent
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection209"ProcessProductPackaging /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/Entitlements.plist build/TestBed.build/Release-iphoneos/TestBed.build/TestBed.xcent209"ProcessProductPackaging /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/Entitlements.plist build/TestBed.build/Release-iphoneos/TestBed.build/TestBed.xcent3199265aa591b841^9d49275aa591b841^---0#0#1#-19%DVTDocumentLocation2@148"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed.xcent00386477deffdf42^966"ProcessProductPackaging /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/Entitlements.plist build/TestBed.build/Release-iphoneos/TestBed.build/TestBed.xcent    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    builtin-productPackagingUtility /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS7.0.sdk/Entitlements.plist -entitlements -format xml -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/TestBed.xcent36"6052DF69-8834-47A2-AFEB-A63A8B3E54FD-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CProcessProductPackaging /Users/adamdna/Library/MobileDevice/Provisioning\ Profiles/A73E08AA-BE65-4B06-9D9A-31406365A6D6.mobileprovision /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/embedded.mobileprovision
+s412198234.137276
+e412198234.139748
+r1
+xProcessProductPackaging
+x/Users/adamdna/Library/MobileDevice/Provisioning Profiles/A73E08AA-BE65-4B06-9D9A-31406365A6D6.mobileprovision
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/embedded.mobileprovision
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection195"ProcessProductPackaging /Users/adamdna/Library/MobileDevice/Provisioning\ Profiles/A73E08AA-BE65-4B06-9D9A-31406365A6D6.mobileprovision build/Release-iphoneos/TestBed.app/embedded.mobileprovision195"ProcessProductPackaging /Users/adamdna/Library/MobileDevice/Provisioning\ Profiles/A73E08AA-BE65-4B06-9D9A-31406365A6D6.mobileprovision build/Release-iphoneos/TestBed.app/embedded.mobileprovisionb937235aa591b841^d2c8235aa591b841^---0#0#1#-19%DVTDocumentLocation2@143"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/embedded.mobileprovision00386477deffdf42^912"ProcessProductPackaging /Users/adamdna/Library/MobileDevice/Provisioning\ Profiles/A73E08AA-BE65-4B06-9D9A-31406365A6D6.mobileprovision build/Release-iphoneos/TestBed.app/embedded.mobileprovision    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    builtin-productPackagingUtility /Users/adamdna/Library/MobileDevice/Provisioning\ Profiles/A73E08AA-BE65-4B06-9D9A-31406365A6D6.mobileprovision -o /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/embedded.mobileprovision36"47FE38AB-2D3F-4812-B230-C7A68D3FB6F9-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
+CTouch /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app
+r0
+
+CValidate /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app
+s412198234.401959
+e412198234.428076
+r1
+xValidate
+x/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app
+lSLF06#21%IDEActivityLogSection1@2#32"com.apple.dt.IDE.BuildLogSection43"Validate build/Release-iphoneos/TestBed.app43"Validate build/Release-iphoneos/TestBed.appadf8665aa591b841^ea966d5aa591b841^---0#0#1#-19%DVTDocumentLocation2@119"file://localhost/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app/0000000000000000^747"Validate build/Release-iphoneos/TestBed.app    cd /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed    setenv PATH "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin:/Applications/Xcode.app/Contents/Developer/usr/bin:/opt/local/bin:/opt/local/sbin:/Users/adamdna/bin:/opt/subversion/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin:/usr/local/git/bin:/Applications/Xcode.app/Contents/Developer/usr/bin"    setenv PRODUCT_TYPE com.apple.product-type.application    /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/Validation /Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/build/Release-iphoneos/TestBed.app36"78CEF960-D6E8-4502-8584-015F3FF7A11D-
+b378FA36D-2E6B-4F25-AD6A-ECD4A377EF86
+
