@@ -14,9 +14,11 @@
 #define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
 #define ABC_SERVER_UPDATE_CARE_PACKAGE_PATH "account/carepackage/update"
 #define ABC_SERVER_GET_QUESTIONS_PATH       "questions"
+#define ABC_SERVER_CHANGE_PASSWORD_PATH     "account/password/update"
 
 #define ABC_SERVER_JSON_L1_FIELD            "l1"
 #define ABC_SERVER_JSON_P1_FIELD            "p1"
+#define ABC_SERVER_JSON_NEW_P1_FIELD        "new_p1"
 #define ABC_SERVER_JSON_LRA1_FIELD          "lra"
 #define ABC_SERVER_JSON_CARE_PACKAGE_FIELD  "care_package"
 #define ABC_SERVER_JSON_CATEGORY_FIELD      "category"

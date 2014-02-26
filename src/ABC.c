@@ -1081,6 +1081,7 @@ exit:
  * @param szUserName                UserName for the account
  * @param szPassword                Password for the account
  * @param szNewPassword             New Password for the account
+ * @param szNewPIN                  New PIN for the account
  * @param fRequestCallback          The function that will be called when the account create process has finished.
  * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
@@ -1088,6 +1089,7 @@ exit:
 tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,
                            const char *szNewPassword,
+                           const char *szNewPIN,
                            tABC_Request_Callback fRequestCallback,
                            void *pData,
                            tABC_Error *pError)
@@ -1106,6 +1108,8 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(szNewPassword);
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
+    ABC_CHECK_NULL(szNewPIN);
+    ABC_CHECK_ASSERT(strlen(szNewPIN) > 0, ABC_CC_Error, "No new PIN provided");
     ABC_CHECK_NULL(fRequestCallback);
 
     ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
@@ -1114,7 +1118,7 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
                                               szPassword,
                                               NULL, // recovery questions
                                               NULL, // recovery answers
-                                              NULL, // PIN
+                                              szNewPIN,
                                               szNewPassword,
                                               fRequestCallback,
                                               pData,
@@ -1145,6 +1149,7 @@ exit:
  * @param szUserName                UserName for the account
  * @param szRecoveryAnswers         Recovery answers (each answer seperated by a newline)
  * @param szNewPassword             New Password for the account
+ * @param szNewPIN                  New PIN for the account
  * @param fRequestCallback          The function that will be called when the account create process has finished.
  * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
@@ -1152,6 +1157,7 @@ exit:
 tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
                                               const char *szRecoveryAnswers,
                                               const char *szNewPassword,
+                                              const char *szNewPIN,
                                               tABC_Request_Callback fRequestCallback,
                                               void *pData,
                                               tABC_Error *pError)
@@ -1170,6 +1176,8 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error, "No recovery answers provided");
     ABC_CHECK_NULL(szNewPassword);
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
+    ABC_CHECK_NULL(szNewPIN);
+    ABC_CHECK_ASSERT(strlen(szNewPIN) > 0, ABC_CC_Error, "No new PIN provided");
     ABC_CHECK_NULL(fRequestCallback);
 
     ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
@@ -1178,7 +1186,7 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
                                               NULL, // recovery questions
                                               NULL, // password
                                               szRecoveryAnswers,
-                                              NULL, // PIN
+                                              szNewPIN,
                                               szNewPassword,
                                               fRequestCallback,
                                               pData,

@@ -77,6 +77,7 @@ static tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo, tABC_Error *pEr
 static tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pError);
 static tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo, tABC_Error *pError);
+static tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, tABC_Error *pError);
 static tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
@@ -769,18 +770,234 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    tAccountKeys *pKeys = NULL;
+    tABC_U08Buf oldLP2 = ABC_BUF_NULL;
+    tABC_U08Buf LRA2 = ABC_BUF_NULL;
+    tABC_U08Buf LRA = ABC_BUF_NULL;
+    tABC_U08Buf LRA1 = ABC_BUF_NULL;
+    tABC_U08Buf oldP1 = ABC_BUF_NULL;
+    char *szAccountDir = NULL;
+    char *szFilename = NULL;
+    char *szJSON = NULL;
+
     ABC_CHECK_NULL(pInfo);
     ABC_CHECK_NULL(pInfo->szUserName);
     ABC_CHECK_NULL(pInfo->szNewPassword);
 
-    // TODO: right this function
+    // get the account directory and set up for creating needed filenames
+    ABC_CHECK_RET(ABC_AccountGetDirName(pInfo->szUserName, &szAccountDir, pError));
+    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+
+    // we need to obtain the original LP2 and LRA2
+    if (pInfo->szPassword != NULL)
+    {
+        // get the keys for this user with the password
+        ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
+        ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->LP2), ABC_CC_Error, "Expected to find LP2 in key cache");
+        ABC_BUF_DUP(oldLP2, pKeys->LP2);
+
+        // if we don't yet have LRA2
+        if (ABC_BUF_PTR(pKeys->LRA2) == NULL)
+        {
+            // get the LRA2 by decrypting ELRA2
+            sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELRA2_FILENAME);
+            ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pKeys->LP2, &(pKeys->LRA2), pError));
+        }
+        ABC_BUF_DUP(LRA2, pKeys->LRA2);
+
+        // create the old P1 for use in server auth -> P1 = Scrypt(P, SNRP1)
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->P, pKeys->pSNRP1, &oldP1, pError));
+    }
+    else
+    {
+        // get the keys for this user without the password
+        ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, NULL, &pKeys, pError));
+
+        // we have the recovery questions so we can make the LRA2
+
+        // LRA = L + RA
+        ABC_BUF_DUP(LRA, pKeys->L);
+        ABC_BUF_APPEND_PTR(LRA, pInfo->szRecoveryAnswers, strlen(pInfo->szRecoveryAnswers));
+
+        // LRA2 = Scrypt(LRA, SNRP3)
+        ABC_CHECK_ASSERT(NULL != pKeys->pSNRP3, ABC_CC_Error, "Expected to find SNRP3 in key cache");
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP3, &LRA2, pError));
+
+        // get the LP2 by decrypting ELP2 with LRA2
+        sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELP2_FILENAME);
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, LRA2, &oldLP2, pError));
+    }
+
+    // we now have oldLP2 and oldLRA2
+
+    // time to set the new data for this account
+
+    // set new PIN
+    if (pKeys->szPIN)
+    {
+        free(pKeys->szPIN);
+    }
+    pKeys->szPIN = strdup(pInfo->szPIN);
+
+    // set new password
+    if (pKeys->szPassword)
+    {
+        free(pKeys->szPassword);
+    }
+    pKeys->szPassword = strdup(pInfo->szNewPassword);
+
+    // set new P
+    ABC_BUF_FREE(pKeys->P);
+    ABC_BUF_DUP_PTR(pKeys->P, pKeys->szPassword, strlen(pKeys->szPassword));
+
+    // set new P1
+    ABC_BUF_FREE(pKeys->P1);
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->P, pKeys->pSNRP1, &(pKeys->P1), pError));
+
+    // set new LP = L + P
+    ABC_BUF_FREE(pKeys->LP);
+    ABC_BUF_DUP(pKeys->LP, pKeys->L);
+    ABC_BUF_APPEND(pKeys->LP, pKeys->P);
+
+    // set new LP2 = Scrypt(L + P, SNRP2)
+    ABC_BUF_FREE(pKeys->LP2);
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->LP, pKeys->pSNRP2, &(pKeys->LP2), pError));
+
+    // we'll need L1 for server comm L1 = Scrypt(L, SNRP1)
+    if (ABC_BUF_PTR(pKeys->L1) == NULL)
+    {
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP1, &(pKeys->L1), pError));
+    }
+
+    // server change password - Server will need L1, (P1 or LRA1) and new_P1
+    ABC_CHECK_RET(ABC_AccountServerChangePassword(pKeys->L1, oldP1, LRA1, pKeys->P1, pError));
+
+    // TODO: change all the wallet keys - re-encrypted them with new LP2
+
+    // write out new ELP2.json <- LP2 encrypted with recovery key (LRA2)
+    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELP2_FILENAME);
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(pKeys->LP2, LRA2, ABC_CryptoType_AES256, szFilename, pError));
+
+    // write out new ELRA2.json <- LRA2 encrypted with LP2 (L+P,S2)
+    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELRA2_FILENAME);
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(pKeys->LP2, LRA2, ABC_CryptoType_AES256, szFilename, pError));
+
+    // the keys for the account have all been updated so other functions can now be called that use them
+
+    // set the new PIN
+    ABC_CHECK_RET(ABC_AccountSetPIN(pInfo->szUserName, pInfo->szNewPassword, pInfo->szPIN, pError));
 
 exit:
+    ABC_BUF_FREE(oldLP2);
+    ABC_BUF_FREE(LRA2);
+    ABC_BUF_FREE(LRA);
+    ABC_BUF_FREE(LRA1);
+    ABC_BUF_FREE(oldP1);
+    if (szAccountDir) free(szAccountDir);
+    if (szFilename) free(szFilename);
+    if (szJSON) free(szJSON);
+    if (cc != ABC_CC_Ok) ABC_AccountClearKeyCache(NULL);
 
-    
     return cc;
 }
 
+
+/**
+ * Changes the password for an account on the server.
+ *
+ * This function sends information to the server to change the password for an account.
+ * Either the old P1 or LRA1 can be used for authentication.
+ *
+ * @param L1    Login hash for the account
+ * @param oldP1 Old password hash for the account (if this is empty, LRA1 is used instead)
+ * @param LRA1  LRA1 for the account (used if oldP1 is empty)
+ */
+static
+tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szURL     = NULL;
+    char *szResults = NULL;
+    char *szPost    = NULL;
+    char *szL1_Base64 = NULL;
+    char *szOldP1_Base64 = NULL;
+    char *szNewP1_Base64 = NULL;
+    char *szAuth_Base64 = NULL;
+    json_t *pJSON_Root = NULL;
+
+    ABC_CHECK_NULL_BUF(L1);
+    ABC_CHECK_NULL_BUF(newP1);
+
+    // create the URL
+    szURL = malloc(ABC_URL_MAX_PATH_LENGTH);
+    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_CHANGE_PASSWORD_PATH);
+
+    // create base64 versions of L1 and newP1
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(newP1, &szNewP1_Base64, pError));
+
+    // create the post data
+    if (ABC_BUF_PTR(oldP1) != NULL)
+    {
+        ABC_CHECK_RET(ABC_CryptoBase64Encode(oldP1, &szAuth_Base64, pError));
+        pJSON_Root = json_pack("{ssssss}",
+                               ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                               ABC_SERVER_JSON_P1_FIELD, szAuth_Base64,
+                               ABC_SERVER_JSON_NEW_P1_FIELD, szNewP1_Base64);
+    }
+    else
+    {
+        ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(LRA1), ABC_CC_Error, "LRA1 missing for server password change auth");
+        ABC_CHECK_RET(ABC_CryptoBase64Encode(LRA1, &szAuth_Base64, pError));
+        pJSON_Root = json_pack("{ssssss}",
+                               ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                               ABC_SERVER_JSON_LRA1_FIELD, szAuth_Base64,
+                               ABC_SERVER_JSON_NEW_P1_FIELD, szNewP1_Base64);
+    }
+    szPost = json_dumps(pJSON_Root, JSON_COMPACT);
+    json_decref(pJSON_Root);
+    pJSON_Root = NULL;
+    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %s", szResults);
+
+    // decode the result
+    json_t *pJSON_Value = NULL;
+    json_error_t error;
+    pJSON_Root = json_loads(szResults, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    // get the status code
+    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
+    int statusCode = (int) json_integer_value(pJSON_Value);
+
+    // if there was a failure
+    if (ABC_Server_Code_Success != statusCode)
+    {
+        // get the message
+        pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
+        ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
+        ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
+        ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
+    }
+
+exit:
+    if (szURL)          free(szURL);
+    if (szResults)      free(szResults);
+    if (szPost)         free(szPost);
+    if (szL1_Base64)    free(szL1_Base64);
+    if (szOldP1_Base64) free(szOldP1_Base64);
+    if (szNewP1_Base64) free(szNewP1_Base64);
+    if (szAuth_Base64)  free(szAuth_Base64);
+    if (pJSON_Root)     json_decref(pJSON_Root);
+    
+    return cc;
+}
 
 /**
  * Set recovery questions and answers on the server.
@@ -1846,6 +2063,11 @@ exit:
     return cc;
 }
 
+/**
+ * Sets the PIN for the given account
+ *
+ * @param szPIN PIN to use for the account
+ */
 tABC_CC ABC_AccountSetPIN(const char *szUserName,
                           const char *szPassword,
                           const char *szPIN,
