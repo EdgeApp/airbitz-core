@@ -6,6 +6,7 @@
 //  Copyright (c) 2014 Adam Harris. All rights reserved.
 //
 
+#include <qrencode.h>
 #import "ViewController.h"
 #import "ABC.h"
 #import "ABC_Util.h"
@@ -98,6 +99,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
 {
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
+
 
 #if 0 // recovery questions
     char *szRecoveryQuestions;
@@ -436,6 +438,28 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     {
         printf("%d, %s, %s, %s\n", aCurrencyArray[i].num, aCurrencyArray[i].szCode, aCurrencyArray[i].szDescription, aCurrencyArray[i].szCountries);
     }
+#endif
+
+#if 0 // qrcode - this test is just for the core - this is not something the UI would normally call
+    QRcode *qr = QRcode_encodeString("Hello", 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+    printf("QRCode width: %d", qr->width);
+    ABC_UtilHexDump("QRCode data", qr->data, qr->width * qr->width);
+    for (int y = 0; y < qr->width; y++)
+    {
+        for (int x = 0; x < qr->width; x++)
+        {
+            if (qr->data[(y * qr->width) + x] & 0x1)
+            {
+                printf("%c", '*');
+            }
+            else
+            {
+                printf(" ");
+            }
+        }
+        printf("\n");
+    }
+    QRcode_free(qr);
 #endif
 
 }

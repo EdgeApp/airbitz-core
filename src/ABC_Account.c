@@ -134,7 +134,8 @@ tABC_CC ABC_AccountRequestInfoAlloc(tABC_AccountRequestInfo **ppAccountRequestIn
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(fRequestCallback);
 
-    tABC_AccountRequestInfo *pAccountRequestInfo = (tABC_AccountRequestInfo *) calloc(1, sizeof(tABC_AccountRequestInfo));
+    tABC_AccountRequestInfo *pAccountRequestInfo = NULL;
+    ABC_ALLOC(pAccountRequestInfo, sizeof(tABC_AccountRequestInfo));
 
     pAccountRequestInfo->requestType = requestType;
 
@@ -181,45 +182,19 @@ void ABC_AccountRequestInfoFree(tABC_AccountRequestInfo *pAccountRequestInfo)
 {
     if (pAccountRequestInfo)
     {
-        if (pAccountRequestInfo->szUserName)
-        {
-            memset(pAccountRequestInfo->szUserName, 0, strlen(pAccountRequestInfo->szUserName));
+        ABC_FREE_STR(pAccountRequestInfo->szUserName);
 
-            free((void *)pAccountRequestInfo->szUserName);
-        }
-        if (pAccountRequestInfo->szPassword)
-        {
-            memset(pAccountRequestInfo->szPassword, 0, strlen(pAccountRequestInfo->szPassword));
+        ABC_FREE_STR(pAccountRequestInfo->szPassword);
 
-            free((void *)pAccountRequestInfo->szPassword);
-        }
-        if (pAccountRequestInfo->szRecoveryQuestions)
-        {
-            memset(pAccountRequestInfo->szRecoveryQuestions, 0, strlen(pAccountRequestInfo->szRecoveryQuestions));
+        ABC_FREE_STR(pAccountRequestInfo->szRecoveryQuestions);
 
-            free((void *)pAccountRequestInfo->szRecoveryQuestions);
-        }
-        if (pAccountRequestInfo->szRecoveryAnswers)
-        {
-            memset(pAccountRequestInfo->szRecoveryAnswers, 0, strlen(pAccountRequestInfo->szRecoveryAnswers));
+        ABC_FREE_STR(pAccountRequestInfo->szRecoveryAnswers);
 
-            free((void *)pAccountRequestInfo->szRecoveryAnswers);
-        }
-        if (pAccountRequestInfo->szPIN)
-        {
-            memset(pAccountRequestInfo->szPIN, 0, strlen(pAccountRequestInfo->szPIN));
+        ABC_FREE_STR(pAccountRequestInfo->szPIN);
 
-            free((void *)pAccountRequestInfo->szPIN);
-        }
-        if (pAccountRequestInfo->szNewPassword)
-        {
-            memset(pAccountRequestInfo->szNewPassword, 0, strlen(pAccountRequestInfo->szNewPassword));
+        ABC_FREE_STR(pAccountRequestInfo->szNewPassword);
 
-            free((void *)pAccountRequestInfo->szNewPassword);
-        }
-
-        memset(pAccountRequestInfo, 0, sizeof(tABC_AccountRequestInfo));
-        free(pAccountRequestInfo);
+        ABC_CLEAR_FREE(pAccountRequestInfo, sizeof(tABC_AccountRequestInfo));
     }
 }
 
@@ -395,7 +370,7 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     }
 
     // create an account keys struct
-    pKeys = calloc(1, sizeof(tAccountKeys));
+    ABC_ALLOC(pKeys, sizeof(tAccountKeys));
     pKeys->szUserName = strdup(pInfo->szUserName);
     pKeys->szPassword = strdup(pInfo->szPassword);
     pKeys->szPIN = strdup(pInfo->szPIN);
@@ -448,17 +423,17 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_AccountNextAccountNum(&(pKeys->accountNum), pError));
 
     // create the main account directory
-    szAccountDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
     ABC_CHECK_RET(ABC_FileIOCreateDir(szAccountDir, pError));
 
-    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
     // create the name file data and write the file
     ABC_CHECK_RET(ABC_UtilCreateValueJSONString(pKeys->szUserName, JSON_ACCT_USERNAME_FIELD, &szJSON, pError));
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_NAME_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
-    free(szJSON);
+    ABC_FREE_STR(szJSON);
     szJSON = NULL;
 
     // create the PIN JSON
@@ -470,7 +445,7 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_CryptoEncryptJSONString(PIN, pKeys->LP2, ABC_CryptoType_AES256, &szEPIN_JSON, pError));
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EPIN_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEPIN_JSON, pError));
-    free(szJSON);
+    ABC_FREE_STR(szJSON);
     szJSON = NULL;
 
     // write the file care package to a file
@@ -491,16 +466,16 @@ exit:
     if (pKeys)
     {
         ABC_AccountFreeAccountKeys(pKeys);
-        free(pKeys);
+        ABC_CLEAR_FREE(pKeys, sizeof(tAccountKeys));
     }
     if (pJSON_SNRP2)        json_decref(pJSON_SNRP2);
     if (pJSON_SNRP3)        json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)        json_decref(pJSON_SNRP4);
-    if (szCarePackage_JSON) free(szCarePackage_JSON);
-    if (szEPIN_JSON)        free(szEPIN_JSON);
-    if (szJSON)             free(szJSON);
-    if (szAccountDir)       free(szAccountDir);
-    if (szFilename)         free(szFilename);
+    ABC_FREE_STR(szCarePackage_JSON);
+    ABC_FREE_STR(szEPIN_JSON);
+    ABC_FREE_STR(szJSON);
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szFilename);
 
     return cc;
 }
@@ -532,7 +507,7 @@ tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pErr
 
 
     // create the URL
-    szURL = malloc(ABC_URL_MAX_PATH_LENGTH);
+    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_ACCOUNT_CREATE_PATH);
 
     // create base64 versions of L1 and P1
@@ -582,11 +557,11 @@ tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pErr
     }
 
 exit:
-    if (szURL)          free(szURL);
-    if (szResults)      free(szResults);
-    if (szPost)         free(szPost);
-    if (szL1_Base64)    free(szL1_Base64);
-    if (szP1_Base64)    free(szP1_Base64);
+    ABC_FREE_STR(szURL);
+    ABC_FREE_STR(szResults);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szL1_Base64);
+    ABC_FREE_STR(szP1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
     
     return cc;
@@ -714,10 +689,10 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
     // write out the files
 
     // create the main account directory
-    szAccountDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
 
-    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
     // write ELP2.json <- LP2 (L+P,S2) encrypted with recovery key (LRA2)
     sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELP2_FILENAME);
@@ -748,11 +723,11 @@ exit:
     if (pJSON_SNRP2)        json_decref(pJSON_SNRP2);
     if (pJSON_SNRP3)        json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)        json_decref(pJSON_SNRP4);
-    if (szCarePackage_JSON) free(szCarePackage_JSON);
-    if (szELP2_JSON)        free(szELP2_JSON);
-    if (szELRA2_JSON)       free(szELRA2_JSON);
-    if (szAccountDir)       free(szAccountDir);
-    if (szFilename)         free(szFilename);
+    ABC_FREE_STR(szCarePackage_JSON);
+    ABC_FREE_STR(szELP2_JSON);
+    ABC_FREE_STR(szELRA2_JSON);
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szFilename);
 
     return cc;
 }
@@ -790,7 +765,7 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
 
     // get the account directory and set up for creating needed filenames
     ABC_CHECK_RET(ABC_AccountGetDirName(pInfo->szUserName, &szAccountDir, pError));
-    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
     // get the keys for this user (note: password can be NULL for this call)
     ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
@@ -842,17 +817,11 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     // time to set the new data for this account
 
     // set new PIN
-    if (pKeys->szPIN)
-    {
-        free(pKeys->szPIN);
-    }
+    ABC_FREE_STR(pKeys->szPIN);
     pKeys->szPIN = strdup(pInfo->szPIN);
 
     // set new password
-    if (pKeys->szPassword)
-    {
-        free(pKeys->szPassword);
-    }
+    ABC_FREE_STR(pKeys->szPassword);
     pKeys->szPassword = strdup(pInfo->szNewPassword);
 
     // set new P
@@ -906,9 +875,9 @@ exit:
     ABC_BUF_FREE(LRA);
     ABC_BUF_FREE(LRA1);
     ABC_BUF_FREE(oldP1);
-    if (szAccountDir) free(szAccountDir);
-    if (szFilename) free(szFilename);
-    if (szJSON) free(szJSON);
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szFilename);
+    ABC_FREE_STR(szJSON);
     if (cc != ABC_CC_Ok) ABC_AccountClearKeyCache(NULL);
 
     return cc;
@@ -943,7 +912,7 @@ tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_
     ABC_CHECK_NULL_BUF(newP1);
 
     // create the URL
-    szURL = malloc(ABC_URL_MAX_PATH_LENGTH);
+    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_CHANGE_PASSWORD_PATH);
 
     // create base64 versions of L1 and newP1
@@ -1000,13 +969,13 @@ tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_
     }
 
 exit:
-    if (szURL)          free(szURL);
-    if (szResults)      free(szResults);
-    if (szPost)         free(szPost);
-    if (szL1_Base64)    free(szL1_Base64);
-    if (szOldP1_Base64) free(szOldP1_Base64);
-    if (szNewP1_Base64) free(szNewP1_Base64);
-    if (szAuth_Base64)  free(szAuth_Base64);
+    ABC_FREE_STR(szURL);
+    ABC_FREE_STR(szResults);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szL1_Base64);
+    ABC_FREE_STR(szOldP1_Base64);
+    ABC_FREE_STR(szNewP1_Base64);
+    ABC_FREE_STR(szAuth_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
     
     return cc;
@@ -1042,7 +1011,7 @@ tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf
     ABC_CHECK_NULL(szCarePackage);
 
     // create the URL
-    szURL = malloc(ABC_URL_MAX_PATH_LENGTH);
+    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_UPDATE_CARE_PACKAGE_PATH);
 
     // create base64 versions of L1, P1 and LRA1
@@ -1101,12 +1070,12 @@ tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf
     }
 
 exit:
-    if (szURL)          free(szURL);
-    if (szResults)      free(szResults);
-    if (szPost)         free(szPost);
-    if (szL1_Base64)    free(szL1_Base64);
-    if (szP1_Base64)    free(szP1_Base64);
-    if (szLRA1_Base64)  free(szLRA1_Base64);
+    ABC_FREE_STR(szURL);
+    ABC_FREE_STR(szResults);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szL1_Base64);
+    ABC_FREE_STR(szP1_Base64);
+    ABC_FREE_STR(szLRA1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
     
     return cc;
@@ -1149,7 +1118,7 @@ tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ,
         json_object_set(pJSON_Root, JSON_ACCT_ERQ_FIELD, (json_t *) pJSON_ERQ);
     }
 
-    szField = calloc(1, ABC_MAX_STRING_LENGTH);
+    ABC_ALLOC(szField, ABC_MAX_STRING_LENGTH);
 
     sprintf(szField, "%s%d", JSON_ACCT_SNRP_FIELD_PREFIX, 2);
     json_object_set(pJSON_Root, szField, (json_t *) pJSON_SNRP2);
@@ -1164,7 +1133,7 @@ tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ,
 
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
-    if (szField)    free(szField);
+    ABC_FREE_STR(szField);
 
     return cc;
 }
@@ -1211,11 +1180,11 @@ tABC_CC ABC_AccountGetCarePackageObjects(int          AccountNum,
     ABC_CHECK_ASSERT(AccountNum >= 0, ABC_CC_AccountDoesNotExist, "Bad account number");
 
     // get the main account directory
-    szAccountDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, AccountNum, pError));
 
     // create the name of the care package file
-    szCarePackageFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szCarePackageFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szCarePackageFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
 
     // load the care package
@@ -1231,7 +1200,7 @@ tABC_CC ABC_AccountGetCarePackageObjects(int          AccountNum,
     pJSON_ERQ = json_object_get(pJSON_Root, JSON_ACCT_ERQ_FIELD);
     //ABC_CHECK_ASSERT((pJSON_ERQ && json_is_object(pJSON_ERQ)), ABC_CC_JSONError, "Error parsing JSON care package - missing ERQ");
 
-    szField = calloc(1, ABC_MAX_STRING_LENGTH);
+    ABC_ALLOC(szField, ABC_MAX_STRING_LENGTH);
 
     // get SNRP2
     sprintf(szField, "%s%d", JSON_ACCT_SNRP_FIELD_PREFIX, 2);
@@ -1275,10 +1244,10 @@ tABC_CC ABC_AccountGetCarePackageObjects(int          AccountNum,
 
 exit:
     if (pJSON_Root)             json_decref(pJSON_Root);
-    if (szAccountDir)           free(szAccountDir);
-    if (szCarePackageFilename)  free(szCarePackageFilename);
-    if (szCarePackage_JSON)     free(szCarePackage_JSON);
-    if (szField)                free(szField);
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szCarePackageFilename);
+    ABC_FREE_STR(szCarePackage_JSON);
+    ABC_FREE_STR(szField);
 
     return cc;
 }
@@ -1296,7 +1265,7 @@ tABC_CC ABC_AccountCreateSync(const char *szAccountsRootDir,
 
     ABC_CHECK_NULL(szAccountsRootDir);
 
-    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
     // create the sync directory
     sprintf(szFilename, "%s/%s", szAccountsRootDir, ACCOUNT_SYNC_DIR);
@@ -1306,14 +1275,14 @@ tABC_CC ABC_AccountCreateSync(const char *szAccountsRootDir,
     ABC_CHECK_RET(ABC_AccountCreateListJSON(JSON_ACCT_CATEGORIES_FIELD, "", &szDataJSON, pError));
     sprintf(szFilename, "%s/%s/%s", szAccountsRootDir, ACCOUNT_SYNC_DIR, ACCOUNT_CATEGORIES_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szDataJSON, pError));
-    free(szDataJSON);
+    ABC_FREE_STR(szDataJSON);
     szDataJSON = NULL;
 
     // TODO: create sync info in this directory
 
 exit:
-    if (szDataJSON) free(szDataJSON);
-    if (szFilename) free(szFilename);
+    ABC_FREE_STR(szDataJSON);
+    ABC_FREE_STR(szFilename);
 
     return cc;
 }
@@ -1334,11 +1303,11 @@ tABC_CC ABC_AccountNextAccountNum(int *pAccountNum,
     ABC_CHECK_RET(ABC_AccountCreateRootDir(pError));
 
     // get the account root directory string
-    szAccountRoot = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
 
     // run through all the account names
-    szAccountDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
     int AccountNum;
     for (AccountNum = 0; AccountNum < ACCOUNT_MAX; AccountNum++)
     {
@@ -1359,8 +1328,8 @@ tABC_CC ABC_AccountNextAccountNum(int *pAccountNum,
     *pAccountNum = AccountNum;
 
 exit:
-    if (szAccountRoot)  free(szAccountRoot);
-    if (szAccountDir)   free(szAccountDir);
+    ABC_FREE_STR(szAccountRoot);
+    ABC_FREE_STR(szAccountDir);
 
     return cc;
 }
@@ -1374,7 +1343,7 @@ tABC_CC ABC_AccountCreateRootDir(tABC_Error *pError)
     char *szAccountRoot = NULL;
 
     // create the account directory string
-    szAccountRoot = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
 
     // if it doesn't exist
@@ -1384,7 +1353,7 @@ tABC_CC ABC_AccountCreateRootDir(tABC_Error *pError)
     }
 
 exit:
-    if (szAccountRoot) free(szAccountRoot);
+    ABC_FREE_STR(szAccountRoot);
 
     return cc;
 }
@@ -1403,7 +1372,7 @@ tABC_CC ABC_AccountGetRootDir(char **pszRootDir, tABC_Error *pError)
     ABC_CHECK_NULL(pszRootDir);
 
     // create the account directory string
-    *pszRootDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(*pszRootDir, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyRootDirName(*pszRootDir, pError));
 
 exit:
@@ -1455,14 +1424,14 @@ tABC_CC ABC_AccountGetDirName(const char *szUserName, char **pszDirName, tABC_Er
     }
 
     // get the account root directory string
-    szDirName = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szDirName, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szDirName, accountNum, pError));
     *pszDirName = szDirName;
     szDirName = NULL; // so we don't free it
 
 
 exit:
-    if (szDirName)  free(szDirName);
+    ABC_FREE_STR(szDirName);
 
     return cc;
 }
@@ -1482,11 +1451,11 @@ tABC_CC ABC_AccountGetSyncDirName(const char *szUserName,
 
     ABC_CHECK_RET(ABC_AccountGetDirName(szUserName, &szDirName, pError));
 
-    *pszDirName = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(*pszDirName, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(*pszDirName, "%s/%s", szDirName, ACCOUNT_SYNC_DIR);
 
 exit:
-    if (szDirName)  free(szDirName);
+    ABC_FREE_STR(szDirName);
 
     return cc;
 }
@@ -1502,14 +1471,14 @@ tABC_CC ABC_AccountCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_E
     ABC_CHECK_NULL(szAccountDir);
 
     // get the account root directory string
-    szAccountRoot = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
 
     // create the account directory string
     sprintf(szAccountDir, "%s/%s%d", szAccountRoot, ACCOUNT_FOLDER_PREFIX, AccountNum);
 
 exit:
-    if (szAccountRoot)  free(szAccountRoot);
+    ABC_FREE_STR(szAccountRoot);
 
     return cc;
 }
@@ -1567,7 +1536,7 @@ tABC_CC ABC_AccountCreateListJSON(const char *szName, const char *szItems, char 
 exit:
     if (jsonItems)      json_decref(jsonItems);
     if (jsonItemArray)  json_decref(jsonItemArray);
-    if (szNewItems)     free(szNewItems);
+    ABC_FREE_STR(szNewItems);
 
     return cc;
 }
@@ -1593,7 +1562,7 @@ tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Err
     ABC_CHECK_RET(ABC_AccountCreateRootDir(pError));
 
     // get the account root directory string
-    szAccountRoot = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
 
     // get all the files in this root
@@ -1620,7 +1589,7 @@ tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Err
                     *pAccountNum = AccountNum;
                     break;
                 }
-                free(szCurUserName);
+                ABC_FREE_STR(szCurUserName);
                 szCurUserName = NULL;
             }
         }
@@ -1628,8 +1597,8 @@ tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Err
     ABC_FileIOFreeFileList(pFileList, NULL);
 
 exit:
-    if (szCurUserName)  free(szCurUserName);
-    if (szAccountRoot)  free(szAccountRoot);
+    ABC_FREE_STR(szCurUserName);
+    ABC_FREE_STR(szAccountRoot);
 
     return cc;
 }
@@ -1652,11 +1621,11 @@ tABC_CC ABC_AccountUserForNum(unsigned int AccountNum, char **pszUserName, tABC_
     ABC_CHECK_RET(ABC_AccountCreateRootDir(pError));
 
     // get the account root directory string
-    szAccountRoot = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
 
     // create the path to the account name file
-    szAccountNamePath = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szAccountNamePath, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szAccountNamePath, "%s/%s%d/%s", szAccountRoot, ACCOUNT_FOLDER_PREFIX, AccountNum, ACCOUNT_NAME_FILENAME);
 
     // read in the json
@@ -1676,9 +1645,9 @@ tABC_CC ABC_AccountUserForNum(unsigned int AccountNum, char **pszUserName, tABC_
 
 exit:
     if (root)               json_decref(root);
-    if (szAccountNameJSON)  free(szAccountNameJSON);
-    if (szAccountRoot)      free(szAccountRoot);
-    if (szAccountNamePath)  free(szAccountNamePath);
+    ABC_FREE_STR(szAccountNameJSON);
+    ABC_FREE_STR(szAccountRoot);
+    ABC_FREE_STR(szAccountNamePath);
 
     return cc;
 }
@@ -1696,7 +1665,7 @@ tABC_CC ABC_AccountClearKeyCache(tABC_Error *pError)
             ABC_AccountFreeAccountKeys(pAccountKeys);
         }
 
-        free(gaAccountKeysCacheArray);
+        ABC_FREE(gaAccountKeysCacheArray);
         gAccountKeysCacheCount = 0;
     }
 
@@ -1710,52 +1679,27 @@ static void ABC_AccountFreeAccountKeys(tAccountKeys *pAccountKeys)
 {
     if (pAccountKeys)
     {
-        if (pAccountKeys->szUserName)
-        {
-            memset (pAccountKeys->szUserName, 0, strlen(pAccountKeys->szUserName));
-            free(pAccountKeys->szUserName);
-            pAccountKeys->szUserName = NULL;
-        }
+        ABC_FREE_STR(pAccountKeys->szUserName);
 
-        if (pAccountKeys->szPassword)
-        {
-            memset (pAccountKeys->szPassword, 0, strlen(pAccountKeys->szPassword));
-            free(pAccountKeys->szPassword);
-            pAccountKeys->szPassword = NULL;
-        }
+        ABC_FREE_STR(pAccountKeys->szPassword);
 
-        if (pAccountKeys->szPIN)
-        {
-            memset (pAccountKeys->szPIN, 0, strlen(pAccountKeys->szPIN));
-            free(pAccountKeys->szPIN);
-            pAccountKeys->szPIN = NULL;
-        }
+        ABC_FREE_STR(pAccountKeys->szPIN);
 
         ABC_CryptoFreeSNRP(&(pAccountKeys->pSNRP1));
         ABC_CryptoFreeSNRP(&(pAccountKeys->pSNRP2));
         ABC_CryptoFreeSNRP(&(pAccountKeys->pSNRP3));
         ABC_CryptoFreeSNRP(&(pAccountKeys->pSNRP4));
-        ABC_BUF_ZERO(pAccountKeys->L);
+
         ABC_BUF_FREE(pAccountKeys->L);
-        ABC_BUF_ZERO(pAccountKeys->L1);
         ABC_BUF_FREE(pAccountKeys->L1);
-        ABC_BUF_ZERO(pAccountKeys->P);
         ABC_BUF_FREE(pAccountKeys->P);
-        ABC_BUF_ZERO(pAccountKeys->P1);
         ABC_BUF_FREE(pAccountKeys->P1);
-        ABC_BUF_ZERO(pAccountKeys->LRA);
         ABC_BUF_FREE(pAccountKeys->LRA);
-        ABC_BUF_ZERO(pAccountKeys->LRA1);
         ABC_BUF_FREE(pAccountKeys->LRA1);
-        ABC_BUF_ZERO(pAccountKeys->L2);
         ABC_BUF_FREE(pAccountKeys->L2);
-        ABC_BUF_ZERO(pAccountKeys->RQ);
         ABC_BUF_FREE(pAccountKeys->RQ);
-        ABC_BUF_ZERO(pAccountKeys->LP);
         ABC_BUF_FREE(pAccountKeys->LP);
-        ABC_BUF_ZERO(pAccountKeys->LP2);
         ABC_BUF_FREE(pAccountKeys->LP2);
-        ABC_BUF_ZERO(pAccountKeys->LRA2);
         ABC_BUF_FREE(pAccountKeys->LRA2);
     }
 }
@@ -1779,7 +1723,7 @@ static tABC_CC ABC_AccountAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *
         {
             // create a new one
             gAccountKeysCacheCount = 0;
-            gaAccountKeysCacheArray = malloc(sizeof(tAccountKeys *));
+            ABC_ALLOC(gaAccountKeysCacheArray, sizeof(tAccountKeys *));
         }
         else
         {
@@ -1869,7 +1813,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
         ABC_CHECK_RET(ABC_AccountNumForUser(szUserName, &AccountNum, pError));
         if (AccountNum >= 0)
         {
-            pKeys = calloc(1, sizeof(tAccountKeys));
+            ABC_ALLOC(pKeys, sizeof(tAccountKeys));
             pKeys->accountNum = AccountNum;
             pKeys->szUserName = strdup(szUserName);
 
@@ -1916,9 +1860,9 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pFinalKeys->pSNRP2, &LP2, pError));
 
             // try to decrypt EPIN
-            szAccountDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+            ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
             ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pFinalKeys->accountNum, pError));
-            szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+            ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
             sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EPIN_FILENAME);
             tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, LP2, &PIN_JSON, pError);
 
@@ -1970,10 +1914,10 @@ exit:
     if (pKeys)
     {
         ABC_AccountFreeAccountKeys(pKeys);
-        free(pKeys);
+        ABC_CLEAR_FREE(pKeys, sizeof(tAccountKeys));
     }
-    if (szFilename)     free(szFilename);
-    if (szAccountDir)   free(szAccountDir);
+    ABC_FREE_STR(szFilename);
+    ABC_FREE_STR(szAccountDir);
     if (pJSON_SNRP2)    json_decref(pJSON_SNRP2);
     if (pJSON_SNRP3)    json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)    json_decref(pJSON_SNRP4);
@@ -2106,7 +2050,7 @@ tABC_CC ABC_AccountSetPIN(const char *szUserName,
     ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, &pKeys, pError));
 
     // set the new PIN in the cache
-    free(pKeys->szPIN);
+    ABC_FREE_STR(pKeys->szPIN);
     pKeys->szPIN = strdup(szPIN);
 
     // create the PIN JSON
@@ -2119,15 +2063,15 @@ tABC_CC ABC_AccountSetPIN(const char *szUserName,
 
     // write the EPIN
     ABC_CHECK_RET(ABC_AccountGetDirName(szUserName, &szAccountDir, pError));
-    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EPIN_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEPIN_JSON, pError));
 
 exit:
-    if (szJSON) free(szJSON);
-    if (szEPIN_JSON) free(szEPIN_JSON);
-    if (szAccountDir) free(szAccountDir);
-    if (szFilename) free(szFilename);
+    ABC_FREE_STR(szJSON);
+    ABC_FREE_STR(szEPIN_JSON);
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szFilename);
 
     return cc;
 }
@@ -2154,7 +2098,7 @@ tABC_CC ABC_AccountGetCategories(const char *szUserName,
 
     // load the categories
     ABC_CHECK_RET(ABC_AccountGetDirName(szUserName, &szAccountDir, pError));
-    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_CATEGORIES_FILENAME);
     ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON, pError));
 
@@ -2162,9 +2106,9 @@ tABC_CC ABC_AccountGetCategories(const char *szUserName,
     ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString(szJSON, JSON_ACCT_CATEGORIES_FIELD, paszCategories, pCount, pError));
 
 exit:
-    if (szJSON) free(szJSON);
-    if (szAccountDir) free(szAccountDir);
-    if (szFilename) free(szFilename);
+    ABC_FREE_STR(szJSON);
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szFilename);
 
     return cc;
 }
@@ -2193,7 +2137,7 @@ tABC_CC ABC_AccountAddCategory(const char *szUserName,
     }
     else
     {
-        aszCategories = malloc(sizeof(char *));
+        ABC_ALLOC(aszCategories, sizeof(char *));
         categoryCount = 0;
     }
     aszCategories[categoryCount] = strdup(szCategory);
@@ -2241,7 +2185,7 @@ tABC_CC ABC_AccountRemoveCategory(const char *szUserName,
             }
             else
             {
-                aszNewCategories = malloc(sizeof(char *));
+                ABC_ALLOC(aszNewCategories, sizeof(char *));
                 newCategoryCount = 0;
             }
             aszNewCategories[newCategoryCount] = strdup(aszCategories[i]);
@@ -2274,21 +2218,21 @@ tABC_CC ABC_AccountSaveCategories(const char *szUserName,
 
     ABC_CHECK_NULL(szUserName);
 
-    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
     // create the categories JSON
     ABC_CHECK_RET(ABC_UtilCreateArrayJSONString(aszCategories, count, JSON_ACCT_CATEGORIES_FIELD, &szDataJSON, pError));
 
     // write them out
     ABC_CHECK_RET(ABC_AccountGetDirName(szUserName, &szAccountDir, pError));
-    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_CATEGORIES_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szDataJSON, pError));
 
 exit:
-    if (szDataJSON) free(szDataJSON);
-    if (szFilename) free(szFilename);
-    if (szAccountDir) free(szAccountDir);
+    ABC_FREE_STR(szDataJSON);
+    ABC_FREE_STR(szFilename);
+    ABC_FREE_STR(szAccountDir);
 
     return cc;
 }
@@ -2346,7 +2290,7 @@ tABC_CC ABC_AccountCheckRecoveryAnswers(const char *szUserName,
 
         // attempt to decode ELP2
         ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
-        szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+        ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
         sprintf(szFilename, "%s/%s", szAccountSyncDir, ACCOUNT_ELP2_FILENAME);
         tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, LRA2, &LP2, pError);
 
@@ -2383,8 +2327,8 @@ exit:
     ABC_BUF_FREE(LRA);
     ABC_BUF_FREE(LRA2);
     ABC_BUF_FREE(LP2);
-    if (szAccountSyncDir) free(szAccountSyncDir);
-    if (szFilename) free(szFilename);
+    ABC_FREE_STR(szAccountSyncDir);
+    ABC_FREE_STR(szFilename);
 
     return cc;
 }
@@ -2413,7 +2357,7 @@ tABC_CC ABC_AccountServerGetQuestions(tABC_U08Buf L1, json_t **ppJSON_Q, tABC_Er
     ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL(ppJSON_Q);
     // create the URL
-    szURL = malloc(ABC_URL_MAX_PATH_LENGTH);
+    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_QUESTIONS_PATH);
 
     // create base64 versions of L1
@@ -2468,10 +2412,10 @@ tABC_CC ABC_AccountServerGetQuestions(tABC_U08Buf L1, json_t **ppJSON_Q, tABC_Er
 exit:
 
     if (pJSON_Root)     json_decref(pJSON_Root);
-    if (szURL)          free(szURL);
-    if (szPost)         free(szPost);
-    if (szL1_Base64)    free(szL1_Base64);
-    if (szResults)      free(szResults);
+    ABC_FREE_STR(szURL);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szL1_Base64);
+    ABC_FREE_STR(szResults);
     
     return cc;
 }
@@ -2511,7 +2455,7 @@ tABC_CC ABC_AccountUpdateQuestionChoices(const char *szUserName, tABC_Error *pEr
 
     // create the filename for the question json
     ABC_CHECK_RET(ABC_AccountGetRootDir(&szRootDir, pError));
-    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szRootDir, ACCOUNT_QUESTIONS_FILENAME);
 
     // get the JSON for the file
@@ -2524,9 +2468,9 @@ exit:
 
     if (pJSON_Root)     json_decref(pJSON_Root);
     if (pJSON_Q)        json_decref(pJSON_Q);
-    if (szRootDir)      free(szRootDir);
-    if (szFilename)     free(szFilename);
-    if (szJSON)         free(szJSON);
+    ABC_FREE_STR(szRootDir);
+    ABC_FREE_STR(szFilename);
+    ABC_FREE_STR(szJSON);
 
     return cc;
 }
@@ -2558,7 +2502,7 @@ tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountRequestInfo *pInfo,
 
     // create the filename for the question json
     ABC_CHECK_RET(ABC_AccountGetRootDir(&szRootDir, pError));
-    szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szRootDir, ACCOUNT_QUESTIONS_FILENAME);
 
     // if the file doesn't exist
@@ -2580,9 +2524,9 @@ tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountRequestInfo *pInfo,
     if (count > 0)
     {
         // allocate the data
-        pQuestionChoices = calloc(1, sizeof(tABC_QuestionChoices));
+        ABC_ALLOC(pQuestionChoices, sizeof(tABC_QuestionChoices));
         pQuestionChoices->numChoices = count;
-        pQuestionChoices->aChoices = calloc(1, sizeof(tABC_QuestionChoice *) * count);
+        ABC_ALLOC(pQuestionChoices->aChoices, sizeof(tABC_QuestionChoice *) * count);
 
         for (int i = 0; i < count; i++)
         {
@@ -2590,7 +2534,7 @@ tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountRequestInfo *pInfo,
             ABC_CHECK_ASSERT((pJSON_Elem && json_is_object(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON element value for recovery questions");
 
             // allocate this element
-            pQuestionChoices->aChoices[i] = calloc(1, sizeof(tABC_QuestionChoice));
+            ABC_ALLOC(pQuestionChoices->aChoices[i], sizeof(tABC_QuestionChoice));
 
             // get the category
             json_t *pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_CATEGORY_FIELD);
@@ -2619,8 +2563,8 @@ tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountRequestInfo *pInfo,
     }
 
 exit:
-    if (szRootDir)  free(szRootDir);
-    if (szFilename) free(szFilename);
+    ABC_FREE_STR(szRootDir);
+    ABC_FREE_STR(szFilename);
     if (pJSON_Root) json_decref(pJSON_Root);
     if (pQuestionChoices) ABC_AccountFreeQuestionChoices(pQuestionChoices);
     
@@ -2647,26 +2591,15 @@ void ABC_AccountFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices)
 
                 if (pChoice)
                 {
-                    if (pChoice->szQuestion)
-                    {
-                        memset(pChoice->szQuestion, 0, strlen(pChoice->szQuestion));
-                        free(pChoice->szQuestion);
-                    }
-
-                    if (pChoice->szCategory)
-                    {
-                        memset(pChoice->szCategory, 0, strlen(pChoice->szCategory));
-                        free(pChoice->szCategory);
-                    }
+                    ABC_FREE_STR(pChoice->szQuestion);
+                    ABC_FREE_STR(pChoice->szCategory);
                 }
             }
 
-            memset(pQuestionChoices->aChoices, 0, sizeof(tABC_QuestionChoice *) * pQuestionChoices->numChoices);
-            free(pQuestionChoices->aChoices);
+            ABC_CLEAR_FREE(pQuestionChoices->aChoices, sizeof(tABC_QuestionChoice *) * pQuestionChoices->numChoices);
         }
 
-        memset(pQuestionChoices, 0, sizeof(tABC_QuestionChoices));
-        free(pQuestionChoices);
+        ABC_CLEAR_FREE(pQuestionChoices, sizeof(tABC_QuestionChoices));
     }
 }
 

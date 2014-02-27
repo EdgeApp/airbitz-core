@@ -29,9 +29,9 @@ extern "C" {
         /** data pointer given by caller at initial create call time */
         void                    *pData;
 
-        const char              *szUserName;
-        const char              *szPassword;
-        const char              *szWalletName;
+        char                    *szUserName;
+        char                    *szPassword;
+        char                    *szWalletName;
         int                     currencyNum;
         unsigned int            attributes;
         tABC_Request_Callback   fRequestCallback;

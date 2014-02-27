@@ -275,9 +275,9 @@ exit:
     ABC_BUF_FREE(Salt);
     ABC_BUF_FREE(EncData);
     ABC_BUF_FREE(IV);
-    if (szSalt_Hex)   free(szSalt_Hex);
-    if (szIV_Hex)     free(szIV_Hex);
-    if (szDataBase64) free(szDataBase64);
+    ABC_FREE_STR(szSalt_Hex);
+    ABC_FREE_STR(szIV_Hex);
+    ABC_FREE_STR(szDataBase64);
     if (jsonRoot)     json_decref(jsonRoot);
     if (pSNRP)        ABC_CryptoFreeSNRP(&pSNRP);
 
@@ -307,7 +307,7 @@ tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
 
 exit:
-    if (szJSON) free(szJSON);
+    ABC_FREE_STR(szJSON);
 
     return cc;
 }
@@ -427,7 +427,7 @@ tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
     ABC_CHECK_RET(ABC_CryptoDecryptJSONString(szJSON_Enc, Key, pData, pError));
 
 exit:
-    if (szJSON_Enc) free(szJSON_Enc);
+    ABC_FREE_STR(szJSON_Enc);
 
     return cc;
 }
@@ -702,7 +702,8 @@ tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
     // max ciphertext len for a n bytes of plaintext is n + AES_256_BLOCK_LENGTH -1 bytes
     int c_len = ABC_BUF_SIZE(Data) + AES_256_BLOCK_LENGTH;
     int f_len = 0;
-    unsigned char *pTmpEncData = malloc(c_len);
+    unsigned char *pTmpEncData = NULL;
+    ABC_ALLOC(pTmpEncData, c_len);
 
     // allows reusing of 'e' for multiple encryption cycles
     EVP_EncryptInit_ex(&e_ctx, NULL, NULL, NULL, NULL);
@@ -766,7 +767,8 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
     /* because we have padding ON, we must allocate an extra cipher block size of memory */
     int p_len = ABC_BUF_SIZE(EncData);
     int f_len = 0;
-    unsigned char *pTmpData = malloc(p_len + AES_256_BLOCK_LENGTH);
+    unsigned char *pTmpData = NULL;
+    ABC_ALLOC(pTmpData, p_len + AES_256_BLOCK_LENGTH);
 
     // decrypt
     EVP_DecryptInit_ex(&d_ctx, NULL, NULL, NULL, NULL);
@@ -819,7 +821,7 @@ tABC_CC ABC_CryptoHexEncode(const tABC_U08Buf Data,
 
     char *szDataHex;
     unsigned int dataLength = ABC_BUF_SIZE(Data);
-    szDataHex = calloc(1, (dataLength * 2) + 1);
+    ABC_ALLOC(szDataHex, (dataLength * 2) + 1);
 
     for (int i = 0; i < dataLength; i++)
     {
@@ -897,7 +899,7 @@ tABC_CC ABC_CryptoBase64Encode(const tABC_U08Buf Data,
     // Move the data to the output:
     BUF_MEM *bptr;
     BIO_get_mem_ptr(mem, &bptr);
-    *pszDataBase64 = calloc(1, bptr->length + 1);
+    ABC_ALLOC(*pszDataBase64, bptr->length + 1);
     memcpy(*pszDataBase64, bptr->data, bptr->length);
 
 exit:
@@ -932,7 +934,8 @@ tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
 
     // Push the data through:
     int decodeLen = ABC_CryptoCalcBase64DecodeLength(szDataBase64);
-    unsigned char *pTmpData = (unsigned char *)calloc(1, decodeLen + 1);
+    unsigned char *pTmpData = NULL;
+    ABC_ALLOC(pTmpData, decodeLen + 1);
     int len = BIO_read(bio, pTmpData, (int)strlen(szDataBase64));
     if (len != decodeLen)
     {
@@ -978,7 +981,8 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
 
     ABC_CHECK_NULL(pszUUID);
 
-    char *szUUID = calloc(1, UUID_STR_LENGTH + 1);
+    char *szUUID = NULL;
+    ABC_ALLOC(szUUID, UUID_STR_LENGTH + 1);
 
     tABC_U08Buf Data;
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(UUID_BYTE_COUNT, &Data, pError));
@@ -998,7 +1002,7 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
     *pszUUID = szUUID;
 
 exit:
-    if (pData) free(pData);
+    ABC_BUF_FREE(Data);
 
     return cc;
 }
@@ -1157,7 +1161,8 @@ tABC_CC ABC_CryptoCreateSNRP(const tABC_U08Buf Salt,
 
     ABC_CHECK_NULL_BUF(Salt);
 
-    tABC_CryptoSNRP *pSNRP = malloc(sizeof(tABC_CryptoSNRP));
+    tABC_CryptoSNRP *pSNRP = NULL;
+    ABC_ALLOC(pSNRP, sizeof(tABC_CryptoSNRP));
 
     // create a copy of the salt
     ABC_BUF_DUP(pSNRP->Salt, Salt);
@@ -1196,7 +1201,7 @@ tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
                              JSON_ENC_P_FIELD, SCRYPT_DEFAULT_CLIENT_P);
 
 exit:
-    if (szSalt_Hex) free(szSalt_Hex);
+    ABC_FREE_STR(szSalt_Hex);
 
     return cc;
 }
@@ -1240,7 +1245,8 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
     int p = (int) json_integer_value(jsonVal);
 
     // store final values
-    tABC_CryptoSNRP *pSNRP = malloc(sizeof(tABC_CryptoSNRP));
+    tABC_CryptoSNRP *pSNRP = NULL;
+    ABC_ALLOC(pSNRP, sizeof(tABC_CryptoSNRP));
     pSNRP->Salt = Salt;
     ABC_BUF_CLEAR(Salt); // so we don't free it when we leave
     pSNRP->N = N;
@@ -1262,7 +1268,7 @@ void ABC_CryptoFreeSNRP(tABC_CryptoSNRP **ppSNRP)
     if (pSNRP)
     {
         ABC_BUF_FREE(pSNRP->Salt);
-        free(pSNRP);
+        ABC_CLEAR_FREE(pSNRP, sizeof(tABC_CryptoSNRP));
     }
 
     *ppSNRP = NULL;

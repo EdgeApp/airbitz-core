@@ -151,7 +151,7 @@ tABC_CC ABC_UtilCreateArrayJSONString(char   **aszValues,
 exit:
     if (jsonItems)      json_decref(jsonItems);
     if (jsonItemArray)  json_decref(jsonItemArray);
-    if (szNewItems)     free(szNewItems);
+    ABC_FREE_STR(szNewItems);
 
     return cc;
 }
@@ -178,7 +178,7 @@ tABC_CC ABC_UtilCreateHexDataJSONString(const tABC_U08Buf Data,
     ABC_CHECK_RET(ABC_UtilCreateValueJSONString(szData_Hex, szFieldName, pszJSON, pError));
 
 exit:
-    if (szData_Hex) free(szData_Hex);
+    ABC_FREE_STR(szData_Hex);
 
     return cc;
 }
@@ -285,7 +285,7 @@ tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
 
     if (*pCount > 0)
     {
-        pArrayStrings = calloc(1, sizeof(char *) * *pCount);
+        ABC_ALLOC(pArrayStrings, sizeof(char *) * *pCount);
 
         for (int i = 0; i < *pCount; i++)
         {
@@ -305,7 +305,7 @@ tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
 
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
-    if (pArrayStrings) free(pArrayStrings);
+    ABC_CLEAR_FREE(pArrayStrings, sizeof(char *) * *pCount);
 
     return cc;
 }
@@ -319,10 +319,9 @@ void ABC_UtilFreeStringArray(char **aszStrings,
     {
         for (int i = 0; i < count; i++)
         {
-            free(aszStrings[i]);
-            memset(aszStrings[i], 0, strlen(aszStrings[i]));
+            ABC_FREE_STR(aszStrings[i]);
         }
-        free(aszStrings);
+        ABC_FREE(aszStrings);
     }
 }
 

@@ -84,13 +84,55 @@ extern "C" {
         ABC_PRINT_ERR(pError); \
     }
 
+#define ABC_ALLOC(ptr, size) \
+    { \
+        ptr = calloc(1, (size)); \
+        ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "calloc failed (returned NULL)"); \
+    }
+
+#define ABC_FREE(ptr) \
+    { \
+        if (ptr != NULL) \
+        { \
+            free(ptr); \
+            ptr = NULL; \
+        } \
+    }
+
+#define ABC_FREE_STR(str) \
+    { \
+        if (str != NULL) \
+        { \
+            memset(str, 0, strlen(str)); \
+            free(str); \
+            str = NULL; \
+        } \
+    }
+
+#define ABC_CLEAR_FREE(ptr, len) \
+    { \
+        if (ptr != NULL) \
+        { \
+            if ((len) > 0) \
+            { \
+                memset(ptr, 0, (len)); \
+            } \
+            free(ptr); \
+            ptr = NULL; \
+        } \
+    }
+
 #define ABC_BUF(type)                       struct {  \
                                                     type *p;  \
                                                     type *end;  \
                                             }
 #define ABC_BUF_SIZE(x)                     ((unsigned int) (((x).end)-((x).p)))
 #define ABC_BUF_FREE(x)                     {  \
-                                                free((x).p);  \
+                                                if ((x).p != NULL) \
+                                                { \
+                                                    memset((x).p, 0, (((x).end)-((x).p))); \
+                                                    free((x).p);  \
+                                                } \
                                                 (x).p = NULL;  \
                                                 (x).end = NULL;  \
                                             }

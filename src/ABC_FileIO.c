@@ -88,7 +88,8 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
     ABC_CHECK_NULL(ppFileList);
     ABC_CHECK_NULL(szDir);
 
-    tABC_FileIOList *pFileList = (tABC_FileIOList *) calloc(1, sizeof(tABC_FileIOList));
+    tABC_FileIOList *pFileList = NULL;
+    ABC_ALLOC(pFileList, sizeof(tABC_FileIOList));
 
     DIR *dir;
     struct dirent *ent;
@@ -102,10 +103,11 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
             }
             else
             {
-                pFileList->apFiles = (tABC_FileIOFileInfo **)malloc(sizeof(tABC_FileIOFileInfo *));
+                ABC_ALLOC(pFileList->apFiles, sizeof(tABC_FileIOFileInfo *));
             }
 
-            pFileList->apFiles[pFileList->nCount] = (tABC_FileIOFileInfo *) calloc(1, sizeof(tABC_FileIOFileInfo));
+            pFileList->apFiles[pFileList->nCount] = NULL;
+            ABC_ALLOC(pFileList->apFiles[pFileList->nCount], sizeof(tABC_FileIOFileInfo));
 
             pFileList->apFiles[pFileList->nCount]->szName = strdup(ent->d_name);
             if (ent->d_type == DT_UNKNOWN)
@@ -151,17 +153,14 @@ tABC_CC ABC_FileIOFreeFileList(tABC_FileIOList *pFileList,
         {
             if (pFileList->apFiles[i])
             {
-                if (pFileList->apFiles[i]->szName)
-                {
-                    free(pFileList->apFiles[i]->szName);
-                }
-                free(pFileList->apFiles[i]);
+                ABC_FREE_STR(pFileList->apFiles[i]->szName);
+                ABC_CLEAR_FREE(pFileList->apFiles[i], sizeof(tABC_FileIOFileInfo));
             }
         }
     }
 
 
-    free(pFileList);
+    ABC_CLEAR_FREE(pFileList, sizeof(tABC_FileIOList));
 
 exit:
 
@@ -302,12 +301,12 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
     fseek(fp, 0, SEEK_SET);
 
     // create the memory
-    *pszData = calloc(1, size + 1); // +1 for the '\0'
+    ABC_ALLOC(*pszData, size + 1); // +1 for the '\0'
 
     // write the data
     if (fread(*pszData, 1, size, fp) != size)
     {
-        free(pszData);
+        ABC_FREE_STR(*pszData);
         ABC_RET_ERROR(ABC_CC_FileReadError, "Could not read from file");
     }
 
@@ -358,7 +357,7 @@ tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
     pJSON_Root = NULL; // so we don't decref it
 
 exit:
-    if (szData_JSON) free(szData_JSON);
+    ABC_FREE_STR(szData_JSON);
     if (pJSON_Root) json_decref(pJSON_Root);
 
     return cc;
