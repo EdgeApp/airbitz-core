@@ -21,6 +21,7 @@
 #define WALLET_KEY_LENGTH                   AES_256_KEY_LENGTH
 
 #define WALLET_DIR                          "Wallets"
+#define WALLET_SYNC_DIR                     "sync"
 #define WALLET_EMK_PREFIX                   "EMK_"
 #define WALLET_ACCOUNTS_WALLETS_FILENAME    "Wallets.json"
 #define WALLET_NAME_FILENAME                "Wallet_Name.json"
@@ -42,6 +43,7 @@ typedef struct sWalletData
     char            *szUserName;
     char            *szPassword;
     char            *szWalletDir;
+    char            *szWalletSyncDir;
     unsigned int    attributes;
     int             currencyNum;
     unsigned int    numAccounts;
@@ -59,6 +61,7 @@ static tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPasswo
 static tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError);
 static tABC_CC ABC_WalletGetRootDirName(char **pszRootDir, tABC_Error *pError);
 static tABC_CC ABC_WalletGetDirName(char **pszDir, const char *szWalletUUID, tABC_Error *pError);
+static tABC_CC ABC_WalletGetSyncDirName(char **pszDir, const char *szWalletUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, const char *szUUID, tWalletData **ppData, tABC_Error *pError);
 static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
 static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError);
@@ -241,6 +244,10 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     ABC_CHECK_RET(ABC_WalletGetDirName(&(pData->szWalletDir), pData->szUUID, pError));
     ABC_CHECK_RET(ABC_FileIOCreateDir(pData->szWalletDir, pError));
 
+    // create the wallet sync dir under the main dir
+    ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), pData->szUUID, pError));
+    ABC_CHECK_RET(ABC_FileIOCreateDir(pData->szWalletSyncDir, pError));
+
     // we now have a new wallet so go ahead and cache its data
     ABC_CHECK_RET(ABC_WalletAddToCache(pData, pError));
     pData = NULL; // so we don't free what we just added to the cache
@@ -306,7 +313,7 @@ tABC_CC ABC_WalletSetName(const char *szUserName, const char *szPassword, const 
 
     // write the name out to the file
     szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", pData->szWalletDir, WALLET_NAME_FILENAME);
+    sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_NAME_FILENAME);
     tABC_U08Buf Data;
     ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(Data, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
@@ -344,7 +351,7 @@ tABC_CC ABC_WalletSetCurrencyNum(const char *szUserName, const char *szPassword,
 
     // write the name out to the file
     szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", pData->szWalletDir, WALLET_CURRENCY_FILENAME);
+    sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_CURRENCY_FILENAME);
     tABC_U08Buf Data;
     ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(Data, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
@@ -381,7 +388,7 @@ tABC_CC ABC_WalletSetAttributes(const char *szUserName, const char *szPassword, 
 
     // write the name out to the file
     szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", pData->szWalletDir, WALLET_ATTRIBUTES_FILENAME);
+    sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_ATTRIBUTES_FILENAME);
     tABC_U08Buf Data;
     ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(Data, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
@@ -430,7 +437,7 @@ tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, con
 
     // write the name out to the file
     szFilename = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", pData->szWalletDir, WALLET_ACCOUNTS_FILENAME);
+    sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_ACCOUNTS_FILENAME);
     tABC_U08Buf Data;
     ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(Data, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
@@ -501,10 +508,36 @@ tABC_CC ABC_WalletGetDirName(char **pszDir, const char *szWalletUUID, tABC_Error
 
     // create the account directory string
     *pszDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_CHECK_NULL(*pszDir);
     sprintf(*pszDir, "%s/%s", szWalletRootDir, szWalletUUID);
 
 exit:
     if (szWalletRootDir) free(szWalletRootDir);
+
+    return cc;
+}
+
+/**
+ * Gets the sync directory for the given wallet UUID.
+ * @param pszDir the output directory name. The caller must free this.
+ */
+tABC_CC ABC_WalletGetSyncDirName(char **pszDir, const char *szWalletUUID, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szWalletDir = NULL;
+
+    ABC_CHECK_NULL(pszDir);
+    ABC_CHECK_NULL(szWalletUUID);
+
+    ABC_CHECK_RET(ABC_WalletGetDirName(&szWalletDir, szWalletUUID, pError));
+
+    *pszDir = calloc(1, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_CHECK_NULL(*pszDir);
+    sprintf(*pszDir, "%s/%s", szWalletDir, WALLET_SYNC_DIR);
+
+exit:
+    if (szWalletDir) free(szWalletDir);
 
     return cc;
 }
@@ -559,6 +592,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         pData->szPassword = strdup(szPassword);
         pData->szUUID = strdup(szUUID);
         ABC_CHECK_RET(ABC_WalletGetDirName(&(pData->szWalletDir), szUUID, pError));
+        ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), szUUID, pError));
 
         // get LP2 for this account
         ABC_CHECK_RET(ABC_AccountGetKey(pData->szUserName, pData->szPassword, ABC_AccountKey_LP2, &LP2, pError));
@@ -569,7 +603,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, LP2, &(pData->MK), pError));
 
         // get the name
-        sprintf(szFilename, "%s/%s", pData->szWalletDir, WALLET_NAME_FILENAME);
+        sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_NAME_FILENAME);
         if (true == ABC_FileIOFileExist(szFilename))
         {
             ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
@@ -582,7 +616,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         }
 
         // get the attributes
-        sprintf(szFilename, "%s/%s", pData->szWalletDir, WALLET_ATTRIBUTES_FILENAME);
+        sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_ATTRIBUTES_FILENAME);
         if (true == ABC_FileIOFileExist(szFilename))
         {
             ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
@@ -595,7 +629,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         }
 
         // get the currency num
-        sprintf(szFilename, "%s/%s", pData->szWalletDir, WALLET_CURRENCY_FILENAME);
+        sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_CURRENCY_FILENAME);
         if (true == ABC_FileIOFileExist(szFilename))
         {
             ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
@@ -608,7 +642,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         }
 
         // get the accounts
-        sprintf(szFilename, "%s/%s", pData->szWalletDir, WALLET_ACCOUNTS_FILENAME);
+        sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_ACCOUNTS_FILENAME);
         if (true == ABC_FileIOFileExist(szFilename))
         {
             ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
@@ -776,6 +810,13 @@ void ABC_WalletFreeData(tWalletData *pData)
             memset(pData->szWalletDir, 0, strlen(pData->szWalletDir));
             free(pData->szWalletDir);
             pData->szWalletDir = NULL;
+        }
+
+        if (pData->szWalletSyncDir)
+        {
+            memset(pData->szWalletSyncDir, 0, strlen(pData->szWalletSyncDir));
+            free(pData->szWalletSyncDir);
+            pData->szWalletSyncDir = NULL;
         }
 
         pData->attributes = 0;
@@ -1180,7 +1221,7 @@ exit:
     if (szFilename)         free(szFilename);
     if (szJSON)             free(szJSON);
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
-    
+
     return cc;
 }
 
