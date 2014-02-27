@@ -1,0 +1,13 @@
+inherit lib
+
+source="http://megaui.net/fukuchi/works/qrencode/qrencode-3.4.3.tar.bz2"
+
+build() {
+    cd qrencode-3.4.3
+    ./configure --enable-static --disable-shared --host=$cross --without-tools --prefix=$install_dir
+    make
+    make install
+}
+
+include="include/qrencode.h"
+lib="lib/libqrencode.a"

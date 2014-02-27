@@ -1,4 +1,4 @@
-depends="curl jansson libbitcoin openssl scrypt"
+depends="curl jansson libbitcoin libqrencode openssl scrypt"
 inherit lib
 
 build() {
