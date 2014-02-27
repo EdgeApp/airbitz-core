@@ -520,7 +520,7 @@
 					"../../deps/build/zlib/ios-universal/lib",
 					"../../deps/build/curl/ios-universal/lib",
 					"../../deps/build/scrypt/ios-universal/lib",
-					"/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/airbitz-walletcore/deps/build/libqrencode/ios-universal/lib",
+					"../../deps/build/libqrencode/ios-universal/lib",
 				);
 				PRODUCT_NAME = "TestBed x64";
 				USER_HEADER_SEARCH_PATHS = ../../deps/build/prefix/ios/arm64/include;
@@ -544,7 +544,7 @@
 					"../../deps/build/zlib/ios-universal/lib",
 					"../../deps/build/curl/ios-universal/lib",
 					"../../deps/build/scrypt/ios-universal/lib",
-					"/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/airbitz-walletcore/deps/build/libqrencode/ios-universal/lib",
+					"../../deps/build/libqrencode/ios-universal/lib",
 				);
 				PRODUCT_NAME = "TestBed x64";
 				USER_HEADER_SEARCH_PATHS = ../../deps/build/prefix/ios/arm64/include;
@@ -646,7 +646,7 @@
 					"../../deps/build/zlib/ios-universal/lib",
 					"../../deps/build/curl/ios-universal/lib",
 					"../../deps/build/scrypt/ios-universal/lib",
-					"/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/airbitz-walletcore/deps/build/libqrencode/ios-universal/lib",
+					"../../deps/build/libqrencode/ios-universal/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = ../../deps/build/prefix/ios/i386/include;
@@ -670,7 +670,7 @@
 					"../../deps/build/zlib/ios-universal/lib",
 					"../../deps/build/curl/ios-universal/lib",
 					"../../deps/build/scrypt/ios-universal/lib",
-					"/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/airbitz-walletcore/deps/build/libqrencode/ios-universal/lib",
+					"../../deps/build/libqrencode/ios-universal/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = ../../deps/build/prefix/ios/i386/include;
