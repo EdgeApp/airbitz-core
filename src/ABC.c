@@ -1264,8 +1264,6 @@ void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo)
 
         ABC_FREE_STR(pInfo->szMessage);
 
-        ABC_FREE_STR(pInfo->szSend);
-
         ABC_CLEAR_FREE(pInfo, sizeof(tABC_BitcoinURIInfo));
     }
 }

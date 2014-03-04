@@ -259,9 +259,6 @@ extern "C" {
 
         /** amount of bitcoins */
         int64_t amountSatoshi;
-
-        /** send: used to send bitcoin, rather than to request them */
-        char *szSend;
     } tABC_BitcoinURIInfo;
 
     /**
