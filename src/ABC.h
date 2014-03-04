@@ -206,7 +206,7 @@ extern "C" {
         /** wallet attributes */
         unsigned int    attributes;
         /** wallet balance */
-        double          balance;
+        int64_t         balanceSatoshi;
     } tABC_WalletInfo;
 
     /**
@@ -258,7 +258,7 @@ extern "C" {
         char *szMessage;
 
         /** amount of bitcoins */
-        double amount;
+        int64_t amountSatoshi;
 
         /** send: used to send bitcoin, rather than to request them */
         char *szSend;
