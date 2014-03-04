@@ -20,6 +20,8 @@
 #include "ABC_Crypto.h"
 #include "ABC_URL.h"
 
+#define SATOSHI_PER_BITCOIN 100000000
+
 static bool gbInitialized = false;
 
 static tABC_Currency gaCurrencies[] = {
@@ -1266,6 +1268,26 @@ void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo)
 
         ABC_CLEAR_FREE(pInfo, sizeof(tABC_BitcoinURIInfo));
     }
+}
+
+/**
+ * Converts amount from Satoshi to Bitcoin
+ *
+ * @param satoshi Amount in Satoshi
+ */
+double ABC_SatoshiToBitcoin(int64_t satoshi)
+{
+    return((double) satoshi / (double) SATOSHI_PER_BITCOIN);
+}
+
+/**
+ * Converts amount from Bitcoin to Satoshi
+ *
+ * @param bitcoin Amount in Bitcoin
+ */
+int64_t ABC_BitcoinToSatoshi(double bitcoin)
+{
+    return((int64_t) (bitcoin * (double) SATOSHI_PER_BITCOIN));
 }
 
 void tempEventA()

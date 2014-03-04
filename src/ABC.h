@@ -421,6 +421,10 @@ extern "C" {
 
     void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo);
 
+    double ABC_SatoshiToBitcoin(int64_t satoshi);
+
+    int64_t ABC_BitcoinToSatoshi(double bitcoin);
+
     // temp functions
     void tempEventA();
     void tempEventB();
