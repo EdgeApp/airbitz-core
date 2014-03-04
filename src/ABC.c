@@ -22,6 +22,8 @@
 
 #define SATOSHI_PER_BITCOIN 100000000
 
+#define CURRENCY_NUM_USD    840
+
 static bool gbInitialized = false;
 
 static tABC_Currency gaCurrencies[] = {
@@ -1289,6 +1291,83 @@ int64_t ABC_BitcoinToSatoshi(double bitcoin)
 {
     return((int64_t) (bitcoin * (double) SATOSHI_PER_BITCOIN));
 }
+
+/**
+ * Converts Satoshi to given currency
+ *
+ * @param satoshi     Amount in Satoshi
+ * @param pCurrency   Pointer to location to store amount converted to currency.
+ * @param currencyNum Currency ISO 4217 num
+ * @param pError      A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_SatoshiToCurrency(int64_t satoshi,
+                              double *pCurrency,
+                              int currencyNum,
+                              tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(pCurrency);
+    *pCurrency = 0.0;
+
+    // currently only supporting dollars
+    if (CURRENCY_NUM_USD == currencyNum)
+    {
+        // TODO: find real conversion - for now hardcode to $600 per bitcoin
+        *pCurrency = ABC_SatoshiToBitcoin(satoshi) * 600;
+    }
+    else
+    {
+        ABC_RET_ERROR(ABC_CC_NotSupported, "The given currency is not currently supported");
+    }
+
+exit:
+    
+    return cc;
+}
+
+/**
+ * Converts given currency to Satoshi
+ *
+ * @param currency    Amount in given currency
+ * @param currencyNum Currency ISO 4217 num
+ * @param pSatoshi    Pointer to location to store amount converted to Satoshi
+ * @param pError      A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_CurrencyToSatoshi(double currency,
+                              int currencyNum,
+                              int64_t *pSatoshi,
+                              tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(pSatoshi);
+    *pSatoshi = 0;
+
+    // currently only supporting dollars
+    if (CURRENCY_NUM_USD == currencyNum)
+    {
+        // TODO: find real conversion - for now hardcode to $600 per bitcoin
+        *pSatoshi = ABC_BitcoinToSatoshi(currency) * 600;
+    }
+    else
+    {
+        ABC_RET_ERROR(ABC_CC_NotSupported, "The given currency is not currently supported");
+    }
+
+exit:
+
+    return cc;
+}
+
 
 void tempEventA()
 {

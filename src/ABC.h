@@ -80,7 +80,9 @@ extern "C" {
         /** Server error  */
         ABC_CC_ServerError = 24,
         /** The user has not set recovery questions */
-        ABC_CC_NoRecoveryQuestions = 25
+        ABC_CC_NoRecoveryQuestions = 25,
+        /** Functionality not supported */
+        ABC_CC_NotSupported = 26
     } tABC_CC;
 
     /**
@@ -424,6 +426,12 @@ extern "C" {
     double ABC_SatoshiToBitcoin(int64_t satoshi);
 
     int64_t ABC_BitcoinToSatoshi(double bitcoin);
+
+    tABC_CC ABC_SatoshiToCurrency(int64_t satoshi,
+                                  double *pCurrency,
+                                  int currencyNum,
+                                  tABC_Error *pError);
+
 
     // temp functions
     void tempEventA();
