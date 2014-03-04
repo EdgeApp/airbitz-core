@@ -106,7 +106,9 @@ extern "C" {
         /** Get Recovery Question Choices request */
         ABC_RequestType_GetQuestionChoices = 4,
         /** Change password request */
-        ABC_RequestType_ChangePassword = 5
+        ABC_RequestType_ChangePassword = 5,
+        /** Send bitcoin request */
+        ABC_RequestType_SendBitcoin = 6
     } tABC_RequestType;
 
     /**
@@ -432,6 +434,61 @@ extern "C" {
                                   int currencyNum,
                                   tABC_Error *pError);
 
+    tABC_CC ABC_CurrencyToSatoshi(double currency,
+                                  int currencyNum,
+                                  int64_t *pSatoshi,
+                                  tABC_Error *pError);
+
+    tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
+                                     const char *szPassword,
+                                     const char *szWalletUUID,
+                                     int64_t amountSatoshi,
+                                     const char *szName,
+                                     const char *szCategory,
+                                     const char *szNotes,
+                                     char **pszRequestID,
+                                     tABC_Error *pError);
+
+    tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
+                                     const char *szPassword,
+                                     const char *szWalletUUID,
+                                     const char *szRequestID,
+                                     int64_t amountSatoshi,
+                                     const char *szName,
+                                     const char *szCategory,
+                                     const char *szNotes,
+                                     tABC_Error *pError);
+
+    tABC_CC ABC_FinalizeReceiveRequest(const char *szUserName,
+                                       const char *szPassword,
+                                       const char *szWalletUUID,
+                                       const char *szRequestID,
+                                       tABC_Error *pError);
+
+    tABC_CC ABC_CancelReceiveRequest(const char *szUserName,
+                                     const char *szPassword,
+                                     const char *szWalletUUID,
+                                     const char *szRequestID,
+                                     tABC_Error *pError);
+
+    tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
+                                      const char *szPassword,
+                                      const char *szWalletUUID,
+                                      const char *szRequestID,
+                                      unsigned char **paData,
+                                      unsigned int *pWidth,
+                                      tABC_Error *pError);
+
+    tABC_CC ABC_InitiateSendRequest(const char *szUserName,
+                                    const char *szPassword,
+                                    const char *szWalletUUID,
+                                    int64_t amountSatoshi,
+                                    const char *szName,
+                                    const char *szCategory,
+                                    const char *szNotes,
+                                    tABC_Request_Callback fRequestCallback,
+                                    void *pData,
+                                    tABC_Error *pError);
 
     // temp functions
     void tempEventA();

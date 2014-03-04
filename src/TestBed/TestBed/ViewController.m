@@ -100,6 +100,39 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
 
+#if 0 // qrcode
+    unsigned int width = 0;
+    unsigned char *pData = NULL;
+
+    ABC_GenerateRequestQRCode([self.textUsername.text UTF8String],
+                              [self.textPassword.text UTF8String],
+                              "walletUUID",
+                              "RequestID",
+                              &pData,
+                              &width,
+                              &Error);
+    [self printABC_Error:&Error];
+
+    printf("QRCode width: %d\n", width);
+    ABC_UtilHexDump("QRCode data", pData, width * width);
+    for (int y = 0; y < width; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            if (pData[(y * width) + x] & 0x1)
+            {
+                printf("%c", '*');
+            }
+            else
+            {
+                printf(" ");
+            }
+        }
+        printf("\n");
+    }
+
+    free(pData);
+#endif
 
 #if 0 // recovery questions
     char *szRecoveryQuestions;
@@ -440,27 +473,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     }
 #endif
 
-#if 0 // qrcode - this test is just for the core - this is not something the UI would normally call
-    QRcode *qr = QRcode_encodeString("Hello", 0, QR_ECLEVEL_L, QR_MODE_8, 1);
-    printf("QRCode width: %d", qr->width);
-    ABC_UtilHexDump("QRCode data", qr->data, qr->width * qr->width);
-    for (int y = 0; y < qr->width; y++)
-    {
-        for (int x = 0; x < qr->width; x++)
-        {
-            if (qr->data[(y * qr->width) + x] & 0x1)
-            {
-                printf("%c", '*');
-            }
-            else
-            {
-                printf(" ");
-            }
-        }
-        printf("\n");
-    }
-    QRcode_free(qr);
-#endif
+
 
 }
 
