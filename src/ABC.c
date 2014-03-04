@@ -1617,6 +1617,7 @@ exit:
  * @param szUserName        UserName for the account associated with this request
  * @param szPassword        Password for the account associated with this request
  * @param szWalletUUID      UUID of the wallet associated with this request
+ * @param szDestAddress     Bitcoin address (Base58) to which the funds are to be sent
  * @param amountSatoshi     Amount of request in Santoshi
  * @param szName            Name of recipient (optional)
  * @param szCategory        Category to associate with request (optional)
@@ -1628,6 +1629,7 @@ exit:
 tABC_CC ABC_InitiateSendRequest(const char *szUserName,
                                 const char *szPassword,
                                 const char *szWalletUUID,
+                                const char *szDestAddress,
                                 int64_t amountSatoshi,
                                 const char *szName,
                                 const char *szCategory,

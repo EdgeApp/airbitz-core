@@ -482,6 +482,7 @@ extern "C" {
     tABC_CC ABC_InitiateSendRequest(const char *szUserName,
                                     const char *szPassword,
                                     const char *szWalletUUID,
+                                    const char *szDestAddress,
                                     int64_t amountSatoshi,
                                     const char *szName,
                                     const char *szCategory,
