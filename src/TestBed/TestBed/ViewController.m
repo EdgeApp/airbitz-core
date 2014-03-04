@@ -189,7 +189,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     {
         tABC_WalletInfo *pInfo = aWalletInfo[i];
 
-        printf("Account: %s, UUID: %s, Name: %s, currency: %d, attributes: %u, balance: %u\n",
+        printf("Account: %s, UUID: %s, Name: %s, currency: %d, attributes: %u, balance: %lf\n",
                pInfo->szUserName,
                pInfo->szUUID,
                pInfo->szName,

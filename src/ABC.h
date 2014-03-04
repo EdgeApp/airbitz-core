@@ -206,7 +206,7 @@ extern "C" {
         /** wallet attributes */
         unsigned int    attributes;
         /** wallet balance */
-        unsigned int    balance;
+        double          balance;
     } tABC_WalletInfo;
 
     /**
@@ -238,6 +238,31 @@ extern "C" {
         /** array of choices */
         tABC_QuestionChoice **aChoices;
     } tABC_QuestionChoices;
+
+    /**
+     * AirBitz Bitcoin URI Elements
+     *
+     * This structure contains elements in
+     * a Bitcoin URI
+     *
+     */
+    typedef struct sABC_BitcoinURIInfo
+    {
+        /** label for that address (e.g. name of receiver) */
+        char *szLabel;
+
+        /** bitcoin address (base58) */
+        char *szAddress;
+
+        /** message that shown to the user after scanning the QR code */
+        char *szMessage;
+
+        /** amount of bitcoins */
+        double amount;
+
+        /** send: used to send bitcoin, rather than to request them */
+        char *szSend;
+    } tABC_BitcoinURIInfo;
 
     /**
      * AirBitz Asynchronous BitCoin event callback
@@ -392,6 +417,12 @@ extern "C" {
                                                   tABC_Request_Callback fRequestCallback,
                                                   void *pData,
                                                   tABC_Error *pError);
+
+    tABC_CC ABC_ParseBitcoinURI(const char *szURI,
+                                tABC_BitcoinURIInfo **ppInfo,
+                                tABC_Error *pError);
+
+    void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo);
 
     // temp functions
     void tempEventA();
