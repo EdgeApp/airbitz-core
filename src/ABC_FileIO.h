@@ -42,7 +42,7 @@ extern "C" {
     tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
                                  tABC_Error *pError);
 
-    tABC_CC ABC_FileIOGetRootDir(const char **pszRootDir,
+    tABC_CC ABC_FileIOGetRootDir(char **pszRootDir,
                                  tABC_Error *pError);
 
     tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
@@ -52,7 +52,9 @@ extern "C" {
     tABC_CC ABC_FileIOFreeFileList(tABC_FileIOList *pFileList,
                                    tABC_Error *pError);
 
-    bool ABC_FileIOFileExist(const char *szFilename);
+    tABC_CC ABC_FileIOFileExists(const char *szFilename,
+                                 bool *pbExists,
+                                 tABC_Error *pError);
 
     tABC_CC ABC_FileIOCreateDir(const char *szDir,
                                 tABC_Error *pError);
@@ -74,9 +76,10 @@ extern "C" {
                                      bool bMustExist,
                                      tABC_Error  *pError);
 
-    FILE *fmemopen(void *buf,
-                   size_t size,
-                   const char *mode);
+    tABC_CC ABC_FileIOInitialize(tABC_Error *pError);
+
+    void ABC_FileIOTerminate();
+
 
 #ifdef __cplusplus
 }

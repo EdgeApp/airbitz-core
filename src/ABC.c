@@ -245,17 +245,19 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_NULL(pSeedData);
     ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "The core library has already been initalized");
 
+    gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
+    pAsyncBitCoinCallerData = pData;
+
     // initialize URL system
     ABC_CHECK_RET(ABC_URLInitialize(pError));
 
-    gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
-    pAsyncBitCoinCallerData = pData;
+    // initialize the FileIO system
+    ABC_CHECK_RET(ABC_FileIOInitialize(pError));
 
     if (szRootDir)
     {
         ABC_CHECK_RET(ABC_FileIOSetRootDir(szRootDir, pError));
     }
-
 
     ABC_BUF_DUP_PTR(Seed, pSeedData, seedLength);
     ABC_CHECK_RET(ABC_CryptoSetRandomSeed(Seed, pError));
@@ -282,6 +284,8 @@ void ABC_Terminate()
         ABC_ClearKeyCache(NULL);
 
         ABC_URLTerminate();
+
+        ABC_FileIOTerminate();
 
         gbInitialized = false;
     }

@@ -459,7 +459,9 @@ tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError)
     ABC_CHECK_RET(ABC_WalletGetRootDirName(&szWalletRoot, pError));
 
     // if it doesn't exist
-    if (ABC_FileIOFileExist(szWalletRoot) != true)
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szWalletRoot, &bExists, pError));
+    if (true != bExists)
     {
         ABC_CHECK_RET(ABC_FileIOCreateDir(szWalletRoot, pError));
     }
@@ -477,9 +479,10 @@ tABC_CC ABC_WalletGetRootDirName(char **pszRootDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    char *szFileIORootDir = NULL;
+
     ABC_CHECK_NULL(pszRootDir);
 
-    const char *szFileIORootDir;
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szFileIORootDir, pError));
 
     // create the wallet directory string
@@ -487,6 +490,7 @@ tABC_CC ABC_WalletGetRootDirName(char **pszRootDir, tABC_Error *pError)
     sprintf(*pszRootDir, "%s/%s", szFileIORootDir, WALLET_DIR);
 
 exit:
+    ABC_FREE_STR(szFileIORootDir);
 
     return cc;
 }
@@ -602,7 +606,9 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
 
         // get the name
         sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_NAME_FILENAME);
-        if (true == ABC_FileIOFileExist(szFilename))
+        bool bExists = false;
+        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+        if (true == bExists)
         {
             ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
             ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_NAME_FIELD, &(pData->szName), pError));
@@ -615,7 +621,9 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
 
         // get the attributes
         sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_ATTRIBUTES_FILENAME);
-        if (true == ABC_FileIOFileExist(szFilename))
+        bExists = false;
+        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+        if (true == bExists)
         {
             ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
             ABC_CHECK_RET(ABC_UtilGetIntValueFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_ATTRIBUTES_FIELD, (int *) &(pData->attributes), pError));
@@ -628,7 +636,9 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
 
         // get the currency num
         sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_CURRENCY_FILENAME);
-        if (true == ABC_FileIOFileExist(szFilename))
+        bExists = false;
+        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+        if (true == bExists)
         {
             ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
             ABC_CHECK_RET(ABC_UtilGetIntValueFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_CURRENCY_NUM_FIELD, (int *) &(pData->currencyNum), pError));
@@ -641,7 +651,9 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
 
         // get the accounts
         sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_ACCOUNTS_FILENAME);
-        if (true == ABC_FileIOFileExist(szFilename))
+        bExists = false;
+        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+        if (true == bExists)
         {
             ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
             ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_ACCOUNTS_FIELD, &(pData->aszAccounts), &(pData->numAccounts), pError));
@@ -901,7 +913,9 @@ tABC_CC ABC_WalletGetUUIDs(const char *szUserName,
     // load wallet the account Wallets.json
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountSyncDir, WALLET_ACCOUNTS_WALLETS_FILENAME);
-    if (ABC_FileIOFileExist(szFilename))
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szAccountSyncDir, &bExists, pError));
+    if (true == bExists)
     {
         ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON, pError));
         ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString(szJSON, JSON_WALLET_WALLETS_FIELD, paUUIDs, pCount, pError));
@@ -1040,7 +1054,9 @@ tABC_CC ABC_WalletSetOrder(const char *szUserName,
     // load wallet the account Wallets.json
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountSyncDir, WALLET_ACCOUNTS_WALLETS_FILENAME);
-    if (ABC_FileIOFileExist(szFilename))
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szAccountSyncDir, &bExists, pError));
+    if (true == bExists)
     {
         ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON, pError));
         ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString(szJSON, JSON_WALLET_WALLETS_FIELD, &aszCurUUIDs, &nCurUUIDs, pError));

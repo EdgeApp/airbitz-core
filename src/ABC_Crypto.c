@@ -91,6 +91,8 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    char *szFileIORootDir = NULL;
+
     tABC_U08Buf NewSeed = ABC_BUF_NULL;
 
     ABC_CHECK_NULL_BUF(Seed);
@@ -102,11 +104,11 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
 
     // mix in some info on our file system
 #ifndef __ANDROID__
-    const char *szRootDir;
-    ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRootDir, pError));
-    ABC_BUF_APPEND_PTR(NewSeed, szRootDir, strlen(szRootDir));
+
+    ABC_CHECK_RET(ABC_FileIOGetRootDir(&szFileIORootDir, pError));
+    ABC_BUF_APPEND_PTR(NewSeed, szFileIORootDir, strlen(szFileIORootDir));
     struct statvfs fiData;
-    if ((statvfs(szRootDir, &fiData)) >= 0 )
+    if ((statvfs(szFileIORootDir, &fiData)) >= 0 )
     {
         ABC_BUF_APPEND_PTR(NewSeed, (unsigned char *)&fiData, sizeof(struct statvfs));
 
@@ -147,7 +149,7 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     RAND_seed(ABC_BUF_PTR(NewSeed), ABC_BUF_SIZE(NewSeed));
 
 exit:
-
+    ABC_FREE_STR(szFileIORootDir);
     ABC_BUF_FREE(NewSeed);
 
     return cc;

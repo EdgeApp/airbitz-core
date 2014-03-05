@@ -782,7 +782,9 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
         {
             // get the LRA2 by decrypting ELRA2
             sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELRA2_FILENAME);
-            if (true == ABC_FileIOFileExist(szFilename))
+            bool bExists = false;
+            ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+            if (true == bExists)
             {
                 ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pKeys->LP2, &(pKeys->LRA2), pError));
             }
@@ -1311,9 +1313,10 @@ tABC_CC ABC_AccountNextAccountNum(int *pAccountNum,
     int AccountNum;
     for (AccountNum = 0; AccountNum < ACCOUNT_MAX; AccountNum++)
     {
-
         ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, AccountNum, pError));
-        if (true != ABC_FileIOFileExist(szAccountDir))
+        bool bExists = false;
+        ABC_CHECK_RET(ABC_FileIOFileExists(szAccountDir, &bExists, pError));
+        if (true != bExists)
         {
             break;
         }
@@ -1347,7 +1350,9 @@ tABC_CC ABC_AccountCreateRootDir(tABC_Error *pError)
     ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
 
     // if it doesn't exist
-    if (ABC_FileIOFileExist(szAccountRoot) != true)
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szAccountRoot, &bExists, pError));
+    if (true != bExists)
     {
         ABC_CHECK_RET(ABC_FileIOCreateDir(szAccountRoot, pError));
     }
@@ -1390,15 +1395,17 @@ tABC_CC ABC_AccountCopyRootDirName(char *szRootDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    char *szFileIORootDir = NULL;
+
     ABC_CHECK_NULL(szRootDir);
 
-    const char *szFileIORootDir;
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szFileIORootDir, pError));
 
     // create the account directory string
     sprintf(szRootDir, "%s/%s", szFileIORootDir, ACCOUNT_DIR);
 
 exit:
+    ABC_FREE_STR(szFileIORootDir);
 
     return cc;
 }
@@ -2506,7 +2513,9 @@ tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountRequestInfo *pInfo,
     sprintf(szFilename, "%s/%s", szRootDir, ACCOUNT_QUESTIONS_FILENAME);
 
     // if the file doesn't exist
-    if (false == ABC_FileIOFileExist(szFilename))
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    if (true != bExists)
     {
         // get an update from the server
         ABC_CHECK_RET(ABC_AccountUpdateQuestionChoices(pInfo->szUserName, pError));

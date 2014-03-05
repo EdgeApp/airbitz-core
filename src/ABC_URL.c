@@ -30,7 +30,7 @@ tABC_CC ABC_URLInitialize(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "The URL has already been initalized");
+    ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "ABC_URL has already been initalized");
 
     // initialize curl
     CURLcode curlCode;

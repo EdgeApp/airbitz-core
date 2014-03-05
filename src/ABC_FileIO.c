@@ -21,8 +21,38 @@
 #include "ABC_FileIO.h"
 #include "ABC_Util.h"
 
-
 static char gszRootDir[ABC_MAX_STRING_LENGTH + 1] = ".";
+
+static bool gbInitialized = false;
+
+/**
+ * Initialize the FileIO system
+ */
+tABC_CC ABC_FileIOInitialize(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "ABC_FileIO has already been initalized");
+
+    gbInitialized = true;
+
+exit:
+
+    return cc;
+}
+
+/**
+ * Shut down the FileIO system
+ */
+void ABC_FileIOTerminate()
+{
+    if (gbInitialized == true)
+    {
+
+        gbInitialized = false;
+    }
+}
 
 // sets the root directory to the string given
 tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
@@ -30,6 +60,7 @@ tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
     ABC_CHECK_NULL(szRootDir);
     strncpy(gszRootDir, szRootDir, ABC_MAX_STRING_LENGTH);
     gszRootDir[ABC_MAX_STRING_LENGTH] = '\0';
@@ -63,15 +94,20 @@ exit:
     return cc;
 }
 
-// sets the given pointer to point to the c string of the root directory
-tABC_CC ABC_FileIOGetRootDir(const char **pszRootDir,
-                             tABC_Error *pError)
+/**
+ * Gets the root directory
+ *
+ * @param pszRootDir pointer to store allocated string
+ *                   (the user is responsible for free'ing)
+ */
+tABC_CC ABC_FileIOGetRootDir(char **pszRootDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
     ABC_CHECK_NULL(pszRootDir);
 
-    *pszRootDir = gszRootDir;
+    *pszRootDir = strdup(gszRootDir);
 
 exit:
 
@@ -85,6 +121,7 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
     ABC_CHECK_NULL(ppFileList);
     ABC_CHECK_NULL(szDir);
 
@@ -145,6 +182,7 @@ tABC_CC ABC_FileIOFreeFileList(tABC_FileIOList *pFileList,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
     ABC_CHECK_NULL(pFileList);
 
     if (pFileList->apFiles)
@@ -168,19 +206,27 @@ exit:
 }
 
 // checks if a file exists
-bool ABC_FileIOFileExist(const char *szFilename)
+tABC_CC ABC_FileIOFileExists(const char *szFilename,
+                             bool *pbExists,
+                             tABC_Error *pError)
 {
-    bool bExists = false;
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
+    ABC_CHECK_NULL(pbExists);
+    *pbExists = false;
 
     if (szFilename != NULL)
     {
         if (access(szFilename, F_OK) != -1 )
         {
-            bExists = true;
+            *pbExists = true;
         }
     }
 
-    return bExists;
+exit:
+    
+    return cc;
 }
 
 // creates a directory
@@ -189,6 +235,7 @@ tABC_CC ABC_FileIOCreateDir(const char *szDir,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
     ABC_CHECK_NULL(szDir);
 
     mode_t process_mask = umask(0);
@@ -214,6 +261,7 @@ tABC_CC ABC_FileIOWriteFile(const char *szFilename,
 
     FILE *fp = NULL;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL_BUF(Data);
 
@@ -246,6 +294,7 @@ tABC_CC ABC_FileIOWriteFileStr(const char *szFilename,
 
     FILE *fp = NULL;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(szData);
 
@@ -285,6 +334,7 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
 
     FILE *fp = NULL;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(pszData);
 
@@ -329,11 +379,14 @@ tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
     char *szData_JSON = NULL;
     json_t *pJSON_Root = NULL;
 
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(ppJSON_Data);
 
     // if the file exists
-    if (true == ABC_FileIOFileExist(szFilename))
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    if (true == bExists)
     {
         ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szData_JSON, pError));
 
