@@ -82,7 +82,9 @@ extern "C" {
         /** The user has not set recovery questions */
         ABC_CC_NoRecoveryQuestions = 25,
         /** Functionality not supported */
-        ABC_CC_NotSupported = 26
+        ABC_CC_NotSupported = 26,
+        /** Mutex error if some type */
+        ABC_CC_MutexError = 27
     } tABC_CC;
 
     /**
