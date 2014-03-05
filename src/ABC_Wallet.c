@@ -17,6 +17,7 @@
 #include "ABC_FileIO.h"
 #include "ABC_Crypto.h"
 #include "ABC_Account.h"
+#include "ABC_Mutex.h"
 
 #define WALLET_KEY_LENGTH                   AES_256_KEY_LENGTH
 
@@ -68,6 +69,8 @@ static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **pp
 static void    ABC_WalletFreeData(tWalletData *pData);
 static tABC_CC ABC_WalletGetUUIDs(const char *szUserName, char ***paUUIDs, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC ABC_WalletChangeEMKForUUID(const char *szUserName, const char *szUUID, tABC_U08Buf oldLP2, tABC_U08Buf newLP2, tABC_Error *pError);
+static tABC_CC ABC_WalletMutexLock(tABC_Error *pError);
+static tABC_CC ABC_WalletMutexUnlock(tABC_Error *pError);
 
 tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
                                   const char *szUserName,
@@ -557,6 +560,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
     char *szFilename = NULL;
     tABC_U08Buf Data = ABC_BUF_NULL;
 
+    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szUUID);
@@ -682,7 +686,7 @@ exit:
     ABC_FREE_STR(szFilename);
     ABC_BUF_FREE(Data);
 
-
+    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
@@ -690,6 +694,8 @@ exit:
 tABC_CC ABC_WalletClearCache(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
     if ((gWalletsCacheCount > 0) && (NULL != gaWalletsCacheArray))
     {
@@ -705,6 +711,7 @@ tABC_CC ABC_WalletClearCache(tABC_Error *pError)
 
 exit:
 
+    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
@@ -714,6 +721,7 @@ tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
     ABC_CHECK_NULL(pData);
 
     // see if it exists first
@@ -746,6 +754,7 @@ tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError)
 
 exit:
 
+    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
@@ -1128,11 +1137,10 @@ tABC_CC ABC_WalletChangeEMKsForAccount(const char *szUserName,
     char **aszUUIDs = NULL;
     unsigned int nUUIDs = 0;
 
+    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL_BUF(oldLP2);
     ABC_CHECK_NULL_BUF(newLP2);
-
-    // TODO: This function must be protected by a mutex in some way as it is changing the keys that another thread might use
 
     // clear the cache so no old keys will be flushed
     ABC_CHECK_RET(ABC_WalletClearCache(pError));
@@ -1152,6 +1160,7 @@ tABC_CC ABC_WalletChangeEMKsForAccount(const char *szUserName,
 exit:
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
 
+    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
@@ -1180,6 +1189,7 @@ tABC_CC ABC_WalletChangeEMKForUUID(const char *szUserName,
     char **aszUUIDs = NULL;
     unsigned int nUUIDs = 0;
 
+    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szUUID);
     ABC_CHECK_NULL_BUF(oldLP2);
@@ -1203,6 +1213,31 @@ exit:
     ABC_FREE_STR(szJSON);
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
 
+    ABC_WalletMutexUnlock(NULL);
     return cc;
+}
+
+/**
+ * Locks the mutex
+ *
+ * ABC_Wallet uses the same mutex as ABC_Account so that there will be no situation in 
+ * which one thread is in ABC_Wallet locked on a mutex and calling a thread safe ABC_Account call
+ * that is locked from another thread calling a thread safe ABC_Wallet call.
+ * In other words, since they call each other, they need to share a recursive mutex.
+ */
+static
+tABC_CC ABC_WalletMutexLock(tABC_Error *pError)
+{
+    return ABC_MutexLock(pError);
+}
+
+/**
+ * Unlocks the mutex
+ *
+ */
+static
+tABC_CC ABC_WalletMutexUnlock(tABC_Error *pError)
+{
+    return ABC_MutexUnlock(pError);
 }
 

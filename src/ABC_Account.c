@@ -21,6 +21,7 @@
 #include "ABC_Debug.h"
 #include "ABC_ServerDefs.h"
 #include "ABC_Wallet.h"
+#include "ABC_Mutex.h"
 
 #define ACCOUNT_MAX                     1024  // maximum number of accounts
 #define ACCOUNT_DIR                     "Accounts"
@@ -100,6 +101,8 @@ static tABC_CC ABC_AccountSaveCategories(const char *szUserName, char **aszCateg
 static tABC_CC ABC_AccountServerGetQuestions(tABC_U08Buf L1, json_t **ppJSON_Q, tABC_Error *pError);
 static tABC_CC ABC_AccountUpdateQuestionChoices(const char *szUserName, tABC_Error *pError);
 static tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountRequestInfo *pInfo, tABC_QuestionChoices **ppQuestionChoices, tABC_Error *pError);
+static tABC_CC ABC_AccountMutexLock(tABC_Error *pError);
+static tABC_CC ABC_AccountMutexUnlock(tABC_Error *pError);
 
 /**
  * Allocates and fills in an account request structure with the info given.
@@ -358,6 +361,7 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     char            *szAccountDir       = NULL;
     char            *szFilename         = NULL;
 
+    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
 
     int AccountNum = 0;
@@ -477,6 +481,7 @@ exit:
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
 
+    ABC_AccountMutexUnlock(NULL);
     return cc;
 }
 
@@ -504,7 +509,6 @@ tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pErr
 
     ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL_BUF(P1);
-
 
     // create the URL
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
@@ -593,6 +597,7 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
     char            *szAccountDir       = NULL;
     char            *szFilename         = NULL;
 
+    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
 
     int AccountNum = 0;
@@ -729,6 +734,7 @@ exit:
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
 
+    ABC_AccountMutexUnlock(NULL);
     return cc;
 }
 
@@ -757,11 +763,10 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     char *szFilename = NULL;
     char *szJSON = NULL;
 
+    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
     ABC_CHECK_NULL(pInfo->szUserName);
     ABC_CHECK_NULL(pInfo->szNewPassword);
-
-    // TODO: This function must be protected by a mutex in some way as it is changing the keys that another thread might use
 
     // get the account directory and set up for creating needed filenames
     ABC_CHECK_RET(ABC_AccountGetDirName(pInfo->szUserName, &szAccountDir, pError));
@@ -882,6 +887,7 @@ exit:
     ABC_FREE_STR(szJSON);
     if (cc != ABC_CC_Ok) ABC_AccountClearKeyCache(NULL);
 
+    ABC_AccountMutexUnlock(NULL);
     return cc;
 }
 
@@ -1664,6 +1670,8 @@ tABC_CC ABC_AccountClearKeyCache(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+
     if ((gAccountKeysCacheCount > 0) && (NULL != gaAccountKeysCacheArray))
     {
         for (int i = 0; i < gAccountKeysCacheCount; i++)
@@ -1678,6 +1686,7 @@ tABC_CC ABC_AccountClearKeyCache(tABC_Error *pError)
 
 exit:
 
+    ABC_AccountMutexUnlock(NULL);
     return cc;
 }
 
@@ -1716,6 +1725,7 @@ static tABC_CC ABC_AccountAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(pAccountKeys);
 
     // see if it exists first
@@ -1748,6 +1758,7 @@ static tABC_CC ABC_AccountAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *
 
 exit:
 
+    ABC_AccountMutexUnlock(NULL);
     return cc;
 }
 
@@ -1757,6 +1768,7 @@ static tABC_CC ABC_AccountKeyFromCacheByName(const char *szUserName, tAccountKey
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(ppAccountKeys);
 
@@ -1779,6 +1791,7 @@ static tABC_CC ABC_AccountKeyFromCacheByName(const char *szUserName, tAccountKey
 
 exit:
 
+    ABC_AccountMutexUnlock(NULL);
     return cc;
 }
 
@@ -1805,6 +1818,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
     tABC_U08Buf  LP             = ABC_BUF_NULL;
     tABC_U08Buf  LP2            = ABC_BUF_NULL;
 
+    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
 
     // see if it is already in the cache
@@ -1909,8 +1923,6 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
         }
     }
 
-
-
     // if they wanted the keys
     if (ppKeys)
     {
@@ -1934,6 +1946,7 @@ exit:
     ABC_BUF_FREE(LP);
     ABC_BUF_FREE(LP2);
 
+    ABC_AccountMutexUnlock(NULL);
     return cc;
 }
 
@@ -1946,6 +1959,7 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
     tAccountKeys *pKeys = NULL;
     json_t       *pJSON_ERQ     = NULL;
 
+    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(pKey);
 
@@ -2024,6 +2038,7 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
 exit:
     if (pJSON_ERQ)  json_decref(pJSON_ERQ);
 
+    ABC_AccountMutexUnlock(NULL);
     return cc;
 }
 
@@ -2647,4 +2662,28 @@ tABC_CC ABC_AccountGetRecoveryQuestions(const char *szUserName,
 exit:
 
     return cc;
+}
+
+/**
+ * Locks the mutex
+ *
+ * ABC_Wallet uses the same mutex as ABC_Account so that there will be no situation in
+ * which one thread is in ABC_Wallet locked on a mutex and calling a thread safe ABC_Account call
+ * that is locked from another thread calling a thread safe ABC_Wallet call.
+ * In other words, since they call each other, they need to share a recursive mutex.
+ */
+static
+tABC_CC ABC_AccountMutexLock(tABC_Error *pError)
+{
+    return ABC_MutexLock(pError);
+}
+
+/**
+ * Unlocks the mutex
+ *
+ */
+static
+tABC_CC ABC_AccountMutexUnlock(tABC_Error *pError)
+{
+    return ABC_MutexUnlock(pError);
 }

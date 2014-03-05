@@ -46,6 +46,8 @@
 		4C9D93BE18ADA91800402014 /* libjansson.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9D93B418AC65D900402014 /* libjansson.a */; };
 		4C9D93BF18ADA92A00402014 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9D93BA18AC662B00402014 /* libz.a */; };
 		4C9D93C318AECB9E00402014 /* TextFieldContainerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C9D93C218AECB9E00402014 /* TextFieldContainerView.m */; };
+		4CB3450A18C799C600A0FFE5 /* ABC_Mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = 4CB3450818C799C600A0FFE5 /* ABC_Mutex.c */; };
+		4CB3450B18C799C600A0FFE5 /* ABC_Mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = 4CB3450818C799C600A0FFE5 /* ABC_Mutex.c */; };
 		4CCDCB9118B694BC00FC4391 /* libscrypt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CCDCB9018B694BC00FC4391 /* libscrypt.a */; };
 		4CCDCB9218B6953000FC4391 /* libscrypt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CCDCB9018B694BC00FC4391 /* libscrypt.a */; };
 		4CD77582188EF7DC00AF76AC /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CD77581188EF7DC00AF76AC /* Foundation.framework */; };
@@ -102,6 +104,8 @@
 		4C9D93BA18AC662B00402014 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = "../airbitz-walletcore-deps/build/zlib/ios-universal/lib/libz.a"; sourceTree = "<group>"; };
 		4C9D93C118AECB9E00402014 /* TextFieldContainerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TextFieldContainerView.h; path = TextFieldContainerView/TextFieldContainerView.h; sourceTree = "<group>"; };
 		4C9D93C218AECB9E00402014 /* TextFieldContainerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TextFieldContainerView.m; path = TextFieldContainerView/TextFieldContainerView.m; sourceTree = "<group>"; };
+		4CB3450818C799C600A0FFE5 /* ABC_Mutex.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Mutex.c; path = ../../ABC_Mutex.c; sourceTree = "<group>"; };
+		4CB3450918C799C600A0FFE5 /* ABC_Mutex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Mutex.h; path = ../../ABC_Mutex.h; sourceTree = "<group>"; };
 		4CCDCB9018B694BC00FC4391 /* libscrypt.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libscrypt.a; path = "../airbitz-walletcore/deps/build/scrypt/ios-universal/lib/libscrypt.a"; sourceTree = "<group>"; };
 		4CD7757E188EF7DC00AF76AC /* TestBed.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TestBed.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4CD77581188EF7DC00AF76AC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -205,6 +209,8 @@
 				4C41302618BE991E00DD2123 /* ABC_URL.c */,
 				4C41303018BE991E00DD2123 /* ABC_Util.h */,
 				4C41302718BE991E00DD2123 /* ABC_Util.c */,
+				4CB3450918C799C600A0FFE5 /* ABC_Mutex.h */,
+				4CB3450818C799C600A0FFE5 /* ABC_Mutex.c */,
 				4C41302E18BE991E00DD2123 /* ABC_ServerDefs.h */,
 			);
 			name = Core;
@@ -425,6 +431,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4C41304218BE991E00DD2123 /* ABC.c in Sources */,
+				4CB3450B18C799C600A0FFE5 /* ABC_Mutex.c in Sources */,
 				4C41304018BE991E00DD2123 /* ABC_Wallet.c in Sources */,
 				4C41303418BE991E00DD2123 /* ABC_Account.c in Sources */,
 				4C41303618BE991E00DD2123 /* ABC_Crypto.c in Sources */,
@@ -444,6 +451,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4C41304118BE991E00DD2123 /* ABC.c in Sources */,
+				4CB3450A18C799C600A0FFE5 /* ABC_Mutex.c in Sources */,
 				4C41303F18BE991E00DD2123 /* ABC_Wallet.c in Sources */,
 				4C41303318BE991E00DD2123 /* ABC_Account.c in Sources */,
 				4C41303518BE991E00DD2123 /* ABC_Crypto.c in Sources */,

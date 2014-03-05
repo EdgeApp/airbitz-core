@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <curl/curl.h>
+#include <pthread.h>
 #include "ABC.h"
 #include "ABC_FileIO.h"
 #include "ABC_Util.h"
@@ -19,8 +20,11 @@
 #include "ABC_URL.h"
 
 static bool gbInitialized = false;
+static pthread_mutex_t  gMutex; // to block multiple threads from accessing curl at the same time
 
 static size_t ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
+static tABC_CC ABC_URLMutexLock(tABC_Error *pError);
+static tABC_CC ABC_URLMutexUnlock(tABC_Error *pError);
 
 /**
  * Initialize the URL system
@@ -31,6 +35,13 @@ tABC_CC ABC_URLInitialize(tABC_Error *pError)
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "ABC_URL has already been initalized");
+
+    // create a mutex to block multiple threads from accessing curl at the same time
+    pthread_mutexattr_t mutexAttrib;
+    ABC_CHECK_ASSERT(0 == pthread_mutexattr_init(&mutexAttrib), ABC_CC_MutexError, "ABC_URL could not create mutex attribute");
+    ABC_CHECK_ASSERT(0 == pthread_mutexattr_settype(&mutexAttrib, PTHREAD_MUTEX_RECURSIVE), ABC_CC_MutexError, "ABC_URL could not set mutex attributes");
+    ABC_CHECK_ASSERT(0 == pthread_mutex_init(&gMutex, &mutexAttrib), ABC_CC_MutexError, "ABC_URL could not create mutex");
+    pthread_mutexattr_destroy(&mutexAttrib);
 
     // initialize curl
     CURLcode curlCode;
@@ -57,6 +68,8 @@ void ABC_URLTerminate()
         // cleanup curl
         curl_global_cleanup();
 
+        pthread_mutex_destroy(&gMutex);
+
         gbInitialized = false;
     }
 }
@@ -74,7 +87,7 @@ tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError
     tABC_U08Buf Data = ABC_BUF_NULL;
     CURL *pCurlHandle = NULL;
 
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The URL system has not been initalized");
+    ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(pData);
 
@@ -116,6 +129,7 @@ exit:
     ABC_BUF_FREE(Data);
     curl_easy_cleanup(pCurlHandle);
     
+    ABC_URLMutexUnlock(NULL);
     return cc;
 }
 
@@ -134,7 +148,7 @@ tABC_CC ABC_URLRequestString(const char *szURL,
 
     tABC_U08Buf Data;
 
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The URL system has not been initalized");
+    ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(pszResults);
 
@@ -151,6 +165,7 @@ tABC_CC ABC_URLRequestString(const char *szURL,
 exit:
     ABC_BUF_FREE(Data);
 
+    ABC_URLMutexUnlock(NULL);
     return cc;
 }
 
@@ -170,7 +185,7 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
     CURL *pCurlHandle = NULL;
     struct curl_slist *slist = NULL;
 
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The URL system has not been initalized");
+    ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(szPostData);
     ABC_CHECK_NULL(pData);
@@ -233,6 +248,7 @@ exit:
     curl_easy_cleanup(pCurlHandle);
     curl_slist_free_all(slist);
     
+    ABC_URLMutexUnlock(NULL);
     return cc;
 }
 
@@ -253,7 +269,7 @@ tABC_CC ABC_URLPostString(const char *szURL,
 
     tABC_U08Buf Data;
 
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The URL system has not been initalized");
+    ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(szPostData);
     ABC_CHECK_NULL(pszResults);
@@ -271,6 +287,7 @@ tABC_CC ABC_URLPostString(const char *szURL,
 exit:
     ABC_BUF_FREE(Data);
     
+    ABC_URLMutexUnlock(NULL);
     return cc;
 }
 
@@ -306,3 +323,36 @@ size_t ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers,
     return amountWritten;
 }
 
+/**
+ * Locks the global mutex
+ *
+ */
+static
+tABC_CC ABC_URLMutexLock(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_URL has not been initalized");
+    ABC_CHECK_ASSERT(0 == pthread_mutex_lock(&gMutex), ABC_CC_MutexError, "ABC_URL error locking mutex");
+
+exit:
+
+    return cc;
+}
+
+/**
+ * Unlocks the global mutex
+ *
+ */
+static
+tABC_CC ABC_URLMutexUnlock(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_URL has not been initalized");
+    ABC_CHECK_ASSERT(0 == pthread_mutex_unlock(&gMutex), ABC_CC_MutexError, "ABC_URL error unlocking mutex");
+
+exit:
+    
+    return cc;
+}

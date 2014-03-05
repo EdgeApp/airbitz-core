@@ -175,7 +175,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
 #if 0 // change password with old password
     NSLog(@"Calling Change Password");
     self.labelStatus.text = @"Calling Change Password";
-    ABC_ChangePassword("zz", "ff", "zz", "4321", ABC_Request_Callback, (__bridge void *)self, &Error);
+    ABC_ChangePassword("a", "b", "a", "4321", ABC_Request_Callback, (__bridge void *)self, &Error);
     [self printABC_Error:&Error];
 
     if (ABC_CC_Ok == Error.code)
@@ -193,7 +193,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
 #if 0 // change password with recovery questions
     NSLog(@"Calling Change Password w/Recovery");
     self.labelStatus.text = @"Calling Change Password";
-    ABC_ChangePasswordWithRecoveryAnswers("a", "Answer1\nAnswer2\nAnswer3\nAnswer4\nAnswer5", "a", "2222", ABC_Request_Callback, (__bridge void *)self, &Error);
+    ABC_ChangePasswordWithRecoveryAnswers("a", "Answer1\nAnswer2\nAnswer3\nAnswer4\nAnswer5", "b", "2222", ABC_Request_Callback, (__bridge void *)self, &Error);
     [self printABC_Error:&Error];
 
     if (ABC_CC_Ok == Error.code)

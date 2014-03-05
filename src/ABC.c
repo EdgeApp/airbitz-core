@@ -20,6 +20,7 @@
 #include "ABC_Wallet.h"
 #include "ABC_Crypto.h"
 #include "ABC_URL.h"
+#include "ABC_Mutex.h"
 
 #define SATOSHI_PER_BITCOIN 100000000
 
@@ -248,6 +249,9 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
     pAsyncBitCoinCallerData = pData;
 
+    // initialize the mutex system
+    ABC_CHECK_RET(ABC_MutexInitialize(pError));
+
     // initialize URL system
     ABC_CHECK_RET(ABC_URLInitialize(pError));
 
@@ -286,6 +290,8 @@ void ABC_Terminate()
         ABC_URLTerminate();
 
         ABC_FileIOTerminate();
+
+        ABC_MutexTerminate();
 
         gbInitialized = false;
     }
