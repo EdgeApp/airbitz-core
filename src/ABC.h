@@ -256,16 +256,37 @@ extern "C" {
     {
         /** label for that address (e.g. name of receiver) */
         char *szLabel;
-
         /** bitcoin address (base58) */
         char *szAddress;
-
         /** message that shown to the user after scanning the QR code */
         char *szMessage;
-
         /** amount of bitcoins */
         int64_t amountSatoshi;
     } tABC_BitcoinURIInfo;
+
+    /**
+     * AirBitz Transaction Details
+     *
+     * This structure contains details for transactions.
+     * It is used in both transactions and transaction
+     * requests.
+     *
+     */
+    typedef struct sABC_TxDetails
+    {
+        /** amount of bitcoins */
+        int64_t amountSatoshi;
+        /** amount in currency */
+        double amountCurrency;
+        /** payer or payee */
+        char *szName;
+        /** category for the transaction */
+        char *szCategory;
+        /** notes for the transaction */
+        char *szNotes;
+        /** attributes for the transaction */
+        unsigned int attributes;
+    } tABC_TxDetails;
 
     /**
      * AirBitz Asynchronous BitCoin event callback
@@ -444,10 +465,7 @@ extern "C" {
     tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
                                      const char *szPassword,
                                      const char *szWalletUUID,
-                                     int64_t amountSatoshi,
-                                     const char *szName,
-                                     const char *szCategory,
-                                     const char *szNotes,
+                                     tABC_TxDetails *pDetails,
                                      char **pszRequestID,
                                      tABC_Error *pError);
 
@@ -455,10 +473,7 @@ extern "C" {
                                      const char *szPassword,
                                      const char *szWalletUUID,
                                      const char *szRequestID,
-                                     int64_t amountSatoshi,
-                                     const char *szName,
-                                     const char *szCategory,
-                                     const char *szNotes,
+                                     tABC_TxDetails *pDetails,
                                      tABC_Error *pError);
 
     tABC_CC ABC_FinalizeReceiveRequest(const char *szUserName,
@@ -485,10 +500,7 @@ extern "C" {
                                     const char *szPassword,
                                     const char *szWalletUUID,
                                     const char *szDestAddress,
-                                    int64_t amountSatoshi,
-                                    const char *szName,
-                                    const char *szCategory,
-                                    const char *szNotes,
+                                    tABC_TxDetails *pDetails,
                                     tABC_Request_Callback fRequestCallback,
                                     void *pData,
                                     tABC_Error *pError);

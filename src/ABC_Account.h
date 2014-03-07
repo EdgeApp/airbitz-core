@@ -52,9 +52,6 @@ extern "C" {
 
         /** callback function when request is complete */
         tABC_Request_Callback fRequestCallback;
-
-        /** information the error if there was a failure */
-        tABC_Error  errorInfo;
     } tABC_AccountRequestInfo;
 
     typedef enum eABC_AccountKey

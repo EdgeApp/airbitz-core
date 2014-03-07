@@ -35,9 +35,6 @@ extern "C" {
         int                     currencyNum;
         unsigned int            attributes;
         tABC_Request_Callback   fRequestCallback;
-
-        /** information the error if there was a failure */
-        tABC_Error  errorInfo;
     } tABC_WalletCreateInfo;
 
 

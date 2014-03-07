@@ -11,7 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <qrencode.h>
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Account.h"
@@ -21,10 +20,9 @@
 #include "ABC_Crypto.h"
 #include "ABC_URL.h"
 #include "ABC_Mutex.h"
+#include "ABC_Tx.h"
 
-#define SATOSHI_PER_BITCOIN 100000000
 
-#define CURRENCY_NUM_USD    840
 
 static bool gbInitialized = false;
 
@@ -1238,27 +1236,12 @@ tABC_CC ABC_ParseBitcoinURI(const char *szURI,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_BitcoinURIInfo *pInfo = NULL;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    ABC_CHECK_NULL(szURI);
-    ABC_CHECK_ASSERT(strlen(szURI) > 0, ABC_CC_Error, "No URI provided");
-    ABC_CHECK_NULL(ppInfo);
-    *ppInfo = NULL;
 
-    // allocated initial struct
-    ABC_ALLOC(pInfo, sizeof(tABC_BitcoinURIInfo));
-
-    // TODO: parse the elements and store them in the pInfo struct
-    // Note: if a given member (e.g., label) doesn't exist, a blank string should still be allocated
-
-    // assign created info struct
-    *ppInfo = pInfo;
-    pInfo = NULL; // do this so we don't free below what we just gave the caller
+    ABC_CHECK_RET(ABC_TxParseBitcoinURI(szURI, ppInfo, pError));
 
 exit:
-    ABC_FreeURIInfo(pInfo);
-    
+
     return cc;
 }
 
@@ -1271,16 +1254,7 @@ void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    if (pInfo != NULL)
-    {
-        ABC_FREE_STR(pInfo->szLabel);
-
-        ABC_FREE_STR(pInfo->szAddress);
-
-        ABC_FREE_STR(pInfo->szMessage);
-
-        ABC_CLEAR_FREE(pInfo, sizeof(tABC_BitcoinURIInfo));
-    }
+    ABC_TxFreeURIInfo(pInfo);
 }
 
 /**
@@ -1290,7 +1264,7 @@ void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo)
  */
 double ABC_SatoshiToBitcoin(int64_t satoshi)
 {
-    return((double) satoshi / (double) SATOSHI_PER_BITCOIN);
+    return(ABC_TxSatoshiToBitcoin(satoshi));
 }
 
 /**
@@ -1300,7 +1274,7 @@ double ABC_SatoshiToBitcoin(int64_t satoshi)
  */
 int64_t ABC_BitcoinToSatoshi(double bitcoin)
 {
-    return((int64_t) (bitcoin * (double) SATOSHI_PER_BITCOIN));
+    return(ABC_TxBitcoinToSatoshi(bitcoin));
 }
 
 /**
@@ -1322,19 +1296,8 @@ tABC_CC ABC_SatoshiToCurrency(int64_t satoshi,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    ABC_CHECK_NULL(pCurrency);
-    *pCurrency = 0.0;
 
-    // currently only supporting dollars
-    if (CURRENCY_NUM_USD == currencyNum)
-    {
-        // TODO: find real conversion - for now hardcode to $600 per bitcoin
-        *pCurrency = ABC_SatoshiToBitcoin(satoshi) * 600;
-    }
-    else
-    {
-        ABC_RET_ERROR(ABC_CC_NotSupported, "The given currency is not currently supported");
-    }
+    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(satoshi, pCurrency, currencyNum, pError));
 
 exit:
     
@@ -1360,19 +1323,8 @@ tABC_CC ABC_CurrencyToSatoshi(double currency,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    ABC_CHECK_NULL(pSatoshi);
-    *pSatoshi = 0;
 
-    // currently only supporting dollars
-    if (CURRENCY_NUM_USD == currencyNum)
-    {
-        // TODO: find real conversion - for now hardcode to $600 per bitcoin
-        *pSatoshi = ABC_BitcoinToSatoshi(currency) * 600;
-    }
-    else
-    {
-        ABC_RET_ERROR(ABC_CC_NotSupported, "The given currency is not currently supported");
-    }
+    ABC_CHECK_RET(ABC_CurrencyToSatoshi(currency, currencyNum, pSatoshi, pError));
 
 exit:
 
@@ -1385,20 +1337,14 @@ exit:
  * @param szUserName    UserName for the account associated with this request
  * @param szPassword    Password for the account associated with this request
  * @param szWalletUUID  UUID of the wallet associated with this request
- * @param amountSatoshi Amount of request in Santoshi
- * @param szName        Name of recipient (optional)
- * @param szCategory    Category to associate with request (optional)
- * @param szNotes       Notes to associate with request (optional)
+ * @param pDetails      Pointer to transaction details
  * @param pszRequestID  Pointer to store allocated ID for this request
  * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
                                  const char *szPassword,
                                  const char *szWalletUUID,
-                                 int64_t amountSatoshi,
-                                 const char *szName,
-                                 const char *szCategory,
-                                 const char *szNotes,
+                                 tABC_TxDetails *pDetails,
                                  char **pszRequestID,
                                  tABC_Error *pError)
 {
@@ -1408,22 +1354,8 @@ tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(szWalletUUID);
-    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
-    ABC_CHECK_NULL(pszRequestID);
-    *pszRequestID = NULL;
 
-    // for now just create a place holder id
-    *pszRequestID = strdup("ID");
-
-    // TODO: write the real function -
-    /*
-      creates an Address and returns ID (recycle bit set)
-     */
+    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(szUserName, szPassword, szWalletUUID, pDetails, pszRequestID, pError));
 
 exit:
 
@@ -1437,20 +1369,14 @@ exit:
  * @param szPassword    Password for the account associated with this request
  * @param szWalletUUID  UUID of the wallet associated with this request
  * @param szRequestID   ID of this request
- * @param amountSatoshi Amount of request in Santoshi
- * @param szName        Name of recipient (optional)
- * @param szCategory    Category to associate with request (optional)
- * @param szNotes       Notes to associate with request (optional)
+ * @param pDetails      Pointer to transaction details
  * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
                                  const char *szPassword,
                                  const char *szWalletUUID,
                                  const char *szRequestID,
-                                 int64_t amountSatoshi,
-                                 const char *szName,
-                                 const char *szCategory,
-                                 const char *szNotes,
+                                 tABC_TxDetails *pDetails,
                                  tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -1459,19 +1385,8 @@ tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(szWalletUUID);
-    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
-    ABC_CHECK_NULL(szRequestID);
-    ABC_CHECK_ASSERT(strlen(szRequestID) > 0, ABC_CC_Error, "No request ID provided");
 
-    // TODO: write the real function -
-    /*
-     modifies the meta data for the Address of the given request
-     */
+    ABC_CHECK_RET(ABC_TxModifyReceiveRequest(szUserName, szPassword, szWalletUUID, szRequestID, pDetails, pError));
 
 exit:
 
@@ -1499,20 +1414,8 @@ tABC_CC ABC_FinalizeReceiveRequest(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(szWalletUUID);
-    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
-    ABC_CHECK_NULL(szRequestID);
-    ABC_CHECK_ASSERT(strlen(szRequestID) > 0, ABC_CC_Error, "No request ID provided");
 
-    // TODO: write the real function -
-    /*
-     clears recycle bit
-     */
-
+    ABC_CHECK_RET(ABC_TxFinalizeReceiveRequest(szUserName, szPassword, szWalletUUID, szRequestID, pError));
 exit:
 
     return cc;
@@ -1539,20 +1442,8 @@ tABC_CC ABC_CancelReceiveRequest(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(szWalletUUID);
-    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
-    ABC_CHECK_NULL(szRequestID);
-    ABC_CHECK_ASSERT(strlen(szRequestID) > 0, ABC_CC_Error, "No request ID provided");
 
-    // TODO: write the real function -
-    /*
-     Address as ‘unassociated/reusable’
-     Note: this or recycle bit set means it can be reused but the mark of ‘unassociated/reusable’ helps determine actions of funds come in on the address. (i.e., we can remind the user that they cancelled this request)
-     */
+    ABC_CHECK_RET(ABC_TxCancelReceiveRequest(szUserName, szPassword, szWalletUUID, szRequestID, pError));
 
 exit:
 
@@ -1583,38 +1474,11 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    QRcode *qr = NULL;
-    unsigned char *aData = NULL;
-    unsigned int length = 0;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(szWalletUUID);
-    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
-    ABC_CHECK_NULL(szRequestID);
-    ABC_CHECK_ASSERT(strlen(szRequestID) > 0, ABC_CC_Error, "No request ID provided");
 
-    // TODO: write the real function -
-    // for now just generate a temporary qr code
-    char *szURITemp = "bitcoin:1NS17iag9jJgTHD1VXjvLCEnZuQ3rJED9L?amount=50&label=Luke-Jr&message=Donation%20for%20project%20xyz";
-    qr = QRcode_encodeString(szURITemp, 0, QR_ECLEVEL_L, QR_MODE_8, 1);
-    ABC_CHECK_ASSERT(qr != NULL, ABC_CC_Error, "Unable to create QR code");
-    length = qr->width * qr->width;
-    ABC_ALLOC(aData, length);
-    for (int i = 0; i < length; i++)
-    {
-        aData[i] = qr->data[i] & 0x1;
-    }
-    *pWidth = qr->width;
-    *paData = aData;
-    aData = NULL;
+    ABC_CHECK_RET(ABC_TxGenerateRequestQRCode(szUserName, szPassword, szWalletUUID, szRequestID, paData, pWidth, pError));
 
 exit:
-    QRcode_free(qr);
-    ABC_CLEAR_FREE(aData, length);
     return cc;
 }
 
@@ -1628,10 +1492,7 @@ exit:
  * @param szPassword        Password for the account associated with this request
  * @param szWalletUUID      UUID of the wallet associated with this request
  * @param szDestAddress     Bitcoin address (Base58) to which the funds are to be sent
- * @param amountSatoshi     Amount of request in Santoshi
- * @param szName            Name of recipient (optional)
- * @param szCategory        Category to associate with request (optional)
- * @param szNotes           Notes to associate with request (optional)
+ * @param pDetails          Pointer to transaction details
  * @param fRequestCallback  The function that will be called when the send request process has finished.
  * @param pData             Pointer to data to be returned back in callback
  * @param pError            A pointer to the location to store the error if there is one
@@ -1640,10 +1501,7 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
                                 const char *szPassword,
                                 const char *szWalletUUID,
                                 const char *szDestAddress,
-                                int64_t amountSatoshi,
-                                const char *szName,
-                                const char *szCategory,
-                                const char *szNotes,
+                                tABC_TxDetails *pDetails,
                                 tABC_Request_Callback fRequestCallback,
                                 void *pData,
                                 tABC_Error *pError)
@@ -1653,30 +1511,36 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_TxSendInfo *pTxSendInfo = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(szWalletUUID);
-    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet name provided");
+    ABC_CHECK_NULL(pDetails);
     ABC_CHECK_NULL(fRequestCallback);
 
-    // temp for now just call the callback
+    ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
+                                            szUserName,
+                                            szPassword,
+                                            szWalletUUID,
+                                            szDestAddress,
+                                            pDetails,
+                                            fRequestCallback,
+                                            pData,
+                                            pError));
+
+    pthread_t handle;
+    if (!pthread_create(&handle, NULL, ABC_TxSendThreaded, pTxSendInfo))
     {
-        tABC_RequestResults results;
-
-        results.requestType = ABC_RequestType_SendBitcoin;
-        results.bSuccess = true;
-        results.errorInfo.code = ABC_CC_Ok;
-        results.pData = (unsigned int *) strdup("ID");
-        fRequestCallback(&results);
+        if ( ! pthread_detach(handle) )
+        {
+            //printf("Thread detached successfully !!!\n");
+        }
     }
-
-    // TODO: write the real function -
-    /*
-     creates and address with the given info and sends transaction to block chain
-     */
 
 exit:
     
