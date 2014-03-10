@@ -74,6 +74,11 @@ extern "C" {
                                       tABC_U08Buf       *pData,
                                       tABC_Error        *pError);
 
+    tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
+                                            const tABC_U08Buf Key,
+                                            json_t **ppJSON_Data,
+                                            tABC_Error  *pError);
+
     tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
                                        tABC_U08Buf   *pData,
                                        tABC_Error    *pError);

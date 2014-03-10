@@ -18,14 +18,67 @@
 #include "ABC_Crypto.h"
 #include "ABC_Account.h"
 #include "ABC_Mutex.h"
+#include "ABC_Wallet.h"
 
 #define SATOSHI_PER_BITCOIN 100000000
 
 #define CURRENCY_NUM_USD    840
 
+#define JSON_TX_ID_FIELD                "ntxid"
+#define JSON_TX_STATE_FIELD             "state"
+#define JSON_TX_DETAILS_FIELD           "meta"
+#define JSON_TX_CREATION_DATE_FIELD     "creationDate"
+#define JSON_TX_AMOUNT_SATOSHI_FIELD    "amountSatoshi"
+#define JSON_TX_AMOUNT_CURRENCY_FIELD   "amountCurrency"
+#define JSON_TX_NAME_FIELD              "name"
+#define JSON_TX_CATEGORY_FIELD          "category"
+#define JSON_TX_NOTES_FIELD             "notes"
+#define JSON_TX_ATTRIBUTES_FIELD        "attributes"
+
+typedef struct sTxStateInfo
+{
+    int64_t timeCreation;
+} tTxStateInfo;
+
+typedef struct sABC_Tx
+{
+    char            *szID; // ntxid from bitcoin
+    tABC_TxDetails  *pDetails;
+    tTxStateInfo    *pStateInfo;
+} tABC_Tx;
+
+typedef struct sTxAddressActivity
+{
+    char    *szTxID; // ntxid from bitcoin associated with this activity
+    int64_t timeCreation;
+    int64_t amountSatoshi;
+} tTxAddressActivity;
+
+typedef struct sTxAddressStateInfo
+{
+    int64_t             timeCreation;
+    bool                bRecycleable;
+    unsigned int        countActivities;
+    tTxAddressActivity  *aActivities;
+} tTxAddressStateInfo;
+
+typedef struct sABC_TxAddress
+{
+    int64_t             seq; // sequence number
+    char                *szID; // sequence number in string form
+    char                *szPubAddress; // public address
+    tABC_TxDetails      *pDetails;
+    tTxAddressStateInfo *pStateInfo;
+} tABC_TxAddress;
+
 static tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo, char **pszUUID, tABC_Error *pError);
 static tABC_CC  ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pOldDetails, tABC_Error *pError);
 static void     ABC_TxFreeDetails(tABC_TxDetails *pDetails);
+static tABC_CC  ABC_TxGetTxFilename(char **pszFilename, const char *szWalletUUID, const char *szTxID, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadTransaction(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szTxID, tABC_Tx **ppTx, tABC_Error *pError);
+static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError);
+static tABC_CC  ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError);
+static void     ABC_TxFreeTx(tABC_Tx *pTx);
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
 
@@ -158,7 +211,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
      */
     /*
      Core creates an address with the given info and sends transaction to block chain:
-     Ask libwallet for data required to send the amount
+     1) Ask libwallet for data required to send the amount
         input:
             amount
             list of source addresses
@@ -167,12 +220,12 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
             source addresses used,
                 change address needed (any change?),
         fee
-     If there is need for a ‘change address’, look for an address with the recycle bit set, if none found, ask libwallet to create a Bitcoin_Address (for change) using N+1 where N is the current number of addresses.
-     Ask libwallet to send the amount to the address
+     2) If there is need for a ‘change address’, look for an address with the recycle bit set, if none found, ask libwallet to create a Bitcoin_Address (for change) using N+1 where N is the current number of addresses.
+     3) Ask libwallet to send the amount to the address
         input: dest address, source address list (provided in step 1), amount and change Bitcoin_Address (if needed).
         output: TX ID.
-     If there is a change address, create an Address Entry with the Bitcoin_Address and the send funds meta data (e.g., name, amount, etc).
-     Create a transaction in the transaction table with meta data using the TX ID from step 3.
+     4) If there is a change address, create an Address Entry with the Bitcoin_Address and the send funds meta data (e.g., name, amount, etc).
+     5) Create a transaction in the transaction table with meta data using the TX ID from step 3.
      */
 
 exit:
@@ -418,8 +471,12 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
 
     // TODO: write the real function -
     /*
-     creates an Address and returns ID (recycle bit set)
+    Core creates an Address Entry and returns ID (recycle bit set):
+        1) Look for an address with the recycle bit set, if none found, ask libwallet to create a Bitcoin_Address using N+1 where N is the current number of addresses and create an Address Entry.
+        2) Fill in the information (e.g., name, amount, etc) with the information provided for the Address Entry with recycle bit set.
+        3) Return the Address Entry ID.
      */
+
 
 exit:
 
@@ -437,11 +494,11 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_TxModifyReceiveRequest(const char *szUserName,
-                                 const char *szPassword,
-                                 const char *szWalletUUID,
-                                 const char *szRequestID,
-                                 tABC_TxDetails *pDetails,
-                                 tABC_Error *pError)
+                                   const char *szPassword,
+                                   const char *szWalletUUID,
+                                   const char *szRequestID,
+                                   tABC_TxDetails *pDetails,
+                                   tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -476,10 +533,10 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_TxFinalizeReceiveRequest(const char *szUserName,
-                                   const char *szPassword,
-                                   const char *szWalletUUID,
-                                   const char *szRequestID,
-                                   tABC_Error *pError)
+                                     const char *szPassword,
+                                     const char *szWalletUUID,
+                                     const char *szRequestID,
+                                     tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -513,10 +570,10 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_TxCancelReceiveRequest(const char *szUserName,
-                                 const char *szPassword,
-                                 const char *szWalletUUID,
-                                 const char *szRequestID,
-                                 tABC_Error *pError)
+                                   const char *szPassword,
+                                   const char *szWalletUUID,
+                                   const char *szRequestID,
+                                   tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -596,6 +653,396 @@ exit:
     ABC_CLEAR_FREE(aData, length);
     return cc;
 }
+
+/**
+ * Gets the transactions associated with the given wallet.
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param paTransactions    Pointer to store array of transactions info pointers
+ * @param pCount            Pointer to store number of transactions
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_TxGetTransactions(const char *szUserName,
+                              const char *szPassword,
+                              const char *szWalletUUID,
+                              tABC_TxInfo ***paTransactions,
+                              unsigned int *pCount,
+                              tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(paTransactions);
+    *paTransactions = NULL;
+    ABC_CHECK_NULL(pCount);
+    *pCount = 0;
+
+    // TODO: get the tranactions for this wallet
+
+exit:
+    return cc;
+}
+
+/**
+ * Frees the given array of transactions
+ *
+ * @param aTransactions Array of transactions
+ * @param count         Number of transactions
+ */
+void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
+                            unsigned int count)
+{
+    if (aTransactions && count > 0)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            tABC_TxInfo *pInfo = aTransactions[i];
+
+            ABC_TxFreeDetails(pInfo->pDetails);
+
+            ABC_CLEAR_FREE(pInfo, sizeof(tABC_TxInfo));
+        }
+
+        ABC_FREE(aTransactions);
+    }
+}
+
+/**
+ * Sets the details for a specific transaction.
+ *
+ * @param szUserName        UserName for the account associated with the transaction
+ * @param szPassword        Password for the account associated with the transaction
+ * @param szWalletUUID      UUID of the wallet associated with the transaction
+ * @param szID              ID of the transaction
+ * @param pDetails          Details for the transaction
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_TxSetTransactionDetails(const char *szUserName,
+                                    const char *szPassword,
+                                    const char *szWalletUUID,
+                                    const char *szID,
+                                    tABC_TxDetails *pDetails,
+                                    tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szID);
+    ABC_CHECK_ASSERT(strlen(szID) > 0, ABC_CC_Error, "No transaction ID provided");
+
+    // TODO: set the details for the transaction
+
+exit:
+    return cc;
+}
+
+/**
+ * Gets the pending requests associated with the given wallet.
+ *
+ * @param szUserName        UserName for the account associated with the requests
+ * @param szPassword        Password for the account associated with the requests
+ * @param szWalletUUID      UUID of the wallet associated with the requests
+ * @param paTransactions    Pointer to store array of requests info pointers
+ * @param pCount            Pointer to store number of requests
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_TxGetPendingRequests(const char *szUserName,
+                                 const char *szPassword,
+                                 const char *szWalletUUID,
+                                 tABC_RequestInfo ***paRequests,
+                                 unsigned int *pCount,
+                                 tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(paRequests);
+    *paRequests = NULL;
+    ABC_CHECK_NULL(pCount);
+    *pCount = 0;
+
+    // TODO: get the pending requests for this wallet
+
+exit:
+    return cc;
+}
+
+/**
+ * Frees the given array of requets
+ *
+ * @param aRequests Array of requests
+ * @param count     Number of requests
+ */
+void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
+                        unsigned int count)
+{
+    if (aRequests && count > 0)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            tABC_RequestInfo *pInfo = aRequests[i];
+
+            ABC_TxFreeDetails(pInfo->pDetails);
+
+            ABC_CLEAR_FREE(pInfo, sizeof(tABC_RequestInfo));
+        }
+
+        ABC_FREE(aRequests);
+    }
+}
+
+/**
+ * Gets the filename for a given transaction
+ *
+ * @param pszDir the output directory name. The caller must free this.
+ */
+static
+tABC_CC ABC_TxGetTxFilename(char **pszFilename, const char *szWalletUUID, const char *szTxID, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szTxDir = NULL;
+
+    ABC_CHECK_NULL(pszFilename);
+    *pszFilename = NULL;
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_NULL(szTxID);
+
+    ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
+
+    ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(*pszFilename, "%s/%s.json", szTxDir, szTxID);
+
+exit:
+    ABC_FREE_STR(szTxDir);
+    
+    return cc;
+}
+
+/**
+ * Loads a transaction from disk
+ *
+ * @param ppTx  Pointer to location to hold allocated transaction
+ *              (it is the callers responsiblity to free this transaction)
+ */
+static
+tABC_CC ABC_TxLoadTransaction(const char *szUserName,
+                              const char *szPassword,
+                              const char *szWalletUUID,
+                              const char *szTxID,
+                              tABC_Tx **ppTx,
+                              tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_U08Buf MK = ABC_BUF_NULL;
+    char *szFilename = NULL;
+    json_t *pJSON_Root = NULL;
+    tABC_Tx *pTx = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szTxID);
+    ABC_CHECK_ASSERT(strlen(szTxID) > 0, ABC_CC_Error, "No transaction ID provided");
+    ABC_CHECK_NULL(ppTx);
+    *ppTx = NULL;
+
+    // Get the master key we will need to decode the transaction data
+    // (note that this will also make sure the account and wallet exist)
+    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+
+    // get the filename for this transaction
+    ABC_CHECK_RET(ABC_TxGetTxFilename(&szFilename, szWalletUUID, szTxID, pError));
+
+    // make sure the transaction exists
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    ABC_CHECK_ASSERT(bExists == true, ABC_CC_NoTransaction, "Transaction does not exist");
+
+    // load the json object (load file, decrypt it, create json object
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, MK, &pJSON_Root, pError));
+
+    // start decoding
+
+    // get the id
+    json_t *jsonVal = json_object_get(pJSON_Root, JSON_TX_ID_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing id");
+    pTx->szID = strdup(json_string_value(jsonVal));
+
+    // get the state object
+    ABC_CHECK_RET(ABC_TxDecodeTxState(pJSON_Root, &(pTx->pStateInfo), pError));
+
+    // get the details object
+    ABC_CHECK_RET(ABC_TxDecodeTxDetails(pJSON_Root, &(pTx->pDetails), pError));
+
+    // assign final result
+    *ppTx = pTx;
+    pTx = NULL;
+
+exit:
+    ABC_FREE_STR(szFilename);
+    if (pJSON_Root) json_decref(pJSON_Root);
+    ABC_TxFreeTx(pTx);
+
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Decodes the transaction state data from a json transaction object
+ *
+ * @param ppInfo Pointer to store allocated state info
+ *               (it is the callers responsiblity to free this)
+ */
+static
+tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tTxStateInfo *pInfo = NULL;
+
+    ABC_CHECK_NULL(pJSON_Obj);
+    ABC_CHECK_NULL(ppInfo);
+    *ppInfo = NULL;
+
+    // get the state object
+    json_t *jsonState = json_object_get(pJSON_Obj, JSON_TX_STATE_FIELD);
+    ABC_CHECK_ASSERT((jsonState && json_is_object(jsonState)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing state");
+
+    // get the creation date
+    json_t *jsonVal = json_object_get(jsonState, JSON_TX_CREATION_DATE_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing creation date");
+    int64_t date = json_integer_value(jsonVal);
+
+    // allocate the struct
+    ABC_ALLOC(pInfo, sizeof(tTxStateInfo));
+    pInfo->timeCreation = date;
+
+    // assign final result
+    *ppInfo = pInfo;
+    pInfo = NULL;
+
+exit:
+    ABC_CLEAR_FREE(pInfo, sizeof(tTxStateInfo));
+
+    return cc;
+}
+
+/**
+ * Decodes the transaction details data from a json transaction object
+ *
+ * @param ppInfo Pointer to store allocated meta info
+ *               (it is the callers responsiblity to free this)
+ */
+static
+tABC_CC ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_TxDetails *pDetails = NULL;
+
+    ABC_CHECK_NULL(pJSON_Obj);
+    ABC_CHECK_NULL(ppDetails);
+    *ppDetails = NULL;
+
+    // allocated the struct
+    ABC_ALLOC(pDetails, sizeof(pDetails));
+
+    // get the details object
+    json_t *jsonDetails = json_object_get(pJSON_Obj, JSON_TX_DETAILS_FIELD);
+    ABC_CHECK_ASSERT((jsonDetails && json_is_object(jsonDetails)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing meta data (details)");
+
+    // get the satoshi field
+    json_t *jsonVal = json_object_get(jsonDetails, JSON_TX_AMOUNT_SATOSHI_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing satoshi amount");
+    pDetails->amountSatoshi = json_integer_value(jsonVal);
+
+    // get the currency field
+    jsonVal = json_object_get(jsonDetails, JSON_TX_AMOUNT_CURRENCY_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_real(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing currency amount");
+    pDetails->amountCurrency = json_real_value(jsonVal);
+
+    // get the name field
+    jsonVal = json_object_get(jsonDetails, JSON_TX_NAME_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing name");
+    pDetails->szName = strdup(json_string_value(jsonVal));
+
+    // get the category field
+    jsonVal = json_object_get(jsonDetails, JSON_TX_CATEGORY_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing category");
+    pDetails->szCategory = strdup(json_string_value(jsonVal));
+
+    // get the notes field
+    jsonVal = json_object_get(jsonDetails, JSON_TX_NOTES_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing notes");
+    pDetails->szNotes = strdup(json_string_value(jsonVal));
+
+    // get the attributes field
+    jsonVal = json_object_get(jsonDetails, JSON_TX_ATTRIBUTES_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing attributes");
+    pDetails->attributes = (unsigned int) json_integer_value(jsonVal);
+
+    // assign final result
+    *ppDetails = pDetails;
+    pDetails = NULL;
+
+exit:
+    ABC_TxFreeDetails(pDetails);
+
+    return cc;
+}
+
+/**
+ * Free's a tABC_Tx struct and all its elements
+ */
+static
+void ABC_TxFreeTx(tABC_Tx *pTx)
+{
+    if (pTx)
+    {
+        ABC_FREE_STR(pTx->szID);
+        ABC_TxFreeDetails(pTx->pDetails);
+        ABC_CLEAR_FREE(pTx->pStateInfo, sizeof(tTxStateInfo));
+
+        ABC_CLEAR_FREE(pTx, sizeof(tABC_Tx));
+    }
+}
+
+/* TODO: these support functions will be needed
+ save transaction
+ load address
+ save address
+ load transactions
+ save transactions
+ */
 
 /**
  * Locks the mutex

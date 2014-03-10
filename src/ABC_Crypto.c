@@ -434,6 +434,52 @@ exit:
     return cc;
 }
 
+/**
+ * Loads the given file, decrypts it and creates the json object from it
+ *
+ * @param ppJSON_Data pointer to store allocated json object
+ *                   (the user is responsible for json_decref'ing)
+ */
+tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
+                                        const tABC_U08Buf Key,
+                                        json_t **ppJSON_Data,
+                                        tABC_Error  *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_U08Buf Data = ABC_BUF_NULL;
+    json_t *pJSON_Root = NULL;
+
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_NULL_BUF(Key);
+    ABC_CHECK_NULL(ppJSON_Data);
+    *ppJSON_Data = NULL;
+
+    // read the file and decrypt it
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, Key, &Data, pError));
+
+    // get the string form
+    ABC_BUF_APPEND_PTR(Data, "", 1); // make sure it is null terminated so we can get the string
+    char *szData_JSON = (char *) ABC_BUF_PTR(Data);
+
+    // decode the json
+    json_error_t error;
+    pJSON_Root = json_loads(szData_JSON, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    // assign the result
+    *ppJSON_Data = pJSON_Root;
+    pJSON_Root = NULL; // so we don't decref it
+
+exit:
+    ABC_BUF_FREE(Data);
+    if (pJSON_Root) json_decref(pJSON_Root);
+    
+    return cc;
+}
+
 // creates an encrypted aes256 package that includes data, random header/footer and sha256
 /* Package format:
     1 byte:     h (the number of random header bytes)

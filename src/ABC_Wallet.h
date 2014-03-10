@@ -94,6 +94,17 @@ extern "C" {
                                            tABC_U08Buf newLP2,
                                            tABC_Error *pError);
 
+    tABC_CC ABC_WalletGetMK(const char *szUserName,
+                            const char *szPassword,
+                            const char *szUUID,
+                            tABC_U08Buf *pMK,
+                            tABC_Error *pError);
+
+    tABC_CC ABC_WalletGetTxDirName(char **pszDir,
+                                   const char *szWalletUUID,
+                                   tABC_Error *pError);
+
+
 
 #ifdef __cplusplus
 }

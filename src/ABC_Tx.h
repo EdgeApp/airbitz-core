@@ -68,50 +68,76 @@ extern "C" {
     int64_t ABC_TxBitcoinToSatoshi(double bitcoin);
 
     tABC_CC ABC_TxSatoshiToCurrency(int64_t satoshi,
-                                  double *pCurrency,
-                                  int currencyNum,
-                                  tABC_Error *pError);
+                                    double *pCurrency,
+                                    int currencyNum,
+                                    tABC_Error *pError);
 
     tABC_CC ABC_TxCurrencyToSatoshi(double currency,
-                                  int currencyNum,
-                                  int64_t *pSatoshi,
-                                  tABC_Error *pError);
+                                    int currencyNum,
+                                    int64_t *pSatoshi,
+                                    tABC_Error *pError);
 
     tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
-                                     const char *szPassword,
-                                     const char *szWalletUUID,
-                                     tABC_TxDetails *pDetails,
-                                     char **pszRequestID,
-                                     tABC_Error *pError);
+                                       const char *szPassword,
+                                       const char *szWalletUUID,
+                                       tABC_TxDetails *pDetails,
+                                       char **pszRequestID,
+                                       tABC_Error *pError);
 
     tABC_CC ABC_TxModifyReceiveRequest(const char *szUserName,
-                                     const char *szPassword,
-                                     const char *szWalletUUID,
-                                     const char *szRequestID,
-                                     tABC_TxDetails *pDetails,
-                                     tABC_Error *pError);
+                                       const char *szPassword,
+                                       const char *szWalletUUID,
+                                       const char *szRequestID,
+                                       tABC_TxDetails *pDetails,
+                                       tABC_Error *pError);
 
     tABC_CC ABC_TxFinalizeReceiveRequest(const char *szUserName,
+                                         const char *szPassword,
+                                         const char *szWalletUUID,
+                                         const char *szRequestID,
+                                         tABC_Error *pError);
+
+    tABC_CC ABC_TxCancelReceiveRequest(const char *szUserName,
                                        const char *szPassword,
                                        const char *szWalletUUID,
                                        const char *szRequestID,
                                        tABC_Error *pError);
 
-    tABC_CC ABC_TxCancelReceiveRequest(const char *szUserName,
+    tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
+                                        const char *szPassword,
+                                        const char *szWalletUUID,
+                                        const char *szRequestID,
+                                        unsigned char **paData,
+                                        unsigned int *pWidth,
+                                        tABC_Error *pError);
+
+    tABC_CC ABC_TxGetTransactions(const char *szUserName,
+                                  const char *szPassword,
+                                  const char *szWalletUUID,
+                                  tABC_TxInfo ***paTransactions,
+                                  unsigned int *pCount,
+                                  tABC_Error *pError);
+
+    void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
+                                unsigned int count);
+
+    tABC_CC ABC_TxSetTransactionDetails(const char *szUserName,
+                                        const char *szPassword,
+                                        const char *szWalletUUID,
+                                        const char *szID,
+                                        tABC_TxDetails *pDetails,
+                                        tABC_Error *pError);
+
+    tABC_CC ABC_TxGetPendingRequests(const char *szUserName,
                                      const char *szPassword,
                                      const char *szWalletUUID,
-                                     const char *szRequestID,
+                                     tABC_RequestInfo ***paRequests,
+                                     unsigned int *pCount,
                                      tABC_Error *pError);
 
-    tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
-                                      const char *szPassword,
-                                      const char *szWalletUUID,
-                                      const char *szRequestID,
-                                      unsigned char **paData,
-                                      unsigned int *pWidth,
-                                      tABC_Error *pError);
+    void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
+                            unsigned int count);
     
-
 #ifdef __cplusplus
 }
 #endif

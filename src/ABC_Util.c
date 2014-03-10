@@ -325,3 +325,20 @@ void ABC_UtilFreeStringArray(char **aszStrings,
     }
 }
 
+// for security reasons, it is important that we always make sure memory is set the way we expect
+// this function should ensure that
+// reference: http://www.dwheeler.com/secure-programs/Secure-Programs-HOWTO/protect-secrets.html
+void *ABC_UtilGuaranteedMemset(void *v, int c, size_t n)
+{
+    if (v)
+    {
+        volatile char *p = v;
+        while (n--)
+        {
+            *p++ = c;
+        }
+    }
+
+    return v;
+}
+

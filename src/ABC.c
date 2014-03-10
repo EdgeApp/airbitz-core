@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <jansson.h>
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Account.h"
@@ -213,6 +214,9 @@ static tABC_Currency gaCurrencies[] = {
 static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
 static void *pAsyncBitCoinCallerData = NULL;
 
+static void *ABC_JanssonSecureMalloc(size_t size);
+static void ABC_JanssonSecureFree(void *ptr);
+
 /**
  * Initialize the AirBitz Core library.
  *
@@ -243,6 +247,9 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_NULL(szRootDir);
     ABC_CHECK_NULL(pSeedData);
     ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "The core library has already been initalized");
+
+    // override the alloc and free of janson so we can have a secure method
+    json_set_alloc_funcs(ABC_JanssonSecureMalloc, ABC_JanssonSecureFree);
 
     gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
     pAsyncBitCoinCallerData = pData;
@@ -1545,6 +1552,150 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
 exit:
     
     return cc;
+}
+
+/**
+ * Gets the transactions associated with the given wallet.
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param paTransactions    Pointer to store array of transactions info pointers
+ * @param pCount            Pointer to store number of transactions
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_GetTransactions(const char *szUserName,
+                            const char *szPassword,
+                            const char *szWalletUUID,
+                            tABC_TxInfo ***paTransactions,
+                            unsigned int *pCount,
+                            tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_TxGetTransactions(szUserName, szPassword, szWalletUUID, paTransactions, pCount, pError));
+
+exit:
+    return cc;
+}
+
+/**
+ * Frees the given array of transactions
+ *
+ * @param aTransactions Array of transactions
+ * @param count         Number of transactions
+ */
+void ABC_FreeTransactions(tABC_TxInfo **aTransactions,
+                            unsigned int count)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    ABC_TxFreeTransactions(aTransactions, count);
+}
+
+/**
+ * Sets the details for a specific transaction.
+ *
+ * @param szUserName        UserName for the account associated with the transaction
+ * @param szPassword        Password for the account associated with the transaction
+ * @param szWalletUUID      UUID of the wallet associated with the transaction
+ * @param szID              ID of the transaction
+ * @param pDetails          Details for the transaction
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_SetTransactionDetails(const char *szUserName,
+                                  const char *szPassword,
+                                  const char *szWalletUUID,
+                                  const char *szID,
+                                  tABC_TxDetails *pDetails,
+                                  tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_TxSetTransactionDetails(szUserName, szPassword, szWalletUUID, szID, pDetails, pError));
+
+exit:
+    return cc;
+}
+
+/**
+ * Gets the pending requests associated with the given wallet.
+ *
+ * @param szUserName        UserName for the account associated with the requests
+ * @param szPassword        Password for the account associated with the requests
+ * @param szWalletUUID      UUID of the wallet associated with the requests
+ * @param paTransactions    Pointer to store array of requests info pointers
+ * @param pCount            Pointer to store number of requests
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_GetPendingRequests(const char *szUserName,
+                               const char *szPassword,
+                               const char *szWalletUUID,
+                               tABC_RequestInfo ***paRequests,
+                               unsigned int *pCount,
+                               tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_TxGetPendingRequests(szUserName, szPassword, szWalletUUID, paRequests, pCount, pError));
+
+exit:
+    return cc;
+}
+
+/**
+ * Frees the given array of requets
+ *
+ * @param aRequests Array of requests
+ * @param count     Number of requests
+ */
+void ABC_FreeRequests(tABC_RequestInfo **aRequests,
+                      unsigned int count)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    ABC_TxFreeRequests(aRequests, count);
+}
+
+
+// this function is created so that we can override the free function of jansson so we can
+// clear memory on a free
+// reference: https://github.com/akheron/jansson/blob/master/doc/apiref.rst#id97
+static void *ABC_JanssonSecureMalloc(size_t size)
+{
+    /* Store the memory area size in the beginning of the block */
+    void *ptr = malloc(size + 8);
+    *((size_t *)ptr) = size;
+    return ptr + 8;
+}
+
+// this function is created so that we can override the free function of jansson so we can
+// clear memory on a free
+// reference: https://github.com/akheron/jansson/blob/master/doc/apiref.rst#id97
+static void ABC_JanssonSecureFree(void *ptr)
+{
+    size_t size;
+
+    ptr -= 8;
+    size = *((size_t *)ptr);
+
+    ABC_UtilGuaranteedMemset(ptr, 0, size + 8);
+    free(ptr);
 }
 
 void tempEventA()

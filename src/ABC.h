@@ -84,7 +84,9 @@ extern "C" {
         /** Functionality not supported */
         ABC_CC_NotSupported = 26,
         /** Mutex error if some type */
-        ABC_CC_MutexError = 27
+        ABC_CC_MutexError = 27,
+        /** Transaction not found */
+        ABC_CC_NoTransaction = 28
     } tABC_CC;
 
     /**
@@ -287,6 +289,38 @@ extern "C" {
         /** attributes for the transaction */
         unsigned int attributes;
     } tABC_TxDetails;
+
+    /**
+     * AirBitz Transaction Info
+     *
+     * This structure contains info for a transaction.
+     *
+     */
+    typedef struct sABC_TxInfo
+    {
+        /** transaction identifier */
+        char *szID;
+        /** time of creation */
+        int64_t timeCreation;
+        /** transaction details */
+        tABC_TxDetails *pDetails;
+    } tABC_TxInfo;
+
+    /**
+     * AirBitz Request Info
+     *
+     * This structure contains info for a request.
+     *
+     */
+    typedef struct sABC_RequestInfo
+    {
+        /** request identifier */
+        char *szID;
+        /** time of creation */
+        int64_t timeCreate;
+        /** request details */
+        tABC_TxDetails *pDetails;
+    } tABC_RequestInfo;
 
     /**
      * AirBitz Asynchronous BitCoin event callback
@@ -504,6 +538,33 @@ extern "C" {
                                     tABC_Request_Callback fRequestCallback,
                                     void *pData,
                                     tABC_Error *pError);
+
+    tABC_CC ABC_GetTransactions(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletUUID,
+                                tABC_TxInfo ***paTransactions,
+                                unsigned int *pCount,
+                                tABC_Error *pError);
+
+    void ABC_FreeTransactions(tABC_TxInfo **aTransactions,
+                              unsigned int count);
+
+    tABC_CC ABC_SetTransactionDetails(const char *szUserName,
+                                      const char *szPassword,
+                                      const char *szWalletUUID,
+                                      const char *szID,
+                                      tABC_TxDetails *pDetails,
+                                      tABC_Error *pError);
+
+    tABC_CC ABC_GetPendingRequests(const char *szUserName,
+                                   const char *szPassword,
+                                   const char *szWalletUUID,
+                                   tABC_RequestInfo ***paRequests,
+                                   unsigned int *pCount,
+                                   tABC_Error *pError);
+
+    void ABC_FreeRequests(tABC_RequestInfo **aRequests,
+                          unsigned int count);
 
     // temp functions
     void tempEventA();

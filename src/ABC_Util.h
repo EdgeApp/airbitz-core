@@ -103,7 +103,7 @@ extern "C" {
     { \
         if (str != NULL) \
         { \
-            memset(str, 0, strlen(str)); \
+            ABC_UtilGuaranteedMemset(str, 0, strlen(str)); \
             free(str); \
             str = NULL; \
         } \
@@ -115,7 +115,7 @@ extern "C" {
         { \
             if ((len) > 0) \
             { \
-                memset(ptr, 0, (len)); \
+                ABC_UtilGuaranteedMemset(ptr, 0, (len)); \
             } \
             free(ptr); \
             ptr = NULL; \
@@ -130,7 +130,7 @@ extern "C" {
 #define ABC_BUF_FREE(x)                     {  \
                                                 if ((x).p != NULL) \
                                                 { \
-                                                    memset((x).p, 0, (((x).end)-((x).p))); \
+                                                    ABC_UtilGuaranteedMemset((x).p, 0, (((x).end)-((x).p))); \
                                                     free((x).p);  \
                                                 } \
                                                 (x).p = NULL;  \
@@ -189,7 +189,7 @@ extern "C" {
 #define ABC_BUF_ZERO(buf)                   { \
                                                 if ((buf).p != NULL) \
                                                 { \
-                                                    memset ((buf).p, 0, (((buf).end)-((buf).p))); \
+                                                    ABC_UtilGuaranteedMemset ((buf).p, 0, (((buf).end)-((buf).p))); \
                                                 } \
                                             }
 #define ABC_CHECK_NULL_BUF(arg)             { ABC_CHECK_ASSERT(ABC_BUF_PTR(arg) != NULL, ABC_CC_NULLPtr, "NULL ABC_Buf pointer"); }
@@ -250,6 +250,8 @@ extern "C" {
 
     void ABC_UtilFreeStringArray(char **aszStrings,
                                  unsigned int count);
+
+    void *ABC_UtilGuaranteedMemset(void *v, int c, size_t n);
 
 
 #ifdef __cplusplus
