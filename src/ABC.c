@@ -15,6 +15,7 @@
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Account.h"
+#include "ABC_Bridge.h"
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
 #include "ABC_Wallet.h"
@@ -964,7 +965,7 @@ void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
 /**
  * Set the wallet order for a specified account.
  *
- * This function sets the order of the wallets for an account to the order in the given 
+ * This function sets the order of the wallets for an account to the order in the given
  * array.
  *
  * @param szUserName            UserName for the account associated with this wallet
@@ -1043,7 +1044,7 @@ tABC_CC ABC_GetQuestionChoices(const char *szUserName,
     }
 
 exit:
-    
+
     return cc;
 }
 
@@ -1063,7 +1064,7 @@ void ABC_FreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices)
 
 /**
  * Get the recovery questions for a given account.
- * 
+ *
  * The questions will be returned in a single allocated string with
  * each questions seperated by a newline.
  *
@@ -1088,7 +1089,7 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
     ABC_CHECK_RET(ABC_AccountGetRecoveryQuestions(szUserName, pszQuestions, pError));
 
 exit:
-    
+
     return cc;
 }
 
@@ -1155,7 +1156,7 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     }
 
 exit:
-    
+
     return cc;
 }
 
@@ -1223,7 +1224,7 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     }
 
 exit:
-    
+
     return cc;
 }
 
@@ -1245,7 +1246,7 @@ tABC_CC ABC_ParseBitcoinURI(const char *szURI,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxParseBitcoinURI(szURI, ppInfo, pError));
+    ABC_CHECK_RET(ABC_BridgeParseBitcoinURI(szURI, ppInfo, pError));
 
 exit:
 
@@ -1261,7 +1262,7 @@ void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    ABC_TxFreeURIInfo(pInfo);
+    ABC_BridgeFreeURIInfo(pInfo);
 }
 
 /**
@@ -1307,7 +1308,7 @@ tABC_CC ABC_SatoshiToCurrency(int64_t satoshi,
     ABC_CHECK_RET(ABC_TxSatoshiToCurrency(satoshi, pCurrency, currencyNum, pError));
 
 exit:
-    
+
     return cc;
 }
 
@@ -1550,7 +1551,7 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
     }
 
 exit:
-    
+
     return cc;
 }
 

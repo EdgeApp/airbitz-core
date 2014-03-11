@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3D3EC1CF18CFCF2F00682700 /* ABC_Bridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */; };
 		4C08A6CF18BFBFCD0071B87C /* libqrencode.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C08A6CE18BFBFCC0071B87C /* libqrencode.a */; };
 		4C08A6D018BFBFF20071B87C /* libqrencode.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C08A6CE18BFBFCC0071B87C /* libqrencode.a */; };
 		4C41303318BE991E00DD2123 /* ABC_Account.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302218BE991E00DD2123 /* ABC_Account.c */; };
@@ -79,6 +80,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ABC_Bridge.cpp; path = ../../ABC_Bridge.cpp; sourceTree = "<group>"; };
+		3D3EC1CE18CFCF2F00682700 /* ABC_Bridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Bridge.h; path = ../../ABC_Bridge.h; sourceTree = "<group>"; };
 		4C08A6CE18BFBFCC0071B87C /* libqrencode.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libqrencode.a; path = "../../deps/build/libqrencode/ios-universal/lib/libqrencode.a"; sourceTree = "<group>"; };
 		4C41302218BE991E00DD2123 /* ABC_Account.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Account.c; path = ../../ABC_Account.c; sourceTree = "<group>"; };
 		4C41302318BE991E00DD2123 /* ABC_Crypto.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Crypto.c; path = ../../ABC_Crypto.c; sourceTree = "<group>"; };
@@ -197,6 +200,8 @@
 		4CC049D21890504A00E5461B /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */,
+				3D3EC1CE18CFCF2F00682700 /* ABC_Bridge.h */,
 				4C41303218BE991E00DD2123 /* ABC.h */,
 				4C41302918BE991E00DD2123 /* ABC.c */,
 				4C41302A18BE991E00DD2123 /* ABC_Account.h */,
@@ -457,6 +462,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3D3EC1CF18CFCF2F00682700 /* ABC_Bridge.cpp in Sources */,
 				4C41304118BE991E00DD2123 /* ABC.c in Sources */,
 				4CB3450A18C799C600A0FFE5 /* ABC_Mutex.c in Sources */,
 				4C41303F18BE991E00DD2123 /* ABC_Wallet.c in Sources */,
@@ -539,7 +545,7 @@
 					"../../deps/build/libqrencode/ios-universal/lib",
 				);
 				PRODUCT_NAME = "TestBed x64";
-				USER_HEADER_SEARCH_PATHS = ../../deps/build/prefix/ios/arm64/include;
+				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/arm64/include";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -563,7 +569,7 @@
 					"../../deps/build/libqrencode/ios-universal/lib",
 				);
 				PRODUCT_NAME = "TestBed x64";
-				USER_HEADER_SEARCH_PATHS = ../../deps/build/prefix/ios/arm64/include;
+				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/arm64/include";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
@@ -665,7 +671,7 @@
 					"../../deps/build/libqrencode/ios-universal/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				USER_HEADER_SEARCH_PATHS = ../../deps/build/prefix/ios/i386/include;
+				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/i386/include";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -689,7 +695,7 @@
 					"../../deps/build/libqrencode/ios-universal/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				USER_HEADER_SEARCH_PATHS = ../../deps/build/prefix/ios/i386/include;
+				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/i386/include";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;

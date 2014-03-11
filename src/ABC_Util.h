@@ -12,6 +12,7 @@
 
 #include <string.h>
 #include <strings.h>
+#include <stdlib.h>
 #include "ABC.h"
 
 #ifdef __cplusplus
@@ -25,7 +26,7 @@ extern "C" {
 
 #define ABC_CHECK_SYS(test, name) \
     if (!(test)) { \
-        ABC_RET_ERROR(ABC_CC_SysError, "System function "name" failed."); \
+        ABC_RET_ERROR(ABC_CC_SysError, "System function " name " failed."); \
     } else \
 
 #define ABC_RET_ERROR(err, desc) \
@@ -87,6 +88,12 @@ extern "C" {
 #define ABC_ALLOC(ptr, size) \
     { \
         ptr = calloc(1, (size)); \
+        ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "calloc failed (returned NULL)"); \
+    }
+
+#define ABC_ALLOC_ARRAY(ptr, count, type) \
+    { \
+        ptr = (type*)calloc(count, sizeof(type)); \
         ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "calloc failed (returned NULL)"); \
     }
 

@@ -11,6 +11,7 @@
 #define ABC_h
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /** The maximum buffer length for default strings in the system */
 #define ABC_MAX_STRING_LENGTH 256
@@ -121,7 +122,7 @@ extern "C" {
      * This structure contains the detailed information associated
      * with an error.
      * Most AirBitz Core functions should offer the option of passing
-     * a pointer to this structure to be filled out in the event of 
+     * a pointer to this structure to be filled out in the event of
      * error.
      *
      */
