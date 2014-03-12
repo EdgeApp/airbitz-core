@@ -1,3 +1,5 @@
 inherit native
 inherit android
-inherit ios
+if [ Darwin = $(uname -s) ]; then
+    inherit ios
+fi
