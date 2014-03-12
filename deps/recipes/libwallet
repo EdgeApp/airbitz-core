@@ -1,4 +1,4 @@
-depends="libbitcoin"
+depends="libbitcoin curl"
 inherit lib
 
 source="https://github.com/swansontec/libwallet.git"
