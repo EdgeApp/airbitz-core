@@ -49,6 +49,7 @@
 		4C9D93C318AECB9E00402014 /* TextFieldContainerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C9D93C218AECB9E00402014 /* TextFieldContainerView.m */; };
 		4C9F576C18CA70DF003941B2 /* ABC_Tx.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C9F576B18CA70DF003941B2 /* ABC_Tx.c */; };
 		4C9F576D18CA70DF003941B2 /* ABC_Tx.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C9F576B18CA70DF003941B2 /* ABC_Tx.c */; };
+		4C9F576E18CFEDDE003941B2 /* ABC_Bridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */; };
 		4CB3450A18C799C600A0FFE5 /* ABC_Mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = 4CB3450818C799C600A0FFE5 /* ABC_Mutex.c */; };
 		4CB3450B18C799C600A0FFE5 /* ABC_Mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = 4CB3450818C799C600A0FFE5 /* ABC_Mutex.c */; };
 		4CCDCB9118B694BC00FC4391 /* libscrypt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CCDCB9018B694BC00FC4391 /* libscrypt.a */; };
@@ -200,8 +201,6 @@
 		4CC049D21890504A00E5461B /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */,
-				3D3EC1CE18CFCF2F00682700 /* ABC_Bridge.h */,
 				4C41303218BE991E00DD2123 /* ABC.h */,
 				4C41302918BE991E00DD2123 /* ABC.c */,
 				4C41302A18BE991E00DD2123 /* ABC_Account.h */,
@@ -223,6 +222,8 @@
 				4CB3450918C799C600A0FFE5 /* ABC_Mutex.h */,
 				4CB3450818C799C600A0FFE5 /* ABC_Mutex.c */,
 				4C41302E18BE991E00DD2123 /* ABC_ServerDefs.h */,
+				3D3EC1CE18CFCF2F00682700 /* ABC_Bridge.h */,
+				3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */,
 			);
 			name = Core;
 			sourceTree = "<group>";
@@ -441,6 +442,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4C9F576E18CFEDDE003941B2 /* ABC_Bridge.cpp in Sources */,
 				4C41304218BE991E00DD2123 /* ABC.c in Sources */,
 				4CB3450B18C799C600A0FFE5 /* ABC_Mutex.c in Sources */,
 				4C41304018BE991E00DD2123 /* ABC_Wallet.c in Sources */,

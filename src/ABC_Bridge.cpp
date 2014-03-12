@@ -44,7 +44,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
     pInfo = NULL; // do this so we don't free below what we just gave the caller
 
 exit:
-    ABC_FreeURIInfo(pInfo);
+    ABC_BridgeFreeURIInfo(pInfo);
 
     return cc;
 }
