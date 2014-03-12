@@ -1,10 +1,9 @@
 depends="libbitcoin"
 inherit lib
 
-source="http://libbitcoin.dyne.org/download/libwallet-0.4.tar.bz2"
+source="https://github.com/swansontec/libwallet.git"
 
 build() {
-    cd libwallet-0.4
     autoreconf -i
     ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
     make

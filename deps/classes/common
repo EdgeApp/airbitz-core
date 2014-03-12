@@ -8,7 +8,15 @@ download() {
     mkdir -p $download_dir
     for s in $source; do
         filename="$download_dir/$(echo $s | sed -e's@^.*/@@' -e's@\?.*$@@')"
-        [ -e $filename ] || wget -O "$filename" "$s"
+        if [ $filename != ${filename%.git} ]; then
+            if [ -e $filename ]; then
+                git --git-dir="$filename" fetch "$s" master:master
+            else
+                git clone --bare "$s" "$filename"
+            fi
+        else
+            [ -e $filename ] || wget -O "$filename" "$s"
+        fi
     done
 }
 task download
@@ -20,6 +28,8 @@ unpack() {
         if echo $filename | grep -q -e'\.tar.*$' -e'\.tgz$'; then
             echo "Unpacking $(relative $filename) to $(relative $work_dir)..."
             tar -C $work_dir -xf $filename
+        elif [ $filename != ${filename%.git} ]; then
+            git --git-dir="$filename" --work-tree="$work_dir" reset --hard master
         fi
     done
 }
