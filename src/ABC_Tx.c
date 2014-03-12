@@ -79,6 +79,10 @@ static tABC_CC  ABC_TxLoadTransaction(const char *szUserName, const char *szPass
 static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError);
 static void     ABC_TxFreeTx(tABC_Tx *pTx);
+static tABC_CC  ABC_TxCreateTxDir(const char *szWalletUUID, tABC_Error *pError);
+static tABC_CC  ABC_TxSaveTransaction(const char *szUserName, const char *szPassword, const char *szWalletUUID, const tABC_Tx *pTx, tABC_Error *pError);
+static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *pError);
+static tABC_CC  ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError);
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
 
@@ -1036,8 +1040,186 @@ void ABC_TxFreeTx(tABC_Tx *pTx)
     }
 }
 
+// creates the transaction directory if needed
+static
+tABC_CC ABC_TxCreateTxDir(const char *szWalletUUID, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szTxDir = NULL;
+
+    // get the transaction directory
+    ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
+
+    // if transaction dir doesn't exist, create it
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szTxDir, &bExists, pError));
+    if (true != bExists)
+    {
+        ABC_CHECK_RET(ABC_FileIOCreateDir(szTxDir, pError));
+    }
+
+exit:
+    ABC_FREE_STR(szTxDir);
+
+    return cc;
+}
+
+/**
+ * Saves a transaction to disk
+ *
+ * @param pTx  Pointer to transaction data
+ */
+static
+tABC_CC ABC_TxSaveTransaction(const char *szUserName,
+                              const char *szPassword,
+                              const char *szWalletUUID,
+                              const tABC_Tx *pTx,
+                              tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_U08Buf MK = ABC_BUF_NULL;
+    char *szFilename = NULL;
+    json_t *pJSON_Root = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(pTx);
+    ABC_CHECK_NULL(pTx->szID);
+    ABC_CHECK_ASSERT(strlen(pTx->szID) > 0, ABC_CC_Error, "No transaction ID provided");
+
+    // Get the master key we will need to decode the transaction data
+    // (note that this will also make sure the account and wallet exist)
+    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+
+    // create the json for the transaction
+    pJSON_Root = json_object();
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_Error, "Could not create transaction JSON object");
+
+    // set the ID
+    json_object_set_new(pJSON_Root, JSON_TX_ID_FIELD, json_string(pTx->szID));
+
+    // set the state info
+    ABC_CHECK_RET(ABC_TxEncodeTxState(pJSON_Root, pTx->pStateInfo, pError));
+
+    // set the details
+    ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pTx->pDetails, pError));
+
+    // create the transaction directory if needed
+    ABC_CHECK_RET(ABC_TxCreateTxDir(szWalletUUID, pError));
+
+    // get the filename for this transaction
+    ABC_CHECK_RET(ABC_TxGetTxFilename(&szFilename, szWalletUUID, pTx->szID, pError));
+
+    // save out the transaction object to a file encrypted with the master key
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, MK, ABC_CryptoType_AES256, szFilename, pError));
+
+exit:
+    ABC_FREE_STR(szFilename);
+    if (pJSON_Root) json_decref(pJSON_Root);
+
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Encodes the transaction state data into the given json transaction object
+ *
+ * @param pJSON_Obj Pointer to the json object into which the state data is stored.
+ * @param pInfo     Pointer to the state data to store in the json object.
+ */
+static
+tABC_CC ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    json_t *pJSON_State = NULL;
+    int retVal = 0;
+
+    ABC_CHECK_NULL(pJSON_Obj);
+    ABC_CHECK_NULL(pInfo);
+
+    // create the state object
+    pJSON_State = json_object();
+
+    // add the creation date to the state object
+    retVal = json_object_set_new(pJSON_State, JSON_TX_CREATION_DATE_FIELD, json_integer(pInfo->timeCreation));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the state object to the master object
+    retVal = json_object_set(pJSON_Obj, JSON_TX_STATE_FIELD, pJSON_State);
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+exit:
+    if (pJSON_State) json_decref(pJSON_State);
+
+    return cc;
+}
+
+/**
+ * Encodes the transaction details data into the given json transaction object
+ *
+ * @param pJSON_Obj Pointer to the json object into which the details are stored.
+ * @param pDetails  Pointer to the details to store in the json object.
+ */
+static
+tABC_CC ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    json_t *pJSON_Details = NULL;
+    int retVal = 0;
+
+    ABC_CHECK_NULL(pJSON_Obj);
+    ABC_CHECK_NULL(pDetails);
+
+    // create the details object
+    pJSON_Details = json_object();
+
+    // add the satoshi field to the details object
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_AMOUNT_SATOSHI_FIELD, json_integer(pDetails->amountSatoshi));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the currency field to the details object
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_AMOUNT_CURRENCY_FIELD, json_real(pDetails->amountCurrency));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the name field to the details object
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_NAME_FIELD, json_string(pDetails->szName));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the category field to the details object
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_CATEGORY_FIELD, json_string(pDetails->szCategory));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the notes field to the details object
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_NOTES_FIELD, json_string(pDetails->szNotes));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the attributes field to the details object
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_ATTRIBUTES_FIELD, json_integer(pDetails->attributes));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the details object to the master object
+    retVal = json_object_set(pJSON_Obj, JSON_TX_DETAILS_FIELD, pJSON_Details);
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+exit:
+    if (pJSON_Details) json_decref(pJSON_Details);
+    
+    return cc;
+}
+
 /* TODO: these support functions will be needed
- save transaction
  load address
  save address
  load transactions

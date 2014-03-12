@@ -314,6 +314,36 @@ exit:
     return cc;
 }
 
+// encrypted the given json and write the encrypted json to a file
+tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
+                                        const tABC_U08Buf Key,
+                                        tABC_CryptoType  cryptoType,
+                                        const char *szFilename,
+                                        tABC_Error  *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szJSON = NULL;
+    tABC_U08Buf Data = ABC_BUF_NULL;
+
+    ABC_CHECK_NULL_BUF(Key);
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_NULL(pJSON_Data);
+
+    // create the json string
+    szJSON = json_dumps(pJSON_Data, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+    ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
+
+    // write out the data encrypted to a file
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(Data, Key, cryptoType, szFilename, pError));
+
+exit:
+    ABC_FREE_STR(szJSON);
+
+    return cc;
+}
+
 // given a JSON string holding encrypted data, this function decrypts it
 tABC_CC ABC_CryptoDecryptJSONString(const char        *szEncDataJSON,
                                     const tABC_U08Buf Key,
