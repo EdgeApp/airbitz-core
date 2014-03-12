@@ -57,12 +57,6 @@ extern "C" {
 
     void * ABC_TxSendThreaded(void *pData);
 
-    tABC_CC ABC_TxParseBitcoinURI(const char *szURI,
-                                tABC_BitcoinURIInfo **ppInfo,
-                                tABC_Error *pError);
-
-    void ABC_TxFreeURIInfo(tABC_BitcoinURIInfo *pInfo);
-
     double ABC_TxSatoshiToBitcoin(int64_t satoshi);
 
     int64_t ABC_TxBitcoinToSatoshi(double bitcoin);
@@ -137,7 +131,7 @@ extern "C" {
 
     void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
                             unsigned int count);
-    
+
 #ifdef __cplusplus
 }
 #endif

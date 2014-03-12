@@ -272,7 +272,7 @@ tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pO
     // set the pointer for the caller
     *ppNewDetails = pNewDetails;
     pNewDetails = NULL;
-    
+
 exit:
     ABC_TxFreeDetails(pNewDetails);
 
@@ -291,62 +291,6 @@ void ABC_TxFreeDetails(tABC_TxDetails *pDetails)
         ABC_FREE_STR(pDetails->szCategory);
         ABC_FREE_STR(pDetails->szNotes);
         ABC_CLEAR_FREE(pDetails, sizeof(tABC_TxDetails));
-    }
-}
-
-/**
- * Parses a Bitcoin URI and creates an info struct with the data found in the URI.
- *
- * @param szURI     URI to parse
- * @param ppInfo    Pointer to location to store allocated info struct.
- * @param pError    A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_TxParseBitcoinURI(const char *szURI,
-                            tABC_BitcoinURIInfo **ppInfo,
-                            tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    tABC_BitcoinURIInfo *pInfo = NULL;
-
-    ABC_CHECK_NULL(szURI);
-    ABC_CHECK_ASSERT(strlen(szURI) > 0, ABC_CC_Error, "No URI provided");
-    ABC_CHECK_NULL(ppInfo);
-    *ppInfo = NULL;
-
-    // allocated initial struct
-    ABC_ALLOC(pInfo, sizeof(tABC_BitcoinURIInfo));
-
-    // TODO: parse the elements and store them in the pInfo struct
-    // Note: if a given member (e.g., label) doesn't exist, a blank string should still be allocated
-
-    // assign created info struct
-    *ppInfo = pInfo;
-    pInfo = NULL; // do this so we don't free below what we just gave the caller
-
-exit:
-    ABC_FreeURIInfo(pInfo);
-
-    return cc;
-}
-
-/**
- * Parses a Bitcoin URI and creates an info struct with the data found in the URI.
- *
- * @param pInfo Pointer to allocated info struct.
- */
-void ABC_TxFreeURIInfo(tABC_BitcoinURIInfo *pInfo)
-{
-    if (pInfo != NULL)
-    {
-        ABC_FREE_STR(pInfo->szLabel);
-
-        ABC_FREE_STR(pInfo->szAddress);
-
-        ABC_FREE_STR(pInfo->szMessage);
-
-        ABC_CLEAR_FREE(pInfo, sizeof(tABC_BitcoinURIInfo));
     }
 }
 
@@ -651,7 +595,7 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
     *pWidth = qr->width;
     *paData = aData;
     aData = NULL;
-    
+
 exit:
     QRcode_free(qr);
     ABC_CLEAR_FREE(aData, length);
@@ -839,7 +783,7 @@ tABC_CC ABC_TxGetTxFilename(char **pszFilename, const char *szWalletUUID, const 
 
 exit:
     ABC_FREE_STR(szTxDir);
-    
+
     return cc;
 }
 

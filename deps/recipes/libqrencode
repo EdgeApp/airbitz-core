@@ -4,6 +4,8 @@ source="http://megaui.net/fukuchi/works/qrencode/qrencode-3.4.3.tar.bz2"
 
 build() {
     cd qrencode-3.4.3
+    rm use/config.guess use/config.sub
+    ./autogen.sh
     ./configure --enable-static --disable-shared --host=$cross --without-tools --prefix=$install_dir
     make
     make install
