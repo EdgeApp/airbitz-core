@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		3D3EC1CF18CFCF2F00682700 /* ABC_Bridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */; };
+		3D3EC1D118CFDDF100682700 /* libwallet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D3EC1D018CFDDF100682700 /* libwallet.a */; };
+		3D3EC1D218CFDE6800682700 /* libwallet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D3EC1D018CFDDF100682700 /* libwallet.a */; };
 		4C08A6CF18BFBFCD0071B87C /* libqrencode.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C08A6CE18BFBFCC0071B87C /* libqrencode.a */; };
 		4C08A6D018BFBFF20071B87C /* libqrencode.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C08A6CE18BFBFCC0071B87C /* libqrencode.a */; };
 		4C41303318BE991E00DD2123 /* ABC_Account.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302218BE991E00DD2123 /* ABC_Account.c */; };
@@ -83,6 +85,7 @@
 /* Begin PBXFileReference section */
 		3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ABC_Bridge.cpp; path = ../../ABC_Bridge.cpp; sourceTree = "<group>"; };
 		3D3EC1CE18CFCF2F00682700 /* ABC_Bridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Bridge.h; path = ../../ABC_Bridge.h; sourceTree = "<group>"; };
+		3D3EC1D018CFDDF100682700 /* libwallet.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libwallet.a; path = "../../deps/build/libwallet/ios-universal/lib/libwallet.a"; sourceTree = "<group>"; };
 		4C08A6CE18BFBFCC0071B87C /* libqrencode.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libqrencode.a; path = "../../deps/build/libqrencode/ios-universal/lib/libqrencode.a"; sourceTree = "<group>"; };
 		4C41302218BE991E00DD2123 /* ABC_Account.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Account.c; path = ../../ABC_Account.c; sourceTree = "<group>"; };
 		4C41302318BE991E00DD2123 /* ABC_Crypto.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Crypto.c; path = ../../ABC_Crypto.c; sourceTree = "<group>"; };
@@ -146,6 +149,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3D3EC1D218CFDE6800682700 /* libwallet.a in Frameworks */,
 				4C08A6CF18BFBFCD0071B87C /* libqrencode.a in Frameworks */,
 				4CCDCB9218B6953000FC4391 /* libscrypt.a in Frameworks */,
 				4C8A78F318B4022B00A06B16 /* libcurl.a in Frameworks */,
@@ -163,6 +167,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3D3EC1D118CFDDF100682700 /* libwallet.a in Frameworks */,
 				4C08A6D018BFBFF20071B87C /* libqrencode.a in Frameworks */,
 				4CCDCB9118B694BC00FC4391 /* libscrypt.a in Frameworks */,
 				4C8A78F218B401FC00A06B16 /* libcurl.a in Frameworks */,
@@ -252,6 +257,7 @@
 		4CD77580188EF7DC00AF76AC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				3D3EC1D018CFDDF100682700 /* libwallet.a */,
 				4C08A6CE18BFBFCC0071B87C /* libqrencode.a */,
 				4CCDCB9018B694BC00FC4391 /* libscrypt.a */,
 				4C8A78F118B401FC00A06B16 /* libcurl.a */,
@@ -545,6 +551,7 @@
 					"../../deps/build/curl/ios-universal/lib",
 					"../../deps/build/scrypt/ios-universal/lib",
 					"../../deps/build/libqrencode/ios-universal/lib",
+					"../../deps/build/libwallet/ios-universal/lib",
 				);
 				PRODUCT_NAME = "TestBed x64";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/arm64/include";
@@ -569,6 +576,7 @@
 					"../../deps/build/curl/ios-universal/lib",
 					"../../deps/build/scrypt/ios-universal/lib",
 					"../../deps/build/libqrencode/ios-universal/lib",
+					"../../deps/build/libwallet/ios-universal/lib",
 				);
 				PRODUCT_NAME = "TestBed x64";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/arm64/include";
@@ -671,6 +679,7 @@
 					"../../deps/build/curl/ios-universal/lib",
 					"../../deps/build/scrypt/ios-universal/lib",
 					"../../deps/build/libqrencode/ios-universal/lib",
+					"/Users/william/airbitz/airbitz-walletcore/deps/build/libwallet/ios-universal/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/i386/include";
@@ -695,6 +704,7 @@
 					"../../deps/build/curl/ios-universal/lib",
 					"../../deps/build/scrypt/ios-universal/lib",
 					"../../deps/build/libqrencode/ios-universal/lib",
+					"/Users/william/airbitz/airbitz-walletcore/deps/build/libwallet/ios-universal/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/i386/include";
