@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3D34923118D1258C000FCE2C /* libbitcoin.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D34923018D1258B000FCE2C /* libbitcoin.a */; };
+		3D34923318D125BE000FCE2C /* libboost_system.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D34923218D125BE000FCE2C /* libboost_system.a */; };
+		3D34923418D125ED000FCE2C /* libbitcoin.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D34923018D1258B000FCE2C /* libbitcoin.a */; };
+		3D34923518D125FE000FCE2C /* libboost_system.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D34923218D125BE000FCE2C /* libboost_system.a */; };
 		3D3EC1CF18CFCF2F00682700 /* ABC_Bridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */; };
 		3D3EC1D118CFDDF100682700 /* libwallet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D3EC1D018CFDDF100682700 /* libwallet.a */; };
 		3D3EC1D218CFDE6800682700 /* libwallet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D3EC1D018CFDDF100682700 /* libwallet.a */; };
@@ -83,6 +87,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		3D34923018D1258B000FCE2C /* libbitcoin.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbitcoin.a; path = "../../deps/build/libbitcoin/ios-universal/lib/libbitcoin.a"; sourceTree = "<group>"; };
+		3D34923218D125BE000FCE2C /* libboost_system.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_system.a; path = "../../deps/build/boost/ios-universal/lib/libboost_system.a"; sourceTree = "<group>"; };
 		3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ABC_Bridge.cpp; path = ../../ABC_Bridge.cpp; sourceTree = "<group>"; };
 		3D3EC1CE18CFCF2F00682700 /* ABC_Bridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Bridge.h; path = ../../ABC_Bridge.h; sourceTree = "<group>"; };
 		3D3EC1D018CFDDF100682700 /* libwallet.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libwallet.a; path = "../../deps/build/libwallet/ios-universal/lib/libwallet.a"; sourceTree = "<group>"; };
@@ -149,6 +155,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3D34923318D125BE000FCE2C /* libboost_system.a in Frameworks */,
+				3D34923118D1258C000FCE2C /* libbitcoin.a in Frameworks */,
 				3D3EC1D218CFDE6800682700 /* libwallet.a in Frameworks */,
 				4C08A6CF18BFBFCD0071B87C /* libqrencode.a in Frameworks */,
 				4CCDCB9218B6953000FC4391 /* libscrypt.a in Frameworks */,
@@ -167,6 +175,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3D34923518D125FE000FCE2C /* libboost_system.a in Frameworks */,
+				3D34923418D125ED000FCE2C /* libbitcoin.a in Frameworks */,
 				3D3EC1D118CFDDF100682700 /* libwallet.a in Frameworks */,
 				4C08A6D018BFBFF20071B87C /* libqrencode.a in Frameworks */,
 				4CCDCB9118B694BC00FC4391 /* libscrypt.a in Frameworks */,
@@ -257,6 +267,8 @@
 		4CD77580188EF7DC00AF76AC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				3D34923218D125BE000FCE2C /* libboost_system.a */,
+				3D34923018D1258B000FCE2C /* libbitcoin.a */,
 				3D3EC1D018CFDDF100682700 /* libwallet.a */,
 				4C08A6CE18BFBFCC0071B87C /* libqrencode.a */,
 				4CCDCB9018B694BC00FC4391 /* libscrypt.a */,
@@ -552,6 +564,8 @@
 					"../../deps/build/scrypt/ios-universal/lib",
 					"../../deps/build/libqrencode/ios-universal/lib",
 					"../../deps/build/libwallet/ios-universal/lib",
+					"../../deps/build/libbitcoin/ios-universal/lib",
+					"../../deps/build/boost/ios-universal/lib",
 				);
 				PRODUCT_NAME = "TestBed x64";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/arm64/include";
@@ -577,6 +591,8 @@
 					"../../deps/build/scrypt/ios-universal/lib",
 					"../../deps/build/libqrencode/ios-universal/lib",
 					"../../deps/build/libwallet/ios-universal/lib",
+					"../../deps/build/libbitcoin/ios-universal/lib",
+					"../../deps/build/boost/ios-universal/lib",
 				);
 				PRODUCT_NAME = "TestBed x64";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/arm64/include";
@@ -679,7 +695,9 @@
 					"../../deps/build/curl/ios-universal/lib",
 					"../../deps/build/scrypt/ios-universal/lib",
 					"../../deps/build/libqrencode/ios-universal/lib",
-					"/Users/william/airbitz/airbitz-walletcore/deps/build/libwallet/ios-universal/lib",
+					"../../deps/build/libwallet/ios-universal/lib",
+					"../../deps/build/libbitcoin/ios-universal/lib",
+					"../../deps/build/boost/ios-universal/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/i386/include";
@@ -704,7 +722,9 @@
 					"../../deps/build/curl/ios-universal/lib",
 					"../../deps/build/scrypt/ios-universal/lib",
 					"../../deps/build/libqrencode/ios-universal/lib",
-					"/Users/william/airbitz/airbitz-walletcore/deps/build/libwallet/ios-universal/lib",
+					"../../deps/build/libwallet/ios-universal/lib",
+					"../../deps/build/libbitcoin/ios-universal/lib",
+					"../../deps/build/boost/ios-universal/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/i386/include";

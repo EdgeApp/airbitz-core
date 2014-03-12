@@ -87,7 +87,9 @@ extern "C" {
         /** Mutex error if some type */
         ABC_CC_MutexError = 27,
         /** Transaction not found */
-        ABC_CC_NoTransaction = 28
+        ABC_CC_NoTransaction = 28,
+        /** Failed to parse input text */
+        ABC_CC_ParseError = 29
     } tABC_CC;
 
     /**

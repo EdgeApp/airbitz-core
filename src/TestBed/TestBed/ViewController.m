@@ -100,6 +100,21 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
 
+#if 1 // bitcoin uri
+    tABC_BitcoinURIInfo *uri;
+    ABC_ParseBitcoinURI("bitcoin:113Pfw4sFqN1T5kXUnKbqZHMJHN9oyjtgD?message=test",
+                        &uri,
+                        &Error);
+    printf("Parsing URI:\n");
+    if (uri->szAddress)
+        printf("    address: %s\n", uri->szAddress);
+    printf("    amount: %lld\n", uri->amountSatoshi);
+    if (uri->szLabel)
+        printf("    label: %s\n", uri->szLabel);
+    if (uri->szMessage)
+        printf("    message: %s\n", uri->szMessage);
+#endif
+
 #if 0 // qrcode
     unsigned int width = 0;
     unsigned char *pData = NULL;
