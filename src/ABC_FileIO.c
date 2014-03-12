@@ -26,9 +26,6 @@ static char             gszRootDir[ABC_MAX_STRING_LENGTH + 1] = ".";
 static bool             gbInitialized = false;
 static pthread_mutex_t  gMutex; // to block multiple threads from accessing files at the same time
 
-static tABC_CC ABC_FileIOMutexLock(tABC_Error *pError);
-static tABC_CC ABC_FileIOMutexUnlock(tABC_Error *pError);
-
 /**
  * Initialize the FileIO system
  */
@@ -168,33 +165,23 @@ exit:
 }
 
 // frees a file list structure
-tABC_CC ABC_FileIOFreeFileList(tABC_FileIOList *pFileList,
-                               tABC_Error *pError)
+void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList)
 {
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
-    ABC_CHECK_NULL(pFileList);
-
-    if (pFileList->apFiles)
+    if (pFileList)
     {
-        for (int i = 0; i < pFileList->nCount; i++)
+        if (pFileList->apFiles)
         {
-            if (pFileList->apFiles[i])
+            for (int i = 0; i < pFileList->nCount; i++)
             {
-                ABC_FREE_STR(pFileList->apFiles[i]->szName);
-                ABC_CLEAR_FREE(pFileList->apFiles[i], sizeof(tABC_FileIOFileInfo));
+                if (pFileList->apFiles[i])
+                {
+                    ABC_FREE_STR(pFileList->apFiles[i]->szName);
+                    ABC_CLEAR_FREE(pFileList->apFiles[i], sizeof(tABC_FileIOFileInfo));
+                }
             }
         }
+        ABC_CLEAR_FREE(pFileList, sizeof(tABC_FileIOList));
     }
-
-
-    ABC_CLEAR_FREE(pFileList, sizeof(tABC_FileIOList));
-
-exit:
-
-    ABC_FileIOMutexUnlock(NULL);
-    return cc;
 }
 
 // checks if a file exists
@@ -415,10 +402,32 @@ exit:
 }
 
 /**
+ * Deletes the specified file
+ *
+ */
+tABC_CC ABC_FileIODeleteFile(const char *szFilename,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No filename provided");
+
+    // delete it
+    if (0 != unlink(szFilename))
+    {
+        ABC_RET_ERROR(ABC_CC_Error, "Could not delete file");
+    }
+
+exit:
+
+    return cc;
+}
+
+/**
  * Locks the global mutex
  *
  */
-static
 tABC_CC ABC_FileIOMutexLock(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -435,7 +444,6 @@ exit:
  * Unlocks the global mutex
  *
  */
-static
 tABC_CC ABC_FileIOMutexUnlock(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;

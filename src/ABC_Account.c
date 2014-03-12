@@ -1564,6 +1564,7 @@ tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Err
 
     char *szCurUserName = NULL;
     char *szAccountRoot = NULL;
+    tABC_FileIOList *pFileList = NULL;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(pAccountNum);
@@ -1579,7 +1580,7 @@ tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Err
     ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
 
     // get all the files in this root
-    tABC_FileIOList *pFileList;
+
     ABC_FileIOCreateFileList(&pFileList, szAccountRoot, NULL);
     for (int i = 0; i < pFileList->nCount; i++)
     {
@@ -1607,11 +1608,12 @@ tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Err
             }
         }
     }
-    ABC_FileIOFreeFileList(pFileList, NULL);
+
 
 exit:
     ABC_FREE_STR(szCurUserName);
     ABC_FREE_STR(szAccountRoot);
+    ABC_FileIOFreeFileList(pFileList);
 
     return cc;
 }

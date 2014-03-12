@@ -39,6 +39,10 @@ extern "C" {
         tABC_FileIOFileInfo **apFiles;
     } tABC_FileIOList;
 
+    tABC_CC ABC_FileIOInitialize(tABC_Error *pError);
+
+    void ABC_FileIOTerminate();
+
     tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
                                  tABC_Error *pError);
 
@@ -49,8 +53,7 @@ extern "C" {
                                      const char *szDir,
                                      tABC_Error *pError);
 
-    tABC_CC ABC_FileIOFreeFileList(tABC_FileIOList *pFileList,
-                                   tABC_Error *pError);
+    void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList);
 
     tABC_CC ABC_FileIOFileExists(const char *szFilename,
                                  bool *pbExists,
@@ -76,9 +79,12 @@ extern "C" {
                                      bool bMustExist,
                                      tABC_Error  *pError);
 
-    tABC_CC ABC_FileIOInitialize(tABC_Error *pError);
+    tABC_CC ABC_FileIODeleteFile(const char *szFilename,
+                                 tABC_Error *pError);
 
-    void ABC_FileIOTerminate();
+    tABC_CC ABC_FileIOMutexLock(tABC_Error *pError);
+
+    tABC_CC ABC_FileIOMutexUnlock(tABC_Error *pError);
 
 
 #ifdef __cplusplus

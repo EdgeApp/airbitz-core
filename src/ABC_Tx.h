@@ -55,7 +55,7 @@ extern "C" {
 
     void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo);
 
-    void * ABC_TxSendThreaded(void *pData);
+    void *ABC_TxSendThreaded(void *pData);
 
     double ABC_TxSatoshiToBitcoin(int64_t satoshi);
 

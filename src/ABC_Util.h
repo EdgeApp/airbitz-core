@@ -91,6 +91,12 @@ extern "C" {
         ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "calloc failed (returned NULL)"); \
     }
 
+#define ABC_REALLOC(ptr, newsize) \
+    { \
+        ptr = realloc(ptr, newsize); \
+        ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "realloc failed (returned NULL)"); \
+    }
+
 #define ABC_ALLOC_ARRAY(ptr, count, type) \
     { \
         ptr = (type*)calloc(count, sizeof(type)); \

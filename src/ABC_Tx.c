@@ -24,10 +24,14 @@
 
 #define CURRENCY_NUM_USD    840
 
+#define TX_INTERNAL_SUFFIX "-int.json" // the transaction was created by our direct action (i.e., send)
+#define TX_EXTERNAL_SUFFIX "-ext.json" // the transaction was created due to events in the block-chain (usually receives)
+
 #define JSON_TX_ID_FIELD                "ntxid"
 #define JSON_TX_STATE_FIELD             "state"
 #define JSON_TX_DETAILS_FIELD           "meta"
 #define JSON_TX_CREATION_DATE_FIELD     "creationDate"
+#define JSON_TX_INTERNAL_FIELD          "internal"
 #define JSON_TX_AMOUNT_SATOSHI_FIELD    "amountSatoshi"
 #define JSON_TX_AMOUNT_CURRENCY_FIELD   "amountCurrency"
 #define JSON_TX_NAME_FIELD              "name"
@@ -35,9 +39,17 @@
 #define JSON_TX_NOTES_FIELD             "notes"
 #define JSON_TX_ATTRIBUTES_FIELD        "attributes"
 
+typedef enum eTxType
+{
+    TxType_None = 0,
+    TxType_Internal,
+    TxType_External
+} tTxType;
+
 typedef struct sTxStateInfo
 {
     int64_t timeCreation;
+    bool    bInternal;
 } tTxStateInfo;
 
 typedef struct sABC_Tx
@@ -74,8 +86,12 @@ typedef struct sABC_TxAddress
 static tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo, char **pszUUID, tABC_Error *pError);
 static tABC_CC  ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pOldDetails, tABC_Error *pError);
 static void     ABC_TxFreeDetails(tABC_TxDetails *pDetails);
-static tABC_CC  ABC_TxGetTxFilename(char **pszFilename, const char *szWalletUUID, const char *szTxID, tABC_Error *pError);
-static tABC_CC  ABC_TxLoadTransaction(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szTxID, tABC_Tx **ppTx, tABC_Error *pError);
+static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *pbEquivalent, tABC_Error *pError);
+static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pType, char **pszBasename, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadTxAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
+static void     ABC_TxFreeTransaction(tABC_TxInfo *pTransactions);
+static tABC_CC  ABC_TxGetTxFilename(char **pszFilename, const char *szWalletUUID, const char *szTxID, bool bInternal, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadTransaction(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError);
 static void     ABC_TxFreeTx(tABC_Tx *pTx);
@@ -622,6 +638,13 @@ tABC_CC ABC_TxGetTransactions(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    char *szTxDir = NULL;
+    tABC_FileIOList *pFileList = NULL;
+    char *szFilename = NULL;
+    tABC_TxInfo **aTransactions = NULL;
+    unsigned int count = 0;
+
+    ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -633,10 +656,304 @@ tABC_CC ABC_TxGetTransactions(const char *szUserName,
     ABC_CHECK_NULL(pCount);
     *pCount = 0;
 
-    // TODO: get the tranactions for this wallet
+    // get the directory name
+    ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
+
+    // if there is a transaction directory
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szTxDir, &bExists, pError));
+
+    if (bExists == true)
+    {
+        ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+
+        // get all the files in the transaction directory
+        ABC_FileIOCreateFileList(&pFileList, szTxDir, NULL);
+        for (int i = 0; i < pFileList->nCount; i++)
+        {
+            // if this file is a normal file
+            if (pFileList->apFiles[i]->type == ABC_FileIOFileType_Regular)
+            {
+                // create the filename for this transaction
+                sprintf(szFilename, "%s/%s", szTxDir, pFileList->apFiles[i]->szName);
+
+                // get the transaction type
+                tTxType type = TxType_None;
+                ABC_CHECK_RET(ABC_TxGetTxTypeAndBasename(szFilename, &type, NULL, pError));
+
+                // if this is a transaction file (based upon name)
+                if (type != TxType_None)
+                {
+                    bool bHasInternalEquivalent = false;
+
+                    // if this is an external transaction
+                    if (type == TxType_External)
+                    {
+                        // check if it has an internal equivalent and, if so, delete the external
+                        ABC_CHECK_RET(ABC_TxCheckForInternalEquivalent(szFilename, &bHasInternalEquivalent, pError));
+                    }
+
+                    // if this doesn't not have an internal equivalent (or is an internal itself)
+                    if (bHasInternalEquivalent == false)
+                    {
+                        // add this transaction to the array
+                        ABC_CHECK_RET(ABC_TxLoadTxAndAppendToArray(szUserName, szPassword, szWalletUUID, szFilename, &aTransactions, &count, pError));
+                    }
+                }
+            }
+        }
+    }
+
+    // store final results
+    *paTransactions = aTransactions;
+    aTransactions = NULL;
+    *pCount = count;
+    count = 0;
 
 exit:
+    ABC_FREE_STR(szTxDir);
+    ABC_FREE_STR(szFilename);
+    ABC_FileIOFreeFileList(pFileList);
+    ABC_TxFreeTransactions(aTransactions, count);
+
+    ABC_FileIOMutexUnlock(NULL);
     return cc;
+}
+
+/**
+ * Looks to see if a matching internal (i.e., -int) version of this file exists.
+ * If it does, this external version is deleted.
+ *
+ * @param szFilename    Filename of transaction
+ * @param pbEquivalent  Pointer to store result
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxCheckForInternalEquivalent(const char *szFilename,
+                                         bool *pbEquivalent,
+                                         tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szBasename = NULL;
+    char *szFilenameInt = NULL;
+    tTxType type = TxType_None;
+
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_NULL(pbEquivalent);
+    *pbEquivalent = false;
+
+    // get the type and the basename of this transaction
+    ABC_CHECK_RET(ABC_TxGetTxTypeAndBasename(szFilename, &type, &szBasename, pError));
+
+    // if this is an external
+    if (type == TxType_External)
+    {
+        // create the internal version of the filename
+        ABC_ALLOC(szFilenameInt, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+        sprintf(szFilenameInt, "%s%s", szBasename, TX_INTERNAL_SUFFIX);
+
+        // check if this internal version of the file exists
+        bool bExists = false;
+        ABC_CHECK_RET(ABC_FileIOFileExists(szFilenameInt, &bExists, pError));
+
+        // if the internal version exists
+        if (bExists)
+        {
+            // delete the external version (this one)
+            ABC_CHECK_RET(ABC_FileIODeleteFile(szFilename, pError));
+
+            *pbEquivalent = true;
+        }
+    }
+
+exit:
+    ABC_FREE_STR(szBasename);
+    ABC_FREE_STR(szFilenameInt);
+
+    return cc;
+}
+
+/**
+ * Given a potential transaction filename, determines the type and 
+ * creates an allocated basename if it is a transaction type.
+ *
+ * @param szFilename    Filename of potential transaction
+ * @param pType         Pointer to store type
+ * @param pszBasename   Pointer to store allocated basename (optional)
+ *                      (caller must free)
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxGetTxTypeAndBasename(const char *szFilename,
+                                   tTxType *pType,
+                                   char **pszBasename,
+                                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szBasename = NULL;
+
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_NULL(pType);
+
+    // assume nothing found
+    *pType = TxType_None;
+    if (pszBasename != NULL)
+    {
+        *pszBasename = NULL;
+    }
+
+    // look for external the suffix
+    int sizeSuffix = strlen(TX_EXTERNAL_SUFFIX);
+    if (strlen(szFilename) > sizeSuffix)
+    {
+        char *szSuffix = (char *) szFilename + (strlen(szFilename) - sizeSuffix);
+
+        // if this file ends with the external suffix
+        if (strcmp(szSuffix, TX_EXTERNAL_SUFFIX) == 0)
+        {
+            *pType = TxType_External;
+
+            // if they want the basename
+            if (pszBasename != NULL)
+            {
+                szBasename = strdup(szFilename);
+                szBasename[strlen(szFilename) - sizeSuffix] = '\0';
+            }
+        }
+    }
+
+    // if we haven't found it yet
+    if (TxType_None == *pType)
+    {
+        // check for the internal
+        sizeSuffix = strlen(TX_INTERNAL_SUFFIX);
+        if (strlen(szFilename) > sizeSuffix)
+        {
+            char *szSuffix = (char *) szFilename + (strlen(szFilename) - sizeSuffix);
+
+            // if this file ends with the external suffix
+            if (strcmp(szSuffix, TX_INTERNAL_SUFFIX) == 0)
+            {
+                *pType = TxType_Internal;
+
+                // if they want the basename
+                if (pszBasename != NULL)
+                {
+                    szBasename = strdup(szFilename);
+                    szBasename[strlen(szFilename) - sizeSuffix] = '\0';
+                }
+            }
+        }
+    }
+
+    if (pszBasename != NULL)
+    {
+        *pszBasename = szBasename;
+    }
+    szBasename = NULL;
+    
+exit:
+    ABC_FREE_STR(szBasename);
+    
+    return cc;
+}
+
+/**
+ * Loads the given transaction and adds it to the end of the array
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param szFilename        Filename of transaction
+ * @param paTransactions    Pointer to array into which the transaction will be added
+ * @param pCount            Pointer to store number of transactions (will be updated)
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxLoadTxAndAppendToArray(const char *szUserName,
+                                     const char *szPassword,
+                                     const char *szWalletUUID,
+                                     const char *szFilename,
+                                     tABC_TxInfo ***paTransactions,
+                                     unsigned int *pCount,
+                                     tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_Tx *pTx = NULL;
+    tABC_TxInfo *pTransaction = NULL;
+
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No transaction filename provided");
+    ABC_CHECK_NULL(paTransactions);
+    ABC_CHECK_NULL(pCount);
+
+    // load it into the internal transaction structure
+    ABC_CHECK_RET(ABC_TxLoadTransaction(szUserName, szPassword, szWalletUUID, szFilename, &pTx, pError));
+
+    // allocated the info version
+    ABC_ALLOC(pTransaction, sizeof(tABC_TxInfo));
+
+    // reassign the data over to the info struct
+    pTransaction->szID = pTx->szID;
+    pTx->szID = NULL;
+    pTransaction->pDetails = pTx->pDetails;
+    pTx->pDetails = NULL;
+    ABC_CHECK_NULL(pTx->pStateInfo);
+    pTransaction->timeCreation = pTx->pStateInfo->timeCreation;
+
+    // create space for new entry
+    if (*paTransactions == NULL)
+    {
+        ABC_ALLOC(*paTransactions, sizeof(tABC_TxInfo *));
+        *pCount = 1;
+    }
+    else
+    {
+        *pCount = *pCount + 1;
+        ABC_REALLOC(*paTransactions, sizeof(tABC_TxInfo *) * *pCount);
+    }
+
+    // add it to the array
+    tABC_TxInfo **aTransactions = *paTransactions;
+    aTransactions[*pCount - 1] = pTransaction;
+    pTransaction = NULL;
+    
+exit:
+    ABC_TxFreeTx(pTx);
+    ABC_TxFreeTransaction(pTransaction);
+
+    return cc;
+}
+
+/**
+ * Frees the given transaction
+ *
+ * @param pTransaction Pointer to transaction to free
+ */
+static
+void ABC_TxFreeTransaction(tABC_TxInfo *pTransaction)
+{
+    if (pTransaction)
+    {
+        ABC_FREE_STR(pTransaction->szID);
+
+        ABC_TxFreeDetails(pTransaction->pDetails);
+
+        ABC_CLEAR_FREE(pTransaction, sizeof(tABC_TxInfo));
+    }
 }
 
 /**
@@ -652,11 +969,7 @@ void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
     {
         for (int i = 0; i < count; i++)
         {
-            tABC_TxInfo *pInfo = aTransactions[i];
-
-            ABC_TxFreeDetails(pInfo->pDetails);
-
-            ABC_CLEAR_FREE(pInfo, sizeof(tABC_TxInfo));
+            ABC_TxFreeTransaction(aTransactions[i]);
         }
 
         ABC_FREE(aTransactions);
@@ -762,10 +1075,10 @@ void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
 /**
  * Gets the filename for a given transaction
  *
- * @param pszDir the output directory name. The caller must free this.
+ * @param pszFilename Output filename name. The caller must free this.
  */
 static
-tABC_CC ABC_TxGetTxFilename(char **pszFilename, const char *szWalletUUID, const char *szTxID, tABC_Error *pError)
+tABC_CC ABC_TxGetTxFilename(char **pszFilename, const char *szWalletUUID, const char *szTxID, bool bInternal, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -779,7 +1092,7 @@ tABC_CC ABC_TxGetTxFilename(char **pszFilename, const char *szWalletUUID, const 
     ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
 
     ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszFilename, "%s/%s.json", szTxDir, szTxID);
+    sprintf(*pszFilename, "%s/%s%s", szTxDir, szTxID, (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX));
 
 exit:
     ABC_FREE_STR(szTxDir);
@@ -797,7 +1110,7 @@ static
 tABC_CC ABC_TxLoadTransaction(const char *szUserName,
                               const char *szPassword,
                               const char *szWalletUUID,
-                              const char *szTxID,
+                              const char *szFilename,
                               tABC_Tx **ppTx,
                               tABC_Error *pError)
 {
@@ -805,7 +1118,6 @@ tABC_CC ABC_TxLoadTransaction(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf MK = ABC_BUF_NULL;
-    char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
     tABC_Tx *pTx = NULL;
 
@@ -816,17 +1128,14 @@ tABC_CC ABC_TxLoadTransaction(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
-    ABC_CHECK_NULL(szTxID);
-    ABC_CHECK_ASSERT(strlen(szTxID) > 0, ABC_CC_Error, "No transaction ID provided");
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No filename provided");
     ABC_CHECK_NULL(ppTx);
     *ppTx = NULL;
 
     // Get the master key we will need to decode the transaction data
     // (note that this will also make sure the account and wallet exist)
     ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
-
-    // get the filename for this transaction
-    ABC_CHECK_RET(ABC_TxGetTxFilename(&szFilename, szWalletUUID, szTxID, pError));
 
     // make sure the transaction exists
     bool bExists = false;
@@ -854,7 +1163,6 @@ tABC_CC ABC_TxLoadTransaction(const char *szUserName,
     pTx = NULL;
 
 exit:
-    ABC_FREE_STR(szFilename);
     if (pJSON_Root) json_decref(pJSON_Root);
     ABC_TxFreeTx(pTx);
 
@@ -880,6 +1188,9 @@ tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error
     ABC_CHECK_NULL(ppInfo);
     *ppInfo = NULL;
 
+    // allocate the struct
+    ABC_ALLOC(pInfo, sizeof(tTxStateInfo));
+
     // get the state object
     json_t *jsonState = json_object_get(pJSON_Obj, JSON_TX_STATE_FIELD);
     ABC_CHECK_ASSERT((jsonState && json_is_object(jsonState)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing state");
@@ -887,11 +1198,12 @@ tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error
     // get the creation date
     json_t *jsonVal = json_object_get(jsonState, JSON_TX_CREATION_DATE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing creation date");
-    int64_t date = json_integer_value(jsonVal);
+    pInfo->timeCreation = json_integer_value(jsonVal);
 
-    // allocate the struct
-    ABC_ALLOC(pInfo, sizeof(tTxStateInfo));
-    pInfo->timeCreation = date;
+    // get the internal boolean
+    jsonVal = json_object_get(jsonState, JSON_TX_INTERNAL_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_boolean(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing internal boolean");
+    pInfo->bInternal = json_is_true(jsonVal) ? true : false;
 
     // assign final result
     *ppInfo = pInfo;
@@ -1038,6 +1350,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     ABC_CHECK_NULL(pTx);
     ABC_CHECK_NULL(pTx->szID);
     ABC_CHECK_ASSERT(strlen(pTx->szID) > 0, ABC_CC_Error, "No transaction ID provided");
+    ABC_CHECK_NULL(pTx->pStateInfo);
 
     // Get the master key we will need to decode the transaction data
     // (note that this will also make sure the account and wallet exist)
@@ -1060,7 +1373,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     ABC_CHECK_RET(ABC_TxCreateTxDir(szWalletUUID, pError));
 
     // get the filename for this transaction
-    ABC_CHECK_RET(ABC_TxGetTxFilename(&szFilename, szWalletUUID, pTx->szID, pError));
+    ABC_CHECK_RET(ABC_TxGetTxFilename(&szFilename, szWalletUUID, pTx->szID, pTx->pStateInfo->bInternal, pError));
 
     // save out the transaction object to a file encrypted with the master key
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, MK, ABC_CryptoType_AES256, szFilename, pError));
@@ -1096,6 +1409,10 @@ tABC_CC ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *
 
     // add the creation date to the state object
     retVal = json_object_set_new(pJSON_State, JSON_TX_CREATION_DATE_FIELD, json_integer(pInfo->timeCreation));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the internal boolean (internally created or created due to bitcoin event)
+    retVal = json_object_set_new(pJSON_State, JSON_TX_INTERNAL_FIELD, json_boolean(pInfo->bInternal));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the state object to the master object
@@ -1167,7 +1484,6 @@ exit:
  load address
  save address
  load transactions
- save transactions
  */
 
 /**
