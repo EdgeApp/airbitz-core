@@ -520,7 +520,7 @@ tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pErr
 
     // create the post data
     pJSON_Root = json_pack("{ssss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64, ABC_SERVER_JSON_P1_FIELD, szP1_Base64);
-    szPost = json_dumps(pJSON_Root, JSON_COMPACT);
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
     ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
@@ -945,7 +945,7 @@ tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_
                                ABC_SERVER_JSON_LRA1_FIELD, szAuth_Base64,
                                ABC_SERVER_JSON_NEW_P1_FIELD, szNewP1_Base64);
     }
-    szPost = json_dumps(pJSON_Root, JSON_COMPACT);
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
     ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
@@ -1033,7 +1033,7 @@ tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf
                            ABC_SERVER_JSON_P1_FIELD, szP1_Base64,
                            ABC_SERVER_JSON_LRA1_FIELD, szLRA1_Base64,
                            ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage);
-    szPost = json_dumps(pJSON_Root, JSON_COMPACT);
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
     ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
@@ -1137,7 +1137,7 @@ tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ,
     sprintf(szField, "%s%d", JSON_ACCT_SNRP_FIELD_PREFIX, 4);
     json_object_set(pJSON_Root, szField, (json_t *) pJSON_SNRP4);
 
-    *pszJSON = json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+    *pszJSON = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
@@ -1544,7 +1544,7 @@ tABC_CC ABC_AccountCreateListJSON(const char *szName, const char *szItems, char 
     // set our final json for the questions
     json_object_set(jsonItems, szName, jsonItemArray);
 
-    *pszJSON = json_dumps(jsonItems, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+    *pszJSON = ABC_UtilStringFromJSONObject(jsonItems, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 
 exit:
     if (jsonItems)      json_decref(jsonItems);
@@ -2389,7 +2389,7 @@ tABC_CC ABC_AccountServerGetQuestions(tABC_U08Buf L1, json_t **ppJSON_Q, tABC_Er
 
     // create the post data
     pJSON_Root = json_pack("{ss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64);
-    szPost = json_dumps(pJSON_Root, JSON_COMPACT);
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
     ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
@@ -2483,7 +2483,7 @@ tABC_CC ABC_AccountUpdateQuestionChoices(const char *szUserName, tABC_Error *pEr
     sprintf(szFilename, "%s/%s", szRootDir, ACCOUNT_QUESTIONS_FILENAME);
 
     // get the JSON for the file
-    szJSON = json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+    szJSON = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 
     // write the file
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));

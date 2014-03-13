@@ -19,23 +19,26 @@
 #include "ABC_Account.h"
 #include "ABC_Mutex.h"
 
-#define WALLET_KEY_LENGTH                   AES_256_KEY_LENGTH
+#define WALLET_KEY_LENGTH                       AES_256_KEY_LENGTH
 
-#define WALLET_DIR                          "Wallets"
-#define WALLET_SYNC_DIR                     "sync"
-#define WALLET_TX_DIR                       "Transactions"
-#define WALLET_EMK_PREFIX                   "EMK_"
-#define WALLET_ACCOUNTS_WALLETS_FILENAME    "Wallets.json"
-#define WALLET_NAME_FILENAME                "Wallet_Name.json"
-#define WALLET_ATTRIBUTES_FILENAME          "Attributes.json"
-#define WALLET_CURRENCY_FILENAME            "Currency.json"
-#define WALLET_ACCOUNTS_FILENAME            "Accounts.json"
+#define WALLET_BITCOIN_PRIVATE_SEED_LENGTH      32
 
-#define JSON_WALLET_WALLETS_FIELD           "wallets"
-#define JSON_WALLET_NAME_FIELD              "walletName"
-#define JSON_WALLET_ATTRIBUTES_FIELD        "attributes"
-#define JSON_WALLET_CURRENCY_NUM_FIELD      "num"
-#define JSON_WALLET_ACCOUNTS_FIELD          "accounts"
+#define WALLET_DIR                              "Wallets"
+#define WALLET_SYNC_DIR                         "sync"
+#define WALLET_TX_DIR                           "Transactions"
+#define WALLET_EMK_PREFIX                       "EMK_"
+#define WALLET_ACCOUNTS_WALLETS_FILENAME        "Wallets.json"
+#define WALLET_NAME_FILENAME                    "Wallet_Name.json"
+#define WALLET_ATTRIBUTES_FILENAME              "Attributes.json"
+#define WALLET_CURRENCY_FILENAME                "Currency.json"
+#define WALLET_ACCOUNTS_FILENAME                "Accounts.json"
+#define WALLET_BITCOIN_PRIVATE_SEED_FILENAME    "Bitcoin_Private_Seed.json"
+
+#define JSON_WALLET_WALLETS_FIELD               "wallets"
+#define JSON_WALLET_NAME_FIELD                  "walletName"
+#define JSON_WALLET_ATTRIBUTES_FIELD            "attributes"
+#define JSON_WALLET_CURRENCY_NUM_FIELD          "num"
+#define JSON_WALLET_ACCOUNTS_FIELD              "accounts"
 
 // holds wallet data (including keys) for a given wallet
 typedef struct sWalletData
@@ -51,6 +54,7 @@ typedef struct sWalletData
     unsigned int    numAccounts;
     char            **aszAccounts;
     tABC_U08Buf     MK;
+    tABC_U08Buf     BitcoinPrivateSeed;
 } tWalletData;
 
 // this holds all the of the currently cached wallets
@@ -58,6 +62,7 @@ static unsigned int gWalletsCacheCount = 0;
 static tWalletData **gaWalletsCacheArray = NULL;
 
 static tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo, char **pszUUID, tABC_Error *pError);
+static tABC_CC ABC_WalletCreateAndSetBitcoinPrivateSeed(const char *szUserName, const char *szPassword, const char *szUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletSetCurrencyNum(const char *szUserName, const char *szPassword, const char *szUUID, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, const char *szUUID, const char *szAccount, tABC_Error *pError);
 static tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError);
@@ -94,9 +99,9 @@ tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
     tABC_WalletCreateInfo *pWalletCreateInfo;
     ABC_ALLOC(pWalletCreateInfo, sizeof(tABC_WalletCreateInfo));
 
-    pWalletCreateInfo->szUserName = strdup(szUserName);
-    pWalletCreateInfo->szPassword = strdup(szPassword);
-    pWalletCreateInfo->szWalletName = strdup(szWalletName);
+    ABC_STRDUP(pWalletCreateInfo->szUserName, szUserName);
+    ABC_STRDUP(pWalletCreateInfo->szPassword, szPassword);
+    ABC_STRDUP(pWalletCreateInfo->szWalletName, szWalletName);
     pWalletCreateInfo->currencyNum = currencyNum;
     pWalletCreateInfo->attributes = attributes;
 
@@ -190,8 +195,8 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     // create a new wallet data struct
     ABC_ALLOC(pData, sizeof(tWalletData));
-    pData->szUserName = strdup(pInfo->szUserName);
-    pData->szPassword = strdup(pInfo->szPassword);
+    ABC_STRDUP(pData->szUserName, pInfo->szUserName);
+    ABC_STRDUP(pData->szPassword, pInfo->szPassword);
 
     // get the local directory for this account
     ABC_CHECK_RET(ABC_AccountGetSyncDirName(pData->szUserName, &szAccountSyncDir, pError));
@@ -204,13 +209,11 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     // create wallet guid
     ABC_CHECK_RET(ABC_CryptoGenUUIDString(&szUUID, pError));
-    pData->szUUID = strdup(szUUID);
-    *pszUUID = strdup(szUUID);
-    //printf("Wallet UUID: %s\n", pData->szUUID);
+    ABC_STRDUP(pData->szUUID, szUUID);
+    ABC_STRDUP(*pszUUID, szUUID);
 
     // generate the master key for this wallet - MK_<Wallet_GUID1>
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(WALLET_KEY_LENGTH, &pData->MK, pError));
-    //ABC_UtilHexDumpBuf("MK", pData->MK);
 
     // create encrypted wallet key EMK_<Wallet_UUID1>.json ( AES256(MK_<wallet_guid>, LP2) )
     ABC_CHECK_RET(ABC_CryptoEncryptJSONString(pData->MK, LP2, ABC_CryptoType_AES256, &szEMK_JSON, pError));
@@ -235,7 +238,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     }
     ABC_CHECK_ASSERT((pJSON_Wallets && json_is_array(pJSON_Wallets)), ABC_CC_JSONError, "Error parsing JSON wallets array");
     json_array_append_new(pJSON_Wallets, json_string(pData->szUUID));
-    szJSON = json_dumps(pJSON_Data, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+    szJSON = ABC_UtilStringFromJSONObject(pJSON_Data, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
 
     // TODO: create wallet directory sync key
@@ -259,6 +262,9 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     // all the functions below assume the wallet is in the cache or can be loaded into the cache
 
+    // create and set the bitcoin private seed for this wallet
+    ABC_CHECK_RET(ABC_WalletCreateAndSetBitcoinPrivateSeed(pInfo->szUserName, pInfo->szPassword, szUUID, pError));
+
     // set the wallet name
     ABC_CHECK_RET(ABC_WalletSetName(pInfo->szUserName, pInfo->szPassword, szUUID, pInfo->szWalletName, pError));
 
@@ -271,8 +277,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     // set this account for the wallet's first account
     ABC_CHECK_RET(ABC_WalletAddAccount(pInfo->szUserName, pInfo->szPassword, szUUID, pInfo->szUserName, pError));
 
-    // TODO: Create the Private_Seed.json - bit coin seed
-    // TODO: Create the BitCoin_Keys.json - bit coin keys
+
     // TODO: Create sync info for Wallet directory - .git
 
 exit:
@@ -287,6 +292,48 @@ exit:
 
     return cc;
 }
+
+/**
+ * Generates a random bitcoin private seed and sets it for the given wallet.
+ *
+ * It is important that this is only done once for the wallet as changing this seed
+ * will change the bitcoin addresses generated for it. Therefore, it will check to see if it
+ * currently exists and if it does, it will return an error.
+ */
+static
+tABC_CC ABC_WalletCreateAndSetBitcoinPrivateSeed(const char *szUserName, const char *szPassword, const char *szUUID, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tWalletData *pData = NULL;
+    char *szFilename = NULL;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(szUUID);
+
+    // load the wallet data into the cache
+    ABC_CHECK_RET(ABC_WalletCacheData(szUserName, szPassword, szUUID, &pData, pError));
+
+    // make sure there isn't already a private seed in place
+    ABC_CHECK_ASSERT(ABC_BUF_PTR(pData->BitcoinPrivateSeed) == NULL, ABC_CC_Error, "Attempting to create a new Bitcoin Private Seed when one already exists");
+
+    // generate a random bitcoin private seed
+    ABC_CHECK_RET(ABC_CryptoCreateRandomData(WALLET_BITCOIN_PRIVATE_SEED_LENGTH, &(pData->BitcoinPrivateSeed), pError));
+
+    // TODO: there is a very very small chance that this is not a valid seed, need to check with libwallet and retry if not
+
+    // write the name out to the file
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+    sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_BITCOIN_PRIVATE_SEED_FILENAME);
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(pData->BitcoinPrivateSeed, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
+
+exit:
+    ABC_FREE_STR(szFilename);
+
+    return cc;
+}
+
 
 // sets the name of a wallet
 tABC_CC ABC_WalletSetName(const char *szUserName, const char *szPassword, const char *szUUID, const char *szName, tABC_Error *pError)
@@ -307,7 +354,7 @@ tABC_CC ABC_WalletSetName(const char *szUserName, const char *szPassword, const 
 
     // set the new name
     ABC_FREE_STR(pData->szName);
-    pData->szName = strdup(szName);
+    ABC_STRDUP(pData->szName, szName);
 
     // create the json for the wallet name
     ABC_CHECK_RET(ABC_UtilCreateValueJSONString(szName, JSON_WALLET_NAME_FIELD, &szJSON, pError));
@@ -430,7 +477,7 @@ tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, con
         pData->numAccounts = 0;
         ABC_ALLOC(pData->aszAccounts, sizeof(char *));
     }
-    pData->aszAccounts[pData->numAccounts] = strdup(szAccount);
+    ABC_STRDUP(pData->aszAccounts[pData->numAccounts], szAccount);
     pData->numAccounts++;
 
     // create the json for the accounts
@@ -623,9 +670,9 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
 
         // create a new wallet data struct
         ABC_ALLOC(pData, sizeof(tWalletData));
-        pData->szUserName = strdup(szUserName);
-        pData->szPassword = strdup(szPassword);
-        pData->szUUID = strdup(szUUID);
+        ABC_STRDUP(pData->szUserName, szUserName);
+        ABC_STRDUP(pData->szPassword, szPassword);
+        ABC_STRDUP(pData->szUUID, szUUID);
         ABC_CHECK_RET(ABC_WalletGetDirName(&(pData->szWalletDir), szUUID, pError));
         ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), szUUID, pError));
 
@@ -637,9 +684,18 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         sprintf(szFilename, "%s/%s%s.json", szAccountSyncDir, WALLET_EMK_PREFIX, szUUID);
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, LP2, &(pData->MK), pError));
 
+        // get the bitcoint private seed
+        sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_BITCOIN_PRIVATE_SEED_FILENAME);
+        bool bExists = false;
+        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+        if (true == bExists)
+        {
+            ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &(pData->BitcoinPrivateSeed), pError));
+        }
+
         // get the name
         sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_NAME_FILENAME);
-        bool bExists = false;
+        bExists = false;
         ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
         if (true == bExists)
         {
@@ -649,7 +705,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         }
         else
         {
-            pData->szName = strdup("");
+            ABC_STRDUP(pData->szName, "");
         }
 
         // get the attributes
@@ -844,6 +900,8 @@ void ABC_WalletFreeData(tWalletData *pData)
         pData->aszAccounts = NULL;
 
         ABC_BUF_FREE(pData->MK);
+
+        ABC_BUF_FREE(pData->BitcoinPrivateSeed);
     }
 }
 
@@ -883,9 +941,15 @@ tABC_CC ABC_WalletGetInfo(const char *szUserName,
     ABC_ALLOC(pInfo, sizeof(tABC_WalletInfo));
 
     // copy data from what was cached
-    pInfo->szUUID      = strdup(szUUID);
-    pInfo->szName      = (pData->szName != NULL ? strdup(pData->szName) : NULL);
-    pInfo->szUserName  = (pData->szUserName != NULL ? strdup(pData->szUserName) : NULL);
+    ABC_STRDUP(pInfo->szUUID, szUUID);
+    if (pData->szName != NULL)
+    {
+        ABC_STRDUP(pInfo->szName, pData->szName);
+    }
+    if (pData->szUserName != NULL)
+    {
+        ABC_STRDUP(pInfo->szUserName, pData->szUserName);
+    }
     pInfo->currencyNum = pData->currencyNum;
     pInfo->attributes  = pData->attributes;
 

@@ -215,9 +215,6 @@ static tABC_Currency gaCurrencies[] = {
 static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
 static void *pAsyncBitCoinCallerData = NULL;
 
-static void *ABC_JanssonSecureMalloc(size_t size);
-static void ABC_JanssonSecureFree(void *ptr);
-
 /**
  * Initialize the AirBitz Core library.
  *
@@ -250,7 +247,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "The core library has already been initalized");
 
     // override the alloc and free of janson so we can have a secure method
-    json_set_alloc_funcs(ABC_JanssonSecureMalloc, ABC_JanssonSecureFree);
+    json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
     gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
     pAsyncBitCoinCallerData = pData;
@@ -1671,32 +1668,6 @@ void ABC_FreeRequests(tABC_RequestInfo **aRequests,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_TxFreeRequests(aRequests, count);
-}
-
-
-// this function is created so that we can override the free function of jansson so we can
-// clear memory on a free
-// reference: https://github.com/akheron/jansson/blob/master/doc/apiref.rst#id97
-static void *ABC_JanssonSecureMalloc(size_t size)
-{
-    /* Store the memory area size in the beginning of the block */
-    void *ptr = malloc(size + 8);
-    *((size_t *)ptr) = size;
-    return ptr + 8;
-}
-
-// this function is created so that we can override the free function of jansson so we can
-// clear memory on a free
-// reference: https://github.com/akheron/jansson/blob/master/doc/apiref.rst#id97
-static void ABC_JanssonSecureFree(void *ptr)
-{
-    size_t size;
-
-    ptr -= 8;
-    size = *((size_t *)ptr);
-
-    ABC_UtilGuaranteedMemset(ptr, 0, size + 8);
-    free(ptr);
 }
 
 void tempEventA()

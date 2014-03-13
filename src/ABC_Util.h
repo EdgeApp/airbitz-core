@@ -13,6 +13,7 @@
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <jansson.h>
 #include "ABC.h"
 
 #ifdef __cplusplus
@@ -272,6 +273,11 @@ extern "C" {
 
     void *ABC_UtilGuaranteedMemset(void *v, int c, size_t n);
 
+    void *ABC_UtilJanssonSecureMalloc(size_t size);
+
+    void ABC_UtilJanssonSecureFree(void *ptr);
+
+    char *ABC_UtilStringFromJSONObject(const json_t *pJSON_Data, size_t flags);
 
 #ifdef __cplusplus
 }

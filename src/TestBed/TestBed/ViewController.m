@@ -100,7 +100,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
 
-#if 1 // bitcoin uri
+#if 0 // bitcoin uri
     tABC_BitcoinURIInfo *uri;
     ABC_ParseBitcoinURI("bitcoin:113Pfw4sFqN1T5kXUnKbqZHMJHN9oyjtgD?message=test",
                         &uri,

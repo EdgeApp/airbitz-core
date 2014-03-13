@@ -172,7 +172,7 @@ tABC_CC ABC_CryptoEncryptJSONString(const tABC_U08Buf Data,
     ABC_CHECK_NULL(pszEncDataJSON);
 
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(Data, Key, cryptoType, &jsonRoot, pError));
-    *pszEncDataJSON = json_dumps(jsonRoot, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+    *pszEncDataJSON = ABC_UtilStringFromJSONObject(jsonRoot, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 
 exit:
     if (jsonRoot)     json_decref(jsonRoot);
@@ -332,7 +332,7 @@ tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
     ABC_CHECK_NULL(pJSON_Data);
 
     // create the json string
-    szJSON = json_dumps(pJSON_Data, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+    szJSON = ABC_UtilStringFromJSONObject(pJSON_Data, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
     ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
 
     // write out the data encrypted to a file
