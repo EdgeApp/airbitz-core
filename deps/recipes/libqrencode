@@ -4,8 +4,15 @@ source="http://megaui.net/fukuchi/works/qrencode/qrencode-3.4.3.tar.bz2"
 
 build() {
     cd qrencode-3.4.3
-    rm use/config.guess use/config.sub
+
+    echo Patching...
+    rm use/config.sub
+    mkdir -p m4
+    cat configure.ac  | sed -e "/AM_PATH_SDL/d" > configure.ac.new
+    mv configure.ac.new configure.ac
     ./autogen.sh
+
+    echo Building...
     ./configure --enable-static --disable-shared --host=$cross --without-tools --prefix=$install_dir
     make
     make install
