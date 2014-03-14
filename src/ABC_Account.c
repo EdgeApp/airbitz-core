@@ -142,31 +142,31 @@ tABC_CC ABC_AccountRequestInfoAlloc(tABC_AccountRequestInfo **ppAccountRequestIn
 
     pAccountRequestInfo->requestType = requestType;
 
-    pAccountRequestInfo->szUserName = strdup(szUserName);
+    ABC_STRDUP(pAccountRequestInfo->szUserName, szUserName);
 
     if (NULL != szPassword)
     {
-        pAccountRequestInfo->szPassword = strdup(szPassword);
+        ABC_STRDUP(pAccountRequestInfo->szPassword, szPassword);
     }
 
     if (NULL != szRecoveryQuestions)
     {
-        pAccountRequestInfo->szRecoveryQuestions = strdup(szRecoveryQuestions);
+        ABC_STRDUP(pAccountRequestInfo->szRecoveryQuestions, szRecoveryQuestions);
     }
 
     if (NULL != szRecoveryAnswers)
     {
-        pAccountRequestInfo->szRecoveryAnswers = strdup(szRecoveryAnswers);
+        ABC_STRDUP(pAccountRequestInfo->szRecoveryAnswers, szRecoveryAnswers);
     }
 
     if (NULL != szPIN)
     {
-        pAccountRequestInfo->szPIN = strdup(szPIN);
+        ABC_STRDUP(pAccountRequestInfo->szPIN, szPIN);
     }
 
     if (NULL != szNewPassword)
     {
-        pAccountRequestInfo->szNewPassword = strdup(szNewPassword);
+        ABC_STRDUP(pAccountRequestInfo->szNewPassword, szNewPassword);
     }
 
     pAccountRequestInfo->pData = pData;
@@ -375,9 +375,9 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
 
     // create an account keys struct
     ABC_ALLOC(pKeys, sizeof(tAccountKeys));
-    pKeys->szUserName = strdup(pInfo->szUserName);
-    pKeys->szPassword = strdup(pInfo->szPassword);
-    pKeys->szPIN = strdup(pInfo->szPIN);
+    ABC_STRDUP(pKeys->szUserName, pInfo->szUserName);
+    ABC_STRDUP(pKeys->szPassword, pInfo->szPassword);
+    ABC_STRDUP(pKeys->szPIN, pInfo->szPIN);
 
     // generate the SNRP's
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&(pKeys->pSNRP1), pError));
@@ -825,11 +825,11 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
 
     // set new PIN
     ABC_FREE_STR(pKeys->szPIN);
-    pKeys->szPIN = strdup(pInfo->szPIN);
+    ABC_STRDUP(pKeys->szPIN, pInfo->szPIN);
 
     // set new password
     ABC_FREE_STR(pKeys->szPassword);
-    pKeys->szPassword = strdup(pInfo->szNewPassword);
+    ABC_STRDUP(pKeys->szPassword, pInfo->szNewPassword);
 
     // set new P
     ABC_BUF_FREE(pKeys->P);
@@ -1521,7 +1521,7 @@ tABC_CC ABC_AccountCreateListJSON(const char *szName, const char *szItems, char 
     if (strlen(szItems))
     {
         // change all the newlines into nulls to create a string of them
-        szNewItems = strdup(szItems);
+        ABC_STRDUP(szNewItems, szItems);
         int nItems = 1;
         for (int i = 0; i < strlen(szItems); i++)
         {
@@ -1656,7 +1656,7 @@ tABC_CC ABC_AccountUserForNum(unsigned int AccountNum, char **pszUserName, tABC_
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON account name");
     const char *szUserName = json_string_value(jsonVal);
 
-    *pszUserName = strdup(szUserName);
+    ABC_STRDUP(*pszUserName, szUserName);
 
 exit:
     if (root)               json_decref(root);
@@ -1838,7 +1838,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
         {
             ABC_ALLOC(pKeys, sizeof(tAccountKeys));
             pKeys->accountNum = AccountNum;
-            pKeys->szUserName = strdup(szUserName);
+            ABC_STRDUP(pKeys->szUserName, szUserName);
 
             ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
 
@@ -1903,7 +1903,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             }
 
             // if we got here, then the password was good so we can add what we just calculated to the keys
-            pFinalKeys->szPassword = strdup(szPassword);
+            ABC_STRDUP(pFinalKeys->szPassword, szPassword);
             ABC_BUF_SET(pFinalKeys->P, P);
             ABC_BUF_CLEAR(P);
             ABC_BUF_SET(pFinalKeys->LP, LP);
@@ -2075,7 +2075,7 @@ tABC_CC ABC_AccountSetPIN(const char *szUserName,
 
     // set the new PIN in the cache
     ABC_FREE_STR(pKeys->szPIN);
-    pKeys->szPIN = strdup(szPIN);
+    ABC_STRDUP(pKeys->szPIN, szPIN);
 
     // create the PIN JSON
     ABC_CHECK_RET(ABC_UtilCreateValueJSONString(pKeys->szPIN, JSON_ACCT_PIN_FIELD, &szJSON, pError));
@@ -2164,7 +2164,7 @@ tABC_CC ABC_AccountAddCategory(const char *szUserName,
         ABC_ALLOC(aszCategories, sizeof(char *));
         categoryCount = 0;
     }
-    aszCategories[categoryCount] = strdup(szCategory);
+    ABC_STRDUP(aszCategories[categoryCount], szCategory);
     categoryCount++;
 
     // save out the categories
@@ -2212,7 +2212,7 @@ tABC_CC ABC_AccountRemoveCategory(const char *szUserName,
                 ABC_ALLOC(aszNewCategories, sizeof(char *));
                 newCategoryCount = 0;
             }
-            aszNewCategories[newCategoryCount] = strdup(aszCategories[i]);
+            ABC_STRDUP(aszNewCategories[newCategoryCount], aszCategories[i]);
             newCategoryCount++;
         }
     }
@@ -2565,12 +2565,12 @@ tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountRequestInfo *pInfo,
             // get the category
             json_t *pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_CATEGORY_FIELD);
             ABC_CHECK_ASSERT((pJSON_Obj && json_is_string(pJSON_Obj)), ABC_CC_JSONError, "Error parsing JSON category value for recovery questions");
-            pQuestionChoices->aChoices[i]->szCategory = strdup(json_string_value(pJSON_Obj));
+            ABC_STRDUP(pQuestionChoices->aChoices[i]->szCategory, json_string_value(pJSON_Obj));
 
             // get the question
             pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_QUESTION_FIELD);
             ABC_CHECK_ASSERT((pJSON_Obj && json_is_string(pJSON_Obj)), ABC_CC_JSONError, "Error parsing JSON question value for recovery questions");
-            pQuestionChoices->aChoices[i]->szQuestion = strdup(json_string_value(pJSON_Obj));
+            ABC_STRDUP(pQuestionChoices->aChoices[i]->szQuestion, json_string_value(pJSON_Obj));
 
             // get the min length
             pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_MIN_LENGTH_FIELD);

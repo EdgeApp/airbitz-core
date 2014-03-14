@@ -26,6 +26,7 @@
 #define WALLET_DIR                              "Wallets"
 #define WALLET_SYNC_DIR                         "sync"
 #define WALLET_TX_DIR                           "Transactions"
+#define WALLET_ADDR_DIR                         "Addresses"
 #define WALLET_EMK_PREFIX                       "EMK_"
 #define WALLET_ACCOUNTS_WALLETS_FILENAME        "Wallets.json"
 #define WALLET_NAME_FILENAME                    "Wallet_Name.json"
@@ -622,6 +623,32 @@ tABC_CC ABC_WalletGetTxDirName(char **pszDir, const char *szWalletUUID, tABC_Err
 exit:
     ABC_FREE_STR(szWalletSyncDir);
     
+    return cc;
+}
+
+/**
+ * Gets the address directory for the given wallet UUID.
+ *
+ * @param pszDir the output directory name. The caller must free this.
+ */
+tABC_CC ABC_WalletGetAddressDirName(char **pszDir, const char *szWalletUUID, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szWalletSyncDir = NULL;
+
+    ABC_CHECK_NULL(pszDir);
+    ABC_CHECK_NULL(szWalletUUID);
+
+    ABC_CHECK_RET(ABC_WalletGetSyncDirName(&szWalletSyncDir, szWalletUUID, pError));
+
+    ABC_ALLOC(*pszDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_CHECK_NULL(*pszDir);
+    sprintf(*pszDir, "%s/%s", szWalletSyncDir, WALLET_ADDR_DIR);
+
+exit:
+    ABC_FREE_STR(szWalletSyncDir);
+
     return cc;
 }
 

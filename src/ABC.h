@@ -91,7 +91,9 @@ extern "C" {
         /** Failed to parse input text */
         ABC_CC_ParseError = 29,
         /** Invalid wallet ID */
-        ABC_CC_InvalidWalletID = 30
+        ABC_CC_InvalidWalletID = 30,
+        /** Request (address) not found */
+        ABC_CC_NoRequest = 31
     } tABC_CC;
 
     /**

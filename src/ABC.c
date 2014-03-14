@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <jansson.h>
-#include <string.h>
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Account.h"
@@ -640,7 +639,7 @@ tABC_CC ABC_GetPIN(const char *szUserName,
     tABC_U08Buf PIN;
     ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_PIN, &PIN, pError));
 
-    *pszPIN = strdup((char *)ABC_BUF_PTR(PIN));
+    ABC_STRDUP(*pszPIN, (char *)ABC_BUF_PTR(PIN));
 
 exit:
 

@@ -226,7 +226,7 @@ tABC_CC ABC_UtilGetStringValueFromJSONString(const char *szJSON,
     // get the field
     pJSON_Value = json_object_get(pJSON_Root, szFieldName);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-    *pszValue = strdup(json_string_value(pJSON_Value));
+    ABC_STRDUP(*pszValue, json_string_value(pJSON_Value));
 
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
@@ -312,7 +312,7 @@ tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
         {
             json_t *pJSON_Elem = json_array_get(pJSON_Value, i);
             ABC_CHECK_ASSERT((pJSON_Elem && json_is_string(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON string value");
-            pArrayStrings[i] = strdup(json_string_value(pJSON_Elem));
+            ABC_STRDUP(pArrayStrings[i], json_string_value(pJSON_Elem));
         }
 
         *aszValues = pArrayStrings;

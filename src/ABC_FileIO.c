@@ -93,7 +93,7 @@ tABC_CC ABC_FileIOGetRootDir(char **pszRootDir, tABC_Error *pError)
     ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(pszRootDir);
 
-    *pszRootDir = strdup(gszRootDir);
+    ABC_STRDUP(*pszRootDir, gszRootDir);
 
 exit:
 
@@ -133,7 +133,7 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
             pFileList->apFiles[pFileList->nCount] = NULL;
             ABC_ALLOC(pFileList->apFiles[pFileList->nCount], sizeof(tABC_FileIOFileInfo));
 
-            pFileList->apFiles[pFileList->nCount]->szName = strdup(ent->d_name);
+            ABC_STRDUP(pFileList->apFiles[pFileList->nCount]->szName, ent->d_name);
             if (ent->d_type == DT_UNKNOWN)
             {
                 pFileList->apFiles[pFileList->nCount]->type = ABC_FileIOFileType_Unknown;

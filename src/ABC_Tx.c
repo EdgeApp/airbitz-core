@@ -20,24 +20,36 @@
 #include "ABC_Mutex.h"
 #include "ABC_Wallet.h"
 
-#define SATOSHI_PER_BITCOIN 100000000
+#define SATOSHI_PER_BITCOIN             100000000
 
-#define CURRENCY_NUM_USD    840
+#define CURRENCY_NUM_USD                840
 
-#define TX_INTERNAL_SUFFIX "-int.json" // the transaction was created by our direct action (i.e., send)
-#define TX_EXTERNAL_SUFFIX "-ext.json" // the transaction was created due to events in the block-chain (usually receives)
+#define TX_MAX_ADDR_ID_LENGTH           20 // should just be the string version of the id number - 20 digits should handle it
+
+#define TX_INTERNAL_SUFFIX              "-int.json" // the transaction was created by our direct action (i.e., send)
+#define TX_EXTERNAL_SUFFIX              "-ext.json" // the transaction was created due to events in the block-chain (usually receives)
+
+#define ADDRESS_FILENAME_SSCAN          "%d-%s"     // form of the address filename in sscan format
+
+#define JSON_DETAILS_FIELD              "meta"
+#define JSON_CREATION_DATE_FIELD        "creationDate"
+#define JSON_AMOUNT_SATOSHI_FIELD       "amountSatoshi"
 
 #define JSON_TX_ID_FIELD                "ntxid"
 #define JSON_TX_STATE_FIELD             "state"
-#define JSON_TX_DETAILS_FIELD           "meta"
-#define JSON_TX_CREATION_DATE_FIELD     "creationDate"
 #define JSON_TX_INTERNAL_FIELD          "internal"
-#define JSON_TX_AMOUNT_SATOSHI_FIELD    "amountSatoshi"
 #define JSON_TX_AMOUNT_CURRENCY_FIELD   "amountCurrency"
 #define JSON_TX_NAME_FIELD              "name"
 #define JSON_TX_CATEGORY_FIELD          "category"
 #define JSON_TX_NOTES_FIELD             "notes"
 #define JSON_TX_ATTRIBUTES_FIELD        "attributes"
+
+#define JSON_ADDR_SEQ_FIELD             "seq"
+#define JSON_ADDR_ADDRESS_FIELD         "address"
+#define JSON_ADDR_STATE_FIELD           "state"
+#define JSON_ADDR_RECYCLEABLE_FIELD     "recycleable"
+#define JSON_ADDR_ACTIVITY_FIELD        "activity"
+#define JSON_ADDR_DATE_FIELD            "date"
 
 typedef enum eTxType
 {
@@ -100,6 +112,14 @@ static tABC_CC  ABC_TxSaveTransaction(const char *szUserName, const char *szPass
 static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError);
 static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
+static tABC_CC  ABC_TxLoadAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxAddress **ppAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **ppState, tABC_Error *pError);
+static tABC_CC  ABC_TxSaveAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, const tABC_TxAddress *pAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pInfo, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateAddressFilename(char **pszFilename, const char *szWalletUUID, const tABC_TxAddress *pAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateAddressDir(const char *szWalletUUID, tABC_Error *pError);
+static void     ABC_TxFreeAddress(tABC_TxAddress *pAddress);
+static void     ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo);
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
 
@@ -1281,7 +1301,7 @@ tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error
     ABC_CHECK_ASSERT((jsonState && json_is_object(jsonState)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing state");
 
     // get the creation date
-    json_t *jsonVal = json_object_get(jsonState, JSON_TX_CREATION_DATE_FIELD);
+    json_t *jsonVal = json_object_get(jsonState, JSON_CREATION_DATE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing creation date");
     pInfo->timeCreation = json_integer_value(jsonVal);
 
@@ -1301,7 +1321,7 @@ exit:
 }
 
 /**
- * Decodes the transaction details data from a json transaction object
+ * Decodes the transaction details data from a json transaction or address object
  *
  * @param ppInfo Pointer to store allocated meta info
  *               (it is the callers responsiblity to free this)
@@ -1322,37 +1342,37 @@ tABC_CC ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tAB
     ABC_ALLOC(pDetails, sizeof(tABC_TxDetails));
 
     // get the details object
-    json_t *jsonDetails = json_object_get(pJSON_Obj, JSON_TX_DETAILS_FIELD);
-    ABC_CHECK_ASSERT((jsonDetails && json_is_object(jsonDetails)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing meta data (details)");
+    json_t *jsonDetails = json_object_get(pJSON_Obj, JSON_DETAILS_FIELD);
+    ABC_CHECK_ASSERT((jsonDetails && json_is_object(jsonDetails)), ABC_CC_JSONError, "Error parsing JSON details package - missing meta data (details)");
 
     // get the satoshi field
-    json_t *jsonVal = json_object_get(jsonDetails, JSON_TX_AMOUNT_SATOSHI_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing satoshi amount");
+    json_t *jsonVal = json_object_get(jsonDetails, JSON_AMOUNT_SATOSHI_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing satoshi amount");
     pDetails->amountSatoshi = json_integer_value(jsonVal);
 
     // get the currency field
     jsonVal = json_object_get(jsonDetails, JSON_TX_AMOUNT_CURRENCY_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_real(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing currency amount");
+    ABC_CHECK_ASSERT((jsonVal && json_is_real(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing currency amount");
     pDetails->amountCurrency = json_real_value(jsonVal);
 
     // get the name field
     jsonVal = json_object_get(jsonDetails, JSON_TX_NAME_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing name");
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing name");
     ABC_STRDUP(pDetails->szName, json_string_value(jsonVal));
 
     // get the category field
     jsonVal = json_object_get(jsonDetails, JSON_TX_CATEGORY_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing category");
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing category");
     ABC_STRDUP(pDetails->szCategory, json_string_value(jsonVal));
 
     // get the notes field
     jsonVal = json_object_get(jsonDetails, JSON_TX_NOTES_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing notes");
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing notes");
     ABC_STRDUP(pDetails->szNotes, json_string_value(jsonVal));
 
     // get the attributes field
     jsonVal = json_object_get(jsonDetails, JSON_TX_ATTRIBUTES_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing attributes");
+    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing attributes");
     pDetails->attributes = (unsigned int) json_integer_value(jsonVal);
 
     // assign final result
@@ -1437,7 +1457,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(pTx->szID) > 0, ABC_CC_Error, "No transaction ID provided");
     ABC_CHECK_NULL(pTx->pStateInfo);
 
-    // Get the master key we will need to decode the transaction data
+    // Get the master key we will need to encode the transaction data
     // (note that this will also make sure the account and wallet exist)
     ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
 
@@ -1493,7 +1513,7 @@ tABC_CC ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *
     pJSON_State = json_object();
 
     // add the creation date to the state object
-    retVal = json_object_set_new(pJSON_State, JSON_TX_CREATION_DATE_FIELD, json_integer(pInfo->timeCreation));
+    retVal = json_object_set_new(pJSON_State, JSON_CREATION_DATE_FIELD, json_integer(pInfo->timeCreation));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the internal boolean (internally created or created due to bitcoin event)
@@ -1532,7 +1552,7 @@ tABC_CC ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_
     pJSON_Details = json_object();
 
     // add the satoshi field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_AMOUNT_SATOSHI_FIELD, json_integer(pDetails->amountSatoshi));
+    retVal = json_object_set_new(pJSON_Details, JSON_AMOUNT_SATOSHI_FIELD, json_integer(pDetails->amountSatoshi));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the currency field to the details object
@@ -1556,7 +1576,7 @@ tABC_CC ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the details object to the master object
-    retVal = json_object_set(pJSON_Obj, JSON_TX_DETAILS_FIELD, pJSON_Details);
+    retVal = json_object_set(pJSON_Obj, JSON_DETAILS_FIELD, pJSON_Details);
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
 exit:
@@ -1596,9 +1616,409 @@ int ABC_TxInfoPtrCompare (const void * a, const void * b)
     return 0;
 }
 
+/**
+ * Loads an address from disk
+ *
+ * @param ppAddress  Pointer to location to hold allocated address
+ *                   (it is the callers responsiblity to free this address)
+ */
+static
+tABC_CC ABC_TxLoadAddress(const char *szUserName,
+                          const char *szPassword,
+                          const char *szWalletUUID,
+                          const char *szFilename,
+                          tABC_TxAddress **ppAddress,
+                          tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_U08Buf MK = ABC_BUF_NULL;
+    json_t *pJSON_Root = NULL;
+    tABC_TxAddress *pAddress = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No filename provided");
+    ABC_CHECK_NULL(ppAddress);
+    *ppAddress = NULL;
+
+    // Get the master key we will need to decode the transaction data
+    // (note that this will also make sure the account and wallet exist)
+    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+
+    // make sure the addresss exists
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    ABC_CHECK_ASSERT(bExists == true, ABC_CC_NoRequest, "Request address does not exist");
+
+    // load the json object (load file, decrypt it, create json object
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, MK, &pJSON_Root, pError));
+
+    // start decoding
+
+    ABC_ALLOC(pAddress, sizeof(tABC_TxAddress));
+
+    // get the seq and id
+    json_t *jsonVal = json_object_get(pJSON_Root, JSON_ADDR_SEQ_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing seq");
+    pAddress->seq = json_integer_value(jsonVal);
+    ABC_ALLOC(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
+    sprintf(pAddress->szID, "%lld", pAddress->seq);
+
+    // get the public address field
+    jsonVal = json_object_get(pJSON_Root, JSON_ADDR_ADDRESS_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing address");
+    ABC_STRDUP(pAddress->szPubAddress, json_string_value(jsonVal));
+
+    // get the state object
+    ABC_CHECK_RET(ABC_TxDecodeAddressStateInfo(pJSON_Root, &(pAddress->pStateInfo), pError));
+
+    // get the details object
+    ABC_CHECK_RET(ABC_TxDecodeTxDetails(pJSON_Root, &(pAddress->pDetails), pError));
+
+    // assign final result
+    *ppAddress = pAddress;
+    pAddress = NULL;
+
+exit:
+    if (pJSON_Root) json_decref(pJSON_Root);
+    ABC_TxFreeAddress(pAddress);
+    
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Decodes the address state info from a json address object
+ *
+ * @param ppState Pointer to store allocated state info
+ *               (it is the callers responsiblity to free this)
+ */
+static
+tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **ppState, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tTxAddressStateInfo *pState = NULL;
+
+    ABC_CHECK_NULL(pJSON_Obj);
+    ABC_CHECK_NULL(ppState);
+    *ppState = NULL;
+
+    // allocated the struct
+    ABC_ALLOC(ppState, sizeof(tTxAddressStateInfo));
+
+    // get the state object
+    json_t *jsonState = json_object_get(pJSON_Obj, JSON_ADDR_STATE_FIELD);
+    ABC_CHECK_ASSERT((jsonState && json_is_object(jsonState)), ABC_CC_JSONError, "Error parsing JSON address package - missing state info");
+
+    // get the creation date
+    json_t *jsonVal = json_object_get(jsonState, JSON_CREATION_DATE_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing creation date");
+    pState->timeCreation = json_integer_value(jsonVal);
+
+    // get the internal boolean
+    jsonVal = json_object_get(jsonState, JSON_ADDR_RECYCLEABLE_FIELD);
+    ABC_CHECK_ASSERT((jsonVal && json_is_boolean(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing recycleable boolean");
+    pState->bRecycleable = json_is_true(jsonVal) ? true : false;
+
+    // get the activity array (if it exists)
+    json_t *jsonActivity = json_object_get(jsonState, JSON_ADDR_ACTIVITY_FIELD);
+    if (jsonActivity)
+    {
+        ABC_CHECK_ASSERT(json_is_array(jsonActivity), ABC_CC_JSONError, "Error parsing JSON address package - missing activity array");
+
+        // get the number of elements in the array
+        pState->countActivities = (int) json_array_size(jsonActivity);
+
+        if (pState->countActivities > 0)
+        {
+            ABC_ALLOC(pState->aActivities, sizeof(tTxAddressActivity) * pState->countActivities);
+
+            for (int i = 0; i < pState->countActivities; i++)
+            {
+                json_t *pJSON_Elem = json_array_get(jsonActivity, i);
+                ABC_CHECK_ASSERT((pJSON_Elem && json_is_object(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON address package - missing activity array element");
+
+                // get the tx id
+                jsonVal = json_object_get(pJSON_Elem, JSON_TX_ID_FIELD);
+                ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing activity txid");
+                ABC_STRDUP(pState->aActivities[i].szTxID, json_string_value(jsonVal));
+
+                // get the date field
+                jsonVal = json_object_get(pJSON_Elem, JSON_ADDR_STATE_FIELD);
+                ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing date");
+                pState->aActivities[i].timeCreation = json_integer_value(jsonVal);
+
+                // get the satoshi field
+                jsonVal = json_object_get(pJSON_Elem, JSON_AMOUNT_SATOSHI_FIELD);
+                ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing satoshi amount");
+                pState->aActivities[i].amountSatoshi = json_integer_value(jsonVal);
+            }
+        }
+    }
+    else
+    {
+        pState->countActivities = 0;
+    }
+
+    // assign final result
+    *ppState = pState;
+    pState = NULL;
+
+exit:
+    ABC_TxFreeAddressStateInfo(pState);
+    
+    return cc;
+}
+
+/**
+ * Saves an address to disk
+ *
+ * @param pAddress  Pointer to address data
+ */
+static
+tABC_CC ABC_TxSaveAddress(const char *szUserName,
+                          const char *szPassword,
+                          const char *szWalletUUID,
+                          const tABC_TxAddress *pAddress,
+                          tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_U08Buf MK = ABC_BUF_NULL;
+    char *szFilename = NULL;
+    json_t *pJSON_Root = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(pAddress);
+    ABC_CHECK_NULL(pAddress->szID);
+    ABC_CHECK_ASSERT(strlen(pAddress->szID) > 0, ABC_CC_Error, "No address ID provided");
+    ABC_CHECK_NULL(pAddress->pStateInfo);
+
+    // Get the master key we will need to encode the address data
+    // (note that this will also make sure the account and wallet exist)
+    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+
+    // create the json for the transaction
+    pJSON_Root = json_object();
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_Error, "Could not create address JSON object");
+
+    // set the seq
+    json_object_set_new(pJSON_Root, JSON_ADDR_SEQ_FIELD, json_integer(pAddress->seq));
+
+    // set the address
+    json_object_set_new(pJSON_Root, JSON_ADDR_ADDRESS_FIELD, json_string(pAddress->szPubAddress));
+
+    // set the state info
+    ABC_CHECK_RET(ABC_TxEncodeAddressStateInfo(pJSON_Root, pAddress->pStateInfo, pError));
+
+    // set the details
+    ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pAddress->pDetails, pError));
+
+    // create the address directory if needed
+    ABC_CHECK_RET(ABC_TxCreateAddressDir(szWalletUUID, pError));
+
+    // create the filename for this transaction
+    ABC_CHECK_RET(ABC_TxCreateAddressFilename(&szFilename, szWalletUUID, pAddress, pError));
+
+    // save out the transaction object to a file encrypted with the master key
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, MK, ABC_CryptoType_AES256, szFilename, pError));
+
+exit:
+    ABC_FREE_STR(szFilename);
+    if (pJSON_Root) json_decref(pJSON_Root);
+
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Encodes the address state data into the given json transaction object
+ *
+ * @param pJSON_Obj Pointer to the json object into which the state info is stored.
+ * @param pInfo     Pointer to the state info to store in the json object.
+ */
+static
+tABC_CC ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pInfo, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    json_t *pJSON_State = NULL;
+    json_t *pJSON_ActivityArray = NULL;
+    json_t *pJSON_Activity = NULL;
+    int retVal = 0;
+
+    ABC_CHECK_NULL(pJSON_Obj);
+    ABC_CHECK_NULL(pInfo);
+
+    // create the state object
+    pJSON_State = json_object();
+
+    // add the creation date to the state object
+    retVal = json_object_set_new(pJSON_State, JSON_CREATION_DATE_FIELD, json_integer(pInfo->timeCreation));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the recycleable boolean
+    retVal = json_object_set_new(pJSON_State, JSON_TX_INTERNAL_FIELD, json_boolean(pInfo->bRecycleable));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // create the array object
+    pJSON_ActivityArray = json_array();
+
+    // if there are any activities
+    if ((pInfo->countActivities > 0) && (pInfo->aActivities != NULL))
+    {
+        for (int i = 0; i < pInfo->countActivities; i++)
+        {
+            // create the array object
+            pJSON_Activity = json_object();
+
+            // add the ntxid to the activity object
+            retVal = json_object_set_new(pJSON_Activity, JSON_TX_ID_FIELD, json_string(pInfo->aActivities[i].szTxID));
+            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+            // add the date to the activity object
+            retVal = json_object_set_new(pJSON_Activity, JSON_ADDR_DATE_FIELD, json_integer(pInfo->aActivities[i].timeCreation));
+            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+            // add the amount satoshi to the activity object
+            retVal = json_object_set_new(pJSON_Activity, JSON_AMOUNT_SATOSHI_FIELD, json_integer(pInfo->aActivities[i].amountSatoshi));
+            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+            // add this activity to the activity array
+            json_array_append_new(pJSON_ActivityArray, pJSON_Activity);
+
+            // the appent_new stole the reference so we are done with it
+            pJSON_Activity = NULL;
+        }
+    }
+
+    // add the activity array to the state object
+    retVal = json_object_set(pJSON_State, JSON_ADDR_ACTIVITY_FIELD, pJSON_ActivityArray);
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the state object to the master object
+    retVal = json_object_set(pJSON_Obj, JSON_ADDR_STATE_FIELD, pJSON_State);
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+exit:
+    if (pJSON_State) json_decref(pJSON_State);
+    if (pJSON_ActivityArray) json_decref(pJSON_ActivityArray);
+    if (pJSON_Activity) json_decref(pJSON_Activity);
+
+    return cc;
+}
+
+/**
+ * Gets the filename for a given address
+ *
+ * @param pszFilename Output filename name. The caller must free this.
+ */
+static
+tABC_CC ABC_TxCreateAddressFilename(char **pszFilename, const char *szWalletUUID, const tABC_TxAddress *pAddress, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szAddrDir = NULL;
+
+    ABC_CHECK_NULL(pszFilename);
+    *pszFilename = NULL;
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_NULL(pAddress);
+
+    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
+
+    ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(*pszFilename, "%s/%lld-%s.json", szAddrDir, pAddress->seq, pAddress->szPubAddress);
+
+exit:
+    ABC_FREE_STR(szAddrDir);
+    
+    return cc;
+}
+
+// creates the address directory if needed
+static
+tABC_CC ABC_TxCreateAddressDir(const char *szWalletUUID, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szAddrDir = NULL;
+
+    // get the address directory
+    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
+
+    // if transaction dir doesn't exist, create it
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szAddrDir, &bExists, pError));
+    if (true != bExists)
+    {
+        ABC_CHECK_RET(ABC_FileIOCreateDir(szAddrDir, pError));
+    }
+
+exit:
+    ABC_FREE_STR(szAddrDir);
+
+    return cc;
+}
+
+/**
+ * Free's a ABC_TxFreeAddress struct and all its elements
+ */
+static
+void ABC_TxFreeAddress(tABC_TxAddress *pAddress)
+{
+    if (pAddress)
+    {
+        ABC_FREE_STR(pAddress->szID);
+        ABC_FREE_STR(pAddress->szPubAddress);
+        ABC_TxFreeDetails(pAddress->pDetails);
+        ABC_TxFreeAddressStateInfo(pAddress->pStateInfo);
+
+        ABC_CLEAR_FREE(pAddress, sizeof(tABC_TxAddress));
+    }
+}
+
+/**
+ * Free's a tTxAddressStateInfo struct and all its elements
+ */
+static
+void ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo)
+{
+    if (pInfo)
+    {
+        if ((pInfo->aActivities != NULL) && (pInfo->countActivities > 0))
+        {
+            for (int i = 0; i < pInfo->countActivities; i++)
+            {
+                ABC_FREE_STR(pInfo->aActivities[i].szTxID);
+            }
+            ABC_CLEAR_FREE(pInfo->aActivities, sizeof(tTxAddressActivity) * pInfo->countActivities);
+        }
+
+        ABC_CLEAR_FREE(pInfo, sizeof(tTxAddressStateInfo));
+    }
+}
+
 /* TODO: these support functions will be needed
- load address
- save address
+ load addresses
  */
 
 /**
