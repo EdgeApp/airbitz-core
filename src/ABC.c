@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <jansson.h>
+#include <string.h>
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Account.h"

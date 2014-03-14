@@ -16,6 +16,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/dir.h> 
 #include <jansson.h>
 #include "ABC.h"
 #include "ABC_FileIO.h"
