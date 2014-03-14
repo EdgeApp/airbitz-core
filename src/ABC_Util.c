@@ -159,7 +159,7 @@ tABC_CC ABC_UtilCreateArrayJSONString(char   **aszValues,
     // set our final json for the array element
     json_object_set(jsonItems, szFieldName, jsonItemArray);
 
-    *pszJSON = ABC_UtilStringFromJSONObject(jsonItems, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+    *pszJSON = json_dumps(jsonItems, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 
 exit:
     if (jsonItems)      json_decref(jsonItems);

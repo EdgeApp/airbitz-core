@@ -99,6 +99,7 @@ static tABC_CC  ABC_TxCreateTxDir(const char *szWalletUUID, tABC_Error *pError);
 static tABC_CC  ABC_TxSaveTransaction(const char *szUserName, const char *szPassword, const char *szWalletUUID, const tABC_Tx *pTx, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError);
+static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
 
@@ -656,6 +657,30 @@ tABC_CC ABC_TxGetTransactions(const char *szUserName,
     ABC_CHECK_NULL(pCount);
     *pCount = 0;
 
+    // validate the creditials
+    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
+
+#if 0 // TODO: we can take this out once we are creating real transactions
+    // start temp - create a transaction
+    tABC_Tx Tx;
+    char szID[] = "3ba1345764a1a704b97d062b47b55c8632efc4d7c0c8039d78adf8a52bcba4fe";
+    Tx.szID = szID;
+    tABC_TxDetails Details;
+    Details.amountSatoshi = 999;
+    Details.amountCurrency = 9.9;
+    Details.szName = "My Name2";
+    Details.szCategory = "My Category2";
+    Details.szNotes = "My Notes2";
+    Details.attributes = 0x1;
+    Tx.pDetails = &Details;
+    tTxStateInfo State;
+    State.timeCreation = 123;
+    State.bInternal = true;
+    Tx.pStateInfo = &State;
+    ABC_CHECK_RET(ABC_TxSaveTransaction(szUserName, szPassword, szWalletUUID, &Tx, pError));
+    // end temp
+#endif
+
     // get the directory name
     ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
 
@@ -704,7 +729,8 @@ tABC_CC ABC_TxGetTransactions(const char *szUserName,
         }
     }
 
-    // TODO: sort the transactions by creation date using qsort
+    // sort the transactions by creation date using qsort
+    qsort(aTransactions, count, sizeof(tABC_TxInfo *), ABC_TxInfoPtrCompare);
 
     // store final results
     *paTransactions = aTransactions;
@@ -889,6 +915,8 @@ tABC_CC ABC_TxLoadTxAndAppendToArray(const char *szUserName,
 
     tABC_Tx *pTx = NULL;
     tABC_TxInfo *pTransaction = NULL;
+    tABC_TxInfo **aTransactions = NULL;
+    unsigned int count = 0;
 
 
     ABC_CHECK_NULL(szUserName);
@@ -901,6 +929,10 @@ tABC_CC ABC_TxLoadTxAndAppendToArray(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No transaction filename provided");
     ABC_CHECK_NULL(paTransactions);
     ABC_CHECK_NULL(pCount);
+
+    // hold on to current values
+    count = *pCount;
+    aTransactions = *paTransactions;
 
     // load it into the internal transaction structure
     ABC_CHECK_RET(ABC_TxLoadTransaction(szUserName, szPassword, szWalletUUID, szFilename, &pTx, pError));
@@ -917,21 +949,24 @@ tABC_CC ABC_TxLoadTxAndAppendToArray(const char *szUserName,
     pTransaction->timeCreation = pTx->pStateInfo->timeCreation;
 
     // create space for new entry
-    if (*paTransactions == NULL)
+    if (aTransactions == NULL)
     {
-        ABC_ALLOC(*paTransactions, sizeof(tABC_TxInfo *));
-        *pCount = 1;
+        ABC_ALLOC(aTransactions, sizeof(tABC_TxInfo *));
+        count = 1;
     }
     else
     {
-        *pCount = *pCount + 1;
-        ABC_REALLOC(*paTransactions, sizeof(tABC_TxInfo *) * *pCount);
+        count++;
+        ABC_REALLOC(aTransactions, sizeof(tABC_TxInfo *) * count);
     }
 
     // add it to the array
-    tABC_TxInfo **aTransactions = *paTransactions;
-    aTransactions[*pCount - 1] = pTransaction;
+    aTransactions[count - 1] = pTransaction;
     pTransaction = NULL;
+
+    // assign the values to the caller
+    *paTransactions = aTransactions;
+    *pCount = count;
     
 exit:
     ABC_TxFreeTx(pTx);
@@ -1011,7 +1046,8 @@ tABC_CC ABC_TxSetTransactionDetails(const char *szUserName,
     ABC_CHECK_NULL(szID);
     ABC_CHECK_ASSERT(strlen(szID) > 0, ABC_CC_Error, "No transaction ID provided");
 
-    // TODO: set the details for the transaction
+    // validate the creditials
+    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
 
     // find the filename of the existing transaction
 
@@ -1194,9 +1230,11 @@ tABC_CC ABC_TxLoadTransaction(const char *szUserName,
 
     // start decoding
 
+    ABC_ALLOC(pTx, sizeof(tABC_Tx));
+
     // get the id
     json_t *jsonVal = json_object_get(pJSON_Root, JSON_TX_ID_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing id");
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing id");
     ABC_STRDUP(pTx->szID, json_string_value(jsonVal));
 
     // get the state object
@@ -1240,16 +1278,16 @@ tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error
 
     // get the state object
     json_t *jsonState = json_object_get(pJSON_Obj, JSON_TX_STATE_FIELD);
-    ABC_CHECK_ASSERT((jsonState && json_is_object(jsonState)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing state");
+    ABC_CHECK_ASSERT((jsonState && json_is_object(jsonState)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing state");
 
     // get the creation date
     json_t *jsonVal = json_object_get(jsonState, JSON_TX_CREATION_DATE_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing creation date");
+    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing creation date");
     pInfo->timeCreation = json_integer_value(jsonVal);
 
     // get the internal boolean
     jsonVal = json_object_get(jsonState, JSON_TX_INTERNAL_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_boolean(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing internal boolean");
+    ABC_CHECK_ASSERT((jsonVal && json_is_boolean(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing internal boolean");
     pInfo->bInternal = json_is_true(jsonVal) ? true : false;
 
     // assign final result
@@ -1281,40 +1319,40 @@ tABC_CC ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tAB
     *ppDetails = NULL;
 
     // allocated the struct
-    ABC_ALLOC(pDetails, sizeof(pDetails));
+    ABC_ALLOC(pDetails, sizeof(tABC_TxDetails));
 
     // get the details object
     json_t *jsonDetails = json_object_get(pJSON_Obj, JSON_TX_DETAILS_FIELD);
-    ABC_CHECK_ASSERT((jsonDetails && json_is_object(jsonDetails)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing meta data (details)");
+    ABC_CHECK_ASSERT((jsonDetails && json_is_object(jsonDetails)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing meta data (details)");
 
     // get the satoshi field
     json_t *jsonVal = json_object_get(jsonDetails, JSON_TX_AMOUNT_SATOSHI_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing satoshi amount");
+    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing satoshi amount");
     pDetails->amountSatoshi = json_integer_value(jsonVal);
 
     // get the currency field
     jsonVal = json_object_get(jsonDetails, JSON_TX_AMOUNT_CURRENCY_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_real(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing currency amount");
+    ABC_CHECK_ASSERT((jsonVal && json_is_real(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing currency amount");
     pDetails->amountCurrency = json_real_value(jsonVal);
 
     // get the name field
     jsonVal = json_object_get(jsonDetails, JSON_TX_NAME_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing name");
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing name");
     ABC_STRDUP(pDetails->szName, json_string_value(jsonVal));
 
     // get the category field
     jsonVal = json_object_get(jsonDetails, JSON_TX_CATEGORY_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing category");
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing category");
     ABC_STRDUP(pDetails->szCategory, json_string_value(jsonVal));
 
     // get the notes field
     jsonVal = json_object_get(jsonDetails, JSON_TX_NOTES_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing notes");
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing notes");
     ABC_STRDUP(pDetails->szNotes, json_string_value(jsonVal));
 
     // get the attributes field
     jsonVal = json_object_get(jsonDetails, JSON_TX_ATTRIBUTES_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON transaction package - missing attributes");
+    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing attributes");
     pDetails->attributes = (unsigned int) json_integer_value(jsonVal);
 
     // assign final result
@@ -1527,10 +1565,40 @@ exit:
     return cc;
 }
 
+/**
+ * This function is used to support sorting an array of tTxInfo pointers via qsort.
+ * qsort has the following documentation for the required function:
+ *
+ * Pointer to a function that compares two elements.
+ * This function is called repeatedly by qsort to compare two elements. It shall follow the following prototype:
+ *
+ * int compar (const void* p1, const void* p2);
+ *
+ * Taking two pointers as arguments (both converted to const void*). The function defines the order of the elements by returning (in a stable and transitive manner):
+ * return value	meaning
+ * <0	The element pointed by p1 goes before the element pointed by p2
+ * 0	The element pointed by p1 is equivalent to the element pointed by p2
+ * >0	The element pointed by p1 goes after the element pointed by p2
+ *
+ */
+static
+int ABC_TxInfoPtrCompare (const void * a, const void * b)
+{
+    tABC_TxInfo **ppInfoA = (tABC_TxInfo **)a;
+    tABC_TxInfo *pInfoA = (tABC_TxInfo *)*ppInfoA;
+    tABC_TxInfo **ppInfoB = (tABC_TxInfo **)b;
+    tABC_TxInfo *pInfoB = (tABC_TxInfo *)*ppInfoB;
+
+    if (pInfoA->timeCreation < pInfoB->timeCreation) return -1;
+    if (pInfoA->timeCreation == pInfoB->timeCreation) return 0;
+    if (pInfoA->timeCreation > pInfoB->timeCreation) return 1;
+
+    return 0;
+}
+
 /* TODO: these support functions will be needed
  load address
  save address
- load transactions
  */
 
 /**

@@ -104,7 +104,10 @@ extern "C" {
                                    const char *szWalletUUID,
                                    tABC_Error *pError);
 
-
+    tABC_CC ABC_WalletCheckCredentials(const char *szUserName,
+                                       const char *szPassword,
+                                       const char *szUUID,
+                                       tABC_Error *pError);
 
 #ifdef __cplusplus
 }

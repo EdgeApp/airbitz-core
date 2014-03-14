@@ -89,7 +89,9 @@ extern "C" {
         /** Transaction not found */
         ABC_CC_NoTransaction = 28,
         /** Failed to parse input text */
-        ABC_CC_ParseError = 29
+        ABC_CC_ParseError = 29,
+        /** Invalid wallet ID */
+        ABC_CC_InvalidWalletID = 30
     } tABC_CC;
 
     /**

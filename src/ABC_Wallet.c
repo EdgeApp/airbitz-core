@@ -277,6 +277,8 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     // set this account for the wallet's first account
     ABC_CHECK_RET(ABC_WalletAddAccount(pInfo->szUserName, pInfo->szPassword, szUUID, pInfo->szUserName, pError));
 
+    // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
+
 
     // TODO: Create sync info for Wallet directory - .git
 
@@ -676,6 +678,11 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         ABC_CHECK_RET(ABC_WalletGetDirName(&(pData->szWalletDir), szUUID, pError));
         ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), szUUID, pError));
 
+        // make sure this wallet exists
+        bool bExists = false;
+        ABC_CHECK_RET(ABC_FileIOFileExists(pData->szWalletSyncDir, &bExists, pError));
+        ABC_CHECK_ASSERT(bExists == true, ABC_CC_InvalidWalletID, "Wallet does not exist");
+
         // get LP2 for this account
         ABC_CHECK_RET(ABC_AccountGetKey(pData->szUserName, pData->szPassword, ABC_AccountKey_LP2, &LP2, pError));
 
@@ -686,7 +693,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
 
         // get the bitcoint private seed
         sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_BITCOIN_PRIVATE_SEED_FILENAME);
-        bool bExists = false;
+        bExists = false;
         ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
         if (true == bExists)
         {
@@ -1337,6 +1344,36 @@ tABC_CC ABC_WalletGetMK(const char *szUserName, const char *szPassword, const ch
 exit:
 
     ABC_WalletMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Checks if the username, password and Wallet UUID are valid.
+ *
+ * @param szUserName    UserName for validation
+ * @param szPassword    Password for validation
+ * @param szUUID        Wallet UUID
+ */
+tABC_CC ABC_WalletCheckCredentials(const char *szUserName,
+                                   const char *szPassword,
+                                   const char *szUUID,
+                                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+
+    // check that this is a valid user and password
+    ABC_CHECK_RET(ABC_AccountCheckCredentials(szUserName, szPassword, pError));
+
+    // cache up the wallet (this will check that the wallet UUID is valid)
+    tWalletData *pData = NULL;
+    ABC_CHECK_RET(ABC_WalletCacheData(szUserName, szPassword, szUUID, &pData, pError));
+
+exit:
+
     return cc;
 }
 

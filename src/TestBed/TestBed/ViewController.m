@@ -21,6 +21,7 @@
 @property (weak, nonatomic) IBOutlet UILabel     *labelStatus;
 @property (weak, nonatomic) IBOutlet UITextField *textUsername;
 @property (weak, nonatomic) IBOutlet UITextField *textPassword;
+@property (weak, nonatomic) IBOutlet UITextField *textTest;
 
 @property (assign, nonatomic) BOOL      bSuccess;
 @property (nonatomic, strong) NSString  *strReason;
@@ -100,19 +101,60 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
 
+#if 0
+    tABC_TxInfo **aTransactions = NULL;
+    unsigned int nCount = 0;
+    ABC_GetTransactions([self.textUsername.text UTF8String],
+                        [self.textPassword.text UTF8String],
+                        [self.textTest.text UTF8String],
+                        &aTransactions,
+                        &nCount,
+                        &Error);
+    [self printABC_Error:&Error];
+
+    printf("Transactions:\n");
+
+    // list them
+    for (int i = 0; i < nCount; i++)
+    {
+        tABC_TxInfo *pInfo = aTransactions[i];
+
+        printf("Transaction: %s, time: %lld, satoshi: %lld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
+               pInfo->szID,
+               pInfo->timeCreation,
+               pInfo->pDetails->amountSatoshi,
+               pInfo->pDetails->amountCurrency,
+               pInfo->pDetails->szName,
+               pInfo->pDetails->szCategory,
+               pInfo->pDetails->szNotes,
+               pInfo->pDetails->attributes);
+    }
+
+    //ABC_FreeTransactions(aTransactions, nCount);
+
+#endif
+
 #if 0 // bitcoin uri
     tABC_BitcoinURIInfo *uri;
-    ABC_ParseBitcoinURI("bitcoin:113Pfw4sFqN1T5kXUnKbqZHMJHN9oyjtgD?message=test",
-                        &uri,
-                        &Error);
-    printf("Parsing URI:\n");
-    if (uri->szAddress)
-        printf("    address: %s\n", uri->szAddress);
-    printf("    amount: %lld\n", uri->amountSatoshi);
-    if (uri->szLabel)
-        printf("    label: %s\n", uri->szLabel);
-    if (uri->szMessage)
-        printf("    message: %s\n", uri->szMessage);
+    printf("Parsing URI: %s\n", [self.textTest.text UTF8String]);
+    //ABC_ParseBitcoinURI("bitcoin:113Pfw4sFqN1T5kXUnKbqZHMJHN9oyjtgD?message=test", &uri, &Error);
+    ABC_ParseBitcoinURI([self.textTest.text UTF8String], &uri, &Error);
+    [self printABC_Error:&Error];
+
+    if (uri != NULL)
+    {
+        if (uri->szAddress)
+            printf("    address: %s\n", uri->szAddress);
+        printf("    amount: %lld\n", uri->amountSatoshi);
+        if (uri->szLabel)
+            printf("    label: %s\n", uri->szLabel);
+        if (uri->szMessage)
+            printf("    message: %s\n", uri->szMessage);
+    }
+    else
+    {
+        printf("URI parse failed!");
+    }
 #endif
 
 #if 0 // qrcode
@@ -121,7 +163,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
 
     ABC_GenerateRequestQRCode([self.textUsername.text UTF8String],
                               [self.textPassword.text UTF8String],
-                              "walletUUID",
+                              [self.textTest.text UTF8String],
                               "RequestID",
                               &pData,
                               &width,
@@ -208,7 +250,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
 #if 0 // change password with recovery questions
     NSLog(@"Calling Change Password w/Recovery");
     self.labelStatus.text = @"Calling Change Password";
-    ABC_ChangePasswordWithRecoveryAnswers("a", "Answer1\nAnswer2\nAnswer3\nAnswer4\nAnswer5", "b", "2222", ABC_Request_Callback, (__bridge void *)self, &Error);
+    ABC_ChangePasswordWithRecoveryAnswers("a", "Answer1\nAnswer2\nAnswer3\nAnswer4\nAnswer5", "a", "2222", ABC_Request_Callback, (__bridge void *)self, &Error);
     [self printABC_Error:&Error];
 
     if (ABC_CC_Ok == Error.code)
@@ -223,7 +265,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     NSLog(@"Done calling Change Password");
 #endif
 
-#if 1 // list wallets
+#if 0 // list wallets
     tABC_WalletInfo **aWalletInfo = NULL;
     unsigned int nCount;
     ABC_GetWallets([self.textUsername.text UTF8String], [self.textPassword.text UTF8String], &aWalletInfo, &nCount, &Error);
@@ -231,8 +273,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
 
     printf("Wallets:\n");
 
-    // create an array of them in reverse order
-    char **aszWallets = malloc(sizeof(char *) * nCount);
+    // list them
     for (int i = 0; i < nCount; i++)
     {
         tABC_WalletInfo *pInfo = aWalletInfo[i];
@@ -244,8 +285,6 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
                pInfo->currencyNum,
                pInfo->attributes,
                pInfo->balanceSatoshi);
-
-        aszWallets[nCount - i - 1] = strdup(pInfo->szUUID);
     }
 
     ABC_FreeWalletInfoArray(aWalletInfo, nCount);
@@ -487,9 +526,6 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
         printf("%d, %s, %s, %s\n", aCurrencyArray[i].num, aCurrencyArray[i].szCode, aCurrencyArray[i].szDescription, aCurrencyArray[i].szCountries);
     }
 #endif
-
-
-
 }
 
 #pragma mark - Misc Methods
