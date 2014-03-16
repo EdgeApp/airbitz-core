@@ -102,6 +102,7 @@ typedef struct sABC_TxAddress
 static tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo, char **pszUUID, tABC_Error *pError);
 static tABC_CC  ABC_GetAddressFilename(const char *szWalletUUID, const char *szRequestID, char **pszFilename, tABC_Error *pError);
 static tABC_CC  ABC_TxParseAddrFilename(const char *szFilename, char **pszID, char **pszPublicAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxSetAddressRecycle(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, bool bRecyclable, tABC_Error *pError);
 static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *pbEquivalent, tABC_Error *pError);
 static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pType, char **pszBasename, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTxAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
@@ -691,10 +692,9 @@ exit:
     return cc;
 }
 
-
-
 /**
  * Finalizes a previously created receive request.
+ * This is done by setting the recycle bit to false so that the address is not used again.
  *
  * @param szUserName    UserName for the account associated with this request
  * @param szPassword    Password for the account associated with this request
@@ -720,10 +720,8 @@ tABC_CC ABC_TxFinalizeReceiveRequest(const char *szUserName,
     ABC_CHECK_NULL(szRequestID);
     ABC_CHECK_ASSERT(strlen(szRequestID) > 0, ABC_CC_Error, "No request ID provided");
 
-    // TODO: write the real function -
-    /*
-     clears recycle bit
-     */
+    // set the recycle bool to false (not that the request is actually an address internally)
+    ABC_CHECK_RET(ABC_TxSetAddressRecycle(szUserName, szPassword, szWalletUUID, szRequestID, false, pError));
 
 exit:
 
@@ -732,6 +730,7 @@ exit:
 
 /**
  * Cancels a previously created receive request.
+ * This is done by setting the recycle bit to true so that the address can be used again.
  *
  * @param szUserName    UserName for the account associated with this request
  * @param szPassword    Password for the account associated with this request
@@ -757,14 +756,83 @@ tABC_CC ABC_TxCancelReceiveRequest(const char *szUserName,
     ABC_CHECK_NULL(szRequestID);
     ABC_CHECK_ASSERT(strlen(szRequestID) > 0, ABC_CC_Error, "No request ID provided");
 
-    // TODO: write the real function -
-    /*
-     Address as ‘unassociated/reusable’
-     Note: this or recycle bit set means it can be reused but the mark of ‘unassociated/reusable’ helps determine actions of funds come in on the address. (i.e., we can remind the user that they cancelled this request)
-     */
+    // set the recycle bool to true (not that the request is actually an address internally)
+    ABC_CHECK_RET(ABC_TxSetAddressRecycle(szUserName, szPassword, szWalletUUID, szRequestID, true, pError));
 
 exit:
 
+    return cc;
+}
+
+/**
+ * Sets the recycle status on an address as specified
+ *
+ * @param szUserName    UserName for the account associated with this request
+ * @param szPassword    Password for the account associated with this request
+ * @param szWalletUUID  UUID of the wallet associated with this request
+ * @param szAddress     ID of the address
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxSetAddressRecycle(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletUUID,
+                                const char *szAddress,
+                                bool bRecyclable,
+                                tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szFile = NULL;
+    char *szAddrDir = NULL;
+    char *szFilename = NULL;
+    tABC_TxAddress *pAddress = NULL;
+    tABC_TxDetails *pNewDetails = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szAddress);
+    ABC_CHECK_ASSERT(strlen(szAddress) > 0, ABC_CC_Error, "No address ID provided");
+
+    // get the filename for this address
+    ABC_CHECK_RET(ABC_GetAddressFilename(szWalletUUID, szAddress, &szFile, pError));
+
+    // get the directory name
+    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
+
+    // create the full filename
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+    sprintf(szFilename, "%s/%s", szAddrDir, szFile);
+
+    // load the request address
+    ABC_CHECK_RET(ABC_TxLoadAddress(szUserName, szPassword, szWalletUUID, szFilename, &pAddress, pError));
+    ABC_CHECK_NULL(pAddress->pStateInfo);
+
+    // if it isn't already set as required
+    if (pAddress->pStateInfo->bRecycleable != bRecyclable)
+    {
+        // change the recycle boolean
+        ABC_CHECK_NULL(pAddress->pStateInfo);
+        pAddress->pStateInfo->bRecycleable = bRecyclable;
+
+        // write out the address
+        ABC_CHECK_RET(ABC_TxSaveAddress(szUserName, szPassword, szWalletUUID, pAddress, pError));
+    }
+
+exit:
+    ABC_FREE_STR(szFile);
+    ABC_FREE_STR(szAddrDir);
+    ABC_FREE_STR(szFilename);
+    ABC_TxFreeAddress(pAddress);
+    ABC_TxFreeDetails(pNewDetails);
+
+    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 

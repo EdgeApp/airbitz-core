@@ -101,6 +101,26 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
 
+#if 0 // cancel request
+    ABC_CancelReceiveRequest([self.textUsername.text UTF8String],
+                             [self.textPassword.text UTF8String],
+                             [self.textTest.text UTF8String],
+                             "1",
+                             &Error);
+    [self printABC_Error:&Error];
+
+#endif
+
+#if 0 // finalize request
+    ABC_FinalizeReceiveRequest([self.textUsername.text UTF8String],
+                               [self.textPassword.text UTF8String],
+                               [self.textTest.text UTF8String],
+                               "1",
+                               &Error);
+    [self printABC_Error:&Error];
+
+#endif
+
 #if 0 // pending requests and modify the first one
     tABC_RequestInfo **aRequests = NULL;
     unsigned int nCount = 0;
@@ -156,7 +176,6 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
         ABC_FreeTxDetails(pNewDetails);
         
     }
-
 
     ABC_FreeRequests(aRequests, nCount);
 #endif
