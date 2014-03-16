@@ -577,6 +577,12 @@ extern "C" {
     void ABC_FreeRequests(tABC_RequestInfo **aRequests,
                           unsigned int count);
 
+    tABC_CC ABC_DuplicateTxDetails(tABC_TxDetails **ppNewDetails,
+                             const tABC_TxDetails *pOldDetails,
+                             tABC_Error *pError);
+
+    void ABC_FreeTxDetails(tABC_TxDetails *pDetails);
+
     // temp functions
     void tempEventA();
     void tempEventB();

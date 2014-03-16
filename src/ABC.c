@@ -1369,6 +1369,8 @@ exit:
 
 /**
  * Modifies a previously created receive request.
+ * Note: the previous details will be free'ed so if the user is using the previous details for this request
+ * they should not assume they will be valid after this call.
  *
  * @param szUserName    UserName for the account associated with this request
  * @param szPassword    Password for the account associated with this request
@@ -1668,6 +1670,44 @@ void ABC_FreeRequests(tABC_RequestInfo **aRequests,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_TxFreeRequests(aRequests, count);
+}
+
+/**
+ * Duplicates transaction details.
+ * This can be used when changing the details on a transaction.
+ *
+ * @param ppNewDetails  Address to store pointer to copy of details
+ * @param pOldDetails   Ptr to details to copy
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_DuplicateTxDetails(tABC_TxDetails **ppNewDetails,
+                               const tABC_TxDetails *pOldDetails,
+                               tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_TxDupDetails(ppNewDetails, pOldDetails, pError));
+
+exit:
+    
+    return cc;
+}
+
+/**
+ * Frees the given transaction details
+ *
+ * @param pDetails Ptr to details to free
+ */
+void ABC_FreeTxDetails(tABC_TxDetails *pDetails)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    ABC_TxFreeDetails(pDetails);
 }
 
 void tempEventA()

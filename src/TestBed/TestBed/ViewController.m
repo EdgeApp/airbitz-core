@@ -101,7 +101,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
 
-#if 0 // pending requests
+#if 0 // pending requests and modify the first one
     tABC_RequestInfo **aRequests = NULL;
     unsigned int nCount = 0;
     ABC_GetPendingRequests([self.textUsername.text UTF8String],
@@ -114,23 +114,49 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
 
     printf("Pending requests:\n");
 
-    // list them
-    for (int i = 0; i < nCount; i++)
+    if (nCount > 0)
     {
-        tABC_RequestInfo *pInfo = aRequests[i];
 
-        printf("Pending Request: %s, time: %lld, satoshi: %lld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u, existing_satoshi: %lld, owed_satoshi: %lld\n",
-               pInfo->szID,
-               pInfo->timeCreation,
-               pInfo->pDetails->amountSatoshi,
-               pInfo->pDetails->amountCurrency,
-               pInfo->pDetails->szName,
-               pInfo->pDetails->szCategory,
-               pInfo->pDetails->szNotes,
-               pInfo->pDetails->attributes,
-               pInfo->amountSatoshi,
-               pInfo->owedSatoshi);
+        // list them
+        for (int i = 0; i < nCount; i++)
+        {
+            tABC_RequestInfo *pInfo = aRequests[i];
+
+            printf("Pending Request: %s, time: %lld, satoshi: %lld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u, existing_satoshi: %lld, owed_satoshi: %lld\n",
+                   pInfo->szID,
+                   pInfo->timeCreation,
+                   pInfo->pDetails->amountSatoshi,
+                   pInfo->pDetails->amountCurrency,
+                   pInfo->pDetails->szName,
+                   pInfo->pDetails->szCategory,
+                   pInfo->pDetails->szNotes,
+                   pInfo->pDetails->attributes,
+                   pInfo->amountSatoshi,
+                   pInfo->owedSatoshi);
+        }
+
+        // take the first one and duplicate the info
+        tABC_TxDetails *pNewDetails;
+        ABC_DuplicateTxDetails(&pNewDetails, aRequests[0]->pDetails, &Error);
+        [self printABC_Error:&Error];
+
+        // change the attributes
+        pNewDetails->attributes++;
+
+        // write it back out
+        ABC_ModifyReceiveRequest([self.textUsername.text UTF8String],
+                                 [self.textPassword.text UTF8String],
+                                 [self.textTest.text UTF8String],
+                                 aRequests[0]->szID,
+                                 pNewDetails,
+                                 &Error);
+        [self printABC_Error:&Error];
+
+        // free the duplicated details
+        ABC_FreeTxDetails(pNewDetails);
+        
     }
+
 
     ABC_FreeRequests(aRequests, nCount);
 #endif

@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <qrencode.h>
 #include "ABC_Tx.h"
 #include "ABC_Util.h"
@@ -30,7 +31,9 @@
 #define TX_INTERNAL_SUFFIX              "-int.json" // the transaction was created by our direct action (i.e., send)
 #define TX_EXTERNAL_SUFFIX              "-ext.json" // the transaction was created due to events in the block-chain (usually receives)
 
-#define ADDRESS_FILENAME_SSCAN          "%d-%s"     // form of the address filename in sscan format
+#define ADDRESS_FILENAME_SEPARATOR      '-'
+#define ADDRESS_FILENAME_SUFFIX         ".json"
+#define ADDRESS_FILENAME_MIN_LEN        8 // <id>-<public_addr>.json
 
 #define JSON_DETAILS_FIELD              "meta"
 #define JSON_CREATION_DATE_FIELD        "creationDate"
@@ -97,8 +100,8 @@ typedef struct sABC_TxAddress
 } tABC_TxAddress;
 
 static tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo, char **pszUUID, tABC_Error *pError);
-static tABC_CC  ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pOldDetails, tABC_Error *pError);
-static void     ABC_TxFreeDetails(tABC_TxDetails *pDetails);
+static tABC_CC  ABC_GetAddressFilename(const char *szWalletUUID, const char *szRequestID, char **pszFilename, tABC_Error *pError);
+static tABC_CC  ABC_TxParseAddrFilename(const char *szFilename, char **pszID, char **pszPublicAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *pbEquivalent, tABC_Error *pError);
 static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pType, char **pszBasename, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTxAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
@@ -127,7 +130,7 @@ static void     ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int co
 static tABC_CC  ABC_TxGetAddresses(const char *szUserName, const char *szPassword, const char *szWalletUUID, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static int      ABC_TxAddrPtrCompare(const void * a, const void * b);
 static tABC_CC  ABC_TxLoadAddressAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
-static void     ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count);
+//static void     ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count);
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
 
@@ -286,7 +289,6 @@ exit:
 /**
  * Duplicate a TX details struct
  */
-static
 tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pOldDetails, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -327,7 +329,6 @@ exit:
 /**
  * Free a TX details struct
  */
-static
 void ABC_TxFreeDetails(tABC_TxDetails *pDetails)
 {
     if (pDetails)
@@ -478,6 +479,8 @@ exit:
 
 /**
  * Modifies a previously created receive request.
+ * Note: the previous details will be free'ed so if the user is using the previous details for this request
+ * they should not assume they will be valid after this call.
  *
  * @param szUserName    UserName for the account associated with this request
  * @param szPassword    Password for the account associated with this request
@@ -496,6 +499,13 @@ tABC_CC ABC_TxModifyReceiveRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    char *szFile = NULL;
+    char *szAddrDir = NULL;
+    char *szFilename = NULL;
+    tABC_TxAddress *pAddress = NULL;
+    tABC_TxDetails *pNewDetails = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -506,15 +516,182 @@ tABC_CC ABC_TxModifyReceiveRequest(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szRequestID) > 0, ABC_CC_Error, "No request ID provided");
     ABC_CHECK_NULL(pDetails);
 
-    // TODO: write the real function -
-    /*
-     modifies the meta data for the Address of the given request
-     */
+    // get the filename for this request (note: interally requests are addresses)
+    ABC_CHECK_RET(ABC_GetAddressFilename(szWalletUUID, szRequestID, &szFile, pError));
+
+    // get the directory name
+    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
+
+    // create the full filename
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+    sprintf(szFilename, "%s/%s", szAddrDir, szFile);
+
+    // load the request address
+    ABC_CHECK_RET(ABC_TxLoadAddress(szUserName, szPassword, szWalletUUID, szFilename, &pAddress, pError));
+
+    // copy the new details
+    ABC_CHECK_RET(ABC_TxDupDetails(&pNewDetails, pDetails, pError));
+
+    // free the old details on this address
+    ABC_TxFreeDetails(pAddress->pDetails);
+
+    // set the new details
+    pAddress->pDetails = pNewDetails;
+    pNewDetails = NULL;
+
+    // write out the address
+    ABC_CHECK_RET(ABC_TxSaveAddress(szUserName, szPassword, szWalletUUID, pAddress, pError));
+
+exit:
+    ABC_FREE_STR(szFile);
+    ABC_FREE_STR(szAddrDir);
+    ABC_FREE_STR(szFilename);
+    ABC_TxFreeAddress(pAddress);
+    ABC_TxFreeDetails(pNewDetails);
+
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Gets the filename for a given address based upon the address id
+ *
+ * @param szWalletUUID  UUID of the wallet associated with this address
+ * @param szAddressID   ID of this address
+ * @param pszFilename   Address to store pointer to filename
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
+                               const char *szAddressID,
+                               char **pszFilename,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szAddrDir = NULL;
+    tABC_FileIOList *pFileList = NULL;
+
+    char *szID = NULL;
+
+    ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szAddressID);
+    ABC_CHECK_ASSERT(strlen(szAddressID) > 0, ABC_CC_Error, "No address UUID provided");
+    ABC_CHECK_NULL(pszFilename);
+    *pszFilename = NULL;
+
+    // get the directory name
+    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
+
+    // Make sure there is an addresses directory
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szAddrDir, &bExists, pError));
+    ABC_CHECK_ASSERT(bExists == true, ABC_CC_Error, "No existing requests/addresses");
+
+    // get all the files in the address directory
+    ABC_FileIOCreateFileList(&pFileList, szAddrDir, NULL);
+    for (int i = 0; i < pFileList->nCount; i++)
+    {
+        // if this file is a normal file
+        if (pFileList->apFiles[i]->type == ABC_FileIOFileType_Regular)
+        {
+            // parse the elements from the filename
+            ABC_FREE_STR(szID);
+            ABC_CHECK_RET(ABC_TxParseAddrFilename(pFileList->apFiles[i]->szName, &szID, NULL, pError));
+
+            // if the id matches
+            if (strcmp(szID, szAddressID) == 0)
+            {
+                // copy over the filename
+                ABC_STRDUP(*pszFilename, pFileList->apFiles[i]->szName);
+                break;
+            }
+        }
+    }
+
+exit:
+    ABC_FREE_STR(szAddrDir);
+    ABC_FREE_STR(szID);
+    ABC_FileIOFreeFileList(pFileList);
+
+    ABC_FileIOMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Parses out the id and public address from an address filename
+ *
+ * @param szFilename        Filename to parse
+ * @param pszID             Location to store allocated id (caller must free) - optional
+ * @param pszPublicAddress  Location to store allocated public address(caller must free) - optional
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxParseAddrFilename(const char *szFilename,
+                                char **pszID,
+                                char **pszPublicAddress,
+                                tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    // if the filename is long enough
+    if (strlen(szFilename) >= ADDRESS_FILENAME_MIN_LEN)
+    {
+        int suffixPos = (int) strlen(szFilename) - (int) strlen(ADDRESS_FILENAME_SUFFIX);
+        char *szSuffix = (char *) &(szFilename[suffixPos]);
+
+        // if the filename ends with the right suffix
+        if (strcmp(ADDRESS_FILENAME_SUFFIX, szSuffix) == 0)
+        {
+            int nPosSeparator = 0;
+
+            // go through all the characters up to the separator
+            for (int i = 0; i < strlen(szFilename); i++)
+            {
+                // check for id separator
+                if (szFilename[i] == ADDRESS_FILENAME_SEPARATOR)
+                {
+                    // found it
+                    nPosSeparator = i;
+                    break;
+                }
+
+                // if no separator, then better be a digit
+                if (isdigit(szFilename[i]) == 0)
+                {
+                    // Ran into a non-digit! - no good
+                    break;
+                }
+            }
+
+            // if we found a legal separator position
+            if (nPosSeparator > 0)
+            {
+                if (pszID != NULL)
+                {
+                    ABC_ALLOC(*pszID, nPosSeparator + 1);
+                    strncpy(*pszID, szFilename, nPosSeparator);
+                }
+
+                if (pszPublicAddress != NULL)
+                {
+                    ABC_STRDUP(*pszPublicAddress, &(szFilename[nPosSeparator + 1]))
+                    (*pszPublicAddress)[strlen(*pszPublicAddress) - strlen(ADDRESS_FILENAME_SUFFIX)] = '\0';
+                }
+            }
+        }
+    }
 
 exit:
 
     return cc;
 }
+
+
 
 /**
  * Finalizes a previously created receive request.
@@ -949,7 +1126,6 @@ tABC_CC ABC_TxLoadTxAndAppendToArray(const char *szUserName,
     tABC_TxInfo *pTransaction = NULL;
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
-
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
@@ -2416,6 +2592,7 @@ exit:
     return cc;
 }
 
+#if 0
 /**
  * For debug purposes, this prints all of the addresses in the given array
  */
@@ -2495,6 +2672,7 @@ void ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count)
         ABC_DebugLog("No addresses");
     }
 }
+#endif
 
 /**
  * Locks the mutex

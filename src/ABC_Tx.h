@@ -41,6 +41,11 @@ extern "C" {
         tABC_Error  errorInfo;
     } tABC_TxSendInfo;
 
+    tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
+                             const tABC_TxDetails *pOldDetails,
+                             tABC_Error *pError);
+
+    void ABC_TxFreeDetails(tABC_TxDetails *pDetails);
 
     tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
                                 const char *szUserName,
