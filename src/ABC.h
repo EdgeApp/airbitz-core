@@ -324,9 +324,13 @@ extern "C" {
         /** request identifier */
         char *szID;
         /** time of creation */
-        int64_t timeCreate;
+        int64_t timeCreation;
         /** request details */
         tABC_TxDetails *pDetails;
+        /** satoshi amount in address */
+        int64_t amountSatoshi;
+        /** satoshi still owed */
+        int64_t owedSatoshi;
     } tABC_RequestInfo;
 
     /**

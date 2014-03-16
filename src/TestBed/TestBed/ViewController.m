@@ -101,7 +101,41 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
 
-#if 0
+#if 0 // pending requests
+    tABC_RequestInfo **aRequests = NULL;
+    unsigned int nCount = 0;
+    ABC_GetPendingRequests([self.textUsername.text UTF8String],
+                           [self.textPassword.text UTF8String],
+                           [self.textTest.text UTF8String],
+                           &aRequests,
+                           &nCount,
+                           &Error);
+    [self printABC_Error:&Error];
+
+    printf("Pending requests:\n");
+
+    // list them
+    for (int i = 0; i < nCount; i++)
+    {
+        tABC_RequestInfo *pInfo = aRequests[i];
+
+        printf("Pending Request: %s, time: %lld, satoshi: %lld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u, existing_satoshi: %lld, owed_satoshi: %lld\n",
+               pInfo->szID,
+               pInfo->timeCreation,
+               pInfo->pDetails->amountSatoshi,
+               pInfo->pDetails->amountCurrency,
+               pInfo->pDetails->szName,
+               pInfo->pDetails->szCategory,
+               pInfo->pDetails->szNotes,
+               pInfo->pDetails->attributes,
+               pInfo->amountSatoshi,
+               pInfo->owedSatoshi);
+    }
+
+    ABC_FreeRequests(aRequests, nCount);
+#endif
+
+#if 0 // transactions
     tABC_TxInfo **aTransactions = NULL;
     unsigned int nCount = 0;
     ABC_GetTransactions([self.textUsername.text UTF8String],
@@ -130,7 +164,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
                pInfo->pDetails->attributes);
     }
 
-    //ABC_FreeTransactions(aTransactions, nCount);
+    ABC_FreeTransactions(aTransactions, nCount);
 
 #endif
 

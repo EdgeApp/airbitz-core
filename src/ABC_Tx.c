@@ -19,6 +19,7 @@
 #include "ABC_Account.h"
 #include "ABC_Mutex.h"
 #include "ABC_Wallet.h"
+#include "ABC_Debug.h"
 
 #define SATOSHI_PER_BITCOIN             100000000
 
@@ -102,6 +103,8 @@ static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *p
 static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pType, char **pszBasename, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTxAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
 static void     ABC_TxFreeTransaction(tABC_TxInfo *pTransactions);
+static tABC_CC  ABC_TxGetAddressOwed(tABC_TxAddress *pAddr, int64_t *pSatoshiBalance, tABC_Error *pError);
+static void     ABC_TxFreeRequest(tABC_RequestInfo *pRequest);
 static tABC_CC  ABC_TxCreateTxFilename(char **pszFilename, const char *szWalletUUID, const char *szTxID, bool bInternal, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransaction(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError);
@@ -120,6 +123,11 @@ static tABC_CC  ABC_TxCreateAddressFilename(char **pszFilename, const char *szWa
 static tABC_CC  ABC_TxCreateAddressDir(const char *szWalletUUID, tABC_Error *pError);
 static void     ABC_TxFreeAddress(tABC_TxAddress *pAddress);
 static void     ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo);
+static void     ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count);
+static tABC_CC  ABC_TxGetAddresses(const char *szUserName, const char *szPassword, const char *szWalletUUID, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
+static int      ABC_TxAddrPtrCompare(const void * a, const void * b);
+static tABC_CC  ABC_TxLoadAddressAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
+static void     ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count);
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
 
@@ -749,8 +757,12 @@ tABC_CC ABC_TxGetTransactions(const char *szUserName,
         }
     }
 
-    // sort the transactions by creation date using qsort
-    qsort(aTransactions, count, sizeof(tABC_TxInfo *), ABC_TxInfoPtrCompare);
+    // if we have more than one, then let's sort them
+    if (count > 1)
+    {
+        // sort the transactions by creation date using qsort
+        qsort(aTransactions, count, sizeof(tABC_TxInfo *), ABC_TxInfoPtrCompare);
+    }
 
     // store final results
     *paTransactions = aTransactions;
@@ -1134,6 +1146,13 @@ tABC_CC ABC_TxGetPendingRequests(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_TxAddress **aAddresses = NULL;
+    unsigned int count = 0;
+    tABC_RequestInfo **aRequests = NULL;
+    unsigned int countPending = 0;
+    tABC_RequestInfo *pRequest = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -1145,11 +1164,156 @@ tABC_CC ABC_TxGetPendingRequests(const char *szUserName,
     ABC_CHECK_NULL(pCount);
     *pCount = 0;
 
-    // TODO: get the pending requests for this wallet
+    // start by retrieving all address for this wallet
+    ABC_CHECK_RET(ABC_TxGetAddresses(szUserName, szPassword, szWalletUUID, &aAddresses, &count, pError));
+
+    // if there are any addresses
+    if (count > 0)
+    {
+        // print out the addresses - debug
+        //ABC_TxPrintAddresses(aAddresses, count);
+
+        // walk through all the addresses looking for those with outstanding balances
+        for (int i = 0; i < count; i++)
+        {
+            tABC_TxAddress *pAddr = aAddresses[i];
+            ABC_CHECK_NULL(pAddr);
+            tABC_TxDetails  *pDetails = pAddr->pDetails;
+
+            // if this address has user details associated with it (i.e., was created by the user)
+            if (pDetails)
+            {
+                tTxAddressStateInfo *pState = pAddr->pStateInfo;
+                ABC_CHECK_NULL(pState);
+
+                // if this is not a recyclable address (i.e., it was specifically used for a transaction)
+                if (pState->bRecycleable == false)
+                {
+                    // if this address was used for a request of funds (i.e., not a send)
+                    int64_t requestSatoshi = pDetails->amountSatoshi;
+                    if (requestSatoshi >= 0)
+                    {
+                        // get the outstanding balanace on this request/address
+                        int64_t owedSatoshi = 0;
+                        ABC_CHECK_RET(ABC_TxGetAddressOwed(pAddr, &owedSatoshi, pError));
+
+                        // if money is still owed
+                        if (owedSatoshi > 0)
+                        {
+                            // create this request
+                            ABC_ALLOC(pRequest, sizeof(tABC_RequestInfo));
+                            ABC_STRDUP(pRequest->szID, pAddr->szID);
+                            pRequest->timeCreation = pState->timeCreation;
+                            pRequest->owedSatoshi = owedSatoshi;
+                            pRequest->amountSatoshi = pDetails->amountSatoshi - owedSatoshi;
+                            pRequest->pDetails = pDetails; // steal the info as is
+                            pDetails = NULL;
+                            pAddr->pDetails = NULL; // we are taking this for our own so later we don't want to free it
+
+                            // increase the array size
+                            if (countPending > 0)
+                            {
+                                countPending++;
+                                ABC_REALLOC(aRequests, countPending * sizeof(tABC_RequestInfo *));
+                            }
+                            else
+                            {
+                                ABC_ALLOC(aRequests, sizeof(tABC_RequestInfo *));
+                                countPending = 1;
+                            }
+
+                            // add it to the array
+                            aRequests[countPending - 1] = pRequest;
+                            pRequest = NULL;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // assign final results
+    *paRequests = aRequests;
+    aRequests = NULL;
+    *pCount = countPending;
+    countPending = 0;
 
 exit:
+    ABC_TxFreeAddresses(aAddresses, count);
+    ABC_TxFreeRequests(aRequests, countPending);
+    ABC_TxFreeRequest(pRequest);
+
+    ABC_TxMutexUnlock(NULL);
     return cc;
 }
+
+/**
+ * Given an address, this function returns the balance remaining on the address
+ * It does this by checking the activity amounts against the initial request amount.
+ * Negative indicates satoshi is still 'owed' on the address, 'positive' means excess was paid.
+ *
+ * @param pAddr          Address to check
+ * @param pSatoshiOwed   Ptr into which owed amount is stored
+ * @param pError         A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxGetAddressOwed(tABC_TxAddress *pAddr,
+                             int64_t *pSatoshiOwed,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(pSatoshiOwed);
+    *pSatoshiOwed = 0;
+    ABC_CHECK_NULL(pAddr);
+    tABC_TxDetails  *pDetails = pAddr->pDetails;
+    ABC_CHECK_NULL(pDetails);
+    tTxAddressStateInfo *pState = pAddr->pStateInfo;
+    ABC_CHECK_NULL(pState);
+
+    // start with the amount requested
+    int64_t satoshiOwed = pDetails->amountSatoshi;
+
+    // if any activities have occured on this address
+    if ((pState->aActivities != NULL) && (pState->countActivities > 0))
+    {
+        for (int i = 0; i < pState->countActivities; i++)
+        {
+            // if this activity is money paid on the address
+            if (pState->aActivities[i].amountSatoshi > 0)
+            {
+                // remove that from the request amount
+                satoshiOwed -= pState->aActivities[i].amountSatoshi;
+            }
+        }
+    }
+
+    // assign final balance
+    *pSatoshiOwed = satoshiOwed;
+
+exit:
+
+    return cc;
+}
+
+
+/**
+ * Frees the given requets
+ *
+ * @param pRequest Ptr to request to free
+ */
+static
+void ABC_TxFreeRequest(tABC_RequestInfo *pRequest)
+{
+    if (pRequest)
+    {
+        ABC_TxFreeDetails(pRequest->pDetails);
+
+        ABC_CLEAR_FREE(pRequest, sizeof(tABC_RequestInfo));
+    }
+}
+
 
 /**
  * Frees the given array of requets
@@ -1164,11 +1328,7 @@ void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
     {
         for (int i = 0; i < count; i++)
         {
-            tABC_RequestInfo *pInfo = aRequests[i];
-
-            ABC_TxFreeDetails(pInfo->pDetails);
-
-            ABC_CLEAR_FREE(pInfo, sizeof(tABC_RequestInfo));
+            ABC_TxFreeRequest(aRequests[i]);
         }
 
         ABC_FREE(aRequests);
@@ -1714,7 +1874,7 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
     *ppState = NULL;
 
     // allocated the struct
-    ABC_ALLOC(ppState, sizeof(tTxAddressStateInfo));
+    ABC_ALLOC(pState, sizeof(tTxAddressStateInfo));
 
     // get the state object
     json_t *jsonState = json_object_get(pJSON_Obj, JSON_ADDR_STATE_FIELD);
@@ -1754,7 +1914,7 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
                 ABC_STRDUP(pState->aActivities[i].szTxID, json_string_value(jsonVal));
 
                 // get the date field
-                jsonVal = json_object_get(pJSON_Elem, JSON_ADDR_STATE_FIELD);
+                jsonVal = json_object_get(pJSON_Elem, JSON_ADDR_DATE_FIELD);
                 ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing date");
                 pState->aActivities[i].timeCreation = json_integer_value(jsonVal);
 
@@ -1876,7 +2036,7 @@ tABC_CC ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pIn
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the recycleable boolean
-    retVal = json_object_set_new(pJSON_State, JSON_TX_INTERNAL_FIELD, json_boolean(pInfo->bRecycleable));
+    retVal = json_object_set_new(pJSON_State, JSON_ADDR_RECYCLEABLE_FIELD, json_boolean(pInfo->bRecycleable));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // create the array object
@@ -2017,9 +2177,324 @@ void ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo)
     }
 }
 
-/* TODO: these support functions will be needed
- load addresses
+/**
+ * Free's an array of  ABC_TxFreeAddress structs
  */
+static
+void ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count)
+{
+    if ((aAddresses != NULL) && (count > 0))
+    {
+        for (int i = 0; i < count; i++)
+        {
+            ABC_TxFreeAddress(aAddresses[i]);
+        }
+
+        ABC_CLEAR_FREE(aAddresses, sizeof(tABC_TxAddress *) * count);
+    }
+}
+
+/**
+ * Gets the addresses associated with the given wallet.
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param paAddresses       Pointer to store array of addresses info pointers
+ * @param pCount            Pointer to store number of addresses
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxGetAddresses(const char *szUserName,
+                           const char *szPassword,
+                           const char *szWalletUUID,
+                           tABC_TxAddress ***paAddresses,
+                           unsigned int *pCount,
+                           tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szAddrDir = NULL;
+    tABC_FileIOList *pFileList = NULL;
+    char *szFilename = NULL;
+    tABC_TxAddress **aAddresses = NULL;
+    unsigned int count = 0;
+
+    ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(paAddresses);
+    *paAddresses = NULL;
+    ABC_CHECK_NULL(pCount);
+    *pCount = 0;
+
+    // validate the creditials
+    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
+
+#if 0 // TODO: we can take this out once we are creating real addresses
+    // start temp - create an address
+    tABC_TxAddress Addr;
+    Addr.seq = 3;
+    Addr.szID = "3";
+    Addr.szPubAddress = "1NS17iag9jJgTHD1VXjvLCEnZuQ3rJED9L";
+    tTxAddressActivity Activity;
+    Activity.szTxID = "3ba1345764a1a704b97d062b47b55c8632efc4d7c0c8039d78adf8a52bcba4fe";
+    Activity.timeCreation = 321;
+    Activity.amountSatoshi = 10;
+    tTxAddressStateInfo State;
+    State.timeCreation = 1234;
+    State.bRecycleable = false;
+    State.countActivities = 1;
+    State.aActivities = &Activity;
+    Addr.pStateInfo = &State;
+    tABC_TxDetails Details;
+    Details.amountSatoshi = 45;
+    Details.amountCurrency = 8.8;
+    Details.szName = "My Name3";
+    Details.szCategory = "My Category3";
+    Details.szNotes = "My Notes3";
+    Details.attributes = 0x1;
+    Addr.pDetails = &Details;
+    ABC_CHECK_RET(ABC_TxSaveAddress(szUserName, szPassword, szWalletUUID, &Addr, pError));
+    // end temp
+#endif
+
+    // get the directory name
+    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
+
+    // if there is a address directory
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szAddrDir, &bExists, pError));
+
+    if (bExists == true)
+    {
+        ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+
+        // get all the files in the address directory
+        ABC_FileIOCreateFileList(&pFileList, szAddrDir, NULL);
+        for (int i = 0; i < pFileList->nCount; i++)
+        {
+            // if this file is a normal file
+            if (pFileList->apFiles[i]->type == ABC_FileIOFileType_Regular)
+            {
+                // create the filename for this address
+                sprintf(szFilename, "%s/%s", szAddrDir, pFileList->apFiles[i]->szName);
+
+                // add this address to the array
+                ABC_CHECK_RET(ABC_TxLoadAddressAndAppendToArray(szUserName, szPassword, szWalletUUID, szFilename, &aAddresses, &count, pError));
+            }
+        }
+    }
+
+    // if we have more than one, then let's sort them
+    if (count > 1)
+    {
+        // sort the transactions by creation date using qsort
+        qsort(aAddresses, count, sizeof(tABC_TxAddress *), ABC_TxAddrPtrCompare);
+    }
+
+    // store final results
+    *paAddresses = aAddresses;
+    aAddresses = NULL;
+    *pCount = count;
+    count = 0;
+
+exit:
+    ABC_FREE_STR(szAddrDir);
+    ABC_FREE_STR(szFilename);
+    ABC_FileIOFreeFileList(pFileList);
+    ABC_TxFreeAddresses(aAddresses, count);
+    
+    ABC_FileIOMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * This function is used to support sorting an array of tTxAddress pointers via qsort.
+ * qsort has the following documentation for the required function:
+ *
+ * Pointer to a function that compares two elements.
+ * This function is called repeatedly by qsort to compare two elements. It shall follow the following prototype:
+ *
+ * int compar (const void* p1, const void* p2);
+ *
+ * Taking two pointers as arguments (both converted to const void*). The function defines the order of the elements by returning (in a stable and transitive manner):
+ * return value	meaning
+ * <0	The element pointed by p1 goes before the element pointed by p2
+ * 0	The element pointed by p1 is equivalent to the element pointed by p2
+ * >0	The element pointed by p1 goes after the element pointed by p2
+ *
+ */
+static
+int ABC_TxAddrPtrCompare(const void * a, const void * b)
+{
+    tABC_TxAddress **ppInfoA = (tABC_TxAddress **)a;
+    tABC_TxAddress *pInfoA = (tABC_TxAddress *)*ppInfoA;
+    tABC_TxAddress **ppInfoB = (tABC_TxAddress **)b;
+    tABC_TxAddress *pInfoB = (tABC_TxAddress *)*ppInfoB;
+
+    if (pInfoA->seq < pInfoB->seq) return -1;
+    if (pInfoA->seq == pInfoB->seq) return 0;
+    if (pInfoA->seq > pInfoB->seq) return 1;
+
+    return 0;
+}
+
+/**
+ * Loads the given address and adds it to the end of the array
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param szFilename        Filename of address
+ * @param paAddress         Pointer to array into which the address will be added
+ * @param pCount            Pointer to store number of address (will be updated)
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxLoadAddressAndAppendToArray(const char *szUserName,
+                                          const char *szPassword,
+                                          const char *szWalletUUID,
+                                          const char *szFilename,
+                                          tABC_TxAddress ***paAddresses,
+                                          unsigned int *pCount,
+                                          tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_TxAddress *pAddress = NULL;
+    tABC_TxAddress **aAddresses = NULL;
+    unsigned int count = 0;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No transaction filename provided");
+    ABC_CHECK_NULL(paAddresses);
+    ABC_CHECK_NULL(pCount);
+
+    // hold on to current values
+    count = *pCount;
+    aAddresses = *paAddresses;
+
+    // load the address
+    ABC_CHECK_RET(ABC_TxLoadAddress(szUserName, szPassword, szWalletUUID, szFilename, &pAddress, pError));
+
+    // create space for new entry
+    if (aAddresses == NULL)
+    {
+        ABC_ALLOC(aAddresses, sizeof(tABC_TxAddress *));
+        count = 1;
+    }
+    else
+    {
+        count++;
+        ABC_REALLOC(aAddresses, sizeof(tABC_TxAddress *) * count);
+    }
+
+    // add it to the array
+    aAddresses[count - 1] = pAddress;
+    pAddress = NULL;
+
+    // assign the values to the caller
+    *paAddresses = aAddresses;
+    *pCount = count;
+
+exit:
+    ABC_TxFreeAddress(pAddress);
+
+    return cc;
+}
+
+/**
+ * For debug purposes, this prints all of the addresses in the given array
+ */
+static
+void ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count)
+{
+    if ((aAddresses != NULL) && (count > 0))
+    {
+        for (int i = 0; i < count; i++)
+        {
+            ABC_DebugLog("Address - seq: %lld, id: %s, pubAddress: %s\n", aAddresses[i]->seq, aAddresses[i]->szID, aAddresses[i]->szPubAddress);
+            if (aAddresses[i]->pDetails)
+            {
+                ABC_DebugLog("\tDetails - satoshi: %lld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
+                             aAddresses[i]->pDetails->amountSatoshi,
+                             aAddresses[i]->pDetails->amountCurrency,
+                             aAddresses[i]->pDetails->szName,
+                             aAddresses[i]->pDetails->szCategory,
+                             aAddresses[i]->pDetails->szNotes,
+                             aAddresses[i]->pDetails->attributes);
+            }
+            else
+            {
+                ABC_DebugLog("\tNo Details");
+            }
+            if (aAddresses[i]->pStateInfo)
+            {
+                ABC_DebugLog("\tState Info - timeCreation: %lld, recycleable: %s\n",
+                             aAddresses[i]->pStateInfo->timeCreation,
+                             aAddresses[i]->pStateInfo->bRecycleable ? "yes" : "no");
+                if (aAddresses[i]->pStateInfo->aActivities && aAddresses[i]->pStateInfo->countActivities)
+                {
+                    for (int nActivity = 0; nActivity < aAddresses[i]->pStateInfo->countActivities; nActivity++)
+                    {
+                        ABC_DebugLog("\t\tActivity - txID: %s, timeCreation: %lld, satoshi: %lld\n",
+                                     aAddresses[i]->pStateInfo->aActivities[nActivity].szTxID,
+                                     aAddresses[i]->pStateInfo->aActivities[nActivity].timeCreation,
+                                     aAddresses[i]->pStateInfo->aActivities[nActivity].amountSatoshi);
+                    }
+                }
+                else
+                {
+                    ABC_DebugLog("\t\tNo Activities");
+                }
+            }
+            else
+            {
+                ABC_DebugLog("\tNo State Info");
+            }
+        }
+        typedef struct sTxAddressActivity
+        {
+            char    *szTxID; // ntxid from bitcoin associated with this activity
+            int64_t timeCreation;
+            int64_t amountSatoshi;
+        } tTxAddressActivity;
+
+        typedef struct sTxAddressStateInfo
+        {
+            int64_t             timeCreation;
+            bool                bRecycleable;
+            unsigned int        countActivities;
+            tTxAddressActivity  *aActivities;
+        } tTxAddressStateInfo;
+
+        typedef struct sABC_TxAddress
+        {
+            int64_t             seq; // sequence number
+            char                *szID; // sequence number in string form
+            char                *szPubAddress; // public address
+            tABC_TxDetails      *pDetails;
+            tTxAddressStateInfo *pStateInfo;
+        } tABC_TxAddress;
+    }
+    else
+    {
+        ABC_DebugLog("No addresses");
+    }
+}
 
 /**
  * Locks the mutex
