@@ -10,8 +10,8 @@
  */
 
 #include "ABC_Bridge.h"
-#include "ABC_Util.h"
 #include <wallet/uri.hpp>
+#include <bitcoin/utility/base58.hpp>
 
 /**
  * Parses a Bitcoin URI and creates an info struct with the data found in the URI.
@@ -80,4 +80,49 @@ void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo)
 
         ABC_CLEAR_FREE(pInfo, sizeof(tABC_BitcoinURIInfo));
     }
+}
+
+/**
+ * Converts a block of data to a Base58-encoded string.
+ *
+ * @param Data Buffer of data to convert.
+ * @param pszBase58 Output string, allocated by this function.
+ */
+tABC_CC ABC_BridgeBase58Encode(tABC_U08Buf Data, char **pszBase58, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    libbitcoin::data_chunk in(Data.p, Data.end);
+    std::string out = libbitcoin::encode_base58(in);
+
+    ABC_STRDUP(*pszBase58, out.c_str());
+
+exit:
+    return cc;
+}
+
+/**
+ * Converts a Base58-encoded string to a block of data.
+ *
+ * @param szBase58 The string to convert.
+ * @param pData A buffer structure that will be pointed at the newly-allocated output data.
+ */
+tABC_CC ABC_BridgeBase58Decode(const char *szBase58, tABC_U08Buf *pData, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    libbitcoin::data_chunk out;
+
+    std::string in = szBase58;
+    if (!libbitcoin::is_base58(in))
+        ABC_RET_ERROR(ABC_CC_ParseError, "Not Base58 data");
+
+    out = libbitcoin::decode_base58(in);
+
+    pData->p = static_cast<unsigned char*>(malloc(out.size()));
+    ABC_CHECK_ASSERT(pData->p != NULL, ABC_CC_NULLPtr, "malloc failed (returned NULL)");
+    pData->end = pData->p + out.size();
+    memcpy(pData->p, out.data(), out.size());
+
+exit:
+    return cc;
 }

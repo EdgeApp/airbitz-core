@@ -10,6 +10,7 @@
 #define ABC_Bridge_h
 
 #include "ABC.h"
+#include "ABC_Util.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,6 +21,9 @@ extern "C" {
                                 tABC_Error *pError);
 
     void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo);
+
+    tABC_CC ABC_BridgeBase58Encode(tABC_U08Buf Data, char **pszBase58, tABC_Error *pError);
+    tABC_CC ABC_BridgeBase58Decode(const char *szBase58, tABC_U08Buf *pData, tABC_Error *pError);
 
 #ifdef __cplusplus
 }
