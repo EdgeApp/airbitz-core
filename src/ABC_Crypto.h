@@ -19,6 +19,8 @@
 #define AES_256_KEY_LENGTH      32
 #define SHA_256_LENGTH          32
 
+#define HMAC_SHA_512_LENGTH     64
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -105,6 +107,14 @@ extern "C" {
                                    tABC_U08Buf  *pData,
                                    tABC_Error   *pError);
 
+    tABC_CC ABC_CryptoBase58Encode(const tABC_U08Buf Data,
+                                   char              **pszDataBase58,
+                                   tABC_Error        *pError);
+
+    tABC_CC ABC_CryptoBase58Decode(const char   *szDataBase58,
+                                   tABC_U08Buf  *pData,
+                                   tABC_Error   *pError);
+
     tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
                                     tABC_Error *pError);
 
@@ -148,6 +158,11 @@ extern "C" {
                                            tABC_Error        *pError);
 
     void ABC_CryptoFreeSNRP(tABC_CryptoSNRP **ppSNRP);
+
+    tABC_CC ABC_CryptoHMAC512(tABC_U08Buf Data,
+                              tABC_U08Buf Key,
+                              tABC_U08Buf *pDataHMAC,
+                              tABC_Error  *pError);
 
 #ifdef __cplusplus
 }

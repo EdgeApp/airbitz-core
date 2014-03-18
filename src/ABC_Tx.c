@@ -1496,6 +1496,10 @@ exit:
  * It does this by checking the activity amounts against the initial request amount.
  * Negative indicates satoshi is still 'owed' on the address, 'positive' means excess was paid.
  *
+ * the big assumption here is that address can be used for making payments after they have been used for
+ * receiving payment but those should not be taken into account when determining what has been paid on the
+ * address.
+ *
  * @param pAddr          Address to check
  * @param pSatoshiOwed   Ptr into which owed amount is stored
  * @param pError         A pointer to the location to store the error if there is one
@@ -1525,6 +1529,12 @@ tABC_CC ABC_TxGetAddressOwed(tABC_TxAddress *pAddr,
         for (int i = 0; i < pState->countActivities; i++)
         {
             // if this activity is money paid on the address
+            // note: here is where negative activity is ignored
+            // the big assumption here is that address can be used
+            // for making payments after they have been used for
+            // receiving payment but those should not be taken into
+            // account when determining what has been paid on the
+            // address
             if (pState->aActivities[i].amountSatoshi > 0)
             {
                 // remove that from the request amount

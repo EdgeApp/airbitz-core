@@ -24,6 +24,7 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/err.h>
+#include <openssl/hmac.h>
 #include <jansson.h>
 #include <scrypt/crypto_scrypt.h>
 #include <scrypt/sha256.h>
@@ -32,6 +33,7 @@
 #include "ABC_Crypto.h"
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
+#include "ABC_Bridge.h"
 
 #define JSON_ENC_TYPE_FIELD     "encryptionType"
 #define JSON_ENC_SALT_FIELD     "salt_hex"
@@ -1041,14 +1043,59 @@ int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64)
     return (3*len)/4 - padding;
 }
 
-// generates a randome UUID (version 4)
-/*
-Version 4 UUIDs use a scheme relying only on random numbers.
-This algorithm sets the version number (4 bits) as well as two reserved bits.
-All other bits (the remaining 122 bits) are set using a random or pseudorandom data source.
-Version 4 UUIDs have the form xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx where x is any hexadecimal
-digit and y is one of 8, 9, A, or B (e.g., F47AC10B-58CC-4372-A567-0E02B2E3D479).
-*/
+/**
+ * Converts a buffer of binary data to a base-58 string.
+ * @param Data The passed-in data. The caller owns this.
+ * @param pszDataBase58 The returned string, which the caller must free().
+ */
+tABC_CC ABC_CryptoBase58Encode(const tABC_U08Buf Data,
+                               char              **pszDataBase58,
+                               tABC_Error        *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL_BUF(Data);
+    ABC_CHECK_NULL(pszDataBase58);
+
+    ABC_CHECK_RET(ABC_BridgeBase58Encode(Data, pszDataBase58, pError));
+
+exit:
+
+    return cc;
+}
+
+/**
+ * Converts a string of base-58 encoded data to a buffer of binary data.
+ * @param pData An un-allocated data buffer. This function will allocate
+ * memory and assign it to the buffer. The data should then be freed.
+ */
+tABC_CC ABC_CryptoBase58Decode(const char   *szDataBase58,
+                               tABC_U08Buf  *pData,
+                               tABC_Error   *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szDataBase58);
+    ABC_CHECK_NULL(pData);
+
+    ABC_CHECK_RET(ABC_BridgeBase58Decode(szDataBase58, pData, pError));
+
+exit:
+
+    return cc;
+}
+
+/**
+ * generates a randome UUID (version 4)
+
+ * Version 4 UUIDs use a scheme relying only on random numbers.
+ * This algorithm sets the version number (4 bits) as well as two reserved bits.
+ * All other bits (the remaining 122 bits) are set using a random or pseudorandom data source.
+ * Version 4 UUIDs have the form xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx where x is any hexadecimal
+ * digit and y is one of 8, 9, A, or B (e.g., F47AC10B-58CC-4372-A567-0E02B2E3D479).
+ */
 tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
                                 tABC_Error *pError)
 {
@@ -1351,3 +1398,30 @@ void ABC_CryptoFreeSNRP(tABC_CryptoSNRP **ppSNRP)
 
     *ppSNRP = NULL;
 }
+
+/**
+ * Generates HMAC-512 of the given data with the given key
+ * @param pDataHMAC An un-allocated data buffer. This function will allocate
+ * memory and assign it to the buffer. The data should then be freed.
+ */
+tABC_CC ABC_CryptoHMAC512(tABC_U08Buf Data,
+                          tABC_U08Buf Key,
+                          tABC_U08Buf *pDataHMAC,
+                          tABC_Error  *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL_BUF(Data);
+    ABC_CHECK_NULL_BUF(Key);
+    ABC_CHECK_NULL(pDataHMAC);
+
+    // call HMAC-512 in openssl
+    unsigned char *pDigest = HMAC(EVP_sha512(), ABC_BUF_PTR(Key), ABC_BUF_SIZE(Key), ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data), NULL, NULL);
+    ABC_BUF_SET_PTR(*pDataHMAC, pDigest, HMAC_SHA_512_LENGTH);
+
+exit:
+    
+    return cc;
+}
+
