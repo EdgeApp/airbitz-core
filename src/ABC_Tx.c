@@ -109,7 +109,7 @@ static tABC_CC  ABC_TxLoadTxAndAppendToArray(const char *szUserName, const char 
 static void     ABC_TxFreeTransaction(tABC_TxInfo *pTransactions);
 static tABC_CC  ABC_TxGetAddressOwed(tABC_TxAddress *pAddr, int64_t *pSatoshiBalance, tABC_Error *pError);
 static void     ABC_TxFreeRequest(tABC_RequestInfo *pRequest);
-static tABC_CC  ABC_TxCreateTxFilename(char **pszFilename, const char *szWalletUUID, const char *szTxID, bool bInternal, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateTxFilename(char **pszFilename, const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szTxID, bool bInternal, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransaction(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError);
@@ -936,14 +936,14 @@ tABC_CC ABC_TxGetTransactions(const char *szUserName,
 #if 0 // TODO: we can take this out once we are creating real transactions
     // start temp - create a transaction
     tABC_Tx Tx;
-    char szID[] = "3ba1345764a1a704b97d062b47b55c8632efc4d7c0c8039d78adf8a52bcba4fe";
+    char szID[] = "4ba1345764a1a704b97d062b47b55c8632efc4d7c0c8039d78adf8a52bcba4fe";
     Tx.szID = szID;
     tABC_TxDetails Details;
-    Details.amountSatoshi = 999;
+    Details.amountSatoshi = 55;
     Details.amountCurrency = 9.9;
-    Details.szName = "My Name2";
-    Details.szCategory = "My Category2";
-    Details.szNotes = "My Notes2";
+    Details.szName = "My Name1";
+    Details.szCategory = "My Category1";
+    Details.szNotes = "My Notes1";
     Details.attributes = 0x1;
     Tx.pDetails = &Details;
     tTxStateInfo State;
@@ -1328,7 +1328,7 @@ tABC_CC ABC_TxSetTransactionDetails(const char *szUserName,
     // find the filename of the existing transaction
 
     // first try the internal
-    ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szWalletUUID, szID, true, pError));
+    ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, szID, true, pError));
     bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
 
@@ -1337,7 +1337,7 @@ tABC_CC ABC_TxSetTransactionDetails(const char *szUserName,
     {
         // try the external
         ABC_FREE_STR(szFilename);
-        ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szWalletUUID, szID, false, pError));
+        ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, szID, false, pError));
         ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     }
 
@@ -1591,28 +1591,48 @@ void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
 
 /**
  * Gets the filename for a given transaction
+ * format is: N-Base58(HMAC256(TxID,MK)).json
  *
  * @param pszFilename Output filename name. The caller must free this.
  */
 static
-tABC_CC ABC_TxCreateTxFilename(char **pszFilename, const char *szWalletUUID, const char *szTxID, bool bInternal, tABC_Error *pError)
+tABC_CC ABC_TxCreateTxFilename(char **pszFilename, const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szTxID, bool bInternal, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     char *szTxDir = NULL;
+    tABC_U08Buf MK = ABC_BUF_NULL;
+    tABC_U08Buf DataHMAC = ABC_BUF_NULL;
+    char *szDataBase58 = NULL;
 
     ABC_CHECK_NULL(pszFilename);
     *pszFilename = NULL;
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_NULL(szTxID);
 
+    // Get the master key we will need to encode the filename
+    // (note that this will also make sure the account and wallet exist)
+    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+
     ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
 
+    // create an hmac-256 of the TxID
+    tABC_U08Buf TxID = ABC_BUF_NULL;
+    ABC_BUF_SET_PTR(TxID, (unsigned char *)szTxID, strlen(szTxID));
+    ABC_CHECK_RET(ABC_CryptoHMAC256(TxID, MK, &DataHMAC, pError));
+
+    // create a base58 of the hmac-256 TxID
+    ABC_CHECK_RET(ABC_CryptoBase58Encode(DataHMAC, &szDataBase58, pError));
+
     ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszFilename, "%s/%s%s", szTxDir, szTxID, (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX));
+    sprintf(*pszFilename, "%s/%s%s", szTxDir, szDataBase58, (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX));
 
 exit:
     ABC_FREE_STR(szTxDir);
+    ABC_BUF_FREE(DataHMAC);
+    ABC_FREE_STR(szDataBase58);
 
     return cc;
 }
@@ -1892,7 +1912,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     ABC_CHECK_RET(ABC_TxCreateTxDir(szWalletUUID, pError));
 
     // get the filename for this transaction
-    ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szWalletUUID, pTx->szID, pTx->pStateInfo->bInternal, pError));
+    ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, pTx->szID, pTx->pStateInfo->bInternal, pError));
 
     // save out the transaction object to a file encrypted with the master key
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, MK, ABC_CryptoType_AES256, szFilename, pError));

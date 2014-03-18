@@ -105,7 +105,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     ABC_CancelReceiveRequest([self.textUsername.text UTF8String],
                              [self.textPassword.text UTF8String],
                              [self.textTest.text UTF8String],
-                             "1",
+                             "0",
                              &Error);
     [self printABC_Error:&Error];
 
@@ -115,7 +115,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     ABC_FinalizeReceiveRequest([self.textUsername.text UTF8String],
                                [self.textPassword.text UTF8String],
                                [self.textTest.text UTF8String],
-                               "1",
+                               "0",
                                &Error);
     [self printABC_Error:&Error];
 
@@ -179,7 +179,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     ABC_FreeRequests(aRequests, nCount);
 #endif
 
-#if 0 // transactions
+#if 1 // transactions
     tABC_TxInfo **aTransactions = NULL;
     unsigned int nCount = 0;
     ABC_GetTransactions([self.textUsername.text UTF8String],
