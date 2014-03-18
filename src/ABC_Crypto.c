@@ -1400,6 +1400,32 @@ void ABC_CryptoFreeSNRP(tABC_CryptoSNRP **ppSNRP)
 }
 
 /**
+ * Generates HMAC-256 of the given data with the given key
+ * @param pDataHMAC An un-allocated data buffer. This function will allocate
+ * memory and assign it to the buffer. The data should then be freed.
+ */
+tABC_CC ABC_CryptoHMAC256(tABC_U08Buf Data,
+                          tABC_U08Buf Key,
+                          tABC_U08Buf *pDataHMAC,
+                          tABC_Error  *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL_BUF(Data);
+    ABC_CHECK_NULL_BUF(Key);
+    ABC_CHECK_NULL(pDataHMAC);
+
+    // call HMAC-256 in openssl
+    ABC_BUF_NEW(*pDataHMAC, HMAC_SHA_256_LENGTH);
+    HMAC(EVP_sha256(), ABC_BUF_PTR(Key), ABC_BUF_SIZE(Key), ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data), ABC_BUF_PTR(*pDataHMAC), NULL);
+
+exit:
+
+    return cc;
+}
+
+/**
  * Generates HMAC-512 of the given data with the given key
  * @param pDataHMAC An un-allocated data buffer. This function will allocate
  * memory and assign it to the buffer. The data should then be freed.
@@ -1417,8 +1443,8 @@ tABC_CC ABC_CryptoHMAC512(tABC_U08Buf Data,
     ABC_CHECK_NULL(pDataHMAC);
 
     // call HMAC-512 in openssl
-    unsigned char *pDigest = HMAC(EVP_sha512(), ABC_BUF_PTR(Key), ABC_BUF_SIZE(Key), ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data), NULL, NULL);
-    ABC_BUF_SET_PTR(*pDataHMAC, pDigest, HMAC_SHA_512_LENGTH);
+    ABC_BUF_NEW(*pDataHMAC, HMAC_SHA_512_LENGTH);
+    HMAC(EVP_sha512(), ABC_BUF_PTR(Key), ABC_BUF_SIZE(Key), ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data), ABC_BUF_PTR(*pDataHMAC), NULL);
 
 exit:
     

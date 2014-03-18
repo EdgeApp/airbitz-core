@@ -174,7 +174,6 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
 
         // free the duplicated details
         ABC_FreeTxDetails(pNewDetails);
-        
     }
 
     ABC_FreeRequests(aRequests, nCount);

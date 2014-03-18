@@ -123,7 +123,7 @@ static tABC_CC  ABC_TxLoadAddress(const char *szUserName, const char *szPassword
 static tABC_CC  ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **ppState, tABC_Error *pError);
 static tABC_CC  ABC_TxSaveAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, const tABC_TxAddress *pAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pInfo, tABC_Error *pError);
-static tABC_CC  ABC_TxCreateAddressFilename(char **pszFilename, const char *szWalletUUID, const tABC_TxAddress *pAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateAddressFilename(char **pszFilename, const char *szUserName, const char *szPassword, const char *szWalletUUID, const tABC_TxAddress *pAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateAddressDir(const char *szWalletUUID, tABC_Error *pError);
 static void     ABC_TxFreeAddress(tABC_TxAddress *pAddress);
 static void     ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo);
@@ -2249,7 +2249,7 @@ tABC_CC ABC_TxSaveAddress(const char *szUserName,
     ABC_CHECK_RET(ABC_TxCreateAddressDir(szWalletUUID, pError));
 
     // create the filename for this transaction
-    ABC_CHECK_RET(ABC_TxCreateAddressFilename(&szFilename, szWalletUUID, pAddress, pError));
+    ABC_CHECK_RET(ABC_TxCreateAddressFilename(&szFilename, szUserName, szPassword, szWalletUUID, pAddress, pError));
 
     // save out the transaction object to a file encrypted with the master key
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, MK, ABC_CryptoType_AES256, szFilename, pError));
@@ -2342,28 +2342,49 @@ exit:
 
 /**
  * Gets the filename for a given address
+ * format is: N-Base58(HMAC256(pub_address,MK)).json
  *
  * @param pszFilename Output filename name. The caller must free this.
  */
 static
-tABC_CC ABC_TxCreateAddressFilename(char **pszFilename, const char *szWalletUUID, const tABC_TxAddress *pAddress, tABC_Error *pError)
+tABC_CC ABC_TxCreateAddressFilename(char **pszFilename, const char *szUserName, const char *szPassword, const char *szWalletUUID, const tABC_TxAddress *pAddress, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     char *szAddrDir = NULL;
+    tABC_U08Buf MK = ABC_BUF_NULL;
+    tABC_U08Buf DataHMAC = ABC_BUF_NULL;
+    char *szDataBase58 = NULL;
 
     ABC_CHECK_NULL(pszFilename);
     *pszFilename = NULL;
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_NULL(pAddress);
 
+    // Get the master key we will need to encode the filename
+    // (note that this will also make sure the account and wallet exist)
+    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
 
+    // create an hmac-256 of the public address
+    tABC_U08Buf PubAddress = ABC_BUF_NULL;
+    ABC_BUF_SET_PTR(PubAddress, (unsigned char *)pAddress->szPubAddress, strlen(pAddress->szPubAddress));
+    ABC_CHECK_RET(ABC_CryptoHMAC256(PubAddress, MK, &DataHMAC, pError));
+
+    // create a base58 of the hmac-256 public address
+    ABC_CHECK_RET(ABC_CryptoBase58Encode(DataHMAC, &szDataBase58, pError));
+
+    // create the filename
     ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszFilename, "%s/%lld-%s.json", szAddrDir, pAddress->seq, pAddress->szPubAddress);
+    sprintf(*pszFilename, "%s/%lld-%s.json", szAddrDir, pAddress->seq, szDataBase58);
 
 exit:
     ABC_FREE_STR(szAddrDir);
+    ABC_BUF_FREE(DataHMAC);
+    ABC_FREE_STR(szDataBase58);
     
     return cc;
 }
@@ -2493,13 +2514,13 @@ tABC_CC ABC_TxGetAddresses(const char *szUserName,
 #if 0 // TODO: we can take this out once we are creating real addresses
     // start temp - create an address
     tABC_TxAddress Addr;
-    Addr.seq = 3;
-    Addr.szID = "3";
-    Addr.szPubAddress = "1NS17iag9jJgTHD1VXjvLCEnZuQ3rJED9L";
+    Addr.seq = 2;
+    Addr.szID = "2";
+    Addr.szPubAddress = "3NS17iag9jJgTHD1VXjvLCEnZuQ3rJED9L";
     tTxAddressActivity Activity;
-    Activity.szTxID = "3ba1345764a1a704b97d062b47b55c8632efc4d7c0c8039d78adf8a52bcba4fe";
+    Activity.szTxID = "5ba1345764a1a704b97d062b47b55c8632efc4d7c0c8039d78adf8a52bcba4fe";
     Activity.timeCreation = 321;
-    Activity.amountSatoshi = 10;
+    Activity.amountSatoshi = 5;
     tTxAddressStateInfo State;
     State.timeCreation = 1234;
     State.bRecycleable = false;
@@ -2507,11 +2528,11 @@ tABC_CC ABC_TxGetAddresses(const char *szUserName,
     State.aActivities = &Activity;
     Addr.pStateInfo = &State;
     tABC_TxDetails Details;
-    Details.amountSatoshi = 45;
+    Details.amountSatoshi = 100;
     Details.amountCurrency = 8.8;
-    Details.szName = "My Name3";
-    Details.szCategory = "My Category3";
-    Details.szNotes = "My Notes3";
+    Details.szName = "My Name2";
+    Details.szCategory = "My Category2";
+    Details.szNotes = "My Notes2";
     Details.attributes = 0x1;
     Addr.pDetails = &Details;
     ABC_CHECK_RET(ABC_TxSaveAddress(szUserName, szPassword, szWalletUUID, &Addr, pError));
