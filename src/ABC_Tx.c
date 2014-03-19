@@ -96,7 +96,7 @@ typedef struct sTxAddressStateInfo
 
 typedef struct sABC_TxAddress
 {
-    int64_t             seq; // sequence number
+    int32_t             seq; // sequence number
     char                *szID; // sequence number in string form
     char                *szPubAddress; // public address
     tABC_TxDetails      *pDetails;
@@ -104,6 +104,7 @@ typedef struct sABC_TxAddress
 } tABC_TxAddress;
 
 static tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo, char **pszUUID, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateNewAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, tABC_TxDetails *pDetails, tABC_TxAddress **ppAddress, tABC_Error *pError);
 static tABC_CC  ABC_GetAddressFilename(const char *szWalletUUID, const char *szRequestID, char **pszFilename, tABC_Error *pError);
 static tABC_CC  ABC_TxParseAddrFilename(const char *szFilename, char **pszID, char **pszPublicAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxSetAddressRecycle(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, bool bRecyclable, tABC_Error *pError);
@@ -456,6 +457,61 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_TxAddress *pAddress = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(pDetails);
+    ABC_CHECK_NULL(pszRequestID);
+    *pszRequestID = NULL;
+
+    // get a new address (re-using a recycleable if we can)
+    ABC_CHECK_RET(ABC_TxCreateNewAddress(szUserName, szPassword, szWalletUUID, pDetails, &pAddress, pError));
+
+    // save out this address
+    ABC_CHECK_RET(ABC_TxSaveAddress(szUserName, szPassword, szWalletUUID, pAddress, pError));
+
+    // set the id for the caller
+    ABC_STRDUP(*pszRequestID, pAddress->szID);
+
+exit:
+    ABC_TxFreeAddress(pAddress);
+
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Creates a new address.
+ * First looks to see if we can recycle one, if we can, that is the address returned.
+ * This new address is not saved to the file system, the caller must make sure it is saved
+ * if they want it persisted.
+ *
+ * @param szUserName    UserName for the account associated with this request
+ * @param szPassword    Password for the account associated with this request
+ * @param szWalletUUID  UUID of the wallet associated with this request
+ * @param pDetails      Pointer to transaction details to be used for the new address
+ *                      (note: a copy of these are made so the caller can do whatever they want
+ *                       with the pointer once the call is complete)
+ * @param ppAddress     Location to store pointer to allocated address
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxCreateNewAddress(const char *szUserName,
+                               const char *szPassword,
+                               const char *szWalletUUID,
+                               tABC_TxDetails *pDetails,
+                               tABC_TxAddress **ppAddress,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
     tABC_TxAddress **aAddresses = NULL;
     unsigned int countAddresses = 0;
     tABC_TxAddress *pAddress = NULL;
@@ -469,8 +525,7 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
     ABC_CHECK_NULL(pDetails);
-    ABC_CHECK_NULL(pszRequestID);
-    *pszRequestID = NULL;
+    ABC_CHECK_NULL(ppAddress);
 
     // first look for an existing address that we can re-use
 
@@ -485,7 +540,7 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
         if ((pAddress == NULL) && (aAddresses[i]->pStateInfo->bRecycleable == true) && ((aAddresses[i]->pStateInfo->countActivities == 0)))
         {
             pAddress = aAddresses[i];
-            // set it to NULL so we don't free it as part of the array free, we will free individually via pAddress
+            // set it to NULL so we don't free it as part of the array free, we will be sending this back to the caller
             aAddresses[i] = NULL;
         }
 
@@ -509,18 +564,25 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
     {
         ABC_ALLOC(pAddress, sizeof(tABC_TxAddress));
 
-        // use the next sequence number
-        pAddress->seq = N + 1;
-        ABC_ALLOC(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
-        sprintf(pAddress->szID, "%lld", pAddress->seq);
-
         // get the private seed so we can generate the public address
         tABC_U08Buf Seed = ABC_BUF_NULL;
         ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(szUserName, szPassword, szWalletUUID, &Seed, pError));
 
         // generate the public address
-        // TODO: uncomment this line once we have the function
-        //ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), Seed, pAddress->seq, pError));
+        pAddress->szPubAddress = NULL;
+        pAddress->seq = (int32_t) N;
+        do
+        {
+            // move to the next sequence number
+            pAddress->seq++;
+
+            // Get the public address for our sequence (it can return NULL, if it is invalid)
+            ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), Seed, pAddress->seq, pError));
+        } while (pAddress->szPubAddress == NULL);
+
+        // set the final ID
+        ABC_ALLOC(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
+        sprintf(pAddress->szID, "%u", pAddress->seq);
     }
 
     // add the info we have to this address
@@ -535,18 +597,14 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
     pAddress->pStateInfo->aActivities = NULL;
     pAddress->pStateInfo->timeCreation = time(NULL);
 
-    // save out this address
-    ABC_CHECK_RET(ABC_TxSaveAddress(szUserName, szPassword, szWalletUUID, pAddress, pError));
-
-    // set the id for the caller
-    ABC_STRDUP(*pszRequestID, pAddress->szID);
-
-    // for now just create a place holder id
-    ABC_STRDUP(*pszRequestID, "ID");
+    // assigned final address
+    *ppAddress = pAddress;
+    pAddress = NULL;
 
 exit:
     ABC_TxFreeAddresses(aAddresses, countAddresses);
-
+    ABC_TxFreeAddress(pAddress);
+    
     ABC_TxMutexUnlock(NULL);
     return cc;
 }
@@ -990,7 +1048,7 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
 
     // add the amount
     static char szAmount[TX_MAX_AMOUNT_LENGTH];
-    sprintf(szAmount, "?amount=%lld.%lld", pAddress->pDetails->amountSatoshi / SATOSHI_PER_BITCOIN, pAddress->pDetails->amountSatoshi % SATOSHI_PER_BITCOIN);
+    sprintf(szAmount, "?amount=%lld.%08lld", pAddress->pDetails->amountSatoshi / SATOSHI_PER_BITCOIN, pAddress->pDetails->amountSatoshi % SATOSHI_PER_BITCOIN);
     ABC_BUF_APPEND_PTR(StringData, szAmount, strlen(szAmount));
 
     // if there is a name
@@ -2313,9 +2371,9 @@ tABC_CC ABC_TxLoadAddressFile(const char *szUserName,
     // get the seq and id
     json_t *jsonVal = json_object_get(pJSON_Root, JSON_ADDR_SEQ_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing seq");
-    pAddress->seq = json_integer_value(jsonVal);
+    pAddress->seq = (uint32_t)json_integer_value(jsonVal);
     ABC_ALLOC(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
-    sprintf(pAddress->szID, "%lld", pAddress->seq);
+    sprintf(pAddress->szID, "%u", pAddress->seq);
 
     // get the public address field
     jsonVal = json_object_get(pJSON_Root, JSON_ADDR_ADDRESS_FIELD);
@@ -2610,7 +2668,7 @@ tABC_CC ABC_TxCreateAddressFilename(char **pszFilename, const char *szUserName, 
 
     // create the filename
     ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszFilename, "%s/%lld-%s.json", szAddrDir, pAddress->seq, szDataBase58);
+    sprintf(*pszFilename, "%s/%u-%s.json", szAddrDir, pAddress->seq, szDataBase58);
 
 exit:
     ABC_FREE_STR(szAddrDir);
@@ -2741,34 +2799,6 @@ tABC_CC ABC_TxGetAddresses(const char *szUserName,
 
     // validate the creditials
     ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
-
-#if 0 // TODO: we can take this out once we are creating real addresses
-    // start temp - create an address
-    tABC_TxAddress Addr;
-    Addr.seq = 2;
-    Addr.szID = "2";
-    Addr.szPubAddress = "3NS17iag9jJgTHD1VXjvLCEnZuQ3rJED9L";
-    tTxAddressActivity Activity;
-    Activity.szTxID = "5ba1345764a1a704b97d062b47b55c8632efc4d7c0c8039d78adf8a52bcba4fe";
-    Activity.timeCreation = 321;
-    Activity.amountSatoshi = 5;
-    tTxAddressStateInfo State;
-    State.timeCreation = 1234;
-    State.bRecycleable = false;
-    State.countActivities = 1;
-    State.aActivities = &Activity;
-    Addr.pStateInfo = &State;
-    tABC_TxDetails Details;
-    Details.amountSatoshi = 100;
-    Details.amountCurrency = 8.8;
-    Details.szName = "My Name2";
-    Details.szCategory = "My Category2";
-    Details.szNotes = "My Notes2";
-    Details.attributes = 0x1;
-    Addr.pDetails = &Details;
-    ABC_CHECK_RET(ABC_TxSaveAddress(szUserName, szPassword, szWalletUUID, &Addr, pError));
-    // end temp
-#endif
 
     // get the directory name
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));

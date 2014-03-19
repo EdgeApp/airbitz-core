@@ -101,6 +101,27 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
 
+#if 0 // create receive request
+    tABC_TxDetails Details;
+    Details.amountSatoshi = 100;
+    Details.amountCurrency = 8.8;
+    Details.szName = "MyName";
+    Details.szCategory = "MyCategory";
+    Details.szNotes = "MyNotes";
+    Details.attributes = 0x1;
+
+    char *szRequestID = NULL;
+
+    ABC_CreateReceiveRequest([self.textUsername.text UTF8String],
+                             [self.textPassword.text UTF8String],
+                             [self.textTest.text UTF8String],
+                             &Details,
+                             &szRequestID,
+                             &Error);
+
+    [self printABC_Error:&Error];
+#endif
+
 #if 0 // check password
     tABC_PasswordRule **aRules = NULL;
     unsigned int count = 0;
@@ -265,7 +286,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     ABC_GenerateRequestQRCode([self.textUsername.text UTF8String],
                               [self.textPassword.text UTF8String],
                               [self.textTest.text UTF8String],
-                              "1",
+                              "0",
                               &pData,
                               &width,
                               &Error);
