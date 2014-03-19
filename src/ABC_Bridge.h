@@ -22,6 +22,10 @@ extern "C" {
 
     void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo);
 
+    tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
+                                       tABC_BitcoinURIInfo *pInfo,
+                                       tABC_Error *pError);
+
     tABC_CC ABC_BridgeBase58Encode(tABC_U08Buf Data, char **pszBase58, tABC_Error *pError);
     tABC_CC ABC_BridgeBase58Decode(const char *szBase58, tABC_U08Buf *pData, tABC_Error *pError);
 

@@ -265,7 +265,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     ABC_GenerateRequestQRCode([self.textUsername.text UTF8String],
                               [self.textPassword.text UTF8String],
                               [self.textTest.text UTF8String],
-                              "RequestID",
+                              "1",
                               &pData,
                               &width,
                               &Error);

@@ -21,12 +21,15 @@
 #include "ABC_Mutex.h"
 #include "ABC_Wallet.h"
 #include "ABC_Debug.h"
+#include "ABC_Bridge.h"
 
 #define SATOSHI_PER_BITCOIN             100000000
 
 #define CURRENCY_NUM_USD                840
 
-#define TX_MAX_ADDR_ID_LENGTH           20 // should just be the string version of the id number - 20 digits should handle it
+#define TX_MAX_ADDR_ID_LENGTH           20 // largest char count for the string version of the id number - 20 digits should handle it
+
+#define TX_MAX_AMOUNT_LENGTH            100 // should be max length of a bit coin amount string
 
 #define TX_INTERNAL_SUFFIX              "-int.json" // the transaction was created by our direct action (i.e., send)
 #define TX_EXTERNAL_SUFFIX              "-ext.json" // the transaction was created due to events in the block-chain (usually receives)
@@ -119,7 +122,8 @@ static tABC_CC  ABC_TxSaveTransaction(const char *szUserName, const char *szPass
 static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError);
 static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
-static tABC_CC  ABC_TxLoadAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxAddress **ppAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddressID, tABC_TxAddress **ppAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadAddressFile(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxAddress **ppAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **ppState, tABC_Error *pError);
 static tABC_CC  ABC_TxSaveAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, const tABC_TxAddress *pAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pInfo, tABC_Error *pError);
@@ -528,7 +532,7 @@ tABC_CC ABC_TxModifyReceiveRequest(const char *szUserName,
     sprintf(szFilename, "%s/%s", szAddrDir, szFile);
 
     // load the request address
-    ABC_CHECK_RET(ABC_TxLoadAddress(szUserName, szPassword, szWalletUUID, szFilename, &pAddress, pError));
+    ABC_CHECK_RET(ABC_TxLoadAddressFile(szUserName, szPassword, szWalletUUID, szFilename, &pAddress, pError));
 
     // copy the new details
     ABC_CHECK_RET(ABC_TxDupDetails(&pNewDetails, pDetails, pError));
@@ -811,7 +815,7 @@ tABC_CC ABC_TxSetAddressRecycle(const char *szUserName,
     sprintf(szFilename, "%s/%s", szAddrDir, szFile);
 
     // load the request address
-    ABC_CHECK_RET(ABC_TxLoadAddress(szUserName, szPassword, szWalletUUID, szFilename, &pAddress, pError));
+    ABC_CHECK_RET(ABC_TxLoadAddressFile(szUserName, szPassword, szWalletUUID, szFilename, &pAddress, pError));
     ABC_CHECK_NULL(pAddress->pStateInfo);
 
     // if it isn't already set as required
@@ -848,20 +852,24 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
-                                  const char *szPassword,
-                                  const char *szWalletUUID,
-                                  const char *szRequestID,
-                                  unsigned char **paData,
-                                  unsigned int *pWidth,
-                                  tABC_Error *pError)
+                                    const char *szPassword,
+                                    const char *szWalletUUID,
+                                    const char *szRequestID,
+                                    unsigned char **paData,
+                                    unsigned int *pWidth,
+                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_TxAddress *pAddress = NULL;
+    tABC_U08Buf StringData = ABC_BUF_NULL;
     QRcode *qr = NULL;
     unsigned char *aData = NULL;
     unsigned int length = 0;
+    char *szURI = NULL;
 
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -871,10 +879,82 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
     ABC_CHECK_NULL(szRequestID);
     ABC_CHECK_ASSERT(strlen(szRequestID) > 0, ABC_CC_Error, "No request ID provided");
 
-    // TODO: write the real function -
-    // for now just generate a temporary qr code
-    char *szURITemp = "bitcoin:1NS17iag9jJgTHD1VXjvLCEnZuQ3rJED9L?amount=50&label=Luke-Jr&message=Donation%20for%20project%20xyz";
-    qr = QRcode_encodeString(szURITemp, 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+    // load the request/address
+    ABC_CHECK_RET(ABC_TxLoadAddress(szUserName, szPassword, szWalletUUID, szRequestID, &pAddress, pError));
+    ABC_CHECK_NULL(pAddress->pDetails);
+
+    // TODO: Call when available in bridge
+    /*
+    tABC_BitcoinURIInfo infoURI;
+    memset(&infoURI, 0, sizeof(tABC_BitcoinURIInfo));
+    infoURI.amountSatoshi = pAddress->pDetails->amountSatoshi;
+    infoURI.szAddress = pAddress->szPubAddress;
+    // if there is a name
+    if (pAddress->pDetails->szName)
+    {
+        if (strlen(pAddress->pDetails->szName) > 0)
+        {
+            infoURI.szLabel = pAddress->pDetails->szName;
+        }
+    }
+
+    // if there is a note
+    if (pAddress->pDetails->szNotes)
+    {
+        if (strlen(pAddress->pDetails->szNotes) > 0)
+        {
+            infoURI.szMessage = pAddress->pDetails->szNotes;
+        }
+    }
+    ABC_CHECK_RET(ABC_BridgeEncodeBitcoinURI(&szURI, &infoURI, pError));
+     */
+
+    /////////////////////////////////////////////
+    // start temp until we move to Bridge
+    ////////////////////////////////////////////
+
+    // start with the bitcoin label
+    ABC_BUF_DUP_PTR(StringData, "bitcoin:", strlen("bitcoin:"));
+
+    // added the address
+    ABC_BUF_APPEND_PTR(StringData, pAddress->szPubAddress, strlen(pAddress->szPubAddress));
+
+    // add the amount
+    static char szAmount[TX_MAX_AMOUNT_LENGTH];
+    sprintf(szAmount, "?amount=%lld.%lld", pAddress->pDetails->amountSatoshi / SATOSHI_PER_BITCOIN, pAddress->pDetails->amountSatoshi % SATOSHI_PER_BITCOIN);
+    ABC_BUF_APPEND_PTR(StringData, szAmount, strlen(szAmount));
+
+    // if there is a name
+    if (pAddress->pDetails->szName)
+    {
+        if (strlen(pAddress->pDetails->szName) > 0)
+        {
+            ABC_BUF_APPEND_PTR(StringData, "&label=", strlen("&label="));
+            ABC_BUF_APPEND_PTR(StringData, pAddress->pDetails->szName, strlen(pAddress->pDetails->szName));
+        }
+    }
+
+    // if there is a note
+    if (pAddress->pDetails->szNotes)
+    {
+        if (strlen(pAddress->pDetails->szNotes) > 0)
+        {
+            ABC_BUF_APPEND_PTR(StringData, "&message=", strlen("&message="));
+            ABC_BUF_APPEND_PTR(StringData, pAddress->pDetails->szNotes, strlen(pAddress->pDetails->szNotes));
+        }
+    }
+
+    // add the final null so we get a true string
+    ABC_BUF_APPEND_PTR(StringData, "", 1);
+    szURI = (char *) ABC_BUF_PTR(StringData);
+
+    /////////////////////////////////////////////
+    // end temp until we move to Bridge
+    ////////////////////////////////////////////
+
+    // encode our string
+    ABC_DebugLog("Encoding: %s", szURI);
+    qr = QRcode_encodeString(szURI, 0, QR_ECLEVEL_L, QR_MODE_8, 1);
     ABC_CHECK_ASSERT(qr != NULL, ABC_CC_Error, "Unable to create QR code");
     length = qr->width * qr->width;
     ABC_ALLOC(aData, length);
@@ -887,8 +967,12 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
     aData = NULL;
 
 exit:
+    ABC_TxFreeAddress(pAddress);
+    ABC_FREE_STR(szURI);
     QRcode_free(qr);
     ABC_CLEAR_FREE(aData, length);
+
+    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -2051,18 +2135,76 @@ int ABC_TxInfoPtrCompare (const void * a, const void * b)
 }
 
 /**
- * Loads an address from disk
+ * Sets the recycle status on an address as specified
  *
- * @param ppAddress  Pointer to location to hold allocated address
- *                   (it is the callers responsiblity to free this address)
+ * @param szUserName    UserName for the account associated with this request
+ * @param szPassword    Password for the account associated with this request
+ * @param szWalletUUID  UUID of the wallet associated with this request
+ * @param szAddressID   ID of the address
+ * @param ppAddress     Pointer to location to store allocated address info
+ * @param pError        A pointer to the location to store the error if there is one
  */
 static
 tABC_CC ABC_TxLoadAddress(const char *szUserName,
                           const char *szPassword,
                           const char *szWalletUUID,
-                          const char *szFilename,
+                          const char *szAddressID,
                           tABC_TxAddress **ppAddress,
                           tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szFile = NULL;
+    char *szAddrDir = NULL;
+    char *szFilename = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szAddressID);
+    ABC_CHECK_ASSERT(strlen(szAddressID) > 0, ABC_CC_Error, "No address ID provided");
+    ABC_CHECK_NULL(ppAddress);
+
+    // get the filename for this address
+    ABC_CHECK_RET(ABC_GetAddressFilename(szWalletUUID, szAddressID, &szFile, pError));
+
+    // get the directory name
+    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
+
+    // create the full filename
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+    sprintf(szFilename, "%s/%s", szAddrDir, szFile);
+
+    // load the request address
+    ABC_CHECK_RET(ABC_TxLoadAddressFile(szUserName, szPassword, szWalletUUID, szFilename, ppAddress, pError));
+
+exit:
+    ABC_FREE_STR(szFile);
+    ABC_FREE_STR(szAddrDir);
+    ABC_FREE_STR(szFilename);
+
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Loads an address from disk given filename (complete path)
+ *
+ * @param ppAddress  Pointer to location to hold allocated address
+ *                   (it is the callers responsiblity to free this address)
+ */
+static
+tABC_CC ABC_TxLoadAddressFile(const char *szUserName,
+                              const char *szPassword,
+                              const char *szWalletUUID,
+                              const char *szFilename,
+                              tABC_TxAddress **ppAddress,
+                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -2683,7 +2825,7 @@ tABC_CC ABC_TxLoadAddressAndAppendToArray(const char *szUserName,
     aAddresses = *paAddresses;
 
     // load the address
-    ABC_CHECK_RET(ABC_TxLoadAddress(szUserName, szPassword, szWalletUUID, szFilename, &pAddress, pError));
+    ABC_CHECK_RET(ABC_TxLoadAddressFile(szUserName, szPassword, szWalletUUID, szFilename, &pAddress, pError));
 
     // create space for new entry
     if (aAddresses == NULL)
