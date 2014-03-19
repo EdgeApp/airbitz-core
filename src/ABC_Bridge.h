@@ -36,7 +36,7 @@ extern "C" {
 
     tABC_CC ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
                                            tABC_U08Buf PrivateSeed,
-                                           unsigned int N,
+                                           int64_t N,
                                            tABC_Error *pError);
 
 #ifdef __cplusplus
