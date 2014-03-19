@@ -718,7 +718,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         sprintf(szFilename, "%s/%s%s.json", szAccountSyncDir, WALLET_EMK_PREFIX, szUUID);
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, LP2, &(pData->MK), pError));
 
-        // get the bitcoint private seed
+        // get the bitcoin private seed
         sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_BITCOIN_PRIVATE_SEED_FILENAME);
         bExists = false;
         ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
@@ -1367,6 +1367,36 @@ tABC_CC ABC_WalletGetMK(const char *szUserName, const char *szPassword, const ch
 
     // assign the address
     ABC_BUF_SET(*pMK, pData->MK);
+
+exit:
+
+    ABC_WalletMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Gets the bitcoin private seed for the specified wallet
+ *
+ * @param pSeed Pointer to store the bitcoin private seed
+ *            (note: this is not allocated and should not be free'ed by the caller)
+ */
+tABC_CC ABC_WalletGetBitcoinPrivateSeed(const char *szUserName, const char *szPassword, const char *szUUID, tABC_U08Buf *pSeed, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tWalletData *pData = NULL;
+
+    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(szUUID);
+    ABC_CHECK_NULL(pSeed);
+
+    // load the wallet data into the cache
+    ABC_CHECK_RET(ABC_WalletCacheData(szUserName, szPassword, szUUID, &pData, pError));
+
+    // assign the address
+    ABC_BUF_SET(*pSeed, pData->BitcoinPrivateSeed);
 
 exit:
 

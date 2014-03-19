@@ -100,6 +100,12 @@ extern "C" {
                             tABC_U08Buf *pMK,
                             tABC_Error *pError);
 
+    tABC_CC ABC_WalletGetBitcoinPrivateSeed(const char *szUserName,
+                                            const char *szPassword,
+                                            const char *szUUID,
+                                            tABC_U08Buf *pSeed,
+                                            tABC_Error *pError);
+
     tABC_CC ABC_WalletGetTxDirName(char **pszDir,
                                    const char *szWalletUUID,
                                    tABC_Error *pError);

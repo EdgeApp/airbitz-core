@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <time.h>
 #include <qrencode.h>
 #include "ABC_Tx.h"
 #include "ABC_Util.h"
@@ -455,6 +456,12 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_TxAddress **aAddresses = NULL;
+    unsigned int countAddresses = 0;
+    tABC_TxAddress *pAddress = NULL;
+    int64_t N = -1;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -465,20 +472,82 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
     ABC_CHECK_NULL(pszRequestID);
     *pszRequestID = NULL;
 
+    // first look for an existing address that we can re-use
+
+    // load addresses
+    ABC_CHECK_RET(ABC_TxGetAddresses(szUserName, szPassword, szWalletUUID, &aAddresses, &countAddresses, pError));
+
+    // search through all of the addresses, get the highest N and check for one with the recycleable bit set
+    for (int i = 0; i < countAddresses; i++)
+    {
+        // if we don't have an address yet and this one is available
+        ABC_CHECK_NULL(aAddresses[i]->pStateInfo);
+        if ((pAddress == NULL) && (aAddresses[i]->pStateInfo->bRecycleable == true) && ((aAddresses[i]->pStateInfo->countActivities == 0)))
+        {
+            pAddress = aAddresses[i];
+            // set it to NULL so we don't free it as part of the array free, we will free individually via pAddress
+            aAddresses[i] = NULL;
+        }
+
+        // if this is the highest seq number
+        if (aAddresses[i]->seq > N)
+        {
+            N = aAddresses[i]->seq;
+        }
+    }
+
+    // if we found an address, make it ours!
+    if (pAddress != NULL)
+    {
+        // free state and details as we will be setting them to new data below
+        ABC_TxFreeAddressStateInfo(pAddress->pStateInfo);
+        pAddress->pStateInfo = NULL;
+        ABC_FreeTxDetails(pAddress->pDetails);
+        pAddress->pDetails = NULL;
+    }
+    else // if we didn't find an address, we need to create a new one
+    {
+        ABC_ALLOC(pAddress, sizeof(tABC_TxAddress));
+
+        // use the next sequence number
+        pAddress->seq = N + 1;
+        ABC_ALLOC(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
+        sprintf(pAddress->szID, "%lld", pAddress->seq);
+
+        // get the private seed so we can generate the public address
+        tABC_U08Buf Seed = ABC_BUF_NULL;
+        ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(szUserName, szPassword, szWalletUUID, &Seed, pError));
+
+        // generate the public address
+        // TODO: uncomment this line once we have the function
+        //ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), Seed, pAddress->seq, pError));
+    }
+
+    // add the info we have to this address
+
+    // copy over the info we were given
+    ABC_CHECK_RET(ABC_DuplicateTxDetails(&(pAddress->pDetails), pDetails, pError));
+
+    // create the state info
+    ABC_ALLOC(pAddress->pStateInfo, sizeof(tTxAddressStateInfo));
+    pAddress->pStateInfo->bRecycleable = true;
+    pAddress->pStateInfo->countActivities = 0;
+    pAddress->pStateInfo->aActivities = NULL;
+    pAddress->pStateInfo->timeCreation = time(NULL);
+
+    // save out this address
+    ABC_CHECK_RET(ABC_TxSaveAddress(szUserName, szPassword, szWalletUUID, pAddress, pError));
+
+    // set the id for the caller
+    ABC_STRDUP(*pszRequestID, pAddress->szID);
+
     // for now just create a place holder id
     ABC_STRDUP(*pszRequestID, "ID");
 
-    // TODO: write the real function -
-    /*
-    Core creates an Address Entry and returns ID (recycle bit set):
-        1) Look for an address with the recycle bit set, if none found, ask libwallet to create a Bitcoin_Address using N+1 where N is the current number of addresses and create an Address Entry.
-        2) Fill in the information (e.g., name, amount, etc) with the information provided for the Address Entry with recycle bit set.
-        3) Return the Address Entry ID.
-     */
-
-
 exit:
+    ABC_TxFreeAddresses(aAddresses, countAddresses);
 
+    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
