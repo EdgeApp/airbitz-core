@@ -314,6 +314,24 @@ extern "C" {
     } tABC_TxInfo;
 
     /**
+     * AirBitz Password Rule
+     *
+     * This structure contains info for a password rule.
+     * When a password is checked, an array of these will
+     * be delivered to explain what has an hasn't passed
+     * for password requirements.
+     *
+     */
+    typedef struct sABC_PasswordRule
+    {
+        /** description of the rule */
+        char *szDescription;
+        /** has the password passed this requirement */
+        bool bPassed;
+    } tABC_PasswordRule;
+
+
+    /**
      * AirBitz Request Info
      *
      * This structure contains info for a request.
@@ -582,6 +600,15 @@ extern "C" {
                              tABC_Error *pError);
 
     void ABC_FreeTxDetails(tABC_TxDetails *pDetails);
+
+    tABC_CC ABC_CheckPassword(const char *szPassword,
+                              double *pSecondsToCrack,
+                              tABC_PasswordRule ***paRules,
+                              unsigned int *pCountRules,
+                              tABC_Error *pError);
+
+    void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
+                                   unsigned int nCount);
 
     // temp functions
     void tempEventA();

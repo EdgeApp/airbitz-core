@@ -101,6 +101,29 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
 
+#if 0 // check password
+    tABC_PasswordRule **aRules = NULL;
+    unsigned int count = 0;
+    double secondsToCrack;
+
+    ABC_CheckPassword([self.textTest.text UTF8String],
+                      &secondsToCrack,
+                      &aRules,
+                      &count,
+                      &Error);
+    [self printABC_Error:&Error];
+
+    printf("Password results:\n");
+    printf("Time to crack: %lf seconds\n", secondsToCrack);
+    for (int i = 0; i < count; i++)
+    {
+        tABC_PasswordRule *pRule = aRules[i];
+        printf("%s - %s\n", pRule->bPassed ? "pass" : "fail", pRule->szDescription);
+    }
+
+    ABC_FreePasswordRuleArray(aRules, count);
+#endif
+
 #if 0 // cancel request
     ABC_CancelReceiveRequest([self.textUsername.text UTF8String],
                              [self.textPassword.text UTF8String],
@@ -179,7 +202,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     ABC_FreeRequests(aRequests, nCount);
 #endif
 
-#if 1 // transactions
+#if 0 // transactions
     tABC_TxInfo **aTransactions = NULL;
     unsigned int nCount = 0;
     ABC_GetTransactions([self.textUsername.text UTF8String],

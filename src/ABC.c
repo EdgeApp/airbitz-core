@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <pthread.h>
 #include <jansson.h>
 #include "ABC_Debug.h"
@@ -1708,6 +1709,153 @@ void ABC_FreeTxDetails(tABC_TxDetails *pDetails)
     ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_TxFreeDetails(pDetails);
+}
+
+/**
+ * Gets password rules results for a given password.
+ *
+ * This function takes a password and evaluates how long it will take to crack as well as
+ * returns an array of rules with information on whether it satisfied each rule.
+ *
+ * @param szPassword        Paassword to check.
+ * @param pSecondsToCrack   Location to store the number of seconds it would take to crack the password
+ * @param paRules           Pointer to store the allocated array of password rules
+ * @param pCountRules       Pointer to store number of password rules in the array
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_CheckPassword(const char *szPassword,
+                          double *pSecondsToCrack,
+                          tABC_PasswordRule ***paRules,
+                          unsigned int *pCountRules,
+                          tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    double secondsToCrack;
+    tABC_PasswordRule **aRules = NULL;
+    unsigned int count = 0;
+    tABC_PasswordRule *pRuleCount = NULL;
+    tABC_PasswordRule *pRuleLC = NULL;
+    tABC_PasswordRule *pRuleUC = NULL;
+    tABC_PasswordRule *pRuleNum = NULL;
+    tABC_PasswordRule *pRuleSpec = NULL;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(pSecondsToCrack);
+    ABC_CHECK_NULL(paRules);
+    ABC_CHECK_NULL(pCountRules);
+
+    // TODO: calculate the actual number of seconds it would take to crack the password
+    secondsToCrack = 1000.0;
+
+    // we know there will be 5 rules (lots of magic numbers in this function...sorry)
+    ABC_ALLOC(aRules, sizeof(tABC_PasswordRule *) * 5);
+
+    // must have upper case letter
+    ABC_ALLOC(pRuleUC, sizeof(tABC_PasswordRule));
+    pRuleUC->szDescription = "Must have at least one upper case letter";
+    pRuleUC->bPassed = false;
+    aRules[count] = pRuleUC;
+    count++;
+
+    // must have lower case letter
+    ABC_ALLOC(pRuleLC, sizeof(tABC_PasswordRule));
+    pRuleLC->szDescription = "Must have at least one lower case letter";
+    pRuleLC->bPassed = false;
+    aRules[count] = pRuleLC;
+    count++;
+
+    // must have number
+    ABC_ALLOC(pRuleNum, sizeof(tABC_PasswordRule));
+    pRuleNum->szDescription = "Must have at least one number";
+    pRuleNum->bPassed = false;
+    aRules[count] = pRuleNum;
+    count++;
+
+    // must have special character
+    ABC_ALLOC(pRuleSpec, sizeof(tABC_PasswordRule));
+    pRuleSpec->szDescription = "Must have at least one special character";
+    pRuleSpec->bPassed = false;
+    aRules[count] = pRuleSpec;
+    count++;
+
+    // must have 10 characters
+    ABC_ALLOC(pRuleCount, sizeof(tABC_PasswordRule));
+    pRuleCount->szDescription = "Must have at least 10 characters";
+    pRuleCount->bPassed = false;
+    aRules[count] = pRuleCount;
+    count++;
+
+    // check the length
+    if (strlen(szPassword) >= 10)
+    {
+        pRuleCount->bPassed = true;
+    }
+
+    // check the other rules
+    for (int i = 0; i < strlen(szPassword); i++)
+    {
+        char c = szPassword[i];
+        if (isdigit(c))
+        {
+            pRuleNum->bPassed = true;
+        }
+        else if (isalpha(c))
+        {
+            if (islower(c))
+            {
+                pRuleLC->bPassed = true;
+            }
+            else
+            {
+                pRuleUC->bPassed = true;
+            }
+        }
+        else
+        {
+            pRuleSpec->bPassed = true;
+        }
+    }
+
+    // store final values
+    *pSecondsToCrack = secondsToCrack;
+    *paRules = aRules;
+    aRules = NULL;
+    *pCountRules = count;
+    count = 0;
+
+exit:
+    ABC_FreePasswordRuleArray(aRules, count);
+
+    return cc;
+}
+
+/**
+ * Free the password rule array.
+ *
+ * This function frees the password rule array returned from ABC_CheckPassword.
+ *
+ * @param aRules   Array of pointers to password rules to be free'd
+ * @param nCount   Number of elements in the array
+ */
+void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
+                               unsigned int nCount)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    if ((aRules != NULL) && (nCount > 0))
+    {
+        for (int i = 0; i < nCount; i++)
+        {
+            // note we aren't free'ing the string because it uses heap strings
+            ABC_CLEAR_FREE(aRules[i], sizeof(tABC_PasswordRule));
+        }
+        ABC_CLEAR_FREE(aRules, sizeof(tABC_PasswordRule *) * nCount);
+    }
 }
 
 void tempEventA()
