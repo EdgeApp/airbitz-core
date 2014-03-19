@@ -125,7 +125,7 @@ write_tasks() {
         local task=$1
         shift 1
 
-        local deps dep
+        local dep deps=$(relative $(recipe_file $recipe))
         for dep; do
             deps="$deps $(relative $(done_file_dot $dep))"
         done

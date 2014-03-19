@@ -11,6 +11,7 @@
 
 #include "ABC_Bridge.h"
 #include <wallet/uri.hpp>
+#include <wallet/hd_keys.hpp>
 #include <bitcoin/utility/base58.hpp>
 
 /**
@@ -122,6 +123,49 @@ tABC_CC ABC_BridgeBase58Decode(const char *szBase58, tABC_U08Buf *pData, tABC_Er
     ABC_CHECK_ASSERT(pData->p != NULL, ABC_CC_NULLPtr, "malloc failed (returned NULL)");
     pData->end = pData->p + out.size();
     memcpy(pData->p, out.data(), out.size());
+
+exit:
+    return cc;
+}
+
+/**
+ * Helper function to get an address from an HD private key.
+ */
+static std::string address(const libwallet::hd_private_key& key)
+{
+    libbitcoin::payment_address address;
+    libbitcoin::set_public_key(address, key.public_key());
+    return address.encoded();
+}
+
+/**
+ * Calculates a public address for the HD wallet main external chain.
+ * @param pszPubAddress set to the newly-generated address, or set to NULL if
+ * there is a math error. If that happens, add 1 to N and try again.
+ * @param PrivateSeed any amount of random data to seed the generator
+ * @param N the index of the key to generate
+ */
+tABC_CC ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
+                                       tABC_U08Buf PrivateSeed,
+                                       int32_t N,
+                                       tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    libbitcoin::data_chunk seed(PrivateSeed.p, PrivateSeed.end);
+    libwallet::hd_private_key m(seed);
+    libwallet::hd_private_key m0 = m.generate_private_key(0);
+    libwallet::hd_private_key m00 = m0.generate_private_key(0);
+    libwallet::hd_private_key m00n = m00.generate_private_key(N);
+    if (m00n.valid())
+    {
+        std::string out = address(m00n);
+        ABC_STRDUP(*pszPubAddress, out.c_str());
+    }
+    else
+    {
+        *pszPubAddress = nullptr;
+    }
 
 exit:
     return cc;
