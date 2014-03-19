@@ -1,6 +1,7 @@
 BUILD_DIR ?= build
 
-default: abc
+default: abc curl libbitcoin libqrencode openssl zeromq boost jansson \
+         libconfig libwallet obelisk scrypt zlib
 
 $(BUILD_DIR)/%/tasks.mk: recipes/%
 	@ ./run.sh $* write-tasks
