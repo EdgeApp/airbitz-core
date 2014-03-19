@@ -26,8 +26,18 @@ extern "C" {
                                        tABC_BitcoinURIInfo *pInfo,
                                        tABC_Error *pError);
 
-    tABC_CC ABC_BridgeBase58Encode(tABC_U08Buf Data, char **pszBase58, tABC_Error *pError);
-    tABC_CC ABC_BridgeBase58Decode(const char *szBase58, tABC_U08Buf *pData, tABC_Error *pError);
+    tABC_CC ABC_BridgeBase58Encode(tABC_U08Buf Data,
+                                   char **pszBase58,
+                                   tABC_Error *pError);
+
+    tABC_CC ABC_BridgeBase58Decode(const char *szBase58,
+                                   tABC_U08Buf *pData,
+                                   tABC_Error *pError);
+
+    tABC_CC ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
+                                           tABC_U08Buf PrivateSeed,
+                                           unsigned int N,
+                                           tABC_Error *pError);
 
 #ifdef __cplusplus
 }
