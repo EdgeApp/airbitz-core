@@ -604,7 +604,7 @@ tABC_CC ABC_TxCreateNewAddress(const char *szUserName,
 exit:
     ABC_TxFreeAddresses(aAddresses, countAddresses);
     ABC_TxFreeAddress(pAddress);
-    
+
     ABC_TxMutexUnlock(NULL);
     return cc;
 }
@@ -990,7 +990,6 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_TxAddress *pAddress = NULL;
-    tABC_U08Buf StringData = ABC_BUF_NULL;
     QRcode *qr = NULL;
     unsigned char *aData = NULL;
     unsigned int length = 0;
@@ -1011,7 +1010,6 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
     ABC_CHECK_NULL(pAddress->pDetails);
 
     // TODO: Call when available in bridge
-    /*
     tABC_BitcoinURIInfo infoURI;
     memset(&infoURI, 0, sizeof(tABC_BitcoinURIInfo));
     infoURI.amountSatoshi = pAddress->pDetails->amountSatoshi;
@@ -1034,50 +1032,6 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
         }
     }
     ABC_CHECK_RET(ABC_BridgeEncodeBitcoinURI(&szURI, &infoURI, pError));
-     */
-
-    /////////////////////////////////////////////
-    // start temp until we move to Bridge
-    ////////////////////////////////////////////
-
-    // start with the bitcoin label
-    ABC_BUF_DUP_PTR(StringData, "bitcoin:", strlen("bitcoin:"));
-
-    // added the address
-    ABC_BUF_APPEND_PTR(StringData, pAddress->szPubAddress, strlen(pAddress->szPubAddress));
-
-    // add the amount
-    static char szAmount[TX_MAX_AMOUNT_LENGTH];
-    sprintf(szAmount, "?amount=%lld.%08lld", pAddress->pDetails->amountSatoshi / SATOSHI_PER_BITCOIN, pAddress->pDetails->amountSatoshi % SATOSHI_PER_BITCOIN);
-    ABC_BUF_APPEND_PTR(StringData, szAmount, strlen(szAmount));
-
-    // if there is a name
-    if (pAddress->pDetails->szName)
-    {
-        if (strlen(pAddress->pDetails->szName) > 0)
-        {
-            ABC_BUF_APPEND_PTR(StringData, "&label=", strlen("&label="));
-            ABC_BUF_APPEND_PTR(StringData, pAddress->pDetails->szName, strlen(pAddress->pDetails->szName));
-        }
-    }
-
-    // if there is a note
-    if (pAddress->pDetails->szNotes)
-    {
-        if (strlen(pAddress->pDetails->szNotes) > 0)
-        {
-            ABC_BUF_APPEND_PTR(StringData, "&message=", strlen("&message="));
-            ABC_BUF_APPEND_PTR(StringData, pAddress->pDetails->szNotes, strlen(pAddress->pDetails->szNotes));
-        }
-    }
-
-    // add the final null so we get a true string
-    ABC_BUF_APPEND_PTR(StringData, "", 1);
-    szURI = (char *) ABC_BUF_PTR(StringData);
-
-    /////////////////////////////////////////////
-    // end temp until we move to Bridge
-    ////////////////////////////////////////////
 
     // encode our string
     ABC_DebugLog("Encoding: %s", szURI);
@@ -1292,7 +1246,7 @@ exit:
 }
 
 /**
- * Given a potential transaction filename, determines the type and 
+ * Given a potential transaction filename, determines the type and
  * creates an allocated basename if it is a transaction type.
  *
  * @param szFilename    Filename of potential transaction
@@ -1371,10 +1325,10 @@ tABC_CC ABC_TxGetTxTypeAndBasename(const char *szFilename,
         *pszBasename = szBasename;
     }
     szBasename = NULL;
-    
+
 exit:
     ABC_FREE_STR(szBasename);
-    
+
     return cc;
 }
 
@@ -1454,7 +1408,7 @@ tABC_CC ABC_TxLoadTxAndAppendToArray(const char *szUserName,
     // assign the values to the caller
     *paTransactions = aTransactions;
     *pCount = count;
-    
+
 exit:
     ABC_TxFreeTx(pTx);
     ABC_TxFreeTransaction(pTransaction);
@@ -2226,7 +2180,7 @@ tABC_CC ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_
 
 exit:
     if (pJSON_Details) json_decref(pJSON_Details);
-    
+
     return cc;
 }
 
@@ -2393,7 +2347,7 @@ tABC_CC ABC_TxLoadAddressFile(const char *szUserName,
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
     ABC_TxFreeAddress(pAddress);
-    
+
     ABC_TxMutexUnlock(NULL);
     return cc;
 }
@@ -2479,7 +2433,7 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
 
 exit:
     ABC_TxFreeAddressStateInfo(pState);
-    
+
     return cc;
 }
 
@@ -2674,7 +2628,7 @@ exit:
     ABC_FREE_STR(szAddrDir);
     ABC_BUF_FREE(DataHMAC);
     ABC_FREE_STR(szDataBase58);
-    
+
     return cc;
 }
 
@@ -2845,7 +2799,7 @@ exit:
     ABC_FREE_STR(szFilename);
     ABC_FileIOFreeFileList(pFileList);
     ABC_TxFreeAddresses(aAddresses, count);
-    
+
     ABC_FileIOMutexUnlock(NULL);
     return cc;
 }

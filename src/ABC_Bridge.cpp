@@ -99,6 +99,31 @@ tABC_CC ABC_BridgeParseAmount(const char *szAmount,
 }
 
 /**
+ *
+ */
+tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
+                                   tABC_BitcoinURIInfo *pInfo,
+                                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    libwallet::uri_writer writer;
+    if (pInfo->szAddress)
+        writer.write_address(pInfo->szAddress);
+    if (pInfo->amountSatoshi)
+        writer.write_amount(pInfo->amountSatoshi);
+    if (pInfo->szLabel)
+        writer.write_param("label", pInfo->szLabel);
+    if (pInfo->szMessage)
+        writer.write_param("message", pInfo->szMessage);
+
+    ABC_STRDUP(*pszURI, writer.string().c_str());
+
+exit:
+    return cc;
+}
+
+/**
  * Converts a block of data to a Base58-encoded string.
  *
  * @param Data Buffer of data to convert.
