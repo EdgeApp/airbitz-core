@@ -10,7 +10,7 @@ download() {
         filename="$download_dir/$(echo $s | sed -e's@^.*/@@' -e's@\?.*$@@')"
         if [ $filename != ${filename%.git} ]; then
             if [ -e $filename ]; then
-                git --git-dir="$filename" fetch "$s" master:master
+                git --git-dir="$filename" fetch -f "$s" master:master
             else
                 git clone --bare "$s" "$filename"
             fi
