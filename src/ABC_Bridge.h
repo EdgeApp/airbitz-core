@@ -12,6 +12,9 @@
 #include "ABC.h"
 #include "ABC_Util.h"
 
+#define ABC_BRIDGE_INVALID_AMOUNT           ((int64_t)-1)
+#define ABC_BRIDGE_BITCOIN_DECIMAL_PLACE    8
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -21,6 +24,10 @@ extern "C" {
                                 tABC_Error *pError);
 
     void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo);
+
+    tABC_CC ABC_BridgeParseAmount(const char *szAmount,
+                                  int64_t *pValue,
+                                  unsigned decmial_place);
 
     tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
                                        tABC_BitcoinURIInfo *pInfo,

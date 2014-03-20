@@ -83,6 +83,22 @@ void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo)
 }
 
 /**
+ * Parses a Bitcoin amount string to an integer.
+ * @param the amount to parse, in bitcoins
+ * @param the integer value, in satoshis, or ABC_BRIDGE_INVALID_AMOUNT
+ * if something goes wrong.
+ * @param decimal_place set to ABC_BRIDGE_BITCOIN_DECIMAL_PLACE tp convert
+ * bitcoin to satoshis.
+ */
+tABC_CC ABC_BridgeParseAmount(const char *szAmount,
+                              int64_t *pValue,
+                              unsigned decmial_place)
+{
+    *pValue = libwallet::parse_amount(szAmount, decmial_place);
+    return ABC_CC_Ok;
+}
+
+/**
  * Converts a block of data to a Base58-encoded string.
  *
  * @param Data Buffer of data to convert.
