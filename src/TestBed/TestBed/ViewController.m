@@ -119,6 +119,11 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
                              &szRequestID,
                              &Error);
 
+    if (szRequestID)
+    {
+        printf("Request created: %s\n", szRequestID);
+    }
+
     [self printABC_Error:&Error];
 #endif
 

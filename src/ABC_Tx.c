@@ -535,6 +535,12 @@ tABC_CC ABC_TxCreateNewAddress(const char *szUserName,
     // search through all of the addresses, get the highest N and check for one with the recycleable bit set
     for (int i = 0; i < countAddresses; i++)
     {
+        // if this is the highest seq number
+        if (aAddresses[i]->seq > N)
+        {
+            N = aAddresses[i]->seq;
+        }
+
         // if we don't have an address yet and this one is available
         ABC_CHECK_NULL(aAddresses[i]->pStateInfo);
         if ((pAddress == NULL) && (aAddresses[i]->pStateInfo->bRecycleable == true) && ((aAddresses[i]->pStateInfo->countActivities == 0)))
@@ -542,12 +548,6 @@ tABC_CC ABC_TxCreateNewAddress(const char *szUserName,
             pAddress = aAddresses[i];
             // set it to NULL so we don't free it as part of the array free, we will be sending this back to the caller
             aAddresses[i] = NULL;
-        }
-
-        // if this is the highest seq number
-        if (aAddresses[i]->seq > N)
-        {
-            N = aAddresses[i]->seq;
         }
     }
 
