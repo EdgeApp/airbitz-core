@@ -1858,6 +1858,72 @@ void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
     }
 }
 
+/**
+ * Loads the settings for a specific account
+ *
+ * @param szUserName    UserName for the account associated with the settings
+ * @param szPassword    Password for the account associated with the settings
+ * @param ppSettings    Location to store ptr to allocated settings (caller must free)
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_LoadAccountSettings(const char *szUserName,
+                                const char *szPassword,
+                                tABC_AccountSettings **ppSettings,
+                                tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_AccountLoadSettings(szUserName, szPassword, ppSettings, pError));
+                  
+exit:
+
+    return cc;
+}
+
+/**
+ * Updates the settings for a specific account
+ *
+ * @param szUserName    UserName for the account associated with the settings
+ * @param szPassword    Password for the account associated with the settings
+ * @param pSettings    Pointer to settings
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_UpdateAccountSettings(const char *szUserName,
+                                  const char *szPassword,
+                                  tABC_AccountSettings *pSettings,
+                                  tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_AccountSaveSettings(szUserName, szPassword, pSettings, pError));
+
+exit:
+
+    return cc;
+}
+
+/**
+ * Frees the given account settings
+ *
+ * @param pSettings Ptr to setting to free
+ */
+void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    ABC_AccountFreeSettings(pSettings);
+}
+
 void tempEventA()
 {
     if (gfAsyncBitCoinEventCallback)

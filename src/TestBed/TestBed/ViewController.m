@@ -101,6 +101,97 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
 
+#if 0 // change settings
+    tABC_AccountSettings *pNewSettings = NULL;
+    ABC_LoadAccountSettings([self.textUsername.text UTF8String],
+                            [self.textPassword.text UTF8String],
+                            &pNewSettings,
+                            &Error);
+    [self printABC_Error:&Error];
+
+    printf("Updating settings...\n");
+
+    if (pNewSettings != NULL)
+    {
+        if (pNewSettings->szFirstName) free(pNewSettings->szFirstName);
+        pNewSettings->szFirstName = strdup("Adam");
+        if (pNewSettings->szLastName) free(pNewSettings->szLastName);
+        pNewSettings->szLastName = strdup("Harris");
+        if (pNewSettings->szNickname) free(pNewSettings->szNickname);
+        pNewSettings->szNickname = strdup("AdamDNA");
+        pNewSettings->bNameOnPayments = true;
+        pNewSettings->minutesAutoLogout = 30;
+        if (pNewSettings->szLanguage) free(pNewSettings->szLanguage);
+        pNewSettings->szLanguage = strdup("en");
+        pNewSettings->currencyNum = 840;
+        pNewSettings->bAdvancedFeatures = true;
+        if (pNewSettings->bitcoinDenomination.szLabel) free(pNewSettings->bitcoinDenomination.szLabel);
+        pNewSettings->bitcoinDenomination.szLabel = strdup("BTC");
+        pNewSettings->bitcoinDenomination.satoshi = 100000000;
+        if (pNewSettings->exchangeRateSources.numSources > 0 && pNewSettings->exchangeRateSources.aSources)
+        {
+            for (int i = 0; i < pNewSettings->exchangeRateSources.numSources; i++)
+            {
+                if (pNewSettings->exchangeRateSources.aSources[i]->szSource) free(pNewSettings->exchangeRateSources.aSources[i]->szSource);
+                free(pNewSettings->exchangeRateSources.aSources[i]);
+            }
+            free(pNewSettings->exchangeRateSources.aSources);
+        }
+        pNewSettings->exchangeRateSources.numSources = 2;
+        pNewSettings->exchangeRateSources.aSources = calloc(1, pNewSettings->exchangeRateSources.numSources * sizeof(tABC_ExchangeRateSource *));
+        pNewSettings->exchangeRateSources.aSources[0] = calloc(1, sizeof(tABC_ExchangeRateSource));
+        pNewSettings->exchangeRateSources.aSources[0]->currencyNum = 840;
+        pNewSettings->exchangeRateSources.aSources[0]->szSource = strdup("bitstamp");
+
+        pNewSettings->exchangeRateSources.aSources[1] = calloc(1, sizeof(tABC_ExchangeRateSource));
+        pNewSettings->exchangeRateSources.aSources[1]->currencyNum = 124;
+        pNewSettings->exchangeRateSources.aSources[1]->szSource = strdup("cavirtex");
+
+
+        ABC_UpdateAccountSettings([self.textUsername.text UTF8String],
+                                [self.textPassword.text UTF8String],
+                                pNewSettings,
+                                &Error);
+        [self printABC_Error:&Error];
+
+        ABC_FreeAccountSettings(pNewSettings);
+    }
+
+#endif
+
+#if 0 // load settings
+    tABC_AccountSettings *pSettings = NULL;
+    ABC_LoadAccountSettings([self.textUsername.text UTF8String],
+                            [self.textPassword.text UTF8String],
+                            &pSettings,
+                            &Error);
+    [self printABC_Error:&Error];
+
+    printf("Settings: \n");
+
+    if (pSettings != NULL)
+    {
+        printf("First name: %s\n", pSettings->szFirstName ? pSettings->szFirstName : "(none)");
+        printf("Last name: %s\n", pSettings->szLastName ? pSettings->szLastName : "(none)");
+        printf("Nickname: %s\n", pSettings->szNickname ? pSettings->szNickname : "(none)");
+        printf("List name on payments: %s\n", pSettings->bNameOnPayments ? "yes" : "no");
+        printf("Minutes before auto logout: %d\n", pSettings->minutesAutoLogout);
+        printf("Language: %s\n", pSettings->szLanguage);
+        printf("Currency num: %d\n", pSettings->currencyNum);
+        printf("Advanced features: %s\n", pSettings->bAdvancedFeatures ? "yes" : "no");
+        printf("Denomination satoshi: %lld\n", pSettings->bitcoinDenomination.satoshi);
+        printf("Denomination label: %s\n", pSettings->bitcoinDenomination.szLabel);
+        printf("Exchange rate sources:\n");
+        for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)
+        {
+            printf("\tcurrency: %d\tsource: %s\n", pSettings->exchangeRateSources.aSources[i]->currencyNum, pSettings->exchangeRateSources.aSources[i]->szSource);
+        }
+
+        ABC_FreeAccountSettings(pSettings);
+    }
+
+#endif
+
 #if 0 // create receive request
     tABC_TxDetails Details;
     Details.amountSatoshi = 100;
@@ -118,13 +209,12 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
                              &Details,
                              &szRequestID,
                              &Error);
+    [self printABC_Error:&Error];
 
     if (szRequestID)
     {
         printf("Request created: %s\n", szRequestID);
     }
-
-    [self printABC_Error:&Error];
 #endif
 
 #if 0 // check password
@@ -264,7 +354,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
 #if 0 // bitcoin uri
     tABC_BitcoinURIInfo *uri;
     printf("Parsing URI: %s\n", [self.textTest.text UTF8String]);
-    //ABC_ParseBitcoinURI("bitcoin:113Pfw4sFqN1T5kXUnKbqZHMJHN9oyjtgD?message=test", &uri, &Error);
+    //ABC_ParseBitcoinURI("bitcoin:1585j6GvTMz6gkCgjK3kpm9SBkEZCdN5aW?amount=0.00000100&label=MyName&message=MyNotes", &uri, &Error);
     ABC_ParseBitcoinURI([self.textTest.text UTF8String], &uri, &Error);
     [self printABC_Error:&Error];
 
@@ -377,7 +467,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
 #if 0 // change password with recovery questions
     NSLog(@"Calling Change Password w/Recovery");
     self.labelStatus.text = @"Calling Change Password";
-    ABC_ChangePasswordWithRecoveryAnswers("a", "Answer1\nAnswer2\nAnswer3\nAnswer4\nAnswer5", "a", "2222", ABC_Request_Callback, (__bridge void *)self, &Error);
+    ABC_ChangePasswordWithRecoveryAnswers("a", "Answer1\nAnswer2\nAnswer3\nAnswer4\nAnswer5", "b", "2222", ABC_Request_Callback, (__bridge void *)self, &Error);
     [self printABC_Error:&Error];
 
     if (ABC_CC_Ok == Error.code)

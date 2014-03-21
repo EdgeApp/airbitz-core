@@ -16,6 +16,8 @@
 #include <jansson.h>
 #include "ABC.h"
 
+#define CURRENCY_NUM_USD                840
+
 #ifdef __cplusplus
 extern "C" {
 #endif

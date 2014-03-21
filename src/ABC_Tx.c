@@ -26,8 +26,6 @@
 
 #define SATOSHI_PER_BITCOIN             100000000
 
-#define CURRENCY_NUM_USD                840
-
 #define TX_MAX_ADDR_ID_LENGTH           20 // largest char count for the string version of the id number - 20 digits should handle it
 
 #define TX_MAX_AMOUNT_LENGTH            100 // should be max length of a bit coin amount string
@@ -1009,7 +1007,7 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
     ABC_CHECK_RET(ABC_TxLoadAddress(szUserName, szPassword, szWalletUUID, szRequestID, &pAddress, pError));
     ABC_CHECK_NULL(pAddress->pDetails);
 
-    // TODO: Call when available in bridge
+    // Get the URL string for this info
     tABC_BitcoinURIInfo infoURI;
     memset(&infoURI, 0, sizeof(tABC_BitcoinURIInfo));
     infoURI.amountSatoshi = pAddress->pDetails->amountSatoshi;

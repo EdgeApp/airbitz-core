@@ -134,6 +134,18 @@ extern "C" {
                                             char **pszQuestions,
                                             tABC_Error *pError);
 
+    tABC_CC ABC_AccountLoadSettings(const char *szUserName,
+                                    const char *szPassword,
+                                    tABC_AccountSettings **ppSettings,
+                                    tABC_Error *pError);
+
+    tABC_CC ABC_AccountSaveSettings(const char *szUserName,
+                                    const char *szPassword,
+                                    tABC_AccountSettings *pSettings,
+                                    tABC_Error *pError);
+
+    void ABC_AccountFreeSettings(tABC_AccountSettings *pSettings);
+
 #ifdef __cplusplus
 }
 #endif

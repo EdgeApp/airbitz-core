@@ -330,7 +330,6 @@ extern "C" {
         bool bPassed;
     } tABC_PasswordRule;
 
-
     /**
      * AirBitz Request Info
      *
@@ -350,6 +349,82 @@ extern "C" {
         /** satoshi still owed */
         int64_t owedSatoshi;
     } tABC_RequestInfo;
+
+    /**
+     * AirBitz Exchange Rate Source
+     *
+     * This structure contains the exchange rate
+     * source to use for a currencies.
+     *
+     */
+    typedef struct sABC_ExchangeRateSource
+    {
+        /** ISO 4217 currency code */
+        int                         currencyNum;
+        /** exchange rate source */
+        char                        *szSource;
+    } tABC_ExchangeRateSource;
+
+    /**
+     * AirBitz Exchange Rate Sources
+     *
+     * This structure contains the exchange rate
+     * sources to use for different currencies.
+     *
+     */
+    typedef struct sABC_ExchangeRateSources
+    {
+        /** number of sources */
+        unsigned int numSources;
+        /** array of exchange rate sources */
+        tABC_ExchangeRateSource **aSources;
+    } tABC_ExchangeRateSources;
+
+    /**
+     * AirBitz Bitcoin Denomination
+     *
+     * This structure contains the method for
+     * displaying bitcoin.
+     *
+     */
+    typedef struct sABC_BitcoinDenomination
+    {
+        /** label (e.g., mBTC) */
+        char *szLabel;
+        /** number of satoshi per unit (e.g., 100,000) */
+        int64_t satoshi;
+    } tABC_BitcoinDenomination;
+
+    /**
+     * AirBitz Account Settings
+     *
+     * This structure contains the user settings
+     * for an account.
+     *
+     */
+    typedef struct sABC_AccountSettings
+    {
+        /** first name (optional) */
+        char                        *szFirstName;
+        /** last name (optional) */
+        char                        *szLastName;
+        /** nickname (optional) */
+        char                        *szNickname;
+        /** should name be listed on payments */
+        bool                        bNameOnPayments;
+        /** how many minutes before auto logout */
+        int                         minutesAutoLogout;
+        /** language (ISO 639-1) */
+        char                        *szLanguage;
+        /** default ISO 4217 currency code */
+        int                         currencyNum;
+        /** bitcoin exchange rate sources */
+        tABC_ExchangeRateSources    exchangeRateSources;
+        /** how to display bitcoin denomination */
+        tABC_BitcoinDenomination    bitcoinDenomination;
+        /** use advanced features (e.g., allow offline wallet creation) */
+        bool                        bAdvancedFeatures;
+    } tABC_AccountSettings;
 
     /**
      * AirBitz Asynchronous BitCoin event callback
@@ -609,6 +684,18 @@ extern "C" {
 
     void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
                                    unsigned int nCount);
+
+    tABC_CC ABC_LoadAccountSettings(const char *szUserName,
+                                    const char *szPassword,
+                                    tABC_AccountSettings **ppSettings,
+                                    tABC_Error *pError);
+
+    tABC_CC ABC_UpdateAccountSettings(const char *szUserName,
+                                      const char *szPassword,
+                                      tABC_AccountSettings *pSettings,
+                                      tABC_Error *pError);
+
+    void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings);
 
     // temp functions
     void tempEventA();
