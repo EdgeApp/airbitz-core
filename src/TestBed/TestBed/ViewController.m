@@ -217,7 +217,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     }
 #endif
 
-#if 0 // check password
+#if 1 // check password
     tABC_PasswordRule **aRules = NULL;
     unsigned int count = 0;
     double secondsToCrack;

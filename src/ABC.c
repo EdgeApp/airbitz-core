@@ -13,6 +13,7 @@
 #include <ctype.h>
 #include <pthread.h>
 #include <jansson.h>
+#include <math.h>
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Account.h"
@@ -1749,9 +1750,6 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     ABC_CHECK_NULL(paRules);
     ABC_CHECK_NULL(pCountRules);
 
-    // TODO: calculate the actual number of seconds it would take to crack the password
-    secondsToCrack = 1000.0;
-
     // we know there will be 5 rules (lots of magic numbers in this function...sorry)
     ABC_ALLOC(aRules, sizeof(tABC_PasswordRule *) * 5);
 
@@ -1819,6 +1817,52 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
         {
             pRuleSpec->bPassed = true;
         }
+    }
+
+    // calculate the time to crack
+
+    /*
+     From: http://blog.shay.co/password-entropy/
+        A common and easy way to estimate the strength of a password is its entropy.
+        The entropy is given by H=LlogBase2(N) where L is the length of the password and N is the size of the alphabet, and it is usually measured in bits.
+        The entropy measures the number of bits it would take to represent every password of length L under an alphabet with N different symbols.
+
+        For example, a password of 7 lower-case characters (such as: example, polmnni, etc.) has an entropy of H=7logBase2(26)≈32.9bits.
+        A password of 10 alpha-numeric characters (such as: P4ssw0Rd97, K5lb42eQa2) has an entropy of H=10logBase2(62)≈59.54bits.
+
+        Entropy makes it easy to compare password strengths, higher entropy means stronger password (in terms of resistance to brute force attacks).
+     */
+    // Note: (a) the following calculation of is just based upon one method
+    //       (b) the guesses per second is arbitrary
+    //       (c) it does not take dictionary attacks into account
+    int L = (int) strlen(szPassword);
+    if (L > 0)
+    {
+        int N = 0;
+        if (pRuleLC->bPassed)
+        {
+            N += 26; // number of lower-case letters
+        }
+        if (pRuleUC->bPassed)
+        {
+            N += 26; // number of upper-case letters
+        }
+        if (pRuleNum->bPassed)
+        {
+            N += 10; // number of numeric charcters
+        }
+        if (pRuleSpec->bPassed)
+        {
+            N += 35; // number of non-alphanumeric characters on keyboard (iOS)
+        }
+        const double guessesPerSecond = 1000.0; // this can be changed based upon the speed of the computer
+        double entropy = (double) L * (double)log2(N);
+        double vars = pow(2, entropy);
+        secondsToCrack = vars / guessesPerSecond;
+    }
+    else
+    {
+        secondsToCrack = 0;
     }
 
     // store final values
