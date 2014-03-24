@@ -1,5 +1,5 @@
 TARGET ?= native
-CFLAGS += -Wall -std=c99 -D_BSD_SOURCE
+CFLAGS += -Wall -std=c99 -D_BSD_SOURCE -DDEBUG
 
 c_sources=$(wildcard src/*.c)
 cpp_sources=$(wildcard src/*.cpp)
