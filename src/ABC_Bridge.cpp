@@ -169,16 +169,6 @@ exit:
 }
 
 /**
- * Helper function to get an address from an HD private key.
- */
-static std::string address(const libwallet::hd_private_key& key)
-{
-    libbitcoin::payment_address address;
-    libbitcoin::set_public_key(address, key.public_key());
-    return address.encoded();
-}
-
-/**
  * Calculates a public address for the HD wallet main external chain.
  * @param pszPubAddress set to the newly-generated address, or set to NULL if
  * there is a math error. If that happens, add 1 to N and try again.
@@ -199,7 +189,7 @@ tABC_CC ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
     libwallet::hd_private_key m00n = m00.generate_private_key(N);
     if (m00n.valid())
     {
-        std::string out = address(m00n);
+        std::string out = m00n.address().encoded();
         ABC_STRDUP(*pszPubAddress, out.c_str());
     }
     else
