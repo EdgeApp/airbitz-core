@@ -15,11 +15,21 @@
 #include <stdlib.h>
 #include <jansson.h>
 #include "ABC.h"
+#include "ABC_Debug.h"
 
 #define CURRENCY_NUM_USD                840
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifdef DEBUG
+#define ABC_LOG_ERROR(code, err_string) \
+    { \
+        ABC_DebugLog("Error: %s, code: %d, func: %s, source: %s, line: %d", err_string, code, __FUNCTION__, __FILE__, __LINE__); \
+    }
+#else
+    #define ABC_LOG_ERROR(code, err_string) { }
 #endif
 
 #define ABC_SET_ERR_CODE(err, set_code) \
@@ -43,6 +53,7 @@ extern "C" {
             pError->nSourceLine = __LINE__; \
         } \
         cc = err; \
+        ABC_LOG_ERROR(cc, desc); \
         goto exit; \
     }
 
@@ -64,6 +75,7 @@ extern "C" {
         cc = err; \
         if (ABC_CC_Ok != cc) \
         { \
+            ABC_LOG_ERROR(cc, #err); \
             goto exit; \
         } \
     }

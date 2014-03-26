@@ -89,7 +89,6 @@ typedef struct sAccountKeys
 static unsigned int gAccountKeysCacheCount = 0;
 static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
-
 static tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pError);
