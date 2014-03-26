@@ -1714,7 +1714,6 @@ exit:
     return cc;
 }
 
-
 /**
  * Frees the given requets
  *
@@ -1730,7 +1729,6 @@ void ABC_TxFreeRequest(tABC_RequestInfo *pRequest)
         ABC_CLEAR_FREE(pRequest, sizeof(tABC_RequestInfo));
     }
 }
-
 
 /**
  * Frees the given array of requets
@@ -1998,7 +1996,9 @@ void ABC_TxFreeTx(tABC_Tx *pTx)
     }
 }
 
-// creates the transaction directory if needed
+/**
+ * Creates the transaction directory if needed
+ */
 static
 tABC_CC ABC_TxCreateTxDir(const char *szWalletUUID, tABC_Error *pError)
 {
@@ -2630,7 +2630,9 @@ exit:
     return cc;
 }
 
-// creates the address directory if needed
+/**
+ * Creates the address directory if needed
+ */
 static
 tABC_CC ABC_TxCreateAddressDir(const char *szWalletUUID, tABC_Error *pError)
 {

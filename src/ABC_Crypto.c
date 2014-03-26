@@ -86,7 +86,9 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
 static
 int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64);
 
-// sets the seed for the random number generator
+/**
+ * Sets the seed for the random number generator
+ */
 tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
                                 tABC_Error        *pError)
 {
@@ -157,7 +159,9 @@ exit:
     return cc;
 }
 
-// encrypted the given data and create a json string
+/**
+ * Encrypted the given data and create a json string
+ */
 tABC_CC ABC_CryptoEncryptJSONString(const tABC_U08Buf Data,
                                     const tABC_U08Buf Key,
                                     tABC_CryptoType   cryptoType,
@@ -182,7 +186,9 @@ exit:
     return cc;
 }
 
-// encrypt data into a jansson object
+/**
+ * Encrypt data into a jansson object
+ */
 tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
                                     const tABC_U08Buf Key,
                                     tABC_CryptoType   cryptoType,
@@ -288,7 +294,9 @@ exit:
     return cc;
 }
 
-// encrypted the given data and write the json to a file
+/**
+ * Encrypted the given data and write the json to a file
+ */
 tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
                                   const tABC_U08Buf Key,
                                   tABC_CryptoType   cryptoType,
@@ -316,7 +324,9 @@ exit:
     return cc;
 }
 
-// encrypted the given json and write the encrypted json to a file
+/**
+ * Encrypted the given json and write the encrypted json to a file
+ */
 tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
                                         const tABC_U08Buf Key,
                                         tABC_CryptoType  cryptoType,
@@ -346,7 +356,9 @@ exit:
     return cc;
 }
 
-// given a JSON string holding encrypted data, this function decrypts it
+/**
+ * Given a JSON string holding encrypted data, this function decrypts it
+ */
 tABC_CC ABC_CryptoDecryptJSONString(const char        *szEncDataJSON,
                                     const tABC_U08Buf Key,
                                     tABC_U08Buf       *pData,
@@ -375,7 +387,9 @@ exit:
     return cc;
 }
 
-// given a JSON object holding encrypted data, this function decrypts it
+/**
+ * Given a JSON object holding encrypted data, this function decrypts it
+ */
 tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
                                     const tABC_U08Buf Key,
                                     tABC_U08Buf       *pData,
@@ -439,7 +453,9 @@ exit:
     return cc;
 }
 
-// given a file holding encrypted data, this function decrypts it
+/**
+ * Given a file holding encrypted data, this function decrypts it
+ */
 tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
                                   const tABC_U08Buf Key,
                                   tABC_U08Buf       *pData,
@@ -512,16 +528,17 @@ exit:
     return cc;
 }
 
-// creates an encrypted aes256 package that includes data, random header/footer and sha256
-/* Package format:
-    1 byte:     h (the number of random header bytes)
-    h bytes:    h random header bytes
-    4 bytes:    length of data (big endian)
-    x bytes:    data (x bytes)
-    1 byte:     f (the number of random footer bytes)
-    f bytes:    f random header bytes
-    32 bytes:   32 bytes SHA256 of all data up to this point
-*/
+/**
+ * Creates an encrypted aes256 package that includes data, random header/footer and sha256
+ * Package format:
+ *   1 byte:     h (the number of random header bytes)
+ *   h bytes:    h random header bytes
+ *   4 bytes:    length of data (big endian)
+ *   x bytes:    data (x bytes)
+ *   1 byte:     f (the number of random footer bytes)
+ *   f bytes:    f random header bytes
+ *   32 bytes:   32 bytes SHA256 of all data up to this point
+ */
 static
 tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
                                        const tABC_U08Buf Key,
@@ -628,7 +645,6 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
 
     //ABC_UtilHexDumpBuf("Encrypted data", *pEncData);
 
-
 exit:
     ABC_BUF_FREE(RandCount);
     ABC_BUF_FREE(RandHeaderBytes);
@@ -638,18 +654,19 @@ exit:
     return cc;
 }
 
-// decrypts an encrypted aes256 package which includes data, random header/footer and sha256
-// Note: it is critical that this function returns ABC_CC_DecryptFailure if there is an issue
-//       because code is counting on this specific error to know a key is bad
-/* Package format:
-    1 byte:     h (the number of random header bytes)
-    h bytes:    h random header bytes
-    4 bytes:    length of data (big endian)
-    x bytes:    data (x bytes)
-    1 byte:     f (the number of random footer bytes)
-    f bytes:    f random header bytes
-    32 bytes:   32 bytes SHA256 of all data up to this point
-*/
+/**
+ * Decrypts an encrypted aes256 package which includes data, random header/footer and sha256
+ * Note: it is critical that this function returns ABC_CC_DecryptFailure if there is an issue
+ *       because code is counting on this specific error to know a key is bad
+ * Package format:
+ *   1 byte:     h (the number of random header bytes)
+ *   h bytes:    h random header bytes
+ *   4 bytes:    length of data (big endian)
+ *   x bytes:    data (x bytes)
+ *   1 byte:     f (the number of random footer bytes)
+ *   f bytes:    f random header bytes
+ *   32 bytes:   32 bytes SHA256 of all data up to this point
+ */
 static
 tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
                                        const tABC_U08Buf Key,
@@ -735,7 +752,9 @@ exit:
     return cc;
 }
 
-// encrypts the given data with AES256
+/**
+ * Encrypts the given data with AES256
+ */
 static
 tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
                                 const tABC_U08Buf Key,
@@ -802,8 +821,9 @@ exit:
     return cc;
 }
 
-
-// decrypts the given data with AES256
+/**
+ * Decrypts the given data with AES256
+ */
 static
 tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
                                 const tABC_U08Buf Key,
@@ -863,7 +883,9 @@ exit:
     return cc;
 }
 
-// creates a buffer of random data
+/**
+ * Creates a buffer of random data
+ */
 tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
                                    tABC_U08Buf   *pData,
                                    tABC_Error    *pError)
@@ -889,6 +911,11 @@ exit:
     return cc;
 }
 
+/**
+ * Encodes the data into a hex string
+ *
+ * @param pszDataHex Location to store allocated string (caller must free)
+ */
 tABC_CC ABC_CryptoHexEncode(const tABC_U08Buf Data,
                             char              **pszDataHex,
                             tABC_Error        *pError)
@@ -915,6 +942,9 @@ exit:
     return cc;
 }
 
+/**
+ * Decodes the given hex string into data
+ */
 tABC_CC ABC_CryptoHexDecode(const char  *szDataHex,
                             tABC_U08Buf *pData,
                             tABC_Error  *pError)
@@ -1028,7 +1058,9 @@ exit:
     return cc;
 }
 
-// Calculates the length of a decoded base64 string
+/*
+ * Calculates the length of a decoded base64 string
+ */
 static
 int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64)
 {
@@ -1132,7 +1164,9 @@ exit:
     return cc;
 }
 
-// allocate and generate scrypt data with default vals and salt1
+/**
+ * Allocate and generate scrypt data with default vals and salt1
+ */
 tABC_CC ABC_CryptoScryptS1(const tABC_U08Buf Data,
                            tABC_U08Buf       *pScryptData,
                            tABC_Error        *pError)
@@ -1159,7 +1193,9 @@ exit:
     return cc;
 }
 
-// allocate and generate scrypt from an SNRP
+/**
+ * Allocate and generate scrypt from an SNRP
+ */
 tABC_CC ABC_CryptoScryptSNRP(const tABC_U08Buf     Data,
                              const tABC_CryptoSNRP *pSNRP,
                              tABC_U08Buf           *pScryptData,
@@ -1185,8 +1221,9 @@ exit:
     return cc;
 }
 
-
-// allocate and generate scrypt data given all vars
+/**
+ * Allocate and generate scrypt data given all vars
+ */
 tABC_CC ABC_CryptoScrypt(const tABC_U08Buf Data,
                          const tABC_U08Buf Salt,
                          unsigned long     N,
@@ -1217,8 +1254,10 @@ exit:
     return cc;
 }
 
-// allocates an SNRP struct and fills it in with the info given to be used on the client side
-// Note: the Salt buffer is copied
+/**
+ * Allocates an SNRP struct and fills it in with the info given to be used on the client side
+ * Note: the Salt buffer is copied
+ */
 tABC_CC ABC_CryptoCreateSNRPForClient(tABC_CryptoSNRP   **ppSNRP,
                                       tABC_Error        *pError)
 {
@@ -1244,8 +1283,10 @@ exit:
     return cc;
 }
 
-// allocates an SNRP struct and fills it in with the info given to be used on the server side
-// Note: the Salt buffer is copied from the global server salt
+/**
+ * Allocates an SNRP struct and fills it in with the info given to be used on the server side
+ * Note: the Salt buffer is copied from the global server salt
+ */
 tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
                                       tABC_Error        *pError)
 {
@@ -1271,9 +1312,10 @@ exit:
     return cc;
 }
 
-
-// allocates an SNRP struct and fills it in with the info given
-// Note: the Salt buffer is copied
+/**
+ * Allocates an SNRP struct and fills it in with the info given
+ * Note: the Salt buffer is copied
+ */
 tABC_CC ABC_CryptoCreateSNRP(const tABC_U08Buf Salt,
                              unsigned long     N,
                              unsigned long     r,
@@ -1302,7 +1344,9 @@ exit:
     return cc;
 }
 
-// creates a jansson object for SNRP
+/**
+ * Creates a jansson object for SNRP
+ */
 tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
                                        json_t                 **ppJSON_SNRP,
                                        tABC_Error             *pError)
@@ -1331,7 +1375,9 @@ exit:
     return cc;
 }
 
-// takes a jansson object representing an SNRP, decodes it and allocates a SNRP struct
+/**
+ * Takes a jansson object representing an SNRP, decodes it and allocates a SNRP struct
+ */
 tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
                                        tABC_CryptoSNRP   **ppSNRP,
                                        tABC_Error        *pError)
@@ -1385,7 +1431,9 @@ exit:
     return cc;
 }
 
-// deep free's an SNRP object including the Seed data
+/**
+ * Deep free's an SNRP object including the Seed data
+ */
 void ABC_CryptoFreeSNRP(tABC_CryptoSNRP **ppSNRP)
 {
     tABC_CryptoSNRP *pSNRP = *ppSNRP;

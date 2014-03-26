@@ -199,7 +199,9 @@ exit:
     return cc;
 }
 
-// frees the account creation info structure
+/**
+ * Frees the account creation info structure
+ */
 void ABC_AccountRequestInfoFree(tABC_AccountRequestInfo *pAccountRequestInfo)
 {
     if (pAccountRequestInfo)
@@ -344,8 +346,11 @@ exit:
     return cc;
 }
 
-// sign in to an account
-// this cache's the keys for an account
+
+/**
+ * Signs into an account
+ * This cache's the keys for an account
+ */
 static
 tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
                           tABC_Error *pError)
@@ -363,7 +368,9 @@ exit:
     return cc;
 }
 
-// create and account
+/**
+ * Create and account
+ */
 static
 tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
                           tABC_Error *pError)
@@ -1296,8 +1303,10 @@ exit:
     return cc;
 }
 
-// creates a new sync directory and all the files needed for the given account
-// TODO: eventually this function needs the sync info
+/**
+ * Creates a new sync directory and all the files needed for the given account
+ * TODO: eventually this function needs the sync info
+ */
 static
 tABC_CC ABC_AccountCreateSync(const char *szAccountsRootDir,
                               tABC_Error *pError)
@@ -1331,7 +1340,9 @@ exit:
     return cc;
 }
 
-// finds the next available account number (the number is just used for the directory name)
+/**
+ * Finds the next available account number (the number is just used for the directory name)
+ */
 static
 tABC_CC ABC_AccountNextAccountNum(int *pAccountNum,
                                   tABC_Error *pError)
@@ -1379,7 +1390,9 @@ exit:
     return cc;
 }
 
-// creates the account directory if needed
+/**
+ * creates the account directory if needed
+ */
 static
 tABC_CC ABC_AccountCreateRootDir(tABC_Error *pError)
 {
@@ -1452,8 +1465,11 @@ exit:
     return cc;
 }
 
-// gets the account directory for a given username
-// the string is allocated so it is up to the caller to free it
+/**
+ * Gets the account directory for a given username
+ *
+ * @param pszDirName Location to store allocated pointer (must be free'd by caller)
+ */
 tABC_CC ABC_AccountGetDirName(const char *szUserName, char **pszDirName, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1485,8 +1501,11 @@ exit:
     return cc;
 }
 
-// gets the account sync directory for a given username
-// the string is allocated so it is up to the caller to free it
+/**
+ * Gets the account sync directory for a given username
+ *
+ * @param pszDirName Location to store allocated pointer (must be free'd by caller)
+ */
 tABC_CC ABC_AccountGetSyncDirName(const char *szUserName,
                                   char **pszDirName,
                                   tABC_Error *pError)
@@ -1509,7 +1528,9 @@ exit:
     return cc;
 }
 
-// copies the account directory name into the string given
+/*
+ * Copies the account directory name into the string given
+ */
 static
 tABC_CC ABC_AccountCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError)
 {
@@ -1532,11 +1553,13 @@ exit:
     return cc;
 }
 
-// creates the json for a list of items in a string seperated by newlines
-// for example:
-//   "A\nB\n"
-// becomes
-//  { "name" : [ "A", "B" ] }
+/**
+ * creates the json for a list of items in a string seperated by newlines
+ * for example:
+ *   "A\nB\n"
+ * becomes
+ *  { "name" : [ "A", "B" ] }
+ */
 static
 tABC_CC ABC_AccountCreateListJSON(const char *szName, const char *szItems, char **pszJSON,  tABC_Error *pError)
 {
@@ -1591,8 +1614,10 @@ exit:
 }
 
 
-// returns the account number associated with the given user name
-// -1 is returned if the account does not exist
+/*
+ * returns the account number associated with the given user name
+ * -1 is returned if the account does not exist
+ */
 static
 tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Error *pError)
 {
@@ -1654,8 +1679,11 @@ exit:
     return cc;
 }
 
-// gets the user name for the specified account number
-// name must be free'd by caller
+/**
+ * Gets the user name for the specified account number
+ *
+ * @param pszUserName Location to store allocated pointer (must be free'd by caller)
+ */
 static
 tABC_CC ABC_AccountUserForNum(unsigned int AccountNum, char **pszUserName, tABC_Error *pError)
 {
@@ -1703,7 +1731,9 @@ exit:
     return cc;
 }
 
-// clears all the keys from the cache
+/**
+ * Clears all the keys from the cache
+ */
 tABC_CC ABC_AccountClearKeyCache(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1728,7 +1758,9 @@ exit:
     return cc;
 }
 
-// frees all the elements in the given AccountKeys struct
+/**
+ * Frees all the elements in the given AccountKeys struct
+ */
 static void ABC_AccountFreeAccountKeys(tAccountKeys *pAccountKeys)
 {
     if (pAccountKeys)
@@ -1758,7 +1790,9 @@ static void ABC_AccountFreeAccountKeys(tAccountKeys *pAccountKeys)
     }
 }
 
-// adds the given AccountKey to the array of cached account keys
+/**
+ * Adds the given AccountKey to the array of cached account keys
+ */
 static tABC_CC ABC_AccountAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1800,8 +1834,10 @@ exit:
     return cc;
 }
 
-// searches for a key in the cached by account name
-// if it is not found, the account keys will be set to NULL
+/**
+ * Searches for a key in the cached by account name
+ * if it is not found, the account keys will be set to NULL
+ */
 static tABC_CC ABC_AccountKeyFromCacheByName(const char *szUserName, tAccountKeys **ppAccountKeys, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1833,11 +1869,13 @@ exit:
     return cc;
 }
 
-// Adds the given user to the key cache if it isn't already cached.
-// With or without a password, szUserName, L, SNRP1, SNRP2, SNRP3, SNRP4 keys are retrieved and added if they aren't already in the cache
-// If a password is given, szPassword, szPIN, P, LP2 keys are retrieved and the entry is added
-//  (the initial keys are added so the password can be verified while trying to decrypt EPIN)
-// If a pointer to hold the keys is given, then it is set to those keys
+/**
+ * Adds the given user to the key cache if it isn't already cached.
+ * With or without a password, szUserName, L, SNRP1, SNRP2, SNRP3, SNRP4 keys are retrieved and added if they aren't already in the cache
+ * If a password is given, szPassword, szPIN, P, LP2 keys are retrieved and the entry is added
+ *  (the initial keys are added so the password can be verified while trying to decrypt EPIN)
+ * If a pointer to hold the keys is given, then it is set to those keys
+ */
 static
 tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAccountKeys **ppKeys, tABC_Error *pError)
 {
@@ -1988,8 +2026,10 @@ exit:
     return cc;
 }
 
-// retrieves the specified key from the key cache
-// if the account associated with the username and password is not currently in the cache, it is added
+/**
+ * Retrieves the specified key from the key cache
+ * if the account associated with the username and password is not currently in the cache, it is added
+ */
 tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_AccountKey keyType, tABC_U08Buf *pKey, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -2136,9 +2176,11 @@ exit:
     return cc;
 }
 
-// This function gets the categories for an account.
-// An array of allocated strings is allocated so the user is responsible for
-// free'ing all the elements as well as the array itself.
+/**
+ * This function gets the categories for an account.
+ * An array of allocated strings is allocated so the user is responsible for
+ * free'ing all the elements as well as the array itself.
+ */
 tABC_CC ABC_AccountGetCategories(const char *szUserName,
                                  char ***paszCategories,
                                  unsigned int *pCount,
@@ -2173,8 +2215,10 @@ exit:
     return cc;
 }
 
-// This function adds a category to an account.
-// No attempt is made to avoid a duplicate entry.
+/**
+ * This function adds a category to an account.
+ * No attempt is made to avoid a duplicate entry.
+ */
 tABC_CC ABC_AccountAddCategory(const char *szUserName,
                                char *szCategory,
                                tABC_Error *pError)
@@ -2212,9 +2256,11 @@ exit:
     return cc;
 }
 
-// This function removes a category from an account.
-// If there is more than one category with this name, all categories by this name are removed.
-// If the category does not exist, no error is returned.
+/**
+ * This function removes a category from an account.
+ * If there is more than one category with this name, all categories by this name are removed.
+ * If the category does not exist, no error is returned.
+ */
 tABC_CC ABC_AccountRemoveCategory(const char *szUserName,
                                   char *szCategory,
                                   tABC_Error *pError)
@@ -2263,7 +2309,9 @@ exit:
     return cc;
 }
 
-// saves the categories for the given account
+/**
+ * Saves the categories for the given account
+ */
 static
 tABC_CC ABC_AccountSaveCategories(const char *szUserName,
                                   char **aszCategories,
@@ -2631,7 +2679,6 @@ exit:
     
     return cc;
 }
-
 
 /**
  * Free question choices.

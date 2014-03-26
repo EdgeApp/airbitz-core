@@ -73,7 +73,7 @@ void ABC_UtilHexDump(const char *szDescription,
 }
 
 /**
- * creates the json package with a single field and its value
+ * Creates the json package with a single field and its value
  */
 tABC_CC ABC_UtilCreateValueJSONString(const char *szValue,
                                       const char *szFieldName,
@@ -100,7 +100,7 @@ exit:
 }
 
 /**
- * creates the json package with a single field and its int value
+ * Creates the json package with a single field and its int value
  */
 tABC_CC ABC_UtilCreateIntJSONString(int        value,
                                     const char *szFieldName,
@@ -170,7 +170,7 @@ exit:
 }
 
 /**
- * creates the json package with a single field
+ * Creates the json package with a single field
  * the field is encoded into hex and given the specified name
  */
 tABC_CC ABC_UtilCreateHexDataJSONString(const tABC_U08Buf Data,
@@ -200,7 +200,7 @@ exit:
 
 
 /**
- * gets the specified field from a json string
+ * Gets the specified field from a json string
  * the user is responsible for free'ing the value
  */
 tABC_CC ABC_UtilGetStringValueFromJSONString(const char *szJSON,
@@ -235,7 +235,7 @@ exit:
 }
 
 /**
- * gets the specified field from a json string
+ * Gets the specified field from a json string
  */
 tABC_CC ABC_UtilGetIntValueFromJSONString(const char *szJSON,
                                           const char *szFieldName,
@@ -269,7 +269,7 @@ exit:
 }
 
 /**
- * gets the specified field from a json string
+ * Gets the specified field from a json string
  * the user is responsible for free'ing the array
  */
 tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
@@ -332,7 +332,7 @@ exit:
 }
 
 /**
- * free's array of strings
+ * Free's array of strings
  * note: the strings are first zero'ed out before being freed
  */
 void ABC_UtilFreeStringArray(char **aszStrings,
@@ -349,7 +349,7 @@ void ABC_UtilFreeStringArray(char **aszStrings,
 }
 
 /**
- * for security reasons, it is important that we always make sure memory is set the way we expect
+ * For security reasons, it is important that we always make sure memory is set the way we expect
  * this function should ensure that
  * reference: http://www.dwheeler.com/secure-programs/Secure-Programs-HOWTO/protect-secrets.html
  */
@@ -368,7 +368,7 @@ void *ABC_UtilGuaranteedMemset(void *v, int c, size_t n)
 }
 
 /**
- * this function is created so that we can override the free function of jansson so we can
+ * This function is created so that we can override the free function of jansson so we can
  * clear memory on a free
  * reference: https://github.com/akheron/jansson/blob/master/doc/apiref.rst#id97
  */
@@ -381,7 +381,7 @@ void *ABC_UtilJanssonSecureMalloc(size_t size)
 }
 
 /**
- * this function is created so that we can override the free function of jansson so we can
+ * This function is created so that we can override the free function of jansson so we can
  * clear memory on a free
  * reference: https://github.com/akheron/jansson/blob/master/doc/apiref.rst#id97
  */

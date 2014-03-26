@@ -63,7 +63,9 @@ void ABC_FileIOTerminate()
     }
 }
 
-// sets the root directory to the string given
+/**
+ * Sets the root directory to the string given
+ */
 tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
                              tABC_Error *pError)
 {
@@ -101,7 +103,9 @@ exit:
     return cc;
 }
 
-// creates a filelist structure for a specified directory
+/**
+ * Creates a filelist structure for a specified directory
+ */
 tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
                                  const char *szDir,
                                  tABC_Error *pError)
@@ -164,7 +168,9 @@ exit:
     return cc;
 }
 
-// frees a file list structure
+/**
+ * Frees a file list structure
+ */
 void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList)
 {
     if (pFileList)
@@ -184,7 +190,9 @@ void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList)
     }
 }
 
-// checks if a file exists
+/**
+ * Checks if a file exists
+ */
 tABC_CC ABC_FileIOFileExists(const char *szFilename,
                              bool *pbExists,
                              tABC_Error *pError)
@@ -209,7 +217,9 @@ exit:
     return cc;
 }
 
-// creates a directory
+/**
+ * Creates a directory
+ */
 tABC_CC ABC_FileIOCreateDir(const char *szDir,
                             tABC_Error *pError)
 {
@@ -233,7 +243,9 @@ exit:
     return cc;
 }
 
-// writes the given data to the specified filename
+/**
+ * Writes the given data to the specified filename
+ */
 tABC_CC ABC_FileIOWriteFile(const char *szFilename,
                             tABC_U08Buf Data,
                             tABC_Error *pError)
@@ -266,8 +278,10 @@ exit:
     return cc;
 }
 
-// writes the given string to the specified filename
-// a newline is added to the end of the file
+/**
+ * writes the given string to the specified filename
+ * a newline is added to the end of the file
+ */
 tABC_CC ABC_FileIOWriteFileStr(const char *szFilename,
                                const char *szData,
                               tABC_Error *pError)
@@ -307,8 +321,10 @@ exit:
     return cc;
 }
 
-// reads the given filename into a string
-// the data is stored in an allocated buffer and then a '\0' is appended
+/**
+ * Reads the given filename into a string
+ * the data is stored in an allocated buffer and then a '\0' is appended
+ */
 tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
                               char        **pszData,
                               tABC_Error  *pError)
@@ -350,9 +366,11 @@ exit:
     return cc;
 }
 
-// reads the given filename into a JSON object
-// the JSON object must be deref'ed by the caller
-// if bMustExist is false, a new empty object is created if the file doesn't exist
+/**
+ * Reads the given filename into a JSON object
+ * the JSON object must be deref'ed by the caller
+ * if bMustExist is false, a new empty object is created if the file doesn't exist
+ */
 tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
                                  json_t **ppJSON_Data,
                                  bool bMustExist,

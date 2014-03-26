@@ -79,6 +79,10 @@ static tABC_CC ABC_WalletChangeEMKForUUID(const char *szUserName, const char *sz
 static tABC_CC ABC_WalletMutexLock(tABC_Error *pError);
 static tABC_CC ABC_WalletMutexUnlock(tABC_Error *pError);
 
+/**
+ * Allocates the wallet create info structure and 
+ * populates it with the data given
+ */
 tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
                                   const char *szUserName,
                                   const char *szPassword,
@@ -117,6 +121,9 @@ exit:
     return cc;
 }
 
+/**
+ * Frees the wallet creation info structure
+ */
 void ABC_WalletCreateInfoFree(tABC_WalletCreateInfo *pWalletCreateInfo)
 {
     if (pWalletCreateInfo)
@@ -337,8 +344,9 @@ exit:
     return cc;
 }
 
-
-// sets the name of a wallet
+/**
+ * Sets the name of a wallet
+ */
 tABC_CC ABC_WalletSetName(const char *szUserName, const char *szPassword, const char *szUUID, const char *szName, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -377,7 +385,9 @@ exit:
     return cc;
 }
 
-// sets the currency number of a wallet
+/**
+ * Sets the currency number of a wallet
+ */
 static
 tABC_CC ABC_WalletSetCurrencyNum(const char *szUserName, const char *szPassword, const char *szUUID, int currencyNum, tABC_Error *pError)
 {
@@ -415,7 +425,9 @@ exit:
     return cc;
 }
 
-// sets the attributes of a wallet
+/**
+ * Sets the attributes of a wallet
+ */
 tABC_CC ABC_WalletSetAttributes(const char *szUserName, const char *szPassword, const char *szUUID, unsigned int attributes, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -452,7 +464,9 @@ exit:
     return cc;
 }
 
-// adds the given account to the list of accounts that uses this wallet
+/**
+ * Adds the given account to the list of accounts that uses this wallet
+ */
 static
 tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, const char *szUUID, const char *szAccount, tABC_Error *pError)
 {
@@ -501,7 +515,9 @@ exit:
     return cc;
 }
 
-// creates the wallet directory if needed
+/**
+ * creates the wallet directory if needed
+ */
 static
 tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError)
 {
@@ -526,8 +542,10 @@ exit:
     return cc;
 }
 
-// gets the root directory for the wallets
-// the string is allocated so it is up to the caller to free it
+/**
+ * Gets the root directory for the wallets
+ * the string is allocated so it is up to the caller to free it
+ */
 static
 tABC_CC ABC_WalletGetRootDirName(char **pszRootDir, tABC_Error *pError)
 {
@@ -549,8 +567,10 @@ exit:
     return cc;
 }
 
-// gets the directory for the given wallet UUID
-// the string is allocated so it is up to the caller to free it
+/**
+ * Gets the directory for the given wallet UUID
+ * the string is allocated so it is up to the caller to free it
+ */
 static
 tABC_CC ABC_WalletGetDirName(char **pszDir, const char *szWalletUUID, tABC_Error *pError)
 {
@@ -652,8 +672,10 @@ exit:
     return cc;
 }
 
-// Adds the wallet data to the cache
-// If the wallet is not currently in the cache it is added
+/**
+ * Adds the wallet data to the cache
+ * If the wallet is not currently in the cache it is added
+ */
 static
 tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, const char *szUUID, tWalletData **ppData, tABC_Error *pError)
 {
@@ -809,7 +831,9 @@ exit:
     return cc;
 }
 
-// clears all the data from the cache
+/**
+ * Clears all the data from the cache
+ */
 tABC_CC ABC_WalletClearCache(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -834,7 +858,9 @@ exit:
     return cc;
 }
 
-// adds the given WalletDAta to the array of cached wallets
+/**
+ * Adds the given WalletDAta to the array of cached wallets
+ */
 static
 tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError)
 {
@@ -877,8 +903,10 @@ exit:
     return cc;
 }
 
-// searches for a wallet in the cached by UUID
-// if it is not found, the wallet data will be set to NULL
+/**
+ * Searches for a wallet in the cached by UUID
+ * if it is not found, the wallet data will be set to NULL
+ */
 static
 tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError)
 {
@@ -909,7 +937,9 @@ exit:
     return cc;
 }
 
-// free's the given wallet data elements
+/**
+ * Free's the given wallet data elements
+ */
 static
 void ABC_WalletFreeData(tWalletData *pData)
 {
