@@ -283,8 +283,12 @@ extern "C" {
      */
     typedef struct sABC_TxDetails
     {
-        /** amount of bitcoins */
+        /** amount of bitcoins in satoshi (including fees if any) */
         int64_t amountSatoshi;
+        /** airbitz fees in satoshi */
+        int64_t amountFeesAirbitzSatoshi;
+        /** miners fees in satoshi */
+        int64_t amountFeesMinersSatoshi;
         /** amount in currency */
         double amountCurrency;
         /** payer or payee */

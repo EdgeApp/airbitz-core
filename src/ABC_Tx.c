@@ -24,38 +24,40 @@
 #include "ABC_Debug.h"
 #include "ABC_Bridge.h"
 
-#define SATOSHI_PER_BITCOIN             100000000
+#define SATOSHI_PER_BITCOIN                     100000000
 
-#define TX_MAX_ADDR_ID_LENGTH           20 // largest char count for the string version of the id number - 20 digits should handle it
+#define TX_MAX_ADDR_ID_LENGTH                   20 // largest char count for the string version of the id number - 20 digits should handle it
 
-#define TX_MAX_AMOUNT_LENGTH            100 // should be max length of a bit coin amount string
+#define TX_MAX_AMOUNT_LENGTH                    100 // should be max length of a bit coin amount string
 
-#define TX_INTERNAL_SUFFIX              "-int.json" // the transaction was created by our direct action (i.e., send)
-#define TX_EXTERNAL_SUFFIX              "-ext.json" // the transaction was created due to events in the block-chain (usually receives)
+#define TX_INTERNAL_SUFFIX                      "-int.json" // the transaction was created by our direct action (i.e., send)
+#define TX_EXTERNAL_SUFFIX                      "-ext.json" // the transaction was created due to events in the block-chain (usually receives)
 
-#define ADDRESS_FILENAME_SEPARATOR      '-'
-#define ADDRESS_FILENAME_SUFFIX         ".json"
-#define ADDRESS_FILENAME_MIN_LEN        8 // <id>-<public_addr>.json
+#define ADDRESS_FILENAME_SEPARATOR              '-'
+#define ADDRESS_FILENAME_SUFFIX                 ".json"
+#define ADDRESS_FILENAME_MIN_LEN                8 // <id>-<public_addr>.json
 
-#define JSON_DETAILS_FIELD              "meta"
-#define JSON_CREATION_DATE_FIELD        "creationDate"
-#define JSON_AMOUNT_SATOSHI_FIELD       "amountSatoshi"
+#define JSON_DETAILS_FIELD                      "meta"
+#define JSON_CREATION_DATE_FIELD                "creationDate"
+#define JSON_AMOUNT_SATOSHI_FIELD               "amountSatoshi"
+#define JSON_AMOUNT_AIRBITZ_FEE_SATOSHI_FIELD   "amountFeeAirBitzSatoshi"
+#define JSON_AMOUNT_MINERS_FEE_SATOSHI_FIELD    "amountFeeMinersSatoshi"
 
-#define JSON_TX_ID_FIELD                "ntxid"
-#define JSON_TX_STATE_FIELD             "state"
-#define JSON_TX_INTERNAL_FIELD          "internal"
-#define JSON_TX_AMOUNT_CURRENCY_FIELD   "amountCurrency"
-#define JSON_TX_NAME_FIELD              "name"
-#define JSON_TX_CATEGORY_FIELD          "category"
-#define JSON_TX_NOTES_FIELD             "notes"
-#define JSON_TX_ATTRIBUTES_FIELD        "attributes"
+#define JSON_TX_ID_FIELD                        "ntxid"
+#define JSON_TX_STATE_FIELD                     "state"
+#define JSON_TX_INTERNAL_FIELD                  "internal"
+#define JSON_TX_AMOUNT_CURRENCY_FIELD           "amountCurrency"
+#define JSON_TX_NAME_FIELD                      "name"
+#define JSON_TX_CATEGORY_FIELD                  "category"
+#define JSON_TX_NOTES_FIELD                     "notes"
+#define JSON_TX_ATTRIBUTES_FIELD                "attributes"
 
-#define JSON_ADDR_SEQ_FIELD             "seq"
-#define JSON_ADDR_ADDRESS_FIELD         "address"
-#define JSON_ADDR_STATE_FIELD           "state"
-#define JSON_ADDR_RECYCLEABLE_FIELD     "recycleable"
-#define JSON_ADDR_ACTIVITY_FIELD        "activity"
-#define JSON_ADDR_DATE_FIELD            "date"
+#define JSON_ADDR_SEQ_FIELD                     "seq"
+#define JSON_ADDR_ADDRESS_FIELD                 "address"
+#define JSON_ADDR_STATE_FIELD                   "state"
+#define JSON_ADDR_RECYCLEABLE_FIELD             "recycleable"
+#define JSON_ADDR_ACTIVITY_FIELD                "activity"
+#define JSON_ADDR_DATE_FIELD                    "date"
 
 typedef enum eTxType
 {
@@ -309,6 +311,8 @@ tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pO
     ABC_ALLOC(pNewDetails, sizeof(tABC_TxDetails));
 
     pNewDetails->amountSatoshi  = pOldDetails->amountSatoshi;
+    pNewDetails->amountFeesAirbitzSatoshi = pOldDetails->amountFeesAirbitzSatoshi;
+    pNewDetails->amountFeesMinersSatoshi = pOldDetails->amountFeesMinersSatoshi;
     pNewDetails->amountCurrency  = pOldDetails->amountCurrency;
     pNewDetails->attributes = pOldDetails->attributes;
     if (pOldDetails->szName != NULL)
@@ -470,6 +474,8 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
     ABC_CHECK_NULL(pDetails);
     ABC_CHECK_NULL(pszRequestID);
     *pszRequestID = NULL;
+
+    // TODO: If there are fees associated with a receive, they need to be handled here
 
     // get a new address (re-using a recycleable if we can)
     ABC_CHECK_RET(ABC_TxCreateNewAddress(szUserName, szPassword, szWalletUUID, pDetails, &pAddress, pError));
@@ -1516,6 +1522,8 @@ tABC_CC ABC_TxSetTransactionDetails(const char *szUserName,
 
     // modify the details
     pTx->pDetails->amountSatoshi = pDetails->amountSatoshi;
+    pTx->pDetails->amountFeesAirbitzSatoshi = pDetails->amountFeesAirbitzSatoshi;
+    pTx->pDetails->amountFeesMinersSatoshi = pDetails->amountFeesMinersSatoshi;
     pTx->pDetails->amountCurrency = pDetails->amountCurrency;
     pTx->pDetails->attributes = pDetails->attributes;
     ABC_FREE_STR(pTx->pDetails->szName);
@@ -1948,6 +1956,22 @@ tABC_CC ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tAB
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing satoshi amount");
     pDetails->amountSatoshi = json_integer_value(jsonVal);
 
+    // get the airbitz fees satoshi field
+    jsonVal = json_object_get(jsonDetails, JSON_AMOUNT_AIRBITZ_FEE_SATOSHI_FIELD);
+    if (jsonVal)
+    {
+        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError, "Error parsing JSON details package - malformed airbitz fees field");
+        pDetails->amountFeesAirbitzSatoshi = json_integer_value(jsonVal);
+    }
+
+    // get the miners fees satoshi field
+    jsonVal = json_object_get(jsonDetails, JSON_AMOUNT_MINERS_FEE_SATOSHI_FIELD);
+    if (jsonVal)
+    {
+        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError, "Error parsing JSON details package - malformed miners fees field");
+        pDetails->amountFeesMinersSatoshi = json_integer_value(jsonVal);
+    }
+
     // get the currency field
     jsonVal = json_object_get(jsonDetails, JSON_TX_AMOUNT_CURRENCY_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_real(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing currency amount");
@@ -2153,6 +2177,14 @@ tABC_CC ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_
 
     // add the satoshi field to the details object
     retVal = json_object_set_new(pJSON_Details, JSON_AMOUNT_SATOSHI_FIELD, json_integer(pDetails->amountSatoshi));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the airbitz fees satoshi field to the details object
+    retVal = json_object_set_new(pJSON_Details, JSON_AMOUNT_AIRBITZ_FEE_SATOSHI_FIELD, json_integer(pDetails->amountFeesAirbitzSatoshi));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the miners fees satoshi field to the details object
+    retVal = json_object_set_new(pJSON_Details, JSON_AMOUNT_MINERS_FEE_SATOSHI_FIELD, json_integer(pDetails->amountFeesMinersSatoshi));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the currency field to the details object
@@ -2923,8 +2955,10 @@ void ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count)
             ABC_DebugLog("Address - seq: %lld, id: %s, pubAddress: %s\n", aAddresses[i]->seq, aAddresses[i]->szID, aAddresses[i]->szPubAddress);
             if (aAddresses[i]->pDetails)
             {
-                ABC_DebugLog("\tDetails - satoshi: %lld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
+                ABC_DebugLog("\tDetails - satoshi: %lld, airbitz_fee: %lld, miners_fee: %lld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
                              aAddresses[i]->pDetails->amountSatoshi,
+                             aAddresses[i]->pDetails->amountFeesAirbitzSatoshi,
+                             aAddresses[i]->pDetails->amountFeesMinersSatoshi,
                              aAddresses[i]->pDetails->amountCurrency,
                              aAddresses[i]->pDetails->szName,
                              aAddresses[i]->pDetails->szCategory,
