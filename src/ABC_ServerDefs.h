@@ -10,11 +10,14 @@
 #ifndef ABC_Defs_h
 #define ABC_Defs_h
 
+#define API_KEY_HEADER                      "Authorization: Token 0907a450f5479da4a03769ce8ecb47c184c85453"
+
 #define ABC_SERVER_ROOT                     "http://198.61.234.21/api/v1"
 #define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
 #define ABC_SERVER_UPDATE_CARE_PACKAGE_PATH "account/carepackage/update"
 #define ABC_SERVER_GET_QUESTIONS_PATH       "questions"
 #define ABC_SERVER_CHANGE_PASSWORD_PATH     "account/password/update"
+#define ABC_SERVER_GET_INFO_PATH            "getinfo"
 
 #define ABC_SERVER_JSON_L1_FIELD            "l1"
 #define ABC_SERVER_JSON_P1_FIELD            "p1"
@@ -28,8 +31,6 @@
 #define ABC_SERVER_JSON_MESSAGE_FIELD       "message"
 #define ABC_SERVER_JSON_STATUS_CODE_FIELD   "status_code"
 #define ABC_SERVER_JSON_RESULTS_FIELD       "results"
-
-
 
 #ifdef __cplusplus
 extern "C" {

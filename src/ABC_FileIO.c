@@ -443,6 +443,40 @@ exit:
 }
 
 /**
+ * Finds the time the file was last modified
+ *
+ * @param pTime Location to store mode time measured in 
+ *              seconds since 00:00:00 UTC, Jan. 1, 1970
+ *
+ */
+tABC_CC ABC_FileIOFileModTime(const char *szFilename,
+                              time_t *pTime,
+                              tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    struct stat statInfo;
+
+    ABC_CHECK_NULL(pTime);
+    *pTime = 0;
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No filename provided");
+
+    // get stats on file
+    if (0 != stat(szFilename, &statInfo))
+    {
+        ABC_RET_ERROR(ABC_CC_Error, "Could not stat file");
+    }
+
+    // assign the time
+    *pTime = statInfo.st_mtime;
+
+exit:
+
+    return cc;
+}
+
+/**
  * Locks the global mutex
  *
  */

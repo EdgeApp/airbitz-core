@@ -259,6 +259,9 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     ABC_CHECK_NULL(pInfo);
     ABC_CHECK_NULL(pszTxID);
 
+    // take this non-blocking opportunity to update the info from the server if needed
+    ABC_CHECK_RET(ABC_AccountServerUpdateGeneralInfo(pError));
+
     // temp: just create the transaction id
     ABC_STRDUP(*pszTxID, "ID");
 

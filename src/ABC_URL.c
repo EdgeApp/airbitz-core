@@ -18,6 +18,7 @@
 #include "ABC_Util.h"
 #include "ABC_Debug.h"
 #include "ABC_URL.h"
+#include "ABC_ServerDefs.h"
 
 static bool gbInitialized = false;
 static pthread_mutex_t  gMutex; // to block multiple threads from accessing curl at the same time
@@ -171,7 +172,10 @@ exit:
 
 /**
  * Makes a URL post request.
- * Note that the content type on the post will be set to "Content-Type: application/json"
+ *
+ * Note: that the content type on the post will be set to "Content-Type: application/json"
+ *       and the api key is set to that specified in the server defs
+ *
  * @param szURL         The request URL.
  * @param szPostData    The data to be posted in the request
  * @param pData         The location to store the results. The caller is responsible for free'ing this.
@@ -224,8 +228,9 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
-    // set the content type
+    // set the content type and the api key
     slist = curl_slist_append(slist, "Content-Type: application/json");
+    slist = curl_slist_append(slist, API_KEY_HEADER);
     if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_HTTPHEADER, slist)) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);

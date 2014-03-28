@@ -63,6 +63,38 @@ extern "C" {
         ABC_AccountKey_RQ
     } tABC_AccountKey;
 
+    /**
+     * Contains info on bitcoin miner fee
+     */
+    typedef struct sABC_AccountMinerFee
+    {
+        uint64_t amountSatoshi;
+        uint64_t sizeTransaction;
+    } tABC_AccountMinerFee;
+
+    /**
+     * Contains information on AirBitz fees
+     */
+    typedef struct sABC_AccountAirBitzFee
+    {
+        double percentage; // maximum value 100.0
+        uint64_t minSatoshi;
+        uint64_t maxSatoshi;
+        char *szAddresss;
+    } tABC_AccountAirBitzFee;
+
+    /**
+     * Contains general info from the server
+     */
+    typedef struct sABC_AccountGeneralInfo
+    {
+        unsigned int            countMinersFees;
+        tABC_AccountMinerFee    **aMinersFees;
+        tABC_AccountAirBitzFee  *pAirBitzFee;
+        unsigned int            countObeliskServers;
+        char                    **aszObeliskServers;
+    } tABC_AccountGeneralInfo;
+
     tABC_CC ABC_AccountRequestInfoAlloc(tABC_AccountRequestInfo **ppAccountRequestInfo,
                                         tABC_RequestType requestType,
                                         const char *szUserName,
@@ -133,6 +165,13 @@ extern "C" {
     tABC_CC ABC_AccountGetRecoveryQuestions(const char *szUserName,
                                             char **pszQuestions,
                                             tABC_Error *pError);
+
+    tABC_CC ABC_AccountServerUpdateGeneralInfo(tABC_Error *pError);
+
+    tABC_CC ABC_AccountLoadGeneralInfo(tABC_AccountGeneralInfo **ppInfo,
+                                       tABC_Error *pError);
+
+    void ABC_AccountFreeGeneralInfo(tABC_AccountGeneralInfo *pInfo);
 
     tABC_CC ABC_AccountLoadSettings(const char *szUserName,
                                     const char *szPassword,
