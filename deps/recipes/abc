@@ -8,6 +8,7 @@ build() {
     make
     mkdir -p $install_dir/lib
     cp build/$target/libabc.a $install_dir/lib
+    cp src/ABC.h $install_dir/include
 }
 
 clean() {
@@ -17,3 +18,4 @@ clean() {
 }
 
 lib="lib/libabc.a"
+include="include/ABC.h"
