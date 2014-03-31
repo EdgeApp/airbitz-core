@@ -5,6 +5,7 @@ inherit common
 # $2 platform (either iPhoneOS or iPhoneSimulator)
 build_ios() {
     # Put the source in the working directory:
+    top_work_dir=$work_dir
     work_dir=$work_dir/ios-$1
     mkdir -p $work_dir
     unpack
@@ -38,6 +39,12 @@ build_ios() {
 
     cd $work_dir
     build
+
+    # File lists:
+    ([ -n "$lib" ] && (cd $install_dir; find $lib -type f) || true) > \
+        $top_work_dir/lib-${target}.txt
+    ([ -n "$include" ] && (cd $install_dir; find $include -type f) || true) > \
+        $top_work_dir/include-${target}.txt
 }
 build_ios_armv7() {
     build_ios armv7 iPhoneOS
@@ -77,5 +84,35 @@ ios_universal() {
         lipo -create $in_libs -output $out_name
     done
 }
-task ios-universal $(for arch in $arches; do echo build-ios-$arch; done)
-default=ios-universal
+task ios-universal $(for arch in $arches; do echo build-ios-$arch; done) \
+    $(for dep in $depends; do echo $dep.ios-universal; done)
+
+package_ios_universal() {
+    package_dir=${recipe}-ios-universal
+    mkdir -p $package_dir
+    depends=$(cat depends)
+
+    # Gather universal libraries:
+    cp -rv ios-universal/* $package_dir
+    for dep in $depends; do
+        cp -rv $build_dir/$dep/ios-universal/* $package_dir
+    done
+
+    # Gather headers:
+    for f in $(cat include-ios-armv7.txt); do
+        mkdir -p $(dirname $package_dir/$f)
+        ln -vs $build_dir/prefix/ios/armv7/$f $package_dir/$f
+    done
+    for dep in $depends; do
+        for f in $(cat $build_dir/$dep/include-ios-armv7.txt); do
+            mkdir -p $(dirname $package_dir/$f)
+            ln -vs $build_dir/prefix/ios/armv7/$f $package_dir/$f
+        done
+    done
+
+    # Make the archive:
+    zip -r $recipe-ios-universal-$(date +%Y-%m-%d) $package_dir
+}
+task package-ios-universal write-deps ios-universal
+
+default=package-ios-universal
