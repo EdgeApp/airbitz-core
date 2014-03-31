@@ -35,6 +35,15 @@ unpack() {
 }
 task unpack download
 
+# Writes the full (recursive) dependency list for a package
+write_deps() {
+    for dep in $depends; do
+        echo $dep
+        cat $build_dir/$dep/depends
+    done | sort | uniq > depends
+}
+task write-deps $(for dep in $depends; do echo $dep.write-deps; done)
+
 clean() {
     rm -rf $work_dir
 }
