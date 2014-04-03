@@ -430,7 +430,7 @@ tABC_CC ABC_TxCurrencyToSatoshi(double currency,
     if (CURRENCY_NUM_USD == currencyNum)
     {
         // TODO: find real conversion - for now hardcode to $600 per bitcoin
-        *pSatoshi = ABC_BitcoinToSatoshi(currency) * 600;
+        *pSatoshi = ABC_BitcoinToSatoshi(currency) / 600;
     }
     else
     {
