@@ -101,6 +101,43 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     tABC_Error Error;
     Error.code = ABC_CC_Ok;
 
+#if 0 // initiate send request
+
+    tABC_TxDetails Details;
+    Details.amountSatoshi = 1000;
+    Details.amountCurrency = 88.8;
+    Details.szName = "NewName";
+    Details.szCategory = "NewCategory";
+    Details.szNotes = "NewNotes";
+    Details.attributes = 0x2;
+
+    NSLog(@"Calling ABC_InitiateSendRequest");
+    self.labelStatus.text = @"Calling ABC_InitiateSendRequest";
+    ABC_InitiateSendRequest([self.textUsername.text UTF8String],
+                            [self.textPassword.text UTF8String],
+                            [self.textTest.text UTF8String],
+                            "1NS17iag9jJgTHD1VXjvLCEnZuQ3rJED9L",
+                            &Details,
+                            ABC_Request_Callback,
+                            (__bridge void *)self,
+                            &Error);
+
+    [self printABC_Error:&Error];
+
+    if (ABC_CC_Ok == Error.code)
+    {
+        [self blockUser:YES];
+    }
+    else
+    {
+        self.labelStatus.text = [NSString stringWithFormat:@"ABC_InitiateSendRequest failed:\n%s", Error.szDescription];
+    }
+
+    NSLog(@"Done calling ABC_InitiateSendRequest");
+
+
+#endif
+
 #if 0 // change settings
     tABC_AccountSettings *pNewSettings = NULL;
     ABC_LoadAccountSettings([self.textUsername.text UTF8String],
@@ -217,7 +254,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     }
 #endif
 
-#if 1 // check password
+#if 0 // check password
     tABC_PasswordRule **aRules = NULL;
     unsigned int count = 0;
     double secondsToCrack;
@@ -996,6 +1033,20 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     }
 }
 
+- (void)initiateSendComplete
+{
+    [self blockUser:NO];
+    NSLog(@"Initiate Send complete");
+    if (_bSuccess)
+    {
+        self.labelStatus.text = @"Initiate Send success";
+    }
+    else
+    {
+        self.labelStatus.text = @"Initiate Send failure";
+    }
+}
+
 
 - (void)printQuestionChoices:(tABC_QuestionChoices *)pChoices
 {
@@ -1073,6 +1124,11 @@ void ABC_Request_Callback(const tABC_RequestResults *pResults)
         {
             NSLog(@"Change completed with cc: %ld (%s)", (unsigned long) pResults->errorInfo.code, pResults->errorInfo.szDescription);
             [controller performSelectorOnMainThread:@selector(changePasswordComplete) withObject:nil waitUntilDone:FALSE];
+        }
+        else if (pResults->requestType == ABC_RequestType_SendBitcoin)
+        {
+            NSLog(@"Initiate Send completed with cc: %ld (%s)", (unsigned long) pResults->errorInfo.code, pResults->errorInfo.szDescription);
+            [controller performSelectorOnMainThread:@selector(initiateSendComplete) withObject:nil waitUntilDone:FALSE];
         }
     }
 }
