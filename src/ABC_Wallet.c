@@ -990,8 +990,11 @@ tABC_CC ABC_WalletGetInfo(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    int i;
     tWalletData     *pData = NULL;
     tABC_WalletInfo *pInfo = NULL;
+    tABC_TxInfo **aTransactions = NULL;
+    unsigned int nCount = 0;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
@@ -1017,7 +1020,15 @@ tABC_CC ABC_WalletGetInfo(const char *szUserName,
     pInfo->currencyNum = pData->currencyNum;
     pInfo->attributes  = pData->attributes;
 
-    // TODO: get the balance
+    ABC_CHECK_RET(
+        ABC_GetTransactions(szUserName, szPassword, szUUID,
+                            &aTransactions, &nCount, pError));
+    pInfo->balanceSatoshi = 0;
+    for (i = 0; i < nCount; i++)
+    {
+        tABC_TxInfo *pTxInfo = aTransactions[i];
+        pInfo->balanceSatoshi += pTxInfo->pDetails->amountSatoshi;
+    }
 
     // assign it to the user's pointer
     *ppWalletInfo = pInfo;
@@ -1025,6 +1036,7 @@ tABC_CC ABC_WalletGetInfo(const char *szUserName,
 
 exit:
     ABC_CLEAR_FREE(pInfo, sizeof(tABC_WalletInfo));
+    ABC_FreeTransactions(aTransactions, nCount);
 
     return cc;
 }
