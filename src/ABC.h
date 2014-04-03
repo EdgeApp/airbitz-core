@@ -147,6 +147,15 @@ extern "C" {
     } tABC_Error;
 
     /**
+     * AirBitz Core Asynchronous BitCoin Event Type
+     *
+     */
+    typedef enum eABC_AsyncEventType
+    {
+        ABC_AsyncEventType_IncomingBitCoin
+    } tABC_AsyncEventType;
+
+    /**
      * AirBitz Core Asynchronous Structure
      *
      * This structure contains the detailed information associated
@@ -157,6 +166,12 @@ extern "C" {
     {
         /** data pointer given by caller at init */
         void    *pData;
+
+        /** type of event that occured */
+        tABC_AsyncEventType eventType;
+
+        /** if the event involved a transaction, this is its ID */
+        char *szTxID;
 
         /** String containing a description of the event */
         char    szDescription[ABC_MAX_STRING_LENGTH + 1];
