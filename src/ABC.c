@@ -1331,7 +1331,7 @@ tABC_CC ABC_CurrencyToSatoshi(double currency,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_CurrencyToSatoshi(currency, currencyNum, pSatoshi, pError));
+    ABC_CHECK_RET(ABC_TxCurrencyToSatoshi(currency, currencyNum, pSatoshi, pError));
 
 exit:
 
