@@ -257,6 +257,9 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    tABC_U08Buf TxID = ABC_BUF_NULL;
+    tABC_Tx *pTx = NULL;
+
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
     ABC_CHECK_NULL(pszTxID);
@@ -264,8 +267,41 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // take this non-blocking opportunity to update the info from the server if needed
     ABC_CHECK_RET(ABC_AccountServerUpdateGeneralInfo(pError));
 
-    // temp: just create the transaction id
-    ABC_STRDUP(*pszTxID, "ID");
+#if 1 // TODO: we can take this out once we are creating real transactions
+
+    // create a transaction
+    ABC_ALLOC(pTx, sizeof(tABC_Tx));
+    ABC_ALLOC(pTx->pStateInfo, sizeof(tTxStateInfo));
+
+    // copy the details
+    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
+    if (pTx->pDetails->amountSatoshi > 0)
+    {
+        // sends should be negative
+        pTx->pDetails->amountSatoshi *= -1;
+    }
+    if (pTx->pDetails->amountCurrency > 0)
+    {
+        // sends should be negative
+        pTx->pDetails->amountCurrency *= -1.0;
+    }
+
+    // set the state
+    pTx->pStateInfo->timeCreation = time(NULL);
+    pTx->pStateInfo->bInternal = true;
+
+    // create a random transaction id
+    ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxID, pError));
+    ABC_CHECK_RET(ABC_CryptoHexEncode(TxID, &(pTx->szID), pError));
+
+    // save the transaction
+    ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
+
+    // set the transaction id for the caller
+    ABC_STRDUP(*pszTxID, pTx->szID);
+
+    // end temp
+#endif
 
     // TODO: write the real function -
     /*
@@ -291,6 +327,8 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
      */
 
 exit:
+    ABC_BUF_FREE(TxID);
+    ABC_TxFreeTx(pTx);
 
     ABC_TxMutexUnlock(NULL);
     return cc;
