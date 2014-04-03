@@ -26,8 +26,6 @@
 #include "ABC_Mutex.h"
 #include "ABC_Tx.h"
 
-
-
 static bool gbInitialized = false;
 
 static tABC_Currency gaCurrencies[] = {
@@ -213,10 +211,6 @@ static tABC_Currency gaCurrencies[] = {
 #define CURRENCY_ARRAY_COUNT ((int) (sizeof(gaCurrencies) / sizeof(gaCurrencies[0])))
 
 
-/** globally accessable function pointer for BitCoin event callbacks */
-static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
-static void *pAsyncBitCoinCallerData = NULL;
-
 /**
  * Initialize the AirBitz Core library.
  *
@@ -251,9 +245,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // override the alloc and free of janson so we can have a secure method
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
-    gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
-    pAsyncBitCoinCallerData = pData;
-
     // initialize the mutex system
     ABC_CHECK_RET(ABC_MutexInitialize(pError));
 
@@ -262,6 +253,9 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
     // initialize the FileIO system
     ABC_CHECK_RET(ABC_FileIOInitialize(pError));
+
+    // initialize Bitcoin transaction system
+    ABC_CHECK_RET(ABC_TxInitialize(fAsyncBitCoinEventCallback, pData, pError));
 
     if (szRootDir)
     {
@@ -1696,7 +1690,7 @@ tABC_CC ABC_DuplicateTxDetails(tABC_TxDetails **ppNewDetails,
     ABC_CHECK_RET(ABC_TxDupDetails(ppNewDetails, pOldDetails, pError));
 
 exit:
-    
+
     return cc;
 }
 
@@ -1923,7 +1917,7 @@ tABC_CC ABC_LoadAccountSettings(const char *szUserName,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_CHECK_RET(ABC_AccountLoadSettings(szUserName, szPassword, ppSettings, pError));
-                  
+
 exit:
 
     return cc;
@@ -1966,26 +1960,4 @@ void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings)
     ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_AccountFreeSettings(pSettings);
-}
-
-void tempEventA()
-{
-    if (gfAsyncBitCoinEventCallback)
-    {
-        tABC_AsyncBitCoinInfo info;
-        info.pData = pAsyncBitCoinCallerData;
-        strcpy(info.szDescription, "Event A");
-        gfAsyncBitCoinEventCallback(&info);
-    }
-}
-
-void tempEventB()
-{
-    if (gfAsyncBitCoinEventCallback)
-    {
-        tABC_AsyncBitCoinInfo info;
-        strcpy(info.szDescription, "Event B");
-        info.pData = pAsyncBitCoinCallerData;
-        gfAsyncBitCoinEventCallback(&info);
-    }
 }

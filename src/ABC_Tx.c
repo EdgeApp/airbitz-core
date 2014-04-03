@@ -106,6 +106,10 @@ typedef struct sABC_TxAddress
     tTxAddressStateInfo *pStateInfo;
 } tABC_TxAddress;
 
+/** globally accessable function pointer for BitCoin event callbacks */
+static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
+static void *pAsyncBitCoinCallerData = NULL;
+
 static tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo, char **pszUUID, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateNewAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, tABC_TxDetails *pDetails, tABC_TxAddress **ppAddress, tABC_Error *pError);
 static tABC_CC  ABC_GetAddressFilename(const char *szWalletUUID, const char *szRequestID, char **pszFilename, tABC_Error *pError);
@@ -148,6 +152,21 @@ static tABC_CC  ACB_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_
 // fake code:
 static tABC_CC  ABC_TxKickoffFakeReceive(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, tABC_Error *pError);
 static void    *ABC_TxFakeReceiveThread(void *);
+
+/**
+ * Initializes the
+ */
+tABC_CC ABC_TxInitialize(tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
+                         void                         *pData,
+                         tABC_Error                   *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
+    pAsyncBitCoinCallerData = pData;
+
+    return cc;
+}
 
 /**
  * Allocate a send info struct and populate it with the data given
@@ -3233,10 +3252,16 @@ static void *ABC_TxFakeReceiveThread(void *pData)
     // save the address
     ABC_CHECK_RET(ABC_TxSaveAddress(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pAddress, pError));
 
-#if 0
-    // fire the callback from here
-    ABC_STRDUP(*pszTxID, pTx->szID);
-#endif
+    // alert the GUI
+    if (gfAsyncBitCoinEventCallback)
+    {
+        tABC_AsyncBitCoinInfo info;
+        info.pData = pAsyncBitCoinCallerData;
+        info.eventType = ABC_AsyncEventType_IncomingBitCoin;
+        ABC_STRDUP(info.szTxID, pTx->szID);
+        info.szDescription = "Received fake funds";
+        gfAsyncBitCoinEventCallback(&info);
+    }
 
     printf("We are here %s %s %s", pInfo->szUserName, pInfo->szWalletUUID, pInfo->szAddress);
 
