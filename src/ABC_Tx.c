@@ -24,6 +24,9 @@
 #include "ABC_Debug.h"
 #include "ABC_Bridge.h"
 
+#include <unistd.h> // for fake code
+#include <pthread.h>
+
 #define SATOSHI_PER_BITCOIN                     100000000
 
 #define TX_MAX_ADDR_ID_LENGTH                   20 // largest char count for the string version of the id number - 20 digits should handle it
@@ -140,6 +143,11 @@ static tABC_CC  ABC_TxLoadAddressAndAppendToArray(const char *szUserName, const 
 //static void     ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count);
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
+static tABC_CC  ACB_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError);
+
+// fake code:
+static tABC_CC  ABC_TxKickoffFakeReceive(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, tABC_Error *pError);
+static void    *ABC_TxFakeReceiveThread(void *);
 
 /**
  * Allocate a send info struct and populate it with the data given
@@ -523,6 +531,8 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
 
     // set the id for the caller
     ABC_STRDUP(*pszRequestID, pAddress->szID);
+
+    ABC_CHECK_RET(ABC_TxKickoffFakeReceive(szUserName, szPassword, szWalletUUID, pAddress->szID, pError));
 
 exit:
     ABC_TxFreeAddress(pAddress);
@@ -3086,3 +3096,155 @@ tABC_CC ABC_TxMutexUnlock(tABC_Error *pError)
     return ABC_MutexUnlock(pError);
 }
 
+/**
+ * Adds a transaction to an address's activity log.
+ *
+ * @param pAddress the address to modify
+ * @param pTx the transaction to add to the address
+ */
+static
+tABC_CC ACB_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    unsigned int countActivities;
+    tTxAddressActivity *aActivities = NULL;
+
+    // grow the array:
+    countActivities = pAddress->pStateInfo->countActivities;
+    aActivities = pAddress->pStateInfo->aActivities;
+    ABC_REALLOC(aActivities, sizeof(tTxAddressActivity)*(countActivities + 1));
+
+    // fill in the new entry:
+    ABC_STRDUP(aActivities[countActivities].szTxID, pTx->szID);
+    aActivities[countActivities].timeCreation = pTx->pStateInfo->timeCreation;
+    aActivities[countActivities].amountSatoshi = pTx->pDetails->amountSatoshi;
+
+    // save the array:
+    pAddress->pStateInfo->countActivities = countActivities + 1;
+    pAddress->pStateInfo->aActivities = aActivities;
+    aActivities = NULL;
+
+exit:
+    ABC_FREE(aActivities);
+
+    return cc;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// Fake code begins here.
+// /////////////////////////////////////////////////////////////////////////////
+
+typedef struct sABC_FakeRecieveInfo
+{
+    char *szUserName;
+    char *szPassword;
+    char *szWalletUUID;
+    char *szAddress;
+} tABC_FakeRecieveInfo;
+
+static void ABC_TxFreeFakeRecieveInfo(tABC_FakeRecieveInfo *pInfo)
+{
+    if (pInfo)
+    {
+        ABC_FREE_STR(pInfo->szUserName);
+        ABC_FREE_STR(pInfo->szPassword);
+        ABC_FREE_STR(pInfo->szWalletUUID);
+        ABC_FREE_STR(pInfo->szAddress);
+        ABC_FREE(pInfo);
+    }
+}
+
+/**
+ * Launches a thread with a few-second delay. Once the thread wakes up, it
+ * creates a fake recieve transaction.
+ */
+static
+tABC_CC ABC_TxKickoffFakeReceive(const char *szUserName,
+                                 const char *szPassword,
+                                 const char *szWalletUUID,
+                                 const char *szAddress,
+                                 tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_FakeRecieveInfo *pInfo = NULL;
+    pthread_t thread;
+    int rv = 0;
+
+    // copy the parameters:
+    ABC_ALLOC(pInfo, sizeof(tABC_FakeRecieveInfo));
+    ABC_STRDUP(pInfo->szUserName,   szUserName);
+    ABC_STRDUP(pInfo->szPassword,   szPassword);
+    ABC_STRDUP(pInfo->szWalletUUID, szWalletUUID);
+    ABC_STRDUP(pInfo->szAddress,    szAddress);
+
+    // launch the thread:
+    rv = pthread_create(&thread, NULL, ABC_TxFakeReceiveThread, pInfo);
+    ABC_CHECK_ASSERT(0 == rv, ABC_CC_SysError, "Cannot start fake thread.");
+
+    pInfo = NULL;
+exit:
+    ABC_TxFreeFakeRecieveInfo(pInfo);
+
+    return cc;
+}
+
+/**
+ * The thread for creating fake recieve transactions.
+ */
+static void *ABC_TxFakeReceiveThread(void *pData)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_Error *pError = NULL;
+    tABC_FakeRecieveInfo *pInfo = pData;
+
+    tABC_TxAddress *pAddress = NULL;
+    tABC_U08Buf TxID = ABC_BUF_NULL;
+    tABC_Tx *pTx = NULL;
+
+    // delay for simulation
+    sleep(5);
+
+    // grab the address
+    ABC_CHECK_RET(ABC_TxLoadAddress(pInfo->szUserName, pInfo->szPassword,
+                                    pInfo->szWalletUUID, pInfo->szAddress,
+                                    &pAddress, pError));
+
+    // create a transaction
+    ABC_ALLOC(pTx, sizeof(tABC_Tx));
+    ABC_ALLOC(pTx->pStateInfo, sizeof(tTxStateInfo));
+
+    // copy the details
+    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pAddress->pDetails, pError));
+
+    // set the state
+    pTx->pStateInfo->timeCreation = time(NULL);
+    pTx->pStateInfo->bInternal = true;
+
+    // create a random transaction id
+    ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxID, pError));
+    ABC_CHECK_RET(ABC_CryptoHexEncode(TxID, &(pTx->szID), pError));
+
+    // save the transaction
+    ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
+
+    // add the transaction to the address
+    ABC_CHECK_RET(ACB_TxAddressAddTx(pAddress, pTx, pError));
+
+    // save the address
+    ABC_CHECK_RET(ABC_TxSaveAddress(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pAddress, pError));
+
+#if 0
+    // fire the callback from here
+    ABC_STRDUP(*pszTxID, pTx->szID);
+#endif
+
+    printf("We are here %s %s %s", pInfo->szUserName, pInfo->szWalletUUID, pInfo->szAddress);
+
+exit:
+    ABC_TxFreeFakeRecieveInfo(pInfo);
+    ABC_TxFreeAddress(pAddress);
+    ABC_BUF_FREE(TxID);
+    ABC_TxFreeTx(pTx);
+
+    return NULL;
+}
