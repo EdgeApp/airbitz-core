@@ -89,7 +89,8 @@ task ios-universal $(for arch in $arches; do echo build-ios-$arch; done) \
 
 package_ios_universal() {
     package_dir=${recipe}-ios-universal
-    mkdir -p $package_dir
+    rm -rf $package_dir
+    mkdir $package_dir
     depends=$(cat depends)
 
     # Gather universal libraries:
