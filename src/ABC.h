@@ -174,7 +174,7 @@ extern "C" {
         char *szTxID;
 
         /** String containing a description of the event */
-        char    szDescription[ABC_MAX_STRING_LENGTH + 1];
+        char *szDescription;
     } tABC_AsyncBitCoinInfo;
 
     /**

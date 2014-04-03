@@ -41,6 +41,10 @@ extern "C" {
         tABC_Error  errorInfo;
     } tABC_TxSendInfo;
 
+    tABC_CC ABC_TxInitialize(tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
+                             void                         *pData,
+                             tABC_Error                   *pError);
+
     tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
                              const tABC_TxDetails *pOldDetails,
                              tABC_Error *pError);
