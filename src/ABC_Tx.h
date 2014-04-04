@@ -114,12 +114,21 @@ extern "C" {
                                         unsigned int *pWidth,
                                         tABC_Error *pError);
 
+    tABC_CC ABC_TxGetTransaction(const char *szUserName,
+                                 const char *szPassword,
+                                 const char *szWalletUUID,
+                                 const char *szID,
+                                 tABC_TxInfo **ppTransaction,
+                                 tABC_Error *pError);
+
     tABC_CC ABC_TxGetTransactions(const char *szUserName,
                                   const char *szPassword,
                                   const char *szWalletUUID,
                                   tABC_TxInfo ***paTransactions,
                                   unsigned int *pCount,
                                   tABC_Error *pError);
+
+    void ABC_TxFreeTransaction(tABC_TxInfo *pTransactions);
 
     void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
                                 unsigned int count);

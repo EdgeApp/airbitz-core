@@ -373,7 +373,7 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
     {
         tABC_TxInfo *pInfo = aTransactions[i];
 
-        printf("Transaction: %s, time: %lld, satoshi: %lld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
+        printf("Transaction: %s, time: %lld, satoshi: %lld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u, address: %s\n",
                pInfo->szID,
                pInfo->timeCreation,
                pInfo->pDetails->amountSatoshi,
@@ -381,10 +381,38 @@ void ABC_Results_Callback(const tABC_RequestResults *pResults);
                pInfo->pDetails->szName,
                pInfo->pDetails->szCategory,
                pInfo->pDetails->szNotes,
-               pInfo->pDetails->attributes);
+               pInfo->pDetails->attributes,
+               pInfo->aAddresses ? pInfo->aAddresses[0] : "(no address)");
     }
 
     ABC_FreeTransactions(aTransactions, nCount);
+
+#endif
+
+#if 0 // transaction
+    tABC_TxInfo *pTransaction = NULL;
+    ABC_GetTransaction([self.textUsername.text UTF8String],
+                       [self.textPassword.text UTF8String],
+                       [self.textTest.text UTF8String],
+                       //"37af4745883ed6d4e263afc84bb99d7034f9eeb143362b577daa496a6d7fa610",
+                       "4a90ded3813b338b65f46bf96001096c8629142a95ba745b63552d5938ffcfbb",
+                       &pTransaction,
+                       &Error);
+    [self printABC_Error:&Error];
+
+
+    printf("Transaction: %s, time: %lld, satoshi: %lld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u, address: %s\n",
+           pTransaction->szID,
+           pTransaction->timeCreation,
+           pTransaction->pDetails->amountSatoshi,
+           pTransaction->pDetails->amountCurrency,
+           pTransaction->pDetails->szName,
+           pTransaction->pDetails->szCategory,
+           pTransaction->pDetails->szNotes,
+           pTransaction->pDetails->attributes,
+           pTransaction->aAddresses ? pTransaction->aAddresses[0] : "(no address)");
+
+    ABC_FreeTransaction(pTransaction);
 
 #endif
 

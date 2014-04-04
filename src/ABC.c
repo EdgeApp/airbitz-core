@@ -1551,6 +1551,37 @@ exit:
 }
 
 /**
+ * Gets the transaction specified
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param szID              ID of the transaction
+ * @param ppTransaction     Location to store allocated transaction
+ *                          (caller must free)
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_GetTransaction(const char *szUserName,
+                           const char *szPassword,
+                           const char *szWalletUUID,
+                           const char *szID,
+                           tABC_TxInfo **ppTransaction,
+                           tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_TxGetTransaction(szUserName, szPassword, szWalletUUID, szID, ppTransaction, pError));
+
+exit:
+    return cc;
+}
+
+/**
  * Gets the transactions associated with the given wallet.
  *
  * @param szUserName        UserName for the account associated with the transactions
@@ -1578,6 +1609,18 @@ tABC_CC ABC_GetTransactions(const char *szUserName,
 
 exit:
     return cc;
+}
+
+/**
+ * Frees the given transactions
+ *
+ * @param pTransaction Pointer to transaction
+ */
+void ABC_FreeTransaction(tABC_TxInfo *pTransaction)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    ABC_TxFreeTransaction(pTransaction);
 }
 
 /**
