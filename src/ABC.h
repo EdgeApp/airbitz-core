@@ -679,6 +679,13 @@ extern "C" {
                                       tABC_TxDetails *pDetails,
                                       tABC_Error *pError);
 
+    tABC_CC ABC_GetTransactionDetails(const char *szUserName,
+                                      const char *szPassword,
+                                      const char *szWalletUUID,
+                                      const char *szID,
+                                      tABC_TxDetails **ppDetails,
+                                      tABC_Error *pError);
+
     tABC_CC ABC_GetPendingRequests(const char *szUserName,
                                    const char *szPassword,
                                    const char *szWalletUUID,

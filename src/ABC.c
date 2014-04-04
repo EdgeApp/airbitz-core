@@ -1625,6 +1625,37 @@ exit:
 }
 
 /**
+ * Gets the details for a specific existing transaction.
+ *
+ * @param szUserName        UserName for the account associated with the transaction
+ * @param szPassword        Password for the account associated with the transaction
+ * @param szWalletUUID      UUID of the wallet associated with the transaction
+ * @param szID              ID of the transaction
+ * @param ppDetails         Location to store allocated details for the transaction
+ *                          (caller must free)
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_GetTransactionDetails(const char *szUserName,
+                                    const char *szPassword,
+                                    const char *szWalletUUID,
+                                    const char *szID,
+                                    tABC_TxDetails **ppDetails,
+                                    tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_TxGetTransactionDetails(szUserName, szPassword, szWalletUUID, szID, ppDetails, pError));
+
+exit:
+    return cc;
+}
+
+/**
  * Gets the pending requests associated with the given wallet.
  *
  * @param szUserName        UserName for the account associated with the requests
