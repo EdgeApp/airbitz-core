@@ -1172,27 +1172,6 @@ tABC_CC ABC_TxGetTransactions(const char *szUserName,
     // validate the creditials
     ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
 
-#if 0 // TODO: we can take this out once we are creating real transactions
-    // start temp - create a transaction
-    tABC_Tx Tx;
-    char szID[] = "4ba1345764a1a704b97d062b47b55c8632efc4d7c0c8039d78adf8a52bcba4fe";
-    Tx.szID = szID;
-    tABC_TxDetails Details;
-    Details.amountSatoshi = 55;
-    Details.amountCurrency = 9.9;
-    Details.szName = "My Name1";
-    Details.szCategory = "My Category1";
-    Details.szNotes = "My Notes1";
-    Details.attributes = 0x1;
-    Tx.pDetails = &Details;
-    tTxStateInfo State;
-    State.timeCreation = 123;
-    State.bInternal = true;
-    Tx.pStateInfo = &State;
-    ABC_CHECK_RET(ABC_TxSaveTransaction(szUserName, szPassword, szWalletUUID, &Tx, pError));
-    // end temp
-#endif
-
     // get the directory name
     ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
 
@@ -1606,6 +1585,84 @@ tABC_CC ABC_TxSetTransactionDetails(const char *szUserName,
 exit:
     ABC_FREE_STR(szFilename);
     ABC_TxFreeTx(pTx);
+
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Gets the details for a specific existing transaction.
+ *
+ * @param szUserName        UserName for the account associated with the transaction
+ * @param szPassword        Password for the account associated with the transaction
+ * @param szWalletUUID      UUID of the wallet associated with the transaction
+ * @param szID              ID of the transaction
+ * @param ppDetails         Location to store allocated details for the transaction
+ *                          (caller must free)
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_TxGetTransactionDetails(const char *szUserName,
+                                    const char *szPassword,
+                                    const char *szWalletUUID,
+                                    const char *szID,
+                                    tABC_TxDetails **ppDetails,
+                                    tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szFilename = NULL;
+    tABC_Tx *pTx = NULL;
+    tABC_TxDetails *pDetails = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szID);
+    ABC_CHECK_ASSERT(strlen(szID) > 0, ABC_CC_Error, "No transaction ID provided");
+
+    // validate the creditials
+    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
+
+    // find the filename of the existing transaction
+
+    // first try the internal
+    ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, szID, true, pError));
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+
+    // if the internal doesn't exist
+    if (bExists == false)
+    {
+        // try the external
+        ABC_FREE_STR(szFilename);
+        ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, szID, false, pError));
+        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    }
+
+    ABC_CHECK_ASSERT(bExists == true, ABC_CC_NoTransaction, "Transaction does not exist");
+
+    // load the existing transaction
+    ABC_CHECK_RET(ABC_TxLoadTransaction(szUserName, szPassword, szWalletUUID, szFilename, &pTx, pError));
+    ABC_CHECK_NULL(pTx->pDetails);
+    ABC_CHECK_NULL(pTx->pStateInfo);
+
+    // duplicate the details
+    ABC_CHECK_RET(ABC_TxDupDetails(&pDetails, pTx->pDetails, pError));
+
+    // assign final result
+    *ppDetails = pDetails;
+    pDetails = NULL;
+
+
+exit:
+    ABC_FREE_STR(szFilename);
+    ABC_TxFreeTx(pTx);
+    ABC_TxFreeDetails(pDetails);
 
     ABC_TxMutexUnlock(NULL);
     return cc;
