@@ -3525,8 +3525,10 @@ static void *ABC_TxFakeReceiveThread(void *pData)
         info.pData = pAsyncBitCoinCallerData;
         info.eventType = ABC_AsyncEventType_IncomingBitCoin;
         ABC_STRDUP(info.szTxID, pTx->szID);
-        strcpy(info.szDescription, "Received fake funds");
+        ABC_STRDUP(info.szDescription, "Received fake funds");
         gfAsyncBitCoinEventCallback(&info);
+        ABC_FREE_STR(info.szTxID);
+        ABC_FREE_STR(info.szDescription);
     }
 
     //printf("We are here %s %s %s", pInfo->szUserName, pInfo->szWalletUUID, pInfo->szAddress);
