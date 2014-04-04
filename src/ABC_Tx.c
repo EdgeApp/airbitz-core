@@ -3478,7 +3478,7 @@ static void *ABC_TxFakeReceiveThread(void *pData)
     tABC_U08Buf IncomingAddress = ABC_BUF_NULL;
 
     // delay for simulation
-    sleep(5);
+    sleep(15);
 
     // grab the address
     ABC_CHECK_RET(ABC_TxLoadAddress(pInfo->szUserName, pInfo->szPassword,
