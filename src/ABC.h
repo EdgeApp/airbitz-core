@@ -328,6 +328,10 @@ extern "C" {
         char *szID;
         /** time of creation */
         int64_t timeCreation;
+        /** count of bitcoin addresses associated with this transaciton */
+        unsigned int countAddresses;
+        /** bitcoin addresses associated with this transaction */
+        char **aAddresses;
         /** transaction details */
         tABC_TxDetails *pDetails;
     } tABC_TxInfo;
@@ -662,12 +666,21 @@ extern "C" {
                                     void *pData,
                                     tABC_Error *pError);
 
+    tABC_CC ABC_GetTransaction(const char *szUserName,
+                               const char *szPassword,
+                               const char *szWalletUUID,
+                               const char *szID,
+                               tABC_TxInfo **ppTransaction,
+                               tABC_Error *pError);
+
     tABC_CC ABC_GetTransactions(const char *szUserName,
                                 const char *szPassword,
                                 const char *szWalletUUID,
                                 tABC_TxInfo ***paTransactions,
                                 unsigned int *pCount,
                                 tABC_Error *pError);
+
+    void ABC_FreeTransaction(tABC_TxInfo *pTransaction);
 
     void ABC_FreeTransactions(tABC_TxInfo **aTransactions,
                               unsigned int count);

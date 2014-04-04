@@ -54,6 +54,7 @@
 #define JSON_TX_CATEGORY_FIELD                  "category"
 #define JSON_TX_NOTES_FIELD                     "notes"
 #define JSON_TX_ATTRIBUTES_FIELD                "attributes"
+#define JSON_TX_ADDRESSES_FIELD                 "addresses"
 
 #define JSON_ADDR_SEQ_FIELD                     "seq"
 #define JSON_ADDR_ADDRESS_FIELD                 "address"
@@ -80,6 +81,8 @@ typedef struct sABC_Tx
     char            *szID; // ntxid from bitcoin
     tABC_TxDetails  *pDetails;
     tTxStateInfo    *pStateInfo;
+    unsigned int    countAddresses;
+    char            **aAddresses;
 } tABC_Tx;
 
 typedef struct sTxAddressActivity
@@ -117,8 +120,8 @@ static tABC_CC  ABC_TxParseAddrFilename(const char *szFilename, char **pszID, ch
 static tABC_CC  ABC_TxSetAddressRecycle(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, bool bRecyclable, tABC_Error *pError);
 static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *pbEquivalent, tABC_Error *pError);
 static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pType, char **pszBasename, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadTransactionInfo(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxInfo **ppTransaction, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTxAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
-static void     ABC_TxFreeTransaction(tABC_TxInfo *pTransactions);
 static tABC_CC  ABC_TxGetAddressOwed(tABC_TxAddress *pAddr, int64_t *pSatoshiBalance, tABC_Error *pError);
 static void     ABC_TxFreeRequest(tABC_RequestInfo *pRequest);
 static tABC_CC  ABC_TxCreateTxFilename(char **pszFilename, const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szTxID, bool bInternal, tABC_Error *pError);
@@ -316,6 +319,11 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // set the state
     pTx->pStateInfo->timeCreation = time(NULL);
     pTx->pStateInfo->bInternal = true;
+
+    // set the address
+    pTx->countAddresses = 1;
+    ABC_ALLOC(pTx->aAddresses, sizeof(char *));
+    ABC_STRDUP(pTx->aAddresses[0], pInfo->szDestAddress);
 
     // create a random transaction id
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxID, pError));
@@ -1132,6 +1140,80 @@ exit:
 }
 
 /**
+ * Get the specified transactions.
+ *
+ * @param szUserName        UserName for the account associated with the transaction
+ * @param szPassword        Password for the account associated with the transaction
+ * @param szWalletUUID      UUID of the wallet associated with the transaction
+ * @param szID              ID of the transaction
+ * @param ppTransaction     Location to store allocated transaction
+ *                          (caller must free)
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_TxGetTransaction(const char *szUserName,
+                             const char *szPassword,
+                             const char *szWalletUUID,
+                             const char *szID,
+                             tABC_TxInfo **ppTransaction,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szFilename = NULL;
+    tABC_Tx *pTx = NULL;
+    tABC_TxInfo *pTransaction = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szID);
+    ABC_CHECK_ASSERT(strlen(szID) > 0, ABC_CC_Error, "No transaction ID provided");
+    ABC_CHECK_NULL(ppTransaction);
+    *ppTransaction = NULL;
+
+    // validate the creditials
+    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
+
+    // find the filename of the existing transaction
+
+    // first try the internal
+    ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, szID, true, pError));
+    bool bExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+
+    // if the internal doesn't exist
+    if (bExists == false)
+    {
+        // try the external
+        ABC_FREE_STR(szFilename);
+        ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, szID, false, pError));
+        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    }
+
+    ABC_CHECK_ASSERT(bExists == true, ABC_CC_NoTransaction, "Transaction does not exist");
+
+    // load the existing transaction
+    ABC_CHECK_RET(ABC_TxLoadTransactionInfo(szUserName, szPassword, szWalletUUID, szFilename, &pTransaction, pError));
+
+    // assign final result
+    *ppTransaction = pTransaction;
+    pTransaction = NULL;
+
+exit:
+    ABC_FREE_STR(szFilename);
+    ABC_TxFreeTx(pTx);
+    ABC_TxFreeTransaction(pTransaction);
+    
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
  * Gets the transactions associated with the given wallet.
  *
  * @param szUserName        UserName for the account associated with the transactions
@@ -1386,7 +1468,73 @@ exit:
 }
 
 /**
- * Loads the given transaction and adds it to the end of the array
+ * Load the specified transaction info.
+ *
+ * @param szUserName        UserName for the account associated with the transaction
+ * @param szPassword        Password for the account associated with the transaction
+ * @param szWalletUUID      UUID of the wallet associated with the transaction
+ * @param szFilename        Filename of the transaction
+ * @param ppTransaction     Location to store allocated transaction
+ *                          (caller must free)
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxLoadTransactionInfo(const char *szUserName,
+                                  const char *szPassword,
+                                  const char *szWalletUUID,
+                                  const char *szFilename,
+                                  tABC_TxInfo **ppTransaction,
+                                  tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_Tx *pTx = NULL;
+    tABC_TxInfo *pTransaction = NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No filename provided");
+    ABC_CHECK_NULL(ppTransaction);
+    *ppTransaction = NULL;
+
+    // load the transaction
+    ABC_CHECK_RET(ABC_TxLoadTransaction(szUserName, szPassword, szWalletUUID, szFilename, &pTx, pError));
+    ABC_CHECK_NULL(pTx->pDetails);
+    ABC_CHECK_NULL(pTx->pStateInfo);
+
+    // steal the data and assign it to our new struct
+    ABC_ALLOC(pTransaction, sizeof(tABC_TxInfo));
+    pTransaction->szID = pTx->szID;
+    pTx->szID = NULL;
+    pTransaction->timeCreation = pTx->pStateInfo->timeCreation;
+    pTransaction->pDetails = pTx->pDetails;
+    pTx->pDetails = NULL;
+    pTransaction->countAddresses = pTx->countAddresses;
+    pTx->countAddresses = 0;
+    pTransaction->aAddresses = pTx->aAddresses;
+    pTx->aAddresses = NULL;
+
+    // assign final result
+    *ppTransaction = pTransaction;
+    pTransaction = NULL;
+
+exit:
+    ABC_TxFreeTx(pTx);
+    ABC_TxFreeTransaction(pTransaction);
+
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Loads the given transaction info and adds it to the end of the array
  *
  * @param szUserName        UserName for the account associated with the transactions
  * @param szPassword        Password for the account associated with the transactions
@@ -1408,7 +1556,6 @@ tABC_CC ABC_TxLoadTxAndAppendToArray(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_Tx *pTx = NULL;
     tABC_TxInfo *pTransaction = NULL;
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
@@ -1428,19 +1575,8 @@ tABC_CC ABC_TxLoadTxAndAppendToArray(const char *szUserName,
     count = *pCount;
     aTransactions = *paTransactions;
 
-    // load it into the internal transaction structure
-    ABC_CHECK_RET(ABC_TxLoadTransaction(szUserName, szPassword, szWalletUUID, szFilename, &pTx, pError));
-
-    // allocated the info version
-    ABC_ALLOC(pTransaction, sizeof(tABC_TxInfo));
-
-    // reassign the data over to the info struct
-    pTransaction->szID = pTx->szID;
-    pTx->szID = NULL;
-    pTransaction->pDetails = pTx->pDetails;
-    pTx->pDetails = NULL;
-    ABC_CHECK_NULL(pTx->pStateInfo);
-    pTransaction->timeCreation = pTx->pStateInfo->timeCreation;
+    // load it into the info transaction structure
+    ABC_CHECK_RET(ABC_TxLoadTransactionInfo(szUserName, szPassword, szWalletUUID, szFilename, &pTransaction, pError));
 
     // create space for new entry
     if (aTransactions == NULL)
@@ -1463,7 +1599,6 @@ tABC_CC ABC_TxLoadTxAndAppendToArray(const char *szUserName,
     *pCount = count;
 
 exit:
-    ABC_TxFreeTx(pTx);
     ABC_TxFreeTransaction(pTransaction);
 
     return cc;
@@ -1474,12 +1609,20 @@ exit:
  *
  * @param pTransaction Pointer to transaction to free
  */
-static
 void ABC_TxFreeTransaction(tABC_TxInfo *pTransaction)
 {
     if (pTransaction)
     {
         ABC_FREE_STR(pTransaction->szID);
+
+        if ((pTransaction->countAddresses > 0) && (pTransaction->aAddresses != NULL))
+        {
+            for (int i = 0; i < pTransaction->countAddresses; i++)
+            {
+                ABC_FREE_STR(pTransaction->aAddresses[i]);
+            }
+            ABC_CLEAR_FREE(pTransaction->aAddresses, (sizeof(char *) * pTransaction->countAddresses));
+        }
 
         ABC_TxFreeDetails(pTransaction->pDetails);
 
@@ -1624,6 +1767,7 @@ tABC_CC ABC_TxGetTransactionDetails(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
     ABC_CHECK_NULL(szID);
     ABC_CHECK_ASSERT(strlen(szID) > 0, ABC_CC_Error, "No transaction ID provided");
+    ABC_CHECK_NULL(ppDetails);
 
     // validate the creditials
     ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
@@ -1993,6 +2137,32 @@ tABC_CC ABC_TxLoadTransaction(const char *szUserName,
     // get the details object
     ABC_CHECK_RET(ABC_TxDecodeTxDetails(pJSON_Root, &(pTx->pDetails), pError));
 
+    // get the addresses array (if it exists)
+    json_t *jsonAddresses = json_object_get(pJSON_Root, JSON_TX_ADDRESSES_FIELD);
+    if (jsonAddresses)
+    {
+        ABC_CHECK_ASSERT(json_is_array(jsonAddresses), ABC_CC_JSONError, "Error parsing JSON transaction package - missing addresses array");
+
+        // get the number of elements in the array
+        pTx->countAddresses = (int) json_array_size(jsonAddresses);
+
+        if (pTx->countAddresses > 0)
+        {
+            ABC_ALLOC(pTx->aAddresses, sizeof(char *) * pTx->countAddresses);
+
+            for (int i = 0; i < pTx->countAddresses; i++)
+            {
+                json_t *pJSON_Elem = json_array_get(jsonAddresses, i);
+                ABC_CHECK_ASSERT((pJSON_Elem && json_is_string(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing address array element");
+                ABC_STRDUP(pTx->aAddresses[i], json_string_value(pJSON_Elem));
+            }
+        }
+    }
+    else
+    {
+        pTx->countAddresses = 0;
+    }
+
     // assign final result
     *ppTx = pTx;
     pTx = NULL;
@@ -2143,6 +2313,15 @@ void ABC_TxFreeTx(tABC_Tx *pTx)
         ABC_TxFreeDetails(pTx->pDetails);
         ABC_CLEAR_FREE(pTx->pStateInfo, sizeof(tTxStateInfo));
 
+        if ((pTx->countAddresses > 0) && (pTx->aAddresses != NULL))
+        {
+            for (int i = 0; i < pTx->countAddresses; i++)
+            {
+                ABC_FREE_STR(pTx->aAddresses[i]);
+            }
+            ABC_CLEAR_FREE(pTx->aAddresses, (sizeof(char *) * pTx->countAddresses));
+        }
+
         ABC_CLEAR_FREE(pTx, sizeof(tABC_Tx));
     }
 }
@@ -2192,6 +2371,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     tABC_U08Buf MK = ABC_BUF_NULL;
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
+    json_t *pJSON_AddressesArray = NULL;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
@@ -2222,6 +2402,24 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     // set the details
     ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pTx->pDetails, pError));
 
+    // create the addresses array object
+    pJSON_AddressesArray = json_array();
+
+    // if there are any addresses
+    if ((pTx->countAddresses > 0) && (pTx->aAddresses != NULL))
+    {
+        for (int i = 0; i < pTx->countAddresses; i++)
+        {
+            // add the address to the array
+            int retVal = json_array_append_new(pJSON_AddressesArray, json_string(pTx->aAddresses[i]));
+            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+        }
+    }
+
+    // add the address array to the  object
+    int retVal = json_object_set(pJSON_Root, JSON_TX_ADDRESSES_FIELD, pJSON_AddressesArray);
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
     // create the transaction directory if needed
     ABC_CHECK_RET(ABC_TxCreateTxDir(szWalletUUID, pError));
 
@@ -2234,6 +2432,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
 exit:
     ABC_FREE_STR(szFilename);
     if (pJSON_Root) json_decref(pJSON_Root);
+    if (pJSON_AddressesArray) json_decref(pJSON_AddressesArray);
 
     ABC_TxMutexUnlock(NULL);
     return cc;
@@ -3276,6 +3475,7 @@ static void *ABC_TxFakeReceiveThread(void *pData)
     tABC_TxAddress *pAddress = NULL;
     tABC_U08Buf TxID = ABC_BUF_NULL;
     tABC_Tx *pTx = NULL;
+    tABC_U08Buf IncomingAddress = ABC_BUF_NULL;
 
     // delay for simulation
     sleep(5);
@@ -3300,11 +3500,20 @@ static void *ABC_TxFakeReceiveThread(void *pData)
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxID, pError));
     ABC_CHECK_RET(ABC_CryptoHexEncode(TxID, &(pTx->szID), pError));
 
+    // create a random address that the funds were received from
+    ABC_CHECK_RET(ABC_CryptoCreateRandomData(20, &IncomingAddress, pError));
+    ABC_ALLOC(pTx->aAddresses, sizeof(char *));
+    pTx->countAddresses = 1;
+    ABC_CHECK_RET(ABC_CryptoBase58Encode(IncomingAddress, &(pTx->aAddresses[0]), pError));
+
     // save the transaction
     ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
 
     // add the transaction to the address
     ABC_CHECK_RET(ACB_TxAddressAddTx(pAddress, pTx, pError));
+
+    // set the address as not recycled so it doens't get used again
+    pAddress->pStateInfo->bRecycleable = false;
 
     // save the address
     ABC_CHECK_RET(ABC_TxSaveAddress(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pAddress, pError));
@@ -3316,16 +3525,17 @@ static void *ABC_TxFakeReceiveThread(void *pData)
         info.pData = pAsyncBitCoinCallerData;
         info.eventType = ABC_AsyncEventType_IncomingBitCoin;
         ABC_STRDUP(info.szTxID, pTx->szID);
-        info.szDescription = "Received fake funds";
+        strcpy(info.szDescription, "Received fake funds");
         gfAsyncBitCoinEventCallback(&info);
     }
 
-    printf("We are here %s %s %s", pInfo->szUserName, pInfo->szWalletUUID, pInfo->szAddress);
+    //printf("We are here %s %s %s", pInfo->szUserName, pInfo->szWalletUUID, pInfo->szAddress);
 
 exit:
     ABC_TxFreeFakeRecieveInfo(pInfo);
     ABC_TxFreeAddress(pAddress);
     ABC_BUF_FREE(TxID);
+    ABC_BUF_FREE(IncomingAddress);
     ABC_TxFreeTx(pTx);
 
     return NULL;
