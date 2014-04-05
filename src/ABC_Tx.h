@@ -147,6 +147,13 @@ extern "C" {
                                         tABC_TxDetails **ppDetails,
                                         tABC_Error *pError);
 
+    tABC_CC ABC_TxGetRequestAddress(const char *szUserName,
+                                    const char *szPassword,
+                                    const char *szWalletUUID,
+                                    const char *szRequestID,
+                                    char **pszAddress,
+                                    tABC_Error *pError);
+
     tABC_CC ABC_TxGetPendingRequests(const char *szUserName,
                                      const char *szPassword,
                                      const char *szWalletUUID,
