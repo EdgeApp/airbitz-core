@@ -1699,6 +1699,36 @@ exit:
 }
 
 /**
+ * Gets the bit coin public address for a specified request
+ *
+ * @param szUserName        UserName for the account associated with the requests
+ * @param szPassword        Password for the account associated with the requests
+ * @param szWalletUUID      UUID of the wallet associated with the requests
+ * @param szRequestID       ID of request
+ * @param pszAddress        Location to store allocated address string (caller must free)
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_GetRequestAddress(const char *szUserName,
+                              const char *szPassword,
+                              const char *szWalletUUID,
+                              const char *szRequestID,
+                              char **pszAddress,
+                              tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_TxGetRequestAddress(szUserName, szPassword, szWalletUUID, szRequestID, pszAddress, pError));
+
+exit:
+    return cc;
+}
+
+/**
  * Gets the pending requests associated with the given wallet.
  *
  * @param szUserName        UserName for the account associated with the requests

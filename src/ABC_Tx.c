@@ -1813,6 +1813,51 @@ exit:
 }
 
 /**
+ * Gets the bit coin public address for a specified request
+ *
+ * @param szUserName        UserName for the account associated with the requests
+ * @param szPassword        Password for the account associated with the requests
+ * @param szWalletUUID      UUID of the wallet associated with the requests
+ * @param szRequestID       ID of request
+ * @param pszAddress        Location to store allocated address string (caller must free)
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_TxGetRequestAddress(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletUUID,
+                                const char *szRequestID,
+                                char **pszAddress,
+                                tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szFilename = NULL;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szRequestID);
+    ABC_CHECK_ASSERT(strlen(szRequestID) > 0, ABC_CC_Error, "No request ID provided");
+    ABC_CHECK_NULL(pszAddress);
+    *pszAddress = NULL;
+
+    // get the filename for this address / request
+    ABC_CHECK_RET(ABC_GetAddressFilename(szWalletUUID, szRequestID, &szFilename, pError));
+
+    // parse the elements from the filename
+    ABC_CHECK_RET(ABC_TxParseAddrFilename(szFilename, NULL, pszAddress, pError));
+
+exit:
+    ABC_FREE_STR(szFilename);
+
+    return cc;
+}
+
+/**
  * Gets the pending requests associated with the given wallet.
  *
  * @param szUserName        UserName for the account associated with the requests
