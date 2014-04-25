@@ -1,7 +1,8 @@
 depends="zlib"
 inherit lib
 
-source="https://www.openssl.org/source/openssl-1.0.1f.tar.gz"
+version="1.0.1g"
+source="https://www.openssl.org/source/openssl-$version.tar.gz"
 
 build() {
     case $target in
@@ -13,7 +14,7 @@ build() {
     *)          type=linux-generic32 ;;
     esac
 
-    cd openssl-1.0.1f
+    cd openssl-$version
     if [ $target = "native" ]; then
         ./config --prefix=$install_dir
     else
