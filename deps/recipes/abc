@@ -4,7 +4,7 @@ inherit lib
 build() {
     cd $base_dir/..
     export TARGET=$target
-#    CFLAGS="$CFLAGS -D_XOPEN_SOURCE=500"
+    CFLAGS="$CFLAGS -D_GNU_SOURCE"
     make
     mkdir -p $install_dir/lib
     cp build/$target/libabc.a $install_dir/lib
