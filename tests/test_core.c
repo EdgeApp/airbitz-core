@@ -1,21 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <semaphore.h>
 #include <time.h>
 #include <unistd.h>
+
+#define RED  "\x1B[31m"
+#define GRN  "\x1B[32m"
+#define NRM  "\x1B[0m"
 
 #include "ABC.h"
 #include "ABC_Tx.h"
 #include "ABC_Util.h"
 #include "ABC_Crypto.h"
 #include "ABC_Util.h"
-
-#undef DEBUG
-
-#define RED  "\x1B[31m"
-#define GRN  "\x1B[32m"
-#define NRM  "\x1B[0m"
 
 #define TEST_WAIT_ON_CB(codeBlock) \
     { \
@@ -326,8 +325,11 @@ static void test_checkpassword()
     unsigned int i;
     for (i = 0; i < count; i++)
     {
-        tABC_PasswordRule *pRule = aRules[i];
-        WRAP_PRINTF(("%s - %s\n", pRule->bPassed ? "pass" : "fail", pRule->szDescription));
+        tABC_PasswordRule *pRule = aRules[i]; 
+        if (pRule)
+        {
+            WRAP_PRINTF(("%s - %s\n", pRule->bPassed ? "pass" : "fail", pRule->szDescription));
+        }
     }
 
     ABC_FreePasswordRuleArray(aRules, count);
@@ -367,18 +369,20 @@ static void test_pendingrequests()
         for (i = 0; i < nCount; i++)
         {
             tABC_RequestInfo *pInfo = aRequests[i];
-
-            WRAP_PRINTF(("Pending Request: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u, existing_satoshi: %ld, owed_satoshi: %ld\n",
-                   pInfo->szID,
-                   pInfo->timeCreation,
-                   pInfo->pDetails->amountSatoshi,
-                   pInfo->pDetails->amountCurrency,
-                   pInfo->pDetails->szName,
-                   pInfo->pDetails->szCategory,
-                   pInfo->pDetails->szNotes,
-                   pInfo->pDetails->attributes,
-                   pInfo->amountSatoshi,
-                   pInfo->owedSatoshi));
+            if (pInfo)
+            {
+                WRAP_PRINTF(("Pending Request: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u, existing_satoshi: %ld, owed_satoshi: %ld\n",
+                    pInfo->szID,
+                    pInfo->timeCreation,
+                    pInfo->pDetails->amountSatoshi,
+                    pInfo->pDetails->amountCurrency,
+                    pInfo->pDetails->szName,
+                    pInfo->pDetails->szCategory,
+                    pInfo->pDetails->szNotes,
+                    pInfo->pDetails->attributes,
+                    pInfo->amountSatoshi,
+                    pInfo->owedSatoshi));
+            }
         }
 
         // take the first one and duplicate the info
@@ -420,16 +424,18 @@ static void test_transactions()
     unsigned int i;
     for (i = 0; i < nCount; i++) {
         tABC_TxInfo *pInfo = aTransactions[i];
-
-        WRAP_PRINTF(("Transaction: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
-               pInfo->szID,
-               pInfo->timeCreation,
-               pInfo->pDetails->amountSatoshi,
-               pInfo->pDetails->amountCurrency,
-               pInfo->pDetails->szName,
-               pInfo->pDetails->szCategory,
-               pInfo->pDetails->szNotes,
-               pInfo->pDetails->attributes));
+        if (pInfo)
+        {
+            WRAP_PRINTF(("Transaction: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
+                pInfo->szID,
+                pInfo->timeCreation,
+                pInfo->pDetails->amountSatoshi,
+                pInfo->pDetails->amountCurrency,
+                pInfo->pDetails->szName,
+                pInfo->pDetails->szCategory,
+                pInfo->pDetails->szNotes,
+                pInfo->pDetails->attributes));
+        }
     }
     ABC_FreeTransactions(aTransactions, nCount);
 }
@@ -596,14 +602,16 @@ static void test_listwallets()
     for (i = 0; i < nCount; i++)
     {
         tABC_WalletInfo *pInfo = aWalletInfo[i];
-
-        WRAP_PRINTF(("Account: %s, UUID: %s, Name: %s, currency: %d, attributes: %u, balance: %ld\n",
-               pInfo->szUserName,
-               pInfo->szUUID,
-               pInfo->szName,
-               pInfo->currencyNum,
-               pInfo->attributes,
-               pInfo->balanceSatoshi));
+        if (pInfo)
+        {
+            WRAP_PRINTF(("Account: %s, UUID: %s, Name: %s, currency: %d, attributes: %u, balance: %ld\n",
+                pInfo->szUserName,
+                pInfo->szUUID,
+                pInfo->szName,
+                pInfo->currencyNum,
+                pInfo->attributes,
+                pInfo->balanceSatoshi));
+        }
     }
 
     ABC_FreeWalletInfoArray(aWalletInfo, nCount);
@@ -654,14 +662,16 @@ static void test_reorderwallets()
     for (i = 0; i < nCount; i++)
     {
         tABC_WalletInfo *pInfo = aWalletInfo[i];
-
-        WRAP_PRINTF(("Account: %s, UUID: %s, Name: %s, currency: %d, attributes: %u, balance: %ld\n",
-               pInfo->szUserName,
-               pInfo->szUUID,
-               pInfo->szName,
-               pInfo->currencyNum,
-               pInfo->attributes,
-               (long) pInfo->balanceSatoshi));
+        if (pInfo)
+        {
+            WRAP_PRINTF(("Account: %s, UUID: %s, Name: %s, currency: %d, attributes: %u, balance: %ld\n",
+                pInfo->szUserName,
+                pInfo->szUUID,
+                pInfo->szName,
+                pInfo->currencyNum,
+                pInfo->attributes,
+                (long) pInfo->balanceSatoshi));
+        }
     }
 
     ABC_FreeWalletInfoArray(aWalletInfo, nCount);
@@ -676,79 +686,6 @@ static void test_checkrecoveryquestions()
         &bValid, &Error);
     printABC_Error(&Error);
 }
-
-/*
-static void test_categories()
-{
-    Error.code = ABC_CC_Ok;
-    char **aszCategories;
-    unsigned int count;
-    NSMutableArray *arrayCategories = [[NSMutableArray alloc] init];
-
-    ABC_GetCategories("a", &aszCategories, &count, &Error);
-    int i;
-    for (i = 0; i < count; i++)
-    {
-        [arrayCategories addObject:[NSString stringWithFormat:@"%s", aszCategories[i]]];
-    }
-    ABC_UtilFreeStringArray(aszCategories, count);
-
-
-    ABC_AddCategory("a", "firstCategory", &Error);
-    ABC_GetCategories("a", &aszCategories, &count, &Error);
-    [arrayCategories removeAllObjects];
-    for (i = 0; i < count; i++)
-    {
-        [arrayCategories addObject:[NSString stringWithFormat:@"%s", aszCategories[i]]];
-    }
-    ABC_UtilFreeStringArray(aszCategories, count);
-
-    ABC_AddCategory("a", "secondCategory", &Error);
-    ABC_GetCategories("a", &aszCategories, &count, &Error);
-    [arrayCategories removeAllObjects];
-    for (i = 0; i < count; i++)
-    {
-        [arrayCategories addObject:[NSString stringWithFormat:@"%s", aszCategories[i]]];
-    }
-    ABC_UtilFreeStringArray(aszCategories, count);
-
-    ABC_AddCategory("a", "thirdCategory", &Error);
-    ABC_GetCategories("a", &aszCategories, &count, &Error);
-    [arrayCategories removeAllObjects];
-    for (i = 0; i < count; i++)
-    {
-        [arrayCategories addObject:[NSString stringWithFormat:@"%s", aszCategories[i]]];
-    }
-    ABC_UtilFreeStringArray(aszCategories, count);
-
-    ABC_RemoveCategory("a", "secondCategory", &Error);
-    ABC_GetCategories("a", &aszCategories, &count, &Error);
-    [arrayCategories removeAllObjects];
-    for (i = 0; i < count; i++)
-    {
-        [arrayCategories addObject:[NSString stringWithFormat:@"%s", aszCategories[i]]];
-    }
-    ABC_UtilFreeStringArray(aszCategories, count);
-
-    ABC_RemoveCategory("a", "firstCategory", &Error);
-    ABC_GetCategories("a", &aszCategories, &count, &Error);
-    [arrayCategories removeAllObjects];
-    for (i = 0; i < count; i++)
-    {
-        [arrayCategories addObject:[NSString stringWithFormat:@"%s", aszCategories[i]]];
-    }
-    ABC_UtilFreeStringArray(aszCategories, count);
-
-    ABC_RemoveCategory("a", "thirdCategory", &Error);
-    ABC_GetCategories("a", &aszCategories, &count, &Error);
-    [arrayCategories removeAllObjects];
-    for (i = 0; i < count; i++)
-    {
-        [arrayCategories addObject:[NSString stringWithFormat:@"%s", aszCategories[i]]];
-    }
-    ABC_UtilFreeStringArray(aszCategories, count);
-}
-*/
 
 static void test_setget_pin()
 {
