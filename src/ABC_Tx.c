@@ -1362,8 +1362,7 @@ tABC_CC ABC_TxSearchTransactions(const char *szUserName,
 
     ABC_TxGetTransactions(szUserName, szPassword, szWalletUUID,
                           &aTransactions, &count, pError);
-    aSearchTransactions = malloc(sizeof(tABC_TxInfo*) * count);
-    // TODO: this is pretty naive, replace strstr withsomething better
+    ABC_ALLOC(aSearchTransactions, sizeof(tABC_TxInfo*) * count);
     for (i = 0; i < count; i++) {
         tABC_TxInfo *pInfo = aTransactions[i];
         if (ABC_TxStrStr(pInfo->pDetails->szName, szQuery, pError))
@@ -1388,8 +1387,7 @@ tABC_CC ABC_TxSearchTransactions(const char *szUserName,
         }
         aTransactions[i] = NULL;
     }
-    aSearchTransactions =
-        realloc(aSearchTransactions, sizeof(tABC_TxInfo *) * matchCount);
+    ABC_REALLOC(aSearchTransactions, sizeof(tABC_TxInfo *) * matchCount);
 
     *paTransactions = aSearchTransactions;
     *pCount = matchCount;
