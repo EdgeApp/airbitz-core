@@ -301,9 +301,9 @@ static void test_receive_request()
 {
     test_receive_request_args("Airbitz", "Rent", "My Notes");
     sleep(3);
-    test_receive_request_args("Tim", "", "More Notes");
+    test_receive_request_args("Tim", "", "More air notes");
     sleep(3);
-    test_receive_request_args("Target", "", "Picked up stuff for Airbitz");
+    test_receive_request_args("Target", "", "Picked up stuff for airbitz");
     sleep(3);
 }
 
