@@ -680,6 +680,14 @@ extern "C" {
                                 unsigned int *pCount,
                                 tABC_Error *pError);
 
+    tABC_CC ABC_SearchTransactions(const char *szUserName,
+                                   const char *szPassword,
+                                   const char *szWalletUUID,
+                                   const char *szQuery,
+                                   tABC_TxInfo ***paTransactions,
+                                   unsigned int *pCount,
+                                   tABC_Error *pError);
+
     void ABC_FreeTransaction(tABC_TxInfo *pTransaction);
 
     void ABC_FreeTransactions(tABC_TxInfo **aTransactions,

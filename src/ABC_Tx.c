@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <time.h>
+#include <string.h>
 #include <qrencode.h>
 #include "ABC_Tx.h"
 #include "ABC_Util.h"
@@ -1322,6 +1323,77 @@ exit:
     ABC_TxFreeTransactions(aTransactions, count);
 
     ABC_FileIOMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Searches transactions associated with the given wallet.
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param szQuery           Query to search
+ * @param paTransactions    Pointer to store array of transactions info pointers
+ * @param pCount            Pointer to store number of transactions
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_TxSearchTransactions(const char *szUserName,
+                                 const char *szPassword,
+                                 const char *szWalletUUID,
+                                 const char *szQuery,
+                                 tABC_TxInfo ***paTransactions,
+                                 unsigned int *pCount,
+                                 tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_TxInfo **aTransactions = NULL;
+    tABC_TxInfo **aSearchTransactions = NULL;
+    unsigned int i;
+    unsigned int count = 0;
+    unsigned int matchCount = 0;
+
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    ABC_CHECK_NULL(paTransactions);
+    *paTransactions = NULL;
+    ABC_CHECK_NULL(pCount);
+    *pCount = 0;
+
+    ABC_TxGetTransactions(szUserName, szPassword, szWalletUUID,
+                          &aTransactions, &count, pError);
+    aSearchTransactions = malloc(sizeof(tABC_TxInfo*) * count);
+    // TODO: this is pretty naive, replace strstr withsomething better
+    for (i = 0; i < count; i++) {
+        tABC_TxInfo *pInfo = aTransactions[i];
+        if (strstr(pInfo->pDetails->szName, szQuery))
+        {
+            aSearchTransactions[matchCount] = pInfo;
+            matchCount++;
+            continue;
+        }
+        else if (strstr(pInfo->pDetails->szCategory, szQuery))
+        {
+            aSearchTransactions[matchCount] = pInfo;
+            matchCount++;
+            continue;
+        }
+        else if (strstr(pInfo->pDetails->szNotes, szQuery))
+        {
+            aSearchTransactions[matchCount] = pInfo;
+            matchCount++;
+            continue;
+        } else {
+            ABC_TxFreeTransaction(pInfo);
+        }
+        aTransactions[i] = NULL;
+    }
+    aSearchTransactions =
+        realloc(aSearchTransactions, sizeof(tABC_TxInfo *) * matchCount);
+
+    *paTransactions = aSearchTransactions;
+    *pCount = matchCount;
+    aTransactions = NULL;
+exit:
+    ABC_FREE(aTransactions);
     return cc;
 }
 
@@ -3523,7 +3595,7 @@ static void *ABC_TxFakeReceiveThread(void *pData)
     tABC_U08Buf IncomingAddress = ABC_BUF_NULL;
 
     // delay for simulation
-    sleep(15);
+    sleep(2);
 
     // grab the address
     ABC_CHECK_RET(ABC_TxLoadAddress(pInfo->szUserName, pInfo->szPassword,
