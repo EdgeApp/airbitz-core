@@ -1612,6 +1612,40 @@ exit:
 }
 
 /**
+ * Searches the transactions associated with the given wallet.
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param szQuery           String to match transactions against
+ * @param paTransactions    Pointer to store array of transactions info pointers
+ * @param pCount            Pointer to store number of transactions
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_SearchTransactions(const char *szUserName,
+                               const char *szPassword,
+                               const char *szWalletUUID,
+                               const char *szQuery,
+                               tABC_TxInfo ***paTransactions,
+                               unsigned int *pCount,
+                               tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(
+            ABC_TxSearchTransactions(szUserName, szPassword, szWalletUUID,
+                                     szQuery, paTransactions, 
+                                     pCount, pError));
+exit:
+    return cc;
+}
+
+/**
  * Frees the given transactions
  *
  * @param pTransaction Pointer to transaction

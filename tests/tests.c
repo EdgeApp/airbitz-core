@@ -3,8 +3,10 @@
 #include <string.h>
 #include <semaphore.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "ABC.h"
+#include "ABC_Tx.h"
 #include "ABC_Util.h"
 #include "ABC_Crypto.h"
 #include "ABC_Util.h"
@@ -271,15 +273,15 @@ static void test_loadsettings()
     }
 }
 
-static void test_receive_request()
+static void test_receive_request_args(char *n, char *c, char *notes)
 {
     tABC_Error Error;
     tABC_TxDetails Details;
     Details.amountSatoshi = 100;
     Details.amountCurrency = 8.8;
-    Details.szName = "MyName";
-    Details.szCategory = "MyCategory";
-    Details.szNotes = "MyNotes";
+    Details.szName = n;
+    Details.szCategory = c;
+    Details.szNotes = notes;
     Details.attributes = 0x1;
 
     char *szRequestID = NULL;
@@ -291,7 +293,18 @@ static void test_receive_request()
     if (szRequestID)
     {
         WRAP_PRINTF(("Request created: %s\n", szRequestID));
+        free(szRequestID);
     }
+}
+
+static void test_receive_request()
+{
+    test_receive_request_args("Airbitz", "Rent", "My Notes");
+    sleep(3);
+    test_receive_request_args("Tim", "", "More Notes");
+    sleep(3);
+    test_receive_request_args("Target", "", "Picked up stuff for Airbitz");
+    sleep(3);
 }
 
 static void test_checkpassword()
@@ -419,6 +432,45 @@ static void test_transactions()
                pInfo->pDetails->attributes));
     }
     ABC_FreeTransactions(aTransactions, nCount);
+}
+
+static void test_searchtransactions()
+{
+    tABC_Error Error;
+    tABC_TxInfo **aTransactions = NULL;
+    unsigned int nCount = 0;
+    const char *query = "Airbitz";
+    ABC_SearchTransactions(USERNAME, PASSWORD, WALLET_UUID, query,
+                           &aTransactions, &nCount, &Error);
+
+    WRAP_PRINTF(("Search Transactions:\n"));
+    // list them
+    unsigned int i;
+    for (i = 0; i < nCount; i++) {
+        tABC_TxInfo *pInfo = aTransactions[i];
+
+        WRAP_PRINTF(("Transaction: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
+               pInfo->szID,
+               pInfo->timeCreation,
+               pInfo->pDetails->amountSatoshi,
+               pInfo->pDetails->amountCurrency,
+               pInfo->pDetails->szName,
+               pInfo->pDetails->szCategory,
+               pInfo->pDetails->szNotes,
+               pInfo->pDetails->attributes));
+    }
+    ABC_FreeTransactions(aTransactions, nCount);
+
+    tABC_Error Error2;
+    if (nCount == 2)
+    {
+        Error2.code = ABC_CC_Ok;
+    }
+    else
+    {
+        Error2.code = ABC_CC_Error;
+    }
+    printABC_Error(&Error2);
 }
 
 static void test_bitcoinuri()
@@ -863,6 +915,9 @@ int main(int argc, const char *argv[])
 
     printf("test_transactions();\n");
     test_transactions();
+
+    printf("test_searchtransactions();\n");
+    test_searchtransactions();
 
     printf("test_bitcoinuri();\n");
     test_bitcoinuri();
