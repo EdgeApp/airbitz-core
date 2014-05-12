@@ -152,6 +152,8 @@ static tABC_CC  ABC_TxLoadAddressAndAppendToArray(const char *szUserName, const 
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
 static tABC_CC  ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError);
+static void     ABC_TxStrTable(const char *needle, int *table);
+static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
 
 // fake code:
 static tABC_CC  ABC_TxKickoffFakeReceive(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, tABC_Error *pError);
@@ -1364,19 +1366,19 @@ tABC_CC ABC_TxSearchTransactions(const char *szUserName,
     // TODO: this is pretty naive, replace strstr withsomething better
     for (i = 0; i < count; i++) {
         tABC_TxInfo *pInfo = aTransactions[i];
-        if (strstr(pInfo->pDetails->szName, szQuery))
+        if (ABC_TxStrStr(pInfo->pDetails->szName, szQuery, pError))
         {
             aSearchTransactions[matchCount] = pInfo;
             matchCount++;
             continue;
         }
-        else if (strstr(pInfo->pDetails->szCategory, szQuery))
+        else if (ABC_TxStrStr(pInfo->pDetails->szCategory, szQuery, pError))
         {
             aSearchTransactions[matchCount] = pInfo;
             matchCount++;
             continue;
         }
-        else if (strstr(pInfo->pDetails->szNotes, szQuery))
+        else if (ABC_TxStrStr(pInfo->pDetails->szNotes, szQuery, pError))
         {
             aSearchTransactions[matchCount] = pInfo;
             matchCount++;
@@ -3520,6 +3522,105 @@ exit:
     ABC_FREE(aActivities);
 
     return cc;
+}
+
+/**
+ * This implemens the KMP failure function. Its the preprocessing before we can
+ * search for substrings.
+ * 
+ * @param needle - The string to preprocess
+ * @param table - An array of integers the string length of needle
+ *
+ * Returns 1 if a match is found otherwise returns 0
+ *
+ */
+static
+void ABC_TxStrTable(const char *needle, int *table)
+{
+    int pos = 2, cnd = 0;
+    table[0] = -1;
+    table[1] = 0;
+    size_t needle_size = strlen(needle);
+
+    while (pos < needle_size)
+    {
+        if (tolower(needle[pos - 1]) == tolower(needle[cnd]))
+        {
+            cnd = cnd + 1;
+            table[pos] = cnd;
+            pos = pos + 1;
+        }
+        else if (cnd > 0)
+            cnd = table[cnd];
+        else
+        {
+            table[pos] = 0;
+            pos = pos + 1;
+        }
+    }
+}
+
+/**
+ * This function implemens the KMP string searching algo. This function is
+ * used for string matching when searching transactions.
+ * 
+ * @param haystack - The string to search
+ * @param needle - The string to find in the haystack
+ *
+ * Returns 1 if a match is found otherwise returns 0
+ *
+ */
+static
+int ABC_TxStrStr(const char *haystack, const char *needle,
+                 tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    if (haystack == NULL || needle == NULL) {
+        return 0;
+    }
+    int m = 0, i = 0, result = -1;
+    size_t haystack_size;
+    size_t needle_size;
+    int *table;
+
+    haystack_size = strlen(haystack);
+    needle_size = strlen(needle);
+
+    if (haystack_size == 0 || needle_size == 0) {
+        return 0;
+    }
+
+    ABC_ALLOC(table, needle_size * sizeof(int));
+    ABC_TxStrTable(needle, table);
+
+    while (m + i < haystack_size)
+    {
+        if (tolower(needle[i]) == tolower(haystack[m + i]))
+        {
+            if (i == needle_size - 1)
+            {
+                result = m;
+                break;
+            }
+            i = i + 1;
+        }
+        else
+        {
+            if (table[i] > -1)
+            {
+                i = table[i];
+                m = m + i - table[i];
+            }
+            else
+            {
+                i = 0;
+                m = m + 1;
+            }
+        }
+    }
+exit:
+    ABC_FREE(table);
+    return result > -1 ? 1 : 0;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
