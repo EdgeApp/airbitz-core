@@ -151,7 +151,7 @@ static tABC_CC  ABC_TxLoadAddressAndAppendToArray(const char *szUserName, const 
 //static void     ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count);
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
-static tABC_CC  ACB_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError);
+static tABC_CC  ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError);
 
 // fake code:
 static tABC_CC  ABC_TxKickoffFakeReceive(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, tABC_Error *pError);
@@ -3495,7 +3495,7 @@ tABC_CC ABC_TxMutexUnlock(tABC_Error *pError)
  * @param pTx the transaction to add to the address
  */
 static
-tABC_CC ACB_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError)
+tABC_CC ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     unsigned int countActivities;
@@ -3627,7 +3627,7 @@ static void *ABC_TxFakeReceiveThread(void *pData)
     ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
 
     // add the transaction to the address
-    ABC_CHECK_RET(ACB_TxAddressAddTx(pAddress, pTx, pError));
+    ABC_CHECK_RET(ABC_TxAddressAddTx(pAddress, pTx, pError));
 
     // set the address as not recycled so it doens't get used again
     pAddress->pStateInfo->bRecycleable = false;
