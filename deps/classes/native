@@ -16,23 +16,14 @@ build_native() {
     export CC=clang
     export CXX="clang++"
 
-    export CFLAGS="-g -I${install_dir}/include"
-    export CXXFLAGS="-g -I${install_dir}/include"
+    export CFLAGS="-g -fPIC -I${install_dir}/include"
+    export CXXFLAGS="-g -fPIC -I${install_dir}/include"
     export LDFLAGS="-L${install_dir}/lib"
 
     export PKG_CONFIG_PATH=$install_dir/lib/pkgconfig
 
     cd $work_dir
     build
-}
-build_android_arm() {
-    build_android arm arm-linux-androideabi
-}
-build_android_x86() {
-    build_android x86 i686-linux-android
-}
-build_android_mips() {
-    build_android mips mipsel-linux-android
 }
 
 deps="download"
