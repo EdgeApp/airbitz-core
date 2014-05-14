@@ -1639,7 +1639,7 @@ tABC_CC ABC_SearchTransactions(const char *szUserName,
 
     ABC_CHECK_RET(
             ABC_TxSearchTransactions(szUserName, szPassword, szWalletUUID,
-                                     szQuery, paTransactions, 
+                                     szQuery, paTransactions,
                                      pCount, pError));
 exit:
     return cc;
@@ -1988,7 +1988,8 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
             N += 35; // number of non-alphanumeric characters on keyboard (iOS)
         }
         const double guessesPerSecond = 1000.0; // this can be changed based upon the speed of the computer
-        double entropy = (double) L * (double)log2(N);
+        // log2(x) = ln(x)/ln(2) = ln(x)*1.442695041
+        double entropy = (double) L * log(N) * 1.442695041;
         double vars = pow(2, entropy);
         secondsToCrack = vars / guessesPerSecond;
     }
