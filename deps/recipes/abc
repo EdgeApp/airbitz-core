@@ -3,11 +3,19 @@ inherit lib
 
 build() {
     cd $base_dir/..
+
+    case $target in
+    ios-*)  output=libabc.a ;;
+    *)      output=libabc.so ;;
+    esac
+
+    # Build:
     export TARGET=$target
-    CFLAGS="$CFLAGS -D_GNU_SOURCE"
-    make
+    make $output
+
+    # Install:
     mkdir -p $install_dir/lib
-    cp build/$target/libabc.a $install_dir/lib
+    cp build/$target/$output $install_dir/lib
     cp src/ABC.h $install_dir/include
 }
 
