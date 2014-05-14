@@ -16,7 +16,7 @@ build() {
 
     cd openssl-$version
     if [ $target = "native" ]; then
-        ./config --prefix=$install_dir
+        ./config --prefix=$install_dir "$CFLAGS"
     else
         ./Configure --prefix=$install_dir no-shared zlib $type "$CFLAGS"
     fi
