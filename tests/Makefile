@@ -1,14 +1,16 @@
+BUILD_DIR ?= ../deps/build
+
 TARGET ?= native
 OBJDIR = build/tests/$(TARGET)
-LIBDIR = ../deps/build/prefix/$(TARGET)/lib
-CFLAGS   += -std=c99 -Wall -D_BSD_SOURCE -I../src/ -isystem../deps/build/prefix/$(TARGET)/include
-CXXFLAGS += -std=c++11  -Wall -I../src -isystem../deps/build/prefix/$(TARGET)/include
+LIBDIR = $(BUILD_DIR)/prefix/$(TARGET)/lib
+CFLAGS   += -std=c99 -Wall -D_GNU_SOURCE -I../src/ -isystem $(BUILD_DIR)/prefix/$(TARGET)/include
+CXXFLAGS += -std=c++11  -Wall -I../src -isystem $(BUILD_DIR)/prefix/$(TARGET)/include
 LDFLAGS = -L$(LIBDIR) -lscrypt -lpthread \
 	`pkg-config --static --libs \
 	libbitcoin libwallet libqrencode \
 	libcurl jansson libcrypto \
 	openssl `
-PKG_CONFIG_PATH = ../deps/build/prefix/${TARGET}/lib/pkgconfig
+PKG_CONFIG_PATH = $(BUILD_DIR)/prefix/${TARGET}/lib/pkgconfig
 
 test_cases=test_core
 c_sources=$(wildcard ../src/*.c)
