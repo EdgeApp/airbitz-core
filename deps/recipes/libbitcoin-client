@@ -1,0 +1,14 @@
+depends="libbitcoin obelisk"
+inherit lib
+
+source="https://github.com/Airbitz/libbitcoin-client.git"
+
+build() {
+    autoreconf -i
+    ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
+    make
+    make install
+}
+
+include="include/bitcoin/watcher.hpp include/bitcoin/client/*"
+lib="lib/libbitcoin-client.a"

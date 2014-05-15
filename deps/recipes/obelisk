@@ -9,6 +9,8 @@ build() {
     ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
     ( cd src; make install-libLTLIBRARIES )
     ( cd include/obelisk; make install )
+    mkdir -p $install_dir/lib/pkgconfig
+    cp libobelisk.pc $install_dir/lib/pkgconfig
 }
 
 include="include/obelisk/* include/obelisk/client/*"
