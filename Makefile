@@ -5,6 +5,11 @@ LDFLAGS+= -lwallet -lbitcoin \
           -lboost_thread -lboost_system -lboost_regex -lboost_filesystem \
           -lqrencode -lcurl -ljansson -lssl -lcrypto -ldl -lz -lm -lscrypt
 
+# We need -lpthread if not on Android:
+ifeq (,$(findstring android,$(TARGET)))
+	LDFLAGS += -lpthread
+endif
+
 c_sources=$(wildcard src/*.c)
 cpp_sources=$(wildcard src/*.cpp)
 objects=$(patsubst src/%.c,build/$(TARGET)/%.o,$(c_sources)) \
