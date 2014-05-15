@@ -4,6 +4,8 @@
 #include <string.h>
 #include <semaphore.h>
 #include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #define RED  "\x1B[31m"
@@ -99,7 +101,12 @@ static void test_initialize()
 {
     tABC_Error Error;
     size_t size = 4;
-    const char *datapath = "/tmp";
+    const char *datapath = "./tmp";
+    struct stat st = {0 };
+    if (stat(datapath, &st) == -1)
+    {
+        mkdir(datapath, 0770);
+    }
     char unsigned seed[] = "abcd";
     ABC_Initialize(datapath,
                    ABC_BitCoin_Event_Callback,
@@ -325,7 +332,7 @@ static void test_checkpassword()
     unsigned int i;
     for (i = 0; i < count; i++)
     {
-        tABC_PasswordRule *pRule = aRules[i]; 
+        tABC_PasswordRule *pRule = aRules[i];
         if (pRule)
         {
             WRAP_PRINTF(("%s - %s\n", pRule->bPassed ? "pass" : "fail", pRule->szDescription));
@@ -454,16 +461,18 @@ static void test_searchtransactions()
     unsigned int i;
     for (i = 0; i < nCount; i++) {
         tABC_TxInfo *pInfo = aTransactions[i];
-
-        WRAP_PRINTF(("Transaction: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
-               pInfo->szID,
-               pInfo->timeCreation,
-               pInfo->pDetails->amountSatoshi,
-               pInfo->pDetails->amountCurrency,
-               pInfo->pDetails->szName,
-               pInfo->pDetails->szCategory,
-               pInfo->pDetails->szNotes,
-               pInfo->pDetails->attributes));
+        if (pInfo)
+        {
+            WRAP_PRINTF(("Transaction: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
+                pInfo->szID,
+                pInfo->timeCreation,
+                pInfo->pDetails->amountSatoshi,
+                pInfo->pDetails->amountCurrency,
+                pInfo->pDetails->szName,
+                pInfo->pDetails->szCategory,
+                pInfo->pDetails->szNotes,
+                pInfo->pDetails->attributes));
+        }
     }
     ABC_FreeTransactions(aTransactions, nCount);
 
