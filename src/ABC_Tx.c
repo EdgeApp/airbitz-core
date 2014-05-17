@@ -1211,7 +1211,7 @@ exit:
     ABC_FREE_STR(szFilename);
     ABC_TxFreeTx(pTx);
     ABC_TxFreeTransaction(pTransaction);
-    
+
     ABC_TxMutexUnlock(NULL);
     return cc;
 }
@@ -1353,6 +1353,8 @@ tABC_CC ABC_TxSearchTransactions(const char *szUserName,
     unsigned int i;
     unsigned int count = 0;
     unsigned int matchCount = 0;
+    char satoshi[15];
+    char currency[15];
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_NULL(paTransactions);
@@ -1364,7 +1366,23 @@ tABC_CC ABC_TxSearchTransactions(const char *szUserName,
                           &aTransactions, &count, pError);
     ABC_ALLOC(aSearchTransactions, sizeof(tABC_TxInfo*) * count);
     for (i = 0; i < count; i++) {
+        memset(satoshi, '\0', 15);
+        memset(currency, '\0', 15);
         tABC_TxInfo *pInfo = aTransactions[i];
+        snprintf(satoshi, 15, "%d", pInfo->pDetails->amountSatoshi);
+        snprintf(currency, 15, "%f", pInfo->pDetails->amountCurrency);
+        if (ABC_TxStrStr(satoshi, szQuery, pError))
+        {
+            aSearchTransactions[matchCount] = pInfo;
+            matchCount++;
+            continue;
+        }
+        if (ABC_TxStrStr(currency, szQuery, pError))
+        {
+            aSearchTransactions[matchCount] = pInfo;
+            matchCount++;
+            continue;
+        }
         if (ABC_TxStrStr(pInfo->pDetails->szName, szQuery, pError))
         {
             aSearchTransactions[matchCount] = pInfo;
@@ -1387,7 +1405,10 @@ tABC_CC ABC_TxSearchTransactions(const char *szUserName,
         }
         aTransactions[i] = NULL;
     }
-    ABC_REALLOC(aSearchTransactions, sizeof(tABC_TxInfo *) * matchCount);
+    if (matchCount > 0)
+    {
+        ABC_REALLOC(aSearchTransactions, sizeof(tABC_TxInfo *) * matchCount);
+    }
 
     *paTransactions = aSearchTransactions;
     *pCount = matchCount;
@@ -3525,7 +3546,7 @@ exit:
 /**
  * This implemens the KMP failure function. Its the preprocessing before we can
  * search for substrings.
- * 
+ *
  * @param needle - The string to preprocess
  * @param table - An array of integers the string length of needle
  *
@@ -3561,7 +3582,7 @@ void ABC_TxStrTable(const char *needle, int *table)
 /**
  * This function implemens the KMP string searching algo. This function is
  * used for string matching when searching transactions.
- * 
+ *
  * @param haystack - The string to search
  * @param needle - The string to find in the haystack
  *
