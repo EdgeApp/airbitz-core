@@ -31,7 +31,7 @@
     }
 
 
-#if 0
+#if 1
   #define WRAP_PRINTF(a) printf a
 #else
   #define WRAP_PRINTF(a) (void)0
@@ -447,16 +447,16 @@ static void test_transactions()
     ABC_FreeTransactions(aTransactions, nCount);
 }
 
-static void test_searchtransactions()
+static void test_searchtransactions_params(const char *query,
+                                           int expectedMatch)
 {
     tABC_Error Error;
     tABC_TxInfo **aTransactions = NULL;
     unsigned int nCount = 0;
-    const char *query = "Airbitz";
     ABC_SearchTransactions(USERNAME, PASSWORD, WALLET_UUID, query,
                            &aTransactions, &nCount, &Error);
 
-    WRAP_PRINTF(("Search Transactions:\n"));
+    WRAP_PRINTF(("Search Transactions for %s\n", query));
     // list them
     unsigned int i;
     for (i = 0; i < nCount; i++) {
@@ -477,7 +477,7 @@ static void test_searchtransactions()
     ABC_FreeTransactions(aTransactions, nCount);
 
     tABC_Error Error2;
-    if (nCount == 2)
+    if (nCount == expectedMatch)
     {
         Error2.code = ABC_CC_Ok;
     }
@@ -486,6 +486,14 @@ static void test_searchtransactions()
         Error2.code = ABC_CC_Error;
     }
     printABC_Error(&Error2);
+}
+
+static void test_searchtransactions()
+{
+    test_searchtransactions_params("airbitz", 2);
+    test_searchtransactions_params("10", 3);
+    test_searchtransactions_params("90", 0);
+    test_searchtransactions_params("more AIR Notes", 1);
 }
 
 static void test_bitcoinuri()
