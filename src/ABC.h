@@ -99,7 +99,9 @@ extern "C" {
         /** Invalid wallet ID */
         ABC_CC_InvalidWalletID = 30,
         /** Request (address) not found */
-        ABC_CC_NoRequest = 31
+        ABC_CC_NoRequest = 31,
+        /** Not enough money to send transaction */
+        ABC_CC_InsufficientFunds = 32
     } tABC_CC;
 
     /**
@@ -175,6 +177,9 @@ extern "C" {
 
         /** type of event that occured */
         tABC_AsyncEventType eventType;
+
+        /** if the event involved a transaction, this is its ID */
+        char *szWalletUUID;
 
         /** if the event involved a transaction, this is its ID */
         char *szTxID;
@@ -343,6 +348,19 @@ extern "C" {
         /** transaction details */
         tABC_TxDetails *pDetails;
     } tABC_TxInfo;
+
+    /**
+     * AirBitz Unsigned Transaction
+     *
+     * Includes the approximate fees to send out this transaction
+     */
+    typedef struct sABC_UnsignedTx
+    {
+        void *data;
+        char *szTxId;
+        uint64_t fees;
+    } tABC_UnsignedTx;
+
 
     /**
      * AirBitz Password Rule
@@ -683,6 +701,14 @@ extern "C" {
                                     void *pData,
                                     tABC_Error *pError);
 
+    tABC_CC ABC_CalcSendFees(const char *szUserName,
+                             const char *szPassword,
+                             const char *szWalletUUID,
+                             const char *szDestAddress,
+                             tABC_TxDetails *pDetails,
+                             int64_t *pTotalFees,
+                             tABC_Error *pError);
+
     tABC_CC ABC_GetTransaction(const char *szUserName,
                                const char *szPassword,
                                const char *szWalletUUID,
@@ -767,6 +793,16 @@ extern "C" {
                                       tABC_Error *pError);
 
     void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings);
+
+    tABC_CC ABC_WatcherStart(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletUUID,
+                                tABC_Error *pError);
+
+    tABC_CC ABC_WatchAddresses(const char *szUsername, const char *szPassword,
+                               const char *szWalletUUID, tABC_Error *pError);
+
+    tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError);
 
     // temp functions
     void tempEventA();
