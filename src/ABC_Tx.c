@@ -127,6 +127,7 @@ static tABC_CC  ABC_TxGetAddressOwed(tABC_TxAddress *pAddr, int64_t *pSatoshiBal
 static void     ABC_TxFreeRequest(tABC_RequestInfo *pRequest);
 static tABC_CC  ABC_TxCreateTxFilename(char **pszFilename, const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szTxID, bool bInternal, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransaction(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
+static tABC_CC  ABC_TxFindRequest(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szMatchAddress, tABC_TxAddress **ppMatched, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError);
 static void     ABC_TxFreeTx(tABC_Tx *pTx);
@@ -152,12 +153,9 @@ static tABC_CC  ABC_TxLoadAddressAndAppendToArray(const char *szUserName, const 
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
 static tABC_CC  ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError);
+static bool     ABC_TxTransactionExists(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szID, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
-
-// fake code:
-static tABC_CC  ABC_TxKickoffFakeReceive(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, tABC_Error *pError);
-static void    *ABC_TxFakeReceiveThread(void *);
 
 /**
  * Initializes the
@@ -289,8 +287,17 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_U08Buf TxID = ABC_BUF_NULL;
+    tABC_U08Buf privSeed = ABC_BUF_NULL;
     tABC_Tx *pTx = NULL;
+    tABC_UnsignedTx utx;
+
+    // Change address variables
+    tABC_TxAddress *pChangeAddr = NULL;
+
+    char *szPrivSeed = NULL;
+    char **paAddresses = NULL;
+    char **paPrivAddresses = NULL;
+    unsigned int countAddresses = 0, privCountAddresses = 0;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
@@ -299,77 +306,216 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // take this non-blocking opportunity to update the info from the server if needed
     ABC_CHECK_RET(ABC_AccountServerUpdateGeneralInfo(pError));
 
-#if 1 // TODO: we can take this out once we are creating real transactions
+    // find/create a change address
+    ABC_CHECK_RET(ABC_TxCreateNewAddress(
+                    pInfo->szUserName, pInfo->szPassword, 
+                    pInfo->szWalletUUID, pInfo->pDetails,
+                    &pChangeAddr, pError));
+    // Fetch addresses for this wallet
+    ABC_CHECK_RET(
+        ABC_TxGetPubAddresses(pInfo->szUserName, pInfo->szPassword,
+                              pInfo->szWalletUUID,
+                              &paAddresses, &countAddresses, pError));
+    // Make an unsigned transaction
+    ABC_CHECK_RET(
+        ABC_BridgeTxMake(pInfo, paAddresses, countAddresses,
+                         pChangeAddr->szPubAddress, &utx, pError));
 
-    // create a transaction
+    // Fetch Private Seed
+    ABC_CHECK_RET(
+        ABC_WalletGetBitcoinPrivateSeed(
+            pInfo->szUserName, pInfo->szPassword,
+            pInfo->szWalletUUID, &privSeed, pError));
+    // Fetch the private addresses
+    ABC_CHECK_RET(
+        ABC_TxGetPrivAddresses(pInfo->szUserName, pInfo->szPassword,
+                               pInfo->szWalletUUID, privSeed,
+                               &paPrivAddresses, &privCountAddresses, 
+                               pError));
+    // Sign the transaction
+    ABC_CHECK_RET(
+        ABC_BridgeTxSignSend(pInfo, paPrivAddresses, privCountAddresses,
+                             &utx, pError));
+
+    // sucessfully sent, now create a transaction
     ABC_ALLOC(pTx, sizeof(tABC_Tx));
     ABC_ALLOC(pTx->pStateInfo, sizeof(tTxStateInfo));
-
-    // copy the details
-    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
-    if (pTx->pDetails->amountSatoshi > 0)
-    {
-        // sends should be negative
-        pTx->pDetails->amountSatoshi *= -1;
-    }
-    if (pTx->pDetails->amountCurrency > 0)
-    {
-        // sends should be negative
-        pTx->pDetails->amountCurrency *= -1.0;
-    }
 
     // set the state
     pTx->pStateInfo->timeCreation = time(NULL);
     pTx->pStateInfo->bInternal = true;
 
-    // set the address
+    // Set the address
     pTx->countAddresses = 1;
     ABC_ALLOC(pTx->aAddresses, sizeof(char *));
     ABC_STRDUP(pTx->aAddresses[0], pInfo->szDestAddress);
 
-    // create a random transaction id
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxID, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(TxID, &(pTx->szID), pError));
+    // copy the details
+    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
+    // Add in tx fees to the amount of the tx
+    pTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi
+                                    + pInfo->pDetails->amountFeesAirbitzSatoshi
+                                    + pInfo->pDetails->amountFeesMinersSatoshi;
+    if (pTx->pDetails->amountSatoshi > 0)
+        pTx->pDetails->amountSatoshi *= -1;
+    if (pTx->pDetails->amountCurrency > 0)
+        pTx->pDetails->amountCurrency *= -1.0;
 
+    // Store transaction ID
+    ABC_STRDUP(pTx->szID, utx.szTxId);
     // save the transaction
-    ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
-
+    ABC_CHECK_RET(
+        ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword,
+                              pInfo->szWalletUUID, pTx, pError));
     // set the transaction id for the caller
     ABC_STRDUP(*pszTxID, pTx->szID);
-
-    // end temp
-#endif
-
-    // TODO: write the real function -
-    /*
-     creates and address with the given info and sends transaction to block chain
-     */
-    /*
-     Core creates an address with the given info and sends transaction to block chain:
-     1) Ask libwallet for data required to send the amount
-        input:
-            amount
-            list of source addresses
-        output:
-            fundable (do we have the funds),
-            source addresses used,
-                change address needed (any change?),
-        fee
-     2) If there is need for a ‘change address’, look for an address with the recycle bit set, if none found, ask libwallet to create a Bitcoin_Address (for change) using N+1 where N is the current number of addresses.
-     3) Ask libwallet to send the amount to the address
-        input: dest address, source address list (provided in step 1), amount and change Bitcoin_Address (if needed).
-        output: TX ID.
-     4) If there is a change address, create an Address Entry with the Bitcoin_Address and the send funds meta data (e.g., name, amount, etc).
-     5) Create a transaction in the transaction table with meta data using the TX ID from step 3.
-     */
-
 exit:
-    ABC_BUF_FREE(TxID);
+    ABC_FREE(szPrivSeed);
     ABC_TxFreeTx(pTx);
-
+    ABC_UtilFreeStringArray(paAddresses, countAddresses);
     ABC_TxMutexUnlock(NULL);
     return cc;
 }
+
+tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo, int64_t *pTotalFees, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_UnsignedTx utx;
+    tABC_TxAddress *pChangeAddr = NULL;
+
+    char **paAddresses = NULL;
+    unsigned int countAddresses = 0;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(pInfo);
+
+    pInfo->pDetails->amountFeesAirbitzSatoshi = 0;
+    pInfo->pDetails->amountFeesMinersSatoshi = 0;
+
+    // find/create a change address
+    ABC_CHECK_RET(ABC_TxCreateNewAddress(
+                    pInfo->szUserName, pInfo->szPassword, 
+                    pInfo->szWalletUUID, pInfo->pDetails,
+                    &pChangeAddr, pError));
+    // Fetch addresses for this wallet
+    ABC_CHECK_RET(
+        ABC_TxGetPubAddresses(pInfo->szUserName, pInfo->szPassword,
+                              pInfo->szWalletUUID,
+                              &paAddresses, &countAddresses, pError));
+    cc = ABC_BridgeTxMake(pInfo, paAddresses, countAddresses,
+                            pChangeAddr->szPubAddress, &utx, pError);
+    *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
+                + pInfo->pDetails->amountFeesMinersSatoshi;
+    ABC_CHECK_RET(cc);
+exit:
+    ABC_UtilFreeStringArray(paAddresses, countAddresses);
+    ABC_TxFreeAddress(pChangeAddr);
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Gets the public addresses associated with the given wallet.
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param paAddresses       Pointer to string array of addresses
+ * @param pCount            Pointer to store number of addresses
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_TxGetPubAddresses(const char *szUserName,
+                              const char *szPassword,
+                              const char *szWalletUUID,
+                              char ***paAddresses,
+                              unsigned int *pCount,
+                              tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_TxAddress **aAddresses = NULL;
+    char **sAddresses;
+    unsigned int countAddresses = 0;
+    ABC_CHECK_RET(
+        ABC_TxGetAddresses(szUserName, szPassword, szWalletUUID,
+                           &aAddresses, &countAddresses, pError));
+    ABC_ALLOC(sAddresses, sizeof(char *) * countAddresses);
+    for (int i = 0; i < countAddresses; i++)
+    {
+        const char *s = aAddresses[i]->szPubAddress;
+        ABC_STRDUP(sAddresses[i], s);
+    }
+    *pCount = countAddresses;
+    *paAddresses = sAddresses;
+exit:
+    ABC_TxFreeAddresses(aAddresses, countAddresses);
+    return cc;
+}
+
+/**
+ * Gets the private keys with the given wallet.
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param paAddresses       Pointer to string array of addresses
+ * @param pCount            Pointer to store number of addresses
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_TxGetPrivAddresses(const char *szUserName,
+                               const char *szPassword,
+                               const char *szWalletUUID,
+                               tABC_U08Buf seed,
+                               char ***paAddresses,
+                               unsigned int *pCount,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_TxAddress **aAddresses = NULL;
+    char **sAddresses;
+    unsigned int countAddresses = 0;
+    ABC_CHECK_RET(
+        ABC_TxGetAddresses(szUserName, szPassword, szWalletUUID,
+                           &aAddresses, &countAddresses, pError));
+    ABC_ALLOC(sAddresses, sizeof(char *) * countAddresses);
+    for (int i = 0; i < countAddresses; i++)
+    {
+        ABC_CHECK_RET(
+            ABC_BridgeGetBitcoinPrivAddress(&sAddresses[i],
+                                            seed,
+                                            aAddresses[i]->seq,
+                                            pError));
+        ABC_DebugLog("Fetched Priv Key: %s\n", sAddresses[i]);
+        ABC_DebugLog("For public Key: %s\n", aAddresses[i]->szPubAddress);
+    }
+    *pCount = countAddresses;
+    *paAddresses = sAddresses;
+exit:
+    ABC_TxFreeAddresses(aAddresses, countAddresses);
+    return cc;
+}
+
+tABC_CC ABC_TxWatchAddresses(const char *szUserName,
+                             const char *szPassword,
+                             const char *szWalletUUID,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char **paAddresses = NULL;
+    unsigned int countAddresses = 0;
+    ABC_CHECK_RET(
+        ABC_TxGetPubAddresses(szUserName, szPassword, szWalletUUID,
+                              &paAddresses, &countAddresses, pError));
+    for (int i = 0; i < countAddresses; i++)
+    {
+        ABC_CHECK_RET(
+            ABC_BridgeWatchAddr(szUserName, szPassword, szWalletUUID,
+                                paAddresses[i], false, pError));
+    }
+exit:
+    ABC_UtilFreeStringArray(paAddresses, countAddresses);
+    return cc;
+}
+
 
 /**
  * Duplicate a TX details struct
@@ -519,6 +665,111 @@ exit:
 }
 
 /**
+ * Handles creating or updating when we receive a transaction
+ *
+ * @param szUserName    UserName for the account associated with this request
+ * @param szPassword    Password for the account associated with this request
+ * @param szWalletUUID  UUID of the wallet associated with this request
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
+                                 const char *szPassword,
+                                 const char *szWalletUUID,
+                                 uint64_t amountSatoshi, uint64_t feeSatoshi,
+                                 char **paInAddresses, unsigned int inAddressCount,
+                                 char **paOutAddresses, unsigned int outAddressCount,
+                                 const char *szTxId, const char *szMalTxId,
+                                 tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    int i = 0;
+    tABC_TxAddress *pAddress = NULL;
+    tABC_U08Buf TxID = ABC_BUF_NULL;
+    tABC_Tx *pTx = NULL;
+    tABC_U08Buf IncomingAddress = ABC_BUF_NULL;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+
+    // Does the transaction already exist?
+    if (!ABC_TxTransactionExists(szUserName, szPassword,
+                                 szWalletUUID, szTxId, pError))
+    {
+        // create a transaction
+        ABC_ALLOC(pTx, sizeof(tABC_Tx));
+        ABC_ALLOC(pTx->pStateInfo, sizeof(tTxStateInfo));
+        ABC_ALLOC(pTx->pDetails, sizeof(tABC_TxDetails));
+
+        pTx->pStateInfo->timeCreation = time(NULL);
+        pTx->pDetails->amountSatoshi = amountSatoshi;
+        pTx->pDetails->amountFeesMinersSatoshi = feeSatoshi;
+        ABC_STRDUP(pTx->pDetails->szName, "");
+        ABC_STRDUP(pTx->pDetails->szCategory, "");
+        ABC_STRDUP(pTx->pDetails->szNotes, "");
+
+        // set the state
+        pTx->pStateInfo->timeCreation = time(NULL);
+        pTx->pStateInfo->bInternal = true;
+
+        // store transaction id
+        ABC_STRDUP(pTx->szID, szTxId);
+        // store the input addresses
+        ABC_ALLOC(pTx->aAddresses, sizeof(char *) * inAddressCount);
+        pTx->countAddresses = inAddressCount;
+        for (i = 0; i < inAddressCount; ++i)
+        {
+            ABC_DebugLog("Saving Input address: %s\n", paInAddresses[i]);
+            ABC_STRDUP(pTx->aAddresses[i], paInAddresses[i]);
+        }
+
+        // save the transaction
+        ABC_CHECK_RET(
+            ABC_TxSaveTransaction(szUserName, szPassword,
+                                  szWalletUUID, pTx, pError));
+
+        // add the transaction to the address
+        for (i = 0; i < outAddressCount; ++i)
+        {
+            ABC_DebugLog("Saving Output address: %s\n", paOutAddresses[i]);
+            ABC_CHECK_RET(ABC_TxFindRequest(szUserName, szPassword,
+                                            szWalletUUID, paOutAddresses[i],
+                                            &pAddress, pError));
+            ABC_CHECK_RET(ABC_TxAddressAddTx(pAddress, pTx, pError));
+            pAddress->pStateInfo->bRecycleable = false;
+            ABC_CHECK_RET(
+                ABC_TxSaveAddress(szUserName, szPassword,
+                                  szWalletUUID, pAddress,
+                                  pError));
+            ABC_TxFreeAddress(pAddress);
+        }
+
+        if (gfAsyncBitCoinEventCallback)
+        {
+            tABC_AsyncBitCoinInfo info;
+            info.pData = pAsyncBitCoinCallerData;
+            info.eventType = ABC_AsyncEventType_IncomingBitCoin;
+            ABC_STRDUP(info.szTxID, pTx->szID);
+            ABC_STRDUP(info.szWalletUUID, szWalletUUID);
+            ABC_STRDUP(info.szDescription, "Received funds");
+            gfAsyncBitCoinEventCallback(&info);
+            ABC_FREE_STR(info.szTxID);
+            ABC_FREE_STR(info.szDescription);
+        }
+    }
+    else
+    {
+        ABC_DebugLog("We already have %s\n", szTxId);
+    }
+exit:
+    ABC_TxMutexUnlock(NULL);
+    ABC_BUF_FREE(TxID);
+    ABC_BUF_FREE(IncomingAddress);
+    ABC_TxFreeTx(pTx);
+
+    return cc;
+}
+
+
+/**
  * Creates a receive request.
  *
  * @param szUserName    UserName for the account associated with this request
@@ -529,11 +780,11 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
-                                 const char *szPassword,
-                                 const char *szWalletUUID,
-                                 tABC_TxDetails *pDetails,
-                                 char **pszRequestID,
-                                 tABC_Error *pError)
+                                   const char *szPassword,
+                                   const char *szWalletUUID,
+                                   tABC_TxDetails *pDetails,
+                                   char **pszRequestID,
+                                   tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -551,8 +802,6 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
     ABC_CHECK_NULL(pszRequestID);
     *pszRequestID = NULL;
 
-    // TODO: If there are fees associated with a receive, they need to be handled here
-
     // get a new address (re-using a recycleable if we can)
     ABC_CHECK_RET(ABC_TxCreateNewAddress(szUserName, szPassword, szWalletUUID, pDetails, &pAddress, pError));
 
@@ -562,8 +811,11 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
     // set the id for the caller
     ABC_STRDUP(*pszRequestID, pAddress->szID);
 
-    ABC_CHECK_RET(ABC_TxKickoffFakeReceive(szUserName, szPassword, szWalletUUID, pAddress->szID, pError));
-
+    // Watch this new address
+    ABC_CHECK_RET(ABC_TxWatchAddresses(szUserName, szPassword, szWalletUUID, pError));
+    ABC_CHECK_RET(
+        ABC_BridgeWatchAddr(szUserName, szPassword, szWalletUUID,
+                            pAddress->szPubAddress, true, pError));
 exit:
     ABC_TxFreeAddress(pAddress);
 
@@ -1369,7 +1621,7 @@ tABC_CC ABC_TxSearchTransactions(const char *szUserName,
         memset(satoshi, '\0', 15);
         memset(currency, '\0', 15);
         tABC_TxInfo *pInfo = aTransactions[i];
-        snprintf(satoshi, 15, "%d", pInfo->pDetails->amountSatoshi);
+        snprintf(satoshi, 15, "%ld", pInfo->pDetails->amountSatoshi);
         snprintf(currency, 15, "%f", pInfo->pDetails->amountCurrency);
         if (ABC_TxStrStr(satoshi, szQuery, pError))
         {
@@ -1925,8 +2177,7 @@ tABC_CC ABC_TxGetRequestAddress(const char *szUserName,
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    char *szFilename = NULL;
+    tABC_TxAddress *pAddress = NULL;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
@@ -1939,14 +2190,13 @@ tABC_CC ABC_TxGetRequestAddress(const char *szUserName,
     ABC_CHECK_NULL(pszAddress);
     *pszAddress = NULL;
 
-    // get the filename for this address / request
-    ABC_CHECK_RET(ABC_GetAddressFilename(szWalletUUID, szRequestID, &szFilename, pError));
-
-    // parse the elements from the filename
-    ABC_CHECK_RET(ABC_TxParseAddrFilename(szFilename, NULL, pszAddress, pError));
-
+    ABC_CHECK_RET(
+        ABC_TxLoadAddress(szUserName, szPassword,
+                          szWalletUUID, szRequestID,
+                          &pAddress, pError));
+    ABC_STRDUP(*pszAddress, pAddress->szPubAddress);
 exit:
-    ABC_FREE_STR(szFilename);
+    ABC_TxFreeAddress(pAddress);
 
     return cc;
 }
@@ -2311,6 +2561,49 @@ exit:
     ABC_TxFreeTx(pTx);
 
     ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Retrieve an Address by the public address
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param szMatchAddress    The public address to find a match against
+ * @param ppMatched         A pointer to store the matched address to (caller must free)
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+static tABC_CC ABC_TxFindRequest(const char *szUserName,
+                                 const char *szPassword,
+                                 const char *szWalletUUID,
+                                 const char *szMatchAddress,
+                                 tABC_TxAddress **ppMatched,
+                                 tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_TxAddress **aAddresses = NULL;
+    tABC_TxAddress *pMatched = NULL;
+    unsigned int countAddresses = 0;
+
+    ABC_CHECK_NULL(ppMatched);
+
+    ABC_CHECK_RET(
+        ABC_TxGetAddresses(szUserName, szPassword, szWalletUUID,
+                           &aAddresses, &countAddresses, pError));
+    for (int i = 0; i < countAddresses; i++)
+    {
+        if (strncmp(aAddresses[i]->szPubAddress, szMatchAddress,
+                    strlen(aAddresses[i]->szPubAddress)) == 0) {
+            ABC_CHECK_RET(ABC_TxLoadAddress(szUserName, szPassword,
+                                            szWalletUUID, aAddresses[i]->szID,
+                                            &pMatched, pError));
+            break;
+        }
+    }
+    *ppMatched = pMatched;
+exit:
+    ABC_TxFreeAddresses(aAddresses, countAddresses);
     return cc;
 }
 
@@ -3557,6 +3850,49 @@ exit:
     return cc;
 }
 
+bool ABC_TxTransactionExists(const char *szUserName,
+                             const char *szPassword,
+                             const char *szWalletUUID,
+                             const char *szID,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szFilename = NULL;
+    bool bExists = false;
+
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
+    ABC_CHECK_NULL(szID);
+    ABC_CHECK_ASSERT(strlen(szID) > 0, ABC_CC_Error, "No transaction ID provided");
+
+    // validate the creditials
+    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
+
+    // first try the internal
+    ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, szID, true, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+
+    // if the internal doesn't exist
+    if (bExists == false)
+    {
+        // try the external
+        ABC_FREE_STR(szFilename);
+        ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, szID, false, pError));
+        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    }
+exit:
+    ABC_FREE_STR(szFilename);
+
+    ABC_TxMutexUnlock(NULL);
+    return bExists;
+}
+
 /**
  * This implemens the KMP failure function. Its the preprocessing before we can
  * search for substrings.
@@ -3656,140 +3992,3 @@ exit:
     return result > -1 ? 1 : 0;
 }
 
-// /////////////////////////////////////////////////////////////////////////////
-// Fake code begins here.
-// /////////////////////////////////////////////////////////////////////////////
-
-typedef struct sABC_FakeRecieveInfo
-{
-    char *szUserName;
-    char *szPassword;
-    char *szWalletUUID;
-    char *szAddress;
-} tABC_FakeRecieveInfo;
-
-static void ABC_TxFreeFakeRecieveInfo(tABC_FakeRecieveInfo *pInfo)
-{
-    if (pInfo)
-    {
-        ABC_FREE_STR(pInfo->szUserName);
-        ABC_FREE_STR(pInfo->szPassword);
-        ABC_FREE_STR(pInfo->szWalletUUID);
-        ABC_FREE_STR(pInfo->szAddress);
-        ABC_FREE(pInfo);
-    }
-}
-
-/**
- * Launches a thread with a few-second delay. Once the thread wakes up, it
- * creates a fake recieve transaction.
- */
-static
-tABC_CC ABC_TxKickoffFakeReceive(const char *szUserName,
-                                 const char *szPassword,
-                                 const char *szWalletUUID,
-                                 const char *szAddress,
-                                 tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_FakeRecieveInfo *pInfo = NULL;
-    pthread_t thread;
-    int rv = 0;
-
-    // copy the parameters:
-    ABC_ALLOC(pInfo, sizeof(tABC_FakeRecieveInfo));
-    ABC_STRDUP(pInfo->szUserName,   szUserName);
-    ABC_STRDUP(pInfo->szPassword,   szPassword);
-    ABC_STRDUP(pInfo->szWalletUUID, szWalletUUID);
-    ABC_STRDUP(pInfo->szAddress,    szAddress);
-
-    // launch the thread:
-    rv = pthread_create(&thread, NULL, ABC_TxFakeReceiveThread, pInfo);
-    ABC_CHECK_ASSERT(0 == rv, ABC_CC_SysError, "Cannot start fake thread.");
-
-    pInfo = NULL;
-exit:
-    ABC_TxFreeFakeRecieveInfo(pInfo);
-
-    return cc;
-}
-
-/**
- * The thread for creating fake recieve transactions.
- */
-static void *ABC_TxFakeReceiveThread(void *pData)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_Error *pError = NULL;
-    tABC_FakeRecieveInfo *pInfo = pData;
-
-    tABC_TxAddress *pAddress = NULL;
-    tABC_U08Buf TxID = ABC_BUF_NULL;
-    tABC_Tx *pTx = NULL;
-    tABC_U08Buf IncomingAddress = ABC_BUF_NULL;
-
-    // delay for simulation
-    sleep(2);
-
-    // grab the address
-    ABC_CHECK_RET(ABC_TxLoadAddress(pInfo->szUserName, pInfo->szPassword,
-                                    pInfo->szWalletUUID, pInfo->szAddress,
-                                    &pAddress, pError));
-
-    // create a transaction
-    ABC_ALLOC(pTx, sizeof(tABC_Tx));
-    ABC_ALLOC(pTx->pStateInfo, sizeof(tTxStateInfo));
-
-    // copy the details
-    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pAddress->pDetails, pError));
-
-    // set the state
-    pTx->pStateInfo->timeCreation = time(NULL);
-    pTx->pStateInfo->bInternal = true;
-
-    // create a random transaction id
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxID, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(TxID, &(pTx->szID), pError));
-
-    // create a random address that the funds were received from
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(20, &IncomingAddress, pError));
-    ABC_ALLOC(pTx->aAddresses, sizeof(char *));
-    pTx->countAddresses = 1;
-    ABC_CHECK_RET(ABC_CryptoBase58Encode(IncomingAddress, &(pTx->aAddresses[0]), pError));
-
-    // save the transaction
-    ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
-
-    // add the transaction to the address
-    ABC_CHECK_RET(ABC_TxAddressAddTx(pAddress, pTx, pError));
-
-    // set the address as not recycled so it doens't get used again
-    pAddress->pStateInfo->bRecycleable = false;
-
-    // save the address
-    ABC_CHECK_RET(ABC_TxSaveAddress(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pAddress, pError));
-
-    // alert the GUI
-    if (gfAsyncBitCoinEventCallback)
-    {
-        tABC_AsyncBitCoinInfo info;
-        info.pData = pAsyncBitCoinCallerData;
-        info.eventType = ABC_AsyncEventType_IncomingBitCoin;
-        ABC_STRDUP(info.szTxID, pTx->szID);
-        ABC_STRDUP(info.szDescription, "Received fake funds");
-        gfAsyncBitCoinEventCallback(&info);
-        ABC_FREE_STR(info.szTxID);
-        ABC_FREE_STR(info.szDescription);
-    }
-
-    //printf("We are here %s %s %s", pInfo->szUserName, pInfo->szWalletUUID, pInfo->szAddress);
-
-exit:
-    ABC_TxFreeFakeRecieveInfo(pInfo);
-    ABC_TxFreeAddress(pAddress);
-    ABC_BUF_FREE(TxID);
-    ABC_BUF_FREE(IncomingAddress);
-    ABC_TxFreeTx(pTx);
-
-    return NULL;
-}
