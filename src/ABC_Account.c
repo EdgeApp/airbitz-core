@@ -326,7 +326,7 @@ tABC_CC ABC_AccountCheckCredentials(const char *szUserName,
     ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, NULL, pError));
 
 exit:
-    
+
     return cc;
 }
 
@@ -611,7 +611,7 @@ exit:
     ABC_FREE_STR(szL1_Base64);
     ABC_FREE_STR(szP1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
-    
+
     return cc;
 }
 
@@ -1046,7 +1046,7 @@ exit:
     ABC_FREE_STR(szNewP1_Base64);
     ABC_FREE_STR(szAuth_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
-    
+
     return cc;
 }
 
@@ -1146,7 +1146,7 @@ exit:
     ABC_FREE_STR(szP1_Base64);
     ABC_FREE_STR(szLRA1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
-    
+
     return cc;
 }
 
@@ -2542,7 +2542,7 @@ exit:
     ABC_FREE_STR(szPost);
     ABC_FREE_STR(szL1_Base64);
     ABC_FREE_STR(szResults);
-    
+
     return cc;
 }
 
@@ -2694,7 +2694,7 @@ exit:
     ABC_FREE_STR(szFilename);
     if (pJSON_Root) json_decref(pJSON_Root);
     if (pQuestionChoices) ABC_AccountFreeQuestionChoices(pQuestionChoices);
-    
+
     return cc;
 }
 
@@ -2849,7 +2849,7 @@ tABC_CC ABC_AccountServerUpdateGeneralInfo(tABC_Error *pError)
         // write the file
         ABC_CHECK_RET(ABC_FileIOWriteFileStr(szInfoFilename, szJSON, pError));
     }
-    
+
 exit:
 
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -2857,7 +2857,7 @@ exit:
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szInfoFilename);
     ABC_FREE_STR(szJSON);
-    
+
     return cc;
 }
 
@@ -2984,7 +2984,7 @@ tABC_CC ABC_AccountLoadGeneralInfo(tABC_AccountGeneralInfo **ppInfo,
     // assign the final result
     *ppInfo = pInfo;
     pInfo = NULL;
-    
+
 exit:
 
     if (pJSON_Root) json_decref(pJSON_Root);
@@ -3082,7 +3082,7 @@ tABC_CC ABC_AccountGetSettingsFilename(const char *szUserName,
 
 exit:
     ABC_FREE_STR(szSyncDirName);
-    
+
     return cc;
 }
 
