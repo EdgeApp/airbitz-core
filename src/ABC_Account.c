@@ -102,12 +102,8 @@ typedef struct sAccountKeys
 static unsigned int gAccountKeysCacheCount = 0;
 static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
-static tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo, tABC_Error *pError);
-static tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pError);
-static tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, tABC_Error *pError);
-static tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
 static tABC_CC ABC_AccountGetCarePackageObjects(int AccountNum, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
@@ -127,7 +123,6 @@ static tABC_CC ABC_AccountKeyFromCacheByName(const char *szUserName, tAccountKey
 static tABC_CC ABC_AccountSaveCategories(const char *szUserName, char **aszCategories, unsigned int Count, tABC_Error *pError);
 static tABC_CC ABC_AccountServerGetQuestions(tABC_U08Buf L1, json_t **ppJSON_Q, tABC_Error *pError);
 static tABC_CC ABC_AccountUpdateQuestionChoices(const char *szUserName, tABC_Error *pError);
-static tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountRequestInfo *pInfo, tABC_QuestionChoices **ppQuestionChoices, tABC_Error *pError);
 static tABC_CC ABC_AccountGetGeneralInfoFilename(char **pszFilename, tABC_Error *pError);
 static tABC_CC ABC_AccountGetSettingsFilename(const char *szUserName, char **pszFilename, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateDefaultSettings(tABC_AccountSettings **ppSettings, tABC_Error *pError);
@@ -363,7 +358,6 @@ exit:
  * Signs into an account
  * This cache's the keys for an account
  */
-static
 tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
                           tABC_Error *pError)
 {
@@ -386,7 +380,6 @@ exit:
 /**
  * Create and account
  */
-static
 tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
                           tABC_Error *pError)
 {
@@ -624,7 +617,6 @@ exit:
  * @param pInfo     Pointer to recovery information data
  * @param pError    A pointer to the location to store the error if there is one
  */
-static
 tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
                                tABC_Error *pError)
 {
@@ -791,7 +783,6 @@ exit:
  * @param pInfo     Pointer to password change information data
  * @param pError    A pointer to the location to store the error if there is one
  */
-static
 tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
                                   tABC_Error *pError)
 {
@@ -2607,7 +2598,6 @@ exit:
  * @param pInfo             Pointer to recovery question chioces information
  * @param ppQuestionChoices Pointer to hold allocated pointer to recovery question chioces
  */
-static
 tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountRequestInfo *pInfo,
                                       tABC_QuestionChoices    **ppQuestionChoices,
                                       tABC_Error              *pError)

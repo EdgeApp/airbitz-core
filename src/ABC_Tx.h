@@ -172,6 +172,11 @@ extern "C" {
     void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
                             unsigned int count);
 
+    // Blocking functions:
+    tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo,
+                        char **pszUUID,
+                        tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif

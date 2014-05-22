@@ -62,7 +62,6 @@ typedef struct sWalletData
 static unsigned int gWalletsCacheCount = 0;
 static tWalletData **gaWalletsCacheArray = NULL;
 
-static tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo, char **pszUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletCreateAndSetBitcoinPrivateSeed(const char *szUserName, const char *szPassword, const char *szUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletSetCurrencyNum(const char *szUserName, const char *szPassword, const char *szUUID, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, const char *szUUID, const char *szAccount, tABC_Error *pError);
@@ -180,7 +179,6 @@ void *ABC_WalletCreateThreaded(void *pData)
  * @param pInfo Pointer to wallet information
  * @param pszUUID Pointer to hold allocated pointer to UUID string
  */
-static
 tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
                          char                  **pszUUID,
                          tABC_Error            *pError)

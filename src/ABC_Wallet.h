@@ -119,6 +119,11 @@ extern "C" {
                                        const char *szUUID,
                                        tABC_Error *pError);
 
+    // Blocking functions:
+    tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
+                             char **pszUUID,
+                             tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif

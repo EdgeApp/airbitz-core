@@ -115,7 +115,6 @@ typedef struct sABC_TxAddress
 static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
 static void *pAsyncBitCoinCallerData = NULL;
 
-static tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo, char **pszUUID, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateNewAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, tABC_TxDetails *pDetails, tABC_TxAddress **ppAddress, tABC_Error *pError);
 static tABC_CC  ABC_GetAddressFilename(const char *szWalletUUID, const char *szRequestID, char **pszFilename, tABC_Error *pError);
 static tABC_CC  ABC_TxParseAddrFilename(const char *szFilename, char **pszID, char **pszPublicAddress, tABC_Error *pError);
@@ -284,7 +283,6 @@ void *ABC_TxSendThreaded(void *pData)
  * @param pInfo Pointer to transaction information
  * @param pszTxID Pointer to hold allocated pointer to transaction ID string
  */
-static
 tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
                    char             **pszTxID,
                    tABC_Error       *pError)
