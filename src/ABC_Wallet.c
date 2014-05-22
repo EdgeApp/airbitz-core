@@ -80,7 +80,7 @@ static tABC_CC ABC_WalletMutexLock(tABC_Error *pError);
 static tABC_CC ABC_WalletMutexUnlock(tABC_Error *pError);
 
 /**
- * Allocates the wallet create info structure and 
+ * Allocates the wallet create info structure and
  * populates it with the data given
  */
 tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
@@ -642,7 +642,7 @@ tABC_CC ABC_WalletGetTxDirName(char **pszDir, const char *szWalletUUID, tABC_Err
 
 exit:
     ABC_FREE_STR(szWalletSyncDir);
-    
+
     return cc;
 }
 
@@ -1479,7 +1479,7 @@ exit:
 /**
  * Locks the mutex
  *
- * ABC_Wallet uses the same mutex as ABC_Account so that there will be no situation in 
+ * ABC_Wallet uses the same mutex as ABC_Account so that there will be no situation in
  * which one thread is in ABC_Wallet locked on a mutex and calling a thread safe ABC_Account call
  * that is locked from another thread calling a thread safe ABC_Wallet call.
  * In other words, since they call each other, they need to share a recursive mutex.
