@@ -339,14 +339,18 @@ tABC_CC ABC_SignIn(const char *szUserName,
                                               pData,
                                               pError));
 
-    pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
+    if (fRequestCallback)
     {
-        //printf("Thread create successfully !!!\n");
-        if ( ! pthread_detach(handle) )
+        pthread_t handle;
+        if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
         {
-            //printf("Thread detached successfully !!!\n");
+            pthread_detach(handle);
         }
+    }
+    else
+    {
+        cc = ABC_AccountSignIn(pAccountRequestInfo, pError);
+        ABC_AccountRequestInfoFree(pAccountRequestInfo);
     }
 
 exit:
@@ -401,14 +405,18 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
                                               pData,
                                               pError));
 
-    pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
+    if (fRequestCallback)
     {
-        //printf("Thread create successfully !!!\n");
-        if ( ! pthread_detach(handle) )
+        pthread_t handle;
+        if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
         {
-            //printf("Thread detached successfully !!!\n");
+            pthread_detach(handle);
         }
+    }
+    else
+    {
+        cc = ABC_AccountCreate(pAccountRequestInfo, pError);
+        ABC_AccountRequestInfoFree(pAccountRequestInfo);
     }
 
 exit:
@@ -468,14 +476,18 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                               pData,
                                               pError));
 
-    pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pInfo))
+    if (fRequestCallback)
     {
-        //printf("Thread create successfully !!!\n");
-        if ( ! pthread_detach(handle) )
+        pthread_t handle;
+        if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pInfo))
         {
-            //printf("Thread detached successfully !!!\n");
+            pthread_detach(handle);
         }
+    }
+    else
+    {
+        cc = ABC_AccountSetRecovery(pInfo, pError);
+        ABC_AccountRequestInfoFree(pInfo);
     }
 
 exit:
@@ -496,7 +508,8 @@ exit:
  * @param currencyNum               ISO 4217 currency number
  * @param attributes                Attributes to be used for filtering (e.g., archive bit)
  * @param fRequestCallback          The function that will be called when the wallet create process has finished.
- * @param pData                     Pointer to data to be returned back in callback
+ * @param pData                     Pointer to data to be returned back in callback,
+ *                                  or `char **pszUUID` if callbacks aren't used.
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_CreateWallet(const char *szUserName,
@@ -533,15 +546,18 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                                             fRequestCallback,
                                             pData,
                                             pError));
-
-    pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_WalletCreateThreaded, pWalletCreateInfo))
+    if (fRequestCallback)
     {
-        //printf("Thread create successfully !!!\n");
-        if ( ! pthread_detach(handle) )
+        pthread_t handle;
+        if (!pthread_create(&handle, NULL, ABC_WalletCreateThreaded, pWalletCreateInfo))
         {
-            //printf("Thread detached successfully !!!\n");
+            pthread_detach(handle);
         }
+    }
+    else
+    {
+        cc = ABC_WalletCreate(pWalletCreateInfo, (char**)pData, pError);
+        ABC_WalletCreateInfoFree(pWalletCreateInfo);
     }
 
 exit:
@@ -994,7 +1010,8 @@ exit:
  *
  * @param szUserName                UserName for the account
  * @param fRequestCallback          The function that will be called when the recovery question choices are ready.
- * @param pData                     Pointer to data to be returned back in callback
+ * @param pData                     Pointer to data to be returned back in callback,
+ *                                  or a `tABC_QuestionChoices **` if callbacks aren't used.
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_GetQuestionChoices(const char *szUserName,
@@ -1026,14 +1043,18 @@ tABC_CC ABC_GetQuestionChoices(const char *szUserName,
                                               pData,
                                               pError));
 
-    pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
+    if (fRequestCallback)
     {
-        //printf("Thread create successfully !!!\n");
-        if ( ! pthread_detach(handle) )
+        pthread_t handle;
+        if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
         {
-            //printf("Thread detached successfully !!!\n");
+            pthread_detach(handle);
         }
+    }
+    else
+    {
+        cc = ABC_AccountGetQuestionChoices(pAccountRequestInfo, (tABC_QuestionChoices**)pData, pError);
+        ABC_AccountRequestInfoFree(pAccountRequestInfo);
     }
 
 exit:
@@ -1138,14 +1159,18 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
                                               pData,
                                               pError));
 
-    pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
+    if (fRequestCallback)
     {
-        //printf("Thread create successfully !!!\n");
-        if ( ! pthread_detach(handle) )
+        pthread_t handle;
+        if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
         {
-            //printf("Thread detached successfully !!!\n");
+            pthread_detach(handle);
         }
+    }
+    else
+    {
+        cc = ABC_AccountChangePassword(pAccountRequestInfo, pError);
+        ABC_AccountRequestInfoFree(pAccountRequestInfo);
     }
 
 exit:
@@ -1206,14 +1231,18 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
                                               pData,
                                               pError));
 
-    pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
+    if (fRequestCallback)
     {
-        //printf("Thread create successfully !!!\n");
-        if ( ! pthread_detach(handle) )
+        pthread_t handle;
+        if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
         {
-            //printf("Thread detached successfully !!!\n");
+            pthread_detach(handle);
         }
+    }
+    else
+    {
+        cc = ABC_AccountChangePassword(pAccountRequestInfo, pError);
+        ABC_AccountRequestInfoFree(pAccountRequestInfo);
     }
 
 exit:
@@ -1497,7 +1526,8 @@ exit:
  * @param szDestAddress     Bitcoin address (Base58) to which the funds are to be sent
  * @param pDetails          Pointer to transaction details
  * @param fRequestCallback  The function that will be called when the send request process has finished.
- * @param pData             Pointer to data to be returned back in callback
+ * @param pData             Pointer to data to be returned back in callback,
+ *                          or a `char **pszTxID` if callbacks aren't used.
  * @param pError            A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_InitiateSendRequest(const char *szUserName,
@@ -1536,13 +1566,18 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
                                             pData,
                                             pError));
 
-    pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_TxSendThreaded, pTxSendInfo))
+    if (fRequestCallback)
     {
-        if ( ! pthread_detach(handle) )
+        pthread_t handle;
+        if (!pthread_create(&handle, NULL, ABC_TxSendThreaded, pTxSendInfo))
         {
-            //printf("Thread detached successfully !!!\n");
+            pthread_detach(handle);
         }
+    }
+    else
+    {
+        cc = ABC_TxSend(pTxSendInfo, (char**)pData, pError);
+        ABC_TxSendInfoFree(pTxSendInfo);
     }
 
 exit:

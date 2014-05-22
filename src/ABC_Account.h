@@ -185,6 +185,23 @@ extern "C" {
 
     void ABC_AccountFreeSettings(tABC_AccountSettings *pSettings);
 
+    // Blocking functions:
+    tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
+                              tABC_Error *pError);
+
+    tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
+                              tABC_Error *pError);
+
+    tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
+                                   tABC_Error *pError);
+
+    tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountRequestInfo *pInfo,
+                                          tABC_QuestionChoices **ppQuestionChoices,
+                                          tABC_Error *pError);
+
+    tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
+                                      tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif
