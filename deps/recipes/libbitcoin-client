@@ -1,4 +1,4 @@
-depends="libbitcoin obelisk"
+depends="libbitcoin libwallet obelisk"
 inherit lib
 
 source="https://github.com/Airbitz/libbitcoin-client.git"
