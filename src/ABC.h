@@ -308,6 +308,8 @@ extern "C" {
         double amountCurrency;
         /** payer or payee */
         char *szName;
+        /** payee business-directory id (0 otherwise) */
+        unsigned int bizId;
         /** category for the transaction */
         char *szCategory;
         /** notes for the transaction */

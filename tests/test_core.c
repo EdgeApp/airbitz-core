@@ -433,12 +433,13 @@ static void test_transactions()
         tABC_TxInfo *pInfo = aTransactions[i];
         if (pInfo)
         {
-            WRAP_PRINTF(("Transaction: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
+            WRAP_PRINTF(("Transaction: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, bizid: %u, category: %s, notes: %s, attributes: %u\n",
                 pInfo->szID,
                 pInfo->timeCreation,
                 pInfo->pDetails->amountSatoshi,
                 pInfo->pDetails->amountCurrency,
                 pInfo->pDetails->szName,
+                pInfo->pDetails->bizId,
                 pInfo->pDetails->szCategory,
                 pInfo->pDetails->szNotes,
                 pInfo->pDetails->attributes));

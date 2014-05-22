@@ -52,6 +52,7 @@
 #define JSON_TX_INTERNAL_FIELD                  "internal"
 #define JSON_TX_AMOUNT_CURRENCY_FIELD           "amountCurrency"
 #define JSON_TX_NAME_FIELD                      "name"
+#define JSON_TX_BIZID_FIELD                     "bizId"
 #define JSON_TX_CATEGORY_FIELD                  "category"
 #define JSON_TX_NOTES_FIELD                     "notes"
 #define JSON_TX_ATTRIBUTES_FIELD                "attributes"
@@ -390,6 +391,7 @@ tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pO
     pNewDetails->amountFeesAirbitzSatoshi = pOldDetails->amountFeesAirbitzSatoshi;
     pNewDetails->amountFeesMinersSatoshi = pOldDetails->amountFeesMinersSatoshi;
     pNewDetails->amountCurrency  = pOldDetails->amountCurrency;
+    pNewDetails->bizId = pOldDetails->bizId;
     pNewDetails->attributes = pOldDetails->attributes;
     if (pOldDetails->szName != NULL)
     {
@@ -1807,6 +1809,7 @@ tABC_CC ABC_TxSetTransactionDetails(const char *szUserName,
     pTx->pDetails->amountFeesAirbitzSatoshi = pDetails->amountFeesAirbitzSatoshi;
     pTx->pDetails->amountFeesMinersSatoshi = pDetails->amountFeesMinersSatoshi;
     pTx->pDetails->amountCurrency = pDetails->amountCurrency;
+    pTx->pDetails->bizId = pDetails->bizId;
     pTx->pDetails->attributes = pDetails->attributes;
     ABC_FREE_STR(pTx->pDetails->szName);
     ABC_STRDUP(pTx->pDetails->szName, pDetails->szName);
@@ -2414,6 +2417,14 @@ tABC_CC ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tAB
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing name");
     ABC_STRDUP(pDetails->szName, json_string_value(jsonVal));
 
+    // get the business-directory id field
+    jsonVal = json_object_get(jsonDetails, JSON_TX_BIZID_FIELD);
+    if (jsonVal)
+    {
+        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError, "Error parsing JSON details package - malformed directory bizId field");
+        pDetails->bizId = json_integer_value(jsonVal);
+    }
+
     // get the category field
     jsonVal = json_object_get(jsonDetails, JSON_TX_CATEGORY_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing category");
@@ -2654,6 +2665,10 @@ tABC_CC ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_
 
     // add the name field to the details object
     retVal = json_object_set_new(pJSON_Details, JSON_TX_NAME_FIELD, json_string(pDetails->szName));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the business-directory id field to the details object
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_BIZID_FIELD, json_integer(pDetails->bizId));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the category field to the details object
@@ -3416,12 +3431,13 @@ void ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count)
             ABC_DebugLog("Address - seq: %lld, id: %s, pubAddress: %s\n", aAddresses[i]->seq, aAddresses[i]->szID, aAddresses[i]->szPubAddress);
             if (aAddresses[i]->pDetails)
             {
-                ABC_DebugLog("\tDetails - satoshi: %lld, airbitz_fee: %lld, miners_fee: %lld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
+                ABC_DebugLog("\tDetails - satoshi: %lld, airbitz_fee: %lld, miners_fee: %lld, currency: %lf, name: %s, bizid: %u, category: %s, notes: %s, attributes: %u\n",
                              aAddresses[i]->pDetails->amountSatoshi,
                              aAddresses[i]->pDetails->amountFeesAirbitzSatoshi,
                              aAddresses[i]->pDetails->amountFeesMinersSatoshi,
                              aAddresses[i]->pDetails->amountCurrency,
                              aAddresses[i]->pDetails->szName,
+                             aAddresses[i]->pDetails->bizId,
                              aAddresses[i]->pDetails->szCategory,
                              aAddresses[i]->pDetails->szNotes,
                              aAddresses[i]->pDetails->attributes);
