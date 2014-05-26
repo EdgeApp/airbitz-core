@@ -5,21 +5,30 @@ version="1.0.1g"
 source="https://www.openssl.org/source/openssl-$version.tar.gz"
 
 build() {
-    case $target in
-    ios-x86_64) type=darwin64-x86_64-cc ;;
-    ios-i386)   type=debug-darwin-i386-cc ;;
-    ios-*)      type=BSD-generic32 ;;
-    android-arm)type=android-armv7 ;;
-    android-x86)type=android-x86 ;;
-    *)          type=linux-generic32 ;;
-    esac
-
     cd openssl-$version
+
+    # Configure:
     if [ $target = "native" ]; then
-        ./config --prefix=$install_dir "$CFLAGS"
+        if [ 'Darwin x86_64 i386' = "$(uname -smp)" ]; then
+            # The openssl configure script won't auto-detect Darwin x64:
+            ./Configure --prefix=$install_dir no-shared zlib darwin64-x86_64-cc "$CFLAGS"
+        else
+            # Otherwise, let the config script guess:
+            ./config --prefix=$install_dir "$CFLAGS"
+        fi
     else
+        # We are cross-compiling, so specify the target manually:
+        case $target in
+        ios-x86_64) type=darwin64-x86_64-cc ;;
+        ios-i386)   type=debug-darwin-i386-cc ;;
+        ios-*)      type=BSD-generic32 ;;
+        android-arm)type=android-armv7 ;;
+        android-x86)type=android-x86 ;;
+        *)          type=linux-generic32 ;;
+        esac
         ./Configure --prefix=$install_dir no-shared zlib $type "$CFLAGS"
     fi
+
     make
     make install_sw
 }
