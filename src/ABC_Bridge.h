@@ -27,7 +27,11 @@ extern "C" {
 
     tABC_CC ABC_BridgeParseAmount(const char *szAmount,
                                   int64_t *pValue,
-                                  unsigned decmial_place);
+                                  unsigned decimal_places);
+
+    tABC_CC ABC_BridgeFormatAmount(int64_t amount,
+                                   char **pszAmountOut,
+                                   unsigned decimal_places);
 
     tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
                                        tABC_BitcoinURIInfo *pInfo,

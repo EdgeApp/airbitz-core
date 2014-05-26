@@ -87,15 +87,38 @@ void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo)
  * @param the amount to parse, in bitcoins
  * @param the integer value, in satoshis, or ABC_BRIDGE_INVALID_AMOUNT
  * if something goes wrong.
- * @param decimal_place set to ABC_BRIDGE_BITCOIN_DECIMAL_PLACE tp convert
+ * @param decimal_places set to ABC_BRIDGE_BITCOIN_DECIMAL_PLACE to convert
  * bitcoin to satoshis.
  */
 tABC_CC ABC_BridgeParseAmount(const char *szAmount,
                               int64_t *pValue,
-                              unsigned decmial_place)
+                              unsigned decimal_places)
 {
-    *pValue = libwallet::parse_amount(szAmount, decmial_place);
+    *pValue = libwallet::parse_amount(szAmount, decimal_places);
     return ABC_CC_Ok;
+}
+
+/**
+ * Formats a Bitcoin integer amount as a string, avoiding the rounding
+ * problems typical with floating-point math.
+ * @param amount the number of satoshis
+ * @param pszAmountOut a pointer that will hold the output string. The
+ * caller frees the returned value.
+ * @param decimal_places set to ABC_BRIDGE_BITCOIN_DECIMAL_PLACE to convert
+ * satoshis to bitcoins.
+ */
+tABC_CC ABC_BridgeFormatAmount(int64_t amount,
+                               char **pszAmountOut,
+                               unsigned decimal_places,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    std::string out = libwallet::format_amount(amount, decimal_places);
+    ABC_STRDUP(*pszAmountOut, out.c_str());
+
+exit:
+    return cc;
 }
 
 /**
