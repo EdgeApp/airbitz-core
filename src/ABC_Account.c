@@ -162,7 +162,6 @@ tABC_CC ABC_AccountRequestInfoAlloc(tABC_AccountRequestInfo **ppAccountRequestIn
 
     ABC_CHECK_NULL(ppAccountRequestInfo);
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(fRequestCallback);
 
     tABC_AccountRequestInfo *pAccountRequestInfo = NULL;
     ABC_ALLOC(pAccountRequestInfo, sizeof(tABC_AccountRequestInfo));
