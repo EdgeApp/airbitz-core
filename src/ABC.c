@@ -325,7 +325,6 @@ tABC_CC ABC_SignIn(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(fRequestCallback);
 
     ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
                                               ABC_RequestType_AccountSignIn,
@@ -391,7 +390,6 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(szPIN);
     ABC_CHECK_ASSERT(strlen(szPIN) > 0, ABC_CC_Error, "No PIN provided");
-    ABC_CHECK_NULL(fRequestCallback);
 
     ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
                                               ABC_RequestType_CreateAccount,
@@ -462,7 +460,6 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szRecoveryQuestions) > 0, ABC_CC_Error, "No recovery questions provided");
     ABC_CHECK_NULL(szRecoveryAnswers);
     ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error, "No recovery answers provided");
-    ABC_CHECK_NULL(fRequestCallback);
 
     ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pInfo,
                                               ABC_RequestType_SetAccountRecoveryQuestions,
@@ -535,7 +532,6 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(szWalletName);
     ABC_CHECK_ASSERT(strlen(szWalletName) > 0, ABC_CC_Error, "No wallet name provided");
-    ABC_CHECK_NULL(fRequestCallback);
 
     ABC_CHECK_RET(ABC_WalletCreateInfoAlloc(&pWalletCreateInfo,
                                             szUserName,
@@ -1029,7 +1025,6 @@ tABC_CC ABC_GetQuestionChoices(const char *szUserName,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(fRequestCallback);
 
     ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
                                               ABC_RequestType_GetQuestionChoices,
@@ -1145,7 +1140,6 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
     ABC_CHECK_NULL(szNewPIN);
     ABC_CHECK_ASSERT(strlen(szNewPIN) > 0, ABC_CC_Error, "No new PIN provided");
-    ABC_CHECK_NULL(fRequestCallback);
 
     ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
                                               ABC_RequestType_ChangePassword,
@@ -1217,7 +1211,6 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
     ABC_CHECK_NULL(szNewPIN);
     ABC_CHECK_ASSERT(strlen(szNewPIN) > 0, ABC_CC_Error, "No new PIN provided");
-    ABC_CHECK_NULL(fRequestCallback);
 
     ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
                                               ABC_RequestType_ChangePassword,
@@ -1554,7 +1547,6 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet name provided");
     ABC_CHECK_NULL(pDetails);
-    ABC_CHECK_NULL(fRequestCallback);
 
     ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
                                             szUserName,
