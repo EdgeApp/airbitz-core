@@ -16,6 +16,12 @@
 /** The maximum buffer length for default strings in the system */
 #define ABC_MAX_STRING_LENGTH 256
 
+/** The ABC_ParseAmount function returns this when a string is malformed. */
+#define ABC_INVALID_AMOUNT           ((int64_t)-1)
+
+/** The number of decimal-place shifts needed to convert satoshi to bitcoin. */
+#define ABC_BITCOIN_DECIMAL_PLACES   8
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -624,6 +630,15 @@ extern "C" {
                                   int currencyNum,
                                   int64_t *pSatoshi,
                                   tABC_Error *pError);
+
+    tABC_CC ABC_ParseAmount(const char *szAmount,
+                            int64_t *pAmountOut,
+                            unsigned decimalPlaces);
+
+    tABC_CC ABC_FormatAmount(int64_t amount,
+                             char **pszAmountOut,
+                             unsigned decimalPlaces,
+                             tABC_Error *pError);
 
     tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
                                      const char *szPassword,

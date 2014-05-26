@@ -1354,6 +1354,49 @@ exit:
     return cc;
 }
 
+
+/**
+ * Parses a Bitcoin amount string to an integer.
+ * @param the amount to parse, in bitcoins
+ * @param the integer value, in satoshis, or ABC_INVALID_AMOUNT
+ * if something goes wrong.
+ * @param decimalPlaces set to ABC_BITCOIN_DECIMAL_PLACE to convert
+ * bitcoin to satoshis.
+ */
+tABC_CC ABC_ParseAmount(const char *szAmount,
+                              int64_t *pAmountOut,
+                              unsigned decimalPlaces)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_RET(ABC_BridgeParseAmount(szAmount, pAmountOut, decimalPlaces));
+
+exit:
+    return cc;
+}
+
+/**
+ * Formats a Bitcoin integer amount as a string, avoiding the rounding
+ * problems typical with floating-point math.
+ * @param amount the number of satoshis
+ * @param pszAmountOut a pointer that will hold the output string, in
+ * bitcoins. The caller frees the returned value.
+ * @param decimalPlaces set to ABC_BITCOIN_DECIMAL_PLACE to convert
+ * satoshis to bitcoins.
+ */
+tABC_CC ABC_FormatAmount(int64_t amount,
+                               char **pszAmountOut,
+                               unsigned decimalPlaces,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_RET(ABC_BridgeFormatAmount(amount, pszAmountOut, decimalPlaces, pError));
+
+exit:
+    return cc;
+}
+
 /**
  * Creates a receive request.
  *
