@@ -12,5 +12,5 @@ build() {
     cp libobelisk.pc $install_dir/lib/pkgconfig
 }
 
-include="include/obelisk/* include/obelisk/client/*"
+include="include/obelisk/*"
 lib="lib/libobelisk.a"
