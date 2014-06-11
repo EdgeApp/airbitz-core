@@ -1,0 +1,19 @@
+inherit lib
+
+source="https://github.com/libgit2/libgit2/archive/v0.20.0.tar.gz"
+
+build() {
+    cd libgit2-0.20.0
+    export install_dir
+
+    mkdir -p build
+    cd build
+    cmake .. \
+        -DCMAKE_TOOLCHAIN_FILE=$recipe_dir/../../classes/ios.toolchain.cmake \
+        -DCMAKE_INSTALL_PREFIX=$install_dir \
+        -DBUILD_SHARED_LIBS:BOOL=FALSE
+    cmake --build . --target install
+}
+
+include="include/jansson.h include/jansson_config.h"
+lib="lib/libjansson.a"
