@@ -1,3 +1,4 @@
+depends="openssl"
 inherit lib
 
 version="0.21.0"
@@ -5,19 +6,18 @@ source="https://github.com/libgit2/libgit2/archive/v$version.tar.gz"
 
 build() {
     cd libgit2-$version
-    export install_dir
 
     case $target in
-    android-*) cmakeflags=-DANDROID=1 ;;
+    ios-*)      cmakeflags="-DCMAKE_TOOLCHAIN_FILE=$recipe_dir/../../classes/ios.toolchain.cmake" ;;
+    android-*)  cmakeflags="-DCMAKE_TOOLCHAIN_FILE=$recipe_dir/../../classes/android.toolchain.cmake -DANDROID=1" ;;
+    *)          cmakeflags="-C$recipe_dir/../../classes/native.cmake" ;;
     esac
 
     mkdir -p build
     cd build
-    cmake .. \
-        -DCMAKE_TOOLCHAIN_FILE=$recipe_dir/../../classes/ios.toolchain.cmake \
+    cmake .. $cmakeflags \
         -DCMAKE_INSTALL_PREFIX=$install_dir \
-        -DBUILD_SHARED_LIBS:BOOL=FALSE \
-        $cmakeflags
+        -DBUILD_SHARED_LIBS:BOOL=FALSE
     cmake --build . --target install
 }
 

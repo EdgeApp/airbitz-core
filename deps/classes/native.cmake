@@ -1,8 +1,5 @@
-set(CMAKE_SYSTEM_NAME Darwin)
-set(CMAKE_SYSTEM_VERSION 1)
-
 # Where is the target environment:
-set(CMAKE_FIND_ROOT_PATH "${CMAKE_INSTALL_PREFIX}")
+set(CMAKE_FIND_ROOT_PATH  "${CMAKE_INSTALL_PREFIX}")
 
 # Search for programs in the build host directories:
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
