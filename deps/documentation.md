@@ -36,6 +36,7 @@ The build script provides variables with these paths:
 * build_dir - The "build" directory where all work takes place.
 * download_dir - The "download" directory where all sources are downloaded.
 * work_dir - The per-recipe working directory. The run script switches to this directory before running tasks. The unpack task writes its output here, and the "build" tasks should run inside this directory.
+* recipe_dir - The directory where the recipe file is located.
 
 Every recipe has a work directory. The top-level script is responsible for creating this directory, and `cd`'s into the directory prior to running any recipe tasks. The build script also places its own per-recipe state information into the work directory, including logs, task-done state files, and makefile fragments. These files have the extensions `.log`, `.done`, and `.mk`, respectively, so the recipe itself should avoid creating files with similar names. Instead, the recipe should probably create its own working directory under the work directory, where it unpacks and builds its source code.
 
