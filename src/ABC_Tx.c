@@ -311,6 +311,10 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
                     pInfo->szUserName, pInfo->szPassword, 
                     pInfo->szWalletUUID, pInfo->pDetails,
                     &pChangeAddr, pError));
+    // save out this address
+    ABC_CHECK_RET(ABC_TxSaveAddress(pInfo->szUserName, pInfo->szPassword,
+                                    pInfo->szWalletUUID, pChangeAddr, pError));
+
     // Fetch addresses for this wallet
     ABC_CHECK_RET(
         ABC_TxGetPubAddresses(pInfo->szUserName, pInfo->szPassword,
@@ -336,6 +340,10 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     ABC_CHECK_RET(
         ABC_BridgeTxSignSend(pInfo, paPrivAddresses, privCountAddresses,
                              &utx, pError));
+
+    // Start watching all addresses incuding new change addres
+    ABC_CHECK_RET(ABC_TxWatchAddresses(pInfo->szUserName, pInfo->szPassword,
+                                       pInfo->szWalletUUID, pError));
 
     // sucessfully sent, now create a transaction
     ABC_ALLOC(pTx, sizeof(tABC_Tx));
@@ -372,6 +380,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 exit:
     ABC_FREE(szPrivSeed);
     ABC_TxFreeTx(pTx);
+    ABC_TxFreeAddress(pChangeAddr);
     ABC_UtilFreeStringArray(paAddresses, countAddresses);
     ABC_TxMutexUnlock(NULL);
     return cc;
@@ -397,6 +406,10 @@ tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo, int64_t *pTotalFees, tABC_Er
                     pInfo->szUserName, pInfo->szPassword, 
                     pInfo->szWalletUUID, pInfo->pDetails,
                     &pChangeAddr, pError));
+    // save out this address
+    ABC_CHECK_RET(ABC_TxSaveAddress(pInfo->szUserName, pInfo->szPassword,
+                                    pInfo->szWalletUUID, pChangeAddr, pError));
+
     // Fetch addresses for this wallet
     ABC_CHECK_RET(
         ABC_TxGetPubAddresses(pInfo->szUserName, pInfo->szPassword,
