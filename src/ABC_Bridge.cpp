@@ -441,6 +441,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
         bc::payment_address pa;
         ABC_CHECK_ASSERT(true == pa.set_encoded(addresses[i]),
             ABC_CC_Error, "Bad source address");
+        std::cout << "Including in outputs: " <<  pa.encoded() << std::endl;
         addresses_.push_back(pa);
     }
     ABC_CHECK_ASSERT(true == change.set_encoded(changeAddress),
@@ -597,11 +598,13 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
         {
             oaddresses.push_back(addr.encoded());
             totalMeSatoshi += o.value;
+            // TODO: load address and mark recycleable = false
         }
         totalOutSatoshi += o.value;
     }
     if (totalMeSatoshi == 0 && totalMeInSatoshi == 0)
     {
+        ABC_DebugLog("values == 0, this tx does not concern me.\n");
         goto exit;
     }
     fees = totalInSatoshi - totalOutSatoshi;
