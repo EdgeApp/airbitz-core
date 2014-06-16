@@ -311,6 +311,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
                     pInfo->szUserName, pInfo->szPassword, 
                     pInfo->szWalletUUID, pInfo->pDetails,
                     &pChangeAddr, pError));
+    pChangeAddr->pStateInfo->bRecycleable = false;
     // save out this address
     ABC_CHECK_RET(ABC_TxSaveAddress(pInfo->szUserName, pInfo->szPassword,
                                     pInfo->szWalletUUID, pChangeAddr, pError));
