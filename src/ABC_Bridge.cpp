@@ -431,6 +431,8 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
     ABC_CHECK_ASSERT(utx != NULL,
         ABC_CC_NULLPtr, "Unable alloc unsigned_transaction_type");
 
+    // Update general info before send
+    ABC_CHECK_RET(ABC_AccountServerUpdateGeneralInfo(pError));
     // Fetch Info to calculate fees
     ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&ppInfo, pError));
     // Create payment_addresses
