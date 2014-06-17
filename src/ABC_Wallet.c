@@ -98,7 +98,7 @@ tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szWalletName);
-    ABC_CHECK_NULL(fRequestCallback);
+    /* ABC_CHECK_NULL(fRequestCallback); */
 
     tABC_WalletCreateInfo *pWalletCreateInfo;
     ABC_ALLOC(pWalletCreateInfo, sizeof(tABC_WalletCreateInfo));

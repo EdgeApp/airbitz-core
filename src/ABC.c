@@ -552,7 +552,11 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     }
     else
     {
-        cc = ABC_WalletCreate(pWalletCreateInfo, (char**)pData, pError);
+	tABC_RequestResults *results = pData;
+	char * output = NULL;
+	ABC_ALLOC(output, 100*sizeof(char));
+	results->pRetData = output;
+        cc = ABC_WalletCreate(pWalletCreateInfo, (char**) &(results->pRetData), pError);
         ABC_WalletCreateInfoFree(pWalletCreateInfo);
     }
 
