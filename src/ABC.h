@@ -339,6 +339,8 @@ extern "C" {
     {
         /** transaction identifier */
         char *szID;
+        /** malleable transaction identifier */
+        char *szMalleableTxId;
         /** time of creation */
         int64_t timeCreation;
         /** count of bitcoin addresses associated with this transaciton */
@@ -358,6 +360,7 @@ extern "C" {
     {
         void *data;
         char *szTxId;
+        char *szTxMalleableId;
         uint64_t fees;
     } tABC_UnsignedTx;
 
@@ -803,6 +806,10 @@ extern "C" {
                                const char *szWalletUUID, tABC_Error *pError);
 
     tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError);
+
+    tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *height, tABC_Error *pError);
+
+    tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError);
 
     // temp functions
     void tempEventA();
