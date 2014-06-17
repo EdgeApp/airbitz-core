@@ -58,6 +58,11 @@
 #define JSON_TX_NOTES_FIELD                     "notes"
 #define JSON_TX_ATTRIBUTES_FIELD                "attributes"
 #define JSON_TX_ADDRESSES_FIELD                 "addresses"
+#define JSON_TX_OUTPUT_FLAG                     "input"
+#define JSON_TX_OUTPUT_VALUE                    "value"
+#define JSON_TX_OUTPUT_ADDRESS                  "address"
+#define JSON_TX_OUTPUT_TXID                     "txid"
+#define JSON_TX_OUTPUT_INDEX                    "index"
 
 #define JSON_ADDR_SEQ_FIELD                     "seq"
 #define JSON_ADDR_ADDRESS_FIELD                 "address"
@@ -85,8 +90,8 @@ typedef struct sABC_Tx
     char            *szID; // ntxid from bitcoin
     tABC_TxDetails  *pDetails;
     tTxStateInfo    *pStateInfo;
-    unsigned int    countAddresses;
-    char            **aAddresses;
+    unsigned int    countOutputs;
+    tABC_TxOutput   **aOutputs;
 } tABC_Tx;
 
 typedef struct sTxAddressActivity
@@ -148,6 +153,8 @@ static tABC_CC  ABC_TxCreateAddressDir(const char *szWalletUUID, tABC_Error *pEr
 static void     ABC_TxFreeAddress(tABC_TxAddress *pAddress);
 static void     ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo);
 static void     ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count);
+static void     ABC_TxFreeOutput(tABC_TxOutput *pOutputs);
+static void     ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 static tABC_CC  ABC_TxGetAddresses(const char *szUserName, const char *szPassword, const char *szWalletUUID, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static int      ABC_TxAddrPtrCompare(const void * a, const void * b);
 static tABC_CC  ABC_TxLoadAddressAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
@@ -358,9 +365,12 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, utx.szTxMalleableId);
 
     // Set the address
-    pTx->countAddresses = 1;
-    ABC_ALLOC(pTx->aAddresses, sizeof(char *));
-    ABC_STRDUP(pTx->aAddresses[0], pInfo->szDestAddress);
+    pTx->countOutputs = 1;
+    ABC_ALLOC(pTx->aOutputs, sizeof(tABC_TxOutput *));
+    ABC_ALLOC(pTx->aOutputs[0], sizeof(tABC_TxOutput));
+    ABC_STRDUP(pTx->aOutputs[0]->szAddress, pInfo->szDestAddress);
+    pTx->aOutputs[0]->input = false;
+    pTx->aOutputs[0]->value = pTx->pDetails->amountSatoshi;
 
     // copy the details
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
@@ -501,8 +511,6 @@ tABC_CC ABC_TxGetPrivAddresses(const char *szUserName,
                                             seed,
                                             aAddresses[i]->seq,
                                             pError));
-        ABC_DebugLog("Fetched Priv Key: %s\n", sAddresses[i]);
-        ABC_DebugLog("For public Key: %s\n", aAddresses[i]->szPubAddress);
     }
     *pCount = countAddresses;
     *paAddresses = sAddresses;
@@ -693,8 +701,8 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
                                  const char *szPassword,
                                  const char *szWalletUUID,
                                  uint64_t amountSatoshi, uint64_t feeSatoshi,
-                                 char **paInAddresses, unsigned int inAddressCount,
-                                 char **paOutAddresses, unsigned int outAddressCount,
+                                 tABC_TxOutput **paInAddresses, unsigned int inAddressCount,
+                                 tABC_TxOutput **paOutAddresses, unsigned int outAddressCount,
                                  const char *szTxId, const char *szMalTxId,
                                  tABC_Error *pError)
 {
@@ -731,12 +739,27 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
         // store transaction id
         ABC_STRDUP(pTx->szID, szTxId);
         // store the input addresses
-        ABC_ALLOC(pTx->aAddresses, sizeof(char *) * inAddressCount);
-        pTx->countAddresses = inAddressCount;
+        pTx->countOutputs = inAddressCount + outAddressCount;
+        ABC_ALLOC(pTx->aOutputs, sizeof(tABC_TxOutput *) * pTx->countOutputs);
         for (i = 0; i < inAddressCount; ++i)
         {
-            ABC_DebugLog("Saving Input address: %s\n", paInAddresses[i]);
-            ABC_STRDUP(pTx->aAddresses[i], paInAddresses[i]);
+            ABC_DebugLog("Saving Input address: %s\n", paInAddresses[i]->szAddress);
+
+            ABC_ALLOC(pTx->aOutputs[i], sizeof(tABC_TxOutput));
+            ABC_STRDUP(pTx->aOutputs[i]->szAddress, paInAddresses[i]->szAddress);
+            ABC_STRDUP(pTx->aOutputs[i]->szTxId, paInAddresses[i]->szTxId);
+            pTx->aOutputs[i]->input = paInAddresses[i]->input;
+            pTx->aOutputs[i]->value = paInAddresses[i]->value;
+        }
+        for (i = 0; i < outAddressCount; ++i)
+        {
+            ABC_DebugLog("Saving Output address: %s\n", paOutAddresses[i]);
+            int newi = i + inAddressCount;
+            ABC_ALLOC(pTx->aOutputs[newi], sizeof(tABC_TxOutput));
+            ABC_STRDUP(pTx->aOutputs[newi]->szAddress, paOutAddresses[i]->szAddress);
+            ABC_STRDUP(pTx->aOutputs[newi]->szTxId, paOutAddresses[i]->szTxId);
+            pTx->aOutputs[newi]->input = paOutAddresses[i]->input;
+            pTx->aOutputs[newi]->value = paOutAddresses[i]->value;
         }
 
         // save the transaction
@@ -747,17 +770,21 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
         // add the transaction to the address
         for (i = 0; i < outAddressCount; ++i)
         {
-            ABC_DebugLog("Saving Output address: %s\n", paOutAddresses[i]);
             ABC_CHECK_RET(ABC_TxFindRequest(szUserName, szPassword,
-                                            szWalletUUID, paOutAddresses[i],
+                                            szWalletUUID,
+                                            paOutAddresses[i]->szAddress,
                                             &pAddress, pError));
-            ABC_CHECK_RET(ABC_TxAddressAddTx(pAddress, pTx, pError));
-            pAddress->pStateInfo->bRecycleable = false;
-            ABC_CHECK_RET(
-                ABC_TxSaveAddress(szUserName, szPassword,
-                                  szWalletUUID, pAddress,
-                                  pError));
-            ABC_TxFreeAddress(pAddress);
+            if (pAddress)
+            {
+                ABC_CHECK_RET(ABC_TxAddressAddTx(pAddress, pTx, pError));
+                pAddress->pStateInfo->bRecycleable = false;
+                ABC_CHECK_RET(
+                    ABC_TxSaveAddress(szUserName, szPassword,
+                                    szWalletUUID, pAddress,
+                                    pError));
+                ABC_TxFreeAddress(pAddress);
+            }
+            pAddress = NULL;
         }
 
         if (gfAsyncBitCoinEventCallback)
@@ -1881,10 +1908,10 @@ tABC_CC ABC_TxLoadTransactionInfo(const char *szUserName,
     pTransaction->timeCreation = pTx->pStateInfo->timeCreation;
     pTransaction->pDetails = pTx->pDetails;
     pTx->pDetails = NULL;
-    pTransaction->countAddresses = pTx->countAddresses;
-    pTx->countAddresses = 0;
-    pTransaction->aAddresses = pTx->aAddresses;
-    pTx->aAddresses = NULL;
+    pTransaction->countOutputs = pTx->countOutputs;
+    pTx->countOutputs = 0;
+    pTransaction->aOutputs = pTx->aOutputs;
+    pTx->aOutputs = NULL;
 
     // assign final result
     *ppTransaction = pTransaction;
@@ -1979,18 +2006,8 @@ void ABC_TxFreeTransaction(tABC_TxInfo *pTransaction)
     if (pTransaction)
     {
         ABC_FREE_STR(pTransaction->szID);
-
-        if ((pTransaction->countAddresses > 0) && (pTransaction->aAddresses != NULL))
-        {
-            for (int i = 0; i < pTransaction->countAddresses; i++)
-            {
-                ABC_FREE_STR(pTransaction->aAddresses[i]);
-            }
-            ABC_CLEAR_FREE(pTransaction->aAddresses, (sizeof(char *) * pTransaction->countAddresses));
-        }
-
+        ABC_TxFreeOutputs(pTransaction->aOutputs, pTransaction->countOutputs);
         ABC_TxFreeDetails(pTransaction->pDetails);
-
         ABC_CLEAR_FREE(pTransaction, sizeof(tABC_TxInfo));
     }
 }
@@ -2553,23 +2570,50 @@ tABC_CC ABC_TxLoadTransaction(const char *szUserName,
         ABC_CHECK_ASSERT(json_is_array(jsonAddresses), ABC_CC_JSONError, "Error parsing JSON transaction package - missing addresses array");
 
         // get the number of elements in the array
-        pTx->countAddresses = (int) json_array_size(jsonAddresses);
+        pTx->countOutputs = (int) json_array_size(jsonAddresses);
 
-        if (pTx->countAddresses > 0)
+        if (pTx->countOutputs > 0)
         {
-            ABC_ALLOC(pTx->aAddresses, sizeof(char *) * pTx->countAddresses);
+            ABC_ALLOC(pTx->aOutputs, sizeof(tABC_TxOutput *) * pTx->countOutputs);
 
-            for (int i = 0; i < pTx->countAddresses; i++)
+            for (int i = 0; i < pTx->countOutputs; i++)
             {
+                ABC_ALLOC(pTx->aOutputs[i], sizeof(tABC_TxOutput));
+
                 json_t *pJSON_Elem = json_array_get(jsonAddresses, i);
-                ABC_CHECK_ASSERT((pJSON_Elem && json_is_string(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing address array element");
-                ABC_STRDUP(pTx->aAddresses[i], json_string_value(pJSON_Elem));
+                ABC_CHECK_ASSERT((pJSON_Elem && json_is_object(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON transaction output - missing object");
+
+                json_t *jsonVal = json_object_get(pJSON_Elem, JSON_TX_OUTPUT_FLAG);
+                ABC_CHECK_ASSERT((jsonVal && json_is_boolean(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction output - missing input boolean");
+                pTx->aOutputs[i]->input = json_is_true(jsonVal) ? true : false;
+
+                jsonVal = json_object_get(pJSON_Elem, JSON_TX_OUTPUT_VALUE);
+                ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing address array element");
+                pTx->aOutputs[i]->value = json_integer_value(jsonVal);
+
+                jsonVal = json_object_get(pJSON_Elem, JSON_TX_OUTPUT_ADDRESS);
+                ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing address array element");
+                ABC_STRDUP(pTx->aOutputs[i]->szAddress, json_string_value(jsonVal));
+
+                jsonVal = json_object_get(pJSON_Elem, JSON_TX_OUTPUT_TXID);
+                if (jsonVal)
+                {
+                    ABC_CHECK_ASSERT(json_is_string(jsonVal), ABC_CC_JSONError, "Error parsing JSON transaction package - missing txid");
+                    ABC_STRDUP(pTx->aOutputs[i]->szTxId, json_string_value(jsonVal));
+                }
+
+                jsonVal = json_object_get(pJSON_Elem, JSON_TX_OUTPUT_INDEX);
+                if (jsonVal)
+                {
+                    ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError, "Error parsing JSON transaction package - missing index");
+                    pTx->aOutputs[i]->index = json_integer_value(jsonVal);
+                }
             }
         }
     }
     else
     {
-        pTx->countAddresses = 0;
+        pTx->countOutputs = 0;
     }
 
     // assign final result
@@ -2779,16 +2823,7 @@ void ABC_TxFreeTx(tABC_Tx *pTx)
         ABC_FREE_STR(pTx->szID);
         ABC_TxFreeDetails(pTx->pDetails);
         ABC_CLEAR_FREE(pTx->pStateInfo, sizeof(tTxStateInfo));
-
-        if ((pTx->countAddresses > 0) && (pTx->aAddresses != NULL))
-        {
-            for (int i = 0; i < pTx->countAddresses; i++)
-            {
-                ABC_FREE_STR(pTx->aAddresses[i]);
-            }
-            ABC_CLEAR_FREE(pTx->aAddresses, (sizeof(char *) * pTx->countAddresses));
-        }
-
+        ABC_TxFreeOutputs(pTx->aOutputs, pTx->countOutputs);
         ABC_CLEAR_FREE(pTx, sizeof(tABC_Tx));
     }
 }
@@ -2839,6 +2874,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_AddressesArray = NULL;
+    json_t **ppJSON_Output = NULL;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
@@ -2873,12 +2909,30 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     pJSON_AddressesArray = json_array();
 
     // if there are any addresses
-    if ((pTx->countAddresses > 0) && (pTx->aAddresses != NULL))
+    if ((pTx->countOutputs > 0) && (pTx->aOutputs != NULL))
     {
-        for (int i = 0; i < pTx->countAddresses; i++)
+        ABC_ALLOC(ppJSON_Output, sizeof(json_t *) * pTx->countOutputs);
+        for (int i = 0; i < pTx->countOutputs; i++)
         {
-            // add the address to the array
-            int retVal = json_array_append_new(pJSON_AddressesArray, json_string(pTx->aAddresses[i]));
+            ppJSON_Output[i] = json_object();
+
+            int retVal = json_object_set_new(ppJSON_Output[i], JSON_TX_OUTPUT_FLAG, json_boolean(pTx->aOutputs[i]->input));
+            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+            retVal = json_object_set_new(ppJSON_Output[i], JSON_TX_OUTPUT_VALUE, json_integer(pTx->aOutputs[i]->value));
+            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+            retVal = json_object_set_new(ppJSON_Output[i], JSON_TX_OUTPUT_ADDRESS, json_string(pTx->aOutputs[i]->szAddress));
+            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+            retVal = json_object_set_new(ppJSON_Output[i], JSON_TX_OUTPUT_TXID, json_string(pTx->aOutputs[i]->szTxId));
+            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+            retVal = json_object_set_new(ppJSON_Output[i], JSON_TX_OUTPUT_INDEX, json_integer(pTx->aOutputs[i]->index));
+            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+            // add output to the array
+            retVal = json_array_append_new(pJSON_AddressesArray, ppJSON_Output[i]);
             ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
         }
     }
@@ -2898,6 +2952,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
 
 exit:
     ABC_FREE_STR(szFilename);
+    ABC_CLEAR_FREE(ppJSON_Output, sizeof(json_t *) * pTx->countOutputs);
     if (pJSON_Root) json_decref(pJSON_Root);
     if (pJSON_AddressesArray) json_decref(pJSON_AddressesArray);
 
@@ -3542,6 +3597,30 @@ void ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count)
         }
 
         ABC_CLEAR_FREE(aAddresses, sizeof(tABC_TxAddress *) * count);
+    }
+}
+
+static
+void ABC_TxFreeOutput(tABC_TxOutput *pOutput)
+{
+    if (pOutput)
+    {
+        ABC_FREE_STR(pOutput->szAddress);
+        ABC_FREE_STR(pOutput->szTxId);
+        ABC_CLEAR_FREE(pOutput, sizeof(tABC_TxOutput));
+    }
+}
+
+static void
+ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count)
+{
+    if ((aOutputs != NULL) && (count > 0))
+    {
+        for (int i = 0; i < count; i++)
+        {
+            ABC_TxFreeOutput(aOutputs[i]);
+        }
+        ABC_CLEAR_FREE(aOutputs, sizeof(tABC_TxOutput *) * count);
     }
 }
 
