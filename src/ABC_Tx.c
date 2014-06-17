@@ -43,6 +43,7 @@
 
 #define JSON_DETAILS_FIELD                      "meta"
 #define JSON_CREATION_DATE_FIELD                "creationDate"
+#define JSON_MALLEABLE_TX_ID                    "malleableTxId"
 #define JSON_AMOUNT_SATOSHI_FIELD               "amountSatoshi"
 #define JSON_AMOUNT_AIRBITZ_FEE_SATOSHI_FIELD   "amountFeeAirBitzSatoshi"
 #define JSON_AMOUNT_MINERS_FEE_SATOSHI_FIELD    "amountFeeMinersSatoshi"
@@ -76,6 +77,7 @@ typedef struct sTxStateInfo
 {
     int64_t timeCreation;
     bool    bInternal;
+    char    *szMalleableTxId;
 } tTxStateInfo;
 
 typedef struct sABC_Tx
@@ -353,6 +355,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // set the state
     pTx->pStateInfo->timeCreation = time(NULL);
     pTx->pStateInfo->bInternal = true;
+    ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, utx.szTxMalleableId);
 
     // Set the address
     pTx->countAddresses = 1;
@@ -713,6 +716,7 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
         ABC_ALLOC(pTx->pStateInfo, sizeof(tTxStateInfo));
         ABC_ALLOC(pTx->pDetails, sizeof(tABC_TxDetails));
 
+        pTx->pStateInfo->szMalleableTxId = szMalTxId;
         pTx->pStateInfo->timeCreation = time(NULL);
         pTx->pDetails->amountSatoshi = amountSatoshi;
         pTx->pDetails->amountFeesMinersSatoshi = feeSatoshi;
@@ -1872,6 +1876,8 @@ tABC_CC ABC_TxLoadTransactionInfo(const char *szUserName,
     ABC_ALLOC(pTransaction, sizeof(tABC_TxInfo));
     pTransaction->szID = pTx->szID;
     pTx->szID = NULL;
+    pTransaction->szMalleableTxId = pTx->pStateInfo->szMalleableTxId;
+    pTx->pStateInfo->szMalleableTxId = NULL;
     pTransaction->timeCreation = pTx->pStateInfo->timeCreation;
     pTransaction->pDetails = pTx->pDetails;
     pTx->pDetails = NULL;
@@ -2651,6 +2657,13 @@ tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing creation date");
     pInfo->timeCreation = json_integer_value(jsonVal);
 
+    jsonVal = json_object_get(jsonState, JSON_MALLEABLE_TX_ID);
+    if (jsonVal)
+    {
+        ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing malleable tx id");
+        ABC_STRDUP(pInfo->szMalleableTxId, json_string_value(jsonVal));
+    }
+
     // get the internal boolean
     jsonVal = json_object_get(jsonState, JSON_TX_INTERNAL_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_boolean(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing internal boolean");
@@ -2915,6 +2928,10 @@ tABC_CC ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *
 
     // add the creation date to the state object
     retVal = json_object_set_new(pJSON_State, JSON_CREATION_DATE_FIELD, json_integer(pInfo->timeCreation));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // add the creation date to the state object
+    retVal = json_object_set_new(pJSON_State, JSON_MALLEABLE_TX_ID, json_string(pInfo->szMalleableTxId));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the internal boolean (internally created or created due to bitcoin event)

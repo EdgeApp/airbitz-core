@@ -2230,3 +2230,26 @@ tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError)
     return ABC_BridgeWatcherStop(szWalletUUID, pError);
 }
 
+tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
+                     unsigned int *height, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
+    ABC_CHECK_NULL(szTxId);
+    ABC_CHECK_ASSERT(strlen(szTxId) > 0, ABC_CC_Error, "No tx id provided");
+    ABC_BridgeTxHeight(szWalletUUID, szTxId, height, pError);
+exit:
+    return cc;
+}
+
+tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
+    ABC_BridgeTxBlockHeight(szWalletUUID, height, pError);
+exit:
+    return cc;
+}
+

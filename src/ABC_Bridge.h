@@ -78,6 +78,10 @@ extern "C" {
                                  tABC_UnsignedTx *pUtx,
                                  tABC_Error *pError);
 
+    tABC_CC ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *height, tABC_Error *pError);
+
+    tABC_CC ABC_BridgeTxBlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif

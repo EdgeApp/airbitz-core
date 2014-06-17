@@ -504,7 +504,7 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    std::string txid;
+    std::string txid, malleableId;
     std::vector<bc::elliptic_curve_key> keys;
     libwallet::unsigned_transaction_type *utx;
 
@@ -526,11 +526,46 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     txid = ABC_BridgeNonMalleableTxId(utx->tx);
     ABC_STRDUP(pUtx->szTxId, txid.c_str());
 
+    malleableId = bc::encode_hex(bc::hash_transaction(utx->tx));
+    ABC_STRDUP(pUtx->szTxMalleableId, malleableId.c_str());
+
     if (ABC_BridgeBlockhainPostTx(utx, pError) != ABC_CC_Ok)
     {
         ABC_RET_ERROR(ABC_CC_ServerError, pError->szDescription);
         ABC_DebugLog(pError->szDescription);
     }
+exit:
+    return cc;
+}
+
+tABC_CC
+ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *height, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    bc::hash_digest txId;
+    auto row = watchers_.find(szWalletUUID);
+    ABC_CHECK_ASSERT(row != watchers_.end(),
+        ABC_CC_Error, "Unable find watcher");
+
+    txId = bc::decode_hex_digest<bc::hash_digest>(szTxId);
+    ABC_DebugLog("Looking height for: %s\n", szTxId);
+    *height = row->second->watcher->get_tx_height(txId);
+    ABC_DebugLog("Height: %ld\n", *height);
+exit:
+    return cc;
+}
+
+tABC_CC
+ABC_BridgeTxBlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    auto row = watchers_.find(szWalletUUID);
+    ABC_CHECK_ASSERT(row != watchers_.end(),
+        ABC_CC_Error, "Unable find watcher");
+
+    ABC_DebugLog("Looking blockchain height:\n");
+    *height = row->second->watcher->get_last_block_height();
+    ABC_DebugLog("Height: %ld\n", *height);
 exit:
     return cc;
 }
