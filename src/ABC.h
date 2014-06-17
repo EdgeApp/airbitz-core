@@ -330,6 +330,26 @@ extern "C" {
     } tABC_TxDetails;
 
     /**
+     * AirBitz Output Info
+     *
+     * Contains the outputs used in a transaction
+     *
+     */
+    typedef struct sABC_TxOutput
+    {
+        /** Was this output used as an input to a tx? **/
+        bool     input;
+        /** The number of satoshis used in the transaction **/
+        int64_t  value;
+        /** The coin address **/
+        char     *szAddress;
+        /** The tx address **/
+        char     *szTxId;
+        /** The tx index **/
+        int64_t  index;
+    } tABC_TxOutput;
+
+    /**
      * AirBitz Transaction Info
      *
      * This structure contains info for a transaction.
@@ -344,9 +364,9 @@ extern "C" {
         /** time of creation */
         int64_t timeCreation;
         /** count of bitcoin addresses associated with this transaciton */
-        unsigned int countAddresses;
+        unsigned int countOutputs;
         /** bitcoin addresses associated with this transaction */
-        char **aAddresses;
+        tABC_TxOutput **aOutputs;
         /** transaction details */
         tABC_TxDetails *pDetails;
     } tABC_TxInfo;

@@ -85,8 +85,8 @@ extern "C" {
                                      const char *szPassword,
                                      const char *szWalletUUID,
                                      uint64_t amountSatoshi, uint64_t feeSatoshi,
-                                     char **paInAddress, unsigned int inAddressCount,
-                                     char **paOutAddresses, unsigned int outAddressCount,
+                                     tABC_TxOutput **paInAddress, unsigned int inAddressCount,
+                                     tABC_TxOutput **paOutAddresses, unsigned int outAddressCount,
                                      const char *szTxId, const char *szMalTxId,
                                      tABC_Error *pError);
 

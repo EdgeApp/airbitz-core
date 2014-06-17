@@ -49,7 +49,6 @@ static tABC_CC     ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::short_hash &addr);
 static tABC_CC     ABC_BridgeStringToEc(char *privKey, bc::elliptic_curve_key& key, tABC_Error *pError);
-static void        ABC_BridgeVectorCopy(char ***arr, std::vector<std::string> addresses);
 static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_AccountGeneralInfo *pInfo);
 static uint64_t    ABC_BridgeCalcMinerFees(libwallet::unsigned_transaction_type *utx, tABC_AccountGeneralInfo *pInfo);
 static std::string ABC_BridgeWatcherFile(const char *szUserName, const char *szPassword, const char *szWalletUUID);
@@ -548,9 +547,8 @@ ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *h
         ABC_CC_Error, "Unable find watcher");
 
     txId = bc::decode_hex_digest<bc::hash_digest>(szTxId);
-    ABC_DebugLog("Looking height for: %s\n", szTxId);
     *height = row->second->watcher->get_tx_height(txId);
-    ABC_DebugLog("Height: %ld\n", *height);
+    ABC_DebugLog("Tx height for: %s %d\n", szTxId, *height);
 exit:
     return cc;
 }
@@ -563,9 +561,8 @@ ABC_BridgeTxBlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Err
     ABC_CHECK_ASSERT(row != watchers_.end(),
         ABC_CC_Error, "Unable find watcher");
 
-    ABC_DebugLog("Looking blockchain height:\n");
     *height = row->second->watcher->get_last_block_height();
-    ABC_DebugLog("Height: %ld\n", *height);
+    ABC_DebugLog("Block height: %d\n", *height);
 exit:
     return cc;
 }
@@ -595,10 +592,11 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_Error error;
+    tABC_Error *pError = &error;
     int64_t fees = 0;
     int64_t totalInSatoshi = 0, totalOutSatoshi = 0, totalMeSatoshi = 0, totalMeInSatoshi = 0;
-    char **iarr = NULL, **oarr = NULL;
-    std::vector<std::string> oaddresses, iaddresses;
+    tABC_TxOutput **iarr = NULL, **oarr = NULL;
+    unsigned int idx = 0, iCount = 0, oCount = 0;
     std::string txId, malTxId;
 
     if (watcherInfo == NULL)
@@ -609,35 +607,62 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
     ABC_DebugLog("ABC_BridgeTxCallback %s %s %s\n",
         watcherInfo->szUserName, watcherInfo->szPassword, watcherInfo->szWalletUUID);
 
+    txId = ABC_BridgeNonMalleableTxId(tx);
+    malTxId = bc::encode_hex(bc::hash_transaction(tx));
+
+    idx = 0;
+    iCount = tx.inputs.size();
+    iarr = (tABC_TxOutput **) malloc(sizeof(tABC_TxOutput *) * iCount);
     for (auto i : tx.inputs)
     {
         bc::payment_address addr;
         bc::extract(addr, i.script);
-
         auto prev = i.previous_output;
+
+        // Create output
+        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
+        out->input = true;
+        ABC_STRDUP(out->szTxId, bc::encode_hex(prev.hash).c_str());
+        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
+
+        // Check prevouts for values
         auto tx = watcherInfo->watcher->find_tx(prev.hash);
         if (prev.index < tx.outputs.size())
         {
+            out->value = tx.outputs[prev.index].value;
             totalInSatoshi += tx.outputs[prev.index].value;
             auto row = watcherInfo->addresses.find(addr.encoded());
             if  (row != watcherInfo->addresses.end())
                 totalMeInSatoshi += tx.outputs[prev.index].value;
         }
-        iaddresses.push_back(addr.encoded());
+        iarr[idx] = out;
+        idx++;
     }
 
+    idx = 0;
+    oCount = tx.outputs.size();
+    oarr = (tABC_TxOutput **) malloc(sizeof(tABC_TxOutput *) * oCount);
     for (auto o : tx.outputs)
     {
         bc::payment_address addr;
         bc::extract(addr, o.script);
+        // Create output
+        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
+        out->input = false;
+        out->value = o.value;
+        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
+        ABC_STRDUP(out->szTxId, malTxId.c_str());
+
+        // Do we own this address?
         auto row = watcherInfo->addresses.find(addr.encoded());
         if  (row != watcherInfo->addresses.end())
         {
-            oaddresses.push_back(addr.encoded());
             totalMeSatoshi += o.value;
-            // TODO: load address and mark recycleable = false
         }
         totalOutSatoshi += o.value;
+
+        oarr[idx] = out;
+        idx++;
     }
     if (totalMeSatoshi == 0 && totalMeInSatoshi == 0)
     {
@@ -647,27 +672,22 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
     fees = totalInSatoshi - totalOutSatoshi;
     totalMeSatoshi -= totalMeInSatoshi;
 
-    ABC_BridgeVectorCopy(&iarr, iaddresses);
-    ABC_BridgeVectorCopy(&oarr, oaddresses);
-
     ABC_DebugLog("calling ABC_TxReceiveTransaction\n");
     ABC_DebugLog("Total Me: %d, Total In: %d, Total Out: %d, Fees: %d\n",
                     totalMeSatoshi, totalInSatoshi, totalOutSatoshi, fees);
-    txId = ABC_BridgeNonMalleableTxId(tx);
-    malTxId = bc::encode_hex(bc::hash_transaction(tx));
     ABC_DebugLog("Non-Malleable: %s\n", txId.c_str());
     ABC_DebugLog("Malleable: %s\n", malTxId.c_str());
     ABC_CHECK_RET(
         ABC_TxReceiveTransaction(
             watcherInfo->szUserName, watcherInfo->szPassword, watcherInfo->szWalletUUID,
             totalMeSatoshi, fees,
-            iarr, iaddresses.size(),
-            oarr, oaddresses.size(),
+            iarr, iCount,
+            oarr, oCount,
             txId.c_str(), malTxId.c_str(), &error));
     ABC_BridgeWatcherSerializeAsync(watcherInfo);
 exit:
-    ABC_UtilFreeStringArray(oarr, oaddresses.size());
-    ABC_UtilFreeStringArray(iarr, iaddresses.size());
+    ABC_FREE(oarr);
+    ABC_FREE(iarr);
 }
 
 static
@@ -701,18 +721,6 @@ void ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amoun
     output.script.push_operation({bc::opcode::equalverify, bc::data_chunk()});
     output.script.push_operation({bc::opcode::checksig, bc::data_chunk()});
     outputs.push_back(output);
-}
-
-static
-void ABC_BridgeVectorCopy(char ***arr, std::vector<std::string> addresses)
-{
-    char **narr = new char * [addresses.size()];
-    for (size_t i = 0; i < addresses.size(); i++)
-    {
-        narr[i] = new char[addresses[i].size() + 1];
-        strcpy(narr[i], addresses[i].c_str());
-    }
-    *arr = narr;
 }
 
 static
