@@ -327,7 +327,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 
     // find/create a change address
     ABC_CHECK_RET(ABC_TxCreateNewAddress(
-                    pInfo->szUserName, pInfo->szPassword, 
+                    pInfo->szUserName, pInfo->szPassword,
                     pInfo->szWalletUUID, pInfo->pDetails,
                     &pChangeAddr, pError));
     pChangeAddr->pStateInfo->bRecycleable = false;
@@ -354,7 +354,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     ABC_CHECK_RET(
         ABC_TxGetPrivAddresses(pInfo->szUserName, pInfo->szPassword,
                                pInfo->szWalletUUID, privSeed,
-                               &paPrivAddresses, &privCountAddresses, 
+                               &paPrivAddresses, &privCountAddresses,
                                pError));
     // Sign the transaction
     ABC_CHECK_RET(
@@ -436,7 +436,7 @@ tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo, int64_t *pTotalFees, tABC_Er
 
     // find/create a change address
     ABC_CHECK_RET(ABC_TxCreateNewAddress(
-                    pInfo->szUserName, pInfo->szPassword, 
+                    pInfo->szUserName, pInfo->szPassword,
                     pInfo->szWalletUUID, pInfo->pDetails,
                     &pChangeAddr, pError));
     // save out this address

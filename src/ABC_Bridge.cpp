@@ -425,7 +425,7 @@ tABC_CC ABC_BridgeWatcherRestart(const char *szUserName,
     auto row = watchers_.find(szWalletUUID);
     ABC_CHECK_ASSERT(row != watchers_.end(),
         ABC_CC_Error, "Unable find watcher");
-    
+
     ABC_BridgeWatcherStop(szWalletUUID, pError);
     if (clearCache)
     {
