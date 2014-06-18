@@ -2230,6 +2230,15 @@ tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError)
     return ABC_BridgeWatcherStop(szWalletUUID, pError);
 }
 
+tABC_CC ABC_WatcherRestart(const char *szUserName,
+                           const char *szPassword,
+                           const char *szWalletUUID,
+                           bool clearCache,
+                           tABC_Error *pError)
+{
+    return ABC_BridgeWatcherRestart(szUserName, szPassword, szWalletUUID, clearCache, pError);
+}
+
 tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
                      unsigned int *height, tABC_Error *pError)
 {
