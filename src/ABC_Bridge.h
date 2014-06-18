@@ -10,6 +10,8 @@
 #define ABC_Bridge_h
 
 #include "ABC.h"
+#include "ABC_Account.h"
+#include "ABC_Tx.h"
 #include "ABC_Util.h"
 
 #ifdef __cplusplus
@@ -47,6 +49,43 @@ extern "C" {
                                            tABC_U08Buf PrivateSeed,
                                            int32_t N,
                                            tABC_Error *pError);
+
+    tABC_CC ABC_BridgeGetBitcoinPrivAddress(char **pszPrivAddress,
+                                            tABC_U08Buf PrivateSeed,
+                                            int32_t N,
+                                            tABC_Error *pError);
+
+    tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
+                                   const char *szPassword,
+                                   const char *walletUUID,
+                                   tABC_Error *pError);
+
+    tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError);
+
+    tABC_CC ABC_BridgeWatcherRestart(const char *szUserName,
+                                     const char *szPassword,
+                                     const char *szWalletUUID,
+                                     bool clearCache, tABC_Error *pError);
+
+    tABC_CC ABC_BridgeWatchAddr(const char *szUserName, const char *szPassword,
+                                const char *walletUUID, const char *address,
+                                bool prioritize, tABC_Error *pError);
+
+    tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
+                             char **addresses, int addressCount,
+                             char *changeAddress,
+                             tABC_UnsignedTx *pUtx,
+                             tABC_Error *pError);
+
+    tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
+                                 char **paPrivKey,
+                                 unsigned int keyCount,
+                                 tABC_UnsignedTx *pUtx,
+                                 tABC_Error *pError);
+
+    tABC_CC ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *height, tABC_Error *pError);
+
+    tABC_CC ABC_BridgeTxBlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError);
 
 #ifdef __cplusplus
 }

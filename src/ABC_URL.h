@@ -41,7 +41,6 @@ extern "C" {
                               char **pszResults,
                               tABC_Error *pError);
 
-
 #ifdef __cplusplus
 }
 #endif
