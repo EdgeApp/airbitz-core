@@ -81,6 +81,8 @@ extern "C" {
                                     int64_t *pSatoshi,
                                     tABC_Error *pError);
 
+    tABC_CC ABC_TxBlockHeightUpdate(uint64_t height, tABC_Error *pError);
+
     tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
                                      const char *szPassword,
                                      const char *szWalletUUID,

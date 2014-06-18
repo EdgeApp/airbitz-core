@@ -162,7 +162,8 @@ extern "C" {
      */
     typedef enum eABC_AsyncEventType
     {
-        ABC_AsyncEventType_IncomingBitCoin
+        ABC_AsyncEventType_IncomingBitCoin,
+        ABC_AsyncEventType_BlockHeightChange
     } tABC_AsyncEventType;
 
     /**
