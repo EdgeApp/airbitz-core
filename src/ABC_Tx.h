@@ -41,6 +41,7 @@ extern "C" {
         tABC_Error  errorInfo;
     } tABC_TxSendInfo;
 
+
     tABC_CC ABC_TxInitialize(tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
                              void                         *pData,
                              tABC_Error                   *pError);
@@ -79,6 +80,15 @@ extern "C" {
                                     int currencyNum,
                                     int64_t *pSatoshi,
                                     tABC_Error *pError);
+
+    tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
+                                     const char *szPassword,
+                                     const char *szWalletUUID,
+                                     uint64_t amountSatoshi, uint64_t feeSatoshi,
+                                     tABC_TxOutput **paInAddress, unsigned int inAddressCount,
+                                     tABC_TxOutput **paOutAddresses, unsigned int outAddressCount,
+                                     const char *szTxId, const char *szMalTxId,
+                                     tABC_Error *pError);
 
     tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
                                        const char *szPassword,
@@ -176,6 +186,30 @@ extern "C" {
     tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo,
                         char **pszUUID,
                         tABC_Error *pError);
+
+    tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo,
+                                int64_t *pTotalFees,
+                                tABC_Error *pError);
+
+    tABC_CC ABC_TxGetPubAddresses(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletUUID,
+                                char ***paAddresses,
+                                unsigned int *pCount,
+                                tABC_Error *pError);
+
+    tABC_CC ABC_TxGetPrivAddresses(const char *szUserName,
+                                   const char *szPassword,
+                                   const char *szWalletUUID,
+                                   tABC_U08Buf seed,
+                                   char ***paAddresses,
+                                   unsigned int *pCount,
+                                   tABC_Error *pError);
+
+    tABC_CC ABC_TxWatchAddresses(const char *szUserName,
+                                 const char *szPassword,
+                                 const char *szWalletUUID,
+                                 tABC_Error *pError);
 
 #ifdef __cplusplus
 }

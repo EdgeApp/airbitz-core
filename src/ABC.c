@@ -1624,6 +1624,45 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_CalcSendFees(const char *szUserName,
+                         const char *szPassword,
+                         const char *szWalletUUID,
+                         const char *szDestAddress,
+                         tABC_TxDetails *pDetails,
+                         int64_t *pTotalFees,
+                         tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_TxSendInfo *pTxSendInfo = NULL;
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet name provided");
+    ABC_CHECK_NULL(pDetails);
+
+    ABC_ALLOC(pTxSendInfo, sizeof(tABC_TxSendInfo));
+    ABC_STRDUP(pTxSendInfo->szUserName, szUserName);
+    ABC_STRDUP(pTxSendInfo->szPassword, szPassword);
+    ABC_STRDUP(pTxSendInfo->szWalletUUID, szWalletUUID);
+    ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
+
+    ABC_CHECK_RET(ABC_TxDupDetails(&(pTxSendInfo->pDetails), pDetails, pError));
+    ABC_CHECK_RET(ABC_TxCalcSendFees(pTxSendInfo, pTotalFees, pError));
+
+    pDetails->amountFeesAirbitzSatoshi = pTxSendInfo->pDetails->amountFeesAirbitzSatoshi;
+    pDetails->amountFeesMinersSatoshi = pTxSendInfo->pDetails->amountFeesMinersSatoshi;
+exit:
+    ABC_TxSendInfoFree(pTxSendInfo);
+    return cc;
+}
+
 /**
  * Gets the transaction specified
  *
@@ -2174,3 +2213,56 @@ void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings)
 
     ABC_AccountFreeSettings(pSettings);
 }
+
+tABC_CC ABC_WatcherStart(const char *szUserName,
+                               const char *szPassword,
+                               const char *szWalletUUID,
+                               tABC_Error *pError)
+{
+    return ABC_BridgeWatcherStart(szUserName, szPassword, szWalletUUID, pError);
+}
+
+
+tABC_CC ABC_WatchAddresses(const char *szUsername, const char *szPassword,
+                           const char *szWalletUUID, tABC_Error *pError)
+{
+    return ABC_TxWatchAddresses(szUsername, szPassword, szWalletUUID, pError);
+}
+
+tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError)
+{
+    return ABC_BridgeWatcherStop(szWalletUUID, pError);
+}
+
+tABC_CC ABC_WatcherRestart(const char *szUserName,
+                           const char *szPassword,
+                           const char *szWalletUUID,
+                           bool clearCache,
+                           tABC_Error *pError)
+{
+    return ABC_BridgeWatcherRestart(szUserName, szPassword, szWalletUUID, clearCache, pError);
+}
+
+tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
+                     unsigned int *height, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
+    ABC_CHECK_NULL(szTxId);
+    ABC_CHECK_ASSERT(strlen(szTxId) > 0, ABC_CC_Error, "No tx id provided");
+    ABC_BridgeTxHeight(szWalletUUID, szTxId, height, pError);
+exit:
+    return cc;
+}
+
+tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
+    ABC_BridgeTxBlockHeight(szWalletUUID, height, pError);
+exit:
+    return cc;
+}
+

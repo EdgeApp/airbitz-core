@@ -22,6 +22,8 @@
 /** The number of decimal-place shifts needed to convert satoshi to bitcoin. */
 #define ABC_BITCOIN_DECIMAL_PLACES   8
 
+#define NETWORK_FAKE 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -99,7 +101,9 @@ extern "C" {
         /** Invalid wallet ID */
         ABC_CC_InvalidWalletID = 30,
         /** Request (address) not found */
-        ABC_CC_NoRequest = 31
+        ABC_CC_NoRequest = 31,
+        /** Not enough money to send transaction */
+        ABC_CC_InsufficientFunds = 32
     } tABC_CC;
 
     /**
@@ -175,6 +179,9 @@ extern "C" {
 
         /** type of event that occured */
         tABC_AsyncEventType eventType;
+
+        /** if the event involved a transaction, this is its ID */
+        char *szWalletUUID;
 
         /** if the event involved a transaction, this is its ID */
         char *szTxID;
@@ -325,6 +332,26 @@ extern "C" {
     } tABC_TxDetails;
 
     /**
+     * AirBitz Output Info
+     *
+     * Contains the outputs used in a transaction
+     *
+     */
+    typedef struct sABC_TxOutput
+    {
+        /** Was this output used as an input to a tx? **/
+        bool     input;
+        /** The number of satoshis used in the transaction **/
+        int64_t  value;
+        /** The coin address **/
+        char     *szAddress;
+        /** The tx address **/
+        char     *szTxId;
+        /** The tx index **/
+        int64_t  index;
+    } tABC_TxOutput;
+
+    /**
      * AirBitz Transaction Info
      *
      * This structure contains info for a transaction.
@@ -334,15 +361,38 @@ extern "C" {
     {
         /** transaction identifier */
         char *szID;
+        /** malleable transaction identifier */
+        char *szMalleableTxId;
         /** time of creation */
         int64_t timeCreation;
         /** count of bitcoin addresses associated with this transaciton */
-        unsigned int countAddresses;
+        unsigned int countOutputs;
         /** bitcoin addresses associated with this transaction */
-        char **aAddresses;
+        tABC_TxOutput **aOutputs;
         /** transaction details */
         tABC_TxDetails *pDetails;
     } tABC_TxInfo;
+
+    /**
+     * AirBitz Unsigned Transaction
+     *
+     * Includes the approximate fees to send out this transaction
+     */
+    typedef struct sABC_UnsignedTx
+    {
+        void *data;
+        /** Tx Id we use internally */
+        char *szTxId;
+        /** block chain tx id**/
+        char *szTxMalleableId;
+        /** Fees associated with the tx **/
+        uint64_t fees;
+        /** Number for outputs **/
+        unsigned int countOutputs;
+        /** The output information **/
+        tABC_TxOutput **aOutputs;
+    } tABC_UnsignedTx;
+
 
     /**
      * AirBitz Password Rule
@@ -683,6 +733,14 @@ extern "C" {
                                     void *pData,
                                     tABC_Error *pError);
 
+    tABC_CC ABC_CalcSendFees(const char *szUserName,
+                             const char *szPassword,
+                             const char *szWalletUUID,
+                             const char *szDestAddress,
+                             tABC_TxDetails *pDetails,
+                             int64_t *pTotalFees,
+                             tABC_Error *pError);
+
     tABC_CC ABC_GetTransaction(const char *szUserName,
                                const char *szPassword,
                                const char *szWalletUUID,
@@ -767,6 +825,26 @@ extern "C" {
                                       tABC_Error *pError);
 
     void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings);
+
+    tABC_CC ABC_WatcherStart(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletUUID,
+                                tABC_Error *pError);
+
+    tABC_CC ABC_WatchAddresses(const char *szUsername, const char *szPassword,
+                               const char *szWalletUUID, tABC_Error *pError);
+
+    tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError);
+
+    tABC_CC ABC_WatcherRestart(const char *szUserName,
+                               const char *szPassword,
+                               const char *szWalletUUID,
+                               bool clearCache,
+                               tABC_Error *pError);
+
+    tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *height, tABC_Error *pError);
+
+    tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError);
 
     // temp functions
     void tempEventA();
