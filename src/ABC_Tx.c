@@ -57,7 +57,7 @@
 #define JSON_TX_CATEGORY_FIELD                  "category"
 #define JSON_TX_NOTES_FIELD                     "notes"
 #define JSON_TX_ATTRIBUTES_FIELD                "attributes"
-#define JSON_TX_ADDRESSES_FIELD                 "addresses"
+#define JSON_TX_OUTPUTS_FIELD                   "outputs"
 #define JSON_TX_OUTPUT_FLAG                     "input"
 #define JSON_TX_OUTPUT_VALUE                    "value"
 #define JSON_TX_OUTPUT_ADDRESS                  "address"
@@ -2573,13 +2573,13 @@ tABC_CC ABC_TxLoadTransaction(const char *szUserName,
     ABC_CHECK_RET(ABC_TxDecodeTxDetails(pJSON_Root, &(pTx->pDetails), pError));
 
     // get the addresses array (if it exists)
-    json_t *jsonAddresses = json_object_get(pJSON_Root, JSON_TX_ADDRESSES_FIELD);
-    if (jsonAddresses)
+    json_t *jsonOutputs = json_object_get(pJSON_Root, JSON_TX_OUTPUTS_FIELD);
+    if (jsonOutputs)
     {
-        ABC_CHECK_ASSERT(json_is_array(jsonAddresses), ABC_CC_JSONError, "Error parsing JSON transaction package - missing addresses array");
+        ABC_CHECK_ASSERT(json_is_array(jsonOutputs), ABC_CC_JSONError, "Error parsing JSON transaction package - missing addresses array");
 
         // get the number of elements in the array
-        pTx->countOutputs = (int) json_array_size(jsonAddresses);
+        pTx->countOutputs = (int) json_array_size(jsonOutputs);
 
         if (pTx->countOutputs > 0)
         {
@@ -2589,7 +2589,7 @@ tABC_CC ABC_TxLoadTransaction(const char *szUserName,
             {
                 ABC_ALLOC(pTx->aOutputs[i], sizeof(tABC_TxOutput));
 
-                json_t *pJSON_Elem = json_array_get(jsonAddresses, i);
+                json_t *pJSON_Elem = json_array_get(jsonOutputs, i);
                 ABC_CHECK_ASSERT((pJSON_Elem && json_is_object(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON transaction output - missing object");
 
                 json_t *jsonVal = json_object_get(pJSON_Elem, JSON_TX_OUTPUT_FLAG);
@@ -2882,7 +2882,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     tABC_U08Buf MK = ABC_BUF_NULL;
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
-    json_t *pJSON_AddressesArray = NULL;
+    json_t *pJSON_OutputArray = NULL;
     json_t **ppJSON_Output = NULL;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
@@ -2915,7 +2915,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pTx->pDetails, pError));
 
     // create the addresses array object
-    pJSON_AddressesArray = json_array();
+    pJSON_OutputArray = json_array();
 
     // if there are any addresses
     if ((pTx->countOutputs > 0) && (pTx->aOutputs != NULL))
@@ -2941,13 +2941,13 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
             ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
             // add output to the array
-            retVal = json_array_append_new(pJSON_AddressesArray, ppJSON_Output[i]);
+            retVal = json_array_append_new(pJSON_OutputArray, ppJSON_Output[i]);
             ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
         }
     }
 
     // add the address array to the  object
-    int retVal = json_object_set(pJSON_Root, JSON_TX_ADDRESSES_FIELD, pJSON_AddressesArray);
+    int retVal = json_object_set(pJSON_Root, JSON_TX_OUTPUTS_FIELD, pJSON_OutputArray);
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // create the transaction directory if needed
@@ -2963,7 +2963,7 @@ exit:
     ABC_FREE_STR(szFilename);
     ABC_CLEAR_FREE(ppJSON_Output, sizeof(json_t *) * pTx->countOutputs);
     if (pJSON_Root) json_decref(pJSON_Root);
-    if (pJSON_AddressesArray) json_decref(pJSON_AddressesArray);
+    if (pJSON_OutputArray) json_decref(pJSON_OutputArray);
 
     ABC_TxMutexUnlock(NULL);
     return cc;
