@@ -22,6 +22,8 @@
 /** The number of decimal-place shifts needed to convert satoshi to bitcoin. */
 #define ABC_BITCOIN_DECIMAL_PLACES   8
 
+#define NETWORK_FAKE 1
+
 #ifdef __cplusplus
 extern "C" {
 #endif
