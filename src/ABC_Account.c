@@ -72,7 +72,7 @@
 #define JSON_INFO_AIRBITZ_FEE_ADDRESS_FIELD     "address"
 #define JSON_INFO_OBELISK_SERVERS_FIELD         "obeliskServers"
 
-#define ACCOUNT_ACCEPTABLE_INFO_FILE_AGE_SECS   (7 * 24 * 60 * 60) // how many seconds old can the info file before it should be updated
+#define ACCOUNT_ACCEPTABLE_INFO_FILE_AGE_SECS   (24 * 60 * 60) // how many seconds old can the info file before it should be updated
 
 // holds keys for a given account
 typedef struct sAccountKeys
