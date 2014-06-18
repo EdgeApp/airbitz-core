@@ -47,6 +47,7 @@ static std::map<WalletUUID, WatcherInfo*> watchers_;
 
 #if !NETWORK_FAKE
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx);
+static void        ABC_BridgeHeightCallback(size_t block_height);
 static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, libwallet::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::short_hash &addr);
@@ -332,8 +333,14 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
 
     ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&ppInfo, pError));
     /* Set transaction callback */
-    ABC_DebugLog("setting callback\n");
+    ABC_DebugLog("Setting tx callback\n");
     watcherInfo->watcher->set_callback(watcherInfo->callback);
+
+    ABC_DebugLog("Setting height callback\n");
+    watcherInfo->watcher->set_height_callback([](const size_t height)
+    {
+        ABC_BridgeHeightCallback(height);
+    });
 
     if (false && ppInfo->countObeliskServers > 0)
     {
@@ -703,8 +710,6 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
     ABC_DebugLog("calling ABC_TxReceiveTransaction\n");
     ABC_DebugLog("Total Me: %d, Total In: %d, Total Out: %d, Fees: %d\n",
                     totalMeSatoshi, totalInSatoshi, totalOutSatoshi, fees);
-    ABC_DebugLog("Non-Malleable: %s\n", txId.c_str());
-    ABC_DebugLog("Malleable: %s\n", malTxId.c_str());
     ABC_CHECK_RET(
         ABC_TxReceiveTransaction(
             watcherInfo->szUserName, watcherInfo->szPassword, watcherInfo->szWalletUUID,
@@ -716,6 +721,13 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
 exit:
     ABC_FREE(oarr);
     ABC_FREE(iarr);
+}
+
+static
+void ABC_BridgeHeightCallback(size_t block_height)
+{
+    tABC_Error error;
+    ABC_TxBlockHeightUpdate(block_height, &error);
 }
 
 static tABC_CC
@@ -767,7 +779,6 @@ static
 tABC_CC ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type *utx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_DebugLog("Transaction Error Code: %d\n", utx->code);
     switch (utx->code)
     {
         case libwallet::insufficent_funds:
@@ -822,10 +833,8 @@ uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_AccountGeneralInfo *pInfo)
     uint64_t abFees =
         (uint64_t) ((double) amount *
                     (pInfo->pAirBitzFee->percentage * 0.01));
-    ABC_DebugLog("Percent satoshi: %ld\n", abFees);
     abFees = AB_MIN(pInfo->pAirBitzFee->minSatoshi,
                 AB_MAX(pInfo->pAirBitzFee->maxSatoshi, abFees));
-    ABC_DebugLog("Bounded fees satoshi: %ld\n", abFees);
     return abFees;
 }
 
@@ -835,7 +844,6 @@ uint64_t ABC_BridgeCalcMinerFees(libwallet::unsigned_transaction_type *utx,
 {
     uint64_t fees = 0;
     size_t tx_size = bc::satoshi_raw_size(utx->tx);
-    ABC_DebugLog("Tx Size: %ld\n", tx_size);
     if (pInfo->countMinersFees > 0)
     {
         for (int i = 0; i < pInfo->countMinersFees; ++i)
@@ -847,7 +855,6 @@ uint64_t ABC_BridgeCalcMinerFees(libwallet::unsigned_transaction_type *utx,
             }
         }
     }
-    ABC_DebugLog("Miner Fees: %ld\n", fees);
     return fees;
 }
 

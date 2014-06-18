@@ -708,6 +708,22 @@ exit:
     return cc;
 }
 
+tABC_CC
+ABC_TxBlockHeightUpdate(uint64_t height, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    if (gfAsyncBitCoinEventCallback)
+    {
+        tABC_AsyncBitCoinInfo info;
+        info.eventType = ABC_AsyncEventType_BlockHeightChange;
+        ABC_STRDUP(info.szDescription, "Block height change");
+        gfAsyncBitCoinEventCallback(&info);
+        ABC_FREE_STR(info.szDescription);
+    }
+exit:
+    return cc;
+}
+
 /**
  * Handles creating or updating when we receive a transaction
  *
