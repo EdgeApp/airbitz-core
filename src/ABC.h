@@ -379,9 +379,16 @@ extern "C" {
     typedef struct sABC_UnsignedTx
     {
         void *data;
+        /** Tx Id we use internally */
         char *szTxId;
+        /** block chain tx id**/
         char *szTxMalleableId;
+        /** Fees associated with the tx **/
         uint64_t fees;
+        /** Number for outputs **/
+        unsigned int countOutputs;
+        /** The output information **/
+        tABC_TxOutput **aOutputs;
     } tABC_UnsignedTx;
 
 

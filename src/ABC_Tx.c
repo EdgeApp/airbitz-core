@@ -303,6 +303,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // Change address variables
     tABC_TxAddress *pChangeAddr = NULL;
 
+    int i = 0;
     char *szPrivSeed = NULL;
     char **paAddresses = NULL;
     char **paPrivAddresses = NULL;
@@ -364,13 +365,20 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     pTx->pStateInfo->bInternal = true;
     ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, utx.szTxMalleableId);
 
-    // Set the address
-    pTx->countOutputs = 1;
-    ABC_ALLOC(pTx->aOutputs, sizeof(tABC_TxOutput *));
-    ABC_ALLOC(pTx->aOutputs[0], sizeof(tABC_TxOutput));
-    ABC_STRDUP(pTx->aOutputs[0]->szAddress, pInfo->szDestAddress);
-    pTx->aOutputs[0]->input = false;
-    pTx->aOutputs[0]->value = pTx->pDetails->amountSatoshi;
+    pTx->countOutputs = utx.countOutputs;
+    if (pTx->countOutputs > 0)
+    {
+        ABC_ALLOC(pTx->aOutputs, sizeof(tABC_TxOutput *) * pTx->countOutputs);
+        for (i = 0; i < utx.countOutputs; ++i)
+        {
+            ABC_DebugLog("Saving Outputs: %s\n", utx.aOutputs[i]->szAddress);
+            ABC_ALLOC(pTx->aOutputs[i], sizeof(tABC_TxOutput));
+            ABC_STRDUP(pTx->aOutputs[i]->szAddress, utx.aOutputs[i]->szAddress);
+            ABC_STRDUP(pTx->aOutputs[i]->szTxId, utx.aOutputs[i]->szTxId);
+            pTx->aOutputs[i]->input = utx.aOutputs[i]->input;
+            pTx->aOutputs[i]->value = utx.aOutputs[i]->value;
+        }
+    }
 
     // copy the details
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
@@ -396,6 +404,7 @@ exit:
     ABC_TxFreeTx(pTx);
     ABC_TxFreeAddress(pChangeAddr);
     ABC_UtilFreeStringArray(paAddresses, countAddresses);
+    ABC_TxFreeOutputs(utx.aOutputs, utx.countOutputs);
     ABC_TxMutexUnlock(NULL);
     return cc;
 }
@@ -724,7 +733,7 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
         ABC_ALLOC(pTx->pStateInfo, sizeof(tTxStateInfo));
         ABC_ALLOC(pTx->pDetails, sizeof(tABC_TxDetails));
 
-        pTx->pStateInfo->szMalleableTxId = szMalTxId;
+        ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, szMalTxId);
         pTx->pStateInfo->timeCreation = time(NULL);
         pTx->pDetails->amountSatoshi = amountSatoshi;
         pTx->pDetails->amountFeesMinersSatoshi = feeSatoshi;
