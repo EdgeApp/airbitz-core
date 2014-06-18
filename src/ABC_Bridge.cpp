@@ -45,6 +45,7 @@ struct WatcherInfo
 typedef std::string WalletUUID;
 static std::map<WalletUUID, WatcherInfo*> watchers_;
 
+static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, libwallet::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::short_hash &addr);
@@ -554,6 +555,53 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     {
         ABC_RET_ERROR(ABC_CC_ServerError, pError->szDescription);
         ABC_DebugLog(pError->szDescription);
+    }
+
+    ABC_BridgeExtractOutputs(row->second->watcher, utx, malleableId, pUtx, pError);
+exit:
+    return cc;
+}
+
+static tABC_CC
+ABC_BridgeExtractOutputs(libwallet::watcher *watcher, libwallet::unsigned_transaction_type *utx,
+                         std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    pUtx->countOutputs = utx->tx.inputs.size() + utx->tx.outputs.size();
+    pUtx->aOutputs = (tABC_TxOutput **) malloc(sizeof(tABC_TxOutput) * pUtx->countOutputs);
+    int i = 0;
+    for (auto& input : utx->tx.inputs)
+    {
+        auto prev = input.previous_output;
+        bc::payment_address addr;
+        bc::extract(addr, input.script);
+
+        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
+        out->input = true;
+        ABC_STRDUP(out->szTxId, bc::encode_hex(prev.hash).c_str());
+        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
+
+        auto tx = watcher->find_tx(prev.hash);
+        if (prev.index < tx.outputs.size())
+        {
+            out->value = tx.outputs[prev.index].value;
+        }
+        pUtx->aOutputs[i] = out;
+        i++;
+    }
+    for (auto& output : utx->tx.outputs)
+    {
+        bc::payment_address addr;
+        bc::extract(addr, output.script);
+
+        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
+        out->input = false;
+        out->value = output.value;
+        ABC_STRDUP(out->szTxId, malleableId.c_str());
+        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
+
+        pUtx->aOutputs[i] = out;
+        i++;
     }
 exit:
     return cc;
