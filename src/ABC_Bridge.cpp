@@ -311,6 +311,7 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
 
 #if !NETWORK_FAKE
     tABC_AccountGeneralInfo *ppInfo = NULL;
+    libwallet::watcher::block_height_callback hcb;
     char *szUserCopy;
     char *szPassCopy;
     char *szUUIDCopy;
@@ -337,10 +338,11 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     watcherInfo->watcher->set_callback(watcherInfo->callback);
 
     ABC_DebugLog("Setting height callback\n");
-    watcherInfo->watcher->set_height_callback([](const size_t height)
+    hcb = [](const size_t height)
     {
         ABC_BridgeHeightCallback(height);
-    });
+    };
+    watcherInfo->watcher->set_height_callback(hcb);
 
     if (false && ppInfo->countObeliskServers > 0)
     {
