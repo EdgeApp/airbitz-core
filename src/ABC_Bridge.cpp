@@ -485,7 +485,6 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
         bc::payment_address pa;
         ABC_CHECK_ASSERT(true == pa.set_encoded(addresses[i]),
             ABC_CC_Error, "Bad source address");
-        std::cout << "Including in outputs: " <<  pa.encoded() << std::endl;
         addresses_.push_back(pa);
     }
     ABC_CHECK_ASSERT(true == change.set_encoded(changeAddress),
