@@ -47,7 +47,7 @@ static std::map<WalletUUID, WatcherInfo*> watchers_;
 
 #if !NETWORK_FAKE
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx);
-static void        ABC_BridgeHeightCallback(size_t block_height);
+static void        ABC_BridgeHeightCallback(WatcherInfo *watcherInfo, size_t block_height);
 static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, libwallet::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::short_hash &addr);
@@ -343,9 +343,9 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     watcherInfo->watcher->set_callback(watcherInfo->callback);
 
     ABC_DebugLog("Setting height callback\n");
-    hcb = [](const size_t height)
+    hcb = [watcherInfo](const size_t height)
     {
-        ABC_BridgeHeightCallback(height);
+        ABC_BridgeHeightCallback(watcherInfo, height);
     };
     watcherInfo->watcher->set_height_callback(hcb);
 
@@ -729,10 +729,11 @@ exit:
 }
 
 static
-void ABC_BridgeHeightCallback(size_t block_height)
+void ABC_BridgeHeightCallback(WatcherInfo *watcherInfo, size_t block_height)
 {
     tABC_Error error;
     ABC_TxBlockHeightUpdate(block_height, &error);
+    ABC_BridgeWatcherSerializeAsync(watcherInfo);
 }
 
 static tABC_CC
