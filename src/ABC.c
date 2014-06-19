@@ -2219,19 +2219,52 @@ tABC_CC ABC_WatcherStart(const char *szUserName,
                                const char *szWalletUUID,
                                tABC_Error *pError)
 {
-    return ABC_BridgeWatcherStart(szUserName, szPassword, szWalletUUID, pError);
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_BridgeWatcherStart(szUserName, szPassword, szWalletUUID, pError));
+
+exit:
+
+    return cc;
 }
 
 
 tABC_CC ABC_WatchAddresses(const char *szUsername, const char *szPassword,
                            const char *szWalletUUID, tABC_Error *pError)
 {
-    return ABC_TxWatchAddresses(szUsername, szPassword, szWalletUUID, pError);
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_TxWatchAddresses(szUsername, szPassword, szWalletUUID, pError));
+
+exit:
+
+    return cc;
 }
 
 tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError)
 {
-    return ABC_BridgeWatcherStop(szWalletUUID, pError);
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_BridgeWatcherStop(szWalletUUID, pError));
+
+exit:
+
+    return cc;
 }
 
 tABC_CC ABC_WatcherRestart(const char *szUserName,
@@ -2240,29 +2273,56 @@ tABC_CC ABC_WatcherRestart(const char *szUserName,
                            bool clearCache,
                            tABC_Error *pError)
 {
-    return ABC_BridgeWatcherRestart(szUserName, szPassword, szWalletUUID, clearCache, pError);
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_BridgeWatcherRestart(szUserName, szPassword, szWalletUUID, clearCache, pError));
+
+exit:
+
+    return cc;
 }
 
 tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
                      unsigned int *height, tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
     ABC_CHECK_NULL(szTxId);
     ABC_CHECK_ASSERT(strlen(szTxId) > 0, ABC_CC_Error, "No tx id provided");
-    ABC_BridgeTxHeight(szWalletUUID, szTxId, height, pError);
+    ABC_CHECK_RET(ABC_BridgeTxHeight(szWalletUUID, szTxId, height, pError));
+
 exit:
+
     return cc;
 }
 
 tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError)
 {
+    ABC_DebugLog("%s called", __FUNCTION__);
+
     tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
-    ABC_BridgeTxBlockHeight(szWalletUUID, height, pError);
+    ABC_CHECK_RET(ABC_BridgeTxBlockHeight(szWalletUUID, height, pError));
+
 exit:
+
     return cc;
 }
 
