@@ -597,7 +597,6 @@ ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *h
 
     txId = bc::decode_hex_digest<bc::hash_digest>(szTxId);
     *height = row->second->watcher->get_tx_height(txId);
-    ABC_DebugLog("Tx height for: %s %d\n", szTxId, *height);
 exit:
 #else
     *height = 0;
@@ -615,7 +614,6 @@ ABC_BridgeTxBlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Err
         ABC_CC_Error, "Unable find watcher");
 
     *height = row->second->watcher->get_last_block_height();
-    ABC_DebugLog("Block height: %d\n", *height);
 exit:
 #else
     *height = 0;
