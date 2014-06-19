@@ -77,6 +77,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
                             tABC_Error *pError)
 {
     libwallet::uri_parse_result result;
+    libbitcoin::payment_address address;
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
@@ -92,7 +93,11 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
 
     // parse and extract contents
     if (!libwallet::uri_parse(szURI, result))
-        ABC_RET_ERROR(ABC_CC_ParseError, "Malformed bitcoin URI");
+    {
+        if (!address.set_encoded(szURI))
+            ABC_RET_ERROR(ABC_CC_ParseError, "Malformed bitcoin URI");
+        result.address = address;
+    }
     if (result.address)
         ABC_STRDUP(pInfo->szAddress, result.address.get().encoded().c_str());
     if (result.amount)
