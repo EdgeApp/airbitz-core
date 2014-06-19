@@ -579,6 +579,7 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
         ABC_DebugLog(pError->szDescription);
     }
 
+    ABC_BridgeWatcherSerializeAsync(row->second);
     ABC_BridgeExtractOutputs(row->second->watcher, utx, malleableId, pUtx, pError);
 exit:
 #endif // NETWORK_FAKE
