@@ -2214,10 +2214,17 @@ void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings)
     ABC_AccountFreeSettings(pSettings);
 }
 
+/**
+ * Start the watcher for a wallet
+ *
+ * @param szUserName   UserName for the account
+ * @param szPassword   Password for the account
+ * @param szWalletUUID The wallet watcher to use
+ */
 tABC_CC ABC_WatcherStart(const char *szUserName,
-                               const char *szPassword,
-                               const char *szWalletUUID,
-                               tABC_Error *pError)
+                         const char *szPassword,
+                         const char *szWalletUUID,
+                         tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
@@ -2233,7 +2240,13 @@ exit:
     return cc;
 }
 
-
+/**
+ * Stop the watcher for a wallet
+ *
+ * @param szUserName   UserName for the account
+ * @param szPassword   Password for the account
+ * @param szWalletUUID The wallet watcher to use
+ */
 tABC_CC ABC_WatchAddresses(const char *szUsername, const char *szPassword,
                            const char *szWalletUUID, tABC_Error *pError)
 {
@@ -2251,6 +2264,11 @@ exit:
     return cc;
 }
 
+/**
+ * Stop the watcher for a wallet
+ *
+ * @param szWalletUUID The wallet watcher to use
+ */
 tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -2267,6 +2285,14 @@ exit:
     return cc;
 }
 
+/**
+ * Restart the watcher for a wallet
+ *
+ * @param szUserName   UserName for the account
+ * @param szPassword   Password for the account
+ * @param szWalletUUID The wallet watcher to use
+ * @param clearCache   true if you want to rebuild the watcher cache
+ */
 tABC_CC ABC_WatcherRestart(const char *szUserName,
                            const char *szPassword,
                            const char *szWalletUUID,
@@ -2287,6 +2313,13 @@ exit:
     return cc;
 }
 
+/**
+ * Lookup the transaction height
+ *
+ * @param szWalletUUID Used to lookup the watcher with the data
+ * @param szTxId The "malleable" transaction id
+ * @param height Pointer to integer to store the results
+ */
 tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
                      unsigned int *height, tABC_Error *pError)
 {
@@ -2308,6 +2341,12 @@ exit:
     return cc;
 }
 
+/**
+ * Lookup the block chain height
+ *
+ * @param szWalletUUID Used to lookup the watcher with the data
+ * @param height Pointer to integer to store the results
+ */
 tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
