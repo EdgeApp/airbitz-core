@@ -17,6 +17,7 @@
 #include "ABC_Util.h"
 #include "ABC_Crypto.h"
 #include "ABC_Util.h"
+#include "ABC_Exchanges.h"
 
 #define TEST_WAIT_ON_CB(codeBlock) \
     { \
@@ -810,6 +811,22 @@ static void test_getcurrencies()
     printABC_Error(&Error);
 }
 
+static void test_exchanges()
+{
+    tABC_Error Error;
+
+    double rate = 0.0;
+    ABC_ExchangeCurrentRate(USERNAME, PASSWORD, CURRENCY_NUM_USD, &rate, &Error);
+    printf("Usd Old Rate: %f\n", rate);
+    printABC_Error(&Error);
+
+    sleep(4);
+
+    ABC_ExchangeCurrentRate(USERNAME, PASSWORD, CURRENCY_NUM_USD, &rate, &Error);
+    printf("Usd Current Rate: %f\n", rate);
+    printABC_Error(&Error);
+}
+
 static void create_credentials()
 {
     size_t sSize = 20;
@@ -841,6 +858,10 @@ int main(int argc, const char *argv[])
     printf("test_createaccount();\n");
     test_createaccount();
 
+    printf("test_exchanges();\n");
+    test_exchanges();
+
+    /*
     printf("test_signin();\n");
     test_signin();
 
@@ -915,6 +936,7 @@ int main(int argc, const char *argv[])
 
     printf("test_getcurrencies();\n");
     test_getcurrencies();
+    */
 
     destroy_credentials();
     sem_destroy(&cb_sem);

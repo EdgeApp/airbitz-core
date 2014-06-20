@@ -71,12 +71,16 @@ extern "C" {
 
     int64_t ABC_TxBitcoinToSatoshi(double bitcoin);
 
-    tABC_CC ABC_TxSatoshiToCurrency(int64_t satoshi,
+    tABC_CC ABC_TxSatoshiToCurrency(const char *szUserName,
+                                    const char *szPassword,
+                                    int64_t satoshi,
                                     double *pCurrency,
                                     int currencyNum,
                                     tABC_Error *pError);
 
-    tABC_CC ABC_TxCurrencyToSatoshi(double currency,
+    tABC_CC ABC_TxCurrencyToSatoshi(const char *szUserName,
+                                    const char *szPassword,
+                                    double currency,
                                     int currencyNum,
                                     int64_t *pSatoshi,
                                     tABC_Error *pError);

@@ -17,7 +17,11 @@
 #include "ABC.h"
 #include "ABC_Debug.h"
 
+#define CURRENCY_NUM_CAD                124
+#define CURRENCY_NUM_CNY                156
+#define CURRENCY_NUM_MXN                484
 #define CURRENCY_NUM_USD                840
+#define CURRENCY_NUM_EUR                978
 
 #ifdef __cplusplus
 extern "C" {
