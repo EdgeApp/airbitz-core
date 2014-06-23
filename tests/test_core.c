@@ -13,6 +13,7 @@
 #define NRM  "\x1B[0m"
 
 #include "ABC.h"
+#include "ABC_Account.h"
 #include "ABC_Tx.h"
 #include "ABC_Util.h"
 #include "ABC_Crypto.h"
@@ -129,6 +130,16 @@ static void test_createaccount()
                         &Error);
         printABC_Error(&Error);
     )
+}
+
+static void update_info()
+{
+    tABC_Error Error;
+    tABC_AccountGeneralInfo *pInfo;
+    ABC_AccountServerUpdateGeneralInfo(&Error);
+    ABC_AccountLoadGeneralInfo(&pInfo, &Error);
+    ABC_AccountFreeGeneralInfo(pInfo);
+    printABC_Error(&Error);
 }
 
 static void test_signin()
@@ -840,6 +851,9 @@ int main(int argc, const char *argv[])
 
     printf("test_createaccount();\n");
     test_createaccount();
+
+    printf("update_info();\n");
+    update_info();
 
     printf("test_signin();\n");
     test_signin();
