@@ -16,11 +16,11 @@ endif
 CFLAGS   += -Wall -D_GNU_SOURCE -I../src -std=c99
 CXXFLAGS += -Wall -D_GNU_SOURCE -I../src -std=c++11
 
-$(BIN_DIR)/test_send: test_send.o
+$(BIN_DIR)/test_core: test_core.o
 	mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 
-$(BIN_DIR)/test_core: test_core.o
+$(BIN_DIR)/test_send: test_send.o
 	mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 

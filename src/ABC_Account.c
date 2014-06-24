@@ -71,6 +71,7 @@
 #define JSON_INFO_AIRBITZ_FEE_MIN_SATOSHI_FIELD "minSatoshi"
 #define JSON_INFO_AIRBITZ_FEE_ADDRESS_FIELD     "address"
 #define JSON_INFO_OBELISK_SERVERS_FIELD         "obeliskServers"
+#define JSON_INFO_SYNC_SERVERS_FIELD            "syncServers"
 
 #define ACCOUNT_ACCEPTABLE_INFO_FILE_AGE_SECS   (24 * 60 * 60) // how many seconds old can the info file before it should be updated
 
@@ -2969,6 +2970,34 @@ tABC_CC ABC_AccountLoadGeneralInfo(tABC_AccountGeneralInfo **ppInfo,
         ABC_STRDUP(pInfo->aszObeliskServers[i], json_string_value(pJSON_Value));
     }
 
+    // get the sync array
+    json_t *pJSON_SyncArray = json_object_get(pJSON_Root, JSON_INFO_SYNC_SERVERS_FIELD);
+    if (pJSON_SyncArray)
+    {
+        ABC_CHECK_ASSERT((pJSON_SyncArray && json_is_array(pJSON_SyncArray)), ABC_CC_JSONError, "Error parsing JSON array value");
+
+        // get the number of elements in the array
+        pInfo->countSyncServers = (unsigned int) json_array_size(pJSON_SyncArray);
+        if (pInfo->countSyncServers > 0)
+        {
+            ABC_ALLOC(pInfo->aszSyncServers, pInfo->countSyncServers * sizeof(char *));
+        }
+
+        // run through all the sync servers
+        for (int i = 0; i < pInfo->countObeliskServers; i++)
+        {
+            // get the sync server
+            pJSON_Value = json_array_get(pJSON_SyncArray, i);
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
+            ABC_STRDUP(pInfo->aszSyncServers[i], json_string_value(pJSON_Value));
+        }
+    }
+    else
+    {
+        pInfo->countSyncServers = 0;
+        pInfo->aszSyncServers = NULL;
+    }
+
 
     // assign the final result
     *ppInfo = pInfo;
@@ -3012,6 +3041,15 @@ void ABC_AccountFreeGeneralInfo(tABC_AccountGeneralInfo *pInfo)
                 ABC_FREE_STR(pInfo->aszObeliskServers[i]);
             }
             ABC_CLEAR_FREE(pInfo->aszObeliskServers, sizeof(char *) * pInfo->countObeliskServers);
+        }
+
+        if ((pInfo->aszSyncServers != NULL) && (pInfo->countSyncServers > 0))
+        {
+            for (int i = 0; i < pInfo->countSyncServers; i++)
+            {
+                ABC_FREE_STR(pInfo->aszSyncServers[i]);
+            }
+            ABC_CLEAR_FREE(pInfo->aszSyncServers, sizeof(char *) * pInfo->countSyncServers);
         }
 
         ABC_CLEAR_FREE(pInfo, sizeof(tABC_AccountGeneralInfo));

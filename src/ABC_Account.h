@@ -93,6 +93,8 @@ extern "C" {
         tABC_AccountAirBitzFee  *pAirBitzFee;
         unsigned int            countObeliskServers;
         char                    **aszObeliskServers;
+        unsigned int            countSyncServers;
+        char                    **aszSyncServers;
     } tABC_AccountGeneralInfo;
 
     tABC_CC ABC_AccountRequestInfoAlloc(tABC_AccountRequestInfo **ppAccountRequestInfo,
