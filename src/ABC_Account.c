@@ -2984,7 +2984,7 @@ tABC_CC ABC_AccountLoadGeneralInfo(tABC_AccountGeneralInfo **ppInfo,
         }
 
         // run through all the sync servers
-        for (int i = 0; i < pInfo->countObeliskServers; i++)
+        for (int i = 0; i < pInfo->countSyncServers; i++)
         {
             // get the sync server
             pJSON_Value = json_array_get(pJSON_SyncArray, i);
