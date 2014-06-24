@@ -3125,8 +3125,8 @@ tABC_CC ABC_AccountCreateDefaultSettings(tABC_AccountSettings **ppSettings,
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
     tABC_AccountSettings *pSettings = NULL;
+    int i = 0;
 
     ABC_CHECK_NULL(ppSettings);
 
@@ -3140,8 +3140,40 @@ tABC_CC ABC_AccountCreateDefaultSettings(tABC_AccountSettings **ppSettings,
     ABC_STRDUP(pSettings->szLanguage, "en");
     pSettings->currencyNum = CURRENCY_NUM_USD;
 
-    pSettings->exchangeRateSources.numSources = 0;
-    pSettings->exchangeRateSources.aSources = NULL;
+    pSettings->exchangeRateSources.numSources = 5;
+    ABC_ALLOC(pSettings->exchangeRateSources.aSources,
+              pSettings->exchangeRateSources.numSources * sizeof(tABC_ExchangeRateSource *));
+
+    tABC_ExchangeRateSource **aSources = pSettings->exchangeRateSources.aSources;
+
+    // USD defaults to bitstamp
+    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
+    aSources[i]->currencyNum = CURRENCY_NUM_USD;
+    ABC_STRDUP(aSources[i]->szSource, ABC_BITSTAMP);
+    i++;
+
+    // CAD defaults to coinbase
+    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
+    aSources[i]->currencyNum = CURRENCY_NUM_CAD;
+    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
+    i++;
+
+    // EUR defaults to coinbase
+    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
+    aSources[i]->currencyNum = CURRENCY_NUM_EUR;
+    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
+    i++;
+
+    // MXN defaults to coinbase
+    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
+    aSources[i]->currencyNum = CURRENCY_NUM_MXN;
+    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
+    i++;
+
+    // CNY defaults to coinbase
+    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
+    aSources[i]->currencyNum = CURRENCY_NUM_CNY;
+    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
 
     ABC_STRDUP(pSettings->bitcoinDenomination.szLabel, "mBTC");
     pSettings->bitcoinDenomination.satoshi = 100000;
