@@ -49,4 +49,7 @@ gdb_core: $(BIN_DIR)/test_core
 gdb_send: $(BIN_DIR)/test_send
 	gdb $<
 
+val_core: $(BIN_DIR)/test_core
+	valgrind --leak-check=full $<
+
 .PHONY: all clean run objdir

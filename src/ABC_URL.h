@@ -41,6 +41,9 @@ extern "C" {
                               char **pszResults,
                               tABC_Error *pError);
 
+    tABC_CC ABC_URLMutexLock(tABC_Error *pError);
+    tABC_CC ABC_URLMutexUnlock(tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif

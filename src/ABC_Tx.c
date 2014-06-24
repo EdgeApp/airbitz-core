@@ -16,6 +16,7 @@
 #include <string.h>
 #include <qrencode.h>
 #include "ABC_Tx.h"
+#include "ABC_Exchanges.h"
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
 #include "ABC_Crypto.h"
@@ -646,28 +647,23 @@ int64_t ABC_TxBitcoinToSatoshi(double bitcoin)
  * @param currencyNum Currency ISO 4217 num
  * @param pError      A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxSatoshiToCurrency(int64_t satoshi,
-                              double *pCurrency,
-                              int currencyNum,
-                              tABC_Error *pError)
+tABC_CC ABC_TxSatoshiToCurrency(const char *szUserName,
+                                const char *szPassword,
+                                int64_t satoshi,
+                                double *pCurrency,
+                                int currencyNum,
+                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    double pRate;
 
     ABC_CHECK_NULL(pCurrency);
     *pCurrency = 0.0;
 
-    // currently only supporting dollars
-    if (CURRENCY_NUM_USD == currencyNum)
-    {
-        // TODO: find real conversion - for now hardcode to $600 per bitcoin
-        *pCurrency = ABC_SatoshiToBitcoin(satoshi) * 600;
-    }
-    else
-    {
-        ABC_RET_ERROR(ABC_CC_NotSupported, "The given currency is not currently supported");
-    }
-
+    ABC_CHECK_RET(ABC_ExchangeCurrentRate(szUserName, szPassword,
+                                          currencyNum, &pRate, pError));
+    *pCurrency = ABC_SatoshiToBitcoin(satoshi) * pRate;
 exit:
 
     return cc;
@@ -681,28 +677,23 @@ exit:
  * @param pSatoshi    Pointer to location to store amount converted to Satoshi
  * @param pError      A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxCurrencyToSatoshi(double currency,
-                              int currencyNum,
-                              int64_t *pSatoshi,
-                              tABC_Error *pError)
+tABC_CC ABC_TxCurrencyToSatoshi(const char *szUserName,
+                                const char *szPassword,
+                                double currency,
+                                int currencyNum,
+                                int64_t *pSatoshi,
+                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    double pRate;
 
     ABC_CHECK_NULL(pSatoshi);
     *pSatoshi = 0;
 
-    // currently only supporting dollars
-    if (CURRENCY_NUM_USD == currencyNum)
-    {
-        // TODO: find real conversion - for now hardcode to $600 per bitcoin
-        *pSatoshi = ABC_BitcoinToSatoshi(currency) / 600;
-    }
-    else
-    {
-        ABC_RET_ERROR(ABC_CC_NotSupported, "The given currency is not currently supported");
-    }
-
+    ABC_CHECK_RET(ABC_ExchangeCurrentRate(szUserName, szPassword,
+                                          currencyNum, &pRate, pError));
+    *pSatoshi = ABC_BitcoinToSatoshi(currency) / pRate;
 exit:
 
     return cc;
