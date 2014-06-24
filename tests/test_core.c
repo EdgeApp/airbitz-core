@@ -875,7 +875,6 @@ int main(int argc, const char *argv[])
     printf("test_exchanges();\n");
     test_exchanges();
 
-    /*
     printf("test_signin();\n");
     test_signin();
 
@@ -950,7 +949,6 @@ int main(int argc, const char *argv[])
 
     printf("test_getcurrencies();\n");
     test_getcurrencies();
-    */
 
     destroy_credentials();
     sem_destroy(&cb_sem);
