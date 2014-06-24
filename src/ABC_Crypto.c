@@ -48,10 +48,10 @@
 #define UUID_STR_LENGTH         (UUID_BYTE_COUNT * 2) + 4
 
 #define SCRYPT_DEFAULT_SERVER_N    16384    // can't change as server uses this as well
-#define SCRYPT_DEFAULT_SERVER_R    1        // can't change as server uses this as well
+#define SCRYPT_DEFAULT_SERVER_R    4        // can't change as server uses this as well
 #define SCRYPT_DEFAULT_SERVER_P    1        // can't change as server uses this as well
 #define SCRYPT_DEFAULT_CLIENT_N    16384
-#define SCRYPT_DEFAULT_CLIENT_R    1
+#define SCRYPT_DEFAULT_CLIENT_R    8
 #define SCRYPT_DEFAULT_CLIENT_P    1
 #define SCRYPT_DEFAULT_LENGTH      32
 #define SCRYPT_DEFAULT_SALT_LENGTH 32
