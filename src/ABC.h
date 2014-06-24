@@ -22,6 +22,9 @@
 /** The number of decimal-place shifts needed to convert satoshi to bitcoin. */
 #define ABC_BITCOIN_DECIMAL_PLACES   8
 
+/** Frequency of exchange rate updates **/
+#define ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS 60
+
 #define NETWORK_FAKE 1
 
 #ifdef __cplusplus
@@ -163,7 +166,8 @@ extern "C" {
     typedef enum eABC_AsyncEventType
     {
         ABC_AsyncEventType_IncomingBitCoin,
-        ABC_AsyncEventType_BlockHeightChange
+        ABC_AsyncEventType_BlockHeightChange,
+        ABC_AsyncEventType_ExchangeRateUpdate
     } tABC_AsyncEventType;
 
     /**
@@ -672,12 +676,16 @@ extern "C" {
 
     int64_t ABC_BitcoinToSatoshi(double bitcoin);
 
-    tABC_CC ABC_SatoshiToCurrency(int64_t satoshi,
+    tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
+                                  const char *szPassword,
+                                  int64_t satoshi,
                                   double *pCurrency,
                                   int currencyNum,
                                   tABC_Error *pError);
 
-    tABC_CC ABC_CurrencyToSatoshi(double currency,
+    tABC_CC ABC_CurrencyToSatoshi(const char *szUserName,
+                                  const char *szPassword,
+                                  double currency,
                                   int currencyNum,
                                   int64_t *pSatoshi,
                                   tABC_Error *pError);
@@ -846,6 +854,9 @@ extern "C" {
     tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *height, tABC_Error *pError);
 
     tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError);
+
+    tABC_CC ABC_RequestExchangeRateUpdate(const char *szUserName, const char *szPassword,
+                                          int currencyNum, tABC_Error *pError);
 
     // temp functions
     void tempEventA();

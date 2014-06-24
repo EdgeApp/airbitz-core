@@ -24,8 +24,6 @@ static bool gbInitialized = false;
 static pthread_mutex_t  gMutex; // to block multiple threads from accessing curl at the same time
 
 static size_t ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
-static tABC_CC ABC_URLMutexLock(tABC_Error *pError);
-static tABC_CC ABC_URLMutexUnlock(tABC_Error *pError);
 
 /**
  * Initialize the URL system
@@ -76,7 +74,7 @@ void ABC_URLTerminate()
 }
 
 /**
- * Makes a URL request. 
+ * Makes a URL request.
  * @param szURL         The request URL.
  * @param pData         The location to store the results. The caller is responsible for free'ing this.
  */
@@ -129,7 +127,7 @@ tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError
 exit:
     ABC_BUF_FREE(Data);
     curl_easy_cleanup(pCurlHandle);
-    
+
     ABC_URLMutexUnlock(NULL);
     return cc;
 }
@@ -137,7 +135,7 @@ exit:
 /**
  * Makes a URL request and returns results in a string.
  * @param szURL         The request URL.
- * @param pszResults    The location to store the allocated string with results. 
+ * @param pszResults    The location to store the allocated string with results.
  *                      The caller is responsible for free'ing this.
  */
 tABC_CC ABC_URLRequestString(const char *szURL,
@@ -252,7 +250,7 @@ exit:
     ABC_BUF_FREE(Data);
     curl_easy_cleanup(pCurlHandle);
     curl_slist_free_all(slist);
-    
+
     ABC_URLMutexUnlock(NULL);
     return cc;
 }
@@ -291,7 +289,7 @@ tABC_CC ABC_URLPostString(const char *szURL,
 
 exit:
     ABC_BUF_FREE(Data);
-    
+
     ABC_URLMutexUnlock(NULL);
     return cc;
 }
@@ -332,7 +330,6 @@ size_t ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers,
  * Locks the global mutex
  *
  */
-static
 tABC_CC ABC_URLMutexLock(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -349,7 +346,6 @@ exit:
  * Unlocks the global mutex
  *
  */
-static
 tABC_CC ABC_URLMutexUnlock(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -358,6 +354,6 @@ tABC_CC ABC_URLMutexUnlock(tABC_Error *pError)
     ABC_CHECK_ASSERT(0 == pthread_mutex_unlock(&gMutex), ABC_CC_MutexError, "ABC_URL error unlocking mutex");
 
 exit:
-    
+
     return cc;
 }
