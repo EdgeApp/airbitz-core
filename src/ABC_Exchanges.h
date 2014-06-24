@@ -12,9 +12,6 @@
 #include "ABC.h"
 #include "ABC_Util.h"
 
-#define ABC_BITSTAMP "Bitstamp"
-#define ABC_COINBASE "Coinbase"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

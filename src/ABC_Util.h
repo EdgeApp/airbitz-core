@@ -23,6 +23,9 @@
 #define CURRENCY_NUM_USD                840
 #define CURRENCY_NUM_EUR                978
 
+#define ABC_BITSTAMP "Bitstamp"
+#define ABC_COINBASE "Coinbase"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
