@@ -858,6 +858,8 @@ extern "C" {
     tABC_CC ABC_RequestExchangeRateUpdate(const char *szUserName, const char *szPassword,
                                           int currencyNum, tABC_Error *pError);
 
+    tABC_CC ABC_IsTestNet(bool *pResult, tABC_Error *pError);
+
     // temp functions
     void tempEventA();
     void tempEventB();

@@ -22,6 +22,7 @@
 #include <bitcoin/client.hpp>
 
 #define FALLBACK_OBELISK "tcp://obelisk1.airbitz.co:9091"
+#define TESTNET_OBELISK "tcp://obelisk-testnet1.airbitz.co:9091"
 
 #define AB_MIN(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -357,8 +358,16 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     }
     else
     {
-        ABC_DebugLog("Using Fallback obelisk servers: %s\n", FALLBACK_OBELISK);
-        watcherInfo->watcher->connect(FALLBACK_OBELISK);
+        if (ABC_BridgeIsTestNet())
+        {
+            ABC_DebugLog("Using Fallback testnet obelisk servers: %s\n", TESTNET_OBELISK);
+            watcherInfo->watcher->connect(TESTNET_OBELISK);
+        }
+        else
+        {
+            ABC_DebugLog("Using Fallback obelisk servers: %s\n", FALLBACK_OBELISK);
+            watcherInfo->watcher->connect(FALLBACK_OBELISK);
+        }
     }
     ABC_BridgeWatcherLoad(watcherInfo, pError);
     watchers_[szWalletUUID] = watcherInfo;
@@ -577,10 +586,13 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     malleableId = bc::encode_hex(bc::hash_transaction(utx->tx));
     ABC_STRDUP(pUtx->szTxMalleableId, malleableId.c_str());
 
-    if (ABC_BridgeBlockhainPostTx(utx, pError) != ABC_CC_Ok)
+    if (!ABC_BridgeIsTestNet())
     {
-        ABC_RET_ERROR(ABC_CC_ServerError, pError->szDescription);
-        ABC_DebugLog(pError->szDescription);
+        if (ABC_BridgeBlockhainPostTx(utx, pError) != ABC_CC_Ok)
+        {
+            ABC_RET_ERROR(ABC_CC_ServerError, pError->szDescription);
+            ABC_DebugLog(pError->szDescription);
+        }
     }
 
     ABC_BridgeWatcherSerializeAsync(row->second);
@@ -624,6 +636,14 @@ exit:
     *height = 0;
 #endif
     return cc;
+}
+
+bool
+ABC_BridgeIsTestNet()
+{
+    bc::payment_address foo;
+    bc::set_public_key_hash(foo, bc::null_short_hash);
+    return foo.version() != 0;
 }
 
 #if !NETWORK_FAKE
