@@ -1,7 +1,7 @@
 depends="libbitcoin libwallet obelisk"
 inherit lib
 
-source="https://github.com/Airbitz/libbitcoin-client.git"
+source="https://github.com/Airbitz/libbitcoin-watcher.git"
 
 build() {
     autoreconf -i
@@ -10,5 +10,5 @@ build() {
     make install
 }
 
-include="include/bitcoin/watcher.hpp include/bitcoin/client/*"
-lib="lib/libbitcoin-client.a"
+include="include/bitcoin/watcher.hpp include/bitcoin/watcher/*"
+lib="lib/libbitcoin-watcher.a"
