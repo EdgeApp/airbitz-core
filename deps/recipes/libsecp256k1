@@ -1,0 +1,13 @@
+inherit lib
+
+source="https://github.com/bitcoin/secp256k1.git"
+
+build() {
+    autoreconf -i
+    ./configure --enable-static --disable-shared  --disable-tests --host=$cross --prefix=$install_dir
+    make
+    make install
+}
+
+include="include/secp256k1.h"
+lib="lib/libsecp256k1.a"
