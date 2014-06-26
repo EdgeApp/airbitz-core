@@ -32,7 +32,9 @@ static bool gbInitialized = false;
 static tABC_Currency gaCurrencies[] = {
     { "CAD", 124, "Canadian dollar", "Canada, Saint Pierre and Miquelon" },
     { "CNY", 156, "Chinese yuan", "China" },
+    { "CUP", 192, "Cuban peso", "Cuba" },
     { "EUR", 978, "Euro", "Andorra, Austria, Belgium, Cyprus, Estonia, Finland, France, Germany, Greece, Ireland, Italy, Kosovo, Latvia, Luxembourg, Malta, Monaco, Montenegro, Netherlands, Portugal, San Marino, Slovakia, Slovenia, Spain, Vatican City; see eurozone" },
+    { "GBP", 826, "Pound sterling", "United Kingdom, British Crown dependencies" },
     { "MXN", 484, "Mexican peso", "Mexico" },
     { "USD", 840, "United States dollar", "American Samoa, Barbados (as well as Barbados Dollar), Bermuda (as well as Bermudian Dollar), British Indian Ocean Territory, British Virgin Islands, Caribbean Netherlands, Ecuador, El Salvador, Guam, Haiti, Marshall Islands, Federated States of Micronesia, Northern Mariana Islands, Palau, Panama, Puerto Rico, Timor-Leste, Turks and Caicos Islands, United States, U.S. Virgin Islands, Zimbabwe" },
 };
