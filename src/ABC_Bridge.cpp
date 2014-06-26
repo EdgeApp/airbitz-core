@@ -19,7 +19,7 @@
 #include <bitcoin/bitcoin.hpp>
 #include <bitcoin/utility/base58.hpp>
 #include <bitcoin/utility/sha256.hpp>
-#include <bitcoin/client.hpp>
+#include <bitcoin/watcher.hpp>
 
 #define FALLBACK_OBELISK "tcp://obelisk1.airbitz.co:9091"
 #define TESTNET_OBELISK "tcp://obelisk-testnet1.airbitz.co:9091"

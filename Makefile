@@ -1,7 +1,7 @@
 TARGET ?= native
 CFLAGS += -std=c99 -Wall -D_GNU_SOURCE -DDEBUG
 CXXFLAGS += -std=c++11 -Wall -D_GNU_SOURCE -DDEBUG
-LDFLAGS+= -lbitcoin-client -lobelisk -lzmq -lsodium -lwallet -lbitcoin \
+LDFLAGS+= -lbitcoin-watcher -lobelisk -lzmq -lsodium -lwallet -lbitcoin \
           -lboost_thread -lboost_system -lboost_regex -lboost_filesystem \
           -lqrencode -lcurl -ljansson -lssl -lcrypto -ldl -lz -lm -lscrypt
 
