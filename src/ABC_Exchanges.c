@@ -243,7 +243,6 @@ tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
     json_error_t error;
     json_t *pJSON_Root = NULL;
     char *szResponse = NULL;
-    // char *szResponse = "{\"bbd_to_usd\":\"0.0\",\"btc_to_usd\":\"587.114908\"}";
 
     // Fetch exchanges from coinbase
     ABC_CHECK_RET(ABC_ExchangeGetString(COINBASE_RATE_URL, &szResponse, pError));
@@ -260,6 +259,10 @@ tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
     ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_cad", CURRENCY_NUM_CAD, pError);
     // EUR
     ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_eur", CURRENCY_NUM_EUR, pError);
+    // CUP
+    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_cup", CURRENCY_NUM_CUP, pError);
+    // GBP
+    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_gbp", CURRENCY_NUM_GBP, pError);
     // MXN
     ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_mxn", CURRENCY_NUM_MXN, pError);
     // CNY
@@ -430,15 +433,11 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
                 ABC_STRDUP(*szSource, ABC_BITSTAMP);
                 break;
             case CURRENCY_NUM_CAD:
-                ABC_STRDUP(*szSource, ABC_COINBASE);
-                break;
-            case CURRENCY_NUM_EUR:
-                ABC_STRDUP(*szSource, ABC_COINBASE);
-                break;
-            case CURRENCY_NUM_MXN:
-                ABC_STRDUP(*szSource, ABC_COINBASE);
-                break;
+            case CURRENCY_NUM_CUP:
             case CURRENCY_NUM_CNY:
+            case CURRENCY_NUM_EUR:
+            case CURRENCY_NUM_GBP:
+            case CURRENCY_NUM_MXN:
                 ABC_STRDUP(*szSource, ABC_COINBASE);
                 break;
             default:
