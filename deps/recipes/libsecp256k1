@@ -1,6 +1,6 @@
 inherit lib
 
-source="https://github.com/bitcoin/secp256k1.git"
+source="https://github.com/Airbitz/secp256k1.git"
 
 build() {
     autoreconf -i
