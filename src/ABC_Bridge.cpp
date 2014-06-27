@@ -609,7 +609,7 @@ ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *h
     ABC_CHECK_ASSERT(row != watchers_.end(),
         ABC_CC_Error, "Unable find watcher");
 
-    txId = bc::decode_hex_digest<bc::hash_digest>(szTxId);
+    txId = bc::decode_hash(szTxId);
     *height = row->second->watcher->get_tx_height(txId);
 exit:
 #else
@@ -824,7 +824,7 @@ tABC_CC ABC_BridgeStringToEc(char *privKey, bc::elliptic_curve_key& key, tABC_Er
     tABC_CC cc = ABC_CC_Ok;
     bc::secret_parameter secret;
 
-    secret = bc::decode_hex_digest<bc::hash_digest>(privKey);
+    secret = bc::decode_hash(privKey);
     if (secret == bc::null_hash)
     {
         secret = libwallet::wif_to_secret(privKey);
@@ -1035,7 +1035,7 @@ static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx)
     for (auto a : tx.inputs)
         for (auto b : bc::save_script(a.script))
             chunk.push_back(b);
-    return bc::encode_hex(bc::generate_sha256_hash(chunk));
+    return bc::encode_hex(bc::sha256_hash(chunk));
 }
 
 #endif // NETWORK_FAKE
