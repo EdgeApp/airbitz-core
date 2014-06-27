@@ -389,10 +389,10 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     }
     else
     {
-	tABC_RequestResults *results = pData;
-	char * output = NULL;
-	ABC_ALLOC(output, 100*sizeof(char));
-	results->pRetData = output;
+        tABC_RequestResults *results = pData;
+        char * output = NULL;
+        ABC_ALLOC(output, 100*sizeof(char));
+        results->pRetData = output;
         cc = ABC_WalletCreate(pWalletCreateInfo, (char**) &(results->pRetData), pError);
         ABC_WalletCreateInfoFree(pWalletCreateInfo);
     }
@@ -1266,7 +1266,7 @@ tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(szUserName, szPassword, szWalletUUID, pDetails, pszRequestID, pError));
+    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(szUserName, szPassword, szWalletUUID, pDetails, pszRequestID, false, pError));
 
 exit:
 
@@ -1437,14 +1437,14 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
     ABC_CHECK_NULL(pDetails);
 
     ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
-                                            szUserName,
-                                            szPassword,
-                                            szWalletUUID,
-                                            szDestAddress,
-                                            pDetails,
-                                            fRequestCallback,
-                                            pData,
-                                            pError));
+                                      szUserName,
+                                      szPassword,
+                                      szWalletUUID,
+                                      szDestAddress,
+                                      pDetails,
+                                      fRequestCallback,
+                                      pData,
+                                      pError));
 
     if (fRequestCallback)
     {
@@ -1465,10 +1465,97 @@ exit:
     return cc;
 }
 
+/**
+ * Initiates a transfer request.
+ *
+ * Once the given send has been submitted to the block chain, the given callback will
+ * be called and the results data will have a pointer to the request id
+ *
+ * @param szUserName        UserName for the account associated with this request
+ * @param szPassword        Password for the account associated with this request
+ * @param pTransfer         Struct container src and dest wallet info
+ * @param szDestWalletUUID  UUID of the destination wallet
+ * @param pDetails          Pointer to transaction details
+ * @param fRequestCallback  The function that will be called when the send request process has finished.
+ * @param pData             Pointer to data to be returned back in callback,
+ *                          or a `char **pszTxID` if callbacks aren't used.
+ * @param pError            A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_InitiateTransfer(const char *szUserName,
+                             const char *szPassword,
+                             tABC_TransferDetails *pTransfer,
+                             tABC_TxDetails *pDetails,
+                             tABC_Request_Callback fRequestCallback,
+                             void *pData,
+                             tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_TxSendInfo *pTxSendInfo = NULL;
+
+    char *szRequestId = NULL;
+    char *szRequestAddress = NULL;
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(pTransfer->szSrcWalletUUID);
+    ABC_CHECK_ASSERT(strlen(pTransfer->szSrcWalletUUID) > 0, ABC_CC_Error, "No wallet name provided");
+    ABC_CHECK_NULL(pTransfer->szDestWalletUUID);
+    ABC_CHECK_ASSERT(strlen(pTransfer->szDestWalletUUID) > 0, ABC_CC_Error, "No destination wallet name provided");
+    ABC_CHECK_NULL(pDetails);
+
+    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(szUserName, szPassword,
+                                             pTransfer->szDestWalletUUID, pDetails,
+                                             &szRequestId, true, pError));
+    ABC_CHECK_RET(ABC_GetRequestAddress(szUserName, szPassword,
+                                        pTransfer->szDestWalletUUID, szRequestId,
+                                        &szRequestAddress, pError));
+    ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
+                                      szUserName,
+                                      szPassword,
+                                      pTransfer->szSrcWalletUUID,
+                                      szRequestAddress,
+                                      pDetails,
+                                      fRequestCallback,
+                                      pData,
+                                      pError));
+    pTxSendInfo->bTransfer = true;
+    ABC_STRDUP(pTxSendInfo->szDestWalletUUID, pTransfer->szDestWalletUUID);
+    ABC_STRDUP(pTxSendInfo->szDestName, pTransfer->szDestName);
+    ABC_STRDUP(pTxSendInfo->szDestCategory, pTransfer->szDestCategory);
+    ABC_STRDUP(pTxSendInfo->szSrcName, pTransfer->szSrcName);
+    ABC_STRDUP(pTxSendInfo->szSrcCategory, pTransfer->szSrcCategory);
+    if (fRequestCallback)
+    {
+        pthread_t handle;
+        if (!pthread_create(&handle, NULL, ABC_TxSendThreaded, pTxSendInfo))
+        {
+            pthread_detach(handle);
+        }
+    }
+    else
+    {
+        cc = ABC_TxSend(pTxSendInfo, (char**)pData, pError);
+        ABC_TxSendInfoFree(pTxSendInfo);
+    }
+
+exit:
+    ABC_FREE_STR(szRequestId);
+    ABC_FREE_STR(szRequestAddress);
+
+    return cc;
+}
+
 tABC_CC ABC_CalcSendFees(const char *szUserName,
                          const char *szPassword,
                          const char *szWalletUUID,
                          const char *szDestAddress,
+                         bool bTransfer,
                          tABC_TxDetails *pDetails,
                          int64_t *pTotalFees,
                          tABC_Error *pError)
@@ -1478,6 +1565,8 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    char *szRequestId = NULL;
+    char *szRequestAddress = NULL;
     tABC_TxSendInfo *pTxSendInfo = NULL;
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
@@ -1494,12 +1583,26 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
     ABC_STRDUP(pTxSendInfo->szWalletUUID, szWalletUUID);
     ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
 
+    if (bTransfer)
+    {
+        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(szUserName, szPassword,
+                                                 pTxSendInfo->szDestAddress, pDetails,
+                                                 &szRequestId, true, pError));
+        ABC_CHECK_RET(ABC_GetRequestAddress(szUserName, szPassword,
+                                            pTxSendInfo->szDestAddress, szRequestId,
+                                            &szRequestAddress, pError));
+        ABC_FREE_STR(pTxSendInfo->szDestAddress);
+        ABC_STRDUP(pTxSendInfo->szDestAddress, szRequestAddress);
+    }
+
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTxSendInfo->pDetails), pDetails, pError));
     ABC_CHECK_RET(ABC_TxCalcSendFees(pTxSendInfo, pTotalFees, pError));
 
     pDetails->amountFeesAirbitzSatoshi = pTxSendInfo->pDetails->amountFeesAirbitzSatoshi;
     pDetails->amountFeesMinersSatoshi = pTxSendInfo->pDetails->amountFeesMinersSatoshi;
 exit:
+    ABC_FREE_STR(szRequestId);
+    ABC_FREE_STR(szRequestAddress);
     ABC_TxSendInfoFree(pTxSendInfo);
     return cc;
 }
