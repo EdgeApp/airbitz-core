@@ -18,8 +18,8 @@
 #include <unordered_map>
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
 
-#define FALLBACK_OBELISK "tcp://obelisk1.airbitz.co:9091"
-#define TESTNET_OBELISK "tcp://obelisk-testnet1.airbitz.co:9091"
+#define FALLBACK_OBELISK "tcp://obelisk2.airbitz.co:9091"
+#define TESTNET_OBELISK "tcp://obelisk-testnet2.airbitz.co:9091"
 
 #define AB_MIN(a,b) \
    ({ __typeof__ (a) _a = (a); \
