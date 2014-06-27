@@ -10,5 +10,6 @@ build() {
     make install
 }
 
-include="include/bitcoin/client.hpp include/bitcoin/client/*"
+# TODO: libbitcoin already copies these headers...
+#include="include/bitcoin/client.hpp include/bitcoin/client/*"
 lib="lib/libbitcoin-client.a"
