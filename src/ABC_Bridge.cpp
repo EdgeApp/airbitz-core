@@ -510,16 +510,19 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
     schedule.satoshi_per_kb = ppInfo->countMinersFees;
     totalAmountSatoshi = pSendInfo->pDetails->amountSatoshi;
 
-    // Calculate AB Fees
-    abFees = ABC_BridgeCalcAbFees(pSendInfo->pDetails->amountSatoshi, ppInfo);
-    // Add in miners fees
-    if (abFees > 0)
+    if (!pSendInfo->bTransfer)
     {
-        pSendInfo->pDetails->amountFeesAirbitzSatoshi = abFees;
-        // Output to Airbitz
-        ABC_BridgeAppendOutput(outputs, abFees, ab.hash());
-        // Increment total tx amount to account for AB fees
-        totalAmountSatoshi += abFees;
+        // Calculate AB Fees
+        abFees = ABC_BridgeCalcAbFees(pSendInfo->pDetails->amountSatoshi, ppInfo);
+        // Add in miners fees
+        if (abFees > 0)
+        {
+            pSendInfo->pDetails->amountFeesAirbitzSatoshi = abFees;
+            // Output to Airbitz
+            ABC_BridgeAppendOutput(outputs, abFees, ab.hash());
+            // Increment total tx amount to account for AB fees
+            totalAmountSatoshi += abFees;
+        }
     }
     // Output to  Destination Address
     ABC_BridgeAppendOutput(outputs, pSendInfo->pDetails->amountSatoshi, dest.hash());
