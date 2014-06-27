@@ -10,5 +10,6 @@ build() {
     make install
 }
 
-include="include/bitcoin/watcher.hpp include/bitcoin/watcher/*"
+# TODO: libbitcoin already copies these headers...
+#include="include/bitcoin/watcher.hpp include/bitcoin/watcher/*"
 lib="lib/libbitcoin-watcher.a"
