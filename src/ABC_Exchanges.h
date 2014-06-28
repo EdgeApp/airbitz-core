@@ -16,17 +16,21 @@
 extern "C" {
 #endif
 
-    typedef enum eABC_Exchange
-    {
-        ABC_BitStamp = 0
-    } tABC_Exchange;
-
+    /**
+     * AirBitz Exchange Info Structure
+     */
     typedef struct sABC_ExchangeInfo
     {
-        tABC_Exchange exchange;
-        int           currencyNum;
-        char          *szUserName;
-        char          *szPassword;
+        /** The currency to request or update **/
+        int                   currencyNum;
+        /** Username used to access account settings **/
+        char                  *szUserName;
+        /** Password used to access account settings **/
+        char                  *szPassword;
+        /** Callback fired after a update **/
+        tABC_Request_Callback fRequestCallback;
+        /** Data to return with the callback **/
+        void                  *pData;
     } tABC_ExchangeInfo;
 
     tABC_CC ABC_ExchangeInitialize(
@@ -37,7 +41,17 @@ extern "C" {
     tABC_CC ABC_ExchangeCurrentRate(const char *szUserName, const char *szPassword,
                                     int currencyNum, double *pRate, tABC_Error *pError);
 
+    tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
+
+    void *ABC_ExchangeUpdateThreaded(void *pData);
+
     void ABC_ExchangeTerminate();
+
+    tABC_CC ABC_ExchangeAlloc(const char *szUserName, const char *szPassword,
+                              int currencyNum,
+                              tABC_Request_Callback fRequestCallback, void *pData,
+                              tABC_ExchangeInfo **ppInfo, tABC_Error *pError);
+    void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo);
 
 #ifdef __cplusplus
 }
