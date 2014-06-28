@@ -59,6 +59,7 @@
 #define JSON_ACCT_EX_RATE_SOURCE_FIELD          "exchangeRateSource"
 #define JSON_ACCT_BITCOIN_DENOMINATION_FIELD    "bitcoinDenomination"
 #define JSON_ACCT_LABEL_FIELD                   "label"
+#define JSON_ACCT_LABEL_TYPE                    "labeltype"
 #define JSON_ACCT_SATOSHI_FIELD                 "satoshi"
 #define JSON_ACCT_ADVANCED_FEATURES_FIELD       "advancedFeatures"
 
@@ -3175,7 +3176,7 @@ tABC_CC ABC_AccountCreateDefaultSettings(tABC_AccountSettings **ppSettings,
     aSources[i]->currencyNum = CURRENCY_NUM_CNY;
     ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
 
-    ABC_STRDUP(pSettings->bitcoinDenomination.szLabel, "mBTC");
+    pSettings->bitcoinDenomination.denominationType = ABC_DENOMINATION_MBTC;
     pSettings->bitcoinDenomination.satoshi = 100000;
 
     // assign final settings
@@ -3289,10 +3290,10 @@ tABC_CC ABC_AccountLoadSettingsEnc(const char *szUserName,
         ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
         pSettings->bitcoinDenomination.satoshi = json_integer_value(pJSON_Value);
 
-        // get denomination label
-        pJSON_Value = json_object_get(pJSON_Denom, JSON_ACCT_LABEL_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-        ABC_STRDUP(pSettings->bitcoinDenomination.szLabel, json_string_value(pJSON_Value));
+        // get denomination type
+        pJSON_Value = json_object_get(pJSON_Denom, JSON_ACCT_LABEL_TYPE);
+        ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
+        pSettings->bitcoinDenomination.denominationType = json_integer_value(pJSON_Value);
 
         // get the exchange rates array
         json_t *pJSON_Sources = json_object_get(pJSON_Root, JSON_ACCT_EX_RATE_SOURCES_FIELD);
@@ -3338,6 +3339,8 @@ tABC_CC ABC_AccountLoadSettingsEnc(const char *szUserName,
     // assign final settings
     *ppSettings = pSettings;
     pSettings = NULL;
+
+ //   ABC_DebugLog("Loading settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
 
 exit:
     ABC_AccountFreeSettings(pSettings);
@@ -3468,8 +3471,8 @@ tABC_CC ABC_AccountSaveSettingsEnc(const char *szUserName,
     retVal = json_object_set_new(pJSON_Denom, JSON_ACCT_SATOSHI_FIELD, json_integer(pSettings->bitcoinDenomination.satoshi));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
-    // set denomination label
-    retVal = json_object_set_new(pJSON_Denom, JSON_ACCT_LABEL_FIELD, json_string(pSettings->bitcoinDenomination.szLabel));
+    // set denomination type
+    retVal = json_object_set_new(pJSON_Denom, JSON_ACCT_LABEL_TYPE, json_integer(pSettings->bitcoinDenomination.denominationType));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the denomination object
@@ -3514,7 +3517,7 @@ tABC_CC ABC_AccountSaveSettingsEnc(const char *szUserName,
     ABC_CHECK_RET(ABC_AccountGetSettingsFilename(szUserName, &szFilename, pError));
 
     // encrypt and save json
-    //ABC_DebugLog("Saving settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
+//    ABC_DebugLog("Saving settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, Key, ABC_CryptoType_AES256, szFilename, pError));
 
 
@@ -3577,7 +3580,6 @@ void ABC_AccountFreeSettings(tABC_AccountSettings *pSettings)
         ABC_FREE_STR(pSettings->szLastName);
         ABC_FREE_STR(pSettings->szNickname);
         ABC_FREE_STR(pSettings->szLanguage);
-        ABC_FREE_STR(pSettings->bitcoinDenomination.szLabel);
         if (pSettings->exchangeRateSources.aSources)
         {
             for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)
