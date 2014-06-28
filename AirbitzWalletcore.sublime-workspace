@@ -1,0 +1,219 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "",
+	"command_palette":
+	{
+		"height": 47.0,
+		"selected_items":
+		[
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"c++",
+				"Set Syntax: C++"
+			],
+			[
+				"instal",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 449.0
+	},
+	"console":
+	{
+		"height": 125.0
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Account.c",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Account.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Bridge.cpp",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Bridge.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Crypto.c",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Crypto.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Debug.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Debug.c",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Exchanges.c",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Exchanges.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_FileIO.c",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_FileIO.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Mutex.c",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Mutex.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_ServerDefs.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Tx.c",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Tx.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_URL.c",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_URL.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Util.c",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Util.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Wallet.c",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC_Wallet.h",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC.c",
+		"/Users/paul/git/master/airbitz-walletcore/src/ABC.h",
+		"/Users/paul/Library/Application Support/Sublime Text 2/Packages/Default/Default (OSX).sublime-keymap",
+		"/Users/paul/git/master/airbitz-walletcore/src/TestBed/build/TestBed.build/Release-iphoneos/TestBed.build/build-state.dat",
+		"/Users/paul/git/master/airbitz-walletcore/src/TestBed/TestBed/ViewController.m",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Account.c",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Account.h",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Bridge.cpp",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Bridge.h",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Crypto.c",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Crypto.h",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Debug.c",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Debug.h",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_FileIO.c",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_FileIO.h",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Mutex.c",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Mutex.h",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_ServerDefs.h",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Tx.c",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Tx.h",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_URL.c",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_URL.h",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Util.c",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Util.h",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Wallet.c",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC_Wallet.h",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC.c",
+		"/Users/paul/git/airbitz-walletcore.watcher-integration/src/ABC.h",
+		"/Users/paul/temp/retinatest.html"
+	],
+	"find":
+	{
+		"height": 35.0
+	},
+	"find_in_files":
+	{
+		"height": 93.0,
+		"where_history":
+		[
+			""
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"obelisk1",
+			"obelisk2",
+			"obelist2",
+			"obelist1",
+			"test",
+			"testnet",
+			"FALLBACK_OBELISK",
+			"obelisk1.airbitz.co",
+			"ABC_CryptoCreateSNRP",
+			"ABC_CryptoCreateJSONObjectSNRP",
+			"NETWORK_FAKE",
+			"fake",
+			"scrypt",
+			"abc.h",
+			"minutesAutoLogout",
+			"logout",
+			"SCRYPT_DEFAULT_SERVER_N",
+			"ABC_CryptoCreateSNRPForServer",
+			"SNRP1",
+			"SNRP",
+			"scrypt",
+			"blockchain"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"replace":
+	{
+		"height": 0.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"show_minimap": true,
+	"show_open_files": false,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 225.0,
+	"status_bar_visible": true
+}
