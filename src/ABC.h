@@ -25,6 +25,11 @@
 /** Frequency of exchange rate updates **/
 #define ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS 60
 
+/** Denomination Type **/
+#define ABC_DENOMINATION_BTC 0
+#define ABC_DENOMINATION_MBTC 1
+#define ABC_DENOMINATION_UBTC 2
+
 #define NETWORK_FAKE 1
 
 #ifdef __cplusplus
@@ -476,7 +481,7 @@ extern "C" {
     typedef struct sABC_BitcoinDenomination
     {
         /** label (e.g., mBTC) */
-        char *szLabel;
+        int denominationType;
         /** number of satoshi per unit (e.g., 100,000) */
         int64_t satoshi;
     } tABC_BitcoinDenomination;
