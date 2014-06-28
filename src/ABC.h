@@ -861,7 +861,9 @@ extern "C" {
     tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError);
 
     tABC_CC ABC_RequestExchangeRateUpdate(const char *szUserName, const char *szPassword,
-                                          int currencyNum, tABC_Error *pError);
+                                          int currencyNum,
+                                          tABC_Request_Callback fRequestCallback,
+                                          void *pData, tABC_Error *pError);
 
     tABC_CC ABC_IsTestNet(bool *pResult, tABC_Error *pError);
 

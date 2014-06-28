@@ -14,19 +14,26 @@
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
 #include "ABC_Account.h"
+#include "ABC_URL.h"
 
 #define BITSTAMP_RATE_URL "https://www.bitstamp.net/api/ticker/"
 #define COINBASE_RATE_URL "https://coinbase.com/api/v1/currencies/exchange_rates"
 
+typedef struct sABC_ExchangeCacheEntry
+{
+    int currencyNum;
+    time_t last_updated;
+    double exchange_rate;
+} tABC_ExchangeCacheEntry;
+
+static unsigned int gExchangesCacheCount = 0;
+static tABC_ExchangeCacheEntry **gaExchangeCacheArray = NULL;
+
 static bool gbInitialized = false;
-static pthread_mutex_t  gMutex;
+static pthread_mutex_t gMutex;
 
-static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
-static void *pAsyncBitCoinCallerData = NULL;
-
-static tABC_CC ABC_ExchangeGetRate(tABC_ExchangeInfo *pInfo, char **szRate, tABC_Error *pError);
-static tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired, char **szRate, tABC_Error *pError);
-static void    *ABC_ExchangeUpdateThreaded(void *pData);
+static tABC_CC ABC_ExchangeGetRate(tABC_ExchangeInfo *pInfo, double *szRate, tABC_Error *pError);
+static tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired, double *szRate, tABC_Error *pError);
 static tABC_CC ABC_ExchangeBitStampRate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_ExchangeExtractAndSave(json_t *pJSON_Root, const char *szField, int currencyNum, tABC_Error *pError);
@@ -37,6 +44,14 @@ static tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC
 static tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo, char **szSource, tABC_Error *pError);
 static tABC_CC ABC_ExchangeMutexLock(tABC_Error *pError);
 static tABC_CC ABC_ExchangeMutexUnlock(tABC_Error *pError);
+
+static tABC_CC ABC_ExchangeFillCache(tABC_Error *pError);
+static tABC_CC ABC_ExchangeGetFromCache(int currencyNum, tABC_ExchangeCacheEntry **ppData, tABC_Error *pError);
+static tABC_CC ABC_ExchangeClearCache(tABC_Error *pError);
+static tABC_CC ABC_ExchangeAddToCache(tABC_ExchangeCacheEntry *pData, tABC_Error *pError);
+static tABC_CC ABC_ExchangeAllocCacheEntry(tABC_ExchangeCacheEntry **ppCache, int currencyNum, time_t last_updated, double exchange_rate, tABC_Error *pError);
+static void ABC_ExchangeFreeCacheEntry(tABC_ExchangeCacheEntry *pCache);
+
 
 /**
  * Initialize the AirBitz Exchanges.
@@ -61,9 +76,6 @@ tABC_CC ABC_ExchangeInitialize(tABC_BitCoin_Event_Callback fAsyncBitCoinEventCal
     ABC_CHECK_ASSERT(0 == pthread_mutex_init(&gMutex, &mutexAttrib), ABC_CC_MutexError, "ABC_Exchanges could not create mutex");
     pthread_mutexattr_destroy(&mutexAttrib);
 
-    gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
-    pAsyncBitCoinCallerData = pData;
-
     gbInitialized = true;
 exit:
     return cc;
@@ -76,107 +88,48 @@ tABC_CC ABC_ExchangeCurrentRate(const char *szUserName, const char *szPassword,
                                 int currencyNum, double *pRate, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    char *szRate = NULL;
+    tABC_ExchangeInfo *pInfo = NULL;
+    tABC_ExchangeCacheEntry *pCache = NULL;
 
-    tABC_ExchangeInfo *info = malloc(sizeof(tABC_ExchangeInfo));
-    info->exchange = ABC_BitStamp;
-    info->currencyNum = currencyNum;
-    ABC_STRDUP(info->szUserName, szUserName);
-    ABC_STRDUP(info->szPassword, szPassword);
-    ABC_CHECK_RET(ABC_ExchangeGetRate(info, &szRate, pError));
+    ABC_CHECK_RET(ABC_ExchangeGetFromCache(currencyNum, &pCache, pError));
+    if (pCache)
+    {
+        ABC_DebugLog("Using cache for currency %d:%f\n", currencyNum, pCache->exchange_rate);
+        *pRate = pCache->exchange_rate;
+    }
+    else
+    {
+        ABC_CHECK_RET(
+            ABC_ExchangeAlloc(szUserName, szPassword, currencyNum, NULL, NULL, &pInfo, pError));
+        ABC_CHECK_RET(ABC_ExchangeGetRate(pInfo, pRate, pError));
+        ABC_ExchangeFreeInfo(pInfo);
 
-    *pRate = strtod(szRate, NULL);
+        ABC_DebugLog("Falling back to disk %d:%f\n", currencyNum, *pRate);
+    }
 exit:
-    ABC_FREE_STR(szRate);
     return cc;
 }
 
 void ABC_ExchangeTerminate()
 {
+    tABC_Error error;
     if (gbInitialized == true)
     {
         pthread_mutex_destroy(&gMutex);
 
         gbInitialized = false;
+        ABC_ExchangeClearCache(&error);
     }
 }
 
-static
-tABC_CC ABC_ExchangeGetRate(tABC_ExchangeInfo *pInfo, char **szRate, tABC_Error *pError)
+tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    bool bUpdateRequired = true;
-    *szRate = NULL;
-
-    ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(pInfo, &bUpdateRequired, szRate, pError));
-    if (bUpdateRequired)
-    {
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_ExchangeUpdateThreaded, pInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        ABC_FREE_STR(pInfo->szUserName);
-        ABC_FREE_STR(pInfo->szPassword);
-        ABC_FREE(pInfo);
-    }
-exit:
-    return cc;
-}
-
-static
-tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired, char **szRate, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    char *szFilename = NULL;
-    bool bExists = false;
-
-    ABC_CHECK_RET(ABC_ExchangeMutexLock(pError));
-    ABC_CHECK_RET(ABC_ExchangeGetFilename(&szFilename, pInfo->currencyNum, pError));
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-    if (true == bExists)
-    {
-        ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, szRate, pError));
-        // get the current time
-        time_t timeNow = time(NULL);
-
-        // get the time the file was last changed
-        time_t timeFileMod;
-        ABC_CHECK_RET(ABC_FileIOFileModTime(szFilename, &timeFileMod, pError));
-
-        // if it isn't too old then don't update
-        if ((timeNow - timeFileMod) < ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS)
-        {
-            *bUpdateRequired = false;
-        }
-    }
-    else
-    {
-        *bUpdateRequired = true;
-        char *def = "0.0";
-        ABC_STRDUP(*szRate, def);
-    }
-exit:
-    ABC_FREE_STR(szFilename);
-    ABC_CHECK_RET(ABC_ExchangeMutexUnlock(NULL));
-    return cc;
-}
-
-static
-void *ABC_ExchangeUpdateThreaded(void *pData)
-{
-    tABC_CC cc;
-    tABC_Error error;
-    tABC_Error *pError = &error;
-    char *szSource = NULL, *szRate = NULL;
-    tABC_ExchangeInfo *pInfo = (tABC_ExchangeInfo *) pData;
+    char *szSource = NULL;
+    double rate;
     bool bUpdateRequired = true;
 
-    ABC_CHECK_RET(ABC_ExchangeMutexLock(pError));
-    ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(pInfo, &bUpdateRequired, &szRate, pError));
+    ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(pInfo, &bUpdateRequired, &rate, pError));
     if (bUpdateRequired)
     {
         ABC_CHECK_RET(ABC_ExchangeExtractSource(pInfo, &szSource, pError));
@@ -184,32 +137,112 @@ void *ABC_ExchangeUpdateThreaded(void *pData)
         {
             if (strcmp(ABC_BITSTAMP, szSource) == 0)
             {
-                ABC_CHECK_RET(ABC_ExchangeBitStampRate(pInfo, &error));
+                ABC_CHECK_RET(ABC_ExchangeBitStampRate(pInfo, pError));
             }
             else if (strcmp(ABC_COINBASE, szSource) == 0)
             {
-                ABC_CHECK_RET(ABC_ExchangeCoinBaseRates(pInfo, &error));
-            }
-
-            if (gfAsyncBitCoinEventCallback)
-            {
-                tABC_AsyncBitCoinInfo resp;
-                resp.eventType = ABC_AsyncEventType_ExchangeRateUpdate;
-                ABC_STRDUP(resp.szDescription, "Exchange rate update");
-                gfAsyncBitCoinEventCallback(&resp);
-                ABC_FREE_STR(resp.szDescription);
+                ABC_CHECK_RET(ABC_ExchangeCoinBaseRates(pInfo, pError));
             }
         }
     }
 exit:
-    ABC_FREE_STR(pInfo->szUserName);
-    ABC_FREE_STR(pInfo->szPassword);
-    ABC_FREE_STR(szSource);
-    ABC_FREE_STR(szRate);
-    ABC_FREE(pInfo);
+    return cc;
+}
 
-    ABC_CHECK_RET(ABC_ExchangeMutexUnlock(NULL));
+void *ABC_ExchangeUpdateThreaded(void *pData)
+{
+    tABC_ExchangeInfo *pInfo = (tABC_ExchangeInfo *) pData;
+    if (pInfo)
+    {
+        tABC_RequestResults results;
+        memset(&results, 0, sizeof(tABC_RequestResults));
+
+        results.requestType = ABC_RequestType_SendBitcoin;
+
+        results.bSuccess = false;
+
+        // send the transaction
+        tABC_CC CC = ABC_ExchangeUpdate(pInfo, &(results.errorInfo));
+        results.errorInfo.code = CC;
+
+        // we are done so load up the info and ship it back to the caller via the callback
+        results.bSuccess = (CC == ABC_CC_Ok ? true : false);
+        pInfo->fRequestCallback(&results);
+
+        // it is our responsibility to free the info struct
+        ABC_ExchangeFreeInfo(pInfo);
+    }
     return NULL;
+}
+
+
+static
+tABC_CC ABC_ExchangeGetRate(tABC_ExchangeInfo *pInfo, double *pRate, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    bool bUpdateRequired = true; // Ignored
+
+    ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(pInfo, &bUpdateRequired, pRate, pError));
+exit:
+    return cc;
+}
+
+static
+tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired, double *pRate, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szFilename = NULL;
+    char *szRate = NULL;
+    tABC_ExchangeCacheEntry *pCache = NULL;
+    time_t timeNow = time(NULL);
+    bool bExists = false;
+
+    ABC_CHECK_RET(ABC_ExchangeMutexLock(pError));
+    ABC_CHECK_RET(ABC_ExchangeGetFromCache(pInfo->currencyNum, &pCache, pError));
+    if (pCache)
+    {
+        if ((timeNow - pCache->last_updated) < ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS)
+        {
+            *bUpdateRequired = false;
+        }
+        *pRate = pCache->exchange_rate;
+    }
+    else
+    {
+        ABC_CHECK_RET(ABC_ExchangeGetFilename(&szFilename, pInfo->currencyNum, pError));
+        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+        if (true == bExists)
+        {
+            ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szRate, pError));
+            // Set the exchange rate
+            *pRate = strtod(szRate, NULL);
+            // get the time the file was last changed
+            time_t timeFileMod;
+            ABC_CHECK_RET(ABC_FileIOFileModTime(szFilename, &timeFileMod, pError));
+
+            // if it isn't too old then don't update
+            if ((timeNow - timeFileMod) < ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS)
+            {
+                *bUpdateRequired = false;
+            }
+        }
+        else
+        {
+            *bUpdateRequired = true;
+            *pRate = 0.0;
+        }
+        ABC_CHECK_RET(ABC_ExchangeAllocCacheEntry(&pCache, pInfo->currencyNum,
+                                                  timeNow, *pRate, pError));
+        if (ABC_CC_WalletAlreadyExists == ABC_ExchangeAddToCache(pCache, pError))
+        {
+            ABC_ExchangeFreeCacheEntry(pCache);
+        }
+    }
+exit:
+    ABC_FREE_STR(szFilename);
+    ABC_FREE_STR(szRate);
+    ABC_CHECK_RET(ABC_ExchangeMutexUnlock(NULL));
+    return cc;
 }
 
 static
@@ -249,7 +282,6 @@ tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
 
     // Parse the json
     pJSON_Root = json_loads(szResponse, 0, &error);
-    ABC_FREE_STR(szResponse);
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
 
@@ -270,6 +302,7 @@ tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
 exit:
     ABC_FREE_STR(szResponse);
     if (pJSON_Root) json_decref(pJSON_Root);
+
     return cc;
 }
 
@@ -281,19 +314,31 @@ tABC_CC ABC_ExchangeExtractAndSave(json_t *pJSON_Root, const char *szField,
     char *szFilename = NULL;
     char *szValue = NULL;
     json_t *jsonVal = NULL;
+    tABC_ExchangeCacheEntry *pCache = NULL;
+    time_t timeNow = time(NULL);
 
+    ABC_CHECK_RET(ABC_ExchangeMutexLock(pError));
+    // Extract value from json
     jsonVal = json_object_get(pJSON_Root, szField);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON");
     ABC_STRDUP(szValue, json_string_value(jsonVal));
 
     ABC_DebugLog("Exchange Response: %s = %s\n", szField, szValue); 
-
+    // Right changes to disk
     ABC_CHECK_RET(ABC_ExchangeGetFilename(&szFilename, currencyNum, pError));
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szValue, pError));
+
+    // Update the cache
+    ABC_CHECK_RET(ABC_ExchangeAllocCacheEntry(&pCache, currencyNum, timeNow, strtod(szValue, NULL), pError));
+    if (ABC_CC_WalletAlreadyExists == ABC_ExchangeAddToCache(pCache, pError))
+    {
+        ABC_ExchangeFreeCacheEntry(pCache);
+    }
 exit:
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szValue);
 
+    ABC_CHECK_RET(ABC_ExchangeMutexUnlock(NULL));
     return cc;
 }
 
@@ -304,6 +349,8 @@ tABC_CC ABC_ExchangeGet(const char *szUrl, tABC_U08Buf *pData, tABC_Error *pErro
     CURL *pCurlHandle = NULL;
     CURLcode curlCode;
     long resCode;
+
+    ABC_CHECK_RET(ABC_URLMutexLock(pError));
 
     pCurlHandle = curl_easy_init();
     // TODO: remove this!!!! and load the cacert for the platform you are on
@@ -325,6 +372,7 @@ exit:
     if (pCurlHandle != NULL)
         curl_easy_cleanup(pCurlHandle);
 
+    ABC_CHECK_RET(ABC_URLMutexUnlock(pError));
     return cc;
 }
 
@@ -336,7 +384,7 @@ tABC_CC ABC_ExchangeGetString(const char *szURL, char **pszResults, tABC_Error *
 
     tABC_U08Buf Data = ABC_BUF_NULL;
 
-    ABC_CHECK_RET(ABC_ExchangeMutexLock(pError));
+    ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(pszResults);
 
@@ -352,7 +400,8 @@ tABC_CC ABC_ExchangeGetString(const char *szURL, char **pszResults, tABC_Error *
 
 exit:
     ABC_BUF_FREE(Data);
-    ABC_ExchangeMutexUnlock(NULL);
+
+    ABC_CHECK_RET(ABC_URLMutexUnlock(pError));
     return cc;
 }
 
@@ -405,10 +454,13 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
     tABC_AccountSettings *pAccountSettings = NULL;
 
     *szSource = NULL;
-    ABC_AccountLoadSettings(pInfo->szUserName,
-                            pInfo->szPassword,
-                            &pAccountSettings,
-                            pError);
+    if (pInfo->szUserName && pInfo->szPassword)
+    {
+        ABC_AccountLoadSettings(pInfo->szUserName,
+                                pInfo->szPassword,
+                                &pAccountSettings,
+                                pError);
+    }
     if (pAccountSettings)
     {
         tABC_ExchangeRateSources *pSources = &(pAccountSettings->exchangeRateSources);
@@ -426,7 +478,7 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
     }
     if (!(*szSource))
     {
-        // If the settings are populated, defaults
+        // If the settings are not populated, defaults
         switch (pInfo->currencyNum)
         {
             case CURRENCY_NUM_USD:
@@ -476,3 +528,163 @@ exit:
     return cc;
 }
 
+/**
+ * Clears all the data from the cache
+ */
+static
+tABC_CC ABC_ExchangeClearCache(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_RET(ABC_ExchangeMutexLock(pError));
+
+    if ((gExchangesCacheCount > 0) && (NULL != gaExchangeCacheArray))
+    {
+        for (int i = 0; i < gExchangesCacheCount; i++)
+        {
+            tABC_ExchangeCacheEntry *pData = gaExchangeCacheArray[i];
+            ABC_FREE(pData);
+        }
+
+        ABC_FREE(gaExchangeCacheArray);
+        gExchangesCacheCount = 0;
+    }
+
+exit:
+
+    ABC_ExchangeMutexUnlock(NULL);
+    return cc;
+}
+
+static
+tABC_CC ABC_ExchangeFillCache(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+exit:
+    return cc;
+}
+
+static
+tABC_CC ABC_ExchangeGetFromCache(int currencyNum, tABC_ExchangeCacheEntry **ppData, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    // assume we didn't find it
+    *ppData = NULL;
+
+    if ((gExchangesCacheCount > 0) && (NULL != gaExchangeCacheArray))
+    {
+        for (int i = 0; i < gExchangesCacheCount; i++)
+        {
+            tABC_ExchangeCacheEntry *pData = gaExchangeCacheArray[i];
+            if (currencyNum == pData->currencyNum)
+            {
+                // found it
+                *ppData = pData;
+                break;
+            }
+        }
+    }
+    return cc;
+}
+
+static
+tABC_CC ABC_ExchangeAddToCache(tABC_ExchangeCacheEntry *pData, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_RET(ABC_ExchangeMutexLock(pError));
+    ABC_CHECK_NULL(pData);
+
+    // see if it exists first
+    tABC_ExchangeCacheEntry *pExistingExchangeData = NULL;
+    ABC_CHECK_RET(ABC_ExchangeGetFromCache(pData->currencyNum, &pExistingExchangeData, pError));
+
+    // if it doesn't currently exist in the array
+    if (pExistingExchangeData == NULL)
+    {
+        // if we don't have an array yet
+        if ((gExchangesCacheCount == 0) || (NULL == gaExchangeCacheArray))
+        {
+            // create a new one
+            gExchangesCacheCount = 0;
+            ABC_ALLOC(gaExchangeCacheArray, sizeof(tABC_ExchangeCacheEntry *));
+        }
+        else
+        {
+            // extend the current one
+            gaExchangeCacheArray = realloc(gaExchangeCacheArray, sizeof(tABC_ExchangeCacheEntry *) * (gExchangesCacheCount + 1));
+
+        }
+        gaExchangeCacheArray[gExchangesCacheCount] = pData;
+        gExchangesCacheCount++;
+    }
+    else
+    {
+        pExistingExchangeData->last_updated = pData->last_updated;
+        pExistingExchangeData->exchange_rate = pData->exchange_rate;
+        cc = ABC_CC_WalletAlreadyExists;
+    }
+
+exit:
+
+    ABC_ExchangeMutexUnlock(NULL);
+    return cc;
+}
+
+tABC_CC ABC_ExchangeAlloc(const char *szUserName, const char *szPassword,
+                          int currencyNum,
+                          tABC_Request_Callback fRequestCallback, void *pData,
+                          tABC_ExchangeInfo **ppInfo, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_ExchangeInfo *pInfo;
+
+    ABC_ALLOC(pInfo, sizeof(tABC_ExchangeInfo));
+    ABC_STRDUP(pInfo->szUserName, szUserName);
+    ABC_STRDUP(pInfo->szPassword, szPassword);
+    pInfo->fRequestCallback = fRequestCallback;
+    pInfo->pData = pData;
+    pInfo->currencyNum = currencyNum;
+
+    *ppInfo = pInfo;
+exit:
+    return cc;
+}
+
+void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo)
+{
+    if (pInfo)
+    {
+        ABC_FREE_STR(pInfo->szUserName);
+        ABC_FREE_STR(pInfo->szPassword);
+        ABC_CLEAR_FREE(pInfo, sizeof(tABC_ExchangeInfo));
+    }
+}
+
+static
+tABC_CC ABC_ExchangeAllocCacheEntry(tABC_ExchangeCacheEntry **ppCache,
+                                    int currencyNum, time_t last_updated,
+                                    double exchange_rate, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_ExchangeCacheEntry *pCache;
+
+    ABC_ALLOC(pCache, sizeof(tABC_ExchangeCacheEntry));
+    pCache->currencyNum = currencyNum;
+    pCache->last_updated = last_updated;
+    pCache->exchange_rate = exchange_rate;
+
+    *ppCache = pCache;
+exit:
+    return cc;
+}
+
+static
+void ABC_ExchangeFreeCacheEntry(tABC_ExchangeCacheEntry *pCache)
+{
+    if (pCache)
+    {
+        ABC_CLEAR_FREE(pCache, sizeof(tABC_ExchangeCacheEntry));
+    }
+}

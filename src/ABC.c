@@ -2206,10 +2206,25 @@ exit:
     return cc;
 }
 
+/**
+ * Request an update to the exchange for a currency
+ *
+ * @param szUserName           UserName for the account
+ * @param szPassword           Password for the account
+ * @param currencyNum          The currency number to update
+ * @param fRequestCallback     The function that will be called when the account signin process has finished.
+ * @param pData                A pointer to data to be returned back in callback
+ * @param pError               A pointer to the location to store the error if there is one
+ */
 tABC_CC
-ABC_RequestExchangeRateUpdate(const char *szUserName, const char *szPassword, int currencyNum, tABC_Error *pError)
+ABC_RequestExchangeRateUpdate(const char *szUserName,
+                              const char *szPassword,
+                              int currencyNum,
+                              tABC_Request_Callback fRequestCallback,
+                              void *pData,
+                              tABC_Error *pError)
 {
-    double rate;
+    tABC_ExchangeInfo *pInfo = NULL;
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
@@ -2221,7 +2236,23 @@ ABC_RequestExchangeRateUpdate(const char *szUserName, const char *szPassword, in
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
-    ABC_CHECK_RET(ABC_ExchangeCurrentRate(szUserName, szPassword, currencyNum, &rate, pError));
+    ABC_CHECK_RET(
+        ABC_ExchangeAlloc(szUserName, szPassword, currencyNum,
+                          fRequestCallback, pData, &pInfo, pError));
+    if (fRequestCallback)
+    {
+        pthread_t handle;
+        if (!pthread_create(&handle, NULL, ABC_ExchangeUpdateThreaded, pInfo))
+        {
+            pthread_detach(handle);
+        }
+    }
+    else
+    {
+        cc = ABC_ExchangeUpdate(pInfo, pError);
+        ABC_ExchangeFreeInfo(pInfo);
+    }
+
 exit:
     return cc;
 }
