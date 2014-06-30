@@ -994,6 +994,8 @@ tABC_CC ABC_WalletGetInfo(const char *szUserName,
     tABC_TxInfo **aTransactions = NULL;
     unsigned int nCount = 0;
 
+    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szUUID);
@@ -1036,6 +1038,7 @@ exit:
     ABC_CLEAR_FREE(pInfo, sizeof(tABC_WalletInfo));
     ABC_FreeTransactions(aTransactions, nCount);
 
+    ABC_CHECK_RET(ABC_WalletMutexUnlock(pError));
     return cc;
 }
 
@@ -1130,6 +1133,8 @@ tABC_CC ABC_WalletGetWallets(const char *szUserName,
     unsigned int nUUIDs = 0;
     tABC_WalletInfo **aWalletInfo = NULL;
 
+    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(paWalletInfo);
@@ -1164,6 +1169,7 @@ exit:
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
     ABC_WalletFreeInfoArray(aWalletInfo, nUUIDs);
 
+    ABC_CHECK_RET(ABC_WalletMutexUnlock(pError));
     return cc;
 }
 
