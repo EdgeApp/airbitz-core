@@ -30,6 +30,7 @@
 #define ACCOUNT_FOLDER_PREFIX                   "Account_"
 #define ACCOUNT_NAME_FILENAME                   "User_Name.json"
 #define ACCOUNT_EPIN_FILENAME                   "EPIN.json"
+#define ACCOUNT_EREPO_FILENAME                  "ERepoAcctKey.json"
 #define ACCOUNT_CARE_PACKAGE_FILENAME           "Care_Package.json"
 #define ACCOUNT_WALLETS_FILENAME                "Wallets.json"
 #define ACCOUNT_CATEGORIES_FILENAME             "Categories.json"
@@ -41,6 +42,7 @@
 
 #define JSON_ACCT_USERNAME_FIELD                "userName"
 #define JSON_ACCT_PIN_FIELD                     "PIN"
+#define JSON_ACCT_REPO_FIELD                    "RepoAcctKey"
 #define JSON_ACCT_QUESTIONS_FIELD               "questions"
 #define JSON_ACCT_WALLETS_FIELD                 "wallets"
 #define JSON_ACCT_CATEGORIES_FIELD              "categories"
@@ -83,6 +85,7 @@ typedef struct sAccountKeys
     char            *szUserName;
     char            *szPassword;
     char            *szPIN;
+    char            *szRepoAcctKey;
     tABC_CryptoSNRP *pSNRP1;
     tABC_CryptoSNRP *pSNRP2;
     tABC_CryptoSNRP *pSNRP3;
@@ -104,7 +107,7 @@ typedef struct sAccountKeys
 static unsigned int gAccountKeysCacheCount = 0;
 static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
-static tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pError);
+static tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, char *szRepoAcctKey, char *szERepoAcctKey, tABC_Error *pError);
 static tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, tABC_Error *pError);
 static tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
@@ -392,14 +395,17 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     json_t          *pJSON_SNRP4        = NULL;
     char            *szCarePackage_JSON = NULL;
     char            *szEPIN_JSON        = NULL;
+    char            *szERepoAcctKey     = NULL;
     char            *szJSON             = NULL;
     char            *szAccountDir       = NULL;
     char            *szFilename         = NULL;
 
+    int AccountNum = 0;
+    tABC_U08Buf RepoAcctKey = ABC_BUF_NULL;
+
     ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
 
-    int AccountNum = 0;
 
     // check locally that the account name is available
     ABC_CHECK_RET(ABC_AccountNumForUser(pInfo->szUserName, &AccountNum, pError));
@@ -442,13 +448,9 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     // CarePackage = ERQ, SNRP2, SNRP3, SNRP4
     ABC_CHECK_RET(ABC_AccountCreateCarePackageJSONString(NULL, pJSON_SNRP2, pJSON_SNRP3, pJSON_SNRP4, &szCarePackage_JSON, pError));
 
-    // TODO: create RepoAcctKey and ERepoAcctKey
-
-    // check with the server that the account name is available while also sending the data it will need
-    // TODO: need to add ERepoAcctKey to the server
-    ABC_CHECK_RET(ABC_AccountServerCreate(pKeys->L1, pKeys->P1, pError));
-
-    // create client side data
+    // Create Repo key
+    ABC_CHECK_RET(ABC_CryptoCreateRandomData(SYNC_REPO_KEY_LENGTH, &RepoAcctKey, pError));
+    ABC_CHECK_RET(ABC_CryptoHexEncode(RepoAcctKey, &(pKeys->szRepoAcctKey), pError));
 
     // LP = L + P
     ABC_BUF_DUP(pKeys->LP, pKeys->L);
@@ -486,6 +488,21 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEPIN_JSON, pError));
     ABC_FREE_STR(szJSON);
     szJSON = NULL;
+
+    // create the RepoAcctKey JSON
+    ABC_CHECK_RET(ABC_UtilCreateValueJSONString(pKeys->szRepoAcctKey, JSON_ACCT_REPO_FIELD, &szJSON, pError));
+    tABC_U08Buf RepoBuf = ABC_BUF_NULL;
+    ABC_BUF_SET_PTR(RepoBuf, (unsigned char *)szJSON, strlen(szJSON) + 1);
+
+    // Create ERepoAcctKey and write to disk
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(RepoBuf, pKeys->LP2, ABC_CryptoType_AES256, &szERepoAcctKey, pError));
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szERepoAcctKey, pError));
+    ABC_FREE_STR(szJSON);
+    szJSON = NULL;
+
+    // Create the repo and account on server
+    ABC_CHECK_RET(ABC_AccountServerCreate(pKeys->L1, pKeys->P1, pKeys->szRepoAcctKey, pKeys->szRepoAcctKey, pError));
 
     // write the file care package to a file
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
@@ -534,7 +551,10 @@ exit:
  * @param P1   Password hash for the account
  */
 static
-tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pError)
+tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1,
+                                char *szRepoAcctKey,
+                                char *szERepoAcctKey,
+                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -557,7 +577,11 @@ tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pErr
     ABC_CHECK_RET(ABC_CryptoBase64Encode(P1, &szP1_Base64, pError));
 
     // create the post data
-    pJSON_Root = json_pack("{ssss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64, ABC_SERVER_JSON_P1_FIELD, szP1_Base64);
+    pJSON_Root = json_pack("{ssssssss}",
+                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                        ABC_SERVER_JSON_P1_FIELD, szP1_Base64,
+                        ABC_SERVER_JSON_REPO_FIELD, szRepoAcctKey,
+                        ABC_SERVER_JSON_EREPO_FIELD, szERepoAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
@@ -1780,6 +1804,7 @@ static void ABC_AccountFreeAccountKeys(tAccountKeys *pAccountKeys)
         ABC_FREE_STR(pAccountKeys->szPassword);
 
         ABC_FREE_STR(pAccountKeys->szPIN);
+        ABC_FREE_STR(pAccountKeys->szRepoAcctKey);
 
         ABC_CryptoFreeSNRP(&(pAccountKeys->pSNRP1));
         ABC_CryptoFreeSNRP(&(pAccountKeys->pSNRP2));
@@ -1899,6 +1924,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
     json_t       *pJSON_SNRP3   = NULL;
     json_t       *pJSON_SNRP4   = NULL;
     tABC_U08Buf  PIN_JSON       = ABC_BUF_NULL;
+    tABC_U08Buf  REPO_JSON      = ABC_BUF_NULL;
     json_t       *pJSON_Root    = NULL;
     tABC_U08Buf  P              = ABC_BUF_NULL;
     tABC_U08Buf  LP             = ABC_BUF_NULL;
@@ -1986,6 +2012,27 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
                 goto exit;
             }
 
+            // try to decrypt RepoAcctKey
+            bool bKeyExists = false;
+            ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+            sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
+            ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bKeyExists, pError));
+            if (bKeyExists)
+            {
+                CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, LP2, &REPO_JSON, pError);
+
+                // check the results
+                if (ABC_CC_DecryptFailure == CC_Decrypt)
+                {
+                    ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt RepoAcctKey - bad password");
+                }
+                else if (ABC_CC_Ok != CC_Decrypt)
+                {
+                    cc = CC_Decrypt;
+                    goto exit;
+                }
+            }
+
             // if we got here, then the password was good so we can add what we just calculated to the keys
             ABC_STRDUP(pFinalKeys->szPassword, szPassword);
             ABC_BUF_SET(pFinalKeys->P, P);
@@ -1998,6 +2045,12 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             // decode the json to get the pin
             char *szJSON_PIN = (char *) ABC_BUF_PTR(PIN_JSON);
             ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_PIN, JSON_ACCT_PIN_FIELD, &(pFinalKeys->szPIN), pError));
+
+            if (bKeyExists)
+            {
+                char *szJSON_REPO = (char *) ABC_BUF_PTR(REPO_JSON);
+                ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_REPO, JSON_ACCT_REPO_FIELD, &(pFinalKeys->szRepoAcctKey), pError));
+            }
         }
         else
         {
@@ -2089,6 +2142,12 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
             // this should already be in the cache
             ABC_CHECK_ASSERT(NULL != pKeys->szPIN, ABC_CC_Error, "Expected to find PIN in key cache");
             ABC_BUF_SET_PTR(*pKey, (unsigned char *)pKeys->szPIN, sizeof(pKeys->szPIN) + 1);
+            break;
+
+        case ABC_AccountKey_RepoAccountKey:
+            // this should already be in the cache
+            ABC_CHECK_ASSERT(NULL != pKeys->szRepoAcctKey, ABC_CC_Error, "Expected to find Repo Account Key");
+            ABC_BUF_SET_PTR(*pKey, (unsigned char *)pKeys->szRepoAcctKey, sizeof(pKeys->szRepoAcctKey) + 1);
             break;
 
         case ABC_AccountKey_RQ:

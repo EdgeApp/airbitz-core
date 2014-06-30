@@ -13,6 +13,8 @@
 #include "ABC.h"
 #include "ABC_Util.h"
 
+#define SYNC_REPO_KEY_LENGTH 20
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -60,6 +62,7 @@ extern "C" {
         ABC_AccountKey_L2,
         ABC_AccountKey_LP2,
         ABC_AccountKey_PIN,
+        ABC_AccountKey_RepoAccountKey,
         ABC_AccountKey_RQ
     } tABC_AccountKey;
 
