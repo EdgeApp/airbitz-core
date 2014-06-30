@@ -18,10 +18,15 @@
 #include "ABC_Crypto.h"
 #include "ABC_Account.h"
 #include "ABC_Mutex.h"
+#include "ABC_ServerDefs.h"
+#include "ABC_URL.h"
 
 #define WALLET_KEY_LENGTH                       AES_256_KEY_LENGTH
 
 #define WALLET_BITCOIN_PRIVATE_SEED_LENGTH      32
+
+#define ABC_SERVER_JSON_REPO_WALLET_FIELD       "repo_wallet_key"
+#define ABC_SERVER_JSON_EREPO_WALLET_FIELD      "erepo_wallet_key"
 
 #define WALLET_DIR                              "Wallets"
 #define WALLET_SYNC_DIR                         "sync"
@@ -34,6 +39,8 @@
 #define WALLET_CURRENCY_FILENAME                "Currency.json"
 #define WALLET_ACCOUNTS_FILENAME                "Accounts.json"
 #define WALLET_BITCOIN_PRIVATE_SEED_FILENAME    "Bitcoin_Private_Seed.json"
+#define WALLET_SYNC_REPO_PREFIX_FIELD           "ERepoWalletKey"
+#define WALLET_SYNC_REPO_SUFFIC_FIELD           "json"
 
 #define JSON_WALLET_WALLETS_FIELD               "wallets"
 #define JSON_WALLET_NAME_FIELD                  "walletName"
@@ -62,6 +69,7 @@ typedef struct sWalletData
 static unsigned int gWalletsCacheCount = 0;
 static tWalletData **gaWalletsCacheArray = NULL;
 
+static tABC_CC ABC_WalletServerRepoCreate(tABC_U08Buf L1, char *szRepoAcctKey, char *szERepoAcctKey, tABC_Error *pError);
 static tABC_CC ABC_WalletCreateAndSetBitcoinPrivateSeed(const char *szUserName, const char *szPassword, const char *szUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletSetCurrencyNum(const char *szUserName, const char *szPassword, const char *szUUID, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, const char *szUUID, const char *szAccount, tABC_Error *pError);
@@ -190,11 +198,18 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     char *szEMK_JSON        = NULL;
     char *szJSON = NULL;
     char *szUUID = NULL;
+    char *szWalletAcctKey = NULL;
+    char *szEWalletAcctKey = NULL;
     json_t *pJSON_Data = NULL;
     json_t *pJSON_Wallets = NULL;
+    tABC_U08Buf L1 = ABC_BUF_NULL;
     tABC_U08Buf L2 = ABC_BUF_NULL;
     tABC_U08Buf LP2 = ABC_BUF_NULL;
+    tABC_U08Buf WalletAcctKey = ABC_BUF_NULL;
+
     tWalletData *pData = NULL;
+
+    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
     ABC_CHECK_NULL(pInfo);
     ABC_CHECK_NULL(pszUUID);
@@ -206,6 +221,9 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     // get the local directory for this account
     ABC_CHECK_RET(ABC_AccountGetSyncDirName(pData->szUserName, &szAccountSyncDir, pError));
+
+    // get L1
+    ABC_CHECK_RET(ABC_AccountGetKey(pData->szUserName, pData->szPassword, ABC_AccountKey_L1, &L1, pError));
 
     // get L2
     ABC_CHECK_RET(ABC_AccountGetKey(pData->szUserName, pData->szPassword, ABC_AccountKey_L2, &L2, pError));
@@ -247,9 +265,20 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     szJSON = ABC_UtilStringFromJSONObject(pJSON_Data, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
 
-    // TODO: create wallet directory sync key
-    // TODO: create encrypted wallet directory sync key ERepoWalletKey_<Wallet_GUID1>.json ( AES256(RepoWalletKey_<Wallet_GUID1>, L2) )
-    // TODO: add encrypted wallet sync key to account directory
+    // Create Wallet Repo key
+    ABC_CHECK_RET(ABC_CryptoCreateRandomData(SYNC_REPO_KEY_LENGTH, &WalletAcctKey, pError));
+    ABC_CHECK_RET(ABC_CryptoHexEncode(WalletAcctKey, &szWalletAcctKey, pError));
+
+    // Write Wallet Repo to disk
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(WalletAcctKey, LP2, ABC_CryptoType_AES256, &szEWalletAcctKey, pError));
+    sprintf(szFilename, "%s/%s_%s.%s", szAccountSyncDir, WALLET_SYNC_REPO_PREFIX_FIELD,
+                                       szUUID, WALLET_SYNC_REPO_SUFFIC_FIELD);
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEWalletAcctKey, pError));
+    ABC_FREE_STR(szJSON);
+    szJSON = NULL;
+
+    // Request remote wallet repo
+    ABC_CHECK_RET(ABC_WalletServerRepoCreate(L1, szWalletAcctKey, szWalletAcctKey, pError));
 
     // create the wallet root directory if necessary
     ABC_CHECK_RET(ABC_WalletCreateRootDir(pError));
@@ -285,7 +314,6 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
-
     // TODO: Create sync info for Wallet directory - .git
 
 exit:
@@ -294,9 +322,94 @@ exit:
     ABC_FREE_STR(szEMK_JSON);
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szUUID);
+    ABC_FREE_STR(szWalletAcctKey);
+    ABC_FREE_STR(szEWalletAcctKey);
     if (pJSON_Data)         json_decref(pJSON_Data);
     if (pJSON_Wallets)      json_decref(pJSON_Wallets);
     if (pData)              ABC_WalletFreeData(pData);
+
+    ABC_CHECK_RET(ABC_WalletMutexUnlock(pError));
+    return cc;
+}
+
+/**
+ * Creates an git repo on the server.
+ *
+ * @param L1   Login hash for the account
+ * @param P1   Password hash for the account
+ */
+static
+tABC_CC ABC_WalletServerRepoCreate(tABC_U08Buf L1,
+                                   char *szWalletAcctKey,
+                                   char *szEWalletAcctKey,
+                                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szURL     = NULL;
+    char *szResults = NULL;
+    char *szPost    = NULL;
+    char *szL1_Base64 = NULL;
+    json_t *pJSON_Root = NULL;
+
+    ABC_CHECK_NULL_BUF(L1);
+
+    // create the URL
+    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_WALLET_CREATE_PATH);
+
+    // create base64 versions of L1
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
+
+    // create the post data
+    pJSON_Root = json_pack("{ssssss}",
+                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                        ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey,
+                        ABC_SERVER_JSON_EREPO_WALLET_FIELD, szEWalletAcctKey);
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
+    json_decref(pJSON_Root);
+    pJSON_Root = NULL;
+    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %s", szResults);
+
+    // decode the result
+    json_t *pJSON_Value = NULL;
+    json_error_t error;
+    pJSON_Root = json_loads(szResults, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    // get the status code
+    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
+    int statusCode = (int) json_integer_value(pJSON_Value);
+
+    // if there was a failure
+    if (ABC_Server_Code_Success != statusCode)
+    {
+        if (ABC_Server_Code_AccountExists == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists on server");
+        }
+        else
+        {
+            // get the message
+            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
+            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
+            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
+        }
+    }
+
+exit:
+    ABC_FREE_STR(szURL);
+    ABC_FREE_STR(szResults);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szL1_Base64);
+    if (pJSON_Root)     json_decref(pJSON_Root);
 
     return cc;
 }
