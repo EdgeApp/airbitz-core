@@ -7,59 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3D34923118D1258C000FCE2C /* libbitcoin.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D34923018D1258B000FCE2C /* libbitcoin.a */; };
-		3D34923318D125BE000FCE2C /* libboost_system.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D34923218D125BE000FCE2C /* libboost_system.a */; };
-		3D34923418D125ED000FCE2C /* libbitcoin.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D34923018D1258B000FCE2C /* libbitcoin.a */; };
-		3D34923518D125FE000FCE2C /* libboost_system.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D34923218D125BE000FCE2C /* libboost_system.a */; };
-		3D3EC1CF18CFCF2F00682700 /* ABC_Bridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */; };
-		3D3EC1D118CFDDF100682700 /* libwallet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D3EC1D018CFDDF100682700 /* libwallet.a */; };
-		3D3EC1D218CFDE6800682700 /* libwallet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D3EC1D018CFDDF100682700 /* libwallet.a */; };
-		4C08A6CF18BFBFCD0071B87C /* libqrencode.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C08A6CE18BFBFCC0071B87C /* libqrencode.a */; };
-		4C08A6D018BFBFF20071B87C /* libqrencode.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C08A6CE18BFBFCC0071B87C /* libqrencode.a */; };
-		4C41303318BE991E00DD2123 /* ABC_Account.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302218BE991E00DD2123 /* ABC_Account.c */; };
-		4C41303418BE991E00DD2123 /* ABC_Account.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302218BE991E00DD2123 /* ABC_Account.c */; };
-		4C41303518BE991E00DD2123 /* ABC_Crypto.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302318BE991E00DD2123 /* ABC_Crypto.c */; };
-		4C41303618BE991E00DD2123 /* ABC_Crypto.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302318BE991E00DD2123 /* ABC_Crypto.c */; };
-		4C41303718BE991E00DD2123 /* ABC_Debug.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302418BE991E00DD2123 /* ABC_Debug.c */; };
-		4C41303818BE991E00DD2123 /* ABC_Debug.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302418BE991E00DD2123 /* ABC_Debug.c */; };
-		4C41303918BE991E00DD2123 /* ABC_FileIO.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302518BE991E00DD2123 /* ABC_FileIO.c */; };
-		4C41303A18BE991E00DD2123 /* ABC_FileIO.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302518BE991E00DD2123 /* ABC_FileIO.c */; };
-		4C41303B18BE991E00DD2123 /* ABC_URL.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302618BE991E00DD2123 /* ABC_URL.c */; };
-		4C41303C18BE991E00DD2123 /* ABC_URL.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302618BE991E00DD2123 /* ABC_URL.c */; };
-		4C41303D18BE991E00DD2123 /* ABC_Util.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302718BE991E00DD2123 /* ABC_Util.c */; };
-		4C41303E18BE991E00DD2123 /* ABC_Util.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302718BE991E00DD2123 /* ABC_Util.c */; };
-		4C41303F18BE991E00DD2123 /* ABC_Wallet.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302818BE991E00DD2123 /* ABC_Wallet.c */; };
-		4C41304018BE991E00DD2123 /* ABC_Wallet.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302818BE991E00DD2123 /* ABC_Wallet.c */; };
-		4C41304118BE991E00DD2123 /* ABC.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302918BE991E00DD2123 /* ABC.c */; };
-		4C41304218BE991E00DD2123 /* ABC.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C41302918BE991E00DD2123 /* ABC.c */; };
 		4C8A78D918B3FCEA00A06B16 /* TextFieldContainerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C9D93C218AECB9E00402014 /* TextFieldContainerView.m */; };
 		4C8A78DB18B3FCEA00A06B16 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CD77597188EF7DC00AF76AC /* ViewController.m */; };
 		4C8A78DC18B3FCEA00A06B16 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CD77591188EF7DC00AF76AC /* AppDelegate.m */; };
 		4C8A78DE18B3FCEA00A06B16 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CD7758D188EF7DC00AF76AC /* main.m */; };
-		4C8A78E118B3FCEA00A06B16 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9D93BA18AC662B00402014 /* libz.a */; };
-		4C8A78E218B3FCEA00A06B16 /* libjansson.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9D93B418AC65D900402014 /* libjansson.a */; };
-		4C8A78E318B3FCEA00A06B16 /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9D93B618AC65FB00402014 /* libcrypto.a */; };
-		4C8A78E418B3FCEA00A06B16 /* libssl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9D93B718AC65FB00402014 /* libssl.a */; };
 		4C8A78E518B3FCEA00A06B16 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CD77583188EF7DC00AF76AC /* CoreGraphics.framework */; };
 		4C8A78E618B3FCEA00A06B16 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CD77585188EF7DC00AF76AC /* UIKit.framework */; };
 		4C8A78E718B3FCEA00A06B16 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CD77581188EF7DC00AF76AC /* Foundation.framework */; };
 		4C8A78E918B3FCEA00A06B16 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4CD77599188EF7DC00AF76AC /* Images.xcassets */; };
 		4C8A78EA18B3FCEA00A06B16 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4CD7758A188EF7DC00AF76AC /* InfoPlist.strings */; };
 		4C8A78EB18B3FCEA00A06B16 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4CD77593188EF7DC00AF76AC /* Main.storyboard */; };
-		4C8A78F218B401FC00A06B16 /* libcurl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C8A78F118B401FC00A06B16 /* libcurl.a */; };
-		4C8A78F318B4022B00A06B16 /* libcurl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C8A78F118B401FC00A06B16 /* libcurl.a */; };
-		4C9D93BC18ADA90200402014 /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9D93B618AC65FB00402014 /* libcrypto.a */; };
-		4C9D93BD18ADA90200402014 /* libssl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9D93B718AC65FB00402014 /* libssl.a */; };
-		4C9D93BE18ADA91800402014 /* libjansson.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9D93B418AC65D900402014 /* libjansson.a */; };
-		4C9D93BF18ADA92A00402014 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4C9D93BA18AC662B00402014 /* libz.a */; };
 		4C9D93C318AECB9E00402014 /* TextFieldContainerView.m in Sources */ = {isa = PBXBuildFile; fileRef = 4C9D93C218AECB9E00402014 /* TextFieldContainerView.m */; };
-		4C9F576C18CA70DF003941B2 /* ABC_Tx.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C9F576B18CA70DF003941B2 /* ABC_Tx.c */; };
-		4C9F576D18CA70DF003941B2 /* ABC_Tx.c in Sources */ = {isa = PBXBuildFile; fileRef = 4C9F576B18CA70DF003941B2 /* ABC_Tx.c */; };
-		4C9F576E18CFEDDE003941B2 /* ABC_Bridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */; };
-		4CB3450A18C799C600A0FFE5 /* ABC_Mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = 4CB3450818C799C600A0FFE5 /* ABC_Mutex.c */; };
-		4CB3450B18C799C600A0FFE5 /* ABC_Mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = 4CB3450818C799C600A0FFE5 /* ABC_Mutex.c */; };
-		4CCDCB9118B694BC00FC4391 /* libscrypt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CCDCB9018B694BC00FC4391 /* libscrypt.a */; };
-		4CCDCB9218B6953000FC4391 /* libscrypt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CCDCB9018B694BC00FC4391 /* libscrypt.a */; };
 		4CD77582188EF7DC00AF76AC /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CD77581188EF7DC00AF76AC /* Foundation.framework */; };
 		4CD77584188EF7DC00AF76AC /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CD77583188EF7DC00AF76AC /* CoreGraphics.framework */; };
 		4CD77586188EF7DC00AF76AC /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CD77585188EF7DC00AF76AC /* UIKit.framework */; };
@@ -74,6 +32,53 @@
 		4CD775A3188EF7DC00AF76AC /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CD77585188EF7DC00AF76AC /* UIKit.framework */; };
 		4CD775AB188EF7DC00AF76AC /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4CD775A9188EF7DC00AF76AC /* InfoPlist.strings */; };
 		4CD775AD188EF7DC00AF76AC /* TestBedTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 4CD775AC188EF7DC00AF76AC /* TestBedTests.m */; };
+		DA8D581F19611B5F008BFFFB /* libbitcoin-client.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D580719611B5F008BFFFB /* libbitcoin-client.a */; };
+		DA8D582019611B5F008BFFFB /* libbitcoin-watcher.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D580819611B5F008BFFFB /* libbitcoin-watcher.a */; };
+		DA8D582119611B5F008BFFFB /* libbitcoin.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D580919611B5F008BFFFB /* libbitcoin.a */; };
+		DA8D582219611B5F008BFFFB /* libboost_atomic.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D580A19611B5F008BFFFB /* libboost_atomic.a */; };
+		DA8D582319611B5F008BFFFB /* libboost_date_time.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D580B19611B5F008BFFFB /* libboost_date_time.a */; };
+		DA8D582419611B5F008BFFFB /* libboost_filesystem.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D580C19611B5F008BFFFB /* libboost_filesystem.a */; };
+		DA8D582519611B5F008BFFFB /* libboost_iostreams.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D580D19611B5F008BFFFB /* libboost_iostreams.a */; };
+		DA8D582619611B5F008BFFFB /* libboost_program_options.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D580E19611B5F008BFFFB /* libboost_program_options.a */; };
+		DA8D582719611B60008BFFFB /* libboost_regex.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D580F19611B5F008BFFFB /* libboost_regex.a */; };
+		DA8D582819611B60008BFFFB /* libboost_signals.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581019611B5F008BFFFB /* libboost_signals.a */; };
+		DA8D582919611B60008BFFFB /* libboost_system.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581119611B5F008BFFFB /* libboost_system.a */; };
+		DA8D582A19611B60008BFFFB /* libboost_thread.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581219611B5F008BFFFB /* libboost_thread.a */; };
+		DA8D582B19611B60008BFFFB /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581319611B5F008BFFFB /* libcrypto.a */; };
+		DA8D582C19611B60008BFFFB /* libcurl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581419611B5F008BFFFB /* libcurl.a */; };
+		DA8D582D19611B60008BFFFB /* libjansson.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581519611B5F008BFFFB /* libjansson.a */; };
+		DA8D582E19611B60008BFFFB /* libqrencode.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581619611B5F008BFFFB /* libqrencode.a */; };
+		DA8D582F19611B60008BFFFB /* libscrypt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581719611B5F008BFFFB /* libscrypt.a */; };
+		DA8D583019611B60008BFFFB /* libsecp256k1.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581819611B5F008BFFFB /* libsecp256k1.a */; };
+		DA8D583119611B60008BFFFB /* libsodium.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581919611B5F008BFFFB /* libsodium.a */; };
+		DA8D583219611B60008BFFFB /* libssl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581A19611B5F008BFFFB /* libssl.a */; };
+		DA8D583319611B60008BFFFB /* libwallet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581B19611B5F008BFFFB /* libwallet.a */; };
+		DA8D583419611B60008BFFFB /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581C19611B5F008BFFFB /* libz.a */; };
+		DA8D583519611B60008BFFFB /* libzmq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DA8D581D19611B5F008BFFFB /* libzmq.a */; };
+		DA8D584F19612296008BFFFB /* ABC_Account.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D583619612296008BFFFB /* ABC_Account.c */; };
+		DA8D585019612296008BFFFB /* ABC_Account.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D583619612296008BFFFB /* ABC_Account.c */; };
+		DA8D585119612296008BFFFB /* ABC_Bridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DA8D583819612296008BFFFB /* ABC_Bridge.cpp */; };
+		DA8D585219612296008BFFFB /* ABC_Bridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DA8D583819612296008BFFFB /* ABC_Bridge.cpp */; };
+		DA8D585319612296008BFFFB /* ABC_Crypto.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D583A19612296008BFFFB /* ABC_Crypto.c */; };
+		DA8D585419612296008BFFFB /* ABC_Crypto.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D583A19612296008BFFFB /* ABC_Crypto.c */; };
+		DA8D585519612296008BFFFB /* ABC_Debug.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D583C19612296008BFFFB /* ABC_Debug.c */; };
+		DA8D585619612296008BFFFB /* ABC_Debug.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D583C19612296008BFFFB /* ABC_Debug.c */; };
+		DA8D585719612296008BFFFB /* ABC_Exchanges.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D583E19612296008BFFFB /* ABC_Exchanges.c */; };
+		DA8D585819612296008BFFFB /* ABC_Exchanges.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D583E19612296008BFFFB /* ABC_Exchanges.c */; };
+		DA8D585919612296008BFFFB /* ABC_FileIO.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584019612296008BFFFB /* ABC_FileIO.c */; };
+		DA8D585A19612296008BFFFB /* ABC_FileIO.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584019612296008BFFFB /* ABC_FileIO.c */; };
+		DA8D585B19612296008BFFFB /* ABC_Mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584219612296008BFFFB /* ABC_Mutex.c */; };
+		DA8D585C19612296008BFFFB /* ABC_Mutex.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584219612296008BFFFB /* ABC_Mutex.c */; };
+		DA8D585D19612296008BFFFB /* ABC_Tx.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584519612296008BFFFB /* ABC_Tx.c */; };
+		DA8D585E19612296008BFFFB /* ABC_Tx.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584519612296008BFFFB /* ABC_Tx.c */; };
+		DA8D585F19612296008BFFFB /* ABC_URL.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584719612296008BFFFB /* ABC_URL.c */; };
+		DA8D586019612296008BFFFB /* ABC_URL.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584719612296008BFFFB /* ABC_URL.c */; };
+		DA8D586119612296008BFFFB /* ABC_Util.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584919612296008BFFFB /* ABC_Util.c */; };
+		DA8D586219612296008BFFFB /* ABC_Util.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584919612296008BFFFB /* ABC_Util.c */; };
+		DA8D586319612296008BFFFB /* ABC_Wallet.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584B19612296008BFFFB /* ABC_Wallet.c */; };
+		DA8D586419612296008BFFFB /* ABC_Wallet.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584B19612296008BFFFB /* ABC_Wallet.c */; };
+		DA8D586519612296008BFFFB /* ABC.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584D19612296008BFFFB /* ABC.c */; };
+		DA8D586619612296008BFFFB /* ABC.c in Sources */ = {isa = PBXBuildFile; fileRef = DA8D584D19612296008BFFFB /* ABC.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -87,43 +92,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		3D34923018D1258B000FCE2C /* libbitcoin.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbitcoin.a; path = "../../deps/build/libbitcoin/ios-universal/lib/libbitcoin.a"; sourceTree = "<group>"; };
-		3D34923218D125BE000FCE2C /* libboost_system.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_system.a; path = "../../deps/build/boost/ios-universal/lib/libboost_system.a"; sourceTree = "<group>"; };
-		3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ABC_Bridge.cpp; path = ../../ABC_Bridge.cpp; sourceTree = "<group>"; };
-		3D3EC1CE18CFCF2F00682700 /* ABC_Bridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Bridge.h; path = ../../ABC_Bridge.h; sourceTree = "<group>"; };
-		3D3EC1D018CFDDF100682700 /* libwallet.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libwallet.a; path = "../../deps/build/libwallet/ios-universal/lib/libwallet.a"; sourceTree = "<group>"; };
-		4C08A6CE18BFBFCC0071B87C /* libqrencode.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libqrencode.a; path = "../../deps/build/libqrencode/ios-universal/lib/libqrencode.a"; sourceTree = "<group>"; };
-		4C41302218BE991E00DD2123 /* ABC_Account.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Account.c; path = ../../ABC_Account.c; sourceTree = "<group>"; };
-		4C41302318BE991E00DD2123 /* ABC_Crypto.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Crypto.c; path = ../../ABC_Crypto.c; sourceTree = "<group>"; };
-		4C41302418BE991E00DD2123 /* ABC_Debug.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Debug.c; path = ../../ABC_Debug.c; sourceTree = "<group>"; };
-		4C41302518BE991E00DD2123 /* ABC_FileIO.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_FileIO.c; path = ../../ABC_FileIO.c; sourceTree = "<group>"; };
-		4C41302618BE991E00DD2123 /* ABC_URL.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_URL.c; path = ../../ABC_URL.c; sourceTree = "<group>"; };
-		4C41302718BE991E00DD2123 /* ABC_Util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Util.c; path = ../../ABC_Util.c; sourceTree = "<group>"; };
-		4C41302818BE991E00DD2123 /* ABC_Wallet.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Wallet.c; path = ../../ABC_Wallet.c; sourceTree = "<group>"; };
-		4C41302918BE991E00DD2123 /* ABC.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC.c; path = ../../ABC.c; sourceTree = "<group>"; };
-		4C41302A18BE991E00DD2123 /* ABC_Account.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Account.h; path = ../../ABC_Account.h; sourceTree = "<group>"; };
-		4C41302B18BE991E00DD2123 /* ABC_Crypto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Crypto.h; path = ../../ABC_Crypto.h; sourceTree = "<group>"; };
-		4C41302C18BE991E00DD2123 /* ABC_Debug.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Debug.h; path = ../../ABC_Debug.h; sourceTree = "<group>"; };
-		4C41302D18BE991E00DD2123 /* ABC_FileIO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_FileIO.h; path = ../../ABC_FileIO.h; sourceTree = "<group>"; };
-		4C41302E18BE991E00DD2123 /* ABC_ServerDefs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_ServerDefs.h; path = ../../ABC_ServerDefs.h; sourceTree = "<group>"; };
-		4C41302F18BE991E00DD2123 /* ABC_URL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_URL.h; path = ../../ABC_URL.h; sourceTree = "<group>"; };
-		4C41303018BE991E00DD2123 /* ABC_Util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Util.h; path = ../../ABC_Util.h; sourceTree = "<group>"; };
-		4C41303118BE991E00DD2123 /* ABC_Wallet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Wallet.h; path = ../../ABC_Wallet.h; sourceTree = "<group>"; };
-		4C41303218BE991E00DD2123 /* ABC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC.h; path = ../../ABC.h; sourceTree = "<group>"; };
 		4C8A78EF18B3FCEA00A06B16 /* TestBed x64.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "TestBed x64.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4C8A78F018B3FCEA00A06B16 /* TestBed copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "TestBed copy-Info.plist"; path = "/Users/adamdna/Documents/DittyLabs/Clients/PaulPuey/AirBitz/TestBed/TestBed copy-Info.plist"; sourceTree = "<absolute>"; };
-		4C8A78F118B401FC00A06B16 /* libcurl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcurl.a; path = "../airbitz-walletcore-deps/build/curl/ios-universal/lib/libcurl.a"; sourceTree = "<group>"; };
-		4C9D93B418AC65D900402014 /* libjansson.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libjansson.a; path = "../airbitz-walletcore-deps/build/jansson/ios-universal/lib/libjansson.a"; sourceTree = "<group>"; };
-		4C9D93B618AC65FB00402014 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = "../airbitz-walletcore-deps/build/openssl/ios-universal/lib/libcrypto.a"; sourceTree = "<group>"; };
-		4C9D93B718AC65FB00402014 /* libssl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libssl.a; path = "../airbitz-walletcore-deps/build/openssl/ios-universal/lib/libssl.a"; sourceTree = "<group>"; };
-		4C9D93BA18AC662B00402014 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = "../airbitz-walletcore-deps/build/zlib/ios-universal/lib/libz.a"; sourceTree = "<group>"; };
 		4C9D93C118AECB9E00402014 /* TextFieldContainerView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TextFieldContainerView.h; path = TextFieldContainerView/TextFieldContainerView.h; sourceTree = "<group>"; };
 		4C9D93C218AECB9E00402014 /* TextFieldContainerView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = TextFieldContainerView.m; path = TextFieldContainerView/TextFieldContainerView.m; sourceTree = "<group>"; };
-		4C9F576A18CA70D6003941B2 /* ABC_Tx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Tx.h; path = ../../ABC_Tx.h; sourceTree = "<group>"; };
-		4C9F576B18CA70DF003941B2 /* ABC_Tx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Tx.c; path = ../../ABC_Tx.c; sourceTree = "<group>"; };
-		4CB3450818C799C600A0FFE5 /* ABC_Mutex.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Mutex.c; path = ../../ABC_Mutex.c; sourceTree = "<group>"; };
-		4CB3450918C799C600A0FFE5 /* ABC_Mutex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Mutex.h; path = ../../ABC_Mutex.h; sourceTree = "<group>"; };
-		4CCDCB9018B694BC00FC4391 /* libscrypt.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libscrypt.a; path = "../airbitz-walletcore/deps/build/scrypt/ios-universal/lib/libscrypt.a"; sourceTree = "<group>"; };
 		4CD7757E188EF7DC00AF76AC /* TestBed.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TestBed.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4CD77581188EF7DC00AF76AC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		4CD77583188EF7DC00AF76AC /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
@@ -143,11 +115,54 @@
 		4CD775A8188EF7DC00AF76AC /* TestBedTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "TestBedTests-Info.plist"; sourceTree = "<group>"; };
 		4CD775AA188EF7DC00AF76AC /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		4CD775AC188EF7DC00AF76AC /* TestBedTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TestBedTests.m; sourceTree = "<group>"; };
-		4CE6026418AC1FF700BFD285 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = "../airbitz-walletcore-deps/build/prefix/ios/i386/lib/libcrypto.a"; sourceTree = "<group>"; };
-		4CE6026618AC202900BFD285 /* libcurl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcurl.a; path = "../airbitz-walletcore-deps/build/prefix/ios/i386/lib/libcurl.a"; sourceTree = "<group>"; };
-		4CE6026718AC202900BFD285 /* libjansson.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libjansson.a; path = "../airbitz-walletcore-deps/build/prefix/ios/i386/lib/libjansson.a"; sourceTree = "<group>"; };
-		4CE6026818AC202900BFD285 /* libssl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libssl.a; path = "../airbitz-walletcore-deps/build/prefix/ios/i386/lib/libssl.a"; sourceTree = "<group>"; };
-		4CE6026918AC202900BFD285 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = "../airbitz-walletcore-deps/build/prefix/ios/i386/lib/libz.a"; sourceTree = "<group>"; };
+		DA8D580719611B5F008BFFFB /* libbitcoin-client.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libbitcoin-client.a"; path = "../../deps/build/prefix/ios/i386/lib/libbitcoin-client.a"; sourceTree = "<group>"; };
+		DA8D580819611B5F008BFFFB /* libbitcoin-watcher.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libbitcoin-watcher.a"; path = "../../deps/build/prefix/ios/i386/lib/libbitcoin-watcher.a"; sourceTree = "<group>"; };
+		DA8D580919611B5F008BFFFB /* libbitcoin.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbitcoin.a; path = ../../deps/build/prefix/ios/i386/lib/libbitcoin.a; sourceTree = "<group>"; };
+		DA8D580A19611B5F008BFFFB /* libboost_atomic.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_atomic.a; path = ../../deps/build/prefix/ios/i386/lib/libboost_atomic.a; sourceTree = "<group>"; };
+		DA8D580B19611B5F008BFFFB /* libboost_date_time.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_date_time.a; path = ../../deps/build/prefix/ios/i386/lib/libboost_date_time.a; sourceTree = "<group>"; };
+		DA8D580C19611B5F008BFFFB /* libboost_filesystem.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_filesystem.a; path = ../../deps/build/prefix/ios/i386/lib/libboost_filesystem.a; sourceTree = "<group>"; };
+		DA8D580D19611B5F008BFFFB /* libboost_iostreams.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_iostreams.a; path = ../../deps/build/prefix/ios/i386/lib/libboost_iostreams.a; sourceTree = "<group>"; };
+		DA8D580E19611B5F008BFFFB /* libboost_program_options.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_program_options.a; path = ../../deps/build/prefix/ios/i386/lib/libboost_program_options.a; sourceTree = "<group>"; };
+		DA8D580F19611B5F008BFFFB /* libboost_regex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_regex.a; path = ../../deps/build/prefix/ios/i386/lib/libboost_regex.a; sourceTree = "<group>"; };
+		DA8D581019611B5F008BFFFB /* libboost_signals.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_signals.a; path = ../../deps/build/prefix/ios/i386/lib/libboost_signals.a; sourceTree = "<group>"; };
+		DA8D581119611B5F008BFFFB /* libboost_system.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_system.a; path = ../../deps/build/prefix/ios/i386/lib/libboost_system.a; sourceTree = "<group>"; };
+		DA8D581219611B5F008BFFFB /* libboost_thread.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libboost_thread.a; path = ../../deps/build/prefix/ios/i386/lib/libboost_thread.a; sourceTree = "<group>"; };
+		DA8D581319611B5F008BFFFB /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrypto.a; path = ../../deps/build/prefix/ios/i386/lib/libcrypto.a; sourceTree = "<group>"; };
+		DA8D581419611B5F008BFFFB /* libcurl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcurl.a; path = ../../deps/build/prefix/ios/i386/lib/libcurl.a; sourceTree = "<group>"; };
+		DA8D581519611B5F008BFFFB /* libjansson.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libjansson.a; path = ../../deps/build/prefix/ios/i386/lib/libjansson.a; sourceTree = "<group>"; };
+		DA8D581619611B5F008BFFFB /* libqrencode.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libqrencode.a; path = ../../deps/build/prefix/ios/i386/lib/libqrencode.a; sourceTree = "<group>"; };
+		DA8D581719611B5F008BFFFB /* libscrypt.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libscrypt.a; path = ../../deps/build/prefix/ios/i386/lib/libscrypt.a; sourceTree = "<group>"; };
+		DA8D581819611B5F008BFFFB /* libsecp256k1.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libsecp256k1.a; path = ../../deps/build/prefix/ios/i386/lib/libsecp256k1.a; sourceTree = "<group>"; };
+		DA8D581919611B5F008BFFFB /* libsodium.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libsodium.a; path = ../../deps/build/prefix/ios/i386/lib/libsodium.a; sourceTree = "<group>"; };
+		DA8D581A19611B5F008BFFFB /* libssl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libssl.a; path = ../../deps/build/prefix/ios/i386/lib/libssl.a; sourceTree = "<group>"; };
+		DA8D581B19611B5F008BFFFB /* libwallet.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libwallet.a; path = ../../deps/build/prefix/ios/i386/lib/libwallet.a; sourceTree = "<group>"; };
+		DA8D581C19611B5F008BFFFB /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = ../../deps/build/prefix/ios/i386/lib/libz.a; sourceTree = "<group>"; };
+		DA8D581D19611B5F008BFFFB /* libzmq.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libzmq.a; path = ../../deps/build/prefix/ios/i386/lib/libzmq.a; sourceTree = "<group>"; };
+		DA8D583619612296008BFFFB /* ABC_Account.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Account.c; path = ../../ABC_Account.c; sourceTree = "<group>"; };
+		DA8D583719612296008BFFFB /* ABC_Account.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Account.h; path = ../../ABC_Account.h; sourceTree = "<group>"; };
+		DA8D583819612296008BFFFB /* ABC_Bridge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ABC_Bridge.cpp; path = ../../ABC_Bridge.cpp; sourceTree = "<group>"; };
+		DA8D583919612296008BFFFB /* ABC_Bridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Bridge.h; path = ../../ABC_Bridge.h; sourceTree = "<group>"; };
+		DA8D583A19612296008BFFFB /* ABC_Crypto.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Crypto.c; path = ../../ABC_Crypto.c; sourceTree = "<group>"; };
+		DA8D583B19612296008BFFFB /* ABC_Crypto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Crypto.h; path = ../../ABC_Crypto.h; sourceTree = "<group>"; };
+		DA8D583C19612296008BFFFB /* ABC_Debug.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Debug.c; path = ../../ABC_Debug.c; sourceTree = "<group>"; };
+		DA8D583D19612296008BFFFB /* ABC_Debug.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Debug.h; path = ../../ABC_Debug.h; sourceTree = "<group>"; };
+		DA8D583E19612296008BFFFB /* ABC_Exchanges.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Exchanges.c; path = ../../ABC_Exchanges.c; sourceTree = "<group>"; };
+		DA8D583F19612296008BFFFB /* ABC_Exchanges.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Exchanges.h; path = ../../ABC_Exchanges.h; sourceTree = "<group>"; };
+		DA8D584019612296008BFFFB /* ABC_FileIO.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_FileIO.c; path = ../../ABC_FileIO.c; sourceTree = "<group>"; };
+		DA8D584119612296008BFFFB /* ABC_FileIO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_FileIO.h; path = ../../ABC_FileIO.h; sourceTree = "<group>"; };
+		DA8D584219612296008BFFFB /* ABC_Mutex.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Mutex.c; path = ../../ABC_Mutex.c; sourceTree = "<group>"; };
+		DA8D584319612296008BFFFB /* ABC_Mutex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Mutex.h; path = ../../ABC_Mutex.h; sourceTree = "<group>"; };
+		DA8D584419612296008BFFFB /* ABC_ServerDefs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_ServerDefs.h; path = ../../ABC_ServerDefs.h; sourceTree = "<group>"; };
+		DA8D584519612296008BFFFB /* ABC_Tx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Tx.c; path = ../../ABC_Tx.c; sourceTree = "<group>"; };
+		DA8D584619612296008BFFFB /* ABC_Tx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Tx.h; path = ../../ABC_Tx.h; sourceTree = "<group>"; };
+		DA8D584719612296008BFFFB /* ABC_URL.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_URL.c; path = ../../ABC_URL.c; sourceTree = "<group>"; };
+		DA8D584819612296008BFFFB /* ABC_URL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_URL.h; path = ../../ABC_URL.h; sourceTree = "<group>"; };
+		DA8D584919612296008BFFFB /* ABC_Util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Util.c; path = ../../ABC_Util.c; sourceTree = "<group>"; };
+		DA8D584A19612296008BFFFB /* ABC_Util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Util.h; path = ../../ABC_Util.h; sourceTree = "<group>"; };
+		DA8D584B19612296008BFFFB /* ABC_Wallet.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC_Wallet.c; path = ../../ABC_Wallet.c; sourceTree = "<group>"; };
+		DA8D584C19612296008BFFFB /* ABC_Wallet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC_Wallet.h; path = ../../ABC_Wallet.h; sourceTree = "<group>"; };
+		DA8D584D19612296008BFFFB /* ABC.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ABC.c; path = ../../ABC.c; sourceTree = "<group>"; };
+		DA8D584E19612296008BFFFB /* ABC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABC.h; path = ../../ABC.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -155,16 +170,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3D34923318D125BE000FCE2C /* libboost_system.a in Frameworks */,
-				3D34923118D1258C000FCE2C /* libbitcoin.a in Frameworks */,
-				3D3EC1D218CFDE6800682700 /* libwallet.a in Frameworks */,
-				4C08A6CF18BFBFCD0071B87C /* libqrencode.a in Frameworks */,
-				4CCDCB9218B6953000FC4391 /* libscrypt.a in Frameworks */,
-				4C8A78F318B4022B00A06B16 /* libcurl.a in Frameworks */,
-				4C8A78E118B3FCEA00A06B16 /* libz.a in Frameworks */,
-				4C8A78E218B3FCEA00A06B16 /* libjansson.a in Frameworks */,
-				4C8A78E318B3FCEA00A06B16 /* libcrypto.a in Frameworks */,
-				4C8A78E418B3FCEA00A06B16 /* libssl.a in Frameworks */,
 				4C8A78E518B3FCEA00A06B16 /* CoreGraphics.framework in Frameworks */,
 				4C8A78E618B3FCEA00A06B16 /* UIKit.framework in Frameworks */,
 				4C8A78E718B3FCEA00A06B16 /* Foundation.framework in Frameworks */,
@@ -175,19 +180,32 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3D34923518D125FE000FCE2C /* libboost_system.a in Frameworks */,
-				3D34923418D125ED000FCE2C /* libbitcoin.a in Frameworks */,
-				3D3EC1D118CFDDF100682700 /* libwallet.a in Frameworks */,
-				4C08A6D018BFBFF20071B87C /* libqrencode.a in Frameworks */,
-				4CCDCB9118B694BC00FC4391 /* libscrypt.a in Frameworks */,
-				4C8A78F218B401FC00A06B16 /* libcurl.a in Frameworks */,
-				4C9D93BF18ADA92A00402014 /* libz.a in Frameworks */,
-				4C9D93BE18ADA91800402014 /* libjansson.a in Frameworks */,
-				4C9D93BC18ADA90200402014 /* libcrypto.a in Frameworks */,
-				4C9D93BD18ADA90200402014 /* libssl.a in Frameworks */,
+				DA8D583419611B60008BFFFB /* libz.a in Frameworks */,
+				DA8D582719611B60008BFFFB /* libboost_regex.a in Frameworks */,
 				4CD77584188EF7DC00AF76AC /* CoreGraphics.framework in Frameworks */,
+				DA8D582419611B5F008BFFFB /* libboost_filesystem.a in Frameworks */,
+				DA8D582B19611B60008BFFFB /* libcrypto.a in Frameworks */,
+				DA8D582219611B5F008BFFFB /* libboost_atomic.a in Frameworks */,
+				DA8D582A19611B60008BFFFB /* libboost_thread.a in Frameworks */,
+				DA8D583319611B60008BFFFB /* libwallet.a in Frameworks */,
+				DA8D583519611B60008BFFFB /* libzmq.a in Frameworks */,
+				DA8D582519611B5F008BFFFB /* libboost_iostreams.a in Frameworks */,
+				DA8D583219611B60008BFFFB /* libssl.a in Frameworks */,
+				DA8D583119611B60008BFFFB /* libsodium.a in Frameworks */,
+				DA8D582E19611B60008BFFFB /* libqrencode.a in Frameworks */,
+				DA8D582919611B60008BFFFB /* libboost_system.a in Frameworks */,
+				DA8D582619611B5F008BFFFB /* libboost_program_options.a in Frameworks */,
+				DA8D582319611B5F008BFFFB /* libboost_date_time.a in Frameworks */,
+				DA8D582C19611B60008BFFFB /* libcurl.a in Frameworks */,
+				DA8D581F19611B5F008BFFFB /* libbitcoin-client.a in Frameworks */,
+				DA8D582D19611B60008BFFFB /* libjansson.a in Frameworks */,
 				4CD77586188EF7DC00AF76AC /* UIKit.framework in Frameworks */,
+				DA8D583019611B60008BFFFB /* libsecp256k1.a in Frameworks */,
+				DA8D582119611B5F008BFFFB /* libbitcoin.a in Frameworks */,
+				DA8D582819611B60008BFFFB /* libboost_signals.a in Frameworks */,
 				4CD77582188EF7DC00AF76AC /* Foundation.framework in Frameworks */,
+				DA8D582F19611B60008BFFFB /* libscrypt.a in Frameworks */,
+				DA8D582019611B5F008BFFFB /* libbitcoin-watcher.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -216,29 +234,31 @@
 		4CC049D21890504A00E5461B /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				4C41303218BE991E00DD2123 /* ABC.h */,
-				4C41302918BE991E00DD2123 /* ABC.c */,
-				4C41302A18BE991E00DD2123 /* ABC_Account.h */,
-				4C41302218BE991E00DD2123 /* ABC_Account.c */,
-				4C41303118BE991E00DD2123 /* ABC_Wallet.h */,
-				4C41302818BE991E00DD2123 /* ABC_Wallet.c */,
-				4C9F576A18CA70D6003941B2 /* ABC_Tx.h */,
-				4C9F576B18CA70DF003941B2 /* ABC_Tx.c */,
-				4C41302B18BE991E00DD2123 /* ABC_Crypto.h */,
-				4C41302318BE991E00DD2123 /* ABC_Crypto.c */,
-				4C41302C18BE991E00DD2123 /* ABC_Debug.h */,
-				4C41302418BE991E00DD2123 /* ABC_Debug.c */,
-				4C41302D18BE991E00DD2123 /* ABC_FileIO.h */,
-				4C41302518BE991E00DD2123 /* ABC_FileIO.c */,
-				4C41302F18BE991E00DD2123 /* ABC_URL.h */,
-				4C41302618BE991E00DD2123 /* ABC_URL.c */,
-				4C41303018BE991E00DD2123 /* ABC_Util.h */,
-				4C41302718BE991E00DD2123 /* ABC_Util.c */,
-				4CB3450918C799C600A0FFE5 /* ABC_Mutex.h */,
-				4CB3450818C799C600A0FFE5 /* ABC_Mutex.c */,
-				4C41302E18BE991E00DD2123 /* ABC_ServerDefs.h */,
-				3D3EC1CE18CFCF2F00682700 /* ABC_Bridge.h */,
-				3D3EC1CD18CFCF2F00682700 /* ABC_Bridge.cpp */,
+				DA8D583619612296008BFFFB /* ABC_Account.c */,
+				DA8D583719612296008BFFFB /* ABC_Account.h */,
+				DA8D583819612296008BFFFB /* ABC_Bridge.cpp */,
+				DA8D583919612296008BFFFB /* ABC_Bridge.h */,
+				DA8D583A19612296008BFFFB /* ABC_Crypto.c */,
+				DA8D583B19612296008BFFFB /* ABC_Crypto.h */,
+				DA8D583C19612296008BFFFB /* ABC_Debug.c */,
+				DA8D583D19612296008BFFFB /* ABC_Debug.h */,
+				DA8D583E19612296008BFFFB /* ABC_Exchanges.c */,
+				DA8D583F19612296008BFFFB /* ABC_Exchanges.h */,
+				DA8D584019612296008BFFFB /* ABC_FileIO.c */,
+				DA8D584119612296008BFFFB /* ABC_FileIO.h */,
+				DA8D584219612296008BFFFB /* ABC_Mutex.c */,
+				DA8D584319612296008BFFFB /* ABC_Mutex.h */,
+				DA8D584419612296008BFFFB /* ABC_ServerDefs.h */,
+				DA8D584519612296008BFFFB /* ABC_Tx.c */,
+				DA8D584619612296008BFFFB /* ABC_Tx.h */,
+				DA8D584719612296008BFFFB /* ABC_URL.c */,
+				DA8D584819612296008BFFFB /* ABC_URL.h */,
+				DA8D584919612296008BFFFB /* ABC_Util.c */,
+				DA8D584A19612296008BFFFB /* ABC_Util.h */,
+				DA8D584B19612296008BFFFB /* ABC_Wallet.c */,
+				DA8D584C19612296008BFFFB /* ABC_Wallet.h */,
+				DA8D584D19612296008BFFFB /* ABC.c */,
+				DA8D584E19612296008BFFFB /* ABC.h */,
 			);
 			name = Core;
 			sourceTree = "<group>";
@@ -267,21 +287,29 @@
 		4CD77580188EF7DC00AF76AC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				3D34923218D125BE000FCE2C /* libboost_system.a */,
-				3D34923018D1258B000FCE2C /* libbitcoin.a */,
-				3D3EC1D018CFDDF100682700 /* libwallet.a */,
-				4C08A6CE18BFBFCC0071B87C /* libqrencode.a */,
-				4CCDCB9018B694BC00FC4391 /* libscrypt.a */,
-				4C8A78F118B401FC00A06B16 /* libcurl.a */,
-				4C9D93BA18AC662B00402014 /* libz.a */,
-				4C9D93B618AC65FB00402014 /* libcrypto.a */,
-				4C9D93B718AC65FB00402014 /* libssl.a */,
-				4C9D93B418AC65D900402014 /* libjansson.a */,
-				4CE6026618AC202900BFD285 /* libcurl.a */,
-				4CE6026718AC202900BFD285 /* libjansson.a */,
-				4CE6026818AC202900BFD285 /* libssl.a */,
-				4CE6026918AC202900BFD285 /* libz.a */,
-				4CE6026418AC1FF700BFD285 /* libcrypto.a */,
+				DA8D580719611B5F008BFFFB /* libbitcoin-client.a */,
+				DA8D580819611B5F008BFFFB /* libbitcoin-watcher.a */,
+				DA8D580919611B5F008BFFFB /* libbitcoin.a */,
+				DA8D580A19611B5F008BFFFB /* libboost_atomic.a */,
+				DA8D580B19611B5F008BFFFB /* libboost_date_time.a */,
+				DA8D580C19611B5F008BFFFB /* libboost_filesystem.a */,
+				DA8D580D19611B5F008BFFFB /* libboost_iostreams.a */,
+				DA8D580E19611B5F008BFFFB /* libboost_program_options.a */,
+				DA8D580F19611B5F008BFFFB /* libboost_regex.a */,
+				DA8D581019611B5F008BFFFB /* libboost_signals.a */,
+				DA8D581119611B5F008BFFFB /* libboost_system.a */,
+				DA8D581219611B5F008BFFFB /* libboost_thread.a */,
+				DA8D581319611B5F008BFFFB /* libcrypto.a */,
+				DA8D581419611B5F008BFFFB /* libcurl.a */,
+				DA8D581519611B5F008BFFFB /* libjansson.a */,
+				DA8D581619611B5F008BFFFB /* libqrencode.a */,
+				DA8D581719611B5F008BFFFB /* libscrypt.a */,
+				DA8D581819611B5F008BFFFB /* libsecp256k1.a */,
+				DA8D581919611B5F008BFFFB /* libsodium.a */,
+				DA8D581A19611B5F008BFFFB /* libssl.a */,
+				DA8D581B19611B5F008BFFFB /* libwallet.a */,
+				DA8D581C19611B5F008BFFFB /* libz.a */,
+				DA8D581D19611B5F008BFFFB /* libzmq.a */,
 				4CD77581188EF7DC00AF76AC /* Foundation.framework */,
 				4CD77583188EF7DC00AF76AC /* CoreGraphics.framework */,
 				4CD77585188EF7DC00AF76AC /* UIKit.framework */,
@@ -460,20 +488,21 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4C9F576E18CFEDDE003941B2 /* ABC_Bridge.cpp in Sources */,
-				4C41304218BE991E00DD2123 /* ABC.c in Sources */,
-				4CB3450B18C799C600A0FFE5 /* ABC_Mutex.c in Sources */,
-				4C41304018BE991E00DD2123 /* ABC_Wallet.c in Sources */,
-				4C41303418BE991E00DD2123 /* ABC_Account.c in Sources */,
-				4C41303618BE991E00DD2123 /* ABC_Crypto.c in Sources */,
-				4C41303A18BE991E00DD2123 /* ABC_FileIO.c in Sources */,
-				4C9F576D18CA70DF003941B2 /* ABC_Tx.c in Sources */,
+				DA8D586419612296008BFFFB /* ABC_Wallet.c in Sources */,
+				DA8D585819612296008BFFFB /* ABC_Exchanges.c in Sources */,
+				DA8D585619612296008BFFFB /* ABC_Debug.c in Sources */,
+				DA8D585019612296008BFFFB /* ABC_Account.c in Sources */,
+				DA8D586019612296008BFFFB /* ABC_URL.c in Sources */,
 				4C8A78D918B3FCEA00A06B16 /* TextFieldContainerView.m in Sources */,
 				4C8A78DB18B3FCEA00A06B16 /* ViewController.m in Sources */,
+				DA8D585C19612296008BFFFB /* ABC_Mutex.c in Sources */,
+				DA8D585E19612296008BFFFB /* ABC_Tx.c in Sources */,
+				DA8D586219612296008BFFFB /* ABC_Util.c in Sources */,
+				DA8D585419612296008BFFFB /* ABC_Crypto.c in Sources */,
+				DA8D585A19612296008BFFFB /* ABC_FileIO.c in Sources */,
+				DA8D586619612296008BFFFB /* ABC.c in Sources */,
+				DA8D585219612296008BFFFB /* ABC_Bridge.cpp in Sources */,
 				4C8A78DC18B3FCEA00A06B16 /* AppDelegate.m in Sources */,
-				4C41303818BE991E00DD2123 /* ABC_Debug.c in Sources */,
-				4C41303C18BE991E00DD2123 /* ABC_URL.c in Sources */,
-				4C41303E18BE991E00DD2123 /* ABC_Util.c in Sources */,
 				4C8A78DE18B3FCEA00A06B16 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -482,20 +511,21 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3D3EC1CF18CFCF2F00682700 /* ABC_Bridge.cpp in Sources */,
-				4C41304118BE991E00DD2123 /* ABC.c in Sources */,
-				4CB3450A18C799C600A0FFE5 /* ABC_Mutex.c in Sources */,
-				4C41303F18BE991E00DD2123 /* ABC_Wallet.c in Sources */,
-				4C41303318BE991E00DD2123 /* ABC_Account.c in Sources */,
-				4C41303518BE991E00DD2123 /* ABC_Crypto.c in Sources */,
-				4C41303918BE991E00DD2123 /* ABC_FileIO.c in Sources */,
-				4C9F576C18CA70DF003941B2 /* ABC_Tx.c in Sources */,
+				DA8D586319612296008BFFFB /* ABC_Wallet.c in Sources */,
+				DA8D585719612296008BFFFB /* ABC_Exchanges.c in Sources */,
+				DA8D585519612296008BFFFB /* ABC_Debug.c in Sources */,
+				DA8D584F19612296008BFFFB /* ABC_Account.c in Sources */,
+				DA8D585F19612296008BFFFB /* ABC_URL.c in Sources */,
 				4C9D93C318AECB9E00402014 /* TextFieldContainerView.m in Sources */,
 				4CD77598188EF7DC00AF76AC /* ViewController.m in Sources */,
+				DA8D585B19612296008BFFFB /* ABC_Mutex.c in Sources */,
+				DA8D585D19612296008BFFFB /* ABC_Tx.c in Sources */,
+				DA8D586119612296008BFFFB /* ABC_Util.c in Sources */,
+				DA8D585319612296008BFFFB /* ABC_Crypto.c in Sources */,
+				DA8D585919612296008BFFFB /* ABC_FileIO.c in Sources */,
+				DA8D586519612296008BFFFB /* ABC.c in Sources */,
+				DA8D585119612296008BFFFB /* ABC_Bridge.cpp in Sources */,
 				4CD77592188EF7DC00AF76AC /* AppDelegate.m in Sources */,
-				4C41303718BE991E00DD2123 /* ABC_Debug.c in Sources */,
-				4C41303B18BE991E00DD2123 /* ABC_URL.c in Sources */,
-				4C41303D18BE991E00DD2123 /* ABC_Util.c in Sources */,
 				4CD7758E188EF7DC00AF76AC /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -696,6 +726,9 @@
 					"../../deps/build/libwallet/ios-universal/lib",
 					"../../deps/build/libbitcoin/ios-universal/lib",
 					"../../deps/build/boost/ios-universal/lib",
+					"../../deps/build/libbitcoin-client/ios-universal/lib",
+					"../../deps/build/libbitcoin-watcher/ios-universal/lib",
+					"/Users/paul/git/master/airbitz-walletcore/deps/build/prefix/ios/i386/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/i386/include";
@@ -723,6 +756,9 @@
 					"../../deps/build/libwallet/ios-universal/lib",
 					"../../deps/build/libbitcoin/ios-universal/lib",
 					"../../deps/build/boost/ios-universal/lib",
+					"../../deps/build/libbitcoin-client/ios-universal/lib",
+					"../../deps/build/libbitcoin-watcher/ios-universal/lib",
+					"/Users/paul/git/master/airbitz-walletcore/deps/build/prefix/ios/i386/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/i386/include";
