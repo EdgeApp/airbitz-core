@@ -429,6 +429,8 @@ tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError)
     if (row->second != NULL) {
         delete row->second;
     }
+    // Remove watcher from map
+    watchers_.erase(szWalletUUID);
 exit:
 #endif // NETWORK_FAKE
     return cc;
