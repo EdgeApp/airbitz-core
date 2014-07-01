@@ -33,6 +33,15 @@ extern "C" {
         char                    *szPassword;
         char                    *szWalletUUID;
         char                    *szDestAddress;
+
+        // Transfer from money from one wallet to another
+        bool                    bTransfer;
+        char                    *szDestWalletUUID;
+        char                    *szDestName;
+        char                    *szDestCategory;
+        char                    *szSrcName;
+        char                    *szSrcCategory;
+
         tABC_TxDetails          *pDetails;
 
         tABC_Request_Callback   fRequestCallback;
@@ -101,6 +110,7 @@ extern "C" {
                                        const char *szWalletUUID,
                                        tABC_TxDetails *pDetails,
                                        char **pszRequestID,
+                                       bool bTransfer,
                                        tABC_Error *pError);
 
     tABC_CC ABC_TxModifyReceiveRequest(const char *szUserName,
