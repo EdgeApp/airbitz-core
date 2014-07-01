@@ -34,6 +34,7 @@
 #define TX_MAX_ADDR_ID_LENGTH                   20 // largest char count for the string version of the id number - 20 digits should handle it
 
 #define TX_MAX_AMOUNT_LENGTH                    100 // should be max length of a bit coin amount string
+#define TX_MAX_CATEGORY_LENGTH                  512
 
 #define TX_INTERNAL_SUFFIX                      "-int.json" // the transaction was created by our direct action (i.e., send)
 #define TX_EXTERNAL_SUFFIX                      "-ext.json" // the transaction was created due to events in the block-chain (usually receives)
@@ -166,6 +167,8 @@ static tABC_CC  ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_
 static bool     ABC_TxTransactionExists(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szID, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
+static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError);
+static int      ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo, tABC_Tx *pTx, tABC_Tx *pReceiveTx, tABC_Error *pError);
 
 // fake code:
 #if NETWORK_FAKE
@@ -248,6 +251,13 @@ void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo)
         ABC_FREE_STR(pTxSendInfo->szWalletUUID);
         ABC_FREE_STR(pTxSendInfo->szDestAddress);
 
+        ABC_FREE_STR(pTxSendInfo->szDestWalletUUID);
+        ABC_FREE_STR(pTxSendInfo->szDestName);
+        ABC_FREE_STR(pTxSendInfo->szDestCategory);
+
+        ABC_FREE_STR(pTxSendInfo->szSrcName);
+        ABC_FREE_STR(pTxSendInfo->szSrcCategory);
+
         ABC_TxFreeDetails(pTxSendInfo->pDetails);
 
         ABC_CLEAR_FREE(pTxSendInfo, sizeof(tABC_TxSendInfo));
@@ -282,6 +292,7 @@ void *ABC_TxSendThreaded(void *pData)
 
         // we are done so load up the info and ship it back to the caller via the callback
         results.pData = pInfo->pData;
+        results.szWalletUUID = strdup(pInfo->szWalletUUID);
         results.bSuccess = (CC == ABC_CC_Ok ? true : false);
         pInfo->fRequestCallback(&results);
 
@@ -308,6 +319,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     tABC_CC cc = ABC_CC_Ok;
     tABC_U08Buf privSeed = ABC_BUF_NULL;
     tABC_Tx *pTx = NULL;
+    tABC_Tx *pReceiveTx = NULL;
     tABC_UnsignedTx utx;
 
     // Change address variables
@@ -374,22 +386,8 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     pTx->pStateInfo->timeCreation = time(NULL);
     pTx->pStateInfo->bInternal = true;
     ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, utx.szTxMalleableId);
-
-    pTx->countOutputs = utx.countOutputs;
-    if (pTx->countOutputs > 0)
-    {
-        ABC_ALLOC(pTx->aOutputs, sizeof(tABC_TxOutput *) * pTx->countOutputs);
-        for (i = 0; i < utx.countOutputs; ++i)
-        {
-            ABC_DebugLog("Saving Outputs: %s\n", utx.aOutputs[i]->szAddress);
-            ABC_ALLOC(pTx->aOutputs[i], sizeof(tABC_TxOutput));
-            ABC_STRDUP(pTx->aOutputs[i]->szAddress, utx.aOutputs[i]->szAddress);
-            ABC_STRDUP(pTx->aOutputs[i]->szTxId, utx.aOutputs[i]->szTxId);
-            pTx->aOutputs[i]->input = utx.aOutputs[i]->input;
-            pTx->aOutputs[i]->value = utx.aOutputs[i]->value;
-        }
-    }
-
+    // Copy outputs
+    ABC_TxCopyOuputs(pTx, utx.aOutputs, utx.countOutputs, pError);
     // copy the details
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
     // Add in tx fees to the amount of the tx
@@ -403,15 +401,50 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 
     // Store transaction ID
     ABC_STRDUP(pTx->szID, utx.szTxId);
+    if (pInfo->bTransfer)
+    {
+        ABC_ALLOC(pReceiveTx, sizeof(tABC_Tx));
+        ABC_ALLOC(pReceiveTx->pStateInfo, sizeof(tTxStateInfo));
+
+        // set the state
+        pReceiveTx->pStateInfo->timeCreation = time(NULL);
+        pReceiveTx->pStateInfo->bInternal = true;
+        ABC_STRDUP(pReceiveTx->pStateInfo->szMalleableTxId, utx.szTxMalleableId);
+        // Copy outputs
+        ABC_TxCopyOuputs(pReceiveTx, utx.aOutputs, utx.countOutputs, pError);
+        // copy the details
+        ABC_CHECK_RET(ABC_TxDupDetails(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
+        // Add in tx fees to the amount of the tx
+        pReceiveTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi
+                                        + pInfo->pDetails->amountFeesAirbitzSatoshi
+                                        + pInfo->pDetails->amountFeesMinersSatoshi;
+        if (pReceiveTx->pDetails->amountSatoshi < 0)
+            pReceiveTx->pDetails->amountSatoshi *= -1;
+        if (pReceiveTx->pDetails->amountCurrency < 0)
+            pReceiveTx->pDetails->amountCurrency *= -1.0;
+
+        // Store transaction ID
+        ABC_STRDUP(pReceiveTx->szID, utx.szTxId);
+
+        // Set the payee and category for both txs
+        ABC_CHECK_RET(ABC_TxTransferPopulate(pInfo, pTx, pReceiveTx, pError));
+
+        // save the transaction
+        ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword,
+                                            pInfo->szDestWalletUUID, pReceiveTx, pError));
+    }
+
     // save the transaction
     ABC_CHECK_RET(
         ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword,
                               pInfo->szWalletUUID, pTx, pError));
     // set the transaction id for the caller
     ABC_STRDUP(*pszTxID, pTx->szID);
+
 exit:
     ABC_FREE(szPrivSeed);
     ABC_TxFreeTx(pTx);
+    ABC_TxFreeTx(pReceiveTx);
     ABC_TxFreeAddress(pChangeAddr);
     ABC_UtilFreeStringArray(paAddresses, countAddresses);
     ABC_TxFreeOutputs(utx.aOutputs, utx.countOutputs);
@@ -855,6 +888,7 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
                                    const char *szWalletUUID,
                                    tABC_TxDetails *pDetails,
                                    char **pszRequestID,
+                                   bool bTransfer,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -888,7 +922,12 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
         ABC_BridgeWatchAddr(szUserName, szPassword, szWalletUUID,
                             pAddress->szPubAddress, true, pError));
 #if NETWORK_FAKE
-    ABC_CHECK_RET(ABC_TxKickoffFakeReceive(szUserName, szPassword, szWalletUUID, pAddress->szID, pError));
+    if (!bTransfer)
+    {
+        ABC_CHECK_RET(
+            ABC_TxKickoffFakeReceive(szUserName, szPassword,
+                                     szWalletUUID, pAddress->szID, pError));
+    }
 #endif
 exit:
     ABC_TxFreeAddress(pAddress);
@@ -4133,6 +4172,60 @@ exit:
     return result > -1 ? 1 : 0;
 }
 
+static int
+ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    int i;
+
+    ABC_CHECK_NULL(pTx);
+    ABC_CHECK_NULL(aOutputs);
+
+    pTx->countOutputs = countOutputs;
+    if (pTx->countOutputs > 0)
+    {
+        ABC_ALLOC(pTx->aOutputs, sizeof(tABC_TxOutput *) * pTx->countOutputs);
+        for (i = 0; i < countOutputs; ++i)
+        {
+            ABC_DebugLog("Saving Outputs: %s\n", aOutputs[i]->szAddress);
+            ABC_ALLOC(pTx->aOutputs[i], sizeof(tABC_TxOutput));
+            ABC_STRDUP(pTx->aOutputs[i]->szAddress, aOutputs[i]->szAddress);
+            ABC_STRDUP(pTx->aOutputs[i]->szTxId, aOutputs[i]->szTxId);
+            pTx->aOutputs[i]->input = aOutputs[i]->input;
+            pTx->aOutputs[i]->value = aOutputs[i]->value;
+        }
+    }
+exit:
+    return cc;
+}
+
+static int
+ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo,
+                       tABC_Tx *pTx, tABC_Tx *pReceiveTx,
+                       tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    // Populate Send Tx
+    ABC_FREE_STR(pTx->pDetails->szName);
+    ABC_FREE_STR(pTx->pDetails->szCategory);
+    ABC_STRDUP(pTx->pDetails->szName, pInfo->szSrcName);
+    ABC_STRDUP(pTx->pDetails->szCategory, pInfo->szSrcCategory);
+
+    // Populate Recv Tx
+    ABC_FREE_STR(pReceiveTx->pDetails->szName);
+    ABC_FREE_STR(pReceiveTx->pDetails->szCategory);
+    ABC_STRDUP(pReceiveTx->pDetails->szName, pInfo->szDestName);
+    ABC_STRDUP(pReceiveTx->pDetails->szCategory, pInfo->szDestCategory);
+
+    ABC_DebugLog("Source: %s\n", pTx->pDetails->szName);
+    ABC_DebugLog("Source: %s\n", pTx->pDetails->szCategory);
+
+    ABC_DebugLog("Receive: %s\n", pReceiveTx->pDetails->szName);
+    ABC_DebugLog("Receive: %s\n", pReceiveTx->pDetails->szCategory);
+exit:
+    return cc;
+}
+
 #if NETWORK_FAKE
 // /////////////////////////////////////////////////////////////////////////////
 // Fake code begins here.
@@ -4278,9 +4371,10 @@ tABC_CC ABC_TxFakeSend(tABC_TxSendInfo  *pInfo, char **pszTxID, tABC_Error *pErr
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    tABC_Tx *pTx = NULL;
     tABC_U08Buf TxID = ABC_BUF_NULL;
     tABC_U08Buf TxMalID = ABC_BUF_NULL;
-    tABC_Tx *pTx = NULL;
+    tABC_Tx *pReceiveTx = NULL;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
@@ -4295,14 +4389,13 @@ tABC_CC ABC_TxFakeSend(tABC_TxSendInfo  *pInfo, char **pszTxID, tABC_Error *pErr
 
     // copy the details
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
+    // Make sure values are negative
     if (pTx->pDetails->amountSatoshi > 0)
     {
-        // sends should be negative
         pTx->pDetails->amountSatoshi *= -1;
     }
     if (pTx->pDetails->amountCurrency > 0)
     {
-        // sends should be negative
         pTx->pDetails->amountCurrency *= -1.0;
     }
 
@@ -4317,6 +4410,33 @@ tABC_CC ABC_TxFakeSend(tABC_TxSendInfo  *pInfo, char **pszTxID, tABC_Error *pErr
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxMalID, pError));
     ABC_CHECK_RET(ABC_CryptoHexEncode(TxMalID, &(pTx->pStateInfo->szMalleableTxId), pError));
 
+    if (pInfo->bTransfer)
+    {
+        ABC_ALLOC(pReceiveTx, sizeof(tABC_Tx));
+        ABC_ALLOC(pReceiveTx->pStateInfo, sizeof(tTxStateInfo));
+
+        ABC_CHECK_RET(ABC_TxDupDetails(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
+        // Make sure values are positive
+        if (pReceiveTx->pDetails->amountSatoshi < 0)
+        {
+            pReceiveTx->pDetails->amountSatoshi *= -1;
+        }
+        if (pReceiveTx->pDetails->amountCurrency < 0)
+        {
+            pReceiveTx->pDetails->amountCurrency *= -1.0;
+        }
+        // set the state
+        pReceiveTx->pStateInfo->timeCreation = time(NULL);
+        pReceiveTx->pStateInfo->bInternal = true;
+        ABC_CHECK_RET(ABC_CryptoHexEncode(TxID, &(pReceiveTx->szID), pError));
+        ABC_CHECK_RET(ABC_CryptoHexEncode(TxMalID, &(pReceiveTx->pStateInfo->szMalleableTxId), pError));
+
+        // Set the payee and category for both txs
+        ABC_CHECK_RET(ABC_TxTransferPopulate(pInfo, pTx, pReceiveTx, pError));
+
+        // save the transaction
+        ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szDestWalletUUID, pReceiveTx, pError));
+    }
     // save the transaction
     ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
 
@@ -4326,6 +4446,7 @@ exit:
     ABC_BUF_FREE(TxID);
     ABC_BUF_FREE(TxMalID);
     ABC_TxFreeTx(pTx);
+    ABC_TxFreeTx(pReceiveTx);
 
     ABC_TxMutexUnlock(NULL);
     return cc;

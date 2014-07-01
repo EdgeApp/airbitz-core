@@ -190,7 +190,7 @@ extern "C" {
         /** type of event that occured */
         tABC_AsyncEventType eventType;
 
-        /** if the event involved a transaction, this is its ID */
+        /** if the event involved a wallet, this is its ID */
         char *szWalletUUID;
 
         /** if the event involved a transaction, this is its ID */
@@ -217,6 +217,8 @@ extern "C" {
         void                *pRetData;
         /** true if successful */
         bool                bSuccess;
+        /** if the event involved a wallet, this is its ID */
+        char                *szWalletUUID;
         /** information the error if there was a failure */
         tABC_Error          errorInfo;
     } tABC_RequestResults;
@@ -340,6 +342,17 @@ extern "C" {
         /** attributes for the transaction */
         unsigned int attributes;
     } tABC_TxDetails;
+
+    typedef struct sABC_TransferDetails
+    {
+        char *szSrcWalletUUID;
+        char *szSrcName;
+        char *szSrcCategory;
+
+        char *szDestWalletUUID;
+        char *szDestName;
+        char *szDestCategory;
+    } tABC_TransferDetails;
 
     /**
      * AirBitz Output Info
@@ -747,10 +760,19 @@ extern "C" {
                                     void *pData,
                                     tABC_Error *pError);
 
+    tABC_CC ABC_InitiateTransfer(const char *szUserName,
+                                 const char *szPassword,
+                                 tABC_TransferDetails *pTransfer,
+                                 tABC_TxDetails *pDetails,
+                                 tABC_Request_Callback fRequestCallback,
+                                 void *pData,
+                                 tABC_Error *pError);
+
     tABC_CC ABC_CalcSendFees(const char *szUserName,
                              const char *szPassword,
                              const char *szWalletUUID,
                              const char *szDestAddress,
+                             bool bTransfer,
                              tABC_TxDetails *pDetails,
                              int64_t *pTotalFees,
                              tABC_Error *pError);
