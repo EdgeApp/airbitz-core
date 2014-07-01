@@ -418,9 +418,9 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
         pReceiveTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi
                                         + pInfo->pDetails->amountFeesAirbitzSatoshi
                                         + pInfo->pDetails->amountFeesMinersSatoshi;
-        if (pReceiveTx->pDetails->amountSatoshi > 0)
+        if (pReceiveTx->pDetails->amountSatoshi < 0)
             pReceiveTx->pDetails->amountSatoshi *= -1;
-        if (pReceiveTx->pDetails->amountCurrency > 0)
+        if (pReceiveTx->pDetails->amountCurrency < 0)
             pReceiveTx->pDetails->amountCurrency *= -1.0;
 
         // Store transaction ID
