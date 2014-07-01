@@ -1652,7 +1652,7 @@ exit:
     ABC_TxFreeTransactions(aTransactions, count);
 
     ABC_FileIOMutexUnlock(NULL);
-    ABC_CHECK_RET(ABC_TxMutexLock(NULL));
+    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
