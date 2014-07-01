@@ -1568,6 +1568,7 @@ tABC_CC ABC_TxGetTransactions(const char *szUserName,
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
 
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
@@ -1651,6 +1652,7 @@ exit:
     ABC_TxFreeTransactions(aTransactions, count);
 
     ABC_FileIOMutexUnlock(NULL);
+    ABC_CHECK_RET(ABC_TxMutexLock(NULL));
     return cc;
 }
 
