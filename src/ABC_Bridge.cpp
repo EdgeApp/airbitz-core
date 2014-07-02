@@ -606,11 +606,16 @@ ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *h
 #if !NETWORK_FAKE
     bc::hash_digest txId;
     auto row = watchers_.find(szWalletUUID);
-    ABC_CHECK_ASSERT(row != watchers_.end(),
-        ABC_CC_Error, "Unable find watcher");
-
-    txId = bc::decode_hash(szTxId);
-    *height = row->second->watcher->get_tx_height(txId);
+    if (row == watchers_.end())
+    {
+        cc = ABC_CC_Synchronizing;
+        goto exit;
+    }
+    else
+    {
+        txId = bc::decode_hash(szTxId);
+        *height = row->second->watcher->get_tx_height(txId);
+    }
 exit:
 #else
     *height = 0;
@@ -624,10 +629,15 @@ ABC_BridgeTxBlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Err
     tABC_CC cc = ABC_CC_Ok;
 #if !NETWORK_FAKE
     auto row = watchers_.find(szWalletUUID);
-    ABC_CHECK_ASSERT(row != watchers_.end(),
-        ABC_CC_Error, "Unable find watcher");
-
-    *height = row->second->watcher->get_last_block_height();
+    if (row == watchers_.end())
+    {
+        cc = ABC_CC_Synchronizing;
+        goto exit;
+    }
+    else
+    {
+        *height = row->second->watcher->get_last_block_height();
+    }
 exit:
 #else
     *height = 0;
