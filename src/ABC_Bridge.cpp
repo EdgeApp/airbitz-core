@@ -59,6 +59,7 @@ static void        *ABC_BridgeWatcherSerialize(void *pData);
 static tABC_CC     ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
 static size_t      ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx);
+static void        *ABC_BridgeWatcherStopThreaded(void *data);
 #endif
 
 /**
@@ -418,16 +419,10 @@ tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError)
 
     ABC_BridgeWatcherSerialize(row->second);
 
-    row->second->watcher->disconnect();
-    if (row->second->watcher != NULL) {
-        delete row->second->watcher;
-    }
-    row->second->watcher = NULL;
-    ABC_FREE_STR(row->second->szUserName);
-    ABC_FREE_STR(row->second->szPassword);
-    ABC_FREE_STR(row->second->szWalletUUID);
-    if (row->second != NULL) {
-        delete row->second;
+    pthread_t handle;
+    if (!pthread_create(&handle, NULL, ABC_BridgeWatcherStopThreaded, row->second))
+    {
+        pthread_detach(handle);
     }
     // Remove watcher from map
     watchers_.erase(szWalletUUID);
@@ -1042,6 +1037,27 @@ static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx)
             chunk.push_back(b);
     return bc::encode_hex(bc::sha256_hash(chunk));
 }
+
+static
+void *ABC_BridgeWatcherStopThreaded(void *data)
+{
+    WatcherInfo *watcherInfo = (WatcherInfo *) data;
+
+    ABC_DebugLog("Disconnecting");
+    watcherInfo->watcher->disconnect();
+    if (watcherInfo->watcher != NULL) {
+        delete watcherInfo->watcher;
+    }
+    ABC_DebugLog("Freeing");
+    watcherInfo->watcher = NULL;
+    ABC_FREE_STR(watcherInfo->szUserName);
+    ABC_FREE_STR(watcherInfo->szPassword);
+    ABC_FREE_STR(watcherInfo->szWalletUUID);
+    if (watcherInfo != NULL) {
+        delete watcherInfo;
+    }
+}
+
 
 #endif // NETWORK_FAKE
 
