@@ -111,7 +111,9 @@ extern "C" {
         /** Request (address) not found */
         ABC_CC_NoRequest = 31,
         /** Not enough money to send transaction */
-        ABC_CC_InsufficientFunds = 32
+        ABC_CC_InsufficientFunds = 32,
+        /** We are still sync-ing */
+        ABC_CC_Synchronizing = 33
     } tABC_CC;
 
     /**
