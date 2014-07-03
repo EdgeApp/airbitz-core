@@ -10,6 +10,7 @@ build() {
     esac
 
     # Build:
+    export CFLAGS="$CFLAGS -g"
     export TARGET=$target
     make $output
 
