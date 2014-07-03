@@ -209,8 +209,6 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     tWalletData *pData = NULL;
 
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
-
     ABC_CHECK_NULL(pInfo);
     ABC_CHECK_NULL(pszUUID);
 
@@ -328,7 +326,6 @@ exit:
     if (pJSON_Wallets)      json_decref(pJSON_Wallets);
     if (pData)              ABC_WalletFreeData(pData);
 
-    ABC_CHECK_RET(ABC_WalletMutexUnlock(pError));
     return cc;
 }
 
