@@ -51,7 +51,7 @@ static tABC_CC     ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::short_hash &addr);
 static tABC_CC     ABC_BridgeStringToEc(char *privKey, bc::elliptic_curve_key& key, tABC_Error *pError);
 static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_AccountGeneralInfo *pInfo);
-static uint64_t    ABC_BridgeCalcMinerFees(libwallet::unsigned_transaction_type *utx, tABC_AccountGeneralInfo *pInfo);
+static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_AccountGeneralInfo *pInfo);
 static std::string ABC_BridgeWatcherFile(const char *szUserName, const char *szPassword, const char *szWalletUUID);
 static tABC_CC     ABC_BridgeWatcherLoad(WatcherInfo *watcherInfo, tABC_Error *pError);
 static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
@@ -316,11 +316,18 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
 #if !NETWORK_FAKE
     tABC_AccountGeneralInfo *ppInfo = NULL;
     libwallet::watcher::block_height_callback hcb;
+    WatcherInfo *watcherInfo = NULL;
     char *szUserCopy;
     char *szPassCopy;
     char *szUUIDCopy;
 
-    WatcherInfo *watcherInfo = new WatcherInfo();
+    auto row = watchers_.find(szWalletUUID);
+    if (row != watchers_.end()) {
+        ABC_DebugLog("Watcher %s already initialized\n", szWalletUUID);
+        goto exit;
+    }
+
+    watcherInfo = new WatcherInfo();
     watcherInfo->watcher = new libwallet::watcher();
 
     ABC_STRDUP(szUserCopy, szUserName);
@@ -414,8 +421,11 @@ tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 #if !NETWORK_FAKE
     auto row = watchers_.find(szWalletUUID);
-    ABC_CHECK_ASSERT(row != watchers_.end(),
-        ABC_CC_Error, "Unable find watcher");
+    if (row == watchers_.end())
+    {
+        ABC_DebugLog("Watcher %s already initialized\n", szWalletUUID);
+        goto exit;
+    }
 
     ABC_BridgeWatcherSerialize(row->second);
 
@@ -522,7 +532,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
     // Output to  Destination Address
     ABC_BridgeAppendOutput(outputs, pSendInfo->pDetails->amountSatoshi, dest.hash());
 
-    minerFees = ABC_BridgeCalcMinerFees(utx, ppInfo);
+    minerFees = ABC_BridgeCalcMinerFees(bc::satoshi_raw_size(utx->tx), ppInfo);
     if (minerFees > 0)
     {
         // If there are miner fees, increase totalSatoshi
@@ -596,6 +606,102 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     ABC_BridgeExtractOutputs(row->second->watcher, utx, malleableId, pUtx, pError);
 exit:
 #endif // NETWORK_FAKE
+    return cc;
+}
+
+tABC_CC ABC_BridgeMaxSpendable(const char *szUserName,
+                               const char *szPassword,
+                               const char *szWalletUUID,
+                               const char *szDestAddress,
+                               bool bTransfer,
+                               uint64_t *pMaxSatoshi,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+#if !NETWORK_FAKE
+    tABC_TxSendInfo SendInfo;
+    tABC_TxDetails Details;
+    tABC_AccountGeneralInfo *ppInfo = NULL;
+    tABC_UnsignedTx utx;
+    tABC_CC txResp;
+    uint64_t abFees = 0, minerFees = 0;
+
+    char *changeAddr = NULL;
+    char **paAddresses = NULL;
+    unsigned int countAddresses = 0;
+
+    auto row = watchers_.find(szWalletUUID);
+    uint64_t total = 0;
+
+    ABC_CHECK_ASSERT(row != watchers_.end(),
+        ABC_CC_Error, "Unable find watcher");
+
+    ABC_STRDUP(SendInfo.szUserName, szUserName);
+    ABC_STRDUP(SendInfo.szPassword, szPassword);
+    ABC_STRDUP(SendInfo.szWalletUUID, szWalletUUID);
+    ABC_STRDUP(SendInfo.szDestAddress, szDestAddress);
+
+    // Snag the latest general info
+    ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&ppInfo, pError));
+    // Fetch all the payment addresses for this wallet
+    ABC_CHECK_RET(
+        ABC_TxGetPubAddresses(szUserName, szPassword, szWalletUUID,
+                              &paAddresses, &countAddresses, pError));
+    if (countAddresses > 0)
+    {
+        // This is needed to pass to the ABC_BridgeTxMake
+        // It should never be used
+        changeAddr = paAddresses[0];
+
+        // Calculate total of utxos for these addresses
+        ABC_DebugLog("Get UTOXs for %d\n", countAddresses);
+        for (int i = 0; i < countAddresses; ++i)
+        {
+            bc::payment_address pa;
+            ABC_CHECK_ASSERT(true == pa.set_encoded(paAddresses[i]),
+                ABC_CC_Error, "Bad source address");
+            for (auto l : row->second->watcher->get_utxos(pa))
+            {
+                total += l.value;
+            }
+        }
+        if (!bTransfer)
+        {
+            // Subtract ab tx fee
+            total -= ABC_BridgeCalcAbFees(total, ppInfo);
+        }
+        // Subtract minimum tx fee
+        total -= ABC_BridgeCalcMinerFees(0, ppInfo);
+
+        SendInfo.pDetails = &Details;
+        SendInfo.bTransfer = bTransfer;
+        Details.amountSatoshi = total;
+
+        // Ewwwwww, fix this to have minimal iterations
+        txResp = ABC_BridgeTxMake(&SendInfo,
+                                  paAddresses, countAddresses,
+                                  changeAddr, &utx, pError);
+        while (txResp == ABC_CC_InsufficientFunds && Details.amountSatoshi > 0)
+        {
+            Details.amountSatoshi -= 1;
+            txResp = ABC_BridgeTxMake(&SendInfo,
+                                      paAddresses, countAddresses,
+                                      changeAddr, &utx, pError);
+        }
+        *pMaxSatoshi = AB_MAX(Details.amountSatoshi, 0);
+    }
+    else
+    {
+        *pMaxSatoshi = 0;
+    }
+exit:
+    ABC_FREE_STR(SendInfo.szUserName);
+    ABC_FREE_STR(SendInfo.szPassword);
+    ABC_FREE_STR(SendInfo.szWalletUUID);
+    ABC_FREE_STR(SendInfo.szDestAddress);
+    ABC_AccountFreeGeneralInfo(ppInfo);
+    ABC_UtilFreeStringArray(paAddresses, countAddresses);
+#endif
     return cc;
 }
 
@@ -872,11 +978,9 @@ uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_AccountGeneralInfo *pInfo)
 }
 
 static
-uint64_t ABC_BridgeCalcMinerFees(libwallet::unsigned_transaction_type *utx,
-                         tABC_AccountGeneralInfo *pInfo)
+uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_AccountGeneralInfo *pInfo)
 {
     uint64_t fees = 0;
-    size_t tx_size = bc::satoshi_raw_size(utx->tx);
     if (pInfo->countMinersFees > 0)
     {
         for (int i = 0; i < pInfo->countMinersFees; ++i)

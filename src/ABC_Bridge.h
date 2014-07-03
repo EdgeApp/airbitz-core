@@ -83,6 +83,14 @@ extern "C" {
                                  tABC_UnsignedTx *pUtx,
                                  tABC_Error *pError);
 
+    tABC_CC ABC_BridgeMaxSpendable(const char *szUsername,
+                                   const char *szPassword,
+                                   const char *szWalletUUID,
+                                   const char *szDestAddress,
+                                   bool bTransfer,
+                                   uint64_t *pMaxSatoshi,
+                                   tABC_Error *pError);
+
     tABC_CC ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *height, tABC_Error *pError);
 
     tABC_CC ABC_BridgeTxBlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError);

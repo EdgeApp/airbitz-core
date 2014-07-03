@@ -785,6 +785,14 @@ extern "C" {
                              int64_t *pTotalFees,
                              tABC_Error *pError);
 
+    tABC_CC ABC_MaxSpendable(const char *szUsername,
+                             const char *szPassword,
+                             const char *szWalletUUID,
+                             const char *szDestAddress,
+                             bool bTransfer,
+                             uint64_t *pMaxSatoshi,
+                             tABC_Error *pError);
+
     tABC_CC ABC_GetTransaction(const char *szUserName,
                                const char *szPassword,
                                const char *szWalletUUID,
