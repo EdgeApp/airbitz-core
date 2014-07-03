@@ -59,7 +59,7 @@ static void        *ABC_BridgeWatcherSerialize(void *pData);
 static tABC_CC     ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
 static size_t      ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx);
-static void        *ABC_BridgeWatcherStopThreaded(void *data);
+static void       *ABC_BridgeWatcherStopThreaded(void *data);
 #endif
 
 /**
@@ -1048,8 +1048,7 @@ static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx)
     return bc::encode_hex(bc::sha256_hash(chunk));
 }
 
-static
-void *ABC_BridgeWatcherStopThreaded(void *data)
+static void *ABC_BridgeWatcherStopThreaded(void *data)
 {
     WatcherInfo *watcherInfo = (WatcherInfo *) data;
 
@@ -1066,6 +1065,7 @@ void *ABC_BridgeWatcherStopThreaded(void *data)
     if (watcherInfo != NULL) {
         delete watcherInfo;
     }
+    return nullptr;
 }
 
 
