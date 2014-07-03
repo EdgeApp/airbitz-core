@@ -1610,6 +1610,7 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
     ABC_STRDUP(pTxSendInfo->szPassword, szPassword);
     ABC_STRDUP(pTxSendInfo->szWalletUUID, szWalletUUID);
     ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
+    pTxSendInfo->bTransfer = bTransfer;
 
     if (bTransfer)
     {
@@ -1632,6 +1633,26 @@ exit:
     ABC_FREE_STR(szRequestId);
     ABC_FREE_STR(szRequestAddress);
     ABC_TxSendInfoFree(pTxSendInfo);
+    return cc;
+}
+
+tABC_CC ABC_MaxSpendable(const char *szUserName,
+                         const char *szPassword,
+                         const char *szWalletUUID,
+                         const char *szDestAddress,
+                         bool bTransfer,
+                         uint64_t *pMaxSatoshi,
+                         tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_RET(
+        ABC_BridgeMaxSpendable(szUserName, szPassword, szWalletUUID,
+                               szDestAddress, bTransfer, pMaxSatoshi, pError));
+exit:
     return cc;
 }
 
@@ -2219,7 +2240,7 @@ exit:
  * @param szPassword   Password for the account
  * @param szWalletUUID The wallet watcher to use
  */
-tABC_CC ABC_WatchAddresses(const char *szUsername, const char *szPassword,
+tABC_CC ABC_WatchAddresses(const char *szUserName, const char *szPassword,
                            const char *szWalletUUID, tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -2229,7 +2250,7 @@ tABC_CC ABC_WatchAddresses(const char *szUsername, const char *szPassword,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxWatchAddresses(szUsername, szPassword, szWalletUUID, pError));
+    ABC_CHECK_RET(ABC_TxWatchAddresses(szUserName, szPassword, szWalletUUID, pError));
 
 exit:
 
