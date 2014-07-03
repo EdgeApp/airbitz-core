@@ -728,7 +728,7 @@
 					"../../deps/build/boost/ios-universal/lib",
 					"../../deps/build/libbitcoin-client/ios-universal/lib",
 					"../../deps/build/libbitcoin-watcher/ios-universal/lib",
-					"/Users/paul/git/master/airbitz-walletcore/deps/build/prefix/ios/i386/lib",
+					../../deps/build/prefix/ios/i386/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/i386/include";
@@ -758,7 +758,7 @@
 					"../../deps/build/boost/ios-universal/lib",
 					"../../deps/build/libbitcoin-client/ios-universal/lib",
 					"../../deps/build/libbitcoin-watcher/ios-universal/lib",
-					"/Users/paul/git/master/airbitz-walletcore/deps/build/prefix/ios/i386/lib",
+					../../deps/build/prefix/ios/i386/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = ".. ../../deps/build/prefix/ios/i386/include";
