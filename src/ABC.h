@@ -644,6 +644,12 @@ extern "C" {
 
     void ABC_FreeWalletInfo(tABC_WalletInfo *pWalletInfo);
 
+    tABC_CC ABC_ExportWalletSeed(const char *szUserName,
+                                 const char *szPassword,
+                                 const char *szUUID,
+                                 char **pszWalletSeed,
+                                 tABC_Error *pError);
+
     tABC_CC ABC_GetWallets(const char *szUserName,
                            const char *szPassword,
                            tABC_WalletInfo ***paWalletInfo,
