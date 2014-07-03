@@ -33,12 +33,12 @@
 #define WALLET_TX_DIR                           "Transactions"
 #define WALLET_ADDR_DIR                         "Addresses"
 #define WALLET_EMK_PREFIX                       "EMK_"
+#define WALLET_BITCOIN_PRIVATE_SEED_PREFIX      "EBPS_"
 #define WALLET_ACCOUNTS_WALLETS_FILENAME        "Wallets.json"
 #define WALLET_NAME_FILENAME                    "Wallet_Name.json"
 #define WALLET_ATTRIBUTES_FILENAME              "Attributes.json"
 #define WALLET_CURRENCY_FILENAME                "Currency.json"
 #define WALLET_ACCOUNTS_FILENAME                "Accounts.json"
-#define WALLET_BITCOIN_PRIVATE_SEED_FILENAME    "Bitcoin_Private_Seed.json"
 #define WALLET_SYNC_REPO_PREFIX_FIELD           "ERepoWalletKey"
 #define WALLET_SYNC_REPO_SUFFIC_FIELD           "json"
 
@@ -427,6 +427,7 @@ tABC_CC ABC_WalletCreateAndSetBitcoinPrivateSeed(const char *szUserName, const c
     tABC_CC cc = ABC_CC_Ok;
 
     tWalletData *pData = NULL;
+    char *szAccountSyncDir = NULL;
     char *szFilename = NULL;
 
     ABC_CHECK_NULL(szUserName);
@@ -444,12 +445,16 @@ tABC_CC ABC_WalletCreateAndSetBitcoinPrivateSeed(const char *szUserName, const c
 
     // TODO: there is a very very small chance that this is not a valid seed, need to check with libwallet and retry if not
 
+    // get the local directory for this account
+    ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+
     // write the name out to the file
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
-    sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_BITCOIN_PRIVATE_SEED_FILENAME);
+    sprintf(szFilename, "%s/%s%s.json", szAccountSyncDir, WALLET_BITCOIN_PRIVATE_SEED_PREFIX, szUUID);
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(pData->BitcoinPrivateSeed, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
 
 exit:
+    ABC_FREE_STR(szAccountSyncDir);
     ABC_FREE_STR(szFilename);
 
     return cc;
@@ -852,7 +857,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, LP2, &(pData->MK), pError));
 
         // get the bitcoin private seed
-        sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_BITCOIN_PRIVATE_SEED_FILENAME);
+        sprintf(szFilename, "%s/%s%s.json", szAccountSyncDir, WALLET_BITCOIN_PRIVATE_SEED_PREFIX, szUUID);
         bExists = false;
         ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
         if (true == bExists)
