@@ -761,6 +761,34 @@ void ABC_FreeWalletInfo(tABC_WalletInfo *pWalletInfo)
 }
 
 /**
+ * Export the private seed used to generate all addresses within a wallet.
+ * For now, this uses a simple hex dump of the raw data.
+ */
+tABC_CC ABC_ExportWalletSeed(const char *szUserName,
+                             const char *szPassword,
+                             const char *szUUID,
+                             char **pszWalletSeed,
+                             tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_U08Buf seed = ABC_BUF_NULL;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(szUserName, szPassword, szUUID, &seed, pError));
+    ABC_CHECK_RET(ABC_CryptoHexEncode(seed, pszWalletSeed, pError));
+
+exit:
+    ABC_BUF_FREE(seed);
+
+    return cc;
+}
+
+/**
  * Gets wallets for a specified account.
  *
  * This function allocates and fills in an array of wallet info structures with the information
