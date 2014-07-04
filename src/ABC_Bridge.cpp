@@ -972,8 +972,8 @@ uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_AccountGeneralInfo *pInfo)
     uint64_t abFees =
         (uint64_t) ((double) amount *
                     (pInfo->pAirBitzFee->percentage * 0.01));
-    abFees = AB_MIN(pInfo->pAirBitzFee->minSatoshi,
-                AB_MAX(pInfo->pAirBitzFee->maxSatoshi, abFees));
+    abFees = AB_MAX(pInfo->pAirBitzFee->minSatoshi, abFees);
+    abFees = AB_MIN(pInfo->pAirBitzFee->maxSatoshi, abFees);
     return abFees;
 }
 
