@@ -414,10 +414,15 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
         ABC_TxCopyOuputs(pReceiveTx, utx.aOutputs, utx.countOutputs, pError);
         // copy the details
         ABC_CHECK_RET(ABC_TxDupDetails(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
-        // Add in tx fees to the amount of the tx
-        pReceiveTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi
-                                        + pInfo->pDetails->amountFeesAirbitzSatoshi
-                                        + pInfo->pDetails->amountFeesMinersSatoshi;
+        
+        pReceiveTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi;
+
+        //
+        // Since this wallet is receiving, it didn't really get charged AB fees
+        // This should really be an assert since no transfers should have AB fees
+        //
+        pReceiveTx->pDetails->amountFeesAirbitzSatoshi = 0;
+
         if (pReceiveTx->pDetails->amountSatoshi < 0)
             pReceiveTx->pDetails->amountSatoshi *= -1;
         if (pReceiveTx->pDetails->amountCurrency < 0)
