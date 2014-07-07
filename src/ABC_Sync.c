@@ -37,7 +37,18 @@ void ABC_SyncTerminate()
 tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
                          tABC_Error *pError)
 {
-    return ABC_CC_Ok;
+    tABC_CC cc = ABC_CC_Ok;
+    int e;
+
+    git_repository *repo = NULL;
+
+    e = git_repository_init(&repo, szRepoPath, 0);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_repository_init failed");
+
+exit:
+    if (repo) git_repository_free(repo);
+
+    return cc;
 }
 
 /**
