@@ -1,9 +1,10 @@
 inherit lib
 
-source="https://github.com/libgit2/libgit2/archive/v0.20.0.tar.gz"
+version="0.21.0"
+source="https://github.com/libgit2/libgit2/archive/v$version.tar.gz"
 
 build() {
-    cd libgit2-0.20.0
+    cd libgit2-$version
     export install_dir
 
     mkdir -p build
@@ -15,5 +16,5 @@ build() {
     cmake --build . --target install
 }
 
-include="include/jansson.h include/jansson_config.h"
-lib="lib/libjansson.a"
+include="include/git2.h include/git/*"
+lib="lib/libgit2.a"
