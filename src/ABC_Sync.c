@@ -11,7 +11,14 @@
  */
 tABC_CC ABC_SyncInit(tABC_Error *pError)
 {
-    return ABC_CC_Ok;
+    tABC_CC cc = ABC_CC_Ok;
+    int e;
+
+    e = git_threads_init();
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_threads_init failed");
+
+exit:
+    return cc;
 }
 
 /**
@@ -20,6 +27,7 @@ tABC_CC ABC_SyncInit(tABC_Error *pError)
  */
 void ABC_SyncTerminate()
 {
+    git_threads_shutdown();
 }
 
 /**
