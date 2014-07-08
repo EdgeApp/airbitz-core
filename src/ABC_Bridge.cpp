@@ -396,8 +396,10 @@ tABC_CC ABC_BridgeWatchAddr(const char *szUserName,
     ABC_DebugLog("Watching %s for %s\n", pubAddress, szWalletUUID);
     bc::payment_address addr;
 
-    ABC_CHECK_ASSERT(row != watchers_.end(),
-        ABC_CC_Error, "Unable find watcher");
+    if (row == watchers_.end())
+    {
+        goto exit;
+    }
 
     if (!addr.set_encoded(pubAddress))
     {
