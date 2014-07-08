@@ -90,6 +90,11 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // initialize Bitcoin exchange system
     ABC_CHECK_RET(ABC_ExchangeInitialize(fAsyncBitCoinEventCallback, pData, pError));
 
+    // initialize Crypto perf checks to determine hashing power
+    ABC_CHECK_RET(ABC_InitializeCrypto(pError));
+
+
+
     if (szRootDir)
     {
         ABC_CHECK_RET(ABC_FileIOSetRootDir(szRootDir, pError));
