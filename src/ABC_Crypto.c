@@ -86,6 +86,46 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
 static
 int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64);
 
+/*
+ * Initializes Scrypt paramenters by benchmarking device
+ */
+
+tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    struct timeval timerStart;
+    struct timeval timerEnd;
+    int totalTime;
+    tABC_U08Buf Salt;
+
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+/* XXX TODO -paul 
+    ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
+    gettimeofday(&timerStart, NULL);
+    ABC_CHECK_RET(ABC_CryptoScrypt(Salt,
+                                   Salt,
+                                   SCRYPT_DEFAULT_CLIENT_N,
+                                   SCRYPT_DEFAULT_CLIENT_R,
+                                   SCRYPT_DEFAULT_CLIENT_P,
+                                   SCRYPT_DEFAULT_LENGTH,
+                                   &Salt,
+                                   pError));
+    gettimeofday(&timerEnd, NULL);
+
+    // Totaltime is in uSec
+    totalTime = 1000000 * (timerEnd.tv_sec - timerStart.tv_sec);
+    totalTime += (timerEnd.tv_usec - timerStart.tv_usec);
+
+    ABC_DebugLog("Scrypt timing: %d\n", totalTime);
+*/
+
+exit:
+
+    return cc;
+}
 /**
  * Sets the seed for the random number generator
  */

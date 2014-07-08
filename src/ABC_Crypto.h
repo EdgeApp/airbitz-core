@@ -41,6 +41,8 @@ extern "C" {
         unsigned long   p;
     } tABC_CryptoSNRP;
 
+    tABC_CC ABC_InitializeCrypto(tABC_Error        *pError);
+
     tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
                                     tABC_Error        *pError);
 
