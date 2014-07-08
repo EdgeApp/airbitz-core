@@ -414,7 +414,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
         ABC_TxCopyOuputs(pReceiveTx, utx.aOutputs, utx.countOutputs, pError);
         // copy the details
         ABC_CHECK_RET(ABC_TxDupDetails(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
-        
+
         pReceiveTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi;
 
         //
