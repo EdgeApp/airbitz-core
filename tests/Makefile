@@ -1,15 +1,14 @@
-BUILD_DIR ?= ../deps/build
-
 ifndef TARGET
 	TARGET = native
-	LDFLAGS += -L$(BUILD_DIR)/prefix/$(TARGET)/lib -labc
+	LDFLAGS += -L../build/ -labc
 else
 	LDFLAGS += -labc
 endif
 
 BIN_DIR = ./build/$(TARGET)/bin
 
-ifeq (native, $(TARGET))
+# Use -lpthread everywhere except Android:
+ifeq (,$(findstring android,$(CC)))
 	LDFLAGS += -lpthread
 endif
 
@@ -33,7 +32,7 @@ all: $(test_cases)
 clean:
 	@rm -rf $(OBJDIR) *.o $(test_cases)
 
-LD_LIBRARY_PATH=$(BUILD_DIR)/prefix/$(TARGET)/lib/
+LD_LIBRARY_PATH := ../build/:$(LD_LIBRARY_PATH)
 run: $(test_cases)
 	$<
 

@@ -10,20 +10,13 @@ build() {
     esac
 
     # Build:
-    export CFLAGS="$CFLAGS -g"
-    export TARGET=$target
+    export WORK_DIR=$work_dir
     make $output
 
     # Install:
     mkdir -p $install_dir/lib
     cp build/$target/$output $install_dir/lib
     cp src/ABC.h $install_dir/include
-}
-
-clean() {
-    rm -rf $work_dir
-    cd $base_dir/..
-    make clean
 }
 
 lib="lib/libabc.a"
