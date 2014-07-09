@@ -36,6 +36,10 @@ tABC_CC TestSync(tABC_Error *pError)
 
     ABC_CHECK_RET(ABC_SyncRepo("download_repo", "server.git", pError));
 
+    ABC_CHECK_RET(TestCreateFile("download_repo/bar.txt", "foo", pError));
+    ABC_CHECK_RET(ABC_SyncRepo("download_repo", "server.git", pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_repo", "server.git", pError));
+
     ABC_SyncTerminate();
 
 exit:
