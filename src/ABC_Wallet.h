@@ -11,6 +11,7 @@
 #define ABC_Wallet_h
 
 #include "ABC.h"
+#include "ABC_Account.h"
 #include "ABC_Util.h"
 
 #ifdef __cplusplus
@@ -123,6 +124,16 @@ extern "C" {
     tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
                              char **pszUUID,
                              tABC_Error *pError);
+
+    tABC_CC ABC_WalletFetchAll(const char *szUserName,
+                               const char *szPassword,
+                               tABC_Error *pError);
+
+    tABC_CC ABC_WalletSyncData(const char *szUserName,
+                               const char *szPassword,
+                               const char *szUUID,
+                               tABC_AccountGeneralInfo *pInfo,
+                               tABC_Error *pError);
 
 #ifdef __cplusplus
 }

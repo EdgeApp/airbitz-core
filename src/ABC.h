@@ -878,6 +878,8 @@ extern "C" {
 
     void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings);
 
+    tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Error *pError);
+
     tABC_CC ABC_WatcherStart(const char *szUserName,
                                 const char *szPassword,
                                 const char *szWalletUUID,
