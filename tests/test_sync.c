@@ -42,7 +42,12 @@ tABC_CC TestSync(tABC_Error *pError)
 
     ABC_SyncTerminate();
 
+    ABC_CHECK_RET(ABC_SyncInit(pError));
+    ABC_CHECK_RET(ABC_SyncMakeRepo("sync_repo", pError));
+
 exit:
+    ABC_SyncTerminate();
+
     return cc;
 }
 
