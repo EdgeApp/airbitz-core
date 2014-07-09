@@ -2,19 +2,24 @@
 #include <ABC_Sync.h>
 #include <ABC_Util.h>
 #include <errno.h>
+#include <ftw.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
+static tABC_CC RecreateDir(const char *szPath, tABC_Error *pError);
+
+/**
+ * Performs a test sync between two repositories.
+ */
 tABC_CC TestSync(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    int e;
 
     ABC_CHECK_RET(ABC_SyncInit(pError));
 
-    e = mkdir("sync_repo", S_IRWXU | S_IRWXG | S_IRWXO);
-    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "mkdir failed");
+    ABC_CHECK_RET(RecreateDir("sync_repo", pError));
     ABC_CHECK_RET(ABC_SyncMakeRepo("sync_repo", pError));
 
     ABC_SyncTerminate();
@@ -22,7 +27,6 @@ tABC_CC TestSync(tABC_Error *pError)
 exit:
     return cc;
 }
-
 
 int main()
 {
@@ -39,4 +43,42 @@ int main()
     }
 
     return 0;
+}
+
+/**
+ * Callback for recusive file deletion.
+ */
+static int DeleteCallback(const char *fpath, const struct stat *sb,
+                       int typeflag, struct FTW *ftwbuf)
+{
+    return remove(fpath);
+}
+
+/**
+ * Deletes and re-creates a directory.
+ */
+static tABC_CC RecreateDir(const char *szPath, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    int e;
+
+    struct stat s;
+    e = stat(szPath, &s);
+    if (!e)
+    {
+        ABC_CHECK_ASSERT(S_ISDIR(s.st_mode), ABC_CC_Error, "not a directory");
+
+        e = nftw(szPath, DeleteCallback, 32, FTW_DEPTH | FTW_PHYS);
+        ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "cannot delete directory");
+    }
+    else
+    {
+        ABC_CHECK_ASSERT(ENOENT == errno, ABC_CC_SysError, "cannot stat directory");
+    }
+
+    e = mkdir(szPath, S_IRWXU | S_IRWXG | S_IRWXO);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "mkdir failed");
+
+exit:
+    return cc;
 }

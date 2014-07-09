@@ -47,7 +47,6 @@ run_send: $(BIN_DIR)/test_send
 	$<
 
 run_sync: $(BIN_DIR)/test_sync
-	$(RM) -r sync_repo
 	$<
 
 gdb_core: $(BIN_DIR)/test_core
