@@ -190,6 +190,11 @@ extern "C" {
 
     void ABC_AccountFreeSettings(tABC_AccountSettings *pSettings);
 
+    tABC_CC ABC_AccountSyncData(const char *szUserName,
+                                const char *szPassword,
+                                tABC_AccountGeneralInfo *pInfo,
+                                tABC_Error *pError);
+
     // Blocking functions:
     tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
                               tABC_Error *pError);

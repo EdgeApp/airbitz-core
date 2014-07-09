@@ -26,6 +26,7 @@
 #include "ABC_Mutex.h"
 #include "ABC_Tx.h"
 #include "ABC_Exchanges.h"
+#include "ABC_Sync.h"
 
 static bool gbInitialized = false;
 
@@ -94,6 +95,8 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_RET(ABC_InitializeCrypto(pError));
 
 
+    // initialize sync
+    ABC_CHECK_RET(ABC_SyncInit(pError));
 
     if (szRootDir)
     {
@@ -133,6 +136,8 @@ void ABC_Terminate()
         ABC_MutexTerminate();
 
         ABC_ExchangeTerminate();
+
+        ABC_SyncTerminate();
 
         gbInitialized = false;
     }
@@ -2210,6 +2215,44 @@ void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings)
     ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_AccountFreeSettings(pSettings);
+}
+
+/**
+ * Run sync on all directories
+ *
+ * @param szUserName UserName for the account
+ * @param szPassword Password for the account
+ */
+tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_AccountGeneralInfo *pInfo = NULL;
+    tABC_WalletInfo **paWalletInfo = NULL;
+    unsigned int i = 0;
+    unsigned int walletCount = 0;
+
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    // Load the general info
+    ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&pInfo, pError));
+
+    // Sync the account data
+    ABC_CHECK_RET(ABC_AccountSyncData(szUserName, szPassword, pInfo, pError));
+
+    ABC_CHECK_RET(ABC_GetWallets(szUserName, szPassword,
+                                 &paWalletInfo, &walletCount, pError));
+    for (i = 0; i < walletCount; ++i)
+    {
+        tABC_WalletInfo *pWallet = paWalletInfo[i];
+        ABC_CHECK_RET(ABC_WalletSyncData(szUserName, szPassword,
+                                         pWallet->szUUID, pInfo, pError));
+    }
+exit:
+    ABC_AccountFreeGeneralInfo(pInfo);
+    return cc;
 }
 
 /**

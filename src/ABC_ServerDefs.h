@@ -14,10 +14,13 @@
 
 #define ABC_SERVER_ROOT                     "http://198.61.234.21/api/v1"
 #define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
+#define ABC_SERVER_GET_CARE_PACKAGE_PATH    "account/carepackage/get"
 #define ABC_SERVER_UPDATE_CARE_PACKAGE_PATH "account/carepackage/update"
+#define ABC_SERVER_CHANGE_PASSWORD_PATH     "account/password/update"
+#define ABC_SERVER_REPO_GET_PATH            "account/repository/get"
+#define ABC_SERVER_REPO_UPDATE_PATH         "account/repository/update"
 #define ABC_SERVER_WALLET_CREATE_PATH       "wallet/create"
 #define ABC_SERVER_GET_QUESTIONS_PATH       "questions"
-#define ABC_SERVER_CHANGE_PASSWORD_PATH     "account/password/update"
 #define ABC_SERVER_GET_INFO_PATH            "getinfo"
 
 #define ABC_SERVER_JSON_L1_FIELD            "l1"
