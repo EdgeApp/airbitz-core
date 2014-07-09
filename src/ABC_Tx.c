@@ -133,6 +133,7 @@ static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pTyp
 static tABC_CC  ABC_TxLoadTransactionInfo(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxInfo **ppTransaction, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTxAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxGetAddressOwed(tABC_TxAddress *pAddr, int64_t *pSatoshiBalance, tABC_Error *pError);
+static tABC_CC  ABC_TxDefaultRequestDetails(const char *szUserName, const char *szPassword, tABC_TxDetails *pDetails, tABC_Error *pError);
 static void     ABC_TxFreeRequest(tABC_RequestInfo *pRequest);
 static tABC_CC  ABC_TxCreateTxFilename(char **pszFilename, const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szTxID, bool bInternal, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransaction(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
@@ -900,6 +901,7 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_TxAddress *pAddress = NULL;
+    tABC_TxDetails *pNewDetails = NULL;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
@@ -912,8 +914,12 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
     ABC_CHECK_NULL(pszRequestID);
     *pszRequestID = NULL;
 
+    // Dupe details and default them
+    ABC_CHECK_RET(ABC_TxDupDetails(&pNewDetails, pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDefaultRequestDetails(szUserName, szPassword, pNewDetails, pError));
+
     // get a new address (re-using a recycleable if we can)
-    ABC_CHECK_RET(ABC_TxCreateNewAddress(szUserName, szPassword, szWalletUUID, pDetails, &pAddress, pError));
+    ABC_CHECK_RET(ABC_TxCreateNewAddress(szUserName, szPassword, szWalletUUID, pNewDetails, &pAddress, pError));
 
     // save out this address
     ABC_CHECK_RET(ABC_TxSaveAddress(szUserName, szPassword, szWalletUUID, pAddress, pError));
@@ -936,6 +942,7 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
 #endif
 exit:
     ABC_TxFreeAddress(pAddress);
+    ABC_TxFreeDetails(pNewDetails);
 
     ABC_TxMutexUnlock(NULL);
     return cc;
@@ -2491,6 +2498,66 @@ tABC_CC ABC_TxGetAddressOwed(tABC_TxAddress *pAddr,
 
 exit:
 
+    return cc;
+}
+
+/**
+ * Default the values of request tABC_TxDetails, if they are not already
+ * populated. Currently this only populates the szName.
+ *
+ * @param szUserName
+ * @param szPassword
+ * @param pError         A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxDefaultRequestDetails(const char *szUserName, const char *szPassword,
+                                    tABC_TxDetails *pDetails, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    tABC_AccountSettings *pSettings = NULL;
+    tABC_U08Buf Label = ABC_BUF_NULL;
+
+    if (ABC_STRLEN(pDetails->szName) == 0)
+    {
+        ABC_CHECK_RET(ABC_LoadAccountSettings(szUserName, szPassword, &pSettings, pError));
+        if (ABC_STRLEN(pSettings->szFirstName) > 0)
+        {
+            ABC_BUF_DUP_PTR(Label, pSettings->szFirstName, strlen(pSettings->szFirstName));
+        }
+        if (ABC_STRLEN(pSettings->szLastName) > 0)
+        {
+            if (ABC_BUF_PTR(Label) == NULL)
+            {
+                ABC_BUF_DUP_PTR(Label, pSettings->szLastName, strlen(pSettings->szLastName));
+            }
+            else
+            {
+                ABC_BUF_APPEND_PTR(Label, " ", 1);
+                ABC_BUF_APPEND_PTR(Label, pSettings->szLastName, strlen(pSettings->szLastName));
+            }
+        }
+        if (ABC_STRLEN(pSettings->szNickname) > 0)
+        {
+            if (ABC_BUF_PTR(Label) == NULL)
+            {
+                ABC_BUF_DUP_PTR(Label, pSettings->szNickname, strlen(pSettings->szNickname));
+            }
+            else
+            {
+                ABC_BUF_APPEND_PTR(Label, " - ", 3);
+                ABC_BUF_APPEND_PTR(Label, pSettings->szNickname, strlen(pSettings->szNickname));
+            }
+        }
+        // Append null byte
+        ABC_BUF_APPEND_PTR(Label, "", 1);
+
+        pDetails->szName = (char *)ABC_BUF_PTR(Label);
+        ABC_BUF_CLEAR(Label);
+    }
+exit:
+    ABC_BUF_FREE(Label);
+    ABC_FreeAccountSettings(pSettings);
     return cc;
 }
 
