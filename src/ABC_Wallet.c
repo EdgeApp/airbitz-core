@@ -1471,6 +1471,7 @@ tABC_CC ABC_WalletChangeEMKForUUID(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf MK = ABC_BUF_NULL;
+    tABC_U08Buf WalletKey = ABC_BUF_NULL;
     char *szAccountSyncDir = NULL;
     char *szFilename = NULL;
     char *szJSON = NULL;
@@ -1494,8 +1495,18 @@ tABC_CC ABC_WalletChangeEMKForUUID(const char *szUserName,
     // write it back out using the new LP2
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(MK, newLP2, ABC_CryptoType_AES256, szFilename, pError));
 
+    // Get the wallet repo key file
+    sprintf(szFilename, "%s/%s_%s.%s", szAccountSyncDir, WALLET_SYNC_REPO_PREFIX_FIELD,
+                                       szUUID, WALLET_SYNC_REPO_SUFFIC_FIELD);
+    // decrypt the wallet repo key
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, oldLP2, &WalletKey, pError));
+
+    // write it back out using the new LP2
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(WalletKey, newLP2, ABC_CryptoType_AES256, szFilename, pError));
+
 exit:
     ABC_BUF_FREE(MK);
+    ABC_BUF_FREE(WalletKey);
     ABC_FREE_STR(szAccountSyncDir);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szJSON);

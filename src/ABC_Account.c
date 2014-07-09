@@ -820,6 +820,7 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     tABC_U08Buf LRA1 = ABC_BUF_NULL;
     tABC_U08Buf oldP1 = ABC_BUF_NULL;
     tABC_U08Buf SettingsData = ABC_BUF_NULL;
+    tABC_U08Buf RepoAcctKey = ABC_BUF_NULL;
     char *szAccountDir = NULL;
     char *szFilename = NULL;
     char *szSettingsFilename = NULL;
@@ -934,7 +935,6 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     }
 
     // re-encrypt the settings
-
     ABC_CHECK_RET(ABC_AccountGetSettingsFilename(pInfo->szUserName, &szSettingsFilename, pError));
     bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szSettingsFilename, &bExists, pError));
@@ -945,6 +945,19 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
 
         // save them using the new key
         ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(SettingsData, pKeys->LP2, ABC_CryptoType_AES256, szSettingsFilename, pError));
+    }
+
+    // Re-encrypt the Repo key
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
+    bool bKeyExists = false;
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bKeyExists, pError));
+    if (true == bKeyExists)
+    {
+        // load them using the old key
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, oldLP2, &RepoAcctKey, pError));
+
+        // save them using the new key
+        ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(RepoAcctKey, pKeys->LP2, ABC_CryptoType_AES256, szFilename, pError));
     }
 
     // the keys for the account have all been updated so other functions can now be called that use them
