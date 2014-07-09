@@ -20,6 +20,11 @@ extern "C" {
     tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
                              tABC_Error *pError);
 
+    tABC_CC ABC_SyncInitialPush(const char *szRepoPath,
+                                const char *szRepoKey,
+                                const char *szServer,
+                                tABC_Error *pError);
+
     tABC_CC ABC_SyncRepo(const char *szRepoPath,
                          const char *szRepoKey,
                          const char *szServer,
