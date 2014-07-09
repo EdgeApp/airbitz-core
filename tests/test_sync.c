@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <ftw.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -21,6 +22,17 @@ tABC_CC TestSync(tABC_Error *pError)
 
     ABC_CHECK_RET(RecreateDir("sync_repo", pError));
     ABC_CHECK_RET(ABC_SyncMakeRepo("sync_repo", pError));
+    FILE *foo = fopen("sync_repo""/foo.txt", "wb");
+    fclose(foo);
+
+    ABC_CHECK_RET(RecreateDir("server.git", pError));
+    system("git init --bare server.git");
+
+    ABC_CHECK_RET(RecreateDir("download_repo", pError));
+    ABC_CHECK_RET(ABC_SyncMakeRepo("download_repo", pError));
+
+    ABC_CHECK_RET(ABC_SyncRepo("sync_repo", "key", "server.git", pError));
+    ABC_CHECK_RET(ABC_SyncRepo("download_repo", NULL, "server.git", pError));
 
     ABC_SyncTerminate();
 
