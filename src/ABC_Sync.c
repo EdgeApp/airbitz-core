@@ -86,8 +86,8 @@ static tABC_CC SyncCommit(git_repository *repo,
     e = git_tree_lookup(&tree, repo, &tree_id);
     ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_tree_lookup failed");
 
-    e = git_signature_default(&sig, repo);
-    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_signature_default failed");
+    e = git_signature_now(&sig, SYNC_GIT_NAME, SYNC_GIT_EMAIL);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_signature_now failed");
 
     char message[256];
     sprintf(message, "%s - %ld", "Adding client generated files", time(NULL));
