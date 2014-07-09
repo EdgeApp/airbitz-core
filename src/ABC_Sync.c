@@ -6,6 +6,145 @@
 #include <git2.h>
 #include "ABC_Sync.h"
 
+#define SYNC_REFSPEC                    "+refs/heads/*:refs/remotes/sync/*"
+#define SYNC_GIT_NAME                   "airbitz"
+#define SYNC_GIT_EMAIL                  ""
+
+/**
+ * Logs error information produced by libgit2.
+ */
+static void SyncLogGitError(int e)
+{
+    const git_error *error = giterr_last();
+    if (error && error->message)
+    {
+        ABC_DebugLog("libgit2 returned %d: %s", e, error->message);
+    }
+    else
+    {
+        ABC_DebugLog("libgit2 returned %d: <no message>", e);
+    }
+}
+
+/**
+ * Helper function to perform the fetch
+ */
+static tABC_CC SyncFetch(git_repository *repo,
+                         const char *szRepoKey,
+                         const char *szServer,
+                         tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    int e;
+
+    git_remote *remote = NULL;
+    git_signature *sig = NULL;
+
+    e = git_remote_create_anonymous(&remote, repo, szServer, SYNC_REFSPEC);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_remote_create_anonymous failed");
+
+    e = git_signature_now(&sig, SYNC_GIT_NAME, SYNC_GIT_EMAIL);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_signature_now failed");
+
+    e = git_remote_fetch(remote, sig, "sync fetch");
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_remote_fetch failed");
+
+exit:
+    if (e)      SyncLogGitError(e);
+    if (remote) git_remote_free(remote);
+    if (sig)    git_signature_free(sig);
+
+    return cc;
+}
+
+/**
+ * Helper function to perform add and commit
+ */
+static tABC_CC SyncCommit(git_repository *repo,
+                          tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    int e;
+
+    git_index *index = NULL;
+    git_tree *tree = NULL;
+    git_signature *sig = NULL;
+    git_oid tree_id, commit_id;
+
+    e = git_repository_index(&index, repo);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_repository_index failed");
+
+    char *strs[] = {"*"};
+    git_strarray paths = {strs, 1};
+
+    e = git_index_add_all(index, &paths, 0, NULL, NULL);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_index_add_all failed");
+
+    e = git_index_write_tree(&tree_id, index);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_index_write_tree failed");
+
+    e = git_tree_lookup(&tree, repo, &tree_id);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_tree_lookup failed");
+
+    e = git_signature_default(&sig, repo);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_signature_default failed");
+
+    char message[256];
+    sprintf(message, "%s - %ld", "Adding client generated files", time(NULL));
+    e = git_commit_create_v(&commit_id, repo, "HEAD", sig, sig, NULL, message, tree, 0);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_commit_create_v failed");
+
+    e = git_index_write(index);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_index_write failed");
+
+exit:
+    if (e)     SyncLogGitError(e);
+    if (index) git_index_free(index);
+    if (tree)  git_tree_free(tree);
+    if (sig)   git_signature_free(sig);
+
+    return cc;
+}
+
+/**
+ * Helper function to perform push.
+ */
+static tABC_CC SyncPush(git_repository *repo,
+                        const char *szRepoKey,
+                        const char *szServer,
+                        tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    int e;
+
+    git_remote *remote;
+    git_push *push;
+
+    e = git_remote_create_anonymous(&remote, repo, szServer, SYNC_REFSPEC);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_remote_create_anonymous failed");
+
+    e = git_remote_connect(remote, GIT_DIRECTION_PUSH);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_remote_connect failed");
+
+    e = git_push_new(&push, remote);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_push_new failed");
+
+    e = git_push_add_refspec(push, "refs/heads/master");
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_push_add_refspec failed");
+
+    e = git_push_finish(push);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_push_finish failed");
+
+    ABC_CHECK_ASSERT(git_push_unpack_ok(push), ABC_CC_SysError, "git_push_unpack_ok failed");
+
+exit:
+    if (e)      SyncLogGitError(e);
+    if (remote) git_remote_free(remote);
+    if (push) git_push_free(push);
+
+    return cc;
+}
+
 /**
  * Initializes the underlying git library. Should be called a program start.
  */
@@ -61,5 +200,21 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
                      const char *szServer,
                      tABC_Error *pError)
 {
-    return ABC_CC_Ok;
+    tABC_CC cc = ABC_CC_Ok;
+    int e;
+
+    git_repository *repo = NULL;
+
+    e = git_repository_open(&repo, szRepoPath);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_repository_open failed");
+
+    ABC_CHECK_RET(SyncCommit(repo, pError));
+    if (szRepoKey) // Temporary hack until merge works
+        ABC_CHECK_RET(SyncPush(repo, szRepoKey, szServer, pError));
+    ABC_CHECK_RET(SyncFetch(repo, szRepoKey, szServer, pError));
+
+exit:
+    if (repo) git_repository_free(repo);
+
+    return cc;
 }
