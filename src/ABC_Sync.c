@@ -118,6 +118,62 @@ exit:
 }
 
 /**
+ * Helper function to perform a merge.
+ */
+static tABC_CC SyncMerge(git_repository *repo,
+                         tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    int e;
+
+    git_oid head_id, remote_id, tree_id, commit_id;
+    git_merge_head *rmt_head = NULL;
+    git_index *index = NULL;
+    git_tree *tree = NULL;
+    git_signature *sig = NULL;
+
+    e = git_reference_name_to_id(&head_id, repo, "HEAD");
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_reference_name_to_id failed");
+
+    e = git_reference_name_to_id(&remote_id, repo, "refs/remotes/sync/master");
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_reference_name_to_id failed");
+
+    e = git_merge_head_from_id(&rmt_head, repo, &remote_id);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_merge_head_from_ref failed");
+
+    git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
+    git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+    checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+    const git_merge_head *heads[] = {rmt_head};
+    e = git_merge(repo, heads, 1, &merge_opts, &checkout_opts);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_merge failed");
+
+    e = git_repository_index(&index, repo);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_repository_index failed");
+
+    e = git_index_write_tree(&tree_id, index);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_index_write_tree failed");
+
+    e = git_tree_lookup(&tree, repo, &tree_id);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_tree_lookup failed");
+
+    e = git_signature_now(&sig, SYNC_GIT_NAME, SYNC_GIT_EMAIL);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_signature_now failed");
+
+    char *message = "Sync with server";
+    e = git_commit_create_v(&commit_id, repo, "HEAD", sig, sig, NULL, message, tree, 2, &head_id, &remote_id);
+
+exit:
+    if (e)          SyncLogGitError(e);
+    if (rmt_head)   git_merge_head_free(rmt_head);
+    if (index)      git_index_free(index);
+    if (tree)       git_tree_free(tree);
+    if (sig)        git_signature_free(sig);
+
+    return cc;
+}
+
+/**
  * Helper function to perform push.
  */
 static tABC_CC SyncPush(git_repository *repo,
@@ -243,8 +299,10 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     e = git_repository_open(&repo, szRepoPath);
     ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_repository_open failed");
 
+    ABC_CHECK_RET(SyncCommit(repo, pError));
     ABC_CHECK_RET(SyncFetch(repo, szServer, pError));
-    // Commit, merge, and push...
+    ABC_CHECK_RET(SyncMerge(repo, pError));
+    ABC_CHECK_RET(SyncPush(repo, szServer, pError));
 
 exit:
     if (repo) git_repository_free(repo);
