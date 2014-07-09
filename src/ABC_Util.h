@@ -127,6 +127,8 @@ extern "C" {
         ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "calloc failed (returned NULL)"); \
     }
 
+#define ABC_STRLEN(string) (string == NULL ? 0 : strlen(string))
+
 #define ABC_STRDUP(ptr, string) \
     { \
         ptr = strdup(string); \
