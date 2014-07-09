@@ -191,6 +191,32 @@ exit:
 }
 
 /**
+ * Pushes a repository to the server for the first time. The normal sync
+ * operation will not work until this has been done.
+ */
+tABC_CC ABC_SyncInitialPush(const char *szRepoPath,
+                            const char *szRepoKey,
+                            const char *szServer,
+                            tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    int e;
+
+    git_repository *repo = NULL;
+
+    e = git_repository_open(&repo, szRepoPath);
+    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_repository_open failed");
+
+    ABC_CHECK_RET(SyncCommit(repo, pError));
+    ABC_CHECK_RET(SyncPush(repo, szRepoKey, szServer, pError));
+
+exit:
+    if (repo) git_repository_free(repo);
+
+    return cc;
+}
+
+/**
  * Synchronizes the directory with the server. New files in the folder will
  * go up to the server, and new files on the server will come down to the
  * directory. If there is a conflict, the newer file will win.
@@ -208,10 +234,8 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     e = git_repository_open(&repo, szRepoPath);
     ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_repository_open failed");
 
-    ABC_CHECK_RET(SyncCommit(repo, pError));
-    if (szRepoKey) // Temporary hack until merge works
-        ABC_CHECK_RET(SyncPush(repo, szRepoKey, szServer, pError));
     ABC_CHECK_RET(SyncFetch(repo, szRepoKey, szServer, pError));
+    // Commit, merge, and push...
 
 exit:
     if (repo) git_repository_free(repo);
