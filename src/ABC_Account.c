@@ -113,7 +113,6 @@ static unsigned int gAccountKeysCacheCount = 0;
 static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
 static tABC_CC ABC_AccountFetch(const char *szUserName, const char *szPassword, tABC_Error *pError);
-static tABC_CC ABC_AccountPickRepo(const char *szRepoKey, const char **szRepoPath, tABC_Error *pError);
 static tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, char *szRepoAcctKey, char *szERepoAcctKey, tABC_Error *pError);
 static tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, tABC_Error *pError);
 static tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError);
@@ -417,7 +416,7 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     char                    *szJSON             = NULL;
     char                    *szAccountDir       = NULL;
     char                    *szFilename         = NULL;
-    char                    *szRepoPath         = NULL;
+    char                    *szRepoURL          = NULL;
 
     int AccountNum = 0;
     tABC_U08Buf RepoAcctKey = ABC_BUF_NULL;
@@ -541,19 +540,19 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     // Load the general info
     ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&pGeneralInfo, pError));
 
+    // Create
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
+    // Create Repo Path
+    ABC_CHECK_RET(ABC_AccountPickRepo(pKeys->szRepoAcctKey, &szRepoURL, pError));
+    ABC_DebugLog("Pushing to: %s\n", szRepoURL);
 
-    ABC_CHECK_RET(ABC_AccountPickRepo(pKeys->szRepoAcctKey, &szRepoPath, pError));
-
-    ABC_DebugLog("Pushing to: %s\n", szRepoPath);
     // Init the git repo
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
     // Sync it
-    ABC_CHECK_ASSERT(pGeneralInfo->countSyncServers > 0, ABC_CC_Error, "No sync servers");
     ABC_CHECK_RET(
-        ABC_SyncInitialPush(szFilename, pKeys->szRepoAcctKey, szRepoPath, pError));
+        ABC_SyncInitialPush(szFilename, pKeys->szRepoAcctKey, szRepoURL, pError));
 
     pKeys = NULL; // so we don't free what we just added to the cache
 exit:
@@ -569,7 +568,7 @@ exit:
     if (pJSON_SNRP2)        json_decref(pJSON_SNRP2);
     if (pJSON_SNRP3)        json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)        json_decref(pJSON_SNRP4);
-    ABC_FREE_STR(szRepoPath);
+    ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szCarePackage_JSON);
     ABC_FREE_STR(szEPIN_JSON);
     ABC_FREE_STR(szJSON);
@@ -598,12 +597,11 @@ tABC_CC ABC_AccountFetch(const char *szUserName, const char *szPassword, tABC_Er
     char *szCarePackage                   = NULL;
     char *szJSON                          = NULL;
     char *szERepoAcctKey                  = NULL;
-    char *szRepoPath                      = NULL;
+    char *szRepoURL                       = NULL;
     tABC_U08Buf L = ABC_BUF_NULL;
     tABC_U08Buf L1 = ABC_BUF_NULL;
     tABC_U08Buf P = ABC_BUF_NULL;
     tABC_U08Buf P1 = ABC_BUF_NULL;
-    tABC_U08Buf LP2 = ABC_BUF_NULL;
     tABC_CryptoSNRP *pSNRP1 = NULL;
     tABC_U08Buf RepoAcctKey = ABC_BUF_NULL;
     int AccountNum = 0;
@@ -643,11 +641,8 @@ tABC_CC ABC_AccountFetch(const char *szUserName, const char *szPassword, tABC_Er
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szERepoAcctKey, pError));
 
-    // Since care package is written, cache account and fetch LP2
-    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_LP2, &LP2, pError));
-
-    //  Use L2 to decrypt ERepoAcctKey to get RepoAcctKey
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONString(szERepoAcctKey, LP2, &RepoAcctKey, pError));
+    // Since care package is written, we can decrypt the ERepoAcctKey
+    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_RepoAccountKey, &RepoAcctKey, pError));
 
     //  Create sync directory and sync
     ABC_CHECK_RET(ABC_AccountCreateSync(szAccountDir, pError));
@@ -658,20 +653,20 @@ tABC_CC ABC_AccountFetch(const char *szUserName, const char *szPassword, tABC_Er
     ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&pGeneralInfo, pError));
 
     // Create repo URL
-    ABC_CHECK_RET(ABC_AccountPickRepo((char *) ABC_BUF_PTR(RepoAcctKey), &szRepoPath, pError));
+    ABC_CHECK_RET(ABC_AccountPickRepo((char *) ABC_BUF_PTR(RepoAcctKey), &szRepoURL, pError));
 
-    ABC_DebugLog("Fetching from: %s\n", szRepoPath);
+    ABC_DebugLog("Fetching from: %s\n", szRepoURL);
 
     // Init the git repo
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
 
     // Sync it
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, (char *) ABC_BUF_PTR(RepoAcctKey), szRepoPath, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, (char *) ABC_BUF_PTR(RepoAcctKey), szRepoURL, pError));
 
     // Fetch and Sync Wallets
-    // ABC_CHECK_RET(ABC_WalletFetchAll(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_WalletFetchAll(szUserName, szPassword, pError));
 exit:
-    ABC_FREE_STR(szRepoPath);
+    ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szCarePackage);
@@ -683,23 +678,6 @@ exit:
     ABC_BUF_FREE(RepoAcctKey);
     ABC_CryptoFreeSNRP(&pSNRP1);
 
-    return cc;
-}
-
-static 
-tABC_CC ABC_AccountPickRepo(const char *szRepoKey, const char **szRepoPath, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_U08Buf URL = ABC_BUF_NULL;
-
-    ABC_BUF_DUP_PTR(URL, SYNC_SERVER, strlen(SYNC_SERVER));
-    ABC_BUF_APPEND_PTR(URL, szRepoKey, strlen(szRepoKey));
-    ABC_BUF_APPEND_PTR(URL, "", 1);
-
-    *szRepoPath = (char *)ABC_BUF_PTR(URL);
-    ABC_BUF_CLEAR(URL);
-exit:
-    ABC_BUF_FREE(URL);
     return cc;
 }
 
@@ -1540,9 +1518,6 @@ tABC_CC ABC_AccountCreateSync(const char *szAccountsRootDir,
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szDataJSON, pError));
     ABC_FREE_STR(szDataJSON);
     szDataJSON = NULL;
-
-    // TODO: create sync info in this directory
-
 exit:
     ABC_FREE_STR(szDataJSON);
     ABC_FREE_STR(szFilename);
@@ -3962,6 +3937,29 @@ void ABC_AccountFreeSettings(tABC_AccountSettings *pSettings)
     }
 }
 
+
+/**
+ * Using the settings pick a repo and create the repo url
+ *
+ * @param szRepoKey    The repo key
+ * @param szRepoPath   Pointer to pointer where the results will be store. Caller must free
+ */
+tABC_CC ABC_AccountPickRepo(const char *szRepoKey, const char **szRepoPath, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_U08Buf URL = ABC_BUF_NULL;
+
+    ABC_BUF_DUP_PTR(URL, SYNC_SERVER, strlen(SYNC_SERVER));
+    ABC_BUF_APPEND_PTR(URL, szRepoKey, strlen(szRepoKey));
+    ABC_BUF_APPEND_PTR(URL, "", 1);
+
+    *szRepoPath = (char *)ABC_BUF_PTR(URL);
+    ABC_BUF_CLEAR(URL);
+exit:
+    ABC_BUF_FREE(URL);
+    return cc;
+}
+
 /**
  * Sync the account data
  *
@@ -3978,22 +3976,28 @@ tABC_CC ABC_AccountSyncData(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tAccountKeys *pKeys = NULL;
-    char *szFilename = NULL;
-    char *szAccountDir = NULL;
+    char *szFilename    = NULL;
+    char *szAccountDir  = NULL;
+    char *szRepoURL     = NULL;
+    bool bExists        = false;
 
     ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, NULL, &pKeys, pError));
     ABC_CHECK_ASSERT(NULL != pKeys->szRepoAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
 
     ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
-    ABC_CHECK_RET(ABC_FileIOCreateDir(szAccountDir, pError));
 
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
-    ABC_CHECK_ASSERT(pInfo->countSyncServers > 0, ABC_CC_Error, "No sync servers");
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, pKeys->szRepoAcctKey, pInfo->aszSyncServers[0], pError));
+    // Create the repo url
+    ABC_CHECK_RET(ABC_AccountPickRepo(pKeys->szRepoAcctKey, &szRepoURL, pError));
+
+    // ABC_CHECK_RET(ABC_SyncRepo(szFilename, pKeys->szRepoAcctKey, pInfo->aszSyncServers[0], pError));
+    ABC_CHECK_RET(
+        ABC_SyncInitialPush(szFilename, pKeys->szRepoAcctKey, szRepoURL, pError));
 exit:
+    ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
     return cc;
