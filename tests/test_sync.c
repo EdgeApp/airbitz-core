@@ -9,7 +9,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-static tABC_CC RecreateDir(const char *szPath, tABC_Error *pError);
+static tABC_CC TestRecreateDir(const char *szPath, tABC_Error *pError);
+static tABC_CC TestCreateFile(const char *szPath, const char *szContents, tABC_Error *pError);
 
 /**
  * Performs a test sync between two repositories.
@@ -20,18 +21,17 @@ tABC_CC TestSync(tABC_Error *pError)
 
     ABC_CHECK_RET(ABC_SyncInit(pError));
 
-    ABC_CHECK_RET(RecreateDir("sync_repo", pError));
+    ABC_CHECK_RET(TestRecreateDir("sync_repo", pError));
     ABC_CHECK_RET(ABC_SyncMakeRepo("sync_repo", pError));
-    FILE *foo = fopen("sync_repo""/foo.txt", "wb");
-    fclose(foo);
+    ABC_CHECK_RET(TestCreateFile("sync_repo/foo.txt", "foo", pError));
 
-    ABC_CHECK_RET(RecreateDir("server.git", pError));
+    ABC_CHECK_RET(TestRecreateDir("server.git", pError));
     system("git init --bare server.git");
 
     ABC_CHECK_RET(ABC_SyncInitialPush("sync_repo", "server.git", pError));
     ABC_CHECK_RET(ABC_SyncInitialPush("sync_repo", "server.git", pError));
 
-    ABC_CHECK_RET(RecreateDir("download_repo", pError));
+    ABC_CHECK_RET(TestRecreateDir("download_repo", pError));
     ABC_CHECK_RET(ABC_SyncMakeRepo("download_repo", pError));
 
     ABC_CHECK_RET(ABC_SyncRepo("download_repo", "server.git", pError));
@@ -62,7 +62,7 @@ int main()
 /**
  * Callback for recusive file deletion.
  */
-static int DeleteCallback(const char *fpath, const struct stat *sb,
+static int TestDeleteCallback(const char *fpath, const struct stat *sb,
                        int typeflag, struct FTW *ftwbuf)
 {
     return remove(fpath);
@@ -71,7 +71,7 @@ static int DeleteCallback(const char *fpath, const struct stat *sb,
 /**
  * Deletes and re-creates a directory.
  */
-static tABC_CC RecreateDir(const char *szPath, tABC_Error *pError)
+static tABC_CC TestRecreateDir(const char *szPath, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     int e;
@@ -82,7 +82,7 @@ static tABC_CC RecreateDir(const char *szPath, tABC_Error *pError)
     {
         ABC_CHECK_ASSERT(S_ISDIR(s.st_mode), ABC_CC_Error, "not a directory");
 
-        e = nftw(szPath, DeleteCallback, 32, FTW_DEPTH | FTW_PHYS);
+        e = nftw(szPath, TestDeleteCallback, 32, FTW_DEPTH | FTW_PHYS);
         ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "cannot delete directory");
     }
     else
@@ -94,5 +94,26 @@ static tABC_CC RecreateDir(const char *szPath, tABC_Error *pError)
     ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "mkdir failed");
 
 exit:
+    return cc;
+}
+
+/**
+ * Deletes and re-creates a directory.
+ */
+static tABC_CC TestCreateFile(const char *szPath, const char *szContents, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    int e;
+
+    FILE *file = NULL;
+
+    file = fopen(szPath, "w");
+    ABC_CHECK_ASSERT(file, ABC_CC_SysError, "cannot create file");
+    e = fwrite(szContents, strlen(szContents), 1, file);
+    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "cannot create file");
+
+exit:
+    if (file)       fclose(file);
+
     return cc;
 }
