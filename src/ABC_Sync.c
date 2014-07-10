@@ -30,7 +30,6 @@ static void SyncLogGitError(int e)
  * Helper function to perform the fetch
  */
 static tABC_CC SyncFetch(git_repository *repo,
-                         const char *szRepoKey,
                          const char *szServer,
                          tABC_Error *pError)
 {
@@ -122,7 +121,6 @@ exit:
  * Helper function to perform push.
  */
 static tABC_CC SyncPush(git_repository *repo,
-                        const char *szRepoKey,
                         const char *szServer,
                         tABC_Error *pError)
 {
@@ -208,7 +206,6 @@ exit:
  * The normal sync operation will not work until this has been done.
  */
 tABC_CC ABC_SyncInitialPush(const char *szRepoPath,
-                            const char *szRepoKey,
                             const char *szServer,
                             tABC_Error *pError)
 {
@@ -221,7 +218,7 @@ tABC_CC ABC_SyncInitialPush(const char *szRepoPath,
     ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_repository_open failed");
 
     ABC_CHECK_RET(SyncCommit(repo, pError));
-    ABC_CHECK_RET(SyncPush(repo, szRepoKey, szServer, pError));
+    ABC_CHECK_RET(SyncPush(repo, szServer, pError));
 
 exit:
     if (repo) git_repository_free(repo);
@@ -235,7 +232,6 @@ exit:
  * directory. If there is a conflict, the newer file will win.
  */
 tABC_CC ABC_SyncRepo(const char *szRepoPath,
-                     const char *szRepoKey,
                      const char *szServer,
                      tABC_Error *pError)
 {
@@ -247,7 +243,7 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     e = git_repository_open(&repo, szRepoPath);
     ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_repository_open failed");
 
-    ABC_CHECK_RET(SyncFetch(repo, szRepoKey, szServer, pError));
+    ABC_CHECK_RET(SyncFetch(repo, szServer, pError));
     // Commit, merge, and push...
 
 exit:
