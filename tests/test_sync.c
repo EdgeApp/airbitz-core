@@ -29,6 +29,7 @@ tABC_CC TestSync(tABC_Error *pError)
     system("git init --bare server.git");
 
     ABC_CHECK_RET(ABC_SyncInitialPush("sync_repo", "key", "server.git", pError));
+    ABC_CHECK_RET(ABC_SyncInitialPush("sync_repo", "key", "server.git", pError));
 
     ABC_CHECK_RET(RecreateDir("download_repo", pError));
     ABC_CHECK_RET(ABC_SyncMakeRepo("download_repo", pError));
