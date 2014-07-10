@@ -82,6 +82,9 @@ extern "C" {
     tABC_CC ABC_FileIODeleteFile(const char *szFilename,
                                  tABC_Error *pError);
 
+    tABC_CC ABC_FileIODeleteRecursive(const char *szFilename,
+                                      tABC_Error *pError);
+
     tABC_CC ABC_FileIOFileModTime(const char *szFilename,
                                   time_t *pTime,
                                   tABC_Error *pError);
