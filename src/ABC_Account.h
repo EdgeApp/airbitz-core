@@ -190,6 +190,10 @@ extern "C" {
 
     void ABC_AccountFreeSettings(tABC_AccountSettings *pSettings);
 
+    tABC_CC ABC_AccountPickRepo(const char *szRepoKey,
+                                const char **szRepoPath,
+                                tABC_Error *pError);
+
     tABC_CC ABC_AccountSyncData(const char *szUserName,
                                 const char *szPassword,
                                 tABC_AccountGeneralInfo *pInfo,

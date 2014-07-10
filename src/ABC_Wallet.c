@@ -204,6 +204,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     char *szJSON = NULL;
     char *szUUID = NULL;
     char *szEWalletAcctKey = NULL;
+    char *szRepoURL = NULL;
     json_t *pJSON_Data = NULL;
     json_t *pJSON_Wallets = NULL;
     tABC_U08Buf L1 = ABC_BUF_NULL;
@@ -303,10 +304,15 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     // Load the general info
     ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&pGeneralInfo, pError));
 
+    // Create Repo URL
+    ABC_CHECK_RET(ABC_AccountPickRepo(pData->szWalletAcctKey, &szRepoURL, pError));
+
     // Init the git repo
     ABC_CHECK_RET(ABC_SyncMakeRepo(pData->szWalletSyncDir, pError));
-    // Sync it
-    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, pGeneralInfo->aszSyncServers[0], pError));
+
+    // TODO: Sync it
+    // ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncInitialPush(pData->szWalletSyncDir, pData->szWalletAcctKey, szRepoURL, pError));
 
     // If everything worked, add wallet to account Wallets.json
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -327,6 +333,10 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     szJSON = ABC_UtilStringFromJSONObject(pJSON_Data, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
 
+    // After wallet is created, sync the account
+    tABC_Error Error;
+    ABC_AccountSyncData(pInfo->szUserName, pInfo->szPassword, pGeneralInfo, &Error);
+
     pData = NULL; // so we don't free what we just added to the cache
 exit:
     if (cc != ABC_CC_Ok)
@@ -334,6 +344,7 @@ exit:
         // TODO: clean up your mess!
         // Remove from cache and rm szWalletSyncDir
     }
+    ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szAccountSyncDir);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szEMK_JSON);
@@ -409,12 +420,19 @@ tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    char *szRepoURL = NULL;
     tWalletData *pData = NULL;
+
+    // Create Repo URL
+    ABC_CHECK_RET(ABC_AccountPickRepo(pData->szWalletAcctKey, &szRepoURL, pError));
+
     // load the wallet data into the cache
     ABC_CHECK_RET(ABC_WalletCacheData(szUserName, szPassword, szUUID, &pData, pError));
     ABC_CHECK_ASSERT(NULL != pData->szWalletAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
-    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, pInfo->aszSyncServers[0], pError));
+    // ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, pInfo->aszSyncServers[0], pError));
+    ABC_CHECK_RET(ABC_SyncInitialPush(pData->szWalletSyncDir, pData->szWalletAcctKey, szRepoURL, pError));
 exit:
+    ABC_FREE_STR(szRepoURL);
     return cc;
 }
 
