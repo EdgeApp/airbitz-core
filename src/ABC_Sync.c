@@ -50,9 +50,9 @@ static tABC_CC SyncFetch(git_repository *repo,
     ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_remote_fetch failed");
 
 exit:
-    if (e)      SyncLogGitError(e);
-    if (remote) git_remote_free(remote);
-    if (sig)    git_signature_free(sig);
+    if (e)          SyncLogGitError(e);
+    if (remote)     git_remote_free(remote);
+    if (sig)        git_signature_free(sig);
 
     return cc;
 }
@@ -89,19 +89,31 @@ static tABC_CC SyncCommit(git_repository *repo,
     e = git_signature_now(&sig, SYNC_GIT_NAME, SYNC_GIT_EMAIL);
     ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_signature_now failed");
 
+    git_oid parent;
+    int count = 1;
+    e = git_reference_name_to_id(&parent, repo, "HEAD");
+    if (e == GIT_ENOTFOUND)
+    {
+        count = 0;
+    }
+    else
+    {
+        ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_reference_name_to_id failed");
+    }
+
     char message[256];
     sprintf(message, "%s - %ld", "Adding client generated files", time(NULL));
-    e = git_commit_create_v(&commit_id, repo, "HEAD", sig, sig, NULL, message, tree, 0);
+    e = git_commit_create_v(&commit_id, repo, "HEAD", sig, sig, NULL, message, tree, count, &parent);
     ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_commit_create_v failed");
 
     e = git_index_write(index);
     ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_index_write failed");
 
 exit:
-    if (e)     SyncLogGitError(e);
-    if (index) git_index_free(index);
-    if (tree)  git_tree_free(tree);
-    if (sig)   git_signature_free(sig);
+    if (e)          SyncLogGitError(e);
+    if (index)      git_index_free(index);
+    if (tree)       git_tree_free(tree);
+    if (sig)        git_signature_free(sig);
 
     return cc;
 }
@@ -117,8 +129,8 @@ static tABC_CC SyncPush(git_repository *repo,
     tABC_CC cc = ABC_CC_Ok;
     int e;
 
-    git_remote *remote;
-    git_push *push;
+    git_remote *remote = NULL;
+    git_push *push = NULL;
 
     e = git_remote_create_anonymous(&remote, repo, szServer, SYNC_REFSPEC);
     ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_remote_create_anonymous failed");
@@ -138,15 +150,15 @@ static tABC_CC SyncPush(git_repository *repo,
     ABC_CHECK_ASSERT(git_push_unpack_ok(push), ABC_CC_SysError, "git_push_unpack_ok failed");
 
 exit:
-    if (e)      SyncLogGitError(e);
-    if (remote) git_remote_free(remote);
-    if (push) git_push_free(push);
+    if (e)          SyncLogGitError(e);
+    if (remote)     git_remote_free(remote);
+    if (push)       git_push_free(push);
 
     return cc;
 }
 
 /**
- * Initializes the underlying git library. Should be called a program start.
+ * Initializes the underlying git library. Should be called at program start.
  */
 tABC_CC ABC_SyncInit(tABC_Error *pError)
 {
@@ -191,8 +203,9 @@ exit:
 }
 
 /**
- * Pushes a repository to the server for the first time. The normal sync
- * operation will not work until this has been done.
+ * Pushes a repository to the server for the first time. This should only
+ * be done once when the account or wallet are created for the first time.
+ * The normal sync operation will not work until this has been done.
  */
 tABC_CC ABC_SyncInitialPush(const char *szRepoPath,
                             const char *szRepoKey,
