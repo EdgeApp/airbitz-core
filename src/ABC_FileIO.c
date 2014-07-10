@@ -17,6 +17,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <jansson.h>
+#include <errno.h>
+#include <ftw.h>
 #include "ABC.h"
 #include "ABC_FileIO.h"
 #include "ABC_Util.h"
@@ -25,6 +27,8 @@ static char             gszRootDir[ABC_MAX_STRING_LENGTH + 1] = ".";
 
 static bool             gbInitialized = false;
 static pthread_mutex_t  gMutex; // to block multiple threads from accessing files at the same time
+
+static int ABC_FileIODeleteCallback(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 
 /**
  * Initialize the FileIO system
@@ -442,6 +446,33 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_FileIODeleteRecursive(const char *szFilename, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    int e;
+    struct stat s;
+
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No filename provided");
+
+    e = stat(szFilename, &s);
+    if (!e)
+    {
+        ABC_CHECK_ASSERT(S_ISDIR(s.st_mode), ABC_CC_Error, "not a directory");
+
+        e = nftw(szFilename, ABC_FileIODeleteCallback, 32, FTW_DEPTH | FTW_PHYS);
+        ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "cannot delete directory");
+    }
+    else
+    {
+        ABC_CHECK_ASSERT(ENOENT == errno, ABC_CC_SysError, "cannot stat directory");
+    }
+
+exit:
+
+    return cc;
+}
+
 /**
  * Finds the time the file was last modified
  *
@@ -506,4 +537,13 @@ tABC_CC ABC_FileIOMutexUnlock(tABC_Error *pError)
 exit:
 
     return cc;
+}
+
+/**
+ * Callback for recusive file deletion.
+ */
+static int ABC_FileIODeleteCallback(const char *fpath, const struct stat *sb,
+                                    int typeflag, struct FTW *ftwbuf)
+{
+    return remove(fpath);
 }
