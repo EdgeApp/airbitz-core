@@ -108,16 +108,24 @@ typedef struct sAccountKeys
     tABC_U08Buf     LRA2;
 } tAccountKeys;
 
+// When a recovers password from on a new device, care package is stored either
+// rather than creating an account directory
+static char *gCarePackageCache = NULL;
+
 // this holds all the of the currently cached account keys
 static unsigned int gAccountKeysCacheCount = 0;
 static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
 static tABC_CC ABC_AccountFetch(tABC_AccountRequestInfo *pInfo, tABC_Error *pError);
+static tABC_CC ABC_AccountFetchInitCarePackage(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, char **szAccountDir, tABC_Error *pError);
+static tABC_CC ABC_AccountFetchRepoKey(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError);
+static tABC_CC ABC_AccountRepoSetup(const char *szUserName, const char *szAccountDir, tABC_Error *pError);
+static tABC_CC ABC_AccountFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError);
 static tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, char *szRepoAcctKey, char *szERepoAcctKey, tABC_Error *pError);
 static tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, tABC_Error *pError);
 static tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
-static tABC_CC ABC_AccountGetCarePackageObjects(int AccountNum, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
+static tABC_CC ABC_AccountGetCarePackageObjects(int AccountNum, const char *szCarePackage, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateSync(const char *szAccountsRootDir, bool bIncludeDefs, tABC_Error *pError);
 static tABC_CC ABC_AccountNextAccountNum(int *pAccountNum, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateRootDir(tABC_Error *pError);
@@ -134,8 +142,8 @@ static tABC_CC ABC_AccountKeyFromCacheByName(const char *szUserName, tAccountKey
 static tABC_CC ABC_AccountSaveCategories(const char *szUserName, char **aszCategories, unsigned int Count, tABC_Error *pError);
 static tABC_CC ABC_AccountServerGetQuestions(tABC_U08Buf L1, json_t **ppJSON_Q, tABC_Error *pError);
 static tABC_CC ABC_AccountServerGetCarePackage(tABC_U08Buf L1, char **szResponse, tABC_Error *pError);
-static tABC_CC ABC_AccountServerGetRepoAcctKey(tABC_U08Buf L1, tABC_U08Buf P1, char **szERepoAcctKey, tABC_Error *pError);
-static tABC_CC ABC_AccountServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, char *szURL, char *szField, char **szResponse, tABC_Error *pError);
+static tABC_CC ABC_AccountServerGetRepoAcctKey(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char **szERepoAcctKey, tABC_Error *pError);
+static tABC_CC ABC_AccountServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char *szURL, char *szField, char **szResponse, tABC_Error *pError);
 static tABC_CC ABC_AccountUpdateQuestionChoices(const char *szUserName, tABC_Error *pError);
 static tABC_CC ABC_AccountGetGeneralInfoFilename(char **pszFilename, tABC_Error *pError);
 static tABC_CC ABC_AccountGetSettingsFilename(const char *szUserName, char **pszFilename, tABC_Error *pError);
@@ -379,8 +387,8 @@ tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
 
     ABC_CHECK_NULL(pInfo);
 
-    // check that this is a valid user
-    if (ABC_AccountCheckValidUser(pInfo->szUserName, pError) != ABC_CC_Ok)
+    // check that this is a valid user, ignore Error
+    if (ABC_AccountCheckValidUser(pInfo->szUserName, NULL) != ABC_CC_Ok)
     {
         // Try the server
         ABC_CHECK_RET(ABC_AccountFetch(pInfo, pError));
@@ -476,6 +484,9 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     ABC_BUF_APPEND(pKeys->LP, pKeys->P);
     //ABC_UtilHexDumpBuf("LP", pKeys->LP);
 
+    // L2 = Scrypt(L + P, SNRP2)
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP4, &(pKeys->L2), pError));
+
     // LP2 = Scrypt(L + P, SNRP2)
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->LP, pKeys->pSNRP2, &(pKeys->LP2), pError));
 
@@ -514,7 +525,7 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     ABC_BUF_SET_PTR(RepoBuf, (unsigned char *)szJSON, strlen(szJSON) + 1);
 
     // Create ERepoAcctKey and write to disk
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(RepoBuf, pKeys->LP2, ABC_CryptoType_AES256, &szERepoAcctKey, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(RepoBuf, pKeys->L2, ABC_CryptoType_AES256, &szERepoAcctKey, pError));
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szERepoAcctKey, pError));
     ABC_FREE_STR(szJSON);
@@ -590,92 +601,178 @@ static
 tABC_CC ABC_AccountFetch(tABC_AccountRequestInfo *pInfo, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_AccountGeneralInfo *pGeneralInfo = NULL;
-    char *szAccountDir                    = NULL;
-    char *szFilename                      = NULL;
-    char *szCarePackage                   = NULL;
-    char *szJSON                          = NULL;
-    char *szERepoAcctKey                  = NULL;
-    char *szRepoURL                       = NULL;
-    tABC_U08Buf L = ABC_BUF_NULL;
-    tABC_U08Buf L1 = ABC_BUF_NULL;
-    tABC_U08Buf P = ABC_BUF_NULL;
-    tABC_U08Buf P1 = ABC_BUF_NULL;
+    char *szAccountDir      = NULL;
+    char *szCarePackage     = NULL;
+    tAccountKeys *pKeys     = NULL;
+    tABC_U08Buf L           = ABC_BUF_NULL;
+    tABC_U08Buf L1          = ABC_BUF_NULL;
+    tABC_U08Buf L2          = ABC_BUF_NULL;
+    tABC_U08Buf P           = ABC_BUF_NULL;
+    tABC_U08Buf P1          = ABC_BUF_NULL;
+    tABC_U08Buf NULL_LRA1   = ABC_BUF_NULL;
     tABC_CryptoSNRP *pSNRP1 = NULL;
-    tABC_U08Buf RepoAcctKey = ABC_BUF_NULL;
-    int AccountNum = 0;
 
     // Create L, P, SNRP1, L1, P1
     ABC_BUF_DUP_PTR(L, pInfo->szUserName, strlen(pInfo->szUserName));
     ABC_BUF_DUP_PTR(P, pInfo->szPassword, strlen(pInfo->szPassword));
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP1, pError));
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(P, pSNRP1, &P1, pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP1, &L1, pError));
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(P, pSNRP1, &P1, pError));
 
     //  Download CarePackage.json and ERepoAcctKey.json
     ABC_CHECK_RET(ABC_AccountServerGetCarePackage(L1, &szCarePackage, pError));
-    ABC_CHECK_RET(ABC_AccountServerGetRepoAcctKey(L1, P1, &szERepoAcctKey, pError));
+
+    // Setup initial account and fetch care package
+    ABC_CHECK_RET(ABC_AccountFetchInitCarePackage(pInfo->szUserName, L1, szCarePackage, &szAccountDir, pError));
+
+    // We have the care package so fetch keys without password
+    ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, NULL, &pKeys, pError));
+
+    // L2 = Scrypt(L, SNRP4)
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pKeys->pSNRP4, &L2, pError));
+
+    // Fetch the ERepoAcctKey
+    ABC_CHECK_RET(ABC_AccountFetchRepoKey(L1, P1, NULL_LRA1, szAccountDir, pError));
+
+    // Setup the account repo and sync
+    ABC_CHECK_RET(ABC_AccountRepoSetup(pInfo->szUserName, szAccountDir, pError));
+
+    // Fetch and Sync Wallets
+    ABC_CHECK_RET(ABC_WalletFetchAll(pInfo->szUserName, pInfo->szPassword, pError));
+
+    // Clear out cache so its reloaded with the password
+    ABC_CHECK_RET(ABC_AccountClearKeyCache(pError));
+exit:
+    if (cc != ABC_CC_Ok)
+    {
+        ABC_FileIODeleteRecursive(szAccountDir, NULL);
+        ABC_AccountClearKeyCache(NULL);
+    }
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szCarePackage);
+    ABC_BUF_FREE(L);
+    ABC_BUF_FREE(L1);
+    ABC_BUF_FREE(P);
+    ABC_BUF_FREE(P1);
+    ABC_BUF_FREE(L2);
+    ABC_CryptoFreeSNRP(&pSNRP1);
+
+    return cc;
+}
+
+static
+tABC_CC ABC_AccountFetchInitCarePackage(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, char **szAccountDir, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szFilename    = NULL;
+    char *szJSON        = NULL;
+    int AccountNum      = 0;
 
     // find the next available account number on this device
     ABC_CHECK_RET(ABC_AccountNextAccountNum(&AccountNum, pError));
 
     // create the main account directory
-    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, AccountNum, pError));
-    ABC_CHECK_RET(ABC_FileIOCreateDir(szAccountDir, pError));
+    ABC_ALLOC(*szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(*szAccountDir, AccountNum, pError));
+    ABC_CHECK_RET(ABC_FileIOCreateDir(*szAccountDir, pError));
 
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
     // create the name file data and write the file
-    ABC_CHECK_RET(ABC_UtilCreateValueJSONString(pInfo->szUserName, JSON_ACCT_USERNAME_FIELD, &szJSON, pError));
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_NAME_FILENAME);
+    ABC_CHECK_RET(ABC_UtilCreateValueJSONString(szUserName, JSON_ACCT_USERNAME_FIELD, &szJSON, pError));
+    sprintf(szFilename, "%s/%s", *szAccountDir, ACCOUNT_NAME_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
-    ABC_FREE_STR(szJSON);
-    szJSON = NULL;
 
     //  Save Care Package
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
+    sprintf(szFilename, "%s/%s", *szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage, pError));
+exit:
+    ABC_FREE_STR(szJSON);
+    return cc;
+}
 
-    //  Save ERepoAcctKey
+static
+tABC_CC ABC_AccountFetchRepoKey(tABC_U08Buf L1, tABC_U08Buf P1,
+                                tABC_U08Buf LRA1,
+                                const char *szAccountDir,
+                                tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szFilename        = NULL;
+    char *szERepoAcctKey    = NULL;
+    bool bExists            = false;
+
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+
+    //  Do we already have an ERepoAcctKey?
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szERepoAcctKey, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    if (!bExists)
+    {
+        // Fetch ERepoAcctKey using P1 or LRA1
+        ABC_CHECK_RET(ABC_AccountServerGetRepoAcctKey(L1, P1, LRA1, &szERepoAcctKey, pError));
 
-    // Since care package is written, we can decrypt the ERepoAcctKey
-    ABC_CHECK_RET(ABC_AccountGetKey(pInfo->szUserName, pInfo->szPassword,
-                                    ABC_AccountKey_RepoAccountKey, &RepoAcctKey, pError));
+        // Save ERepoAcctKey
+        ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szERepoAcctKey, pError));
+    }
+exit:
+    ABC_FREE_STR(szFilename);
+    ABC_FREE_STR(szERepoAcctKey);
+    return cc;
+}
+
+static
+tABC_CC ABC_AccountRepoSetup(const char *szUserName,
+                             const char *szAccountDir,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_U08Buf L2          = ABC_BUF_NULL;
+    char *szFilename        = NULL;
+    char *szRepoAcctKey     = NULL;
+    char *szREPO_JSON       = NULL;
+    char *szRepoURL         = NULL;
+    tABC_U08Buf REPO_JSON   = ABC_BUF_NULL;
+
+    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, NULL, ABC_AccountKey_L2, &L2, pError));
+
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
+
+    // Decrypt ERepoAcctKey
+    tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, L2, &REPO_JSON, pError);
+    // check the results
+    if (ABC_CC_DecryptFailure == CC_Decrypt)
+    {
+        ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt RepoAcctKey - bad password");
+    }
+    else if (ABC_CC_Ok != CC_Decrypt)
+    {
+        cc = CC_Decrypt;
+        goto exit;
+    }
+
+    char *szJSON_REPO = (char *) ABC_BUF_PTR(REPO_JSON);
+    ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_REPO, JSON_ACCT_REPO_FIELD, &szRepoAcctKey, pError));
 
     //  Create sync directory and sync
     ABC_CHECK_RET(ABC_AccountCreateSync(szAccountDir, false, pError));
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
-    // Fetch and Load general info
-    ABC_CHECK_RET(ABC_AccountServerUpdateGeneralInfo(pError));
-    ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&pGeneralInfo, pError));
-
     // Create repo URL
-    ABC_CHECK_RET(ABC_AccountPickRepo((char *) ABC_BUF_PTR(RepoAcctKey), &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_AccountPickRepo(szRepoAcctKey, &szRepoURL, pError));
 
     ABC_DebugLog("Fetching from: %s\n", szRepoURL);
 
     // Init the git repo and sync it
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
     ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, pError));
-
-    // Fetch and Sync Wallets
-    ABC_CHECK_RET(ABC_WalletFetchAll(pInfo->szUserName, pInfo->szPassword, pError));
 exit:
-    ABC_FREE_STR(szRepoURL);
-    ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
-    ABC_FREE_STR(szCarePackage);
-    ABC_FREE_STR(szJSON);
-    ABC_BUF_FREE(L);
-    ABC_BUF_FREE(L1);
-    ABC_BUF_FREE(P);
-    ABC_BUF_FREE(P1);
-    ABC_CryptoFreeSNRP(&pSNRP1);
-
+    ABC_FREE_STR(szREPO_JSON);
+    ABC_FREE_STR(szRepoAcctKey);
+    ABC_FREE_STR(szRepoURL);
+    ABC_BUF_FREE(REPO_JSON);
     return cc;
 }
 
@@ -911,7 +1008,7 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
     // update the care package
 
     // get the current care package
-    ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
+    ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, NULL, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
 
     // Create an updated CarePackage = ERQ, SNRP2, SNRP3, SNRP4
     ABC_CHECK_RET(ABC_AccountCreateCarePackageJSONString(pJSON_ERQ, pJSON_SNRP2, pJSON_SNRP3, pJSON_SNRP4, &szCarePackage_JSON, pError));
@@ -923,6 +1020,9 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
     // Client sends L1, P1, LRA1, CarePackage, to the server
     ABC_CHECK_RET(ABC_AccountServerSetRecovery(pKeys->L1, pKeys->P1, pKeys->LRA1, szCarePackage_JSON, pError));
 
+    // Sync the data (ELP2 and ELRA2) with server
+    ABC_CHECK_RET(ABC_AccountSyncData(pKeys->szUserName, pKeys->szPassword, NULL, pError));
+    ABC_CHECK_RET(ABC_WalletFetchAll(pKeys->szUserName, pKeys->szPassword, pError));
 exit:
     if (pJSON_ERQ)          json_decref(pJSON_ERQ);
     if (pJSON_SNRP2)        json_decref(pJSON_SNRP2);
@@ -953,13 +1053,12 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     tABC_CC cc = ABC_CC_Ok;
 
     tAccountKeys *pKeys = NULL;
-    tABC_U08Buf oldLP2 = ABC_BUF_NULL;
-    tABC_U08Buf LRA2 = ABC_BUF_NULL;
-    tABC_U08Buf LRA = ABC_BUF_NULL;
-    tABC_U08Buf LRA1 = ABC_BUF_NULL;
-    tABC_U08Buf oldP1 = ABC_BUF_NULL;
+    tABC_U08Buf oldLP2  = ABC_BUF_NULL;
+    tABC_U08Buf LRA2    = ABC_BUF_NULL;
+    tABC_U08Buf LRA     = ABC_BUF_NULL;
+    tABC_U08Buf LRA1    = ABC_BUF_NULL;
+    tABC_U08Buf oldP1   = ABC_BUF_NULL;
     tABC_U08Buf SettingsData = ABC_BUF_NULL;
-    tABC_U08Buf RepoAcctKey = ABC_BUF_NULL;
     char *szAccountDir = NULL;
     char *szFilename = NULL;
     char *szSettingsFilename = NULL;
@@ -1086,24 +1185,14 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
         ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(SettingsData, pKeys->LP2, ABC_CryptoType_AES256, szSettingsFilename, pError));
     }
 
-    // Re-encrypt the Repo key
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
-    bool bKeyExists = false;
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bKeyExists, pError));
-    if (true == bKeyExists)
-    {
-        // load them using the old key
-        ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, oldLP2, &RepoAcctKey, pError));
-
-        // save them using the new key
-        ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(RepoAcctKey, pKeys->LP2, ABC_CryptoType_AES256, szFilename, pError));
-    }
-
     // the keys for the account have all been updated so other functions can now be called that use them
 
     // set the new PIN
     ABC_CHECK_RET(ABC_AccountSetPIN(pInfo->szUserName, pInfo->szNewPassword, pInfo->szPIN, pError));
 
+    // Sync the data (ELP2 and ELRA2) with server
+    ABC_CHECK_RET(ABC_AccountSyncData(pInfo->szUserName, pInfo->szNewPassword, NULL, pError));
+    ABC_CHECK_RET(ABC_WalletFetchAll(pInfo->szUserName, pInfo->szNewPassword, pError));
 exit:
     ABC_BUF_FREE(oldLP2);
     ABC_BUF_FREE(LRA2);
@@ -1396,6 +1485,7 @@ exit:
  */
 static
 tABC_CC ABC_AccountGetCarePackageObjects(int          AccountNum,
+                                         const char   *szCarePackage,
                                          json_t       **ppJSON_ERQ,
                                          json_t       **ppJSON_SNRP2,
                                          json_t       **ppJSON_SNRP3,
@@ -1414,18 +1504,26 @@ tABC_CC ABC_AccountGetCarePackageObjects(int          AccountNum,
     json_t *pJSON_SNRP3 = NULL;
     json_t *pJSON_SNRP4 = NULL;
 
-    ABC_CHECK_ASSERT(AccountNum >= 0, ABC_CC_AccountDoesNotExist, "Bad account number");
+    // if we supply a care package, use it instead
+    if (szCarePackage)
+    {
+        ABC_STRDUP(szCarePackage_JSON, szCarePackage);
+    }
+    else
+    {
+        ABC_CHECK_ASSERT(AccountNum >= 0, ABC_CC_AccountDoesNotExist, "Bad account number");
 
-    // get the main account directory
-    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, AccountNum, pError));
+        // get the main account directory
+        ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
+        ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, AccountNum, pError));
 
-    // create the name of the care package file
-    ABC_ALLOC(szCarePackageFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szCarePackageFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
+        // create the name of the care package file
+        ABC_ALLOC(szCarePackageFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+        sprintf(szCarePackageFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
 
-    // load the care package
-    ABC_CHECK_RET(ABC_FileIOReadFileStr(szCarePackageFilename, &szCarePackage_JSON, pError));
+        // load the care package
+        ABC_CHECK_RET(ABC_FileIOReadFileStr(szCarePackageFilename, &szCarePackage_JSON, pError));
+    }
 
     // decode the json
     json_error_t error;
@@ -2101,7 +2199,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             pKeys->accountNum = AccountNum;
             ABC_STRDUP(pKeys->szUserName, szUserName);
 
-            ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
+            ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, NULL, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
 
             // SNRP's
             ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&(pKeys->pSNRP1), pError));
@@ -2111,6 +2209,12 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
 
             // L = username
             ABC_BUF_DUP_PTR(pKeys->L, pKeys->szUserName, strlen(pKeys->szUserName));
+
+            // L1 = scrypt(L, SNRP1)
+            ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP1, &(pKeys->L1), pError));
+
+            // L2 = scrypt(L, SNRP4)
+            ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP4, &(pKeys->L2), pError));
 
             // add new starting account keys to the key cache
             ABC_CHECK_RET(ABC_AccountAddToKeyCache(pKeys, pError));
@@ -2127,6 +2231,36 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
     // at this point there is now one in the cache and it is pFinalKeys
     // but it may or may not have password keys
 
+    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pFinalKeys->accountNum, pError));
+
+    // try to decrypt RepoAcctKey
+    bool bKeyExists = false;
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bKeyExists, pError));
+    if (bKeyExists)
+    {
+        tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, pFinalKeys->L2, &REPO_JSON, pError);
+
+        // check the results
+        if (ABC_CC_DecryptFailure == CC_Decrypt)
+        {
+            ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt RepoAcctKey - bad L2");
+        }
+        else if (ABC_CC_Ok != CC_Decrypt)
+        {
+            cc = CC_Decrypt;
+            goto exit;
+        }
+        char *szJSON_REPO = (char *) ABC_BUF_PTR(REPO_JSON);
+        ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_REPO, JSON_ACCT_REPO_FIELD, &(pFinalKeys->szRepoAcctKey), pError));
+    }
+    else
+    {
+        pFinalKeys->szRepoAcctKey = NULL;
+    }
+
     // if we are given a password
     if (NULL != szPassword)
     {
@@ -2142,11 +2276,6 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
 
             // LP2 = Scrypt(L + P, SNRP2)
             ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pFinalKeys->pSNRP2, &LP2, pError));
-
-            ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-            ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pFinalKeys->accountNum, pError));
-
-            ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
             // try to decrypt EPIN
             tABC_CC CC_Decrypt;
@@ -2171,26 +2300,6 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
                 }
             }
 
-            // try to decrypt RepoAcctKey
-            bool bKeyExists = false;
-            sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
-            ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bKeyExists, pError));
-            if (bKeyExists)
-            {
-                CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, LP2, &REPO_JSON, pError);
-
-                // check the results
-                if (ABC_CC_DecryptFailure == CC_Decrypt)
-                {
-                    ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt RepoAcctKey - bad password");
-                }
-                else if (ABC_CC_Ok != CC_Decrypt)
-                {
-                    cc = CC_Decrypt;
-                    goto exit;
-                }
-            }
-
             // if we got here, then the password was good so we can add what we just calculated to the keys
             ABC_STRDUP(pFinalKeys->szPassword, szPassword);
             ABC_BUF_SET(pFinalKeys->P, P);
@@ -2208,16 +2317,6 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             else
             {
                 pFinalKeys->szPIN = NULL;
-            }
-
-            if (bKeyExists)
-            {
-                char *szJSON_REPO = (char *) ABC_BUF_PTR(REPO_JSON);
-                ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_REPO, JSON_ACCT_REPO_FIELD, &(pFinalKeys->szRepoAcctKey), pError));
-            }
-            else
-            {
-                pFinalKeys->szRepoAcctKey = NULL;
             }
         }
         else
@@ -2314,7 +2413,9 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
 
         case ABC_AccountKey_RepoAccountKey:
             // this should already be in the cache
-            ABC_CHECK_ASSERT(NULL != pKeys->szRepoAcctKey, ABC_CC_Error, "Expected to find Repo Account Key");
+            if (NULL == pKeys->szRepoAcctKey)
+            {
+            }
             ABC_BUF_SET_PTR(*pKey, (unsigned char *)pKeys->szRepoAcctKey, sizeof(pKeys->szRepoAcctKey) + 1);
             break;
 
@@ -2329,7 +2430,7 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
                 // get ERQ
                 int AccountNum = -1;
                 ABC_CHECK_RET(ABC_AccountNumForUser(szUserName, &AccountNum, pError));
-                ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, &pJSON_ERQ, NULL, NULL, NULL, pError));
+                ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, NULL, &pJSON_ERQ, NULL, NULL, NULL, pError));
 
                 // RQ - if ERQ available
                 if (pJSON_ERQ != NULL)
@@ -2594,17 +2695,62 @@ tABC_CC ABC_AccountCheckRecoveryAnswers(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tAccountKeys *pKeys = NULL;
-    tABC_U08Buf LRA = ABC_BUF_NULL;
-    tABC_U08Buf LRA2 = ABC_BUF_NULL;
-    tABC_U08Buf LP2 = ABC_BUF_NULL;
+    tAccountKeys *pKeys    = NULL;
+    tABC_U08Buf LRA        = ABC_BUF_NULL;
+    tABC_U08Buf LRA2       = ABC_BUF_NULL;
+    tABC_U08Buf LRA1       = ABC_BUF_NULL;
+    tABC_U08Buf LP2        = ABC_BUF_NULL;
+    char *szAccountDir     = NULL;
     char *szAccountSyncDir = NULL;
-    char *szFilename = NULL;
+    char *szFilename       = NULL;
+    bool bExists           = false;
+
+    // Use for the remote answers check
+    tABC_U08Buf L           = ABC_BUF_NULL;
+    tABC_U08Buf L1          = ABC_BUF_NULL;
+    tABC_U08Buf L2          = ABC_BUF_NULL;
+    tABC_U08Buf P1_NULL     = ABC_BUF_NULL;
+    char *szERepoAcctKey    = NULL;
+    tABC_CryptoSNRP *pSNRP1 = NULL;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szRecoveryAnswers);
     ABC_CHECK_NULL(pbValid);
     *pbValid = false;
+
+    // If we have the care package cached, check recovery answers remotely
+    // and if successful, setup the account locally
+    if (gCarePackageCache)
+    {
+        ABC_BUF_DUP_PTR(L, szUserName, strlen(szUserName));
+
+        ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP1, pError));
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP1, &L1, pError));
+
+        ABC_BUF_DUP(LRA, L);
+        ABC_BUF_APPEND_PTR(LRA, szRecoveryAnswers, strlen(szRecoveryAnswers));
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pSNRP1, &LRA1, pError));
+
+        // Fetch ERepoAcctKey using P1 or LRA1, if successful, szRecoveryAnswers are correct
+        ABC_CHECK_RET(ABC_AccountServerGetRepoAcctKey(L1, P1_NULL, LRA1, &szERepoAcctKey, pError));
+
+        // Setup initial account and set the care package
+        ABC_CHECK_RET(ABC_AccountFetchInitCarePackage(szUserName, L1, gCarePackageCache, &szAccountDir, pError));
+        ABC_FREE_STR(gCarePackageCache);
+        gCarePackageCache = NULL;
+
+        // We have the care package so fetch keys without password
+        ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, NULL, &pKeys, pError));
+
+        // L2 = Scrypt(L, SNRP4)
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pKeys->pSNRP4, &L2, pError));
+
+        // Fetch the ERepoAcctKey
+        ABC_CHECK_RET(ABC_AccountFetchRepoKey(L1, P1_NULL, LRA1, szAccountDir, pError));
+
+        // Setup the account repo and sync
+        ABC_CHECK_RET(ABC_AccountRepoSetup(szUserName, szAccountDir, pError));
+    }
 
     // pull this account into the cache
     ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, NULL, &pKeys, pError));
@@ -2633,8 +2779,13 @@ tABC_CC ABC_AccountCheckRecoveryAnswers(const char *szUserName,
         // create our LRA2 = Scrypt(L + RA, SNRP3)
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP3, &LRA2, pError));
 
-        // attempt to decode ELP2
+        // create our LRA1 = Scrypt(L + RA, SNRP1)
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP1, &LRA1, pError));
+
         ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+        ABC_CHECK_RET(ABC_FileIOFileExists(szAccountSyncDir, &bExists, pError));
+
+        // attempt to decode ELP2
         ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
         sprintf(szFilename, "%s/%s", szAccountSyncDir, ACCOUNT_ELP2_FILENAME);
         tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, LRA2, &LP2, pError);
@@ -2663,17 +2814,24 @@ tABC_CC ABC_AccountCheckRecoveryAnswers(const char *szUserName,
             ABC_BUF_CLEAR(LRA); // so we don't free as we exit
             ABC_BUF_SET(pKeys->LRA2, LRA2);
             ABC_BUF_CLEAR(LRA2); // so we don't free as we exit
+            ABC_BUF_SET(pKeys->LRA1, LRA1);
+            ABC_BUF_CLEAR(LRA1); // so we don't free as we exit
             ABC_BUF_SET(pKeys->LP2, LP2);
             ABC_BUF_CLEAR(LP2); // so we don't free as we exit
         }
     }
-
 exit:
     ABC_BUF_FREE(LRA);
     ABC_BUF_FREE(LRA2);
+    ABC_BUF_FREE(LRA1);
     ABC_BUF_FREE(LP2);
+    ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szAccountSyncDir);
     ABC_FREE_STR(szFilename);
+
+    ABC_BUF_FREE(L1);
+    ABC_FREE_STR(szERepoAcctKey);
+    ABC_CryptoFreeSNRP(&pSNRP1);
 
     return cc;
 }
@@ -2771,6 +2929,7 @@ tABC_CC ABC_AccountServerGetCarePackage(tABC_U08Buf L1, char **szCarePackage, tA
     tABC_CC cc = ABC_CC_Ok;
     char *szURL = NULL;
     tABC_U08Buf P1 = ABC_BUF_NULL;
+    tABC_U08Buf LRA1 = ABC_BUF_NULL;
 
     ABC_CHECK_NULL_BUF(L1);
 
@@ -2778,7 +2937,7 @@ tABC_CC ABC_AccountServerGetCarePackage(tABC_U08Buf L1, char **szCarePackage, tA
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_CARE_PACKAGE_PATH);
 
-    ABC_CHECK_RET(ABC_AccountServerGetString(L1, P1, szURL, JSON_ACCT_CARE_PACKAGE, szCarePackage, pError));
+    ABC_CHECK_RET(ABC_AccountServerGetString(L1, P1, LRA1, szURL, JSON_ACCT_CARE_PACKAGE, szCarePackage, pError));
 exit:
 
     ABC_FREE_STR(szURL);
@@ -2787,7 +2946,11 @@ exit:
 }
 
 static
-tABC_CC ABC_AccountServerGetRepoAcctKey(tABC_U08Buf L1, tABC_U08Buf P1, char **szERepoAcctKey, tABC_Error *pError)
+tABC_CC ABC_AccountServerGetRepoAcctKey(tABC_U08Buf L1,
+                                        tABC_U08Buf P1,
+                                        tABC_U08Buf LRA1, 
+                                        char **szERepoAcctKey,
+                                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szURL = NULL;
@@ -2797,7 +2960,7 @@ tABC_CC ABC_AccountServerGetRepoAcctKey(tABC_U08Buf L1, tABC_U08Buf P1, char **s
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_REPO_GET_PATH);
 
-    ABC_CHECK_RET(ABC_AccountServerGetString(L1, P1, szURL, JSON_ACCT_EREPO_ACCOUNT_FIELD, szERepoAcctKey, pError));
+    ABC_CHECK_RET(ABC_AccountServerGetString(L1, P1, LRA1, szURL, JSON_ACCT_EREPO_ACCOUNT_FIELD, szERepoAcctKey, pError));
 exit:
 
     ABC_FREE_STR(szURL);
@@ -2806,7 +2969,8 @@ exit:
 }
 
 static
-tABC_CC ABC_AccountServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, char *szURL, char *szField, char **szResponse, tABC_Error *pError)
+tABC_CC ABC_AccountServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1,
+                                   char *szURL, char *szField, char **szResponse, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -2822,16 +2986,24 @@ tABC_CC ABC_AccountServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, char *szURL, 
     ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
 
     // create the post data with or without P1
-    if (ABC_BUF_PTR(P1) == NULL)
+    if (ABC_BUF_PTR(P1) == NULL && ABC_BUF_PTR(LRA1) == NULL)
     {
         pJSON_Root = json_pack("{ss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64);
     }
     else
     {
-        // create base64 versions of P1
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(P1, &szP1_Base64, pError));
-        pJSON_Root = json_pack("{ssss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                                         ABC_SERVER_JSON_P1_FIELD, szP1_Base64);
+        if (ABC_BUF_PTR(P1) == NULL)
+        {
+            ABC_CHECK_RET(ABC_CryptoBase64Encode(LRA1, &szP1_Base64, pError));
+            pJSON_Root = json_pack("{ssss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                                             ABC_SERVER_JSON_LRA1_FIELD, szP1_Base64);
+        }
+        else
+        {
+            ABC_CHECK_RET(ABC_CryptoBase64Encode(P1, &szP1_Base64, pError));
+            pJSON_Root = json_pack("{ssss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                                            ABC_SERVER_JSON_P1_FIELD, szP1_Base64);
+        }
     }
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
@@ -3071,6 +3243,68 @@ void ABC_AccountFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices)
     }
 }
 
+tABC_CC ABC_AccountFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szAccountDir           = NULL;
+    char *szCarePackage          = NULL;
+    tABC_U08Buf L                = ABC_BUF_NULL;
+    tABC_U08Buf L1               = ABC_BUF_NULL;
+    tABC_U08Buf L2               = ABC_BUF_NULL;
+    tABC_U08Buf RQ               = ABC_BUF_NULL;
+    tABC_CryptoSNRP *pSNRP1      = NULL;
+    tABC_CryptoSNRP *pSNRP4      = NULL;
+    json_t          *pJSON_ERQ   = NULL;
+    json_t          *pJSON_SNRP4 = NULL;
+
+    // Create L, SNRP1, L1
+    ABC_BUF_DUP_PTR(L, szUserName, strlen(szUserName));
+    ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP1, pError));
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP1, &L1, pError));
+
+    //  Download CarePackage.json
+    ABC_CHECK_RET(ABC_AccountServerGetCarePackage(L1, &szCarePackage, pError));
+
+    // Set the CarePackage cache
+    ABC_STRDUP(gCarePackageCache, szCarePackage);
+
+    // get ERQ and SNRP4
+    ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(0, gCarePackageCache, &pJSON_ERQ, NULL, NULL, &pJSON_SNRP4, pError));
+
+    // Create L2
+    ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP4, &pSNRP4, pError));
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP4, &L2, pError));
+
+    // RQ - if ERQ available
+    if (pJSON_ERQ != NULL)
+    {
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ERQ, L2, &RQ, pError));
+    }
+    else
+    {
+        ABC_RET_ERROR(ABC_CC_NoRecoveryQuestions, "There are no recovery questions for this user");
+    }
+
+    tABC_U08Buf FinalRQ;
+    ABC_BUF_DUP(FinalRQ, RQ);
+    ABC_BUF_APPEND_PTR(FinalRQ, "", 1);
+    *szRecoveryQuestions = (char *) ABC_BUF_PTR(FinalRQ);
+exit:
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szCarePackage);
+    ABC_BUF_FREE(RQ);
+    ABC_BUF_FREE(L);
+    ABC_BUF_FREE(L1);
+    ABC_BUF_FREE(L2);
+    if (pJSON_ERQ) json_decref(pJSON_ERQ);
+    if (pJSON_SNRP4) json_decref(pJSON_SNRP4);
+    return cc;
+}
+
 /**
  * Get the recovery questions for a given account.
  *
@@ -3095,13 +3329,26 @@ tABC_CC ABC_AccountGetRecoveryQuestions(const char *szUserName,
     ABC_CHECK_NULL(pszQuestions);
     *pszQuestions = NULL;
 
-    // Get RQ for this user
-    tABC_U08Buf RQ;
-    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, NULL, ABC_AccountKey_RQ, &RQ, pError));
-    tABC_U08Buf FinalRQ;
-    ABC_BUF_DUP(FinalRQ, RQ);
-    ABC_BUF_APPEND_PTR(FinalRQ, "", 1);
-    *pszQuestions = (char *)ABC_BUF_PTR(FinalRQ);
+    // Free up care package cache if set
+    ABC_FREE_STR(gCarePackageCache);
+    gCarePackageCache = NULL;
+
+    // check that this is a valid user
+    if (ABC_AccountCheckValidUser(szUserName, NULL) != ABC_CC_Ok)
+    {
+        // Try the server
+        ABC_CHECK_RET(ABC_AccountFetchRecoveryQuestions(szUserName, pszQuestions, pError));
+    }
+    else
+    {
+        // Get RQ for this user
+        tABC_U08Buf RQ;
+        ABC_CHECK_RET(ABC_AccountGetKey(szUserName, NULL, ABC_AccountKey_RQ, &RQ, pError));
+        tABC_U08Buf FinalRQ;
+        ABC_BUF_DUP(FinalRQ, RQ);
+        ABC_BUF_APPEND_PTR(FinalRQ, "", 1);
+        *pszQuestions = (char *)ABC_BUF_PTR(FinalRQ);
+    }
 
 exit:
 
@@ -3963,7 +4210,6 @@ tABC_CC ABC_AccountPickRepo(const char *szRepoKey, char **szRepoPath, tABC_Error
 
     *szRepoPath = (char *)ABC_BUF_PTR(URL);
     ABC_BUF_CLEAR(URL);
-exit:
     ABC_BUF_FREE(URL);
     return cc;
 }
@@ -3987,7 +4233,6 @@ tABC_CC ABC_AccountSyncData(const char *szUserName,
     char *szFilename    = NULL;
     char *szAccountDir  = NULL;
     char *szRepoURL     = NULL;
-    bool bExists        = false;
 
     ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_ASSERT(NULL != pKeys->szRepoAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");

@@ -413,15 +413,14 @@ tABC_CC ABC_WalletFetchAll(const char *szUserName, const char *szPassword, tABC_
         if (!bExists)
         {
             ABC_CHECK_RET(ABC_FileIOCreateDir(szSyncDirectory, pError));
-        }
 
-        // Init repo
-        ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDirectory, pError));
-        ABC_FREE_STR(szSyncDirectory);
+			// Init repo
+			ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDirectory, pError));
+			ABC_FREE_STR(szSyncDirectory);
+        }
 
         // Sync Wallet
         ABC_CHECK_RET(ABC_WalletSyncData(szUserName, szPassword, szUUID, pInfo, pError));
-
     }
 exit:
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
