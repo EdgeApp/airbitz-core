@@ -51,11 +51,19 @@
 #define SCRYPT_DEFAULT_SERVER_R    4        // can't change as server uses this as well
 #define SCRYPT_DEFAULT_SERVER_P    1        // can't change as server uses this as well
 #define SCRYPT_DEFAULT_CLIENT_N    16384
-#define SCRYPT_DEFAULT_CLIENT_R    8
+#define SCRYPT_DEFAULT_CLIENT_R    1
 #define SCRYPT_DEFAULT_CLIENT_P    1
 #define SCRYPT_DEFAULT_LENGTH      32
 #define SCRYPT_DEFAULT_SALT_LENGTH 32
 
+#define TIMED_SCRYPT_PARAMS        FALSE
+
+//
+// Eeewww. Global var. Should we mutex this? It's just a single initialized var at
+// startup. It's never written after that. Only read.
+//
+unsigned int g_timedScryptN = SCRYPT_DEFAULT_CLIENT_N;
+unsigned int g_timedScryptR = SCRYPT_DEFAULT_CLIENT_R;
 
 static unsigned char gaS1[] = { 0xb5, 0x86, 0x5f, 0xfb, 0x9f, 0xa7, 0xb3, 0xbf, 0xe4, 0xb2, 0x38, 0x4d, 0x47, 0xce, 0x83, 0x1e, 0xe2, 0x2a, 0x4a, 0x9d, 0x5c, 0x34, 0xc7, 0xef, 0x7d, 0x21, 0x46, 0x7c, 0xc7, 0x58, 0xf8, 0x1b };
 
@@ -102,7 +110,6 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
     ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-/* XXX TODO -paul 
     ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
     gettimeofday(&timerStart, NULL);
     ABC_CHECK_RET(ABC_CryptoScrypt(Salt,
@@ -119,8 +126,32 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
     totalTime = 1000000 * (timerEnd.tv_sec - timerStart.tv_sec);
     totalTime += (timerEnd.tv_usec - timerStart.tv_usec);
 
-    ABC_DebugLog("Scrypt timing: %d\n", totalTime);
-*/
+#if TIMED_SCRYPT_PARAMS
+    if (totalTime > 2000000)
+    {
+        // Very slow device. But we'll cap it at 2 seconds max equivalent
+        // Do nothing, use default scrypt settings which are lowest we'll go
+    }
+    else if (totalTime >= 250000)
+    {
+        // Medium speed device. scale R between 1 to 8 assuming linear affect on
+        // hashing time and targetting 2 sec hash
+        // Don't touch N
+        g_timedScryptR = 2000000 / totalTime;
+    } 
+    else 
+    {
+        // Very fast device. Need to Adjust scryptN to make scrypt even stronger
+        g_timedScryptR = 8;
+        unsigned int temp = 250000 / totalTime;
+        g_timedScryptN <<= (temp - 1);
+    }
+#endif
+
+
+    ABC_DebugLog("Scrypt timing: %d\n", totalTime); 
+    ABC_DebugLog("Scrypt N = %d\n",g_timedScryptN);
+    ABC_DebugLog("Scrypt R = %d\n",g_timedScryptR);
 
 exit:
 
@@ -270,8 +301,8 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
             // generate a key using the salt and scrypt
             ABC_CHECK_RET(ABC_CryptoScrypt(Key,
                                            Salt,
-                                           SCRYPT_DEFAULT_CLIENT_N,
-                                           SCRYPT_DEFAULT_CLIENT_R,
+                                           g_timedScryptN,
+                                           g_timedScryptR,
                                            SCRYPT_DEFAULT_CLIENT_P,
                                            AES_256_KEY_LENGTH,
                                            &GenKey,
@@ -302,8 +333,8 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
         if (cryptoType == ABC_CryptoType_AES256_Scrypt)
         {
             ABC_CHECK_RET(ABC_CryptoCreateSNRP(Salt,
-                                               SCRYPT_DEFAULT_CLIENT_N,
-                                               SCRYPT_DEFAULT_CLIENT_R,
+                                               g_timedScryptN,
+                                               g_timedScryptR,
                                                SCRYPT_DEFAULT_CLIENT_P,
                                                &pSNRP,
                                                pError));
@@ -1312,8 +1343,8 @@ tABC_CC ABC_CryptoCreateSNRPForClient(tABC_CryptoSNRP   **ppSNRP,
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(SCRYPT_DEFAULT_SALT_LENGTH, &Salt, pError));
 
     ABC_CHECK_RET(ABC_CryptoCreateSNRP(Salt,
-                                       SCRYPT_DEFAULT_CLIENT_N,
-                                       SCRYPT_DEFAULT_CLIENT_R,
+                                       g_timedScryptN,
+                                       g_timedScryptR,
                                        SCRYPT_DEFAULT_CLIENT_P,
                                        ppSNRP,
                                        pError));
@@ -1405,8 +1436,8 @@ tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
     // create the jansson object
     *ppJSON_SNRP = json_pack("{sssisisi}",
                              JSON_ENC_SALT_FIELD, szSalt_Hex,
-                             JSON_ENC_N_FIELD, SCRYPT_DEFAULT_CLIENT_N,
-                             JSON_ENC_R_FIELD, SCRYPT_DEFAULT_CLIENT_R,
+                             JSON_ENC_N_FIELD, g_timedScryptN,
+                             JSON_ENC_R_FIELD, g_timedScryptR,
                              JSON_ENC_P_FIELD, SCRYPT_DEFAULT_CLIENT_P);
 
 exit:
