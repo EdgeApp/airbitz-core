@@ -48,15 +48,16 @@
 #define UUID_STR_LENGTH         (UUID_BYTE_COUNT * 2) + 4
 
 #define SCRYPT_DEFAULT_SERVER_N    16384    // can't change as server uses this as well
-#define SCRYPT_DEFAULT_SERVER_R    4        // can't change as server uses this as well
+#define SCRYPT_DEFAULT_SERVER_R    1        // can't change as server uses this as well
 #define SCRYPT_DEFAULT_SERVER_P    1        // can't change as server uses this as well
 #define SCRYPT_DEFAULT_CLIENT_N    16384
 #define SCRYPT_DEFAULT_CLIENT_R    1
 #define SCRYPT_DEFAULT_CLIENT_P    1
+
 #define SCRYPT_DEFAULT_LENGTH      32
 #define SCRYPT_DEFAULT_SALT_LENGTH 32
 
-#define TIMED_SCRYPT_PARAMS        FALSE
+#define TIMED_SCRYPT_PARAMS        TRUE
 
 //
 // Eeewww. Global var. Should we mutex this? It's just a single initialized var at
@@ -126,7 +127,7 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
     totalTime = 1000000 * (timerEnd.tv_sec - timerStart.tv_sec);
     totalTime += (timerEnd.tv_usec - timerStart.tv_usec);
 
-#if TIMED_SCRYPT_PARAMS
+#ifdef TIMED_SCRYPT_PARAMS
     if (totalTime > 2000000)
     {
         // Very slow device. But we'll cap it at 2 seconds max equivalent
