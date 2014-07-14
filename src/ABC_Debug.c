@@ -14,6 +14,10 @@
 #include <time.h>
 #include <string.h>
 #include <stdarg.h>
+
+#ifdef ANDROID
+#include <android/log.h>
+#endif
 /**
  * Logs the given string
  */
@@ -22,10 +26,10 @@ void ABC_DebugLog(const char * format, ...)
     static char szOut[4096];
     struct tm *	newtime;
     time_t		t;
-    
+
     time(&t);                /* Get time as long integer. */
     newtime = localtime(&t); /* Convert to local time. */
-    
+
     sprintf(szOut, "%d-%02d-%02d %.2d:%.2d:%.2d ABC_Log: ",
             newtime->tm_year + 1900,
             newtime->tm_mon + 1,
@@ -41,7 +45,11 @@ void ABC_DebugLog(const char * format, ...)
         szOut[strlen(szOut) + 1] = '\0';
         szOut[strlen(szOut)] = '\n';
     }
+#ifdef ANDROID
+    __android_log_print(ANDROID_LOG_DEBUG, "ABC", "%s", szOut);
+#else
     printf("%s", szOut);
+#endif
     va_end(args);
 }
 
