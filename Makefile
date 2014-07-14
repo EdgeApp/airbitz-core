@@ -13,6 +13,9 @@ LIBS := $(shell pkg-config --libs --static $(DEPS)) \
 # Do not use -lpthread on Android:
 ifneq (,$(findstring android,$(CC)))
 	LIBS := $(filter-out -lpthread,$(LIBS))
+	CFLAGS += -DANDROID
+	CXXFLAGS += -DANDROID
+	LIBS += -llog
 endif
 
 # Top-level targets:
