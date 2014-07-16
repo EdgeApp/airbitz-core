@@ -123,6 +123,7 @@ static tABC_CC ABC_AccountRepoSetup(const char *szUserName, const char *szAccoun
 static tABC_CC ABC_AccountFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError);
 static tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, char *szRepoAcctKey, char *szERepoAcctKey, tABC_Error *pError);
 static tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, tABC_Error *pError);
+static tABC_CC ABC_AccountServerUploadCarePackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError);
 static tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError);
 static tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
 static tABC_CC ABC_AccountGetCarePackageObjects(int AccountNum, const char *szCarePackage, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
@@ -536,6 +537,10 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     // write the file care package to a file
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage_JSON, pError));
+
+    // Upload initial care package
+    tABC_U08Buf LRA1_NULL = ABC_BUF_NULL;
+    ABC_CHECK_RET(ABC_AccountServerUploadCarePackage(pKeys->L1, pKeys->P1, LRA1_NULL, szAccountDir, pError));
 
     ABC_CHECK_RET(ABC_AccountCreateSync(szAccountDir, true, pError));
 
@@ -1331,8 +1336,6 @@ tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
-    ABC_CHECK_NULL_BUF(P1);
-    ABC_CHECK_NULL_BUF(LRA1);
     ABC_CHECK_NULL(szCarePackage);
 
     // create the URL
@@ -1342,14 +1345,24 @@ tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf
     // create base64 versions of L1, P1 and LRA1
     ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
     ABC_CHECK_RET(ABC_CryptoBase64Encode(P1, &szP1_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LRA1, &szLRA1_Base64, pError));
-
-    // create the post data
-    pJSON_Root = json_pack("{ssssssss}",
-                           ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                           ABC_SERVER_JSON_P1_FIELD, szP1_Base64,
-                           ABC_SERVER_JSON_LRA1_FIELD, szLRA1_Base64,
-                           ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage);
+    if (ABC_BUF_PTR(LRA1) != NULL)
+    {
+        ABC_CHECK_RET(ABC_CryptoBase64Encode(LRA1, &szLRA1_Base64, pError));
+        // create the post data
+        pJSON_Root = json_pack("{ssssssss}",
+                            ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                            ABC_SERVER_JSON_P1_FIELD, szP1_Base64,
+                            ABC_SERVER_JSON_LRA1_FIELD, szLRA1_Base64,
+                            ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage);
+    }
+    else
+    {
+        // create the post data
+        pJSON_Root = json_pack("{ssssss}",
+                            ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                            ABC_SERVER_JSON_P1_FIELD, szP1_Base64,
+                            ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage);
+    }
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
@@ -1403,6 +1416,34 @@ exit:
     ABC_FREE_STR(szLRA1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
 
+    return cc;
+}
+
+/**
+ * Upload the care package
+ *
+ * This function sends LRA1 and Care Package to the server as part
+ * of setting up the recovery data for an account
+ *
+ * @param L1            Login hash for the account
+ * @param P1            Password hash for the account
+ * @param LRA1          Scrypt'ed login and recovery answers
+ * @param szCarePackage Care Package for account
+ */
+static 
+tABC_CC ABC_AccountServerUploadCarePackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szCarePackage = NULL;
+    char *szFilename = NULL;
+
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_AccountServerSetRecovery(L1, P1, LRA1, szCarePackage, pError));
+exit:
+    ABC_FREE_STR(szCarePackage);
+    ABC_FREE_STR(szFilename);
     return cc;
 }
 
