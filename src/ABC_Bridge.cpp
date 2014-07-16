@@ -626,7 +626,6 @@ tABC_CC ABC_BridgeMaxSpendable(const char *szUserName,
     tABC_AccountGeneralInfo *ppInfo = NULL;
     tABC_UnsignedTx utx;
     tABC_CC txResp;
-    uint64_t abFees = 0, minerFees = 0;
 
     char *changeAddr = NULL;
     char **paAddresses = NULL;
