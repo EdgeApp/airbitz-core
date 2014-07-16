@@ -803,7 +803,7 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
 
         // set the state
         pTx->pStateInfo->timeCreation = time(NULL);
-        pTx->pStateInfo->bInternal = true;
+        pTx->pStateInfo->bInternal = false;
 
         // store transaction id
         ABC_STRDUP(pTx->szID, szTxId);
@@ -4394,7 +4394,7 @@ static void *ABC_TxFakeReceiveThread(void *pData)
 
     // set the state
     pTx->pStateInfo->timeCreation = time(NULL);
-    pTx->pStateInfo->bInternal = true;
+    pTx->pStateInfo->bInternal = false;
 
     // create a random transaction id
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxID, pError));
