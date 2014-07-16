@@ -2256,6 +2256,29 @@ exit:
 }
 
 /**
+ * Get the status of the watcher
+ *
+ * @param szWalletUUID Used to lookup the watcher with the data
+ */
+tABC_CC ABC_WatcherStatus(const char *szWalletUUID, tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
+
+    cc = ABC_BridgeWatcherStatus(szWalletUUID, pError);
+exit:
+
+    return cc;
+}
+
+/**
  * Start the watcher for a wallet
  *
  * @param szUserName   UserName for the account
@@ -2376,8 +2399,7 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
     ABC_CHECK_NULL(szTxId);
     ABC_CHECK_ASSERT(strlen(szTxId) > 0, ABC_CC_Error, "No tx id provided");
 
-    ABC_BridgeTxHeight(szWalletUUID, szTxId, height, pError);
-
+    cc = ABC_BridgeTxHeight(szWalletUUID, szTxId, height, pError);
 exit:
 
     return cc;
@@ -2401,8 +2423,7 @@ tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Err
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
 
-    ABC_BridgeTxBlockHeight(szWalletUUID, height, pError);
-
+    cc = ABC_BridgeTxBlockHeight(szWalletUUID, height, pError);
 exit:
 
     return cc;
