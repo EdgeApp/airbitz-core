@@ -16,6 +16,8 @@
 #include "ABC_Account.h"
 #include "ABC_URL.h"
 
+#define EXCHANGE_RATE_DIRECTORY "Exchanges"
+
 #define BITSTAMP_RATE_URL "https://www.bitstamp.net/api/ticker/"
 #define COINBASE_RATE_URL "https://coinbase.com/api/v1/currencies/exchange_rates"
 
@@ -433,16 +435,29 @@ tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC_Error 
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    char *szRoot = NULL;
+    char *szRoot     = NULL;
+    char *szRateRoot = NULL;
+    char *szFilename = NULL;
+    bool bExists     = false;
 
     ABC_CHECK_NULL(pszFilename);
     *pszFilename = NULL;
 
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRoot, pError));
-    ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszFilename, "%s/%d.txt", szRoot, currencyNum);
+    ABC_ALLOC(szRateRoot, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szRateRoot, "%s/%s", szRoot, EXCHANGE_RATE_DIRECTORY);
+    ABC_CHECK_RET(ABC_FileIOFileExists(szRateRoot, &bExists, pError));
+    if (true != bExists)
+    {
+        ABC_CHECK_RET(ABC_FileIOCreateDir(szRateRoot, pError));
+    }
+
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%d.txt", szRateRoot, currencyNum);
+    *pszFilename = szFilename;
 exit:
     ABC_FREE_STR(szRoot);
+    ABC_FREE_STR(szRateRoot);
     return cc;
 }
 
