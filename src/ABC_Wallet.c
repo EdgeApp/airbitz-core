@@ -1184,14 +1184,14 @@ tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError)
 
     for (i = 0; i < gWalletsCacheCount; ++i)
     {
-        tABC_WalletInfo *pWalletInfo = gaWalletsCacheArray[i];
+        tWalletData *pWalletInfo = gaWalletsCacheArray[i];
         if (strcmp(pWalletInfo->szUUID, szUUID) == 0)
         {
             // put the last element in this elements place
             gaWalletsCacheArray[i] = gaWalletsCacheArray[gWalletsCacheCount - 1];
 
             // Delete this element
-            ABC_FreeWalletInfo(pWalletInfo);
+            ABC_WalletFreeData(pWalletInfo);
             pWalletInfo = NULL;
             break;
         }
