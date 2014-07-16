@@ -400,7 +400,6 @@ tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
 
     // take this non-blocking opportunity to update the info from the server if needed
     ABC_CHECK_RET(ABC_AccountServerUpdateGeneralInfo(pError));
-
 exit:
 
     return cc;

@@ -444,6 +444,10 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     ABC_CHECK_RET(
         ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword,
                               pInfo->szWalletUUID, pTx, pError));
+
+    // sync the data
+    ABC_CHECK_RET(ABC_DataSyncAll(pInfo->szUserName, pInfo->szPassword, pError));
+
     // set the transaction id for the caller
     ABC_STRDUP(*pszTxID, pTx->szID);
 
@@ -864,6 +868,7 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
             ABC_FREE_STR(info.szTxID);
             ABC_FREE_STR(info.szDescription);
         }
+        ABC_CHECK_RET(ABC_DataSyncAll(szUserName, szPassword, pError));
     }
     else
     {
@@ -4511,6 +4516,9 @@ tABC_CC ABC_TxFakeSend(tABC_TxSendInfo  *pInfo, char **pszTxID, tABC_Error *pErr
     }
     // save the transaction
     ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
+
+    // Sync the data
+    ABC_CHECK_RET(ABC_DataSyncAll(szUserName, szPassword, pError));
 
     // set the transaction id for the caller
     ABC_STRDUP(*pszTxID, pTx->szID);
