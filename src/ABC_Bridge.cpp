@@ -718,10 +718,11 @@ ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *h
         cc = ABC_CC_Synchronizing;
         goto exit;
     }
-    else
+    txId = bc::decode_hash(szTxId);
+    *height = row->second->watcher->get_tx_height(txId);
+    if (*height == 0 || row->second->watcher->get_status() == libwallet::watcher::watcher_syncing)
     {
-        txId = bc::decode_hash(szTxId);
-        *height = row->second->watcher->get_tx_height(txId);
+        cc = ABC_CC_Synchronizing;
     }
 exit:
 #else
@@ -741,13 +742,35 @@ ABC_BridgeTxBlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Err
         cc = ABC_CC_Synchronizing;
         goto exit;
     }
-    else
+    *height = row->second->watcher->get_last_block_height();
+    if (*height == 0 || row->second->watcher->get_status() == libwallet::watcher::watcher_syncing)
     {
-        *height = row->second->watcher->get_last_block_height();
+        cc = ABC_CC_Synchronizing;
     }
 exit:
 #else
     *height = 0;
+#endif
+    return cc;
+}
+
+tABC_CC
+ABC_BridgeWatcherStatus(const char *szWalletUUID, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+#if !NETWORK_FAKE
+    auto row = watchers_.find(szWalletUUID);
+    if (row == watchers_.end())
+    {
+        cc = ABC_CC_Synchronizing;
+        goto exit;
+    }
+
+    if (row->second->watcher->get_status() == libwallet::watcher::watcher_syncing)
+    {
+        cc = ABC_CC_Synchronizing;
+    }
+exit:
 #endif
     return cc;
 }
