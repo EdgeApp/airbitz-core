@@ -31,6 +31,8 @@
 
 #define SATOSHI_PER_BITCOIN                     100000000
 
+#define WATCH_ADDITIONAL_ADDRESSES              10
+
 #define TX_MAX_ADDR_ID_LENGTH                   20 // largest char count for the string version of the id number - 20 digits should handle it
 
 #define TX_MAX_AMOUNT_LENGTH                    100 // should be max length of a bit coin amount string
@@ -588,19 +590,48 @@ tABC_CC ABC_TxWatchAddresses(const char *szUserName,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    char **paAddresses = NULL;
+
+    tABC_U08Buf Seed            = ABC_BUF_NULL;
+    char *szPubAddress          = NULL;
+    tABC_TxAddress **aAddresses = NULL;
     unsigned int countAddresses = 0;
+    int64_t N                   = -1;
+
     ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(szUserName, szPassword, szWalletUUID,
-                              &paAddresses, &countAddresses, pError));
+        ABC_TxGetAddresses(szUserName, szPassword, szWalletUUID,
+                           &aAddresses, &countAddresses, pError));
     for (int i = 0; i < countAddresses; i++)
     {
+        const tABC_TxAddress *a = aAddresses[i];
         ABC_CHECK_RET(
             ABC_BridgeWatchAddr(szUserName, szPassword, szWalletUUID,
-                                paAddresses[i], false, pError));
+                                a->szPubAddress, false, pError));
+        if (a->seq > N)
+        {
+            N = a->seq;
+        }
+    }
+
+    // Fetch private Seed
+    ABC_CHECK_RET(
+        ABC_WalletGetBitcoinPrivateSeed(szUserName, szPassword,
+                                        szWalletUUID, &Seed, pError));
+    // watch additional addresses
+    for (int i = 0; i < WATCH_ADDITIONAL_ADDRESSES; ++i)
+    {
+        ABC_CHECK_RET(
+            ABC_BridgeGetBitcoinPubAddress(&szPubAddress,
+                                           Seed,
+                                           countAddresses + i,
+                                           pError));
+        ABC_CHECK_RET(
+            ABC_BridgeWatchAddr(szUserName, szPassword, szWalletUUID,
+                                szPubAddress, false, pError));
+        ABC_FREE_STR(szPubAddress);
     }
 exit:
-    ABC_UtilFreeStringArray(paAddresses, countAddresses);
+    ABC_TxFreeAddresses(aAddresses, countAddresses);
+    ABC_FREE_STR(szPubAddress);
     return cc;
 }
 
