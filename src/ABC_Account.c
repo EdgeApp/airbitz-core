@@ -512,13 +512,6 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     tABC_U08Buf PIN = ABC_BUF_NULL;
     ABC_BUF_SET_PTR(PIN, (unsigned char *)szJSON, strlen(szJSON) + 1);
 
-    // EPIN = AES256(PIN, LP2)
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(PIN, pKeys->LP2, ABC_CryptoType_AES256, &szEPIN_JSON, pError));
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EPIN_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEPIN_JSON, pError));
-    ABC_FREE_STR(szJSON);
-    szJSON = NULL;
-
     // create the RepoAcctKey JSON
     ABC_CHECK_RET(ABC_UtilCreateValueJSONString(pKeys->szRepoAcctKey, JSON_ACCT_REPO_FIELD, &szJSON, pError));
     tABC_U08Buf RepoBuf = ABC_BUF_NULL;
@@ -543,6 +536,13 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_AccountServerUploadCarePackage(pKeys->L1, pKeys->P1, LRA1_NULL, szAccountDir, pError));
 
     ABC_CHECK_RET(ABC_AccountCreateSync(szAccountDir, true, pError));
+
+    // EPIN = AES256(PIN, LP2)
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(PIN, pKeys->LP2, ABC_CryptoType_AES256, &szEPIN_JSON, pError));
+    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_EPIN_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEPIN_JSON, pError));
+    ABC_FREE_STR(szJSON);
+    szJSON = NULL;
 
     // we now have a new account so go ahead and cache it's keys
     ABC_CHECK_RET(ABC_AccountAddToKeyCache(pKeys, pError));
@@ -2320,7 +2320,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             // try to decrypt EPIN
             tABC_CC CC_Decrypt;
             bool bPinExists = false;
-            sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EPIN_FILENAME);
+            sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_EPIN_FILENAME);
             ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bPinExists, pError));
             if (bPinExists)
             {
@@ -2542,8 +2542,10 @@ tABC_CC ABC_AccountSetPIN(const char *szUserName,
     // write the EPIN
     ABC_CHECK_RET(ABC_AccountGetDirName(szUserName, &szAccountDir, pError));
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EPIN_FILENAME);
+    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_EPIN_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEPIN_JSON, pError));
+
+    ABC_CHECK_RET(ABC_AccountSyncData(szUserName, szPassword, pError));
 
 exit:
     ABC_FREE_STR(szJSON);
