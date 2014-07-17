@@ -194,7 +194,6 @@ extern "C" {
 
     tABC_CC ABC_AccountSyncData(const char *szUserName,
                                 const char *szPassword,
-                                tABC_AccountGeneralInfo *pInfo,
                                 tABC_Error *pError);
 
     // Blocking functions:
