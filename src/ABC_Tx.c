@@ -597,6 +597,7 @@ tABC_CC ABC_TxWatchAddresses(const char *szUserName,
     unsigned int countAddresses = 0;
     int64_t N                   = -1;
 
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_RET(
         ABC_TxGetAddresses(szUserName, szPassword, szWalletUUID,
                            &aAddresses, &countAddresses, pError));
@@ -632,6 +633,8 @@ tABC_CC ABC_TxWatchAddresses(const char *szUserName,
 exit:
     ABC_TxFreeAddresses(aAddresses, countAddresses);
     ABC_FREE_STR(szPubAddress);
+
+    ABC_CHECK_RET(ABC_TxMutexUnlock(pError));
     return cc;
 }
 
