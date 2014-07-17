@@ -743,7 +743,7 @@ ABC_BridgeTxBlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Err
         goto exit;
     }
     *height = row->second->watcher->get_last_block_height();
-    if (*height == 0 || row->second->watcher->get_status() == libwallet::watcher::watcher_syncing)
+    if (*height == 0)
     {
         cc = ABC_CC_Synchronizing;
     }
