@@ -1025,7 +1025,7 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_AccountServerSetRecovery(pKeys->L1, pKeys->P1, pKeys->LRA1, szCarePackage_JSON, pError));
 
     // Sync the data (ELP2 and ELRA2) with server
-    ABC_CHECK_RET(ABC_AccountSyncData(pKeys->szUserName, pKeys->szPassword, NULL, pError));
+    ABC_CHECK_RET(ABC_AccountSyncData(pKeys->szUserName, pKeys->szPassword, pError));
     ABC_CHECK_RET(ABC_WalletFetchAll(pKeys->szUserName, pKeys->szPassword, pError));
 exit:
     if (pJSON_ERQ)          json_decref(pJSON_ERQ);
@@ -1195,7 +1195,7 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_AccountSetPIN(pInfo->szUserName, pInfo->szNewPassword, pInfo->szPIN, pError));
 
     // Sync the data (ELP2 and ELRA2) with server
-    ABC_CHECK_RET(ABC_AccountSyncData(pInfo->szUserName, pInfo->szNewPassword, NULL, pError));
+    ABC_CHECK_RET(ABC_AccountSyncData(pInfo->szUserName, pInfo->szNewPassword, pError));
     ABC_CHECK_RET(ABC_WalletFetchAll(pInfo->szUserName, pInfo->szNewPassword, pError));
 exit:
     ABC_BUF_FREE(oldLP2);
@@ -4263,7 +4263,6 @@ tABC_CC ABC_AccountPickRepo(const char *szRepoKey, char **szRepoPath, tABC_Error
  */
 tABC_CC ABC_AccountSyncData(const char *szUserName,
                             const char *szPassword,
-                            tABC_AccountGeneralInfo *pInfo,
                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;

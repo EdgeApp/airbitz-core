@@ -198,7 +198,6 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_AccountGeneralInfo *pGeneralInfo = NULL;
     char *szAccountSyncDir = NULL;
     char *szFilename       = NULL;
     char *szEMK_JSON       = NULL;
@@ -304,9 +303,6 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
  
-    // Load the general info
-    ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&pGeneralInfo, pError));
-
     // Create Repo URL
     ABC_CHECK_RET(ABC_AccountPickRepo(pData->szWalletAcctKey, &szRepoURL, pError));
 
@@ -337,7 +333,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     // After wallet is created, sync the account, ignoring any errors
     tABC_Error Error;
-    ABC_CHECK_RET(ABC_AccountSyncData(pInfo->szUserName, pInfo->szPassword, pGeneralInfo, &Error));
+    ABC_CHECK_RET(ABC_AccountSyncData(pInfo->szUserName, pInfo->szPassword, &Error));
 
     pData = NULL; // so we don't free what we just added to the cache
 exit:
@@ -360,7 +356,6 @@ exit:
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szUUID);
     ABC_FREE_STR(szEWalletAcctKey);
-    ABC_AccountFreeGeneralInfo(pGeneralInfo);
     if (pJSON_Data)         json_decref(pJSON_Data);
     if (pJSON_Wallets)      json_decref(pJSON_Wallets);
     if (pData)              ABC_WalletFreeData(pData);

@@ -2228,30 +2228,16 @@ tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Err
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
-    tABC_AccountGeneralInfo *pInfo = NULL;
-    tABC_WalletInfo **paWalletInfo = NULL;
-    unsigned int i = 0;
-    unsigned int walletCount = 0;
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    // Load the general info
-    ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&pInfo, pError));
-
     // Sync the account data
-    ABC_CHECK_RET(ABC_AccountSyncData(szUserName, szPassword, pInfo, pError));
+    ABC_CHECK_RET(ABC_AccountSyncData(szUserName, szPassword, pError));
 
-    ABC_CHECK_RET(ABC_GetWallets(szUserName, szPassword,
-                                 &paWalletInfo, &walletCount, pError));
-    for (i = 0; i < walletCount; ++i)
-    {
-        tABC_WalletInfo *pWallet = paWalletInfo[i];
-        ABC_CHECK_RET(ABC_WalletSyncData(szUserName, szPassword,
-                                         pWallet->szUUID, pInfo, pError));
-    }
+    // Sync Wallet Data
+    ABC_CHECK_RET(ABC_WalletFetchAll(szUserName, szPassword, pError));
 exit:
-    ABC_AccountFreeGeneralInfo(pInfo);
     return cc;
 }
 
