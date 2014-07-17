@@ -720,7 +720,7 @@ ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *h
     }
     txId = bc::decode_hash(szTxId);
     *height = row->second->watcher->get_tx_height(txId);
-    if (*height == 0 || row->second->watcher->get_status() == libwallet::watcher::watcher_syncing)
+    if (*height == 0 && row->second->watcher->get_status() == libwallet::watcher::watcher_syncing)
     {
         cc = ABC_CC_Synchronizing;
     }
