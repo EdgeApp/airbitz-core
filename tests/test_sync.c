@@ -21,6 +21,7 @@ static tABC_CC TestCreateFile(const char *szPath, const char *szContents, tABC_E
 tABC_CC TestSync(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    int dirty;
 
     ABC_CHECK_RET(ABC_SyncInit(pError));
 
@@ -34,35 +35,35 @@ tABC_CC TestSync(tABC_Error *pError)
 
     // Start repo a:
     ABC_CHECK_RET(TestCreateFile("sync_a/a.txt", "a\n", pError));
-    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", &dirty, pError));
 
     // Start repo b:
     ABC_CHECK_RET(TestCreateFile("sync_b/b.txt", "b\n", pError));
-    ABC_CHECK_RET(ABC_SyncRepo("sync_b", "server.git", pError));
-    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_b", "server.git", &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", &dirty, pError));
 
     // Create a conflict:
     check(remove("sync_a/a.txt"));
     ABC_CHECK_RET(TestCreateFile("sync_a/c.txt", "a\n", pError));
     ABC_CHECK_RET(TestCreateFile("sync_b/c.txt", "b\n", pError));
-    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", pError));
-    ABC_CHECK_RET(ABC_SyncRepo("sync_b", "server.git", pError));
-    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_b", "server.git", &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", &dirty, pError));
 
     // Create a subdir:
     check(mkdir("sync_a/sub", S_IRWXU | S_IRWXG | S_IRWXO));
     ABC_CHECK_RET(TestCreateFile("sync_a/sub/a.txt", "a\n", pError));
-    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", pError));
-    ABC_CHECK_RET(ABC_SyncRepo("sync_b", "server.git", pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_b", "server.git", &dirty, pError));
 
     // Subdir chaos:
     ABC_CHECK_RET(TestCreateFile("sync_b/sub/b.txt", "a\n", pError));
     check(remove("sync_a/sub/a.txt"));
     ABC_CHECK_RET(TestCreateFile("sync_a/sub/c.txt", "a\n", pError));
     ABC_CHECK_RET(TestCreateFile("sync_b/sub/c.txt", "b\n", pError));
-    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", pError));
-    ABC_CHECK_RET(ABC_SyncRepo("sync_b", "server.git", pError));
-    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_b", "server.git", &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", &dirty, pError));
 
     ABC_SyncTerminate();
 

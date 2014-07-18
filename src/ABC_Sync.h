@@ -19,13 +19,9 @@ extern "C" {
     tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
                              tABC_Error *pError);
 
-    // Deprecated in favor of ABC_SyncRepo:
-    tABC_CC ABC_SyncInitialPush(const char *szRepoPath,
-                                const char *szServer,
-                                tABC_Error *pError);
-
     tABC_CC ABC_SyncRepo(const char *szRepoPath,
                          const char *szServer,
+                         int *pDirty,
                          tABC_Error *pError);
 
 #ifdef __cplusplus

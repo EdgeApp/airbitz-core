@@ -32,7 +32,7 @@ tABC_CC ABC_SyncInit(tABC_Error *pError)
     int e;
 
     e = git_threads_init();
-    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_threads_init failed");
+    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_threads_init failed");
 
 exit:
     if (e < 0) SyncLogGitError(e);
@@ -61,7 +61,7 @@ tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
     git_repository *repo = NULL;
 
     e = git_repository_init(&repo, szRepoPath, 0);
-    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_repository_init failed");
+    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_init failed");
 
 exit:
     if (e < 0) SyncLogGitError(e);
@@ -71,22 +71,15 @@ exit:
 }
 
 /**
- * Deprecated. Use SyncRepo instead.
- */
-tABC_CC ABC_SyncInitialPush(const char *szRepoPath,
-                            const char *szServer,
-                            tABC_Error *pError)
-{
-    return ABC_SyncRepo(szRepoPath, szServer, pError);
-}
-
-/**
  * Synchronizes the directory with the server. New files in the folder will
  * go up to the server, and new files on the server will come down to the
- * directory. If there is a conflict, the newer file will win.
+ * directory. If there is a conflict, the server's file will win.
+ * @param pDirty set to 1 if the sync has modified the filesystem, or 0
+ * otherwise.
  */
 tABC_CC ABC_SyncRepo(const char *szRepoPath,
                      const char *szServer,
+                     int *pDirty,
                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -95,10 +88,12 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     git_repository *repo = NULL;
 
     e = git_repository_open(&repo, szRepoPath);
-    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "git_repository_open failed");
+    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_open failed");
 
     e = sync_repo(repo, szServer);
-    ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "sync_repo failed");
+    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_repo failed");
+
+    *pDirty = e;
 
 exit:
     if (e < 0) SyncLogGitError(e);

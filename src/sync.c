@@ -437,7 +437,7 @@ static int sync_master(git_repository *repo,
     }
 
     // Report the outcome:
-    *need_checkout = remote_dirty;
+    *need_checkout = !!remote_dirty;
     *need_push = local_dirty || master_dirty;
 
 exit:
@@ -462,5 +462,5 @@ int sync_repo(git_repository *repo,
     }
 
 exit:
-    return e;
+    return e < 0 ? e : need_checkout;
 }
