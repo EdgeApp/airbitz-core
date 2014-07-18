@@ -309,8 +309,9 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     ABC_DebugLog("Wallet Repo: %s %s\n", pData->szWalletSyncDir, szRepoURL);
 
     // Init the git repo and sync it
+    int dirty;
     ABC_CHECK_RET(ABC_SyncMakeRepo(pData->szWalletSyncDir, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, szRepoURL, &dirty, pError));
 
     // If everything worked, add wallet to account Wallets.json
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -447,7 +448,8 @@ tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const
     ABC_DebugLog("Wallet Repo: %s %s\n", pData->szWalletSyncDir, szRepoURL);
 
     // Sync
-    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, szRepoURL, pError));
+    int dirty;
+    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, szRepoURL, &dirty, pError));
 exit:
     ABC_FREE_STR(szRepoURL);
     return cc;

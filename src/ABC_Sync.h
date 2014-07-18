@@ -21,6 +21,7 @@ extern "C" {
 
     tABC_CC ABC_SyncRepo(const char *szRepoPath,
                          const char *szServer,
+                         int *pDirty,
                          tABC_Error *pError);
 
 #ifdef __cplusplus

@@ -565,8 +565,9 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     ABC_DebugLog("Pushing to: %s\n", szRepoURL);
 
     // Init the git repo and sync it
+    int dirty;
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
 
     pKeys = NULL; // so we don't free what we just added to the cache
 exit:
@@ -769,8 +770,9 @@ tABC_CC ABC_AccountRepoSetup(const char *szUserName,
     ABC_DebugLog("Fetching from: %s\n", szRepoURL);
 
     // Init the git repo and sync it
+    int dirty;
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
 exit:
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szREPO_JSON);
@@ -4290,7 +4292,8 @@ tABC_CC ABC_AccountSyncData(const char *szUserName,
     ABC_DebugLog("URL: %s %s\n", szFilename, szRepoURL);
 
     // Sync repo
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, pError));
+    int dirty;
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
 exit:
     ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szAccountDir);
