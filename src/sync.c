@@ -92,25 +92,6 @@ exit:
 }
 
 /**
- * Fetches the contents of the server into the "incoming" branch.
- */
-static int sync_fetch(git_repository *repo, const char *server)
-{
-    int e;
-    git_signature *sig = NULL;
-    git_remote *remote = NULL;
-
-    git_check(git_signature_now(&sig, SYNC_GIT_NAME, SYNC_GIT_EMAIL));
-    git_check(git_remote_create_anonymous(&remote, repo, server, SYNC_REFSPEC));
-    git_check(git_remote_fetch(remote, sig, "fetch"));
-
-exit:
-    if (sig)        git_signature_free(sig);
-    if (remote)     git_remote_free(remote);
-    return e;
-}
-
-/**
  * Reads the tree object out of a commit object, or returns an empty tree
  * if the commit id is zero.
  */
@@ -179,26 +160,6 @@ static int sync_lookup_soft(git_oid *out,
         giterr_clear();
         return 0;
     }
-    return e;
-}
-
-/**
- * Creates a git tree object representing the state of the working directory.
- */
-static int sync_workdir_tree(git_oid *out,
-                             git_repository *repo)
-{
-    int e;
-    git_index *index = NULL;
-
-    git_check(git_repository_index(&index, repo));
-    git_check(git_index_clear(index));
-    git_strarray paths = {NULL, 0};
-    git_check(git_index_add_all(index, &paths, 0, NULL, NULL));
-    git_check(git_index_write_tree(out, index));
-
-exit:
-    if (index)          git_index_free(index);
     return e;
 }
 
@@ -309,44 +270,43 @@ exit:
     return e;
 }
 
-static int sync_push_cb(const char *ref, const char *msg, void *data)
+/**
+ * Creates a git tree object representing the state of the working directory.
+ */
+static int sync_workdir_tree(git_oid *out,
+                             git_repository *repo)
 {
-    if (msg)
-    {
-        giterr_set_str(GITERR_REPOSITORY, msg);
-        return GIT_ENONFASTFORWARD;
-    }
-    return 0;
+    int e;
+    git_index *index = NULL;
+
+    git_check(git_repository_index(&index, repo));
+    git_check(git_index_clear(index));
+    git_strarray paths = {NULL, 0};
+    git_check(git_index_add_all(index, &paths, 0, NULL, NULL));
+    git_check(git_index_write_tree(out, index));
+
+exit:
+    if (index)          git_index_free(index);
+    return e;
 }
 
 /**
- * Pushes the master branch to the server.
+ * Fetches the contents of the server into the "incoming" branch.
  */
-static int sync_push(git_repository *repo,
-                     const char *server)
+int sync_fetch(git_repository *repo,
+               const char *server)
 {
     int e;
+    git_signature *sig = NULL;
     git_remote *remote = NULL;
-    git_push *push = NULL;
 
+    git_check(git_signature_now(&sig, SYNC_GIT_NAME, SYNC_GIT_EMAIL));
     git_check(git_remote_create_anonymous(&remote, repo, server, SYNC_REFSPEC));
-    git_check(git_remote_connect(remote, GIT_DIRECTION_PUSH));
-
-    git_check(git_push_new(&push, remote));
-    git_check(git_push_add_refspec(push, "refs/heads/master"));
-    git_check(git_push_finish(push));
-
-    if (!git_push_unpack_ok(push))
-    {
-        giterr_set_str(GITERR_REPOSITORY, "Remote could not unpack objects");
-        e = GIT_ERROR;
-        goto exit;
-    }
-    git_check(git_push_status_foreach(push, sync_push_cb, NULL));
+    git_check(git_remote_fetch(remote, sig, "fetch"));
 
 exit:
+    if (sig)        git_signature_free(sig);
     if (remote)     git_remote_free(remote);
-    if (push)       git_push_free(push);
     return e;
 }
 
@@ -354,9 +314,9 @@ exit:
  * Updates the master branch with the latest changes, including local
  * changes and changes from the remote repository.
  */
-static int sync_master(git_repository *repo,
-                       int *need_checkout,
-                       int *need_push)
+int sync_master(git_repository *repo,
+                int *files_changed,
+                int *need_push)
 {
     int e = 0;
     git_oid master_id = {{0}};
@@ -418,6 +378,7 @@ static int sync_master(git_repository *repo,
             // Fast-forward to remote:
             git_check(sync_fast_forward(repo, SYNC_REF_MASTER, &remote_id));
         }
+        git_check(sync_checkout(repo, SYNC_REF_MASTER));
     }
     else if (local_dirty)
     {
@@ -437,30 +398,50 @@ static int sync_master(git_repository *repo,
     }
 
     // Report the outcome:
-    *need_checkout = !!remote_dirty;
+    *files_changed = !!remote_dirty;
     *need_push = local_dirty || master_dirty;
 
 exit:
     return e;
 }
 
-int sync_repo(git_repository *repo,
+static int sync_push_cb(const char *ref, const char *msg, void *data)
+{
+    if (msg)
+    {
+        giterr_set_str(GITERR_REPOSITORY, msg);
+        return GIT_ENONFASTFORWARD;
+    }
+    return 0;
+}
+
+/**
+ * Pushes the master branch to the server.
+ */
+int sync_push(git_repository *repo,
               const char *server)
 {
-    int e = 0;
-    int need_checkout, need_push;
+    int e;
+    git_remote *remote = NULL;
+    git_push *push = NULL;
 
-    git_check(sync_fetch(repo, server));
-    git_check(sync_master(repo, &need_checkout, &need_push));
-    if (need_checkout)
+    git_check(git_remote_create_anonymous(&remote, repo, server, SYNC_REFSPEC));
+    git_check(git_remote_connect(remote, GIT_DIRECTION_PUSH));
+
+    git_check(git_push_new(&push, remote));
+    git_check(git_push_add_refspec(push, "refs/heads/master"));
+    git_check(git_push_finish(push));
+
+    if (!git_push_unpack_ok(push))
     {
-        git_check(sync_checkout(repo, SYNC_REF_MASTER));
+        giterr_set_str(GITERR_REPOSITORY, "Remote could not unpack objects");
+        e = GIT_ERROR;
+        goto exit;
     }
-    if (need_push)
-    {
-        git_check(sync_push(repo, server));
-    }
+    git_check(git_push_status_foreach(push, sync_push_cb, NULL));
 
 exit:
-    return e < 0 ? e : need_checkout;
+    if (remote)     git_remote_free(remote);
+    if (push)       git_push_free(push);
+    return e;
 }
