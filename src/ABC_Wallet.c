@@ -86,7 +86,6 @@ static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
 static tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError);
 static void    ABC_WalletFreeData(tWalletData *pData);
-static tABC_CC ABC_WalletGetUUIDs(const char *szUserName, char ***paUUIDs, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC ABC_WalletChangeEMKForUUID(const char *szUserName, const char *szUUID, tABC_U08Buf oldLP2, tABC_U08Buf newLP2, tABC_Error *pError);
 static tABC_CC ABC_WalletMutexLock(tABC_Error *pError);
 static tABC_CC ABC_WalletMutexUnlock(tABC_Error *pError);
@@ -1370,7 +1369,6 @@ void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo)
  * @param pCount                Pointer to store number of UUIDs in the array
  * @param pError                A pointer to the location to store the error if there is one
  */
-static
 tABC_CC ABC_WalletGetUUIDs(const char *szUserName,
                            char ***paUUIDs,
                            unsigned int *pCount,

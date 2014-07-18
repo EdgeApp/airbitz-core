@@ -650,6 +650,11 @@ extern "C" {
                                  char **pszWalletSeed,
                                  tABC_Error *pError);
 
+    tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
+                               char ***paWalletUUID,
+                               unsigned int *pCount,
+                               tABC_Error *pError);
+
     tABC_CC ABC_GetWallets(const char *szUserName,
                            const char *szPassword,
                            tABC_WalletInfo ***paWalletInfo,
