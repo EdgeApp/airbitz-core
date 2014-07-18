@@ -86,14 +86,24 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     int e;
 
     git_repository *repo = NULL;
+    int dirty, need_push;
 
     e = git_repository_open(&repo, szRepoPath);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_open failed");
 
-    e = sync_repo(repo, szServer);
-    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_repo failed");
+    e = sync_fetch(repo, szServer);
+    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_fetch failed");
 
-    *pDirty = e;
+    e = sync_master(repo, &dirty, &need_push);
+    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_master failed");
+
+    if (need_push)
+    {
+        e = sync_push(repo, szServer);
+        ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_push failed");
+    }
+
+    *pDirty = dirty;
 
 exit:
     if (e < 0) SyncLogGitError(e);
