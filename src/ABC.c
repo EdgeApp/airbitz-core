@@ -29,6 +29,8 @@
 #include "ABC_Sync.h"
 
 static bool gbInitialized = false;
+static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
+static void *pAsyncBitCoinCallerData = NULL;
 
 static tABC_Currency gaCurrencies[] = {
     { "CAD", 124, "Canadian dollar", "Canada, Saint Pierre and Miquelon" },
@@ -75,6 +77,10 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
     // override the alloc and free of janson so we can have a secure method
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
+
+    // Set the callback and caller data
+    gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
+    pAsyncBitCoinCallerData = pData;
 
     // initialize the mutex system
     ABC_CHECK_RET(ABC_MutexInitialize(pError));
@@ -2255,15 +2261,25 @@ tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Err
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
+    int accountDirty = 0;
+    int walletDirty = 0;
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     // Sync the account data
-    ABC_CHECK_RET(ABC_AccountSyncData(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_AccountSyncData(szUserName, szPassword, &accountDirty, pError));
 
     // Sync Wallet Data
-    ABC_CHECK_RET(ABC_WalletFetchAll(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_WalletSyncAll(szUserName, szPassword, &walletDirty, pError));
+    if ((accountDirty || walletDirty) && gfAsyncBitCoinEventCallback)
+    {
+        tABC_AsyncBitCoinInfo info;
+        info.eventType = ABC_AsyncEventType_DataSyncUpdate;
+        ABC_STRDUP(info.szDescription, "Data Updated");
+        gfAsyncBitCoinEventCallback(&info);
+        ABC_FREE_STR(info.szDescription);
+    }
 exit:
     return cc;
 }

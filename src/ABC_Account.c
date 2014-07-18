@@ -643,7 +643,8 @@ tABC_CC ABC_AccountFetch(tABC_AccountRequestInfo *pInfo, tABC_Error *pError)
     ABC_CHECK_RET(ABC_AccountRepoSetup(pInfo->szUserName, szAccountDir, pError));
 
     // Fetch and Sync Wallets
-    ABC_CHECK_RET(ABC_WalletFetchAll(pInfo->szUserName, pInfo->szPassword, pError));
+    int dirty;
+    ABC_CHECK_RET(ABC_WalletSyncAll(pInfo->szUserName, pInfo->szPassword, &dirty, pError));
 
     // Clear out cache so its reloaded with the password
     ABC_CHECK_RET(ABC_AccountClearKeyCache(pError));
@@ -1027,8 +1028,9 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_AccountServerSetRecovery(pKeys->L1, pKeys->P1, pKeys->LRA1, szCarePackage_JSON, pError));
 
     // Sync the data (ELP2 and ELRA2) with server
-    ABC_CHECK_RET(ABC_AccountSyncData(pKeys->szUserName, pKeys->szPassword, pError));
-    ABC_CHECK_RET(ABC_WalletFetchAll(pKeys->szUserName, pKeys->szPassword, pError));
+    int dirty;
+    ABC_CHECK_RET(ABC_AccountSyncData(pKeys->szUserName, pKeys->szPassword, &dirty, pError));
+    ABC_CHECK_RET(ABC_WalletSyncAll(pKeys->szUserName, pKeys->szPassword, &dirty, pError));
 exit:
     if (pJSON_ERQ)          json_decref(pJSON_ERQ);
     if (pJSON_SNRP2)        json_decref(pJSON_SNRP2);
@@ -1197,8 +1199,9 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_AccountSetPIN(pInfo->szUserName, pInfo->szNewPassword, pInfo->szPIN, pError));
 
     // Sync the data (ELP2 and ELRA2) with server
-    ABC_CHECK_RET(ABC_AccountSyncData(pInfo->szUserName, pInfo->szNewPassword, pError));
-    ABC_CHECK_RET(ABC_WalletFetchAll(pInfo->szUserName, pInfo->szNewPassword, pError));
+    int dirty;
+    ABC_CHECK_RET(ABC_AccountSyncData(pInfo->szUserName, pInfo->szNewPassword, &dirty, pError));
+    ABC_CHECK_RET(ABC_WalletSyncAll(pInfo->szUserName, pInfo->szNewPassword, &dirty, pError));
 exit:
     ABC_BUF_FREE(oldLP2);
     ABC_BUF_FREE(LRA2);
@@ -2547,8 +2550,8 @@ tABC_CC ABC_AccountSetPIN(const char *szUserName,
     sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_EPIN_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEPIN_JSON, pError));
 
-    ABC_CHECK_RET(ABC_AccountSyncData(szUserName, szPassword, pError));
-
+    int dirty;
+    ABC_CHECK_RET(ABC_AccountSyncData(szUserName, szPassword, &dirty, pError));
 exit:
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szEPIN_JSON);
@@ -4267,6 +4270,7 @@ tABC_CC ABC_AccountPickRepo(const char *szRepoKey, char **szRepoPath, tABC_Error
  */
 tABC_CC ABC_AccountSyncData(const char *szUserName,
                             const char *szPassword,
+                            int *pDirty,
                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -4292,8 +4296,7 @@ tABC_CC ABC_AccountSyncData(const char *szUserName,
     ABC_DebugLog("URL: %s %s\n", szFilename, szRepoURL);
 
     // Sync repo
-    int dirty;
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, pDirty, pError));
 exit:
     ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szAccountDir);

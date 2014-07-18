@@ -333,7 +333,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     // After wallet is created, sync the account, ignoring any errors
     tABC_Error Error;
-    ABC_CHECK_RET(ABC_AccountSyncData(pInfo->szUserName, pInfo->szPassword, &Error));
+    ABC_CHECK_RET(ABC_AccountSyncData(pInfo->szUserName, pInfo->szPassword, &dirty, &Error));
 
     pData = NULL; // so we don't free what we just added to the cache
 exit:
@@ -363,7 +363,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_WalletFetchAll(const char *szUserName, const char *szPassword, tABC_Error *pError)
+tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *pDirty, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -372,9 +372,13 @@ tABC_CC ABC_WalletFetchAll(const char *szUserName, const char *szPassword, tABC_
     char *szDirectory              = NULL;
     char *szSyncDirectory          = NULL;
     tABC_AccountGeneralInfo *pInfo = NULL;
+    int dirty           = 0;
     unsigned int i      = 0;
     unsigned int nUUIDs = 0;
     tABC_U08Buf LP2 = ABC_BUF_NULL;
+
+    // Its not dirty...yet
+    *pDirty = 0;
 
     // Fetch LP2
     ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_LP2, &LP2, pError));
@@ -415,7 +419,12 @@ tABC_CC ABC_WalletFetchAll(const char *szUserName, const char *szPassword, tABC_
         }
 
         // Sync Wallet
-        ABC_CHECK_RET(ABC_WalletSyncData(szUserName, szPassword, szUUID, pInfo, pError));
+        dirty = 0;
+        ABC_CHECK_RET(ABC_WalletSyncData(szUserName, szPassword, szUUID, pInfo, &dirty, pError));
+        if (dirty)
+        {
+            *pDirty = 1;
+        }
     }
 exit:
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
@@ -429,7 +438,7 @@ exit:
  * Sync the wallet's data
  */
 tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const char *szUUID,
-                           tABC_AccountGeneralInfo *pInfo, tABC_Error *pError)
+                           tABC_AccountGeneralInfo *pInfo, int *pDirty, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -447,8 +456,7 @@ tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const
     ABC_DebugLog("Wallet Repo: %s %s\n", pData->szWalletSyncDir, szRepoURL);
 
     // Sync
-    int dirty;
-    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, szRepoURL, &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, szRepoURL, pDirty, pError));
 exit:
     ABC_FREE_STR(szRepoURL);
     return cc;
