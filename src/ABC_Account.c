@@ -566,7 +566,7 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
 
     // Init the git repo and sync it
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncInitialPush(szFilename, szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, pError));
 
     pKeys = NULL; // so we don't free what we just added to the cache
 exit:
@@ -601,7 +601,7 @@ exit:
  * @param szUserName   Login
  * @param szPassword   Password
  */
-static 
+static
 tABC_CC ABC_AccountFetch(tABC_AccountRequestInfo *pInfo, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1430,7 +1430,7 @@ exit:
  * @param LRA1          Scrypt'ed login and recovery answers
  * @param szCarePackage Care Package for account
  */
-static 
+static
 tABC_CC ABC_AccountServerUploadCarePackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -2990,7 +2990,7 @@ exit:
 static
 tABC_CC ABC_AccountServerGetRepoAcctKey(tABC_U08Buf L1,
                                         tABC_U08Buf P1,
-                                        tABC_U08Buf LRA1, 
+                                        tABC_U08Buf LRA1,
                                         char **szERepoAcctKey,
                                         tABC_Error *pError)
 {
@@ -3088,7 +3088,7 @@ tABC_CC ABC_AccountServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf L
     // get the care package
     pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_object(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON care package results");
- 
+
     pJSON_Value = json_object_get(pJSON_Value, szField);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error care package JSON results");
     ABC_STRDUP(*szResponse, json_string_value(pJSON_Value));

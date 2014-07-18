@@ -71,16 +71,6 @@ exit:
 }
 
 /**
- * Deprecated. Use SyncRepo instead.
- */
-tABC_CC ABC_SyncInitialPush(const char *szRepoPath,
-                            const char *szServer,
-                            tABC_Error *pError)
-{
-    return ABC_SyncRepo(szRepoPath, szServer, pError);
-}
-
-/**
  * Synchronizes the directory with the server. New files in the folder will
  * go up to the server, and new files on the server will come down to the
  * directory. If there is a conflict, the newer file will win.
