@@ -7,7 +7,6 @@
 #define ABC_Sync_h
 
 #include "ABC.h"
-#include "ABC_Util.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,6 +19,7 @@ extern "C" {
     tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
                              tABC_Error *pError);
 
+    // Deprecated in favor of ABC_SyncRepo:
     tABC_CC ABC_SyncInitialPush(const char *szRepoPath,
                                 const char *szServer,
                                 tABC_Error *pError);
