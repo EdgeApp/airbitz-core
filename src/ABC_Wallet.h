@@ -130,14 +130,16 @@ extern "C" {
                              char **pszUUID,
                              tABC_Error *pError);
 
-    tABC_CC ABC_WalletFetchAll(const char *szUserName,
-                               const char *szPassword,
-                               tABC_Error *pError);
+    tABC_CC ABC_WalletSyncAll(const char *szUserName,
+                              const char *szPassword,
+                              int *pDirty,
+                              tABC_Error *pError);
 
     tABC_CC ABC_WalletSyncData(const char *szUserName,
                                const char *szPassword,
                                const char *szUUID,
                                tABC_AccountGeneralInfo *pInfo,
+                               int *pDirty,
                                tABC_Error *pError);
 
 #ifdef __cplusplus
