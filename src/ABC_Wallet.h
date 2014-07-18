@@ -75,6 +75,11 @@ extern "C" {
 
     void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo);
 
+    tABC_CC ABC_WalletGetUUIDs(const char *szUserName,
+                               char ***paUUIDs,
+                               unsigned int *pCount,
+                               tABC_Error *pError);
+
     tABC_CC ABC_WalletGetWallets(const char *szUserName,
                                  const char *szPassword,
                                  tABC_WalletInfo ***paWalletInfo,

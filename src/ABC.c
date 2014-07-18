@@ -799,6 +799,33 @@ exit:
 }
 
 /**
+ * Gets wallet UUIDs for a specified account.
+ *
+ * @param szUserName            UserName for the account associated with this wallet
+ * @param paWalletUUID          Pointer to store the allocated array of wallet info structs
+ * @param pCount                Pointer to store number of wallets in the array
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
+                            char ***paWalletUUID,
+                            unsigned int *pCount,
+                            tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_WalletGetUUIDs(szUserName, paWalletUUID, pCount, pError));
+
+exit:
+
+    return cc;
+}
+
+/**
  * Gets wallets for a specified account.
  *
  * This function allocates and fills in an array of wallet info structures with the information
