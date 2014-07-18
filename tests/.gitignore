@@ -1,5 +1,7 @@
 build
-sync_repo
+sync_a
+sync_b
+server.git
 test_core
 test_sync
 tmp
