@@ -385,8 +385,12 @@ tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    int dataDirty;
 
     ABC_CHECK_NULL(pInfo);
+
+    // Clear out any old data
+    ABC_AccountClearKeyCache(NULL);
 
     // check that this is a valid user, ignore Error
     if (ABC_AccountCheckValidUser(pInfo->szUserName, NULL) != ABC_CC_Ok)
@@ -395,13 +399,26 @@ tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
         ABC_CHECK_RET(ABC_AccountFetch(pInfo, pError));
         ABC_CHECK_RET(ABC_AccountCheckValidUser(pInfo->szUserName, pError));
     }
+    else
+    {
+        // TODO: What happens on a network failure?
+        // Note: No password so don't try to login, just update account repo
+        ABC_AccountSyncData(pInfo->szUserName, NULL, &dataDirty, pError);
+    }
 
     // check the credentials
     ABC_CHECK_RET(ABC_AccountCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
 
     // take this non-blocking opportunity to update the info from the server if needed
     ABC_CHECK_RET(ABC_AccountServerUpdateGeneralInfo(pError));
+
+    // And finally sync the wallets data, ignore failures
+    ABC_WalletSyncAll(pInfo->szUserName, pInfo->szPassword, &dataDirty, pError);
 exit:
+    if (cc != ABC_CC_Ok)
+    {
+        ABC_AccountClearKeyCache(NULL);
+    }
 
     return cc;
 }
@@ -2243,6 +2260,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             ABC_ALLOC(pKeys, sizeof(tAccountKeys));
             pKeys->accountNum = AccountNum;
             ABC_STRDUP(pKeys->szUserName, szUserName);
+            pKeys->szPassword = NULL;
 
             ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, NULL, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
 
@@ -2323,26 +2341,20 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pFinalKeys->pSNRP2, &LP2, pError));
 
             // try to decrypt EPIN
-            tABC_CC CC_Decrypt;
-            bool bPinExists = false;
             sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_EPIN_FILENAME);
-            ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bPinExists, pError));
-            if (bPinExists)
-            {
-                CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, LP2, &PIN_JSON, pError);
+            tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, LP2, &PIN_JSON, pError);
 
-                // check the results
-                if (ABC_CC_DecryptFailure == CC_Decrypt)
-                {
-                    // the assumption here is that this specific error is due to a bad password
-                    ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt PIN - bad password");
-                }
-                else if (ABC_CC_Ok != CC_Decrypt)
-                {
-                    // this was an error other than just a bad key so we need to treat this like an error
-                    cc = CC_Decrypt;
-                    goto exit;
-                }
+            // check the results
+            if (ABC_CC_DecryptFailure == CC_Decrypt)
+            {
+                // the assumption here is that this specific error is due to a bad password
+                ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt PIN - bad password");
+            }
+            else if (ABC_CC_Ok != CC_Decrypt)
+            {
+                // this was an error other than just a bad key so we need to treat this like an error
+                cc = CC_Decrypt;
+                goto exit;
             }
 
             // if we got here, then the password was good so we can add what we just calculated to the keys
@@ -2354,15 +2366,8 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             ABC_BUF_SET(pFinalKeys->LP2, LP2);
             ABC_BUF_CLEAR(LP2);
 
-            if (bPinExists)
-            {
-                char *szJSON_PIN = (char *) ABC_BUF_PTR(PIN_JSON);
-                ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_PIN, JSON_ACCT_PIN_FIELD, &(pFinalKeys->szPIN), pError));
-            }
-            else
-            {
-                pFinalKeys->szPIN = NULL;
-            }
+            char *szJSON_PIN = (char *) ABC_BUF_PTR(PIN_JSON);
+            ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_PIN, JSON_ACCT_PIN_FIELD, &(pFinalKeys->szPIN), pError));
         }
         else
         {
