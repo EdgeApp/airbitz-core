@@ -175,7 +175,8 @@ extern "C" {
         ABC_AsyncEventType_IncomingBitCoin,
         ABC_AsyncEventType_BlockHeightChange,
         ABC_AsyncEventType_ExchangeRateUpdate,
-        ABC_AsyncEventType_DataSyncUpdate
+        ABC_AsyncEventType_DataSyncUpdate,
+        ABC_AsyncEventType_RemotePasswordChange
     } tABC_AsyncEventType;
 
     /**

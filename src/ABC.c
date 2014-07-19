@@ -2269,16 +2269,30 @@ tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Err
 
     // Sync the account data
     ABC_CHECK_RET(ABC_AccountSyncData(szUserName, szPassword, &accountDirty, pError));
-
-    // Sync Wallet Data
-    ABC_CHECK_RET(ABC_WalletSyncAll(szUserName, szPassword, &walletDirty, pError));
-    if ((accountDirty || walletDirty) && gfAsyncBitCoinEventCallback)
+    // Try to decrypt something, if it fails, notify password change
+    if (accountDirty && ABC_AccountTestCredentials(szUserName, szPassword, NULL) != ABC_CC_Ok )
     {
-        tABC_AsyncBitCoinInfo info;
-        info.eventType = ABC_AsyncEventType_DataSyncUpdate;
-        ABC_STRDUP(info.szDescription, "Data Updated");
-        gfAsyncBitCoinEventCallback(&info);
-        ABC_FREE_STR(info.szDescription);
+        if (gfAsyncBitCoinEventCallback)
+        {
+            tABC_AsyncBitCoinInfo info;
+            info.eventType = ABC_AsyncEventType_RemotePasswordChange;
+            ABC_STRDUP(info.szDescription, "Password changed");
+            gfAsyncBitCoinEventCallback(&info);
+            ABC_FREE_STR(info.szDescription);
+        }
+    }
+    else
+    {
+        // Sync Wallet Data
+        ABC_CHECK_RET(ABC_WalletSyncAll(szUserName, szPassword, &walletDirty, pError));
+        if ((accountDirty || walletDirty) && gfAsyncBitCoinEventCallback)
+        {
+            tABC_AsyncBitCoinInfo info;
+            info.eventType = ABC_AsyncEventType_DataSyncUpdate;
+            ABC_STRDUP(info.szDescription, "Data Updated");
+            gfAsyncBitCoinEventCallback(&info);
+            ABC_FREE_STR(info.szDescription);
+        }
     }
 exit:
     return cc;

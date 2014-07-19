@@ -348,6 +348,51 @@ exit:
 }
 
 /**
+ * Checks if the cached username and password are valid by decrypting a file with them.
+ *
+ * A remote device can change the password. This function will verify that the
+ * password that is cached is still valid.
+ *
+ * @param szUserName UserName for validation
+ * @param szPassword Password for validation
+ */
+tABC_CC ABC_AccountTestCredentials(const char *szUserName,
+                                   const char *szPassword,
+                                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tAccountKeys *pKeys   = NULL;
+    char *szFilename      = NULL;
+    char *szAccountDir    = NULL;
+    tABC_U08Buf PIN_JSON = ABC_BUF_NULL;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+
+    // check that this is a valid user
+    ABC_CHECK_RET(ABC_AccountCheckValidUser(szUserName, pError));
+
+    // cache up the keys
+    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, &pKeys, pError));
+
+    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
+
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_EPIN_FILENAME);
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pKeys->LP2, &PIN_JSON, pError));
+exit:
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szFilename);
+    ABC_BUF_FREE(PIN_JSON);
+
+    return cc;
+}
+
+
+/**
  * Checks if the username is valid.
  *
  * If the username is not valid, an error will be returned

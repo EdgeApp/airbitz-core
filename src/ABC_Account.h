@@ -161,6 +161,10 @@ extern "C" {
                                         const char *szPassword,
                                         tABC_Error *pError);
 
+    tABC_CC ABC_AccountTestCredentials(const char *szUserName,
+                                       const char *szPassword,
+                                       tABC_Error *pError);
+
     tABC_CC ABC_AccountCheckValidUser(const char *szUserName,
                                       tABC_Error *pError);
 
