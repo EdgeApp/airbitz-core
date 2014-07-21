@@ -17,8 +17,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <jansson.h>
-#include <errno.h>
-#include <ftw.h>
 #include "ABC.h"
 #include "ABC_FileIO.h"
 #include "ABC_Util.h"
@@ -27,8 +25,6 @@ static char             gszRootDir[ABC_MAX_STRING_LENGTH + 1] = ".";
 
 static bool             gbInitialized = false;
 static pthread_mutex_t  gMutex; // to block multiple threads from accessing files at the same time
-
-static int ABC_FileIODeleteCallback(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf);
 
 /**
  * Initialize the FileIO system
@@ -446,29 +442,59 @@ exit:
     return cc;
 }
 
+/**
+ * Recursively deletes a directory or a file.
+ */
 tABC_CC ABC_FileIODeleteRecursive(const char *szFilename, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    int e;
-    struct stat s;
 
-    ABC_CHECK_NULL(szFilename);
-    ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No filename provided");
+    DIR *pDir = NULL;
+    char *szPath = NULL;
 
-    e = stat(szFilename, &s);
-    if (!e)
+    // First, be sure the file exists:
+    struct stat statbuf;
+    if (!stat(szFilename, &statbuf))
     {
-        ABC_CHECK_ASSERT(S_ISDIR(s.st_mode), ABC_CC_Error, "not a directory");
+        // If this is a directory, delete the contents:
+        if (S_ISDIR(statbuf.st_mode))
+        {
+            struct dirent *pEntry = NULL;
+            size_t baseSize = strlen(szFilename);
+            size_t pathSize;
 
-        e = nftw(szFilename, ABC_FileIODeleteCallback, 32, FTW_DEPTH | FTW_PHYS);
-        ABC_CHECK_ASSERT(!e, ABC_CC_SysError, "cannot delete directory");
-    }
-    else
-    {
-        ABC_CHECK_ASSERT(ENOENT == errno, ABC_CC_SysError, "cannot stat directory");
+            pDir = opendir(szFilename);
+            ABC_CHECK_SYS(pDir, "opendir");
+
+            pEntry = readdir(pDir);
+            while (pEntry)
+            {
+                // These two are not real entries:
+                if (strcmp(pEntry->d_name, ".") && strcmp(pEntry->d_name, ".."))
+                {
+                    // Delete the entry:
+                    pathSize = baseSize + strlen(pEntry->d_name) + 2;
+                    ABC_ALLOC_ARRAY(szPath, pathSize, char);
+                    snprintf(szPath, pathSize, "%s/%s", szFilename, pEntry->d_name);
+
+                    ABC_CHECK_RET(ABC_FileIODeleteRecursive(szPath, pError));
+
+                    ABC_FREE(szPath);
+                }
+                pEntry = readdir(pDir);
+            }
+
+            closedir(pDir);
+            pDir = NULL;
+        }
+
+        // Actually remove the thing:
+        ABC_CHECK_SYS(!remove(szFilename), "remove");
     }
 
 exit:
+    if (pDir) closedir(pDir);
+    ABC_FREE(szPath);
 
     return cc;
 }
@@ -476,7 +502,7 @@ exit:
 /**
  * Finds the time the file was last modified
  *
- * @param pTime Location to store mode time measured in 
+ * @param pTime Location to store mode time measured in
  *              seconds since 00:00:00 UTC, Jan. 1, 1970
  *
  */
@@ -537,13 +563,4 @@ tABC_CC ABC_FileIOMutexUnlock(tABC_Error *pError)
 exit:
 
     return cc;
-}
-
-/**
- * Callback for recusive file deletion.
- */
-static int ABC_FileIODeleteCallback(const char *fpath, const struct stat *sb,
-                                    int typeflag, struct FTW *ftwbuf)
-{
-    return remove(fpath);
 }
