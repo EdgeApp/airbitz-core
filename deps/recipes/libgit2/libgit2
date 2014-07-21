@@ -7,12 +7,17 @@ build() {
     cd libgit2-$version
     export install_dir
 
+    case $target in
+    android-*) cmakeflags=-DANDROID=1 ;;
+    esac
+
     mkdir -p build
     cd build
     cmake .. \
         -DCMAKE_TOOLCHAIN_FILE=$recipe_dir/../../classes/ios.toolchain.cmake \
         -DCMAKE_INSTALL_PREFIX=$install_dir \
-        -DBUILD_SHARED_LIBS:BOOL=FALSE
+        -DBUILD_SHARED_LIBS:BOOL=FALSE \
+        $cmakeflags
     cmake --build . --target install
 }
 
