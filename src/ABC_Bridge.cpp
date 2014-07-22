@@ -711,6 +711,7 @@ ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *h
 {
     tABC_CC cc = ABC_CC_Ok;
 #if !NETWORK_FAKE
+    int height_;
     bc::hash_digest txId;
     auto row = watchers_.find(szWalletUUID);
     if (row == watchers_.end())
@@ -719,11 +720,11 @@ ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *h
         goto exit;
     }
     txId = bc::decode_hash(szTxId);
-    *height = row->second->watcher->get_tx_height(txId);
-    if (*height == 0 && row->second->watcher->get_status() == libwallet::watcher::watcher_syncing)
+    if (!row->second->watcher->get_tx_height(txId, height_))
     {
         cc = ABC_CC_Synchronizing;
     }
+    *height = height_;
 exit:
 #else
     *height = 0;
