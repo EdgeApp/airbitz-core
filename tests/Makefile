@@ -29,7 +29,7 @@ $(BIN_DIR)/test_sync: test_sync.o
 
 default: all
 
-test_cases: $(BIN_DIR)/test_send $(BIN_DIR)/test_core $(BIN_DIR)/test_sync
+test_cases = $(BIN_DIR)/test_send $(BIN_DIR)/test_core $(BIN_DIR)/test_sync
 
 all: $(test_cases)
 

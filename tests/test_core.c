@@ -220,9 +220,7 @@ static void test_changesettings()
         pNewSettings->szLanguage = strdup("en");
         pNewSettings->currencyNum = 840;
         pNewSettings->bAdvancedFeatures = true;
-        if (pNewSettings->bitcoinDenomination.szLabel)
-            free(pNewSettings->bitcoinDenomination.szLabel);
-        pNewSettings->bitcoinDenomination.szLabel = strdup("BTC");
+        pNewSettings->bitcoinDenomination.denominationType = ABC_DENOMINATION_BTC;
         pNewSettings->bitcoinDenomination.satoshi = 100000000;
         if (pNewSettings->exchangeRateSources.numSources > 0
             && pNewSettings->exchangeRateSources.aSources)
@@ -279,7 +277,7 @@ static void test_loadsettings()
         WRAP_PRINTF(("Currency num: %d\n", pSettings->currencyNum));
         WRAP_PRINTF(("Advanced features: %s\n", pSettings->bAdvancedFeatures ? "yes" : "no"));
         WRAP_PRINTF(("Denomination satoshi: %ld\n", pSettings->bitcoinDenomination.satoshi));
-        WRAP_PRINTF(("Denomination label: %s\n", pSettings->bitcoinDenomination.szLabel));
+        WRAP_PRINTF(("Denomination id: %d\n", pSettings->bitcoinDenomination.denominationType));
         WRAP_PRINTF(("Exchange rate sources:\n"));
         unsigned int i;
         for (i = 0; i < pSettings->exchangeRateSources.numSources; i++)
