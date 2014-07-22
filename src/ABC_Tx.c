@@ -4552,7 +4552,7 @@ tABC_CC ABC_TxFakeSend(tABC_TxSendInfo  *pInfo, char **pszTxID, tABC_Error *pErr
     ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
 
     // Sync the data
-    ABC_CHECK_RET(ABC_DataSyncAll(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_DataSyncAll(pInfo->szUserName, pInfo->szPassword, pError));
 
     // set the transaction id for the caller
     ABC_STRDUP(*pszTxID, pTx->szID);

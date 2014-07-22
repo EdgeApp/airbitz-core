@@ -30,7 +30,7 @@
 #define ABC_DENOMINATION_MBTC 1
 #define ABC_DENOMINATION_UBTC 2
 
-#define NETWORK_FAKE 0
+#define NETWORK_FAKE 1
 
 #ifdef __cplusplus
 extern "C" {
