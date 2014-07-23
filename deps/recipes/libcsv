@@ -1,0 +1,13 @@
+inherit lib
+
+source="http://tenet.dl.sourceforge.net/project/libcsv/libcsv/libcsv-3.0.3/libcsv-3.0.3.tar.gz"
+
+build() {
+    cd libcsv-3.0.3 
+    ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
+    make
+    make install
+}
+
+include="include/csv.h"
+lib="lib/libcsv.a"
