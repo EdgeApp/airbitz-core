@@ -10,6 +10,8 @@
  */
 
 #include "ABC_Bridge.h"
+#include "ABC_General.h"
+#include "ABC_Account.h"
 #include "ABC_URL.h"
 #include <curl/curl.h>
 #include <wallet/uri.hpp>
@@ -50,8 +52,8 @@ static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, libwall
 static tABC_CC     ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::short_hash &addr);
 static tABC_CC     ABC_BridgeStringToEc(char *privKey, bc::elliptic_curve_key& key, tABC_Error *pError);
-static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_AccountGeneralInfo *pInfo);
-static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_AccountGeneralInfo *pInfo);
+static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo);
+static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo);
 static std::string ABC_BridgeWatcherFile(const char *szUserName, const char *szPassword, const char *szWalletUUID);
 static tABC_CC     ABC_BridgeWatcherLoad(WatcherInfo *watcherInfo, tABC_Error *pError);
 static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
@@ -314,7 +316,7 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
 
 #if !NETWORK_FAKE
-    tABC_AccountGeneralInfo *ppInfo = NULL;
+    tABC_GeneralInfo *ppInfo = NULL;
     libwallet::watcher::block_height_callback hcb;
     WatcherInfo *watcherInfo = NULL;
     char *szUserCopy;
@@ -343,7 +345,7 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
         ABC_BridgeTxCallback(watcherInfo, tx);
     };
 
-    ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&ppInfo, pError));
+    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
     /* Set transaction callback */
     ABC_DebugLog("Setting tx callback\n");
     watcherInfo->watcher->set_callback(watcherInfo->callback);
@@ -377,7 +379,7 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     ABC_BridgeWatcherLoad(watcherInfo, pError);
     watchers_[szWalletUUID] = watcherInfo;
 exit:
-    ABC_AccountFreeGeneralInfo(ppInfo);
+    ABC_GeneralFreeInfo(ppInfo);
 #endif // NETWORK_FAKE
     return cc;
 }
@@ -475,7 +477,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
 #if !NETWORK_FAKE
-    tABC_AccountGeneralInfo *ppInfo = NULL;
+    tABC_GeneralInfo *ppInfo = NULL;
     bc::payment_address change, ab, dest;
     libwallet::fee_schedule schedule;
     libwallet::unsigned_transaction_type *utx;
@@ -494,9 +496,9 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
         ABC_CC_NULLPtr, "Unable alloc unsigned_transaction_type");
 
     // Update general info before send
-    ABC_CHECK_RET(ABC_AccountServerUpdateGeneralInfo(pError));
+    ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
     // Fetch Info to calculate fees
-    ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&ppInfo, pError));
+    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
     // Create payment_addresses
     ABC_CHECK_ASSERT(addressCount > 0,
         ABC_CC_Error, "No addresses supplied");
@@ -557,7 +559,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
     pUtx->data = (void *) utx;
     pUtx->fees = minerFees;
 exit:
-    ABC_AccountFreeGeneralInfo(ppInfo);
+    ABC_GeneralFreeInfo(ppInfo);
 #endif // NETWORK_FAKE
     return cc;
 }
@@ -623,7 +625,7 @@ tABC_CC ABC_BridgeMaxSpendable(const char *szUserName,
 #if !NETWORK_FAKE
     tABC_TxSendInfo SendInfo;
     tABC_TxDetails Details;
-    tABC_AccountGeneralInfo *ppInfo = NULL;
+    tABC_GeneralInfo *ppInfo = NULL;
     tABC_UnsignedTx utx;
     tABC_CC txResp;
 
@@ -643,7 +645,7 @@ tABC_CC ABC_BridgeMaxSpendable(const char *szUserName,
     ABC_STRDUP(SendInfo.szDestAddress, szDestAddress);
 
     // Snag the latest general info
-    ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&ppInfo, pError));
+    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
     // Fetch all the payment addresses for this wallet
     ABC_CHECK_RET(
         ABC_TxGetPubAddresses(szUserName, szPassword, szWalletUUID,
@@ -700,7 +702,7 @@ exit:
     ABC_FREE_STR(SendInfo.szPassword);
     ABC_FREE_STR(SendInfo.szWalletUUID);
     ABC_FREE_STR(SendInfo.szDestAddress);
-    ABC_AccountFreeGeneralInfo(ppInfo);
+    ABC_GeneralFreeInfo(ppInfo);
     ABC_UtilFreeStringArray(paAddresses, countAddresses);
 #endif
     return cc;
@@ -991,7 +993,7 @@ void ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amoun
 }
 
 static
-uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_AccountGeneralInfo *pInfo)
+uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo)
 {
     uint64_t abFees =
         (uint64_t) ((double) amount *
@@ -1002,7 +1004,7 @@ uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_AccountGeneralInfo *pInfo)
 }
 
 static
-uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_AccountGeneralInfo *pInfo)
+uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo)
 {
     uint64_t fees = 0;
     if (pInfo->countMinersFees > 0)

@@ -338,7 +338,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     ABC_CHECK_NULL(pszTxID);
 
     // take this non-blocking opportunity to update the info from the server if needed
-    ABC_CHECK_RET(ABC_AccountServerUpdateGeneralInfo(pError));
+    ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
 
     // find/create a change address
     ABC_CHECK_RET(ABC_TxCreateNewAddress(
@@ -4491,7 +4491,7 @@ tABC_CC ABC_TxFakeSend(tABC_TxSendInfo  *pInfo, char **pszTxID, tABC_Error *pErr
     ABC_CHECK_NULL(pszTxID);
 
     // take this non-blocking opportunity to update the info from the server if needed
-    ABC_CHECK_RET(ABC_AccountServerUpdateGeneralInfo(pError));
+    ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
 
     // create a transaction
     ABC_ALLOC(pTx, sizeof(tABC_Tx));
