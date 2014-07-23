@@ -10,7 +10,6 @@
 #define ABC_Bridge_h
 
 #include "ABC.h"
-#include "ABC_Account.h"
 #include "ABC_Tx.h"
 #include "ABC_Util.h"
 

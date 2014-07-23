@@ -371,7 +371,7 @@ tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *p
     char **aszUUIDs                = NULL;
     char *szDirectory              = NULL;
     char *szSyncDirectory          = NULL;
-    tABC_AccountGeneralInfo *pInfo = NULL;
+    tABC_GeneralInfo *pInfo        = NULL;
     int dirty           = 0;
     unsigned int i      = 0;
     unsigned int nUUIDs = 0;
@@ -384,7 +384,7 @@ tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *p
     ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_LP2, &LP2, pError));
 
     // Fetch general info
-    ABC_CHECK_RET(ABC_AccountLoadGeneralInfo(&pInfo, pError));
+    ABC_CHECK_RET(ABC_GeneralGetInfo(&pInfo, pError));
 
     // Check all wallets
     ABC_CHECK_RET(ABC_WalletGetUUIDs(szUserName, &aszUUIDs, &nUUIDs, pError));
@@ -438,7 +438,7 @@ exit:
  * Sync the wallet's data
  */
 tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const char *szUUID,
-                           tABC_AccountGeneralInfo *pInfo, int *pDirty, tABC_Error *pError)
+                           tABC_GeneralInfo *pInfo, int *pDirty, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
