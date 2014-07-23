@@ -1,0 +1,4 @@
+#!/bin/sh
+make build/get-question-choices.bin
+export LD_LIBRARY_PATH="../build/:$LD_LIBRARY_PATH"
+./build/get-question-choices.bin $@
