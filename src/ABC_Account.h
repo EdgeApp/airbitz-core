@@ -126,6 +126,8 @@ extern "C" {
                               tABC_U08Buf *pKey,
                               tABC_Error *pError);
 
+    tABC_CC ABC_AccountGetRootDir(char **pszRootDir, tABC_Error *pError);
+
     tABC_CC ABC_AccountGetDirName(const char *szUserName,
                                   char **pszDirName,
                                   tABC_Error *pError);
@@ -169,8 +171,6 @@ extern "C" {
                                       tABC_Error *pError);
 
 
-    void ABC_AccountFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices);
-
     tABC_CC ABC_AccountGetRecoveryQuestions(const char *szUserName,
                                             char **pszQuestions,
                                             tABC_Error *pError);
@@ -210,10 +210,6 @@ extern "C" {
 
     tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
                                    tABC_Error *pError);
-
-    tABC_CC ABC_AccountGetQuestionChoices(tABC_AccountRequestInfo *pInfo,
-                                          tABC_QuestionChoices **ppQuestionChoices,
-                                          tABC_Error *pError);
 
     tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
                                       tABC_Error *pError);

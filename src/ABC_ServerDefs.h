@@ -12,7 +12,7 @@
 
 #define API_KEY_HEADER                      "Authorization: Token 0907a450f5479da4a03769ce8ecb47c184c85453"
 
-#define ABC_SERVER_ROOT                     "http://198.61.234.21/api/v1"
+#define ABC_SERVER_ROOT                     "http://mainnet.auth.airbitz.co/api/v1"
 #define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
 #define ABC_SERVER_GET_CARE_PACKAGE_PATH    "account/carepackage/get"
 #define ABC_SERVER_UPDATE_CARE_PACKAGE_PATH "account/carepackage/update"

@@ -17,6 +17,7 @@
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Account.h"
+#include "ABC_General.h"
 #include "ABC_Bridge.h"
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
@@ -914,17 +915,13 @@ exit:
 /**
  * Get the recovery question choices.
  *
- * This function kicks off a thread to get the recovery question choices. The callback will be called when it has finished.
+ * This is a blocking function that hits the server for the possible recovery
+ * questions.
  *
- * @param szUserName                UserName for the account
- * @param fRequestCallback          The function that will be called when the recovery question choices are ready.
- * @param pData                     Pointer to data to be returned back in callback,
- *                                  or a `tABC_QuestionChoices **` if callbacks aren't used.
+ * @param pOut                      The returned question choices.
  * @param pError                    A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_GetQuestionChoices(const char *szUserName,
-                               tABC_Request_Callback fRequestCallback,
-                               void *pData,
+tABC_CC ABC_GetQuestionChoices(tABC_QuestionChoices **pOut,
                                tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -932,37 +929,9 @@ tABC_CC ABC_GetQuestionChoices(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_AccountRequestInfo *pAccountRequestInfo = NULL;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
-    ABC_CHECK_RET(ABC_AccountRequestInfoAlloc(&pAccountRequestInfo,
-                                              ABC_RequestType_GetQuestionChoices,
-                                              szUserName,
-                                              NULL, // password
-                                              NULL, // recovery questions
-                                              NULL, // recovery answers
-                                              NULL, // PIN
-                                              NULL, // new password
-                                              fRequestCallback,
-                                              pData,
-                                              pError));
-
-    if (fRequestCallback)
-    {
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_AccountRequestThreaded, pAccountRequestInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        cc = ABC_AccountGetQuestionChoices(pAccountRequestInfo, (tABC_QuestionChoices**)pData, pError);
-        ABC_AccountRequestInfoFree(pAccountRequestInfo);
-    }
+    ABC_CHECK_RET(ABC_GeneralGetQuestionChoices(pOut, pError));
 
 exit:
 
@@ -980,7 +949,7 @@ void ABC_FreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    ABC_AccountFreeQuestionChoices(pQuestionChoices);
+    ABC_GeneralFreeQuestionChoices(pQuestionChoices);
 }
 
 /**

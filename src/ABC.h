@@ -134,8 +134,6 @@ extern "C" {
         ABC_RequestType_SetAccountRecoveryQuestions = 2,
         /** Create wallet request */
         ABC_RequestType_CreateWallet = 3,
-        /** Get Recovery Question Choices request */
-        ABC_RequestType_GetQuestionChoices = 4,
         /** Change password request */
         ABC_RequestType_ChangePassword = 5,
         /** Send bitcoin request */
@@ -672,9 +670,7 @@ extern "C" {
                                unsigned int countUUIDs,
                                tABC_Error *pError);
 
-    tABC_CC ABC_GetQuestionChoices(const char *szUserName,
-                                   tABC_Request_Callback fRequestCallback,
-                                   void *pData,
+    tABC_CC ABC_GetQuestionChoices(tABC_QuestionChoices **pOut,
                                    tABC_Error *pError);
 
     void ABC_FreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices);
