@@ -47,7 +47,6 @@ static tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo, char **szSour
 static tABC_CC ABC_ExchangeMutexLock(tABC_Error *pError);
 static tABC_CC ABC_ExchangeMutexUnlock(tABC_Error *pError);
 
-static tABC_CC ABC_ExchangeFillCache(tABC_Error *pError);
 static tABC_CC ABC_ExchangeGetFromCache(int currencyNum, tABC_ExchangeCacheEntry **ppData, tABC_Error *pError);
 static tABC_CC ABC_ExchangeClearCache(tABC_Error *pError);
 static tABC_CC ABC_ExchangeAddToCache(tABC_ExchangeCacheEntry *pData, tABC_Error *pError);
@@ -325,7 +324,7 @@ tABC_CC ABC_ExchangeExtractAndSave(json_t *pJSON_Root, const char *szField,
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON");
     ABC_STRDUP(szValue, json_string_value(jsonVal));
 
-    ABC_DebugLog("Exchange Response: %s = %s\n", szField, szValue); 
+    ABC_DebugLog("Exchange Response: %s = %s\n", szField, szValue);
     // Right changes to disk
     ABC_CHECK_RET(ABC_ExchangeGetFilename(&szFilename, currencyNum, pError));
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szValue, pError));
@@ -568,14 +567,6 @@ tABC_CC ABC_ExchangeClearCache(tABC_Error *pError)
 exit:
 
     ABC_ExchangeMutexUnlock(NULL);
-    return cc;
-}
-
-static
-tABC_CC ABC_ExchangeFillCache(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-exit:
     return cc;
 }
 

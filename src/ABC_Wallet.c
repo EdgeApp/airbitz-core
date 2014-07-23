@@ -1181,7 +1181,7 @@ static
 tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    int i, j;
+    int i;
 
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
     ABC_CHECK_NULL(szUUID);
