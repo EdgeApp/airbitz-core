@@ -33,7 +33,6 @@
 #define ACCOUNT_SYNC_DIR                        "sync"
 #define ACCOUNT_FOLDER_PREFIX                   "Account_"
 #define ACCOUNT_NAME_FILENAME                   "User_Name.json"
-#define ACCOUNT_EPIN_FILENAME                   "EPIN.json"
 #define ACCOUNT_EREPO_FILENAME                  "ERepoAcctKey.json"
 #define ACCOUNT_CARE_PACKAGE_FILENAME           "Care_Package.json"
 #define ACCOUNT_WALLETS_FILENAME                "Wallets.json"
@@ -339,10 +338,10 @@ tABC_CC ABC_AccountTestCredentials(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tAccountKeys *pKeys   = NULL;
-    char *szFilename      = NULL;
-    char *szAccountDir    = NULL;
-    tABC_U08Buf PIN_JSON = ABC_BUF_NULL;
+    tAccountKeys *pKeys             = NULL;
+    tABC_AccountSettings *pSettings = NULL;
+    char *szFilename                = NULL;
+    char *szAccountDir              = NULL;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
@@ -356,13 +355,12 @@ tABC_CC ABC_AccountTestCredentials(const char *szUserName,
     ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
 
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_EPIN_FILENAME);
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pKeys->LP2, &PIN_JSON, pError));
+    // Try to decrypt account settings
+    ABC_CHECK_RET(ABC_AccountLoadSettingsEnc(szUserName, pKeys->LP2, &pSettings, pError));
 exit:
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
-    ABC_BUF_FREE(PIN_JSON);
+    ABC_FreeAccountSettings(pSettings);
 
     return cc;
 }
@@ -453,12 +451,12 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_GeneralInfo        *pGeneralInfo       = NULL;
+    tABC_AccountSettings    *pSettings          = NULL;
     tAccountKeys            *pKeys              = NULL;
     json_t                  *pJSON_SNRP2        = NULL;
     json_t                  *pJSON_SNRP3        = NULL;
     json_t                  *pJSON_SNRP4        = NULL;
     char                    *szCarePackage_JSON = NULL;
-    char                    *szEPIN_JSON        = NULL;
     char                    *szERepoAcctKey     = NULL;
     char                    *szJSON             = NULL;
     char                    *szAccountDir       = NULL;
@@ -545,11 +543,6 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     ABC_FREE_STR(szJSON);
     szJSON = NULL;
 
-    // create the PIN JSON
-    ABC_CHECK_RET(ABC_UtilCreateValueJSONString(pKeys->szPIN, JSON_ACCT_PIN_FIELD, &szJSON, pError));
-    tABC_U08Buf PIN = ABC_BUF_NULL;
-    ABC_BUF_SET_PTR(PIN, (unsigned char *)szJSON, strlen(szJSON) + 1);
-
     // create the RepoAcctKey JSON
     ABC_CHECK_RET(ABC_UtilCreateValueJSONString(pKeys->szRepoAcctKey, JSON_ACCT_REPO_FIELD, &szJSON, pError));
     tABC_U08Buf RepoBuf = ABC_BUF_NULL;
@@ -575,12 +568,10 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
 
     ABC_CHECK_RET(ABC_AccountCreateSync(szAccountDir, true, pError));
 
-    // EPIN = AES256(PIN, LP2)
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(PIN, pKeys->LP2, ABC_CryptoType_AES256, &szEPIN_JSON, pError));
-    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_EPIN_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEPIN_JSON, pError));
-    ABC_FREE_STR(szJSON);
-    szJSON = NULL;
+    // Saving PIN in settings
+    ABC_CHECK_RET(ABC_AccountLoadSettingsEnc(pInfo->szUserName, pKeys->LP2, &pSettings, pError));
+    ABC_STRDUP(pSettings->szPIN, pInfo->szPIN);
+    ABC_CHECK_RET(ABC_AccountSaveSettingsEnc(pInfo->szUserName, pKeys->LP2, pSettings, pError));
 
     // we now have a new account so go ahead and cache it's keys
     ABC_CHECK_RET(ABC_AccountAddToKeyCache(pKeys, pError));
@@ -623,12 +614,12 @@ exit:
     if (pJSON_SNRP4)        json_decref(pJSON_SNRP4);
     ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szCarePackage_JSON);
-    ABC_FREE_STR(szEPIN_JSON);
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szERepoAcctKey);
     ABC_GeneralFreeInfo(pGeneralInfo);
+    ABC_AccountFreeSettings(pSettings);
 
     ABC_AccountMutexUnlock(NULL);
     return cc;
@@ -2239,7 +2230,8 @@ exit:
  * Adds the given user to the key cache if it isn't already cached.
  * With or without a password, szUserName, L, SNRP1, SNRP2, SNRP3, SNRP4 keys are retrieved and added if they aren't already in the cache
  * If a password is given, szPassword, szPIN, P, LP2 keys are retrieved and the entry is added
- *  (the initial keys are added so the password can be verified while trying to decrypt EPIN)
+ *  (the initial keys are added so the password can be verified while trying to
+ *  decrypt the settings files)
  * If a pointer to hold the keys is given, then it is set to those keys
  */
 static
@@ -2260,6 +2252,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
     tABC_U08Buf  P              = ABC_BUF_NULL;
     tABC_U08Buf  LP             = ABC_BUF_NULL;
     tABC_U08Buf  LP2            = ABC_BUF_NULL;
+    tABC_AccountSettings    *pSettings = NULL;
 
     ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
@@ -2360,9 +2353,9 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             // LP2 = Scrypt(L + P, SNRP2)
             ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pFinalKeys->pSNRP2, &LP2, pError));
 
-            // try to decrypt EPIN
-            sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_EPIN_FILENAME);
-            tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONFile(szFilename, LP2, &PIN_JSON, pError);
+            // try to decrypt Settings.json
+            tABC_CC CC_Decrypt =
+                ABC_AccountLoadSettingsEnc(szUserName, LP2, &pSettings, pError);
 
             // check the results
             if (ABC_CC_DecryptFailure == CC_Decrypt)
@@ -2377,6 +2370,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
                 goto exit;
             }
 
+
             // if we got here, then the password was good so we can add what we just calculated to the keys
             ABC_STRDUP(pFinalKeys->szPassword, szPassword);
             ABC_BUF_SET(pFinalKeys->P, P);
@@ -2385,9 +2379,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             ABC_BUF_CLEAR(LP);
             ABC_BUF_SET(pFinalKeys->LP2, LP2);
             ABC_BUF_CLEAR(LP2);
-
-            char *szJSON_PIN = (char *) ABC_BUF_PTR(PIN_JSON);
-            ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_PIN, JSON_ACCT_PIN_FIELD, &(pFinalKeys->szPIN), pError));
+            ABC_STRDUP(pFinalKeys->szPIN, pSettings->szPIN);
         }
         else
         {
@@ -2411,6 +2403,7 @@ exit:
         ABC_AccountFreeAccountKeys(pKeys);
         ABC_CLEAR_FREE(pKeys, sizeof(tAccountKeys));
     }
+    ABC_AccountFreeSettings(pSettings);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szAccountDir);
     if (pJSON_SNRP2)    json_decref(pJSON_SNRP2);
@@ -2540,48 +2533,30 @@ tABC_CC ABC_AccountSetPIN(const char *szUserName,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tAccountKeys *pKeys = NULL;
-    tABC_U08Buf LP2 = ABC_BUF_NULL;
-    char *szJSON = NULL;
-    char *szEPIN_JSON = NULL;
-    char *szAccountDir = NULL;
-    char *szFilename = NULL;
+    int                  dirty;
+    tAccountKeys         *pKeys     = NULL;
+    tABC_AccountSettings *pSettings = NULL;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szPIN);
 
-    // get LP2 (this will also validate username and password as well as cache the account)
-    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_LP2, &LP2, pError));
+    ABC_CHECK_RET(ABC_AccountLoadSettings(szUserName, szPassword, &pSettings, pError));
 
     // get the key cache
     ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, &pKeys, pError));
 
-    // set the new PIN in the cache
+    // set the new PIN
     ABC_FREE_STR(pKeys->szPIN);
     ABC_STRDUP(pKeys->szPIN, szPIN);
 
-    // create the PIN JSON
-    ABC_CHECK_RET(ABC_UtilCreateValueJSONString(pKeys->szPIN, JSON_ACCT_PIN_FIELD, &szJSON, pError));
-    tABC_U08Buf PIN = ABC_BUF_NULL;
-    ABC_BUF_SET_PTR(PIN, (unsigned char *)szJSON, strlen(szJSON) + 1);
+    ABC_FREE_STR(pSettings->szPIN);
+    ABC_STRDUP(pSettings->szPIN, szPIN);
 
-    // EPIN = AES256(PIN, LP2)
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(PIN, pKeys->LP2, ABC_CryptoType_AES256, &szEPIN_JSON, pError));
-
-    // write the EPIN
-    ABC_CHECK_RET(ABC_AccountGetDirName(szUserName, &szAccountDir, pError));
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_EPIN_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEPIN_JSON, pError));
-
-    int dirty;
+    ABC_CHECK_RET(ABC_AccountSaveSettings(szUserName, szPassword, pSettings, pError));
     ABC_CHECK_RET(ABC_AccountSyncData(szUserName, szPassword, &dirty, pError));
 exit:
-    ABC_FREE_STR(szJSON);
-    ABC_FREE_STR(szEPIN_JSON);
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szFilename);
+    ABC_AccountFreeSettings(pSettings);
 
     return cc;
 }
@@ -3329,6 +3304,13 @@ tABC_CC ABC_AccountLoadSettingsEnc(const char *szUserName,
             ABC_STRDUP(pSettings->szNickname, json_string_value(pJSON_Value));
         }
 
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_PIN_FIELD);
+        if (pJSON_Value)
+        {
+            ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
+            ABC_STRDUP(pSettings->szPIN, json_string_value(pJSON_Value));
+        }
+
         // get name on payments option
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_NAME_ON_PAYMENTS_FIELD);
         ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON boolean value");
@@ -3516,6 +3498,13 @@ tABC_CC ABC_AccountSaveSettingsEnc(const char *szUserName,
         ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
     }
 
+    // set the pin
+    if (pSettings->szPIN)
+    {
+        retVal = json_object_set_new(pJSON_Root, JSON_ACCT_PIN_FIELD, json_string(pSettings->szPIN));
+        ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+    }
+
     // set name on payments option
     retVal = json_object_set_new(pJSON_Root, JSON_ACCT_NAME_ON_PAYMENTS_FIELD, json_boolean(pSettings->bNameOnPayments));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
@@ -3653,6 +3642,7 @@ void ABC_AccountFreeSettings(tABC_AccountSettings *pSettings)
         ABC_FREE_STR(pSettings->szLastName);
         ABC_FREE_STR(pSettings->szNickname);
         ABC_FREE_STR(pSettings->szLanguage);
+        ABC_FREE_STR(pSettings->szPIN);
         if (pSettings->exchangeRateSources.aSources)
         {
             for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)

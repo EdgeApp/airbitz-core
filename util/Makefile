@@ -3,7 +3,9 @@ CXXFLAGS += -Wall -D_GNU_SOURCE -I../src -std=c++11
 LDFLAGS  += -L../build/
 LIBS     += -labc -lpthread
 
-default: build/create-account.bin
+default: build/create-account.bin \
+		 build/get-pin.bin \
+		 build/set-pin.bin
 
 build/%.bin: build/%.o build/common.o
 	@mkdir -p build
