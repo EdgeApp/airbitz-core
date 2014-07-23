@@ -5,6 +5,7 @@
 
 #include "ABC_Sync.h"
 #include "ABC_Util.h"
+#include "ABC_Mutex.h"
 #include "sync.h"
 
 /**
@@ -21,6 +22,18 @@ static void SyncLogGitError(int e)
     {
         ABC_DebugLog("libgit2 returned %d: <no message>", e);
     }
+}
+
+static int SyncMaster(git_repository *repo, int *dirty, int *need_push)
+{
+    int e;
+    tABC_CC cc;
+
+    ABC_CHECK_RET(ABC_MutexLock(NULL));
+    e = sync_master(repo, dirty, need_push);
+exit:
+    ABC_MutexUnlock(NULL);
+    return e;
 }
 
 /**
@@ -94,7 +107,7 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     e = sync_fetch(repo, szServer);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_fetch failed");
 
-    e = sync_master(repo, &dirty, &need_push);
+    e = SyncMaster(repo, &dirty, &need_push);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_master failed");
 
     if (need_push)
