@@ -516,6 +516,8 @@ extern "C" {
         char                        *szLastName;
         /** nickname (optional) */
         char                        *szNickname;
+        /** PIN */
+        char                        *szPIN;
         /** should name be listed on payments */
         bool                        bNameOnPayments;
         /** how many minutes before auto logout */
