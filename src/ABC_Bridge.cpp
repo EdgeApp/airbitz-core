@@ -11,7 +11,7 @@
 
 #include "ABC_Bridge.h"
 #include "ABC_General.h"
-#include "ABC_Account.h"
+#include "ABC_Wallet.h"
 #include "ABC_URL.h"
 #include <curl/curl.h>
 #include <wallet/uri.hpp>
@@ -1026,13 +1026,11 @@ std::string ABC_BridgeWatcherFile(const char *szUserName, const char *szPassword
 {
     char *szDirName = NULL;
     tABC_Error error;
-    ABC_AccountGetDirName(szUserName, &szDirName, &error);
+    ABC_WalletGetDirName(&szDirName, szWalletUUID, &error);
 
     std::string filepath;
     filepath.append(std::string(szDirName));
-    filepath.append("/w_");
-    filepath.append(szWalletUUID);
-    filepath.append(".ser");
+    filepath.append("/watcher.ser");
     return filepath;
 }
 
