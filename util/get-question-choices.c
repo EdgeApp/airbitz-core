@@ -9,21 +9,21 @@ int main(int argc, char *argv[])
 
     tABC_QuestionChoices *pChoices = NULL;
 
-    if (argc != 3)
+    if (argc != 2)
     {
-        fprintf(stderr, "usage: %s <dir> <user>\n", argv[0]);
+        fprintf(stderr, "usage: %s <dir>\n", argv[0]);
         return 1;
     }
 
     MAIN_CHECK(ABC_Initialize(argv[1], NULL, 0, seed, sizeof(seed), &error));
-    MAIN_CHECK(ABC_GetQuestionChoices(argv[2], NULL, &pChoices, &error));
+    MAIN_CHECK(ABC_GetQuestionChoices(&pChoices, &error));
 
     printf("Choices:\n");
     for (unsigned i = 0; i < pChoices->numChoices; ++i)
     {
-        printf("\t%s\n", pChoices->aChoices[i]->szQuestion);
-        printf("\t%s\n", pChoices->aChoices[i]->szCategory);
-        printf("\t%d\n", pChoices->aChoices[i]->minAnswerLength);
+        printf(" %s (%s, %d)\n", pChoices->aChoices[i]->szQuestion,
+                                  pChoices->aChoices[i]->szCategory,
+                                  pChoices->aChoices[i]->minAnswerLength);
     }
 
     ABC_FreeQuestionChoices(pChoices);
