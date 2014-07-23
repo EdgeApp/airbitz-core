@@ -78,7 +78,6 @@ static tABC_CC ABC_WalletSetCurrencyNum(const char *szUserName, const char *szPa
 static tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, const char *szUUID, const char *szAccount, tABC_Error *pError);
 static tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError);
 static tABC_CC ABC_WalletGetRootDirName(char **pszRootDir, tABC_Error *pError);
-static tABC_CC ABC_WalletGetDirName(char **pszDir, const char *szWalletUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletGetSyncDirName(char **pszDir, const char *szWalletUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletGetRepoKeyDir(char **pszDir, const char *szAccountSyncDir, const char *szWalletUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, const char *szUUID, tWalletData **ppData, tABC_Error *pError);
@@ -817,7 +816,6 @@ exit:
  * Gets the directory for the given wallet UUID
  * the string is allocated so it is up to the caller to free it
  */
-static
 tABC_CC ABC_WalletGetDirName(char **pszDir, const char *szWalletUUID, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;

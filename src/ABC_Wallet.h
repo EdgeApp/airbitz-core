@@ -112,6 +112,10 @@ extern "C" {
                                             tABC_U08Buf *pSeed,
                                             tABC_Error *pError);
 
+    tABC_CC ABC_WalletGetDirName(char **pszDir,
+                                 const char *szWalletUUID,
+                                 tABC_Error *pError);
+
     tABC_CC ABC_WalletGetTxDirName(char **pszDir,
                                    const char *szWalletUUID,
                                    tABC_Error *pError);
