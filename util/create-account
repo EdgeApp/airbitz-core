@@ -1,0 +1,4 @@
+#!/bin/sh
+make build/create-account.bin
+export LD_LIBRARY_PATH="../build/:$LD_LIBRARY_PATH"
+./build/create-account.bin $@
