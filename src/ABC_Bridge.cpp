@@ -579,7 +579,7 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     ABC_CHECK_ASSERT(row != watchers_.end(),
         ABC_CC_Error, "Unable find watcher");
 
-    for (int i = 0; i < keyCount; ++i)
+    for (unsigned i = 0; i < keyCount; ++i)
     {
         bc::elliptic_curve_key k;
         ABC_CHECK_RET(ABC_BridgeStringToEc(paPrivKey[i], k, pError));
@@ -656,7 +656,7 @@ tABC_CC ABC_BridgeMaxSpendable(const char *szUserName,
 
         // Calculate total of utxos for these addresses
         ABC_DebugLog("Get UTOXs for %d\n", countAddresses);
-        for (int i = 0; i < countAddresses; ++i)
+        for (unsigned i = 0; i < countAddresses; ++i)
         {
             bc::payment_address pa;
             ABC_CHECK_ASSERT(true == pa.set_encoded(paAddresses[i]),
@@ -1007,7 +1007,7 @@ uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_AccountGeneralInfo *pInfo)
     uint64_t fees = 0;
     if (pInfo->countMinersFees > 0)
     {
-        for (int i = 0; i < pInfo->countMinersFees; ++i)
+        for (unsigned i = 0; i < pInfo->countMinersFees; ++i)
         {
             if (tx_size <= pInfo->aMinersFees[i]->sizeTransaction)
             {

@@ -328,7 +328,6 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // Change address variables
     tABC_TxAddress *pChangeAddr = NULL;
 
-    int i = 0;
     char *szPrivSeed = NULL;
     char **paAddresses = NULL;
     char **paPrivAddresses = NULL;
