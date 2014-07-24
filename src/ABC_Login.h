@@ -13,8 +13,6 @@
 #include "ABC.h"
 #include "ABC_Util.h"
 
-#define SYNC_REPO_KEY_LENGTH 20
-
 #ifdef __cplusplus
 extern "C" {
 #endif
