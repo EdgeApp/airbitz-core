@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <jansson.h>
 #include "ABC_Login.h"
+#include "ABC_Account.h"
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
 #include "ABC_Crypto.h"
@@ -38,14 +39,12 @@
 #define ACCOUNT_CARE_PACKAGE_FILENAME           "Care_Package.json"
 #define ACCOUNT_LOGIN_PACKAGE_FILENAME          "Login_Package.json"
 #define ACCOUNT_WALLETS_FILENAME                "Wallets.json"
-#define ACCOUNT_CATEGORIES_FILENAME             "Categories.json"
 #define ACCOUNT_SETTINGS_FILENAME               "Settings.json"
 
 #define JSON_ACCT_USERNAME_FIELD                "userName"
 #define JSON_ACCT_PIN_FIELD                     "PIN"
 #define JSON_ACCT_REPO_FIELD                    "RepoAcctKey"
 #define JSON_ACCT_WALLETS_FIELD                 "wallets"
-#define JSON_ACCT_CATEGORIES_FIELD              "categories"
 #define JSON_ACCT_ERQ_FIELD                     "ERQ"
 #define JSON_ACCT_SNRP_FIELD_PREFIX             "SNRP"
 #define JSON_ACCT_QUESTIONS_FIELD               "questions"
@@ -117,19 +116,17 @@ static tABC_CC ABC_LoginCreateLoginPackageJSONString(const json_t *pJSON_MK, con
 static tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys, tABC_U08Buf MK, const char *szRepoAcctKey, tABC_U08Buf LP2, tABC_U08Buf LRA2, char **szLoginPackage, tABC_Error *pError);
 static tABC_CC ABC_LoginGetCarePackageObjects(int AccountNum, const char *szCarePackage, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
 static tABC_CC ABC_LoginGetLoginPackageObjects(int AccountNum, const char *szLoginPackage, json_t **ppJSON_EMK, json_t **ppJSON_ESyncKey, json_t **ppJSON_ELP2, json_t **ppJSON_ELRA2, tABC_Error *pError);
-static tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir, bool bIncludeDefs, tABC_Error *pError);
+static tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir, tABC_Error *pError);
 static tABC_CC ABC_LoginNextAccountNum(int *pAccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateRootDir(tABC_Error *pError);
 static tABC_CC ABC_LoginCopyRootDirName(char *szRootDir, tABC_Error *pError);
 static tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError);
-static tABC_CC ABC_LoginCreateListJSON(const char *szName, const char *szItems, char **pszJSON,  tABC_Error *pError);
 static tABC_CC ABC_LoginNumForUser(const char *szUserName, int *pAccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginUserForNum(unsigned int AccountNum, char **pszUserName, tABC_Error *pError);
 static tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAccountKeys **ppKeys, tABC_Error *pError);
 static void    ABC_LoginFreeAccountKeys(tAccountKeys *pAccountKeys);
 static tABC_CC ABC_LoginAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *pError);
 static tABC_CC ABC_LoginKeyFromCacheByName(const char *szUserName, tAccountKeys **ppAccountKeys, tABC_Error *pError);
-static tABC_CC ABC_LoginSaveCategories(const char *szUserName, char **aszCategories, unsigned int Count, tABC_Error *pError);
 static tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1, char **szResponse, tABC_Error *pError);
 static tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char **szERepoAcctKey, tABC_Error *pError);
 static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char *szURL, char *szField, char **szResponse, tABC_Error *pError);
@@ -458,6 +455,7 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     tABC_GeneralInfo        *pGeneralInfo        = NULL;
     tABC_LoginSettings      *pSettings           = NULL;
     tAccountKeys            *pKeys               = NULL;
+    tABC_SyncKeys           *pSyncKeys           = NULL;
     tABC_U08Buf             NULL_BUF             = ABC_BUF_NULL;
     json_t                  *pJSON_SNRP2         = NULL;
     json_t                  *pJSON_SNRP3         = NULL;
@@ -576,10 +574,14 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage_JSON, pError));
 
-    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, true, pError));
+    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, pError));
 
     // we now have a new account so go ahead and cache it's keys
     ABC_CHECK_RET(ABC_LoginAddToKeyCache(pKeys, pError));
+
+    // Populate the sync dir with files:
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(pInfo->szUserName, pInfo->szPassword, &pSyncKeys, pError));
+    ABC_CHECK_RET(ABC_AccountCreate(pSyncKeys, pError));
 
     // Saving PIN in settings
     ABC_CHECK_RET(ABC_LoadAccountSettings(pInfo->szUserName, pInfo->szPassword, &pSettings, pError));
@@ -619,6 +621,7 @@ exit:
         ABC_LoginFreeAccountKeys(pKeys);
         ABC_CLEAR_FREE(pKeys, sizeof(tAccountKeys));
     }
+    if (pSyncKeys)          ABC_SyncFreeKeys(pSyncKeys);
     if (pJSON_SNRP2)        json_decref(pJSON_SNRP2);
     if (pJSON_SNRP3)        json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)        json_decref(pJSON_SNRP4);
@@ -685,7 +688,7 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
 
     //  Create sync directory and sync
-    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, false, pError));
+    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, pError));
 
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
@@ -791,7 +794,7 @@ tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
     //  Create sync directory and sync
-    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, false, pError));
+    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, pError));
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
     // Create repo URL
@@ -1852,12 +1855,11 @@ exit:
  * Creates a new sync directory and all the files needed for the given account
  */
 static
-tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir, bool bIncludeDefs,
+tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szDataJSON = NULL;
     char *szFilename = NULL;
 
     ABC_CHECK_NULL(szAccountsRootDir);
@@ -1868,17 +1870,7 @@ tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir, bool bIncludeDefs,
     sprintf(szFilename, "%s/%s", szAccountsRootDir, ACCOUNT_SYNC_DIR);
     ABC_CHECK_RET(ABC_FileIOCreateDir(szFilename, pError));
 
-    if (bIncludeDefs)
-    {
-        // create initial categories file with no entries
-        ABC_CHECK_RET(ABC_LoginCreateListJSON(JSON_ACCT_CATEGORIES_FIELD, "", &szDataJSON, pError));
-        sprintf(szFilename, "%s/%s/%s", szAccountsRootDir, ACCOUNT_SYNC_DIR, ACCOUNT_CATEGORIES_FILENAME);
-        ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szDataJSON, pError));
-        ABC_FREE_STR(szDataJSON);
-        szDataJSON = NULL;
-    }
 exit:
-    ABC_FREE_STR(szDataJSON);
     ABC_FREE_STR(szFilename);
 
     return cc;
@@ -2095,67 +2087,6 @@ exit:
 
     return cc;
 }
-
-/**
- * creates the json for a list of items in a string seperated by newlines
- * for example:
- *   "A\nB\n"
- * becomes
- *  { "name" : [ "A", "B" ] }
- */
-static
-tABC_CC ABC_LoginCreateListJSON(const char *szName, const char *szItems, char **pszJSON,  tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    json_t *jsonItems = NULL;
-    json_t *jsonItemArray = NULL;
-    char *szNewItems = NULL;
-
-    ABC_CHECK_NULL(szName);
-    ABC_CHECK_NULL(szItems);
-    ABC_CHECK_NULL(pszJSON);
-
-    // create the json object that will be our questions
-    jsonItems = json_object();
-    jsonItemArray = json_array();
-
-    if (strlen(szItems))
-    {
-        // change all the newlines into nulls to create a string of them
-        ABC_STRDUP(szNewItems, szItems);
-        int nItems = 1;
-        for (int i = 0; i < strlen(szItems); i++)
-        {
-            if (szNewItems[i] == '\n')
-            {
-                nItems++;
-                szNewItems[i] = '\0';
-            }
-        }
-
-        // for each item
-        char *pCurItem = szNewItems;
-        for (int i = 0; i < nItems; i++)
-        {
-            json_array_append_new(jsonItemArray, json_string(pCurItem));
-            pCurItem += strlen(pCurItem) + 1;
-        }
-    }
-
-    // set our final json for the questions
-    json_object_set(jsonItems, szName, jsonItemArray);
-
-    *pszJSON = ABC_UtilStringFromJSONObject(jsonItems, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-
-exit:
-    if (jsonItems)      json_decref(jsonItems);
-    if (jsonItemArray)  json_decref(jsonItemArray);
-    ABC_FREE_STR(szNewItems);
-
-    return cc;
-}
-
 
 /*
  * returns the account number associated with the given user name
@@ -2766,175 +2697,6 @@ tABC_CC ABC_LoginSetPIN(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginSyncData(szUserName, szPassword, &dirty, pError));
 exit:
     ABC_LoginFreeSettings(pSettings);
-
-    return cc;
-}
-
-/**
- * This function gets the categories for an account.
- * An array of allocated strings is allocated so the user is responsible for
- * free'ing all the elements as well as the array itself.
- */
-tABC_CC ABC_LoginGetCategories(const char *szUserName,
-                                 char ***paszCategories,
-                                 unsigned int *pCount,
-                                 tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szAccountDir = NULL;
-    char *szFilename = NULL;
-    char *szJSON = NULL;
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(paszCategories);
-    *paszCategories = NULL;
-    ABC_CHECK_NULL(pCount);
-    *pCount = 0;
-
-    // load the categories
-    ABC_CHECK_RET(ABC_LoginGetDirName(szUserName, &szAccountDir, pError));
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_CATEGORIES_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON, pError));
-
-    // load the strings of values
-    ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString(szJSON, JSON_ACCT_CATEGORIES_FIELD, paszCategories, pCount, pError));
-
-exit:
-    ABC_FREE_STR(szJSON);
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szFilename);
-
-    return cc;
-}
-
-/**
- * This function adds a category to an account.
- * No attempt is made to avoid a duplicate entry.
- */
-tABC_CC ABC_LoginAddCategory(const char *szUserName,
-                               char *szCategory,
-                               tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char **aszCategories = NULL;
-    unsigned int categoryCount = 0;
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szCategory);
-
-    // load the current categories
-    ABC_CHECK_RET(ABC_LoginGetCategories(szUserName, &aszCategories, &categoryCount, pError));
-
-    // if there are categories
-    if ((aszCategories != NULL) && (categoryCount > 0))
-    {
-        aszCategories = realloc(aszCategories, sizeof(char *) * (categoryCount + 1));
-    }
-    else
-    {
-        ABC_ALLOC(aszCategories, sizeof(char *));
-        categoryCount = 0;
-    }
-    ABC_STRDUP(aszCategories[categoryCount], szCategory);
-    categoryCount++;
-
-    // save out the categories
-    ABC_CHECK_RET(ABC_LoginSaveCategories(szUserName, aszCategories, categoryCount, pError));
-
-exit:
-    ABC_UtilFreeStringArray(aszCategories, categoryCount);
-
-    return cc;
-}
-
-/**
- * This function removes a category from an account.
- * If there is more than one category with this name, all categories by this name are removed.
- * If the category does not exist, no error is returned.
- */
-tABC_CC ABC_LoginRemoveCategory(const char *szUserName,
-                                  char *szCategory,
-                                  tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char **aszCategories = NULL;
-    unsigned int categoryCount = 0;
-    char **aszNewCategories = NULL;
-    unsigned int newCategoryCount = 0;
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szCategory);
-
-    // load the current categories
-    ABC_CHECK_RET(ABC_LoginGetCategories(szUserName, &aszCategories, &categoryCount, pError));
-
-    // got through all the categories and only add ones that are not this one
-    for (int i = 0; i < categoryCount; i++)
-    {
-        // if this is not the string we are looking to remove then add it to our new arrary
-        if (0 != strcmp(aszCategories[i], szCategory))
-        {
-            // if there are categories
-            if ((aszNewCategories != NULL) && (newCategoryCount > 0))
-            {
-                aszNewCategories = realloc(aszNewCategories, sizeof(char *) * (newCategoryCount + 1));
-            }
-            else
-            {
-                ABC_ALLOC(aszNewCategories, sizeof(char *));
-                newCategoryCount = 0;
-            }
-            ABC_STRDUP(aszNewCategories[newCategoryCount], aszCategories[i]);
-            newCategoryCount++;
-        }
-    }
-
-    // save out the new categories
-    ABC_CHECK_RET(ABC_LoginSaveCategories(szUserName, aszNewCategories, newCategoryCount, pError));
-
-exit:
-    ABC_UtilFreeStringArray(aszCategories, categoryCount);
-    ABC_UtilFreeStringArray(aszNewCategories, newCategoryCount);
-
-    return cc;
-}
-
-/**
- * Saves the categories for the given account
- */
-static
-tABC_CC ABC_LoginSaveCategories(const char *szUserName,
-                                  char **aszCategories,
-                                  unsigned int count,
-                                  tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szDataJSON = NULL;
-    char *szFilename = NULL;
-    char *szAccountDir = NULL;
-
-    ABC_CHECK_NULL(szUserName);
-
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-
-    // create the categories JSON
-    ABC_CHECK_RET(ABC_UtilCreateArrayJSONString(aszCategories, count, JSON_ACCT_CATEGORIES_FIELD, &szDataJSON, pError));
-
-    // write them out
-    ABC_CHECK_RET(ABC_LoginGetDirName(szUserName, &szAccountDir, pError));
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_CATEGORIES_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szDataJSON, pError));
-
-exit:
-    ABC_FREE_STR(szDataJSON);
-    ABC_FREE_STR(szFilename);
-    ABC_FREE_STR(szAccountDir);
 
     return cc;
 }

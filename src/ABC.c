@@ -17,6 +17,7 @@
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Login.h"
+#include "ABC_Account.h"
 #include "ABC_General.h"
 #include "ABC_Bridge.h"
 #include "ABC_Util.h"
@@ -557,6 +558,7 @@ exit:
  * @param pError                A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_GetCategories(const char *szUserName,
+                          const char *szPassword,
                           char ***paszCategories,
                           unsigned int *pCount,
                           tABC_Error *pError)
@@ -566,11 +568,15 @@ tABC_CC ABC_GetCategories(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginGetCategories(szUserName, paszCategories, pCount, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, paszCategories, pCount, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -586,6 +592,7 @@ exit:
  * @param pError                A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_AddCategory(const char *szUserName,
+                        const char *szPassword,
                         char *szCategory,
                         tABC_Error *pError)
 {
@@ -594,11 +601,15 @@ tABC_CC ABC_AddCategory(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginAddCategory(szUserName, szCategory, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesAdd(pKeys, szCategory, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -616,6 +627,7 @@ exit:
  * @param pError                A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_RemoveCategory(const char *szUserName,
+                           const char *szPassword,
                            char *szCategory,
                            tABC_Error *pError)
 {
@@ -624,11 +636,15 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginRemoveCategory(szUserName, szCategory, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesRemove(pKeys, szCategory, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
