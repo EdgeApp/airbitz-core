@@ -20,7 +20,7 @@
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
 #include "ABC_Crypto.h"
-#include "ABC_Account.h"
+#include "ABC_Login.h"
 #include "ABC_Mutex.h"
 #include "ABC_Wallet.h"
 #include "ABC_Debug.h"
@@ -2553,7 +2553,7 @@ tABC_CC ABC_TxDefaultRequestDetails(const char *szUserName, const char *szPasswo
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    tABC_AccountSettings *pSettings = NULL;
+    tABC_LoginSettings *pSettings = NULL;
     tABC_U08Buf Label = ABC_BUF_NULL;
 
     if (ABC_STRLEN(pDetails->szName) == 0)
@@ -4086,8 +4086,8 @@ void ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count)
 /**
  * Locks the mutex
  *
- * ABC_Tx uses the same mutex as ABC_Account/ABC_Wallet so that there will be no situation in
- * which one thread is in ABC_Tx locked on a mutex and calling a thread safe ABC_Account/ABC_Wallet call
+ * ABC_Tx uses the same mutex as ABC_Login/ABC_Wallet so that there will be no situation in
+ * which one thread is in ABC_Tx locked on a mutex and calling a thread safe ABC_Login/ABC_Wallet call
  * that is locked from another thread calling a thread safe ABC_Tx call.
  * In other words, since they call each other, they need to share a recursive mutex.
  */

@@ -7,8 +7,8 @@
  * @version 1.0
  */
 
-#ifndef ABC_Account_h
-#define ABC_Account_h
+#ifndef ABC_Login_h
+#define ABC_Login_h
 
 #include "ABC.h"
 #include "ABC_Util.h"
@@ -26,7 +26,7 @@ extern "C" {
      * with threaded requests on accounts
      *
      */
-    typedef struct sABC_AccountRequestInfo
+    typedef struct sABC_LoginRequestInfo
     {
         /** request type */
         tABC_RequestType requestType;
@@ -54,19 +54,19 @@ extern "C" {
 
         /** callback function when request is complete */
         tABC_Request_Callback fRequestCallback;
-    } tABC_AccountRequestInfo;
+    } tABC_LoginRequestInfo;
 
-    typedef enum eABC_AccountKey
+    typedef enum eABC_LoginKey
     {
-        ABC_AccountKey_L1,
-        ABC_AccountKey_L2,
-        ABC_AccountKey_LP2,
-        ABC_AccountKey_PIN,
-        ABC_AccountKey_RepoAccountKey,
-        ABC_AccountKey_RQ
-    } tABC_AccountKey;
+        ABC_LoginKey_L1,
+        ABC_LoginKey_L2,
+        ABC_LoginKey_LP2,
+        ABC_LoginKey_PIN,
+        ABC_LoginKey_RepoAccountKey,
+        ABC_LoginKey_RQ
+    } tABC_LoginKey;
 
-    tABC_CC ABC_AccountRequestInfoAlloc(tABC_AccountRequestInfo **ppAccountRequestInfo,
+    tABC_CC ABC_LoginRequestInfoAlloc(tABC_LoginRequestInfo **ppAccountRequestInfo,
                                         tABC_RequestType requestType,
                                         const char *szUserName,
                                         const char *szPassword,
@@ -78,99 +78,99 @@ extern "C" {
                                         void *pData,
                                         tABC_Error *pError);
 
-    void ABC_AccountRequestInfoFree(tABC_AccountRequestInfo *pAccountRequestInfo);
+    void ABC_LoginRequestInfoFree(tABC_LoginRequestInfo *pAccountRequestInfo);
 
-    void *ABC_AccountRequestThreaded(void *pData);
+    void *ABC_LoginRequestThreaded(void *pData);
 
-    void *ABC_AccountSetRecoveryThreaded(void *pData);
+    void *ABC_LoginSetRecoveryThreaded(void *pData);
 
-    tABC_CC ABC_AccountClearKeyCache(tABC_Error *pError);
+    tABC_CC ABC_LoginClearKeyCache(tABC_Error *pError);
 
-    tABC_CC ABC_AccountGetKey(const char *szUserName,
+    tABC_CC ABC_LoginGetKey(const char *szUserName,
                               const char *szPassword,
-                              tABC_AccountKey keyType,
+                              tABC_LoginKey keyType,
                               tABC_U08Buf *pKey,
                               tABC_Error *pError);
 
-    tABC_CC ABC_AccountGetRootDir(char **pszRootDir, tABC_Error *pError);
+    tABC_CC ABC_LoginGetRootDir(char **pszRootDir, tABC_Error *pError);
 
-    tABC_CC ABC_AccountGetDirName(const char *szUserName,
+    tABC_CC ABC_LoginGetDirName(const char *szUserName,
                                   char **pszDirName,
                                   tABC_Error *pError);
 
-    tABC_CC ABC_AccountGetSyncDirName(const char *szUserName,
+    tABC_CC ABC_LoginGetSyncDirName(const char *szUserName,
                                       char **pszDirName,
                                       tABC_Error *pError);
 
-    tABC_CC ABC_AccountSetPIN(const char *szUserName,
+    tABC_CC ABC_LoginSetPIN(const char *szUserName,
                               const char *szPassword,
                               const char *szPIN,
                               tABC_Error *pError);
 
-    tABC_CC ABC_AccountGetCategories(const char *szUserName,
+    tABC_CC ABC_LoginGetCategories(const char *szUserName,
                               char ***paszCategories,
                               unsigned int *pCount,
                               tABC_Error *pError);
 
-    tABC_CC ABC_AccountAddCategory(const char *szUserName,
+    tABC_CC ABC_LoginAddCategory(const char *szUserName,
                             char *szCategory,
                             tABC_Error *pError);
 
-    tABC_CC ABC_AccountRemoveCategory(const char *szUserName,
+    tABC_CC ABC_LoginRemoveCategory(const char *szUserName,
                                char *szCategory,
                                tABC_Error *pError);
 
-    tABC_CC ABC_AccountCheckRecoveryAnswers(const char *szUserName,
+    tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
                                             const char *szRecoveryAnswers,
                                             bool *pbValid,
                                             tABC_Error *pError);
 
-    tABC_CC ABC_AccountCheckCredentials(const char *szUserName,
+    tABC_CC ABC_LoginCheckCredentials(const char *szUserName,
                                         const char *szPassword,
                                         tABC_Error *pError);
 
-    tABC_CC ABC_AccountTestCredentials(const char *szUserName,
+    tABC_CC ABC_LoginTestCredentials(const char *szUserName,
                                        const char *szPassword,
                                        tABC_Error *pError);
 
-    tABC_CC ABC_AccountCheckValidUser(const char *szUserName,
+    tABC_CC ABC_LoginCheckValidUser(const char *szUserName,
                                       tABC_Error *pError);
 
 
-    tABC_CC ABC_AccountGetRecoveryQuestions(const char *szUserName,
+    tABC_CC ABC_LoginGetRecoveryQuestions(const char *szUserName,
                                             char **pszQuestions,
                                             tABC_Error *pError);
 
-    tABC_CC ABC_AccountLoadSettings(const char *szUserName,
+    tABC_CC ABC_LoginLoadSettings(const char *szUserName,
                                     const char *szPassword,
-                                    tABC_AccountSettings **ppSettings,
+                                    tABC_LoginSettings **ppSettings,
                                     tABC_Error *pError);
 
-    tABC_CC ABC_AccountSaveSettings(const char *szUserName,
+    tABC_CC ABC_LoginSaveSettings(const char *szUserName,
                                     const char *szPassword,
-                                    tABC_AccountSettings *pSettings,
+                                    tABC_LoginSettings *pSettings,
                                     tABC_Error *pError);
 
-    void ABC_AccountFreeSettings(tABC_AccountSettings *pSettings);
+    void ABC_LoginFreeSettings(tABC_LoginSettings *pSettings);
 
-    tABC_CC ABC_AccountPickRepo(const char *szRepoKey, char **szRepoPath, tABC_Error *pError);
+    tABC_CC ABC_LoginPickRepo(const char *szRepoKey, char **szRepoPath, tABC_Error *pError);
 
-    tABC_CC ABC_AccountSyncData(const char *szUserName,
+    tABC_CC ABC_LoginSyncData(const char *szUserName,
                                 const char *szPassword,
                                 int *pDirty,
                                 tABC_Error *pError);
 
     // Blocking functions:
-    tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
+    tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
                               tABC_Error *pError);
 
-    tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
+    tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
                               tABC_Error *pError);
 
-    tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
+    tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
                                    tABC_Error *pError);
 
-    tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
+    tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
                                       tABC_Error *pError);
 
 #ifdef __cplusplus

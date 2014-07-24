@@ -14,7 +14,7 @@
 #include <jansson.h>
 #include "ABC_General.h"
 #include "ABC_Util.h"
-#include "ABC_Account.h"
+#include "ABC_Login.h"
 #include "ABC_FileIO.h"
 #include "ABC_URL.h"
 #include "ABC_Debug.h"
@@ -357,7 +357,7 @@ tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename,
     ABC_CHECK_NULL(pszFilename);
     *pszFilename = NULL;
 
-    ABC_CHECK_RET(ABC_AccountGetRootDir(&szRootDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetRootDir(&szRootDir, pError));
     ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(*pszFilename, "%s/%s", szRootDir, GENERAL_INFO_FILENAME);
 
@@ -417,7 +417,7 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     ABC_CHECK_NULL(ppQuestionChoices);
 
     // create the filename for the question json
-    ABC_CHECK_RET(ABC_AccountGetRootDir(&szRootDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetRootDir(&szRootDir, pError));
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szRootDir, GENERAL_QUESTIONS_FILENAME);
 
@@ -512,7 +512,7 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
     json_object_set(pJSON_Root, JSON_QUESTIONS_FIELD, pJSON_Q);
 
     // create the filename for the question json
-    ABC_CHECK_RET(ABC_AccountGetRootDir(&szRootDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetRootDir(&szRootDir, pError));
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szRootDir, GENERAL_QUESTIONS_FILENAME);
 
