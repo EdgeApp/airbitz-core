@@ -8,6 +8,8 @@
 
 #include "ABC.h"
 
+#define SYNC_KEY_LENGTH 20
+
 #ifdef __cplusplus
 extern "C" {
 #endif

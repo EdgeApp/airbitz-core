@@ -250,7 +250,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szEMK_JSON, pError));
 
     // Create Wallet Repo key
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(SYNC_REPO_KEY_LENGTH, &WalletAcctKey, pError));
+    ABC_CHECK_RET(ABC_CryptoCreateRandomData(SYNC_KEY_LENGTH, &WalletAcctKey, pError));
     ABC_CHECK_RET(ABC_CryptoHexEncode(WalletAcctKey, &(pData->szWalletAcctKey), pError));
 
     // create the WalletAcctKey JSON
