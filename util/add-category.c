@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     }
 
     MAIN_CHECK(ABC_Initialize(argv[1], NULL, 0, seed, sizeof(seed), &error));
-    MAIN_CHECK(ABC_AddCategory(argv[2], argv[4], &error));
+    MAIN_CHECK(ABC_AddCategory(argv[2], argv[3], argv[4], &error));
 
     MAIN_CHECK(ABC_ClearKeyCache(&error));
     return 0;

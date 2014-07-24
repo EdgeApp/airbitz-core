@@ -609,15 +609,18 @@ extern "C" {
                        tABC_Error *pError);
 
     tABC_CC ABC_GetCategories(const char *szUserName,
+                              const char *szPassword,
                               char ***paszCategories,
                               unsigned int *pCount,
                               tABC_Error *pError);
 
     tABC_CC ABC_AddCategory(const char *szUserName,
+                            const char *szPassword,
                             char *szCategory,
                             tABC_Error *pError);
 
     tABC_CC ABC_RemoveCategory(const char *szUserName,
+                               const char *szPassword,
                                char *szCategory,
                                tABC_Error *pError);
 

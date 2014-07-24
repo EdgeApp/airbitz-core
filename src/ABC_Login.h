@@ -105,19 +105,6 @@ extern "C" {
                               const char *szPIN,
                               tABC_Error *pError);
 
-    tABC_CC ABC_LoginGetCategories(const char *szUserName,
-                              char ***paszCategories,
-                              unsigned int *pCount,
-                              tABC_Error *pError);
-
-    tABC_CC ABC_LoginAddCategory(const char *szUserName,
-                            char *szCategory,
-                            tABC_Error *pError);
-
-    tABC_CC ABC_LoginRemoveCategory(const char *szUserName,
-                               char *szCategory,
-                               tABC_Error *pError);
-
     tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
                                             const char *szRecoveryAnswers,
                                             bool *pbValid,

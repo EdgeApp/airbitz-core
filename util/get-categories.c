@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     }
 
     MAIN_CHECK(ABC_Initialize(argv[1], NULL, 0, seed, sizeof(seed), &error));
-    MAIN_CHECK(ABC_GetCategories(argv[2], &aszCategories, &count, &error));
+    MAIN_CHECK(ABC_GetCategories(argv[2], argv[3], &aszCategories, &count, &error));
 
     printf("Categories:\n");
     for (unsigned i = 0; i < count; ++i)
