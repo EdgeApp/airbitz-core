@@ -508,7 +508,7 @@ extern "C" {
      * for an account.
      *
      */
-    typedef struct sABC_AccountSettings
+    typedef struct sABC_LoginSettings
     {
         /** first name (optional) */
         char                        *szFirstName;
@@ -532,7 +532,7 @@ extern "C" {
         tABC_BitcoinDenomination    bitcoinDenomination;
         /** use advanced features (e.g., allow offline wallet creation) */
         bool                        bAdvancedFeatures;
-    } tABC_AccountSettings;
+    } tABC_LoginSettings;
 
     /**
      * AirBitz Asynchronous BitCoin event callback
@@ -873,15 +873,15 @@ extern "C" {
 
     tABC_CC ABC_LoadAccountSettings(const char *szUserName,
                                     const char *szPassword,
-                                    tABC_AccountSettings **ppSettings,
+                                    tABC_LoginSettings **ppSettings,
                                     tABC_Error *pError);
 
     tABC_CC ABC_UpdateAccountSettings(const char *szUserName,
                                       const char *szPassword,
-                                      tABC_AccountSettings *pSettings,
+                                      tABC_LoginSettings *pSettings,
                                       tABC_Error *pError);
 
-    void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings);
+    void ABC_FreeAccountSettings(tABC_LoginSettings *pSettings);
 
     tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Error *pError);
 

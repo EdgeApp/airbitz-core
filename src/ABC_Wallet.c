@@ -16,7 +16,7 @@
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
 #include "ABC_Crypto.h"
-#include "ABC_Account.h"
+#include "ABC_Login.h"
 #include "ABC_Mutex.h"
 #include "ABC_ServerDefs.h"
 #include "ABC_Sync.h"
@@ -222,16 +222,16 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     ABC_STRDUP(pData->szPassword, pInfo->szPassword);
 
     // get the local directory for this account
-    ABC_CHECK_RET(ABC_AccountGetSyncDirName(pData->szUserName, &szAccountSyncDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncDirName(pData->szUserName, &szAccountSyncDir, pError));
 
     // get L1
-    ABC_CHECK_RET(ABC_AccountGetKey(pData->szUserName, pData->szPassword, ABC_AccountKey_L1, &L1, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(pData->szUserName, pData->szPassword, ABC_LoginKey_L1, &L1, pError));
 
     // get L2
-    ABC_CHECK_RET(ABC_AccountGetKey(pData->szUserName, pData->szPassword, ABC_AccountKey_L2, &L2, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(pData->szUserName, pData->szPassword, ABC_LoginKey_L2, &L2, pError));
 
     // get LP2
-    ABC_CHECK_RET(ABC_AccountGetKey(pData->szUserName, pData->szPassword, ABC_AccountKey_LP2, &LP2, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(pData->szUserName, pData->szPassword, ABC_LoginKey_LP2, &LP2, pError));
 
     // create wallet guid
     ABC_CHECK_RET(ABC_CryptoGenUUIDString(&szUUID, pError));
@@ -302,7 +302,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
     // Create Repo URL
-    ABC_CHECK_RET(ABC_AccountPickRepo(pData->szWalletAcctKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_LoginPickRepo(pData->szWalletAcctKey, &szRepoURL, pError));
 
     ABC_DebugLog("Wallet Repo: %s %s\n", pData->szWalletSyncDir, szRepoURL);
 
@@ -332,7 +332,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     // After wallet is created, sync the account, ignoring any errors
     tABC_Error Error;
-    ABC_CHECK_RET(ABC_AccountSyncData(pInfo->szUserName, pInfo->szPassword, &dirty, &Error));
+    ABC_CHECK_RET(ABC_LoginSyncData(pInfo->szUserName, pInfo->szPassword, &dirty, &Error));
 
     pData = NULL; // so we don't free what we just added to the cache
 exit:
@@ -380,7 +380,7 @@ tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *p
     *pDirty = 0;
 
     // Fetch LP2
-    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_LP2, &LP2, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_LP2, &LP2, pError));
 
     // Fetch general info
     ABC_CHECK_RET(ABC_GeneralGetInfo(&pInfo, pError));
@@ -450,7 +450,7 @@ tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const
     ABC_CHECK_ASSERT(NULL != pData->szWalletAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
 
     // Create Repo URL
-    ABC_CHECK_RET(ABC_AccountPickRepo(pData->szWalletAcctKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_LoginPickRepo(pData->szWalletAcctKey, &szRepoURL, pError));
 
     ABC_DebugLog("Wallet Repo: %s %s\n", pData->szWalletSyncDir, szRepoURL);
 
@@ -575,7 +575,7 @@ tABC_CC ABC_WalletCreateAndSetBitcoinPrivateSeed(const char *szUserName, const c
     // TODO: there is a very very small chance that this is not a valid seed, need to check with libwallet and retry if not
 
     // get the local directory for this account
-    ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szAccountSyncDir, pError));
 
     // write the name out to the file
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
@@ -980,7 +980,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         // we need to add it
 
         // get the local directory for this account
-        ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+        ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szAccountSyncDir, pError));
 
         // create a new wallet data struct
         ABC_ALLOC(pData, sizeof(tWalletData));
@@ -996,7 +996,7 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         ABC_CHECK_ASSERT(bExists == true, ABC_CC_InvalidWalletID, "Wallet does not exist");
 
         // get LP2 for this account
-        ABC_CHECK_RET(ABC_AccountGetKey(pData->szUserName, pData->szPassword, ABC_AccountKey_LP2, &LP2, pError));
+        ABC_CHECK_RET(ABC_LoginGetKey(pData->szUserName, pData->szPassword, ABC_LoginKey_LP2, &LP2, pError));
 
         // get the MK
         ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -1394,7 +1394,7 @@ tABC_CC ABC_WalletGetUUIDs(const char *szUserName,
     ABC_CHECK_NULL(pCount);
 
     // get the local directory for this account
-    ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szAccountSyncDir, pError));
 
     // load wallet the account Wallets.json
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -1535,10 +1535,10 @@ tABC_CC ABC_WalletSetOrder(const char *szUserName,
     ABC_CHECK_NULL(aszUUIDArray);
 
     // check the credentials
-    ABC_CHECK_RET(ABC_AccountCheckCredentials(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_LoginCheckCredentials(szUserName, szPassword, pError));
 
     // get the local directory for this account
-    ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szAccountSyncDir, pError));
 
     // load wallet the account Wallets.json
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -1677,7 +1677,7 @@ tABC_CC ABC_WalletChangeEMKForUUID(const char *szUserName,
     ABC_CHECK_NULL_BUF(newLP2);
 
     // get the local directory for this account
-    ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szAccountSyncDir, pError));
 
     // get the MK using the old LP2
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -1787,7 +1787,7 @@ tABC_CC ABC_WalletCheckCredentials(const char *szUserName,
     ABC_CHECK_NULL(szPassword);
 
     // check that this is a valid user and password
-    ABC_CHECK_RET(ABC_AccountCheckCredentials(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_LoginCheckCredentials(szUserName, szPassword, pError));
 
     // cache up the wallet (this will check that the wallet UUID is valid)
     tWalletData *pData = NULL;
@@ -1801,8 +1801,8 @@ exit:
 /**
  * Locks the mutex
  *
- * ABC_Wallet uses the same mutex as ABC_Account so that there will be no situation in
- * which one thread is in ABC_Wallet locked on a mutex and calling a thread safe ABC_Account call
+ * ABC_Wallet uses the same mutex as ABC_Login so that there will be no situation in
+ * which one thread is in ABC_Wallet locked on a mutex and calling a thread safe ABC_Login call
  * that is locked from another thread calling a thread safe ABC_Wallet call.
  * In other words, since they call each other, they need to share a recursive mutex.
  */

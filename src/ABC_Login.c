@@ -14,7 +14,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <jansson.h>
-#include "ABC_Account.h"
+#include "ABC_Login.h"
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
 #include "ABC_Crypto.h"
@@ -100,39 +100,39 @@ static char *gCarePackageCache = NULL;
 static unsigned int gAccountKeysCacheCount = 0;
 static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
-static tABC_CC ABC_AccountFetch(tABC_AccountRequestInfo *pInfo, tABC_Error *pError);
-static tABC_CC ABC_AccountFetchInitCarePackage(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, char **szAccountDir, tABC_Error *pError);
-static tABC_CC ABC_AccountFetchRepoKey(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError);
-static tABC_CC ABC_AccountRepoSetup(const char *szUserName, const char *szAccountDir, tABC_Error *pError);
-static tABC_CC ABC_AccountFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError);
-static tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, char *szRepoAcctKey, char *szERepoAcctKey, tABC_Error *pError);
-static tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, tABC_Error *pError);
-static tABC_CC ABC_AccountServerUploadCarePackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError);
-static tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError);
-static tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
-static tABC_CC ABC_AccountGetCarePackageObjects(int AccountNum, const char *szCarePackage, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
-static tABC_CC ABC_AccountCreateSync(const char *szAccountsRootDir, bool bIncludeDefs, tABC_Error *pError);
-static tABC_CC ABC_AccountNextAccountNum(int *pAccountNum, tABC_Error *pError);
-static tABC_CC ABC_AccountCreateRootDir(tABC_Error *pError);
-static tABC_CC ABC_AccountCopyRootDirName(char *szRootDir, tABC_Error *pError);
-static tABC_CC ABC_AccountCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError);
-static tABC_CC ABC_AccountCreateListJSON(const char *szName, const char *szItems, char **pszJSON,  tABC_Error *pError);
-static tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Error *pError);
-static tABC_CC ABC_AccountUserForNum(unsigned int AccountNum, char **pszUserName, tABC_Error *pError);
-static tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAccountKeys **ppKeys, tABC_Error *pError);
-static void    ABC_AccountFreeAccountKeys(tAccountKeys *pAccountKeys);
-static tABC_CC ABC_AccountAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *pError);
-static tABC_CC ABC_AccountKeyFromCacheByName(const char *szUserName, tAccountKeys **ppAccountKeys, tABC_Error *pError);
-static tABC_CC ABC_AccountSaveCategories(const char *szUserName, char **aszCategories, unsigned int Count, tABC_Error *pError);
-static tABC_CC ABC_AccountServerGetCarePackage(tABC_U08Buf L1, char **szResponse, tABC_Error *pError);
-static tABC_CC ABC_AccountServerGetRepoAcctKey(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char **szERepoAcctKey, tABC_Error *pError);
-static tABC_CC ABC_AccountServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char *szURL, char *szField, char **szResponse, tABC_Error *pError);
-static tABC_CC ABC_AccountGetSettingsFilename(const char *szUserName, char **pszFilename, tABC_Error *pError);
-static tABC_CC ABC_AccountCreateDefaultSettings(tABC_AccountSettings **ppSettings, tABC_Error *pError);
-static tABC_CC ABC_AccountLoadSettingsEnc(const char *szUserName, tABC_U08Buf Key, tABC_AccountSettings **ppSettings, tABC_Error *pError);
-static tABC_CC ABC_AccountSaveSettingsEnc(const char *szUserName, tABC_U08Buf Key, tABC_AccountSettings *pSettings, tABC_Error *pError);
-static tABC_CC ABC_AccountMutexLock(tABC_Error *pError);
-static tABC_CC ABC_AccountMutexUnlock(tABC_Error *pError);
+static tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError);
+static tABC_CC ABC_LoginFetchInitCarePackage(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, char **szAccountDir, tABC_Error *pError);
+static tABC_CC ABC_LoginFetchRepoKey(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError);
+static tABC_CC ABC_LoginRepoSetup(const char *szUserName, const char *szAccountDir, tABC_Error *pError);
+static tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError);
+static tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, char *szRepoAcctKey, char *szERepoAcctKey, tABC_Error *pError);
+static tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, tABC_Error *pError);
+static tABC_CC ABC_LoginServerUploadCarePackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError);
+static tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError);
+static tABC_CC ABC_LoginCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
+static tABC_CC ABC_LoginGetCarePackageObjects(int AccountNum, const char *szCarePackage, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
+static tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir, bool bIncludeDefs, tABC_Error *pError);
+static tABC_CC ABC_LoginNextAccountNum(int *pAccountNum, tABC_Error *pError);
+static tABC_CC ABC_LoginCreateRootDir(tABC_Error *pError);
+static tABC_CC ABC_LoginCopyRootDirName(char *szRootDir, tABC_Error *pError);
+static tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError);
+static tABC_CC ABC_LoginCreateListJSON(const char *szName, const char *szItems, char **pszJSON,  tABC_Error *pError);
+static tABC_CC ABC_LoginNumForUser(const char *szUserName, int *pAccountNum, tABC_Error *pError);
+static tABC_CC ABC_LoginUserForNum(unsigned int AccountNum, char **pszUserName, tABC_Error *pError);
+static tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAccountKeys **ppKeys, tABC_Error *pError);
+static void    ABC_LoginFreeAccountKeys(tAccountKeys *pAccountKeys);
+static tABC_CC ABC_LoginAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *pError);
+static tABC_CC ABC_LoginKeyFromCacheByName(const char *szUserName, tAccountKeys **ppAccountKeys, tABC_Error *pError);
+static tABC_CC ABC_LoginSaveCategories(const char *szUserName, char **aszCategories, unsigned int Count, tABC_Error *pError);
+static tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1, char **szResponse, tABC_Error *pError);
+static tABC_CC ABC_LoginServerGetRepoAcctKey(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char **szERepoAcctKey, tABC_Error *pError);
+static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char *szURL, char *szField, char **szResponse, tABC_Error *pError);
+static tABC_CC ABC_LoginGetSettingsFilename(const char *szUserName, char **pszFilename, tABC_Error *pError);
+static tABC_CC ABC_LoginCreateDefaultSettings(tABC_LoginSettings **ppSettings, tABC_Error *pError);
+static tABC_CC ABC_LoginLoadSettingsEnc(const char *szUserName, tABC_U08Buf Key, tABC_LoginSettings **ppSettings, tABC_Error *pError);
+static tABC_CC ABC_LoginSaveSettingsEnc(const char *szUserName, tABC_U08Buf Key, tABC_LoginSettings *pSettings, tABC_Error *pError);
+static tABC_CC ABC_LoginMutexLock(tABC_Error *pError);
+static tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError);
 
 /**
  * Allocates and fills in an account request structure with the info given.
@@ -149,7 +149,7 @@ static tABC_CC ABC_AccountMutexUnlock(tABC_Error *pError);
  * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_AccountRequestInfoAlloc(tABC_AccountRequestInfo **ppAccountRequestInfo,
+tABC_CC ABC_LoginRequestInfoAlloc(tABC_LoginRequestInfo **ppAccountRequestInfo,
                                     tABC_RequestType requestType,
                                     const char *szUserName,
                                     const char *szPassword,
@@ -166,8 +166,8 @@ tABC_CC ABC_AccountRequestInfoAlloc(tABC_AccountRequestInfo **ppAccountRequestIn
     ABC_CHECK_NULL(ppAccountRequestInfo);
     ABC_CHECK_NULL(szUserName);
 
-    tABC_AccountRequestInfo *pAccountRequestInfo = NULL;
-    ABC_ALLOC(pAccountRequestInfo, sizeof(tABC_AccountRequestInfo));
+    tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
+    ABC_ALLOC(pAccountRequestInfo, sizeof(tABC_LoginRequestInfo));
 
     pAccountRequestInfo->requestType = requestType;
 
@@ -212,7 +212,7 @@ exit:
 /**
  * Frees the account creation info structure
  */
-void ABC_AccountRequestInfoFree(tABC_AccountRequestInfo *pAccountRequestInfo)
+void ABC_LoginRequestInfoFree(tABC_LoginRequestInfo *pAccountRequestInfo)
 {
     if (pAccountRequestInfo)
     {
@@ -228,7 +228,7 @@ void ABC_AccountRequestInfoFree(tABC_AccountRequestInfo *pAccountRequestInfo)
 
         ABC_FREE_STR(pAccountRequestInfo->szNewPassword);
 
-        ABC_CLEAR_FREE(pAccountRequestInfo, sizeof(tABC_AccountRequestInfo));
+        ABC_CLEAR_FREE(pAccountRequestInfo, sizeof(tABC_LoginRequestInfo));
     }
 }
 
@@ -239,11 +239,11 @@ void ABC_AccountRequestInfoFree(tABC_AccountRequestInfo *pAccountRequestInfo)
  * The callback will be called when it has finished.
  * The caller needs to handle potentially being in a seperate thread
  *
- * @param pData Structure holding all the data needed to create an account (should be a tABC_AccountCreateInfo)
+ * @param pData Structure holding all the data needed to create an account (should be a tABC_LoginCreateInfo)
  */
-void *ABC_AccountRequestThreaded(void *pData)
+void *ABC_LoginRequestThreaded(void *pData)
 {
-    tABC_AccountRequestInfo *pInfo = (tABC_AccountRequestInfo *)pData;
+    tABC_LoginRequestInfo *pInfo = (tABC_LoginRequestInfo *)pData;
     if (pInfo)
     {
         tABC_RequestResults results;
@@ -258,22 +258,22 @@ void *ABC_AccountRequestThreaded(void *pData)
         if (ABC_RequestType_CreateAccount == pInfo->requestType)
         {
             // create the account
-            CC = ABC_AccountCreate(pInfo, &(results.errorInfo));
+            CC = ABC_LoginCreate(pInfo, &(results.errorInfo));
         }
         else if (ABC_RequestType_AccountSignIn == pInfo->requestType)
         {
             // sign-in
-            CC = ABC_AccountSignIn(pInfo, &(results.errorInfo));
+            CC = ABC_LoginSignIn(pInfo, &(results.errorInfo));
         }
         else if (ABC_RequestType_SetAccountRecoveryQuestions == pInfo->requestType)
         {
             // set the recovery information
-            CC = ABC_AccountSetRecovery(pInfo, &(results.errorInfo));
+            CC = ABC_LoginSetRecovery(pInfo, &(results.errorInfo));
         }
         else if (ABC_RequestType_ChangePassword == pInfo->requestType)
         {
             // change the password
-            CC = ABC_AccountChangePassword(pInfo, &(results.errorInfo));
+            CC = ABC_LoginChangePassword(pInfo, &(results.errorInfo));
         }
 
 
@@ -285,7 +285,7 @@ void *ABC_AccountRequestThreaded(void *pData)
         pInfo->fRequestCallback(&results);
 
         // it is our responsibility to free the info struct
-        ABC_AccountRequestInfoFree(pInfo);
+        ABC_LoginRequestInfoFree(pInfo);
     }
 
     return NULL;
@@ -301,7 +301,7 @@ void *ABC_AccountRequestThreaded(void *pData)
  * @param szUserName UserName for validation
  * @param szPassword Password for validation
  */
-tABC_CC ABC_AccountCheckCredentials(const char *szUserName,
+tABC_CC ABC_LoginCheckCredentials(const char *szUserName,
                                     const char *szPassword,
                                     tABC_Error *pError)
 {
@@ -312,10 +312,10 @@ tABC_CC ABC_AccountCheckCredentials(const char *szUserName,
     ABC_CHECK_NULL(szPassword);
 
     // check that this is a valid user
-    ABC_CHECK_RET(ABC_AccountCheckValidUser(szUserName, pError));
+    ABC_CHECK_RET(ABC_LoginCheckValidUser(szUserName, pError));
 
     // cache up the keys
-    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, NULL, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, NULL, pError));
 
 exit:
 
@@ -331,7 +331,7 @@ exit:
  * @param szUserName UserName for validation
  * @param szPassword Password for validation
  */
-tABC_CC ABC_AccountTestCredentials(const char *szUserName,
+tABC_CC ABC_LoginTestCredentials(const char *szUserName,
                                    const char *szPassword,
                                    tABC_Error *pError)
 {
@@ -339,7 +339,7 @@ tABC_CC ABC_AccountTestCredentials(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tAccountKeys *pKeys             = NULL;
-    tABC_AccountSettings *pSettings = NULL;
+    tABC_LoginSettings *pSettings = NULL;
     char *szFilename                = NULL;
     char *szAccountDir              = NULL;
 
@@ -347,16 +347,16 @@ tABC_CC ABC_AccountTestCredentials(const char *szUserName,
     ABC_CHECK_NULL(szPassword);
 
     // check that this is a valid user
-    ABC_CHECK_RET(ABC_AccountCheckValidUser(szUserName, pError));
+    ABC_CHECK_RET(ABC_LoginCheckValidUser(szUserName, pError));
 
     // cache up the keys
-    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
 
     ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
 
     // Try to decrypt account settings
-    ABC_CHECK_RET(ABC_AccountLoadSettingsEnc(szUserName, pKeys->LP2, &pSettings, pError));
+    ABC_CHECK_RET(ABC_LoginLoadSettingsEnc(szUserName, pKeys->LP2, &pSettings, pError));
 exit:
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
@@ -373,7 +373,7 @@ exit:
  *
  * @param szUserName UserName for validation
  */
-tABC_CC ABC_AccountCheckValidUser(const char *szUserName,
+tABC_CC ABC_LoginCheckValidUser(const char *szUserName,
                                   tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -384,7 +384,7 @@ tABC_CC ABC_AccountCheckValidUser(const char *szUserName,
     int AccountNum = 0;
 
     // check locally for the account
-    ABC_CHECK_RET(ABC_AccountNumForUser(szUserName, &AccountNum, pError));
+    ABC_CHECK_RET(ABC_LoginNumForUser(szUserName, &AccountNum, pError));
     if (AccountNum < 0)
     {
         ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "No account by that name");
@@ -399,7 +399,7 @@ exit:
  * Signs into an account
  * This cache's the keys for an account
  */
-tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
+tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -409,24 +409,24 @@ tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
     ABC_CHECK_NULL(pInfo);
 
     // Clear out any old data
-    ABC_AccountClearKeyCache(NULL);
+    ABC_LoginClearKeyCache(NULL);
 
     // check that this is a valid user, ignore Error
-    if (ABC_AccountCheckValidUser(pInfo->szUserName, NULL) != ABC_CC_Ok)
+    if (ABC_LoginCheckValidUser(pInfo->szUserName, NULL) != ABC_CC_Ok)
     {
         // Try the server
-        ABC_CHECK_RET(ABC_AccountFetch(pInfo, pError));
-        ABC_CHECK_RET(ABC_AccountCheckValidUser(pInfo->szUserName, pError));
+        ABC_CHECK_RET(ABC_LoginFetch(pInfo, pError));
+        ABC_CHECK_RET(ABC_LoginCheckValidUser(pInfo->szUserName, pError));
     }
     else
     {
         // TODO: What happens on a network failure?
         // Note: No password so don't try to login, just update account repo
-        ABC_AccountSyncData(pInfo->szUserName, NULL, &dataDirty, pError);
+        ABC_LoginSyncData(pInfo->szUserName, NULL, &dataDirty, pError);
     }
 
     // check the credentials
-    ABC_CHECK_RET(ABC_AccountCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
+    ABC_CHECK_RET(ABC_LoginCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
 
     // take this non-blocking opportunity to update the info from the server if needed
     ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
@@ -436,7 +436,7 @@ tABC_CC ABC_AccountSignIn(tABC_AccountRequestInfo *pInfo,
 exit:
     if (cc != ABC_CC_Ok)
     {
-        ABC_AccountClearKeyCache(NULL);
+        ABC_LoginClearKeyCache(NULL);
     }
 
     return cc;
@@ -445,13 +445,13 @@ exit:
 /**
  * Create and account
  */
-tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
+tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_GeneralInfo        *pGeneralInfo       = NULL;
-    tABC_AccountSettings    *pSettings          = NULL;
+    tABC_LoginSettings    *pSettings          = NULL;
     tAccountKeys            *pKeys              = NULL;
     json_t                  *pJSON_SNRP2        = NULL;
     json_t                  *pJSON_SNRP3        = NULL;
@@ -466,12 +466,12 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     int AccountNum = 0;
     tABC_U08Buf RepoAcctKey = ABC_BUF_NULL;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
 
 
     // check locally that the account name is available
-    ABC_CHECK_RET(ABC_AccountNumForUser(pInfo->szUserName, &AccountNum, pError));
+    ABC_CHECK_RET(ABC_LoginNumForUser(pInfo->szUserName, &AccountNum, pError));
     if (AccountNum >= 0)
     {
         ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists");
@@ -509,7 +509,7 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     //ABC_UtilHexDumpBuf("P1", pKeys->P1);
 
     // CarePackage = ERQ, SNRP2, SNRP3, SNRP4
-    ABC_CHECK_RET(ABC_AccountCreateCarePackageJSONString(NULL, pJSON_SNRP2, pJSON_SNRP3, pJSON_SNRP4, &szCarePackage_JSON, pError));
+    ABC_CHECK_RET(ABC_LoginCreateCarePackageJSONString(NULL, pJSON_SNRP2, pJSON_SNRP3, pJSON_SNRP4, &szCarePackage_JSON, pError));
 
     // Create Repo key
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(SYNC_REPO_KEY_LENGTH, &RepoAcctKey, pError));
@@ -527,11 +527,11 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->LP, pKeys->pSNRP2, &(pKeys->LP2), pError));
 
     // find the next available account number on this device
-    ABC_CHECK_RET(ABC_AccountNextAccountNum(&(pKeys->accountNum), pError));
+    ABC_CHECK_RET(ABC_LoginNextAccountNum(&(pKeys->accountNum), pError));
 
     // create the main account directory
     ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
     ABC_CHECK_RET(ABC_FileIOCreateDir(szAccountDir, pError));
 
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -556,7 +556,7 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     szJSON = NULL;
 
     // Create the repo and account on server
-    ABC_CHECK_RET(ABC_AccountServerCreate(pKeys->L1, pKeys->P1, pKeys->szRepoAcctKey, szERepoAcctKey, pError));
+    ABC_CHECK_RET(ABC_LoginServerCreate(pKeys->L1, pKeys->P1, pKeys->szRepoAcctKey, szERepoAcctKey, pError));
 
     // write the file care package to a file
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
@@ -564,17 +564,17 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
 
     // Upload initial care package
     tABC_U08Buf LRA1_NULL = ABC_BUF_NULL;
-    ABC_CHECK_RET(ABC_AccountServerUploadCarePackage(pKeys->L1, pKeys->P1, LRA1_NULL, szAccountDir, pError));
+    ABC_CHECK_RET(ABC_LoginServerUploadCarePackage(pKeys->L1, pKeys->P1, LRA1_NULL, szAccountDir, pError));
 
-    ABC_CHECK_RET(ABC_AccountCreateSync(szAccountDir, true, pError));
+    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, true, pError));
 
     // Saving PIN in settings
-    ABC_CHECK_RET(ABC_AccountLoadSettingsEnc(pInfo->szUserName, pKeys->LP2, &pSettings, pError));
+    ABC_CHECK_RET(ABC_LoginLoadSettingsEnc(pInfo->szUserName, pKeys->LP2, &pSettings, pError));
     ABC_STRDUP(pSettings->szPIN, pInfo->szPIN);
-    ABC_CHECK_RET(ABC_AccountSaveSettingsEnc(pInfo->szUserName, pKeys->LP2, pSettings, pError));
+    ABC_CHECK_RET(ABC_LoginSaveSettingsEnc(pInfo->szUserName, pKeys->LP2, pSettings, pError));
 
     // we now have a new account so go ahead and cache it's keys
-    ABC_CHECK_RET(ABC_AccountAddToKeyCache(pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginAddToKeyCache(pKeys, pError));
 
     // take this opportunity to download the questions they can choose from for recovery
     ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
@@ -590,7 +590,7 @@ tABC_CC ABC_AccountCreate(tABC_AccountRequestInfo *pInfo,
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
     // Create Repo Path
-    ABC_CHECK_RET(ABC_AccountPickRepo(pKeys->szRepoAcctKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_LoginPickRepo(pKeys->szRepoAcctKey, &szRepoURL, pError));
     ABC_DebugLog("Pushing to: %s\n", szRepoURL);
 
     // Init the git repo and sync it
@@ -606,7 +606,7 @@ exit:
     }
     if (pKeys)
     {
-        ABC_AccountFreeAccountKeys(pKeys);
+        ABC_LoginFreeAccountKeys(pKeys);
         ABC_CLEAR_FREE(pKeys, sizeof(tAccountKeys));
     }
     if (pJSON_SNRP2)        json_decref(pJSON_SNRP2);
@@ -619,9 +619,9 @@ exit:
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szERepoAcctKey);
     ABC_GeneralFreeInfo(pGeneralInfo);
-    ABC_AccountFreeSettings(pSettings);
+    ABC_LoginFreeSettings(pSettings);
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
@@ -632,7 +632,7 @@ exit:
  * @param szPassword   Password
  */
 static
-tABC_CC ABC_AccountFetch(tABC_AccountRequestInfo *pInfo, tABC_Error *pError)
+tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szAccountDir      = NULL;
@@ -654,34 +654,34 @@ tABC_CC ABC_AccountFetch(tABC_AccountRequestInfo *pInfo, tABC_Error *pError)
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(P, pSNRP1, &P1, pError));
 
     //  Download CarePackage.json and ERepoAcctKey.json
-    ABC_CHECK_RET(ABC_AccountServerGetCarePackage(L1, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(L1, &szCarePackage, pError));
 
     // Setup initial account and fetch care package
-    ABC_CHECK_RET(ABC_AccountFetchInitCarePackage(pInfo->szUserName, L1, szCarePackage, &szAccountDir, pError));
+    ABC_CHECK_RET(ABC_LoginFetchInitCarePackage(pInfo->szUserName, L1, szCarePackage, &szAccountDir, pError));
 
     // We have the care package so fetch keys without password
-    ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, NULL, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, NULL, &pKeys, pError));
 
     // L2 = Scrypt(L, SNRP4)
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pKeys->pSNRP4, &L2, pError));
 
     // Fetch the ERepoAcctKey
-    ABC_CHECK_RET(ABC_AccountFetchRepoKey(L1, P1, NULL_LRA1, szAccountDir, pError));
+    ABC_CHECK_RET(ABC_LoginFetchRepoKey(L1, P1, NULL_LRA1, szAccountDir, pError));
 
     // Setup the account repo and sync
-    ABC_CHECK_RET(ABC_AccountRepoSetup(pInfo->szUserName, szAccountDir, pError));
+    ABC_CHECK_RET(ABC_LoginRepoSetup(pInfo->szUserName, szAccountDir, pError));
 
     // Fetch and Sync Wallets
     int dirty;
     ABC_CHECK_RET(ABC_WalletSyncAll(pInfo->szUserName, pInfo->szPassword, &dirty, pError));
 
     // Clear out cache so its reloaded with the password
-    ABC_CHECK_RET(ABC_AccountClearKeyCache(pError));
+    ABC_CHECK_RET(ABC_LoginClearKeyCache(pError));
 exit:
     if (cc != ABC_CC_Ok)
     {
         ABC_FileIODeleteRecursive(szAccountDir, NULL);
-        ABC_AccountClearKeyCache(NULL);
+        ABC_LoginClearKeyCache(NULL);
     }
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szCarePackage);
@@ -696,7 +696,7 @@ exit:
 }
 
 static
-tABC_CC ABC_AccountFetchInitCarePackage(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, char **szAccountDir, tABC_Error *pError)
+tABC_CC ABC_LoginFetchInitCarePackage(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, char **szAccountDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szFilename    = NULL;
@@ -704,11 +704,11 @@ tABC_CC ABC_AccountFetchInitCarePackage(const char *szUserName, tABC_U08Buf L1, 
     int AccountNum      = 0;
 
     // find the next available account number on this device
-    ABC_CHECK_RET(ABC_AccountNextAccountNum(&AccountNum, pError));
+    ABC_CHECK_RET(ABC_LoginNextAccountNum(&AccountNum, pError));
 
     // create the main account directory
     ABC_ALLOC(*szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(*szAccountDir, AccountNum, pError));
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(*szAccountDir, AccountNum, pError));
     ABC_CHECK_RET(ABC_FileIOCreateDir(*szAccountDir, pError));
 
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -727,7 +727,7 @@ exit:
 }
 
 static
-tABC_CC ABC_AccountFetchRepoKey(tABC_U08Buf L1, tABC_U08Buf P1,
+tABC_CC ABC_LoginFetchRepoKey(tABC_U08Buf L1, tABC_U08Buf P1,
                                 tABC_U08Buf LRA1,
                                 const char *szAccountDir,
                                 tABC_Error *pError)
@@ -745,7 +745,7 @@ tABC_CC ABC_AccountFetchRepoKey(tABC_U08Buf L1, tABC_U08Buf P1,
     if (!bExists)
     {
         // Fetch ERepoAcctKey using P1 or LRA1
-        ABC_CHECK_RET(ABC_AccountServerGetRepoAcctKey(L1, P1, LRA1, &szERepoAcctKey, pError));
+        ABC_CHECK_RET(ABC_LoginServerGetRepoAcctKey(L1, P1, LRA1, &szERepoAcctKey, pError));
 
         // Save ERepoAcctKey
         ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szERepoAcctKey, pError));
@@ -757,7 +757,7 @@ exit:
 }
 
 static
-tABC_CC ABC_AccountRepoSetup(const char *szUserName,
+tABC_CC ABC_LoginRepoSetup(const char *szUserName,
                              const char *szAccountDir,
                              tABC_Error *pError)
 {
@@ -769,7 +769,7 @@ tABC_CC ABC_AccountRepoSetup(const char *szUserName,
     char *szRepoURL         = NULL;
     tABC_U08Buf REPO_JSON   = ABC_BUF_NULL;
 
-    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, NULL, ABC_AccountKey_L2, &L2, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, NULL, ABC_LoginKey_L2, &L2, pError));
 
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
@@ -791,11 +791,11 @@ tABC_CC ABC_AccountRepoSetup(const char *szUserName,
     ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString(szJSON_REPO, JSON_ACCT_REPO_FIELD, &szRepoAcctKey, pError));
 
     //  Create sync directory and sync
-    ABC_CHECK_RET(ABC_AccountCreateSync(szAccountDir, false, pError));
+    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, false, pError));
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
     // Create repo URL
-    ABC_CHECK_RET(ABC_AccountPickRepo(szRepoAcctKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_LoginPickRepo(szRepoAcctKey, &szRepoURL, pError));
 
     ABC_DebugLog("Fetching from: %s\n", szRepoURL);
 
@@ -823,7 +823,7 @@ exit:
  * @param P1   Password hash for the account
  */
 static
-tABC_CC ABC_AccountServerCreate(tABC_U08Buf L1, tABC_U08Buf P1,
+tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1, tABC_U08Buf P1,
                                 char *szRepoAcctKey,
                                 char *szERepoAcctKey,
                                 tABC_Error *pError)
@@ -914,7 +914,7 @@ exit:
  * @param pInfo     Pointer to recovery information data
  * @param pError    A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
+tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -930,20 +930,20 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
     char            *szAccountDir       = NULL;
     char            *szFilename         = NULL;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
 
     int AccountNum = 0;
 
     // check locally for the account
-    ABC_CHECK_RET(ABC_AccountNumForUser(pInfo->szUserName, &AccountNum, pError));
+    ABC_CHECK_RET(ABC_LoginNumForUser(pInfo->szUserName, &AccountNum, pError));
     if (AccountNum < 0)
     {
         ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "No account by that name");
     }
 
     // cache up the keys
-    ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
 
     // the following should all be available
     // szUserName, szPassword, szPIN, L, P, LP2, SNRP2, SNRP3, SNRP4
@@ -1028,7 +1028,7 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
 
     // create the main account directory
     ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
 
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
@@ -1044,21 +1044,21 @@ tABC_CC ABC_AccountSetRecovery(tABC_AccountRequestInfo *pInfo,
     // update the care package
 
     // get the current care package
-    ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, NULL, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
+    ABC_CHECK_RET(ABC_LoginGetCarePackageObjects(AccountNum, NULL, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
 
     // Create an updated CarePackage = ERQ, SNRP2, SNRP3, SNRP4
-    ABC_CHECK_RET(ABC_AccountCreateCarePackageJSONString(pJSON_ERQ, pJSON_SNRP2, pJSON_SNRP3, pJSON_SNRP4, &szCarePackage_JSON, pError));
+    ABC_CHECK_RET(ABC_LoginCreateCarePackageJSONString(pJSON_ERQ, pJSON_SNRP2, pJSON_SNRP3, pJSON_SNRP4, &szCarePackage_JSON, pError));
 
     // write the file care package to a file
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage_JSON, pError));
 
     // Client sends L1, P1, LRA1, CarePackage, to the server
-    ABC_CHECK_RET(ABC_AccountServerSetRecovery(pKeys->L1, pKeys->P1, pKeys->LRA1, szCarePackage_JSON, pError));
+    ABC_CHECK_RET(ABC_LoginServerSetRecovery(pKeys->L1, pKeys->P1, pKeys->LRA1, szCarePackage_JSON, pError));
 
     // Sync the data (ELP2 and ELRA2) with server
     int dirty;
-    ABC_CHECK_RET(ABC_AccountSyncData(pKeys->szUserName, pKeys->szPassword, &dirty, pError));
+    ABC_CHECK_RET(ABC_LoginSyncData(pKeys->szUserName, pKeys->szPassword, &dirty, pError));
     ABC_CHECK_RET(ABC_WalletSyncAll(pKeys->szUserName, pKeys->szPassword, &dirty, pError));
 exit:
     if (pJSON_ERQ)          json_decref(pJSON_ERQ);
@@ -1071,7 +1071,7 @@ exit:
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
@@ -1084,7 +1084,7 @@ exit:
  * @param pInfo     Pointer to password change information data
  * @param pError    A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
+tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
                                   tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1101,17 +1101,17 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     char *szSettingsFilename = NULL;
     char *szJSON = NULL;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
     ABC_CHECK_NULL(pInfo->szUserName);
     ABC_CHECK_NULL(pInfo->szNewPassword);
 
     // get the account directory and set up for creating needed filenames
-    ABC_CHECK_RET(ABC_AccountGetDirName(pInfo->szUserName, &szAccountDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetDirName(pInfo->szUserName, &szAccountDir, pError));
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
     // get the keys for this user (note: password can be NULL for this call)
-    ABC_CHECK_RET(ABC_AccountCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
 
     // we need to obtain the original LP2 and LRA2
     if (pInfo->szPassword != NULL)
@@ -1193,7 +1193,7 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     }
 
     // server change password - Server will need L1, (P1 or LRA1) and new_P1
-    ABC_CHECK_RET(ABC_AccountServerChangePassword(pKeys->L1, oldP1, LRA1, pKeys->P1, pError));
+    ABC_CHECK_RET(ABC_LoginServerChangePassword(pKeys->L1, oldP1, LRA1, pKeys->P1, pError));
 
     // change all the wallet keys - re-encrypted them with new LP2
     ABC_CHECK_RET(ABC_WalletChangeEMKsForAccount(pInfo->szUserName, oldLP2, pKeys->LP2, pError));
@@ -1210,7 +1210,7 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     }
 
     // re-encrypt the settings
-    ABC_CHECK_RET(ABC_AccountGetSettingsFilename(pInfo->szUserName, &szSettingsFilename, pError));
+    ABC_CHECK_RET(ABC_LoginGetSettingsFilename(pInfo->szUserName, &szSettingsFilename, pError));
     bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szSettingsFilename, &bExists, pError));
     if (true == bExists)
@@ -1225,11 +1225,11 @@ tABC_CC ABC_AccountChangePassword(tABC_AccountRequestInfo *pInfo,
     // the keys for the account have all been updated so other functions can now be called that use them
 
     // set the new PIN
-    ABC_CHECK_RET(ABC_AccountSetPIN(pInfo->szUserName, pInfo->szNewPassword, pInfo->szPIN, pError));
+    ABC_CHECK_RET(ABC_LoginSetPIN(pInfo->szUserName, pInfo->szNewPassword, pInfo->szPIN, pError));
 
     // Sync the data (ELP2 and ELRA2) with server
     int dirty;
-    ABC_CHECK_RET(ABC_AccountSyncData(pInfo->szUserName, pInfo->szNewPassword, &dirty, pError));
+    ABC_CHECK_RET(ABC_LoginSyncData(pInfo->szUserName, pInfo->szNewPassword, &dirty, pError));
     ABC_CHECK_RET(ABC_WalletSyncAll(pInfo->szUserName, pInfo->szNewPassword, &dirty, pError));
 exit:
     ABC_BUF_FREE(oldLP2);
@@ -1242,9 +1242,9 @@ exit:
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szSettingsFilename);
-    if (cc != ABC_CC_Ok) ABC_AccountClearKeyCache(NULL);
+    if (cc != ABC_CC_Ok) ABC_LoginClearKeyCache(NULL);
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
@@ -1259,7 +1259,7 @@ exit:
  * @param LRA1  LRA1 for the account (used if oldP1 is empty)
  */
 static
-tABC_CC ABC_AccountServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, tABC_Error *pError)
+tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -1357,7 +1357,7 @@ exit:
  * @param szCarePackage Care Package for account
  */
 static
-tABC_CC ABC_AccountServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError)
+tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -1465,7 +1465,7 @@ exit:
  * @param szCarePackage Care Package for account
  */
 static
-tABC_CC ABC_AccountServerUploadCarePackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError)
+tABC_CC ABC_LoginServerUploadCarePackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szCarePackage = NULL;
@@ -1474,7 +1474,7 @@ tABC_CC ABC_AccountServerUploadCarePackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szCarePackage, pError));
-    ABC_CHECK_RET(ABC_AccountServerSetRecovery(L1, P1, LRA1, szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerSetRecovery(L1, P1, LRA1, szCarePackage, pError));
 exit:
     ABC_FREE_STR(szCarePackage);
     ABC_FREE_STR(szFilename);
@@ -1494,7 +1494,7 @@ exit:
  *                     (the user is responsible for free'ing this pointer)
  */
 static
-tABC_CC ABC_AccountCreateCarePackageJSONString(const json_t *pJSON_ERQ,
+tABC_CC ABC_LoginCreateCarePackageJSONString(const json_t *pJSON_ERQ,
                                                const json_t *pJSON_SNRP2,
                                                const json_t *pJSON_SNRP3,
                                                const json_t *pJSON_SNRP4,
@@ -1558,7 +1558,7 @@ exit:
  * @param pError       A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_AccountGetCarePackageObjects(int          AccountNum,
+tABC_CC ABC_LoginGetCarePackageObjects(int          AccountNum,
                                          const char   *szCarePackage,
                                          json_t       **ppJSON_ERQ,
                                          json_t       **ppJSON_SNRP2,
@@ -1589,7 +1589,7 @@ tABC_CC ABC_AccountGetCarePackageObjects(int          AccountNum,
 
         // get the main account directory
         ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-        ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, AccountNum, pError));
+        ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, AccountNum, pError));
 
         // create the name of the care package file
         ABC_ALLOC(szCarePackageFilename, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -1665,7 +1665,7 @@ exit:
  * Creates a new sync directory and all the files needed for the given account
  */
 static
-tABC_CC ABC_AccountCreateSync(const char *szAccountsRootDir, bool bIncludeDefs,
+tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir, bool bIncludeDefs,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1684,7 +1684,7 @@ tABC_CC ABC_AccountCreateSync(const char *szAccountsRootDir, bool bIncludeDefs,
     if (bIncludeDefs)
     {
         // create initial categories file with no entries
-        ABC_CHECK_RET(ABC_AccountCreateListJSON(JSON_ACCT_CATEGORIES_FIELD, "", &szDataJSON, pError));
+        ABC_CHECK_RET(ABC_LoginCreateListJSON(JSON_ACCT_CATEGORIES_FIELD, "", &szDataJSON, pError));
         sprintf(szFilename, "%s/%s/%s", szAccountsRootDir, ACCOUNT_SYNC_DIR, ACCOUNT_CATEGORIES_FILENAME);
         ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szDataJSON, pError));
         ABC_FREE_STR(szDataJSON);
@@ -1701,7 +1701,7 @@ exit:
  * Finds the next available account number (the number is just used for the directory name)
  */
 static
-tABC_CC ABC_AccountNextAccountNum(int *pAccountNum,
+tABC_CC ABC_LoginNextAccountNum(int *pAccountNum,
                                   tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1712,18 +1712,18 @@ tABC_CC ABC_AccountNextAccountNum(int *pAccountNum,
     ABC_CHECK_NULL(pAccountNum);
 
     // make sure the accounts directory is in place
-    ABC_CHECK_RET(ABC_AccountCreateRootDir(pError));
+    ABC_CHECK_RET(ABC_LoginCreateRootDir(pError));
 
     // get the account root directory string
     ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
+    ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
 
     // run through all the account names
     ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
     int AccountNum;
     for (AccountNum = 0; AccountNum < ACCOUNT_MAX; AccountNum++)
     {
-        ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, AccountNum, pError));
+        ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, AccountNum, pError));
         bool bExists = false;
         ABC_CHECK_RET(ABC_FileIOFileExists(szAccountDir, &bExists, pError));
         if (true != bExists)
@@ -1751,7 +1751,7 @@ exit:
  * creates the account directory if needed
  */
 static
-tABC_CC ABC_AccountCreateRootDir(tABC_Error *pError)
+tABC_CC ABC_LoginCreateRootDir(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -1759,7 +1759,7 @@ tABC_CC ABC_AccountCreateRootDir(tABC_Error *pError)
 
     // create the account directory string
     ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
+    ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
 
     // if it doesn't exist
     bool bExists = false;
@@ -1781,7 +1781,7 @@ exit:
  * @param pszRootDir pointer to store allocated string
  *                   (the user is responsible for free'ing)
  */
-tABC_CC ABC_AccountGetRootDir(char **pszRootDir, tABC_Error *pError)
+tABC_CC ABC_LoginGetRootDir(char **pszRootDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -1789,7 +1789,7 @@ tABC_CC ABC_AccountGetRootDir(char **pszRootDir, tABC_Error *pError)
 
     // create the account directory string
     ABC_ALLOC(*pszRootDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyRootDirName(*pszRootDir, pError));
+    ABC_CHECK_RET(ABC_LoginCopyRootDirName(*pszRootDir, pError));
 
 exit:
 
@@ -1802,7 +1802,7 @@ exit:
  * @param szRootDir pointer into which to copy the string
  */
 static
-tABC_CC ABC_AccountCopyRootDirName(char *szRootDir, tABC_Error *pError)
+tABC_CC ABC_LoginCopyRootDirName(char *szRootDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -1826,7 +1826,7 @@ exit:
  *
  * @param pszDirName Location to store allocated pointer (must be free'd by caller)
  */
-tABC_CC ABC_AccountGetDirName(const char *szUserName, char **pszDirName, tABC_Error *pError)
+tABC_CC ABC_LoginGetDirName(const char *szUserName, char **pszDirName, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -1838,7 +1838,7 @@ tABC_CC ABC_AccountGetDirName(const char *szUserName, char **pszDirName, tABC_Er
     int accountNum = -1;
 
     // check locally for the account
-    ABC_CHECK_RET(ABC_AccountNumForUser(szUserName, &accountNum, pError));
+    ABC_CHECK_RET(ABC_LoginNumForUser(szUserName, &accountNum, pError));
     if (accountNum < 0)
     {
         ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "No account by that name");
@@ -1846,7 +1846,7 @@ tABC_CC ABC_AccountGetDirName(const char *szUserName, char **pszDirName, tABC_Er
 
     // get the account root directory string
     ABC_ALLOC(szDirName, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szDirName, accountNum, pError));
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szDirName, accountNum, pError));
     *pszDirName = szDirName;
     szDirName = NULL; // so we don't free it
 
@@ -1862,7 +1862,7 @@ exit:
  *
  * @param pszDirName Location to store allocated pointer (must be free'd by caller)
  */
-tABC_CC ABC_AccountGetSyncDirName(const char *szUserName,
+tABC_CC ABC_LoginGetSyncDirName(const char *szUserName,
                                   char **pszDirName,
                                   tABC_Error *pError)
 {
@@ -1873,7 +1873,7 @@ tABC_CC ABC_AccountGetSyncDirName(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(pszDirName);
 
-    ABC_CHECK_RET(ABC_AccountGetDirName(szUserName, &szDirName, pError));
+    ABC_CHECK_RET(ABC_LoginGetDirName(szUserName, &szDirName, pError));
 
     ABC_ALLOC(*pszDirName, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(*pszDirName, "%s/%s", szDirName, ACCOUNT_SYNC_DIR);
@@ -1888,7 +1888,7 @@ exit:
  * Copies the account directory name into the string given
  */
 static
-tABC_CC ABC_AccountCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError)
+tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -1898,7 +1898,7 @@ tABC_CC ABC_AccountCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_E
 
     // get the account root directory string
     ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
+    ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
 
     // create the account directory string
     sprintf(szAccountDir, "%s/%s%d", szAccountRoot, ACCOUNT_FOLDER_PREFIX, AccountNum);
@@ -1917,7 +1917,7 @@ exit:
  *  { "name" : [ "A", "B" ] }
  */
 static
-tABC_CC ABC_AccountCreateListJSON(const char *szName, const char *szItems, char **pszJSON,  tABC_Error *pError)
+tABC_CC ABC_LoginCreateListJSON(const char *szName, const char *szItems, char **pszJSON,  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -1975,7 +1975,7 @@ exit:
  * -1 is returned if the account does not exist
  */
 static
-tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Error *pError)
+tABC_CC ABC_LoginNumForUser(const char *szUserName, int *pAccountNum, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -1990,11 +1990,11 @@ tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Err
     *pAccountNum = -1;
 
     // make sure the accounts directory is in place
-    ABC_CHECK_RET(ABC_AccountCreateRootDir(pError));
+    ABC_CHECK_RET(ABC_LoginCreateRootDir(pError));
 
     // get the account root directory string
     ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
+    ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
 
     // get all the files in this root
 
@@ -2012,7 +2012,7 @@ tABC_CC ABC_AccountNumForUser(const char *szUserName, int *pAccountNum, tABC_Err
                 unsigned int AccountNum = (unsigned int) strtol(szAccountNum, NULL, 10); // 10 is for base-10
 
                 // get the username for this account
-                ABC_CHECK_RET(ABC_AccountUserForNum(AccountNum, &szCurUserName, pError));
+                ABC_CHECK_RET(ABC_LoginUserForNum(AccountNum, &szCurUserName, pError));
 
                 // if this matches what we are looking for
                 if (strcmp(szUserName, szCurUserName) == 0)
@@ -2041,7 +2041,7 @@ exit:
  * @param pszUserName Location to store allocated pointer (must be free'd by caller)
  */
 static
-tABC_CC ABC_AccountUserForNum(unsigned int AccountNum, char **pszUserName, tABC_Error *pError)
+tABC_CC ABC_LoginUserForNum(unsigned int AccountNum, char **pszUserName, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -2053,11 +2053,11 @@ tABC_CC ABC_AccountUserForNum(unsigned int AccountNum, char **pszUserName, tABC_
     ABC_CHECK_NULL(pszUserName);
 
     // make sure the accounts directory is in place
-    ABC_CHECK_RET(ABC_AccountCreateRootDir(pError));
+    ABC_CHECK_RET(ABC_LoginCreateRootDir(pError));
 
     // get the account root directory string
     ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyRootDirName(szAccountRoot, pError));
+    ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
 
     // create the path to the account name file
     ABC_ALLOC(szAccountNamePath, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -2090,18 +2090,18 @@ exit:
 /**
  * Clears all the keys from the cache
  */
-tABC_CC ABC_AccountClearKeyCache(tABC_Error *pError)
+tABC_CC ABC_LoginClearKeyCache(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
 
     if ((gAccountKeysCacheCount > 0) && (NULL != gaAccountKeysCacheArray))
     {
         for (int i = 0; i < gAccountKeysCacheCount; i++)
         {
             tAccountKeys *pAccountKeys = gaAccountKeysCacheArray[i];
-            ABC_AccountFreeAccountKeys(pAccountKeys);
+            ABC_LoginFreeAccountKeys(pAccountKeys);
         }
 
         ABC_FREE(gaAccountKeysCacheArray);
@@ -2110,14 +2110,14 @@ tABC_CC ABC_AccountClearKeyCache(tABC_Error *pError)
 
 exit:
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
 /**
  * Frees all the elements in the given AccountKeys struct
  */
-static void ABC_AccountFreeAccountKeys(tAccountKeys *pAccountKeys)
+static void ABC_LoginFreeAccountKeys(tAccountKeys *pAccountKeys)
 {
     if (pAccountKeys)
     {
@@ -2150,16 +2150,16 @@ static void ABC_AccountFreeAccountKeys(tAccountKeys *pAccountKeys)
 /**
  * Adds the given AccountKey to the array of cached account keys
  */
-static tABC_CC ABC_AccountAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *pError)
+static tABC_CC ABC_LoginAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(pAccountKeys);
 
     // see if it exists first
     tAccountKeys *pExistingAccountKeys = NULL;
-    ABC_CHECK_RET(ABC_AccountKeyFromCacheByName(pAccountKeys->szUserName, &pExistingAccountKeys, pError));
+    ABC_CHECK_RET(ABC_LoginKeyFromCacheByName(pAccountKeys->szUserName, &pExistingAccountKeys, pError));
 
     // if it doesn't currently exist in the array
     if (pExistingAccountKeys == NULL)
@@ -2187,7 +2187,7 @@ static tABC_CC ABC_AccountAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *
 
 exit:
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
@@ -2195,11 +2195,11 @@ exit:
  * Searches for a key in the cached by account name
  * if it is not found, the account keys will be set to NULL
  */
-static tABC_CC ABC_AccountKeyFromCacheByName(const char *szUserName, tAccountKeys **ppAccountKeys, tABC_Error *pError)
+static tABC_CC ABC_LoginKeyFromCacheByName(const char *szUserName, tAccountKeys **ppAccountKeys, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(ppAccountKeys);
 
@@ -2222,7 +2222,7 @@ static tABC_CC ABC_AccountKeyFromCacheByName(const char *szUserName, tAccountKey
 
 exit:
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
@@ -2235,7 +2235,7 @@ exit:
  * If a pointer to hold the keys is given, then it is set to those keys
  */
 static
-tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAccountKeys **ppKeys, tABC_Error *pError)
+tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAccountKeys **ppKeys, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -2252,13 +2252,13 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
     tABC_U08Buf  P              = ABC_BUF_NULL;
     tABC_U08Buf  LP             = ABC_BUF_NULL;
     tABC_U08Buf  LP2            = ABC_BUF_NULL;
-    tABC_AccountSettings    *pSettings = NULL;
+    tABC_LoginSettings    *pSettings = NULL;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
 
     // see if it is already in the cache
-    ABC_CHECK_RET(ABC_AccountKeyFromCacheByName(szUserName, &pFinalKeys, pError));
+    ABC_CHECK_RET(ABC_LoginKeyFromCacheByName(szUserName, &pFinalKeys, pError));
 
     // if there wasn't an entry already in the cache - let's add it
     if (NULL == pFinalKeys)
@@ -2267,7 +2267,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
 
         // check if the account exists
         int AccountNum = -1;
-        ABC_CHECK_RET(ABC_AccountNumForUser(szUserName, &AccountNum, pError));
+        ABC_CHECK_RET(ABC_LoginNumForUser(szUserName, &AccountNum, pError));
         if (AccountNum >= 0)
         {
             ABC_ALLOC(pKeys, sizeof(tAccountKeys));
@@ -2275,7 +2275,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             ABC_STRDUP(pKeys->szUserName, szUserName);
             pKeys->szPassword = NULL;
 
-            ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, NULL, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
+            ABC_CHECK_RET(ABC_LoginGetCarePackageObjects(AccountNum, NULL, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
 
             // SNRP's
             ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&(pKeys->pSNRP1), pError));
@@ -2293,7 +2293,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
             ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP4, &(pKeys->L2), pError));
 
             // add new starting account keys to the key cache
-            ABC_CHECK_RET(ABC_AccountAddToKeyCache(pKeys, pError));
+            ABC_CHECK_RET(ABC_LoginAddToKeyCache(pKeys, pError));
             pFinalKeys = pKeys;
             pKeys = NULL; // so we don't free it at the end
 
@@ -2308,7 +2308,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
     // but it may or may not have password keys
 
     ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pFinalKeys->accountNum, pError));
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pFinalKeys->accountNum, pError));
 
     // try to decrypt RepoAcctKey
     bool bKeyExists = false;
@@ -2355,7 +2355,7 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
 
             // try to decrypt Settings.json
             tABC_CC CC_Decrypt =
-                ABC_AccountLoadSettingsEnc(szUserName, LP2, &pSettings, pError);
+                ABC_LoginLoadSettingsEnc(szUserName, LP2, &pSettings, pError);
 
             // check the results
             if (ABC_CC_DecryptFailure == CC_Decrypt)
@@ -2400,10 +2400,10 @@ tABC_CC ABC_AccountCacheKeys(const char *szUserName, const char *szPassword, tAc
 exit:
     if (pKeys)
     {
-        ABC_AccountFreeAccountKeys(pKeys);
+        ABC_LoginFreeAccountKeys(pKeys);
         ABC_CLEAR_FREE(pKeys, sizeof(tAccountKeys));
     }
-    ABC_AccountFreeSettings(pSettings);
+    ABC_LoginFreeSettings(pSettings);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szAccountDir);
     if (pJSON_SNRP2)    json_decref(pJSON_SNRP2);
@@ -2415,7 +2415,7 @@ exit:
     ABC_BUF_FREE(LP);
     ABC_BUF_FREE(LP2);
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
@@ -2423,24 +2423,24 @@ exit:
  * Retrieves the specified key from the key cache
  * if the account associated with the username and password is not currently in the cache, it is added
  */
-tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_AccountKey keyType, tABC_U08Buf *pKey, tABC_Error *pError)
+tABC_CC ABC_LoginGetKey(const char *szUserName, const char *szPassword, tABC_LoginKey keyType, tABC_U08Buf *pKey, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     tAccountKeys *pKeys = NULL;
     json_t       *pJSON_ERQ     = NULL;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(pKey);
 
     // make sure the account is in the cache
-    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_ASSERT(NULL != pKeys, ABC_CC_Error, "Expected to find account keys in cache.");
 
     switch(keyType)
     {
-        case ABC_AccountKey_L1:
+        case ABC_LoginKey_L1:
             // L1 = Scrypt(L, SNRP1)
             if (NULL == ABC_BUF_PTR(pKeys->L1))
             {
@@ -2451,7 +2451,7 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
             ABC_BUF_SET(*pKey, pKeys->L1);
             break;
 
-        case ABC_AccountKey_L2:
+        case ABC_LoginKey_L2:
             // L2 = Scrypt(L, SNRP4)
             if (NULL == ABC_BUF_PTR(pKeys->L2))
             {
@@ -2462,19 +2462,19 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
             ABC_BUF_SET(*pKey, pKeys->L2);
             break;
 
-        case ABC_AccountKey_LP2:
+        case ABC_LoginKey_LP2:
             // this should already be in the cache
             ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->LP2), ABC_CC_Error, "Expected to find LP2 in key cache");
             ABC_BUF_SET(*pKey, pKeys->LP2);
             break;
 
-        case ABC_AccountKey_PIN:
+        case ABC_LoginKey_PIN:
             // this should already be in the cache
             ABC_CHECK_ASSERT(NULL != pKeys->szPIN, ABC_CC_Error, "Expected to find PIN in key cache");
             ABC_BUF_SET_PTR(*pKey, (unsigned char *)pKeys->szPIN, sizeof(pKeys->szPIN) + 1);
             break;
 
-        case ABC_AccountKey_RepoAccountKey:
+        case ABC_LoginKey_RepoAccountKey:
             // this should already be in the cache
             if (NULL == pKeys->szRepoAcctKey)
             {
@@ -2482,18 +2482,18 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
             ABC_BUF_SET_PTR(*pKey, (unsigned char *)pKeys->szRepoAcctKey, sizeof(pKeys->szRepoAcctKey) + 1);
             break;
 
-        case ABC_AccountKey_RQ:
+        case ABC_LoginKey_RQ:
             // RQ - if ERQ available
             if (NULL == ABC_BUF_PTR(pKeys->RQ))
             {
                 // get L2
                 tABC_U08Buf L2;
-                ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_L2, &L2, pError));
+                ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_L2, &L2, pError));
 
                 // get ERQ
                 int AccountNum = -1;
-                ABC_CHECK_RET(ABC_AccountNumForUser(szUserName, &AccountNum, pError));
-                ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(AccountNum, NULL, &pJSON_ERQ, NULL, NULL, NULL, pError));
+                ABC_CHECK_RET(ABC_LoginNumForUser(szUserName, &AccountNum, pError));
+                ABC_CHECK_RET(ABC_LoginGetCarePackageObjects(AccountNum, NULL, &pJSON_ERQ, NULL, NULL, NULL, pError));
 
                 // RQ - if ERQ available
                 if (pJSON_ERQ != NULL)
@@ -2517,7 +2517,7 @@ tABC_CC ABC_AccountGetKey(const char *szUserName, const char *szPassword, tABC_A
 exit:
     if (pJSON_ERQ)  json_decref(pJSON_ERQ);
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
@@ -2526,7 +2526,7 @@ exit:
  *
  * @param szPIN PIN to use for the account
  */
-tABC_CC ABC_AccountSetPIN(const char *szUserName,
+tABC_CC ABC_LoginSetPIN(const char *szUserName,
                           const char *szPassword,
                           const char *szPIN,
                           tABC_Error *pError)
@@ -2535,16 +2535,16 @@ tABC_CC ABC_AccountSetPIN(const char *szUserName,
 
     int                  dirty;
     tAccountKeys         *pKeys     = NULL;
-    tABC_AccountSettings *pSettings = NULL;
+    tABC_LoginSettings *pSettings = NULL;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szPIN);
 
-    ABC_CHECK_RET(ABC_AccountLoadSettings(szUserName, szPassword, &pSettings, pError));
+    ABC_CHECK_RET(ABC_LoginLoadSettings(szUserName, szPassword, &pSettings, pError));
 
     // get the key cache
-    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
 
     // set the new PIN
     ABC_FREE_STR(pKeys->szPIN);
@@ -2553,10 +2553,10 @@ tABC_CC ABC_AccountSetPIN(const char *szUserName,
     ABC_FREE_STR(pSettings->szPIN);
     ABC_STRDUP(pSettings->szPIN, szPIN);
 
-    ABC_CHECK_RET(ABC_AccountSaveSettings(szUserName, szPassword, pSettings, pError));
-    ABC_CHECK_RET(ABC_AccountSyncData(szUserName, szPassword, &dirty, pError));
+    ABC_CHECK_RET(ABC_LoginSaveSettings(szUserName, szPassword, pSettings, pError));
+    ABC_CHECK_RET(ABC_LoginSyncData(szUserName, szPassword, &dirty, pError));
 exit:
-    ABC_AccountFreeSettings(pSettings);
+    ABC_LoginFreeSettings(pSettings);
 
     return cc;
 }
@@ -2566,7 +2566,7 @@ exit:
  * An array of allocated strings is allocated so the user is responsible for
  * free'ing all the elements as well as the array itself.
  */
-tABC_CC ABC_AccountGetCategories(const char *szUserName,
+tABC_CC ABC_LoginGetCategories(const char *szUserName,
                                  char ***paszCategories,
                                  unsigned int *pCount,
                                  tABC_Error *pError)
@@ -2584,7 +2584,7 @@ tABC_CC ABC_AccountGetCategories(const char *szUserName,
     *pCount = 0;
 
     // load the categories
-    ABC_CHECK_RET(ABC_AccountGetDirName(szUserName, &szAccountDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetDirName(szUserName, &szAccountDir, pError));
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_CATEGORIES_FILENAME);
     ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON, pError));
@@ -2604,7 +2604,7 @@ exit:
  * This function adds a category to an account.
  * No attempt is made to avoid a duplicate entry.
  */
-tABC_CC ABC_AccountAddCategory(const char *szUserName,
+tABC_CC ABC_LoginAddCategory(const char *szUserName,
                                char *szCategory,
                                tABC_Error *pError)
 {
@@ -2617,7 +2617,7 @@ tABC_CC ABC_AccountAddCategory(const char *szUserName,
     ABC_CHECK_NULL(szCategory);
 
     // load the current categories
-    ABC_CHECK_RET(ABC_AccountGetCategories(szUserName, &aszCategories, &categoryCount, pError));
+    ABC_CHECK_RET(ABC_LoginGetCategories(szUserName, &aszCategories, &categoryCount, pError));
 
     // if there are categories
     if ((aszCategories != NULL) && (categoryCount > 0))
@@ -2633,7 +2633,7 @@ tABC_CC ABC_AccountAddCategory(const char *szUserName,
     categoryCount++;
 
     // save out the categories
-    ABC_CHECK_RET(ABC_AccountSaveCategories(szUserName, aszCategories, categoryCount, pError));
+    ABC_CHECK_RET(ABC_LoginSaveCategories(szUserName, aszCategories, categoryCount, pError));
 
 exit:
     ABC_UtilFreeStringArray(aszCategories, categoryCount);
@@ -2646,7 +2646,7 @@ exit:
  * If there is more than one category with this name, all categories by this name are removed.
  * If the category does not exist, no error is returned.
  */
-tABC_CC ABC_AccountRemoveCategory(const char *szUserName,
+tABC_CC ABC_LoginRemoveCategory(const char *szUserName,
                                   char *szCategory,
                                   tABC_Error *pError)
 {
@@ -2661,7 +2661,7 @@ tABC_CC ABC_AccountRemoveCategory(const char *szUserName,
     ABC_CHECK_NULL(szCategory);
 
     // load the current categories
-    ABC_CHECK_RET(ABC_AccountGetCategories(szUserName, &aszCategories, &categoryCount, pError));
+    ABC_CHECK_RET(ABC_LoginGetCategories(szUserName, &aszCategories, &categoryCount, pError));
 
     // got through all the categories and only add ones that are not this one
     for (int i = 0; i < categoryCount; i++)
@@ -2685,7 +2685,7 @@ tABC_CC ABC_AccountRemoveCategory(const char *szUserName,
     }
 
     // save out the new categories
-    ABC_CHECK_RET(ABC_AccountSaveCategories(szUserName, aszNewCategories, newCategoryCount, pError));
+    ABC_CHECK_RET(ABC_LoginSaveCategories(szUserName, aszNewCategories, newCategoryCount, pError));
 
 exit:
     ABC_UtilFreeStringArray(aszCategories, categoryCount);
@@ -2698,7 +2698,7 @@ exit:
  * Saves the categories for the given account
  */
 static
-tABC_CC ABC_AccountSaveCategories(const char *szUserName,
+tABC_CC ABC_LoginSaveCategories(const char *szUserName,
                                   char **aszCategories,
                                   unsigned int count,
                                   tABC_Error *pError)
@@ -2717,7 +2717,7 @@ tABC_CC ABC_AccountSaveCategories(const char *szUserName,
     ABC_CHECK_RET(ABC_UtilCreateArrayJSONString(aszCategories, count, JSON_ACCT_CATEGORIES_FIELD, &szDataJSON, pError));
 
     // write them out
-    ABC_CHECK_RET(ABC_AccountGetDirName(szUserName, &szAccountDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetDirName(szUserName, &szAccountDir, pError));
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_CATEGORIES_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szDataJSON, pError));
@@ -2734,7 +2734,7 @@ exit:
  * Check that the recovery answers for a given account are valid
  * @param pbValid true is stored in here if they are correct
  */
-tABC_CC ABC_AccountCheckRecoveryAnswers(const char *szUserName,
+tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
                                         const char *szRecoveryAnswers,
                                         bool *pbValid,
                                         tABC_Error *pError)
@@ -2779,28 +2779,28 @@ tABC_CC ABC_AccountCheckRecoveryAnswers(const char *szUserName,
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pSNRP1, &LRA1, pError));
 
         // Fetch ERepoAcctKey using P1 or LRA1, if successful, szRecoveryAnswers are correct
-        ABC_CHECK_RET(ABC_AccountServerGetRepoAcctKey(L1, P1_NULL, LRA1, &szERepoAcctKey, pError));
+        ABC_CHECK_RET(ABC_LoginServerGetRepoAcctKey(L1, P1_NULL, LRA1, &szERepoAcctKey, pError));
 
         // Setup initial account and set the care package
-        ABC_CHECK_RET(ABC_AccountFetchInitCarePackage(szUserName, L1, gCarePackageCache, &szAccountDir, pError));
+        ABC_CHECK_RET(ABC_LoginFetchInitCarePackage(szUserName, L1, gCarePackageCache, &szAccountDir, pError));
         ABC_FREE_STR(gCarePackageCache);
         gCarePackageCache = NULL;
 
         // We have the care package so fetch keys without password
-        ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, NULL, &pKeys, pError));
+        ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, NULL, &pKeys, pError));
 
         // L2 = Scrypt(L, SNRP4)
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pKeys->pSNRP4, &L2, pError));
 
         // Fetch the ERepoAcctKey
-        ABC_CHECK_RET(ABC_AccountFetchRepoKey(L1, P1_NULL, LRA1, szAccountDir, pError));
+        ABC_CHECK_RET(ABC_LoginFetchRepoKey(L1, P1_NULL, LRA1, szAccountDir, pError));
 
         // Setup the account repo and sync
-        ABC_CHECK_RET(ABC_AccountRepoSetup(szUserName, szAccountDir, pError));
+        ABC_CHECK_RET(ABC_LoginRepoSetup(szUserName, szAccountDir, pError));
     }
 
     // pull this account into the cache
-    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, NULL, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, NULL, &pKeys, pError));
 
     // create our LRA (L + RA) with the answers given
     ABC_BUF_DUP(LRA, pKeys->L);
@@ -2829,7 +2829,7 @@ tABC_CC ABC_AccountCheckRecoveryAnswers(const char *szUserName,
         // create our LRA1 = Scrypt(L + RA, SNRP1)
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP1, &LRA1, pError));
 
-        ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szAccountSyncDir, pError));
+        ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szAccountSyncDir, pError));
         ABC_CHECK_RET(ABC_FileIOFileExists(szAccountSyncDir, &bExists, pError));
 
         // attempt to decode ELP2
@@ -2884,7 +2884,7 @@ exit:
 }
 
 static
-tABC_CC ABC_AccountServerGetCarePackage(tABC_U08Buf L1, char **szCarePackage, tABC_Error *pError)
+tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1, char **szCarePackage, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szURL = NULL;
@@ -2897,7 +2897,7 @@ tABC_CC ABC_AccountServerGetCarePackage(tABC_U08Buf L1, char **szCarePackage, tA
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_CARE_PACKAGE_PATH);
 
-    ABC_CHECK_RET(ABC_AccountServerGetString(L1, P1, LRA1, szURL, JSON_ACCT_CARE_PACKAGE, szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(L1, P1, LRA1, szURL, JSON_ACCT_CARE_PACKAGE, szCarePackage, pError));
 exit:
 
     ABC_FREE_STR(szURL);
@@ -2906,7 +2906,7 @@ exit:
 }
 
 static
-tABC_CC ABC_AccountServerGetRepoAcctKey(tABC_U08Buf L1,
+tABC_CC ABC_LoginServerGetRepoAcctKey(tABC_U08Buf L1,
                                         tABC_U08Buf P1,
                                         tABC_U08Buf LRA1,
                                         char **szERepoAcctKey,
@@ -2920,7 +2920,7 @@ tABC_CC ABC_AccountServerGetRepoAcctKey(tABC_U08Buf L1,
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_REPO_GET_PATH);
 
-    ABC_CHECK_RET(ABC_AccountServerGetString(L1, P1, LRA1, szURL, JSON_ACCT_EREPO_ACCOUNT_FIELD, szERepoAcctKey, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(L1, P1, LRA1, szURL, JSON_ACCT_EREPO_ACCOUNT_FIELD, szERepoAcctKey, pError));
 exit:
 
     ABC_FREE_STR(szURL);
@@ -2929,7 +2929,7 @@ exit:
 }
 
 static
-tABC_CC ABC_AccountServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1,
+tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1,
                                    char *szURL, char *szField, char **szResponse, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -3020,7 +3020,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_AccountFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError)
+tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
@@ -3044,13 +3044,13 @@ tABC_CC ABC_AccountFetchRecoveryQuestions(const char *szUserName, char **szRecov
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP1, &L1, pError));
 
     //  Download CarePackage.json
-    ABC_CHECK_RET(ABC_AccountServerGetCarePackage(L1, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(L1, &szCarePackage, pError));
 
     // Set the CarePackage cache
     ABC_STRDUP(gCarePackageCache, szCarePackage);
 
     // get ERQ and SNRP4
-    ABC_CHECK_RET(ABC_AccountGetCarePackageObjects(0, gCarePackageCache, &pJSON_ERQ, NULL, NULL, &pJSON_SNRP4, pError));
+    ABC_CHECK_RET(ABC_LoginGetCarePackageObjects(0, gCarePackageCache, &pJSON_ERQ, NULL, NULL, &pJSON_SNRP4, pError));
 
     // Create L2
     ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP4, &pSNRP4, pError));
@@ -3092,7 +3092,7 @@ exit:
  * @param pszQuestions              Pointer into which allocated string should be stored.
  * @param pError                    A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_AccountGetRecoveryQuestions(const char *szUserName,
+tABC_CC ABC_LoginGetRecoveryQuestions(const char *szUserName,
                                         char **pszQuestions,
                                         tABC_Error *pError)
 {
@@ -3111,16 +3111,16 @@ tABC_CC ABC_AccountGetRecoveryQuestions(const char *szUserName,
     gCarePackageCache = NULL;
 
     // check that this is a valid user
-    if (ABC_AccountCheckValidUser(szUserName, NULL) != ABC_CC_Ok)
+    if (ABC_LoginCheckValidUser(szUserName, NULL) != ABC_CC_Ok)
     {
         // Try the server
-        ABC_CHECK_RET(ABC_AccountFetchRecoveryQuestions(szUserName, pszQuestions, pError));
+        ABC_CHECK_RET(ABC_LoginFetchRecoveryQuestions(szUserName, pszQuestions, pError));
     }
     else
     {
         // Get RQ for this user
         tABC_U08Buf RQ;
-        ABC_CHECK_RET(ABC_AccountGetKey(szUserName, NULL, ABC_AccountKey_RQ, &RQ, pError));
+        ABC_CHECK_RET(ABC_LoginGetKey(szUserName, NULL, ABC_LoginKey_RQ, &RQ, pError));
         tABC_U08Buf FinalRQ;
         ABC_BUF_DUP(FinalRQ, RQ);
         ABC_BUF_APPEND_PTR(FinalRQ, "", 1);
@@ -3138,7 +3138,7 @@ exit:
  * @param pszFilename Location to store allocated filename string (caller must free)
  */
 static
-tABC_CC ABC_AccountGetSettingsFilename(const char *szUserName,
+tABC_CC ABC_LoginGetSettingsFilename(const char *szUserName,
                                        char **pszFilename,
                                        tABC_Error *pError)
 {
@@ -3151,7 +3151,7 @@ tABC_CC ABC_AccountGetSettingsFilename(const char *szUserName,
     ABC_CHECK_NULL(pszFilename);
     *pszFilename = NULL;
 
-    ABC_CHECK_RET(ABC_AccountGetSyncDirName(szUserName, &szSyncDirName, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szSyncDirName, pError));
 
     ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(*pszFilename, "%s/%s", szSyncDirName, ACCOUNT_SETTINGS_FILENAME);
@@ -3169,17 +3169,17 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_AccountCreateDefaultSettings(tABC_AccountSettings **ppSettings,
+tABC_CC ABC_LoginCreateDefaultSettings(tABC_LoginSettings **ppSettings,
                                          tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    tABC_AccountSettings *pSettings = NULL;
+    tABC_LoginSettings *pSettings = NULL;
     int i = 0;
 
     ABC_CHECK_NULL(ppSettings);
 
-    ABC_ALLOC(pSettings, sizeof(tABC_AccountSettings));
+    ABC_ALLOC(pSettings, sizeof(tABC_LoginSettings));
 
     pSettings->szFirstName = NULL;
     pSettings->szLastName = NULL;
@@ -3232,7 +3232,7 @@ tABC_CC ABC_AccountCreateDefaultSettings(tABC_AccountSettings **ppSettings,
     pSettings = NULL;
 
 exit:
-    ABC_AccountFreeSettings(pSettings);
+    ABC_LoginFreeSettings(pSettings);
 
     return cc;
 }
@@ -3247,27 +3247,27 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_AccountLoadSettingsEnc(const char *szUserName,
+tABC_CC ABC_LoginLoadSettingsEnc(const char *szUserName,
                                    tABC_U08Buf Key,
-                                   tABC_AccountSettings **ppSettings,
+                                   tABC_LoginSettings **ppSettings,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_AccountSettings *pSettings = NULL;
+    tABC_LoginSettings *pSettings = NULL;
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(ppSettings);
 
     // get the settings filename
-    ABC_CHECK_RET(ABC_AccountGetSettingsFilename(szUserName, &szFilename, pError));
+    ABC_CHECK_RET(ABC_LoginGetSettingsFilename(szUserName, &szFilename, pError));
 
     bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
@@ -3278,7 +3278,7 @@ tABC_CC ABC_AccountLoadSettingsEnc(const char *szUserName,
         //ABC_DebugLog("Loaded settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
 
         // allocate the new settings object
-        ABC_ALLOC(pSettings, sizeof(tABC_AccountSettings));
+        ABC_ALLOC(pSettings, sizeof(tABC_LoginSettings));
 
         // get the first name
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_FIRST_NAME_FIELD);
@@ -3388,7 +3388,7 @@ tABC_CC ABC_AccountLoadSettingsEnc(const char *szUserName,
     else
     {
         // create the defaults
-        ABC_CHECK_RET(ABC_AccountCreateDefaultSettings(&pSettings, pError));
+        ABC_CHECK_RET(ABC_LoginCreateDefaultSettings(&pSettings, pError));
     }
 
     // assign final settings
@@ -3398,11 +3398,11 @@ tABC_CC ABC_AccountLoadSettingsEnc(const char *szUserName,
  //   ABC_DebugLog("Loading settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
 
 exit:
-    ABC_AccountFreeSettings(pSettings);
+    ABC_LoginFreeSettings(pSettings);
     ABC_FREE_STR(szFilename);
     if (pJSON_Root) json_decref(pJSON_Root);
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
@@ -3414,9 +3414,9 @@ exit:
  * @param ppSettings    Location to store ptr to allocated settings (caller must free)
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_AccountLoadSettings(const char *szUserName,
+tABC_CC ABC_LoginLoadSettings(const char *szUserName,
                                 const char *szPassword,
-                                tABC_AccountSettings **ppSettings,
+                                tABC_LoginSettings **ppSettings,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -3424,7 +3424,7 @@ tABC_CC ABC_AccountLoadSettings(const char *szUserName,
 
     tABC_U08Buf LP2 = ABC_BUF_NULL;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -3432,14 +3432,14 @@ tABC_CC ABC_AccountLoadSettings(const char *szUserName,
     ABC_CHECK_NULL(ppSettings);
 
     // get LP2
-    ABC_CHECK_RET(ABC_AccountGetKey(szUserName,szPassword, ABC_AccountKey_LP2, &LP2, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName,szPassword, ABC_LoginKey_LP2, &LP2, pError));
 
     // load them with the given key
-    ABC_CHECK_RET(ABC_AccountLoadSettingsEnc(szUserName, LP2, ppSettings, pError));
+    ABC_CHECK_RET(ABC_LoginLoadSettingsEnc(szUserName, LP2, ppSettings, pError));
 
 exit:
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
@@ -3452,9 +3452,9 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_AccountSaveSettingsEnc(const char *szUserName,
+tABC_CC ABC_LoginSaveSettingsEnc(const char *szUserName,
                                    tABC_U08Buf Key,
-                                   tABC_AccountSettings *pSettings,
+                                   tABC_LoginSettings *pSettings,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -3467,7 +3467,7 @@ tABC_CC ABC_AccountSaveSettingsEnc(const char *szUserName,
     char *szFilename = NULL;
     int retVal = 0;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL_BUF(Key);
@@ -3576,7 +3576,7 @@ tABC_CC ABC_AccountSaveSettingsEnc(const char *szUserName,
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // get the settings filename
-    ABC_CHECK_RET(ABC_AccountGetSettingsFilename(szUserName, &szFilename, pError));
+    ABC_CHECK_RET(ABC_LoginGetSettingsFilename(szUserName, &szFilename, pError));
 
     // encrypt and save json
 //    ABC_DebugLog("Saving settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
@@ -3590,7 +3590,7 @@ exit:
     if (pJSON_Source) json_decref(pJSON_Source);
     ABC_FREE_STR(szFilename);
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
@@ -3602,9 +3602,9 @@ exit:
  * @param pSettings     Pointer to settings
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_AccountSaveSettings(const char *szUserName,
+tABC_CC ABC_LoginSaveSettings(const char *szUserName,
                                 const char *szPassword,
-                                tABC_AccountSettings *pSettings,
+                                tABC_LoginSettings *pSettings,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -3612,7 +3612,7 @@ tABC_CC ABC_AccountSaveSettings(const char *szUserName,
 
     tABC_U08Buf LP2 = ABC_BUF_NULL;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
@@ -3620,21 +3620,21 @@ tABC_CC ABC_AccountSaveSettings(const char *szUserName,
     ABC_CHECK_NULL(pSettings);
 
     // get LP2
-    ABC_CHECK_RET(ABC_AccountGetKey(szUserName, szPassword, ABC_AccountKey_LP2, &LP2, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_LP2, &LP2, pError));
 
     // save them with the given key
-    ABC_CHECK_RET(ABC_AccountSaveSettingsEnc(szUserName, LP2, pSettings, pError));
+    ABC_CHECK_RET(ABC_LoginSaveSettingsEnc(szUserName, LP2, pSettings, pError));
 
 exit:
 
-    ABC_AccountMutexUnlock(NULL);
+    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
 /**
  * Free's the given account settings
  */
-void ABC_AccountFreeSettings(tABC_AccountSettings *pSettings)
+void ABC_LoginFreeSettings(tABC_LoginSettings *pSettings)
 {
     if (pSettings)
     {
@@ -3653,7 +3653,7 @@ void ABC_AccountFreeSettings(tABC_AccountSettings *pSettings)
             ABC_CLEAR_FREE(pSettings->exchangeRateSources.aSources, sizeof(tABC_ExchangeRateSource *) * pSettings->exchangeRateSources.numSources);
         }
 
-        ABC_CLEAR_FREE(pSettings, sizeof(tABC_AccountSettings));
+        ABC_CLEAR_FREE(pSettings, sizeof(tABC_LoginSettings));
     }
 }
 
@@ -3664,7 +3664,7 @@ void ABC_AccountFreeSettings(tABC_AccountSettings *pSettings)
  * @param szRepoKey    The repo key
  * @param szRepoPath   Pointer to pointer where the results will be store. Caller must free
  */
-tABC_CC ABC_AccountPickRepo(const char *szRepoKey, char **szRepoPath, tABC_Error *pError)
+tABC_CC ABC_LoginPickRepo(const char *szRepoKey, char **szRepoPath, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_U08Buf URL = ABC_BUF_NULL;
@@ -3686,7 +3686,7 @@ tABC_CC ABC_AccountPickRepo(const char *szRepoKey, char **szRepoPath, tABC_Error
  * @param szPassword    Password for the account associated with the settings
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_AccountSyncData(const char *szUserName,
+tABC_CC ABC_LoginSyncData(const char *szUserName,
                             const char *szPassword,
                             int *pDirty,
                             tABC_Error *pError)
@@ -3699,17 +3699,17 @@ tABC_CC ABC_AccountSyncData(const char *szUserName,
     char *szAccountDir  = NULL;
     char *szRepoURL     = NULL;
 
-    ABC_CHECK_RET(ABC_AccountCacheKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_ASSERT(NULL != pKeys->szRepoAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
 
     ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_AccountCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
 
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
     // Create the repo url and sync it
-    ABC_CHECK_RET(ABC_AccountPickRepo(pKeys->szRepoAcctKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_LoginPickRepo(pKeys->szRepoAcctKey, &szRepoURL, pError));
 
     ABC_DebugLog("URL: %s %s\n", szFilename, szRepoURL);
 
@@ -3725,13 +3725,13 @@ exit:
 /**
  * Locks the mutex
  *
- * ABC_Wallet uses the same mutex as ABC_Account so that there will be no situation in
- * which one thread is in ABC_Wallet locked on a mutex and calling a thread safe ABC_Account call
+ * ABC_Wallet uses the same mutex as ABC_Login so that there will be no situation in
+ * which one thread is in ABC_Wallet locked on a mutex and calling a thread safe ABC_Login call
  * that is locked from another thread calling a thread safe ABC_Wallet call.
  * In other words, since they call each other, they need to share a recursive mutex.
  */
 static
-tABC_CC ABC_AccountMutexLock(tABC_Error *pError)
+tABC_CC ABC_LoginMutexLock(tABC_Error *pError)
 {
     return ABC_MutexLock(pError);
 }
@@ -3741,7 +3741,7 @@ tABC_CC ABC_AccountMutexLock(tABC_Error *pError)
  *
  */
 static
-tABC_CC ABC_AccountMutexUnlock(tABC_Error *pError)
+tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError)
 {
     return ABC_MutexUnlock(pError);
 }
