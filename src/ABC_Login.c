@@ -3863,6 +3863,45 @@ void ABC_LoginFreeSettings(tABC_LoginSettings *pSettings)
     }
 }
 
+/**
+ * Obtains the information needed to access the sync dir for a given account.
+ *
+ * @param szUserName UserName for the account to access
+ * @param szPassword Password for the account to access
+ * @param ppKeys     Location to store returned pointer. The caller must free the structure.
+ * @param pError     A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_LoginGetSyncKeys(const char *szUserName,
+                             const char *szPassword,
+                             tABC_SyncKeys **ppKeys,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_SyncKeys *pKeys = NULL;
+
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(ppKeys);
+
+    ABC_ALLOC(pKeys, sizeof(tABC_SyncKeys));
+    ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &pKeys->szSyncDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_RepoAccountKey, &pKeys->SyncKey, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_LP2, &pKeys->MK, pError));
+
+    *ppKeys = pKeys;
+    pKeys = NULL;
+
+exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
+
+    ABC_LoginMutexUnlock(NULL);
+    return cc;
+}
 
 /**
  * Using the settings pick a repo and create the repo url

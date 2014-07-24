@@ -11,7 +11,7 @@
 #define ABC_Login_h
 
 #include "ABC.h"
-#include "ABC_Util.h"
+#include "ABC_Sync.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -150,6 +150,11 @@ extern "C" {
                                     tABC_Error *pError);
 
     void ABC_LoginFreeSettings(tABC_LoginSettings *pSettings);
+
+    tABC_CC ABC_LoginGetSyncKeys(const char *szUserName,
+                                 const char *szPassword,
+                                 tABC_SyncKeys **ppKeys,
+                                 tABC_Error *pError);
 
     tABC_CC ABC_LoginPickRepo(const char *szRepoKey, char **szRepoPath, tABC_Error *pError);
 
