@@ -5,7 +5,8 @@ LIBS     += -labc -lpthread
 
 default: build/create-account.bin \
 		 build/get-pin.bin \
-		 build/set-pin.bin
+		 build/set-pin.bin \
+		 build/sign-in.bin
 
 build/%.bin: build/%.o build/common.o
 	@mkdir -p build
