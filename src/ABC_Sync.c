@@ -24,6 +24,19 @@ static void SyncLogGitError(int e)
 }
 
 /**
+ * Frees a tABC_SyncKeys structure. While the keys inside the structure do
+ * not need to be freed, the string and the structure itself certainly do.
+ */
+void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys)
+{
+    if (pKeys)
+    {
+        ABC_FREE_STR(pKeys->szSyncDir);
+        ABC_CLEAR_FREE(pKeys, sizeof(tABC_SyncKeys));
+    }
+}
+
+/**
  * Initializes the underlying git library. Should be called at program start.
  */
 tABC_CC ABC_SyncInit(tABC_Error *pError)

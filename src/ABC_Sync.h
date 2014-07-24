@@ -7,12 +7,28 @@
 #define ABC_Sync_h
 
 #include "ABC.h"
+#include "ABC_Util.h"
 
 #define SYNC_KEY_LENGTH 20
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+    /**
+     * Contains everything needed to access a sync repo.
+     */
+    typedef struct sABC_SyncKeys
+    {
+        /** The directory that contains the synced files: */
+        char *szSyncDir;
+        /** The sync key used to access the server: */
+        tABC_U08Buf SyncKey;
+        /** The encryption key used to protect the contents: */
+        tABC_U08Buf MK;
+    } tABC_SyncKeys;
+
+    void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys);
 
     tABC_CC ABC_SyncInit(tABC_Error *pError);
 
