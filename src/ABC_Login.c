@@ -70,7 +70,7 @@
 #define JSON_ACCT_SATOSHI_FIELD                 "satoshi"
 #define JSON_ACCT_ADVANCED_FEATURES_FIELD       "advancedFeatures"
 #define JSON_ACCT_CARE_PACKAGE                  "care_package"
-#define JSON_ACCT_EREPO_ACCOUNT_FIELD           "erepo_account_key"
+#define JSON_ACCT_LOGIN_PACKAGE                 "login_package"
 
 // holds keys for a given account
 typedef struct sAccountKeys
@@ -107,7 +107,7 @@ static unsigned int gAccountKeysCacheCount = 0;
 static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
 static tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError);
-static tABC_CC ABC_LoginFetchInitCarePackage(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, char **szAccountDir, tABC_Error *pError);
+static tABC_CC ABC_LoginInitPackages(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, const char *szLoginPackage, char **szAccountDir, tABC_Error *pError);
 static tABC_CC ABC_LoginFetchRepoKey(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError);
 static tABC_CC ABC_LoginRepoSetup(const char *szUserName, const char *szAccountDir, tABC_Error *pError);
 static tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError);
@@ -133,7 +133,7 @@ static tABC_CC ABC_LoginAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *pE
 static tABC_CC ABC_LoginKeyFromCacheByName(const char *szUserName, tAccountKeys **ppAccountKeys, tABC_Error *pError);
 static tABC_CC ABC_LoginSaveCategories(const char *szUserName, char **aszCategories, unsigned int Count, tABC_Error *pError);
 static tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1, char **szResponse, tABC_Error *pError);
-static tABC_CC ABC_LoginServerGetRepoAcctKey(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char **szERepoAcctKey, tABC_Error *pError);
+static tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char **szERepoAcctKey, tABC_Error *pError);
 static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char *szURL, char *szField, char **szResponse, tABC_Error *pError);
 static tABC_CC ABC_LoginGetSettingsFilename(const char *szUserName, char **pszFilename, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateDefaultSettings(tABC_LoginSettings **ppSettings, tABC_Error *pError);
@@ -428,7 +428,6 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
     }
     else
     {
-        // TODO: What happens on a network failure?
         // Note: No password so don't try to login, just update account repo
         ABC_LoginSyncData(pInfo->szUserName, NULL, &dataDirty, pError);
     }
@@ -651,8 +650,12 @@ static
 tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    int dirty;
     char *szAccountDir      = NULL;
+    char *szFilename        = NULL;
     char *szCarePackage     = NULL;
+    char *szLoginPackage    = NULL;
+    char *szRepoURL         = NULL;
     tAccountKeys *pKeys     = NULL;
     tABC_U08Buf L           = ABC_BUF_NULL;
     tABC_U08Buf L1          = ABC_BUF_NULL;
@@ -669,27 +672,31 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP1, &L1, pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(P, pSNRP1, &P1, pError));
 
-    //  Download CarePackage.json and ERepoAcctKey.json
+    // Download CarePackage.json
     ABC_CHECK_RET(ABC_LoginServerGetCarePackage(L1, &szCarePackage, pError));
 
+    // Download Login_Package.json
+    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, P1, NULL_LRA1, &szLoginPackage, pError));
+
     // Setup initial account and fetch care package
-    ABC_CHECK_RET(ABC_LoginFetchInitCarePackage(pInfo->szUserName, L1, szCarePackage, &szAccountDir, pError));
+    ABC_CHECK_RET(
+        ABC_LoginInitPackages(pInfo->szUserName, L1,
+                              szCarePackage, szLoginPackage,
+                              &szAccountDir, pError));
 
-    // We have the care package so fetch keys without password
-    ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, NULL, &pKeys, pError));
+    // We have the care package so fetch keys
+    ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
 
-    // L2 = Scrypt(L, SNRP4)
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pKeys->pSNRP4, &L2, pError));
+    //  Create sync directory and sync
+    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, false, pError));
 
-    // Fetch the ERepoAcctKey
-    ABC_CHECK_RET(ABC_LoginFetchRepoKey(L1, P1, NULL_LRA1, szAccountDir, pError));
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
-    // Setup the account repo and sync
-    ABC_CHECK_RET(ABC_LoginRepoSetup(pInfo->szUserName, szAccountDir, pError));
-
-    // Fetch and Sync Wallets
-    int dirty;
-    ABC_CHECK_RET(ABC_WalletSyncAll(pInfo->szUserName, pInfo->szPassword, &dirty, pError));
+    // Init the git repo and sync it
+    ABC_CHECK_RET(ABC_LoginPickRepo(pKeys->szRepoAcctKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
 
     // Clear out cache so its reloaded with the password
     ABC_CHECK_RET(ABC_LoginClearKeyCache(pError));
@@ -699,8 +706,11 @@ exit:
         ABC_FileIODeleteRecursive(szAccountDir, NULL);
         ABC_LoginClearKeyCache(NULL);
     }
+    ABC_FREE_STR(szRepoURL);
+    ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szCarePackage);
+    ABC_FREE_STR(szLoginPackage);
     ABC_BUF_FREE(L);
     ABC_BUF_FREE(L1);
     ABC_BUF_FREE(P);
@@ -712,7 +722,7 @@ exit:
 }
 
 static
-tABC_CC ABC_LoginFetchInitCarePackage(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, char **szAccountDir, tABC_Error *pError)
+tABC_CC ABC_LoginInitPackages(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, const char *szLoginPackage, char **szAccountDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szFilename    = NULL;
@@ -737,6 +747,10 @@ tABC_CC ABC_LoginFetchInitCarePackage(const char *szUserName, tABC_U08Buf L1, co
     //  Save Care Package
     sprintf(szFilename, "%s/%s", *szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage, pError));
+
+    // Save Login Package
+    sprintf(szFilename, "%s/%s", *szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage, pError));
 exit:
     ABC_FREE_STR(szJSON);
     return cc;
@@ -750,32 +764,30 @@ tABC_CC ABC_LoginFetchRepoKey(tABC_U08Buf L1, tABC_U08Buf P1,
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szFilename        = NULL;
-    char *szERepoAcctKey    = NULL;
+    char *szLoginPackage    = NULL;
     bool bExists            = false;
 
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
-    //  Do we already have an ERepoAcctKey?
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_EREPO_FILENAME);
+    //  Do we already have an Login_Package?
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     if (!bExists)
     {
-        // Fetch ERepoAcctKey using P1 or LRA1
-        ABC_CHECK_RET(ABC_LoginServerGetRepoAcctKey(L1, P1, LRA1, &szERepoAcctKey, pError));
-
-        // Save ERepoAcctKey
-        ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szERepoAcctKey, pError));
+        // Fetch Login_Package using P1 or LRA1
+        ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, P1, LRA1, &szLoginPackage, pError));
+        ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage, pError));
     }
 exit:
     ABC_FREE_STR(szFilename);
-    ABC_FREE_STR(szERepoAcctKey);
+    ABC_FREE_STR(szLoginPackage);
     return cc;
 }
 
 static
 tABC_CC ABC_LoginRepoSetup(const char *szUserName,
-                             const char *szAccountDir,
-                             tABC_Error *pError)
+                           const char *szAccountDir,
+                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_U08Buf L2          = ABC_BUF_NULL;
@@ -2486,7 +2498,6 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
         ABC_BUF_DUP(FinalSyncKey, REPO_JSON);
         ABC_BUF_APPEND_PTR(FinalSyncKey, "", 1);
         pFinalKeys->szRepoAcctKey = (char*) ABC_BUF_PTR(FinalSyncKey);
-        ABC_DebugLog("%s\n", pFinalKeys->szRepoAcctKey);
     }
     else
     {
@@ -2539,7 +2550,7 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
             ABC_BUF_CLEAR(LP2);
 
             ABC_CHECK_RET(ABC_LoadAccountSettings(szUserName, szPassword, &pSettings, pError));
-            if (pSettings)
+            if (pSettings && pSettings->szPIN)
             {
                 ABC_STRDUP(pFinalKeys->szPIN, pSettings->szPIN);
             }
@@ -2573,6 +2584,7 @@ exit:
     if (pJSON_EMK)      json_decref(pJSON_EMK);
     if (pJSON_ESyncKey) json_decref(pJSON_ESyncKey);
     if (pJSON_Root)     json_decref(pJSON_Root);
+    ABC_BUF_FREE(REPO_JSON);
     ABC_BUF_FREE(PIN_JSON);
     ABC_BUF_FREE(P);
     ABC_BUF_FREE(LP);
@@ -2920,7 +2932,7 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
     tABC_U08Buf L1          = ABC_BUF_NULL;
     tABC_U08Buf L2          = ABC_BUF_NULL;
     tABC_U08Buf P1_NULL     = ABC_BUF_NULL;
-    char *szERepoAcctKey    = NULL;
+    char *szLoginPackage    = NULL;
     tABC_CryptoSNRP *pSNRP1 = NULL;
 
     ABC_CHECK_NULL(szUserName);
@@ -2942,10 +2954,10 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pSNRP1, &LRA1, pError));
 
         // Fetch ERepoAcctKey using P1 or LRA1, if successful, szRecoveryAnswers are correct
-        ABC_CHECK_RET(ABC_LoginServerGetRepoAcctKey(L1, P1_NULL, LRA1, &szERepoAcctKey, pError));
+        ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, P1_NULL, LRA1, &szLoginPackage, pError));
 
         // Setup initial account and set the care package
-        ABC_CHECK_RET(ABC_LoginFetchInitCarePackage(szUserName, L1, gCarePackageCache, &szAccountDir, pError));
+        ABC_CHECK_RET(ABC_LoginInitPackages(szUserName, L1, gCarePackageCache, szLoginPackage, &szAccountDir, pError));
         ABC_FREE_STR(gCarePackageCache);
         gCarePackageCache = NULL;
 
@@ -2955,7 +2967,7 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
         // L2 = Scrypt(L, SNRP4)
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pKeys->pSNRP4, &L2, pError));
 
-        // Fetch the ERepoAcctKey
+        // Fetch the Login_Package
         ABC_CHECK_RET(ABC_LoginFetchRepoKey(L1, P1_NULL, LRA1, szAccountDir, pError));
 
         // Setup the account repo and sync
@@ -3040,7 +3052,7 @@ exit:
     ABC_FREE_STR(szFilename);
 
     ABC_BUF_FREE(L1);
-    ABC_FREE_STR(szERepoAcctKey);
+    ABC_FREE_STR(szLoginPackage);
     ABC_CryptoFreeSNRP(&pSNRP1);
 
     return cc;
@@ -3069,11 +3081,11 @@ exit:
 }
 
 static
-tABC_CC ABC_LoginServerGetRepoAcctKey(tABC_U08Buf L1,
-                                        tABC_U08Buf P1,
-                                        tABC_U08Buf LRA1,
-                                        char **szERepoAcctKey,
-                                        tABC_Error *pError)
+tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
+                                       tABC_U08Buf P1,
+                                       tABC_U08Buf LRA1,
+                                       char **szERepoAcctKey,
+                                       tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szURL = NULL;
@@ -3081,9 +3093,9 @@ tABC_CC ABC_LoginServerGetRepoAcctKey(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(L1);
 
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_REPO_GET_PATH);
+    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_LOGIN_PACK_GET_PATH);
 
-    ABC_CHECK_RET(ABC_LoginServerGetString(L1, P1, LRA1, szURL, JSON_ACCT_EREPO_ACCOUNT_FIELD, szERepoAcctKey, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(L1, P1, LRA1, szURL, JSON_ACCT_LOGIN_PACKAGE, szERepoAcctKey, pError));
 exit:
 
     ABC_FREE_STR(szURL);
