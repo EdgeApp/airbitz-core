@@ -24,12 +24,14 @@
 #define ABC_SERVER_GET_INFO_PATH            "getinfo"
 
 #define ABC_SERVER_JSON_L1_FIELD            "l1"
-#define ABC_SERVER_JSON_P1_FIELD            "p1"
+// XXX: P1 needs to become LP1
+#define ABC_SERVER_JSON_P1_FIELD            "lp1"
 #define ABC_SERVER_JSON_REPO_FIELD          "repo_account_key"
 #define ABC_SERVER_JSON_EREPO_FIELD         "erepo_account_key"
 #define ABC_SERVER_JSON_NEW_P1_FIELD        "new_p1"
 #define ABC_SERVER_JSON_LRA1_FIELD          "lra"
 #define ABC_SERVER_JSON_CARE_PACKAGE_FIELD  "care_package"
+#define ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD "login_package"
 #define ABC_SERVER_JSON_CATEGORY_FIELD      "category"
 #define ABC_SERVER_JSON_MIN_LENGTH_FIELD    "min_length"
 #define ABC_SERVER_JSON_QUESTION_FIELD      "question"
