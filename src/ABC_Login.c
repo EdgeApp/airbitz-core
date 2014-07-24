@@ -116,7 +116,7 @@ static tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, 
 static tABC_CC ABC_LoginServerUploadCarePackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError);
 static tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, const char *szLoginPackage, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
-static tABC_CC ABC_LoginCreateLoginPackageJSONString(const json_t *pJSON_MK, const json_t *pJSON_RepoAcctKey, char **pszJSON, tABC_Error *pError);
+static tABC_CC ABC_LoginCreateLoginPackageJSONString(const json_t *pJSON_MK, const json_t *pJSON_RepoAcctKey, const json_t *pJSON_ELP2, const json_t *pJSON_ELRA3, char **pszJSON, tABC_Error *pError);
 static tABC_CC ABC_LoginGetCarePackageObjects(int AccountNum, const char *szCarePackage, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
 static tABC_CC ABC_LoginGetLoginPackageObjects(int AccountNum, const char *szLoginPackage, json_t **ppJSON_EMK, json_t **ppJSON_ESyncKey, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir, bool bIncludeDefs, tABC_Error *pError);
@@ -564,7 +564,7 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     // create the EMK JSON, ERepoAcctKey, and LoginPackage_JSON
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(MK, pKeys->LP2, ABC_CryptoType_AES256, &pJSON_EMK, pError));
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(RepoBuf, pKeys->L2, ABC_CryptoType_AES256, &pJSON_ESyncKey, pError));
-    ABC_CHECK_RET(ABC_LoginCreateLoginPackageJSONString(pJSON_EMK, pJSON_ESyncKey, &szLoginPackage_JSON, pError));
+    ABC_CHECK_RET(ABC_LoginCreateLoginPackageJSONString(pJSON_EMK, pJSON_ESyncKey, NULL, NULL, &szLoginPackage_JSON, pError));
 
     // Create the repo and account on server
     ABC_CHECK_RET(ABC_LoginServerCreate(pKeys->L1, pKeys->P1,
@@ -954,10 +954,12 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     json_t          *pJSON_SNRP2         = NULL;
     json_t          *pJSON_SNRP3         = NULL;
     json_t          *pJSON_SNRP4         = NULL;
+    json_t          *pJSON_EMK           = NULL;
+    json_t          *pJSON_ESyncKey      = NULL;
+    json_t          *pJSON_ELP2          = NULL;
+    json_t          *pJSON_ELRA2         = NULL;
     char            *szCarePackage_JSON  = NULL;
     char            *szLoginPackage_JSON = NULL;
-    char            *szELP2_JSON         = NULL;
-    char            *szELRA2_JSON        = NULL;
     char            *szAccountDir        = NULL;
     char            *szFilename          = NULL;
 
@@ -1043,37 +1045,39 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     }
 
     // create the json objects and strings we need
+    // EMK
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(pKeys->MK, pKeys->LP2, ABC_CryptoType_AES256, &pJSON_EMK, pError));
+
+    // ESyncKey
+    tABC_U08Buf RepoBuf = ABC_BUF_NULL;
+    ABC_BUF_SET_PTR(RepoBuf, (unsigned char *)pKeys->szRepoAcctKey, strlen(pKeys->szRepoAcctKey) + 1);
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(RepoBuf, pKeys->L2, ABC_CryptoType_AES256, &pJSON_ESyncKey, pError));
 
     // ERQ = AES256(RQ, L2)
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(pKeys->RQ, pKeys->L2, ABC_CryptoType_AES256, &pJSON_ERQ, pError));
 
     // ELP2 = AES256(LP2, LRA2)
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(pKeys->LP2, pKeys->LRA2, ABC_CryptoType_AES256, &szELP2_JSON, pError));
-    //ABC_UtilHexDumpBuf("LP2", pKeys->LP2);
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(pKeys->LP2, pKeys->LRA2, ABC_CryptoType_AES256, &pJSON_ELP2, pError));
 
     // ELRA2 = AES256(LRA2, LP2)
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(pKeys->LRA2, pKeys->LP2, ABC_CryptoType_AES256, &szELRA2_JSON, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(pKeys->LRA2, pKeys->LP2, ABC_CryptoType_AES256, &pJSON_ELRA2, pError));
 
+    ABC_CHECK_RET(
+        ABC_LoginCreateLoginPackageJSONString(pJSON_EMK, pJSON_ESyncKey,
+                                              pJSON_ELP2, pJSON_ELRA2,
+                                              &szLoginPackage_JSON, pError));
 
-    // write out the files
 
     // create the main account directory
     ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
 
+    // update login package
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-
-    // write ELP2.json <- LP2 (L+P,S2) encrypted with recovery key (LRA2)
-    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELP2_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szELP2_JSON, pError));
-
-    // write ELRA2.json <- LRA2 encrypted with LP2 (L+P,S2)
-    sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELRA2_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szELRA2_JSON, pError));
-
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage_JSON, pError));
 
     // update the care package
-
     // get the current care package
     ABC_CHECK_RET(ABC_LoginGetCarePackageObjects(AccountNum, NULL, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
 
@@ -1083,10 +1087,6 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     // write the file care package to a file
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage_JSON, pError));
-
-    // read in the login package
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szLoginPackage_JSON, pError));
 
     // Client sends L1, P1, LRA1, CarePackage, to the server
     ABC_CHECK_RET(
@@ -1103,10 +1103,10 @@ exit:
     if (pJSON_SNRP2)        json_decref(pJSON_SNRP2);
     if (pJSON_SNRP3)        json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)        json_decref(pJSON_SNRP4);
+    if (pJSON_ELP2)         json_decref(pJSON_ELP2);
+    if (pJSON_ELRA2)        json_decref(pJSON_ELRA2);
     ABC_FREE_STR(szCarePackage_JSON);
     ABC_FREE_STR(szLoginPackage_JSON);
-    ABC_FREE_STR(szELP2_JSON);
-    ABC_FREE_STR(szELRA2_JSON);
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
 
@@ -1599,6 +1599,8 @@ exit:
 static
 tABC_CC ABC_LoginCreateLoginPackageJSONString(const json_t *pJSON_MK,
                                               const json_t *pJSON_SyncKey,
+                                              const json_t *pJSON_ELP2,
+                                              const json_t *pJSON_ELRA3,
                                               char         **pszJSON,
                                               tABC_Error   *pError)
 {
