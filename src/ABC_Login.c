@@ -111,7 +111,6 @@ static tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
 static tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError);
 static tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, const char *szCarePackage_JSON, const char *szLoginPackage_JSON, char *szRepoAcctKey, tABC_Error *pError);
 static tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, char *szLoginPackage, tABC_Error *pError);
-static tABC_CC ABC_LoginServerUploadCarePackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError);
 static tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, const char *szLoginPackage, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateLoginPackageJSONString(const json_t *pJSON_MK, const json_t *pJSON_RepoAcctKey, const json_t *pJSON_ELP2, const json_t *pJSON_ELRA2, char **pszJSON, tABC_Error *pError);
@@ -1445,40 +1444,6 @@ exit:
 
     return cc;
 }
-
-/**
- * Upload the care package
- *
- * This function sends LRA1 and Care Package to the server as part
- * of setting up the recovery data for an account
- *
- * @param L1            Login hash for the account
- * @param P1            Password hash for the account
- * @param LRA1          Scrypt'ed login and recovery answers
- * @param szCarePackage Care Package for account
- */
-static
-tABC_CC ABC_LoginServerUploadCarePackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szAccountDir, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    char *szCarePackage = NULL;
-    char *szLoginPackage = NULL;
-    char *szFilename = NULL;
-
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szCarePackage, pError));
-
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szLoginPackage, pError));
-
-    ABC_CHECK_RET(ABC_LoginServerSetRecovery(L1, P1, LRA1, szCarePackage, szLoginPackage, pError));
-exit:
-    ABC_FREE_STR(szCarePackage);
-    ABC_FREE_STR(szFilename);
-    return cc;
-}
-
 
 /**
  * Creates the JSON care package
