@@ -12,9 +12,7 @@
 #include "ABC_Bridge.h"
 #include "ABC_URL.h"
 #include <curl/curl.h>
-#include <wallet/uri.hpp>
-#include <wallet/hd_keys.hpp>
-#include <wallet/key_formats.hpp>
+#include <wallet/wallet.hpp>
 #include <unordered_map>
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
 
