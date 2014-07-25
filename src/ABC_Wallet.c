@@ -1400,7 +1400,7 @@ tABC_CC ABC_WalletGetUUIDs(const char *szUserName,
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountSyncDir, WALLET_ACCOUNTS_WALLETS_FILENAME);
     bool bExists = false;
-    ABC_CHECK_RET(ABC_FileIOFileExists(szAccountSyncDir, &bExists, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     if (true == bExists)
     {
         ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON, pError));
