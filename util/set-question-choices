@@ -1,4 +1,5 @@
 #!/bin/sh
-make build/set-question-choices.bin
+util=build/set-question-choices.bin
+
 export LD_LIBRARY_PATH="../build/:$LD_LIBRARY_PATH"
-./build/set-question-choices.bin $@
+make $util && ./$util $@
