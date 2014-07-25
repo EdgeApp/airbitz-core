@@ -35,13 +35,10 @@
 #define ACCOUNT_SYNC_DIR                        "sync"
 #define ACCOUNT_FOLDER_PREFIX                   "Account_"
 #define ACCOUNT_NAME_FILENAME                   "User_Name.json"
-#define ACCOUNT_EREPO_FILENAME                  "ERepoAcctKey.json"
 #define ACCOUNT_CARE_PACKAGE_FILENAME           "Care_Package.json"
 #define ACCOUNT_LOGIN_PACKAGE_FILENAME          "Login_Package.json"
 #define ACCOUNT_WALLETS_FILENAME                "Wallets.json"
 #define ACCOUNT_CATEGORIES_FILENAME             "Categories.json"
-#define ACCOUNT_ELP2_FILENAME                   "ELP2.json"
-#define ACCOUNT_ELRA2_FILENAME                  "ELRA2.json"
 #define ACCOUNT_SETTINGS_FILENAME               "Settings.json"
 
 #define JSON_ACCT_USERNAME_FIELD                "userName"
@@ -1098,6 +1095,7 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     char *szSettingsFilename = NULL;
     char *szJSON = NULL;
     char *szLoginPackage_JSON = NULL;
+    json_t *pJSON_ELP2 = NULL;
 
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
@@ -1134,9 +1132,13 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
         ABC_CHECK_ASSERT(NULL != pKeys->pSNRP3, ABC_CC_Error, "Expected to find SNRP3 in key cache");
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP3, &LRA2, pError));
 
+        ABC_CHECK_RET(
+            ABC_LoginGetLoginPackageObjects(
+                pKeys->accountNum, NULL,
+                NULL, NULL, &pJSON_ELP2, NULL, pError));
+
         // get the LP2 by decrypting ELP2 with LRA2
-        sprintf(szFilename, "%s/%s/%s", szAccountDir, ACCOUNT_SYNC_DIR, ACCOUNT_ELP2_FILENAME);
-        ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, LRA2, &oldLP2, pError));
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ELP2, LRA2, &oldLP2, pError));
 
         // create LRA1 as it will be needed for server communication later
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP1, &LRA1, pError));
@@ -1224,6 +1226,7 @@ exit:
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szSettingsFilename);
     ABC_FREE_STR(szLoginPackage_JSON);
+    if (pJSON_ELP2) json_decref(pJSON_ELP2);
     if (cc != ABC_CC_Ok) ABC_LoginClearKeyCache(NULL);
 
     ABC_LoginMutexUnlock(NULL);
