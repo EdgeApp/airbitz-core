@@ -1280,8 +1280,8 @@ exit:
  * bitcoin to satoshis.
  */
 tABC_CC ABC_ParseAmount(const char *szAmount,
-                              int64_t *pAmountOut,
-                              unsigned decimalPlaces)
+                        uint64_t *pAmountOut,
+                        unsigned decimalPlaces)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -1300,10 +1300,10 @@ exit:
  * @param decimalPlaces set to ABC_BITCOIN_DECIMAL_PLACE to convert
  * satoshis to bitcoins.
  */
-tABC_CC ABC_FormatAmount(int64_t amount,
-                               char **pszAmountOut,
-                               unsigned decimalPlaces,
-                               tABC_Error *pError)
+tABC_CC ABC_FormatAmount(uint64_t amount,
+                         char **pszAmountOut,
+                         unsigned decimalPlaces,
+                         tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 

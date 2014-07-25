@@ -142,7 +142,7 @@ void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo)
  * bitcoin to satoshis.
  */
 tABC_CC ABC_BridgeParseAmount(const char *szAmount,
-                              int64_t *pAmountOut,
+                              uint64_t *pAmountOut,
                               unsigned decimalPlaces)
 {
     *pAmountOut = libwallet::parse_amount(szAmount, decimalPlaces);
@@ -158,7 +158,7 @@ tABC_CC ABC_BridgeParseAmount(const char *szAmount,
  * @param decimal_places set to ABC_BITCOIN_DECIMAL_PLACE to convert
  * satoshis to bitcoins.
  */
-tABC_CC ABC_BridgeFormatAmount(int64_t amount,
+tABC_CC ABC_BridgeFormatAmount(uint64_t amount,
                                char **pszAmountOut,
                                unsigned decimalPlaces,
                                tABC_Error *pError)
