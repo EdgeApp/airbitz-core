@@ -1,0 +1,4 @@
+#!/bin/sh
+make build/check-recovery-answers.bin
+export LD_LIBRARY_PATH="../build/:$LD_LIBRARY_PATH"
+./build/check-recovery-answers.bin $@

@@ -5,6 +5,7 @@ LIBS     += -labc -lpthread
 
 default: build/create-account.bin \
 		 build/change-password.bin \
+		 build/check-recovery-answers.bin \
 		 build/get-pin.bin \
 		 build/set-pin.bin \
 		 build/set-question-choices.bin \
