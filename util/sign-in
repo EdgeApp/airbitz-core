@@ -1,4 +1,5 @@
 #!/bin/sh
-make build/sign-in.bin
+util=build/sign-in.bin
+
 export LD_LIBRARY_PATH="../build/:$LD_LIBRARY_PATH"
-./build/sign-in.bin $@
+make $util && ./$util $@
