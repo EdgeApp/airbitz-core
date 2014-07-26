@@ -266,10 +266,10 @@ extern "C" {
                                         char       **pszJSON,
                                         tABC_Error *pError);
 
-    tABC_CC ABC_UtilCreateArrayJSONString(char   **aszValues,
+    tABC_CC ABC_UtilCreateArrayJSONObject(char   **aszValues,
                                           unsigned int count,
                                           const char   *szFieldName,
-                                          char         **pszJSON,
+                                          json_t       **ppJSON_Data,
                                           tABC_Error   *pError);
 
     tABC_CC ABC_UtilCreateHexDataJSONString(const tABC_U08Buf Data,
