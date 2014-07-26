@@ -1485,7 +1485,7 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
                                     const char *szPassword,
                                     const char *szWalletUUID,
                                     const char *szRequestID,
-                                    unsigned char **pszURI,
+                                    char **pszURI,
                                     unsigned char **paData,
                                     unsigned int *pWidth,
                                     tABC_Error *pError)
