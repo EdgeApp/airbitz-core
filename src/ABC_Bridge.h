@@ -2,8 +2,10 @@
  * @file
  * AirBitz C++ bridge function prototypes
  *
- * @author William Swanson
- * @version 0.1
+ * See LICENSE for copy, modification, and use permissions 
+ *
+ * @author See AUTHORS
+ * @version 1.0
  */
 
 #ifndef ABC_Bridge_h

@@ -2,7 +2,9 @@
  * @file
  * AirBitz Exchange functions
  *
- * @author Tim Horton
+ * See LICENSE for copy, modification, and use permissions 
+ *
+ * @author See AUTHORS
  * @version 1.0
  */
 
