@@ -719,7 +719,7 @@ tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, con
 
     tWalletData *pData = NULL;
     char *szFilename = NULL;
-    char *szJSON = NULL;
+    json_t *dataJSON = NULL;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
@@ -743,19 +743,16 @@ tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, con
     pData->numAccounts++;
 
     // create the json for the accounts
-    ABC_CHECK_RET(ABC_UtilCreateArrayJSONString(pData->aszAccounts, pData->numAccounts, JSON_WALLET_ACCOUNTS_FIELD, &szJSON, pError));
-    //printf("accounts:\n%s\n", szJSON);
+    ABC_CHECK_RET(ABC_UtilCreateArrayJSONObject(pData->aszAccounts, pData->numAccounts, JSON_WALLET_ACCOUNTS_FIELD, &dataJSON, pError));
 
     // write the name out to the file
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_ACCOUNTS_FILENAME);
-    tABC_U08Buf Data;
-    ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(Data, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(dataJSON, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
 
 exit:
     ABC_FREE_STR(szFilename);
-    ABC_FREE_STR(szJSON);
+    if (dataJSON)       json_decref(dataJSON);
 
     return cc;
 }
@@ -1526,6 +1523,7 @@ tABC_CC ABC_WalletSetOrder(const char *szUserName,
 
     char *szAccountSyncDir = NULL;
     char *szFilename = NULL;
+    json_t *dataJSON = NULL;
     char *szJSON = NULL;
     char **aszCurUUIDs = NULL;
     unsigned int nCurUUIDs = -1;
@@ -1584,14 +1582,16 @@ tABC_CC ABC_WalletSetOrder(const char *szUserName,
     }
 
     // create JSON for new order
-    ABC_CHECK_RET(ABC_UtilCreateArrayJSONString(aszUUIDArray, countUUIDs, JSON_WALLET_WALLETS_FIELD, &szJSON, pError));
+    ABC_CHECK_RET(ABC_UtilCreateArrayJSONObject(aszUUIDArray, countUUIDs, JSON_WALLET_WALLETS_FIELD, &dataJSON, pError));
 
     // write out the new json
+    szJSON = ABC_UtilStringFromJSONObject(dataJSON, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
 
 exit:
     ABC_FREE_STR(szAccountSyncDir);
     ABC_FREE_STR(szFilename);
+    if (dataJSON)       json_decref(dataJSON);
     ABC_FREE_STR(szJSON);
     ABC_UtilFreeStringArray(aszCurUUIDs, nCurUUIDs);
 

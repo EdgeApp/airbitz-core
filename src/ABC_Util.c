@@ -10,7 +10,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <jansson.h>
 #include "ABC_Util.h"
 #include "ABC_Crypto.h"
 
@@ -128,20 +127,19 @@ exit:
 /**
  *  Creates a JSON string representing an array of values with their name
  */
-tABC_CC ABC_UtilCreateArrayJSONString(char   **aszValues,
+tABC_CC ABC_UtilCreateArrayJSONObject(char   **aszValues,
                                       unsigned int count,
                                       const char   *szFieldName,
-                                      char         **pszJSON,
+                                      json_t       **ppJSON_Data,
                                       tABC_Error   *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     json_t *jsonItems = NULL;
     json_t *jsonItemArray = NULL;
-    char *szNewItems = NULL;
 
     ABC_CHECK_NULL(szFieldName);
-    ABC_CHECK_NULL(pszJSON);
+    ABC_CHECK_NULL(ppJSON_Data);
 
     // create the json object that will be our questions
     jsonItems = json_object();
@@ -159,13 +157,12 @@ tABC_CC ABC_UtilCreateArrayJSONString(char   **aszValues,
     // set our final json for the array element
     json_object_set(jsonItems, szFieldName, jsonItemArray);
 
-    //*pszJSON = json_dumps(jsonItems, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-    *pszJSON = ABC_UtilStringFromJSONObject(jsonItems, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
+    *ppJSON_Data = jsonItems;
+    jsonItems = NULL;
 
 exit:
     if (jsonItems)      json_decref(jsonItems);
     if (jsonItemArray)  json_decref(jsonItemArray);
-    ABC_FREE_STR(szNewItems);
 
     return cc;
 }
@@ -404,7 +401,7 @@ void ABC_UtilJanssonSecureFree(void *ptr)
  * Generates the JSON string for a jansson object.
  * Note: the given string is allocated and must be free'd by the caller
  *
- * The reason for this function is because we have overridden the alloc and 
+ * The reason for this function is because we have overridden the alloc and
  * free for jansson so that we can memset it on free.
  * In order to do this, the size of the data must be stored in the beginning
  * of the allocated data.

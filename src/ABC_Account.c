@@ -4,6 +4,7 @@
  */
 
 #include "ABC_Account.h"
+#include "ABC_Crypto.h"
 #include "ABC_FileIO.h"
 #include "ABC_Util.h"
 
@@ -42,7 +43,7 @@ tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
 
     char *szFilename = NULL;
-    char *szJSON = NULL;
+    tABC_U08Buf data;
 
     ABC_CHECK_NULL(paszCategories);
     *paszCategories = NULL;
@@ -52,13 +53,13 @@ tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
     // load the categories
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_CATEGORIES_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pKeys->MK, &data, pError));
 
     // load the strings of values
-    ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString(szJSON, JSON_ACCT_CATEGORIES_FIELD, paszCategories, pCount, pError));
+    ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)data.p, JSON_ACCT_CATEGORIES_FIELD, paszCategories, pCount, pError));
 
 exit:
-    ABC_FREE_STR(szJSON);
+    ABC_BUF_FREE(data);
     ABC_FREE_STR(szFilename);
 
     return cc;
@@ -167,19 +168,19 @@ tABC_CC ABC_AccountCategoriesSave(tABC_SyncKeys *pKeys,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szDataJSON = NULL;
+    json_t *dataJSON = NULL;
     char *szFilename = NULL;
 
     // create the categories JSON
-    ABC_CHECK_RET(ABC_UtilCreateArrayJSONString(aszCategories, count, JSON_ACCT_CATEGORIES_FIELD, &szDataJSON, pError));
+    ABC_CHECK_RET(ABC_UtilCreateArrayJSONObject(aszCategories, count, JSON_ACCT_CATEGORIES_FIELD, &dataJSON, pError));
 
     // write them out
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_CATEGORIES_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szDataJSON, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(dataJSON, pKeys->MK, ABC_CryptoType_AES256, szFilename, pError));
 
 exit:
-    ABC_FREE_STR(szDataJSON);
+    if (dataJSON)       json_decref(dataJSON);
     ABC_FREE_STR(szFilename);
 
     return cc;
