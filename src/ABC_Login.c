@@ -60,7 +60,6 @@ typedef struct sAccountKeys
     int             accountNum; // this is the number in the account directory - Account_x
     char            *szUserName;
     char            *szPassword;
-    char            *szPIN;
     char            *szRepoAcctKey;
     tABC_CryptoSNRP *pSNRP1;
     tABC_CryptoSNRP *pSNRP2;
@@ -469,7 +468,6 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     ABC_ALLOC(pKeys, sizeof(tAccountKeys));
     ABC_STRDUP(pKeys->szUserName, pInfo->szUserName);
     ABC_STRDUP(pKeys->szPassword, pInfo->szPassword);
-    ABC_STRDUP(pKeys->szPIN, pInfo->szPIN);
 
     // generate the SNRP's
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&(pKeys->pSNRP1), pError));
@@ -564,9 +562,7 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_AccountCreate(pSyncKeys, pError));
 
     // Saving PIN in settings
-    ABC_CHECK_RET(ABC_LoadAccountSettings(pInfo->szUserName, pInfo->szPassword, &pSettings, pError));
-    ABC_STRDUP(pSettings->szPIN, pInfo->szPIN);
-    ABC_CHECK_RET(ABC_UpdateAccountSettings(pInfo->szUserName, pInfo->szPassword, pSettings, pError));
+    ABC_CHECK_RET(ABC_SetPIN(pInfo->szUserName, pInfo->szPassword, pInfo->szPIN, pError));
 
     // take this opportunity to download the questions they can choose from for recovery
     ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
@@ -933,7 +929,7 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
 
     // the following should all be available
-    // szUserName, szPassword, szPIN, L, P, LP2, SNRP2, SNRP3, SNRP4
+    // szUserName, szPassword, L, P, LP2, SNRP2, SNRP3, SNRP4
     ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->L), ABC_CC_Error, "Expected to find L in key cache");
     ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->P), ABC_CC_Error, "Expected to find P in key cache");
     ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->LP2), ABC_CC_Error, "Expected to find LP2 in key cache");
@@ -1128,10 +1124,6 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
 
     // time to set the new data for this account
 
-    // set new PIN
-    ABC_FREE_STR(pKeys->szPIN);
-    ABC_STRDUP(pKeys->szPIN, pInfo->szPIN);
-
     // set new password
     ABC_FREE_STR(pKeys->szPassword);
     ABC_STRDUP(pKeys->szPassword, pInfo->szNewPassword);
@@ -1175,7 +1167,7 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     // the keys for the account have all been updated so other functions can now be called that use them
 
     // set the new PIN
-    ABC_CHECK_RET(ABC_LoginSetPIN(pInfo->szUserName, pInfo->szNewPassword, pInfo->szPIN, pError));
+    ABC_CHECK_RET(ABC_SetPIN(pInfo->szUserName, pInfo->szNewPassword, pInfo->szPIN, pError));
 
     // Sync the data (ELP2 and ELRA2) with server
     int dirty;
@@ -2206,7 +2198,6 @@ static void ABC_LoginFreeAccountKeys(tAccountKeys *pAccountKeys)
 
         ABC_FREE_STR(pAccountKeys->szPassword);
 
-        ABC_FREE_STR(pAccountKeys->szPIN);
         ABC_FREE_STR(pAccountKeys->szRepoAcctKey);
 
         ABC_CryptoFreeSNRP(&(pAccountKeys->pSNRP1));
@@ -2310,7 +2301,7 @@ exit:
 /**
  * Adds the given user to the key cache if it isn't already cached.
  * With or without a password, szUserName, L, SNRP1, SNRP2, SNRP3, SNRP4 keys are retrieved and added if they aren't already in the cache
- * If a password is given, szPassword, szPIN, P, LP2 keys are retrieved and the entry is added
+ * If a password is given, szPassword, P, LP2 keys are retrieved and the entry is added
  *  (the initial keys are added so the password can be verified while trying to
  *  decrypt the settings files)
  * If a pointer to hold the keys is given, then it is set to those keys
@@ -2328,7 +2319,6 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
     json_t       *pJSON_EMK          = NULL;
     json_t       *pJSON_ESyncKey     = NULL;
     json_t       *pJSON_ELRA2        = NULL;
-    tABC_U08Buf  PIN_JSON            = ABC_BUF_NULL;
     tABC_U08Buf  REPO_JSON           = ABC_BUF_NULL;
     tABC_U08Buf  MK                  = ABC_BUF_NULL;
     json_t       *pJSON_Root         = NULL;
@@ -2336,7 +2326,6 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
     tABC_U08Buf  LP                  = ABC_BUF_NULL;
     tABC_U08Buf  LP2                 = ABC_BUF_NULL;
     tABC_U08Buf  LRA2                = ABC_BUF_NULL;
-    tABC_AccountSettings  *pSettings = NULL;
 
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
@@ -2476,12 +2465,6 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
                 ABC_BUF_SET(pFinalKeys->LRA2, LRA2);
                 ABC_BUF_CLEAR(LRA2);
             }
-
-            ABC_CHECK_RET(ABC_LoadAccountSettings(szUserName, szPassword, &pSettings, pError));
-            if (pSettings && pSettings->szPIN)
-            {
-                ABC_STRDUP(pFinalKeys->szPIN, pSettings->szPIN);
-            }
         }
         else
         {
@@ -2505,7 +2488,6 @@ exit:
         ABC_LoginFreeAccountKeys(pKeys);
         ABC_CLEAR_FREE(pKeys, sizeof(tAccountKeys));
     }
-    ABC_AccountSettingsFree(pSettings);
     if (pJSON_SNRP2)    json_decref(pJSON_SNRP2);
     if (pJSON_SNRP3)    json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)    json_decref(pJSON_SNRP4);
@@ -2513,7 +2495,6 @@ exit:
     if (pJSON_ESyncKey) json_decref(pJSON_ESyncKey);
     if (pJSON_Root)     json_decref(pJSON_Root);
     ABC_BUF_FREE(REPO_JSON);
-    ABC_BUF_FREE(PIN_JSON);
     ABC_BUF_FREE(P);
     ABC_BUF_FREE(LP);
     ABC_BUF_FREE(LP2);
@@ -2571,12 +2552,6 @@ tABC_CC ABC_LoginGetKey(const char *szUserName, const char *szPassword, tABC_Log
             ABC_BUF_SET(*pKey, pKeys->LP2);
             break;
 
-        case ABC_LoginKey_PIN:
-            // this should already be in the cache
-            ABC_CHECK_ASSERT(NULL != pKeys->szPIN, ABC_CC_Error, "Expected to find PIN in key cache");
-            ABC_BUF_SET_PTR(*pKey, (unsigned char *)pKeys->szPIN, sizeof(pKeys->szPIN) + 1);
-            break;
-
         case ABC_LoginKey_RepoAccountKey:
             // this should already be in the cache
             if (NULL == pKeys->szRepoAcctKey)
@@ -2621,49 +2596,6 @@ exit:
     if (pJSON_ERQ)  json_decref(pJSON_ERQ);
 
     ABC_LoginMutexUnlock(NULL);
-    return cc;
-}
-
-/**
- * Sets the PIN for the given account
- *
- * @param szPIN PIN to use for the account
- */
-tABC_CC ABC_LoginSetPIN(const char *szUserName,
-                          const char *szPassword,
-                          const char *szPIN,
-                          tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    int                  dirty;
-    tAccountKeys         *pKeys     = NULL;
-    tABC_SyncKeys        *pSyncKeys = NULL;
-    tABC_AccountSettings *pSettings = NULL;
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_NULL(szPIN);
-
-    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pSyncKeys, pError));
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(pSyncKeys, &pSettings, pError));
-
-    // get the key cache
-    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
-
-    // set the new PIN
-    ABC_FREE_STR(pKeys->szPIN);
-    ABC_STRDUP(pKeys->szPIN, szPIN);
-
-    ABC_FREE_STR(pSettings->szPIN);
-    ABC_STRDUP(pSettings->szPIN, szPIN);
-
-    ABC_CHECK_RET(ABC_AccountSettingsSave(pSyncKeys, pSettings, pError));
-    ABC_CHECK_RET(ABC_LoginSyncData(szUserName, szPassword, &dirty, pError));
-exit:
-    if (pSyncKeys)      ABC_SyncFreeKeys(pSyncKeys);
-    ABC_AccountSettingsFree(pSettings);
-
     return cc;
 }
 

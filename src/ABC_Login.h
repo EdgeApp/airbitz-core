@@ -59,7 +59,6 @@ extern "C" {
         ABC_LoginKey_L1,
         ABC_LoginKey_L2,
         ABC_LoginKey_LP2,
-        ABC_LoginKey_PIN,
         ABC_LoginKey_RepoAccountKey,
         ABC_LoginKey_RQ
     } tABC_LoginKey;
@@ -99,11 +98,6 @@ extern "C" {
     tABC_CC ABC_LoginGetSyncDirName(const char *szUserName,
                                       char **pszDirName,
                                       tABC_Error *pError);
-
-    tABC_CC ABC_LoginSetPIN(const char *szUserName,
-                              const char *szPassword,
-                              const char *szPIN,
-                              tABC_Error *pError);
 
     tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
                                             const char *szRecoveryAnswers,

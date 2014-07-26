@@ -478,10 +478,11 @@ exit:
 }
 
 /**
- * Get a PIN number.
+ * Get a PIN number (Deprecated!).
  *
  * This function retrieves the PIN for a given account.
  * The string is allocated and must be free'd by the caller.
+ * It is deprecated in favor of just reading the PIN out of the account settings.
  *
  * @param szUserName             UserName for the account
  * @param szPassword             Password for the account
@@ -498,25 +499,31 @@ tABC_CC ABC_GetPIN(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+    tABC_AccountSettings *pSettings = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(pszPIN);
 
-    tABC_U08Buf PIN;
-    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_PIN, &PIN, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
 
-    ABC_STRDUP(*pszPIN, (char *)ABC_BUF_PTR(PIN));
+    ABC_STRDUP(*pszPIN, pSettings->szPIN);
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
+    if (pSettings)      ABC_AccountSettingsFree(pSettings);
 
     return cc;
 }
 
 /**
- * Set PIN number for an account.
+ * Set PIN number for an account (Deprecated!).
  *
  * This function sets the PIN for a given account.
+ * It is deprecated in favor of just setting the PIN in the account settings.
  *
  * @param szUserName            UserName for the account
  * @param szPassword            Password for the account
@@ -533,14 +540,23 @@ tABC_CC ABC_SetPIN(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+    tABC_AccountSettings *pSettings = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szPIN);
 
-    ABC_CHECK_RET(ABC_LoginSetPIN(szUserName, szPassword, szPIN, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
+    ABC_FREE_STR(pSettings->szPIN);
+    ABC_STRDUP(pSettings->szPIN, szPIN);
+    ABC_CHECK_RET(ABC_AccountSettingsSave(pKeys, pSettings, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
+    if (pSettings)      ABC_AccountSettingsFree(pSettings);
 
     return cc;
 }
