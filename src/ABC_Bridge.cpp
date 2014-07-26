@@ -12,9 +12,7 @@
 #include "ABC_Bridge.h"
 #include "ABC_URL.h"
 #include <curl/curl.h>
-#include <wallet/uri.hpp>
-#include <wallet/hd_keys.hpp>
-#include <wallet/key_formats.hpp>
+#include <wallet/wallet.hpp>
 #include <unordered_map>
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
 
@@ -144,7 +142,7 @@ void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo)
  * bitcoin to satoshis.
  */
 tABC_CC ABC_BridgeParseAmount(const char *szAmount,
-                              int64_t *pAmountOut,
+                              uint64_t *pAmountOut,
                               unsigned decimalPlaces)
 {
     *pAmountOut = libwallet::parse_amount(szAmount, decimalPlaces);
@@ -160,7 +158,7 @@ tABC_CC ABC_BridgeParseAmount(const char *szAmount,
  * @param decimal_places set to ABC_BITCOIN_DECIMAL_PLACE to convert
  * satoshis to bitcoins.
  */
-tABC_CC ABC_BridgeFormatAmount(int64_t amount,
+tABC_CC ABC_BridgeFormatAmount(uint64_t amount,
                                char **pszAmountOut,
                                unsigned decimalPlaces,
                                tABC_Error *pError)
