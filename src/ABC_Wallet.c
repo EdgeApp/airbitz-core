@@ -5,7 +5,9 @@
  * This file contains all of the functions associated with wallet creation,
  * viewing and modification.
  *
- * @author Adam Harris
+ * See LICENSE for copy, modification, and use permissions 
+ *
+ * @author See AUTHORS
  * @version 1.0
  */
 
