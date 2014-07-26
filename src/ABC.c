@@ -2179,7 +2179,7 @@ void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
  */
 tABC_CC ABC_LoadAccountSettings(const char *szUserName,
                                 const char *szPassword,
-                                tABC_LoginSettings **ppSettings,
+                                tABC_AccountSettings **ppSettings,
                                 tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -2187,11 +2187,15 @@ tABC_CC ABC_LoadAccountSettings(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginLoadSettings(szUserName, szPassword, ppSettings, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, ppSettings, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -2206,7 +2210,7 @@ exit:
  */
 tABC_CC ABC_UpdateAccountSettings(const char *szUserName,
                                   const char *szPassword,
-                                  tABC_LoginSettings *pSettings,
+                                  tABC_AccountSettings *pSettings,
                                   tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -2214,11 +2218,15 @@ tABC_CC ABC_UpdateAccountSettings(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginSaveSettings(szUserName, szPassword, pSettings, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountSettingsSave(pKeys, pSettings, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -2228,11 +2236,11 @@ exit:
  *
  * @param pSettings Ptr to setting to free
  */
-void ABC_FreeAccountSettings(tABC_LoginSettings *pSettings)
+void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    ABC_LoginFreeSettings(pSettings);
+    ABC_AccountSettingsFree(pSettings);
 }
 
 /**

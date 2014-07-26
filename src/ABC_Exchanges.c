@@ -14,6 +14,7 @@
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
 #include "ABC_Login.h"
+#include "ABC_Account.h"
 #include "ABC_URL.h"
 
 #define EXCHANGE_RATE_DIRECTORY "Exchanges"
@@ -465,13 +466,14 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
                                   char **szSource, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_LoginSettings *pAccountSettings = NULL;
+    tABC_SyncKeys *pKeys = NULL;
+    tABC_AccountSettings *pAccountSettings = NULL;
 
     *szSource = NULL;
     if (pInfo->szUserName && pInfo->szPassword)
     {
-        ABC_LoginLoadSettings(pInfo->szUserName,
-                                pInfo->szPassword,
+        ABC_CHECK_RET(ABC_LoginGetSyncKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
+        ABC_AccountSettingsLoad(pKeys,
                                 &pAccountSettings,
                                 pError);
     }
@@ -512,7 +514,9 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
         }
     }
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     ABC_FreeAccountSettings(pAccountSettings);
+
     return cc;
 }
 

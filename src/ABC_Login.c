@@ -39,10 +39,8 @@
 #define ACCOUNT_CARE_PACKAGE_FILENAME           "Care_Package.json"
 #define ACCOUNT_LOGIN_PACKAGE_FILENAME          "Login_Package.json"
 #define ACCOUNT_WALLETS_FILENAME                "Wallets.json"
-#define ACCOUNT_SETTINGS_FILENAME               "Settings.json"
 
 #define JSON_ACCT_USERNAME_FIELD                "userName"
-#define JSON_ACCT_PIN_FIELD                     "PIN"
 #define JSON_ACCT_REPO_FIELD                    "RepoAcctKey"
 #define JSON_ACCT_WALLETS_FIELD                 "wallets"
 #define JSON_ACCT_ERQ_FIELD                     "ERQ"
@@ -53,20 +51,6 @@
 #define JSON_ACCT_ELP2_FIELD                    "ELP2"
 #define JSON_ACCT_ELRA3_FIELD                   "ELRA3"
 
-#define JSON_ACCT_FIRST_NAME_FIELD              "firstName"
-#define JSON_ACCT_LAST_NAME_FIELD               "lastName"
-#define JSON_ACCT_NICKNAME_FIELD                "nickname"
-#define JSON_ACCT_NAME_ON_PAYMENTS_FIELD        "nameOnPayments"
-#define JSON_ACCT_MINUTES_AUTO_LOGOUT_FIELD     "minutesAutoLogout"
-#define JSON_ACCT_LANGUAGE_FIELD                "language"
-#define JSON_ACCT_NUM_CURRENCY_FIELD            "numCurrency"
-#define JSON_ACCT_EX_RATE_SOURCES_FIELD         "exchangeRateSources"
-#define JSON_ACCT_EX_RATE_SOURCE_FIELD          "exchangeRateSource"
-#define JSON_ACCT_BITCOIN_DENOMINATION_FIELD    "bitcoinDenomination"
-#define JSON_ACCT_LABEL_FIELD                   "label"
-#define JSON_ACCT_LABEL_TYPE                    "labeltype"
-#define JSON_ACCT_SATOSHI_FIELD                 "satoshi"
-#define JSON_ACCT_ADVANCED_FEATURES_FIELD       "advancedFeatures"
 #define JSON_ACCT_CARE_PACKAGE                  "care_package"
 #define JSON_ACCT_LOGIN_PACKAGE                 "login_package"
 
@@ -130,10 +114,6 @@ static tABC_CC ABC_LoginKeyFromCacheByName(const char *szUserName, tAccountKeys 
 static tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1, char **szResponse, tABC_Error *pError);
 static tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char **szERepoAcctKey, tABC_Error *pError);
 static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, char *szURL, char *szField, char **szResponse, tABC_Error *pError);
-static tABC_CC ABC_LoginGetSettingsFilename(const char *szUserName, char **pszFilename, tABC_Error *pError);
-static tABC_CC ABC_LoginCreateDefaultSettings(tABC_LoginSettings **ppSettings, tABC_Error *pError);
-static tABC_CC ABC_LoginLoadSettingsEnc(const char *szUserName, tABC_U08Buf Key, tABC_LoginSettings **ppSettings, tABC_Error *pError);
-static tABC_CC ABC_LoginSaveSettingsEnc(const char *szUserName, tABC_U08Buf Key, tABC_LoginSettings *pSettings, tABC_Error *pError);
 static tABC_CC ABC_LoginMutexLock(tABC_Error *pError);
 static tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError);
 
@@ -453,7 +433,7 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_GeneralInfo        *pGeneralInfo        = NULL;
-    tABC_LoginSettings      *pSettings           = NULL;
+    tABC_AccountSettings    *pSettings           = NULL;
     tAccountKeys            *pKeys               = NULL;
     tABC_SyncKeys           *pSyncKeys           = NULL;
     tABC_U08Buf             NULL_BUF             = ABC_BUF_NULL;
@@ -634,7 +614,7 @@ exit:
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
     ABC_GeneralFreeInfo(pGeneralInfo);
-    ABC_LoginFreeSettings(pSettings);
+    ABC_AccountSettingsFree(pSettings);
 
     ABC_LoginMutexUnlock(NULL);
     return cc;
@@ -1091,10 +1071,8 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     tABC_U08Buf LRA          = ABC_BUF_NULL;
     tABC_U08Buf LRA1         = ABC_BUF_NULL;
     tABC_U08Buf oldP1        = ABC_BUF_NULL;
-    tABC_U08Buf SettingsData = ABC_BUF_NULL;
     char *szAccountDir = NULL;
     char *szFilename = NULL;
-    char *szSettingsFilename = NULL;
     char *szJSON = NULL;
     char *szLoginPackage_JSON = NULL;
     json_t *pJSON_ELP2 = NULL;
@@ -1194,19 +1172,6 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     // change all the wallet keys - re-encrypted them with new LP2
     ABC_CHECK_RET(ABC_WalletChangeEMKsForAccount(pInfo->szUserName, oldLP2, pKeys->LP2, pError));
 
-    // re-encrypt the settings
-    ABC_CHECK_RET(ABC_LoginGetSettingsFilename(pInfo->szUserName, &szSettingsFilename, pError));
-    bool bExists = false;
-    ABC_CHECK_RET(ABC_FileIOFileExists(szSettingsFilename, &bExists, pError));
-    if (true == bExists)
-    {
-        // load them using the old key
-        ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szSettingsFilename, oldLP2, &SettingsData, pError));
-
-        // save them using the new key
-        ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(SettingsData, pKeys->LP2, ABC_CryptoType_AES256, szSettingsFilename, pError));
-    }
-
     // the keys for the account have all been updated so other functions can now be called that use them
 
     // set the new PIN
@@ -1222,11 +1187,9 @@ exit:
     ABC_BUF_FREE(LRA);
     ABC_BUF_FREE(LRA1);
     ABC_BUF_FREE(oldP1);
-    ABC_BUF_FREE(SettingsData);
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szJSON);
-    ABC_FREE_STR(szSettingsFilename);
     ABC_FREE_STR(szLoginPackage_JSON);
     if (pJSON_ELP2) json_decref(pJSON_ELP2);
     if (cc != ABC_CC_Ok) ABC_LoginClearKeyCache(NULL);
@@ -2373,7 +2336,7 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
     tABC_U08Buf  LP                  = ABC_BUF_NULL;
     tABC_U08Buf  LP2                 = ABC_BUF_NULL;
     tABC_U08Buf  LRA2                = ABC_BUF_NULL;
-    tABC_LoginSettings    *pSettings = NULL;
+    tABC_AccountSettings  *pSettings = NULL;
 
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
@@ -2542,7 +2505,7 @@ exit:
         ABC_LoginFreeAccountKeys(pKeys);
         ABC_CLEAR_FREE(pKeys, sizeof(tAccountKeys));
     }
-    ABC_LoginFreeSettings(pSettings);
+    ABC_AccountSettingsFree(pSettings);
     if (pJSON_SNRP2)    json_decref(pJSON_SNRP2);
     if (pJSON_SNRP3)    json_decref(pJSON_SNRP3);
     if (pJSON_SNRP4)    json_decref(pJSON_SNRP4);
@@ -2675,13 +2638,15 @@ tABC_CC ABC_LoginSetPIN(const char *szUserName,
 
     int                  dirty;
     tAccountKeys         *pKeys     = NULL;
-    tABC_LoginSettings *pSettings = NULL;
+    tABC_SyncKeys        *pSyncKeys = NULL;
+    tABC_AccountSettings *pSettings = NULL;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szPIN);
 
-    ABC_CHECK_RET(ABC_LoginLoadSettings(szUserName, szPassword, &pSettings, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pSyncKeys, pError));
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(pSyncKeys, &pSettings, pError));
 
     // get the key cache
     ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
@@ -2693,10 +2658,11 @@ tABC_CC ABC_LoginSetPIN(const char *szUserName,
     ABC_FREE_STR(pSettings->szPIN);
     ABC_STRDUP(pSettings->szPIN, szPIN);
 
-    ABC_CHECK_RET(ABC_LoginSaveSettings(szUserName, szPassword, pSettings, pError));
+    ABC_CHECK_RET(ABC_AccountSettingsSave(pSyncKeys, pSettings, pError));
     ABC_CHECK_RET(ABC_LoginSyncData(szUserName, szPassword, &dirty, pError));
 exit:
-    ABC_LoginFreeSettings(pSettings);
+    if (pSyncKeys)      ABC_SyncFreeKeys(pSyncKeys);
+    ABC_AccountSettingsFree(pSettings);
 
     return cc;
 }
@@ -3098,531 +3064,6 @@ tABC_CC ABC_LoginGetRecoveryQuestions(const char *szUserName,
 exit:
 
     return cc;
-}
-
-/*
- * Gets the account settings filename for a given username
- *
- * @param pszFilename Location to store allocated filename string (caller must free)
- */
-static
-tABC_CC ABC_LoginGetSettingsFilename(const char *szUserName,
-                                       char **pszFilename,
-                                       tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    char *szSyncDirName = NULL;
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(pszFilename);
-    *pszFilename = NULL;
-
-    ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szSyncDirName, pError));
-
-    ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszFilename, "%s/%s", szSyncDirName, ACCOUNT_SETTINGS_FILENAME);
-
-exit:
-    ABC_FREE_STR(szSyncDirName);
-
-    return cc;
-}
-
-/**
- * Creates default account settings
- *
- * @param ppSettings    Location to store ptr to allocated settings (caller must free)
- * @param pError        A pointer to the location to store the error if there is one
- */
-static
-tABC_CC ABC_LoginCreateDefaultSettings(tABC_LoginSettings **ppSettings,
-                                         tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    tABC_LoginSettings *pSettings = NULL;
-    int i = 0;
-
-    ABC_CHECK_NULL(ppSettings);
-
-    ABC_ALLOC(pSettings, sizeof(tABC_LoginSettings));
-
-    pSettings->szFirstName = NULL;
-    pSettings->szLastName = NULL;
-    pSettings->szNickname = NULL;
-    pSettings->bNameOnPayments = false;
-    pSettings->minutesAutoLogout = 60;
-    ABC_STRDUP(pSettings->szLanguage, "en");
-    pSettings->currencyNum = CURRENCY_NUM_USD;
-
-    pSettings->exchangeRateSources.numSources = 5;
-    ABC_ALLOC(pSettings->exchangeRateSources.aSources,
-              pSettings->exchangeRateSources.numSources * sizeof(tABC_ExchangeRateSource *));
-
-    tABC_ExchangeRateSource **aSources = pSettings->exchangeRateSources.aSources;
-
-    // USD defaults to bitstamp
-    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
-    aSources[i]->currencyNum = CURRENCY_NUM_USD;
-    ABC_STRDUP(aSources[i]->szSource, ABC_BITSTAMP);
-    i++;
-
-    // CAD defaults to coinbase
-    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
-    aSources[i]->currencyNum = CURRENCY_NUM_CAD;
-    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
-    i++;
-
-    // EUR defaults to coinbase
-    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
-    aSources[i]->currencyNum = CURRENCY_NUM_EUR;
-    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
-    i++;
-
-    // MXN defaults to coinbase
-    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
-    aSources[i]->currencyNum = CURRENCY_NUM_MXN;
-    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
-    i++;
-
-    // CNY defaults to coinbase
-    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
-    aSources[i]->currencyNum = CURRENCY_NUM_CNY;
-    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
-
-    pSettings->bitcoinDenomination.denominationType = ABC_DENOMINATION_MBTC;
-    pSettings->bitcoinDenomination.satoshi = 100000;
-
-    // assign final settings
-    *ppSettings = pSettings;
-    pSettings = NULL;
-
-exit:
-    ABC_LoginFreeSettings(pSettings);
-
-    return cc;
-}
-
-/**
- * Loads the settings for a specific account using the given key
- * If no settings file exists for the given user, defaults are created
- *
- * @param szUserName    UserName for the account associated with the settings
- * @param Key           Key used to decrypt the settings
- * @param ppSettings    Location to store ptr to allocated settings (caller must free)
- * @param pError        A pointer to the location to store the error if there is one
- */
-static
-tABC_CC ABC_LoginLoadSettingsEnc(const char *szUserName,
-                                   tABC_U08Buf Key,
-                                   tABC_LoginSettings **ppSettings,
-                                   tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    tABC_LoginSettings *pSettings = NULL;
-    char *szFilename = NULL;
-    json_t *pJSON_Root = NULL;
-    json_t *pJSON_Value = NULL;
-
-    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL(ppSettings);
-
-    // get the settings filename
-    ABC_CHECK_RET(ABC_LoginGetSettingsFilename(szUserName, &szFilename, pError));
-
-    bool bExists = false;
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-    if (true == bExists)
-    {
-        // load and decrypted the file into a json object
-        ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, Key, &pJSON_Root, pError));
-        //ABC_DebugLog("Loaded settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
-
-        // allocate the new settings object
-        ABC_ALLOC(pSettings, sizeof(tABC_LoginSettings));
-
-        // get the first name
-        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_FIRST_NAME_FIELD);
-        if (pJSON_Value)
-        {
-            ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szFirstName, json_string_value(pJSON_Value));
-        }
-
-        // get the last name
-        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_LAST_NAME_FIELD);
-        if (pJSON_Value)
-        {
-            ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szLastName, json_string_value(pJSON_Value));
-        }
-
-        // get the nickname
-        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_NICKNAME_FIELD);
-        if (pJSON_Value)
-        {
-            ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szNickname, json_string_value(pJSON_Value));
-        }
-
-        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_PIN_FIELD);
-        if (pJSON_Value)
-        {
-            ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szPIN, json_string_value(pJSON_Value));
-        }
-
-        // get name on payments option
-        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_NAME_ON_PAYMENTS_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON boolean value");
-        pSettings->bNameOnPayments = json_is_true(pJSON_Value) ? true : false;
-
-        // get minutes auto logout
-        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_MINUTES_AUTO_LOGOUT_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
-        pSettings->minutesAutoLogout = (int) json_integer_value(pJSON_Value);
-
-        // get language
-        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_LANGUAGE_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-        ABC_STRDUP(pSettings->szLanguage, json_string_value(pJSON_Value));
-
-        // get currency num
-        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_NUM_CURRENCY_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
-        pSettings->currencyNum = (int) json_integer_value(pJSON_Value);
-
-        // get advanced features
-        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_ADVANCED_FEATURES_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON boolean value");
-        pSettings->bAdvancedFeatures = json_is_true(pJSON_Value) ? true : false;
-
-        // get the denomination object
-        json_t *pJSON_Denom = json_object_get(pJSON_Root, JSON_ACCT_BITCOIN_DENOMINATION_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Denom && json_is_object(pJSON_Denom)), ABC_CC_JSONError, "Error parsing JSON object value");
-
-        // get denomination satoshi display size (e.g., 100,000 would be milli-bit coin)
-        pJSON_Value = json_object_get(pJSON_Denom, JSON_ACCT_SATOSHI_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
-        pSettings->bitcoinDenomination.satoshi = json_integer_value(pJSON_Value);
-
-        // get denomination type
-        pJSON_Value = json_object_get(pJSON_Denom, JSON_ACCT_LABEL_TYPE);
-        ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
-        pSettings->bitcoinDenomination.denominationType = json_integer_value(pJSON_Value);
-
-        // get the exchange rates array
-        json_t *pJSON_Sources = json_object_get(pJSON_Root, JSON_ACCT_EX_RATE_SOURCES_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Sources && json_is_array(pJSON_Sources)), ABC_CC_JSONError, "Error parsing JSON array value");
-
-        // get the number of elements in the array
-        pSettings->exchangeRateSources.numSources = (int) json_array_size(pJSON_Sources);
-        if (pSettings->exchangeRateSources.numSources > 0)
-        {
-            ABC_ALLOC(pSettings->exchangeRateSources.aSources, pSettings->exchangeRateSources.numSources * sizeof(tABC_ExchangeRateSource *));
-        }
-
-        // run through all the sources
-        for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)
-        {
-            tABC_ExchangeRateSource *pSource = NULL;
-            ABC_ALLOC(pSource, sizeof(tABC_ExchangeRateSource));
-
-            // get the source object
-            json_t *pJSON_Source = json_array_get(pJSON_Sources, i);
-            ABC_CHECK_ASSERT((pJSON_Source && json_is_object(pJSON_Source)), ABC_CC_JSONError, "Error parsing JSON array element object");
-
-            // get the currency num
-            pJSON_Value = json_object_get(pJSON_Source, JSON_ACCT_NUM_CURRENCY_FIELD);
-            ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
-            pSource->currencyNum = (int) json_integer_value(pJSON_Value);
-
-            // get the exchange rate source
-            pJSON_Value = json_object_get(pJSON_Source, JSON_ACCT_EX_RATE_SOURCE_FIELD);
-            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSource->szSource, json_string_value(pJSON_Value));
-
-            // assign this source to the array
-            pSettings->exchangeRateSources.aSources[i] = pSource;
-        }
-    }
-    else
-    {
-        // create the defaults
-        ABC_CHECK_RET(ABC_LoginCreateDefaultSettings(&pSettings, pError));
-    }
-
-    // assign final settings
-    *ppSettings = pSettings;
-    pSettings = NULL;
-
- //   ABC_DebugLog("Loading settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
-
-exit:
-    ABC_LoginFreeSettings(pSettings);
-    ABC_FREE_STR(szFilename);
-    if (pJSON_Root) json_decref(pJSON_Root);
-
-    ABC_LoginMutexUnlock(NULL);
-    return cc;
-}
-
-/**
- * Loads the settings for a specific account
- *
- * @param szUserName    UserName for the account associated with the settings
- * @param szPassword    Password for the account associated with the settings
- * @param ppSettings    Location to store ptr to allocated settings (caller must free)
- * @param pError        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_LoginLoadSettings(const char *szUserName,
-                                const char *szPassword,
-                                tABC_LoginSettings **ppSettings,
-                                tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    tABC_U08Buf LP2 = ABC_BUF_NULL;
-
-    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(ppSettings);
-
-    // get LP2
-    ABC_CHECK_RET(ABC_LoginGetKey(szUserName,szPassword, ABC_LoginKey_LP2, &LP2, pError));
-
-    // load them with the given key
-    ABC_CHECK_RET(ABC_LoginLoadSettingsEnc(szUserName, LP2, ppSettings, pError));
-
-exit:
-
-    ABC_LoginMutexUnlock(NULL);
-    return cc;
-}
-
-/**
- * Saves the settings for a specific account using the given key
- *
- * @param szUserName    UserName for the account associated with the settings
- * @param Key           Key used to encrypt the settings
- * @param pSettings     Pointer to settings
- * @param pError        A pointer to the location to store the error if there is one
- */
-static
-tABC_CC ABC_LoginSaveSettingsEnc(const char *szUserName,
-                                   tABC_U08Buf Key,
-                                   tABC_LoginSettings *pSettings,
-                                   tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    json_t *pJSON_Root = NULL;
-    json_t *pJSON_Denom = NULL;
-    json_t *pJSON_SourcesArray = NULL;
-    json_t *pJSON_Source = NULL;
-    char *szFilename = NULL;
-    int retVal = 0;
-
-    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL(pSettings);
-
-    // create the json for the settings
-    pJSON_Root = json_object();
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_Error, "Could not create settings JSON object");
-
-    // set the first name
-    if (pSettings->szFirstName)
-    {
-        retVal = json_object_set_new(pJSON_Root, JSON_ACCT_FIRST_NAME_FIELD, json_string(pSettings->szFirstName));
-        ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-    }
-
-    // set the last name
-    if (pSettings->szLastName)
-    {
-        retVal = json_object_set_new(pJSON_Root, JSON_ACCT_LAST_NAME_FIELD, json_string(pSettings->szLastName));
-        ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-    }
-
-    // set the nickname
-    if (pSettings->szNickname)
-    {
-        retVal = json_object_set_new(pJSON_Root, JSON_ACCT_NICKNAME_FIELD, json_string(pSettings->szNickname));
-        ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-    }
-
-    // set the pin
-    if (pSettings->szPIN)
-    {
-        retVal = json_object_set_new(pJSON_Root, JSON_ACCT_PIN_FIELD, json_string(pSettings->szPIN));
-        ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-    }
-
-    // set name on payments option
-    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_NAME_ON_PAYMENTS_FIELD, json_boolean(pSettings->bNameOnPayments));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // set minutes auto logout
-    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_MINUTES_AUTO_LOGOUT_FIELD, json_integer(pSettings->minutesAutoLogout));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // set language
-    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_LANGUAGE_FIELD, json_string(pSettings->szLanguage));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // set currency num
-    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_NUM_CURRENCY_FIELD, json_integer(pSettings->currencyNum));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // set advanced features
-    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_ADVANCED_FEATURES_FIELD, json_boolean(pSettings->bAdvancedFeatures));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // create the denomination section
-    pJSON_Denom = json_object();
-    ABC_CHECK_ASSERT(pJSON_Denom != NULL, ABC_CC_Error, "Could not create settings JSON object");
-
-    // set denomination satoshi display size (e.g., 100,000 would be milli-bit coin)
-    retVal = json_object_set_new(pJSON_Denom, JSON_ACCT_SATOSHI_FIELD, json_integer(pSettings->bitcoinDenomination.satoshi));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // set denomination type
-    retVal = json_object_set_new(pJSON_Denom, JSON_ACCT_LABEL_TYPE, json_integer(pSettings->bitcoinDenomination.denominationType));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // add the denomination object
-    retVal = json_object_set(pJSON_Root, JSON_ACCT_BITCOIN_DENOMINATION_FIELD, pJSON_Denom);
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // create the exchange sources array
-    pJSON_SourcesArray = json_array();
-    ABC_CHECK_ASSERT(pJSON_SourcesArray != NULL, ABC_CC_Error, "Could not create settings JSON object");
-
-    // add the exchange sources
-    for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)
-    {
-        tABC_ExchangeRateSource *pSource = pSettings->exchangeRateSources.aSources[i];
-
-        // create the source object
-        pJSON_Source = json_object();
-        ABC_CHECK_ASSERT(pJSON_Source != NULL, ABC_CC_Error, "Could not create settings JSON object");
-
-        // set the currency num
-        retVal = json_object_set_new(pJSON_Source, JSON_ACCT_NUM_CURRENCY_FIELD, json_integer(pSource->currencyNum));
-        ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-        // set the exchange rate source
-        retVal = json_object_set_new(pJSON_Source, JSON_ACCT_EX_RATE_SOURCE_FIELD, json_string(pSource->szSource));
-        ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-        // append this object to our array
-        retVal = json_array_append(pJSON_SourcesArray, pJSON_Source);
-        ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-        // free the source object
-        if (pJSON_Source) json_decref(pJSON_Source);
-        pJSON_Source = NULL;
-    }
-
-    // add the exchange sources array object
-    retVal = json_object_set(pJSON_Root, JSON_ACCT_EX_RATE_SOURCES_FIELD, pJSON_SourcesArray);
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // get the settings filename
-    ABC_CHECK_RET(ABC_LoginGetSettingsFilename(szUserName, &szFilename, pError));
-
-    // encrypt and save json
-//    ABC_DebugLog("Saving settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, Key, ABC_CryptoType_AES256, szFilename, pError));
-
-
-exit:
-    if (pJSON_Root) json_decref(pJSON_Root);
-    if (pJSON_Denom) json_decref(pJSON_Denom);
-    if (pJSON_SourcesArray) json_decref(pJSON_SourcesArray);
-    if (pJSON_Source) json_decref(pJSON_Source);
-    ABC_FREE_STR(szFilename);
-
-    ABC_LoginMutexUnlock(NULL);
-    return cc;
-}
-
-/**
- * Saves the settings for a specific account
- *
- * @param szUserName    UserName for the account associated with the settings
- * @param szPassword    Password for the account associated with the settings
- * @param pSettings     Pointer to settings
- * @param pError        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_LoginSaveSettings(const char *szUserName,
-                                const char *szPassword,
-                                tABC_LoginSettings *pSettings,
-                                tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    tABC_U08Buf LP2 = ABC_BUF_NULL;
-
-    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(pSettings);
-
-    // get LP2
-    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_LP2, &LP2, pError));
-
-    // save them with the given key
-    ABC_CHECK_RET(ABC_LoginSaveSettingsEnc(szUserName, LP2, pSettings, pError));
-
-exit:
-
-    ABC_LoginMutexUnlock(NULL);
-    return cc;
-}
-
-/**
- * Free's the given account settings
- */
-void ABC_LoginFreeSettings(tABC_LoginSettings *pSettings)
-{
-    if (pSettings)
-    {
-        ABC_FREE_STR(pSettings->szFirstName);
-        ABC_FREE_STR(pSettings->szLastName);
-        ABC_FREE_STR(pSettings->szNickname);
-        ABC_FREE_STR(pSettings->szLanguage);
-        ABC_FREE_STR(pSettings->szPIN);
-        if (pSettings->exchangeRateSources.aSources)
-        {
-            for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)
-            {
-                ABC_FREE_STR(pSettings->exchangeRateSources.aSources[i]->szSource);
-                ABC_CLEAR_FREE(pSettings->exchangeRateSources.aSources[i], sizeof(tABC_ExchangeRateSource));
-            }
-            ABC_CLEAR_FREE(pSettings->exchangeRateSources.aSources, sizeof(tABC_ExchangeRateSource *) * pSettings->exchangeRateSources.numSources);
-        }
-
-        ABC_CLEAR_FREE(pSettings, sizeof(tABC_LoginSettings));
-    }
 }
 
 /**

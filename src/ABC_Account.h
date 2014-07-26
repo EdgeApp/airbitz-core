@@ -29,6 +29,16 @@ extern "C" {
                                         char *szCategory,
                                         tABC_Error *pError);
 
+    tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
+                                    tABC_AccountSettings **ppSettings,
+                                    tABC_Error *pError);
+
+    tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
+                                    tABC_AccountSettings *pSettings,
+                                    tABC_Error *pError);
+
+    void ABC_AccountSettingsFree(tABC_AccountSettings *pSettings);
+
 #ifdef __cplusplus
 }
 #endif
