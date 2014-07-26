@@ -654,7 +654,7 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     // Download Login_Package.json
     ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, P1, NULL_LRA1, &szLoginPackage, pError));
 
-    // Setup initial account and fetch care package
+    // Setup initial account directories and files
     ABC_CHECK_RET(
         ABC_LoginInitPackages(pInfo->szUserName, L1,
                               szCarePackage, szLoginPackage,
@@ -674,7 +674,7 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
     ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
 
-    // Clear out cache so its reloaded with the password
+    // Clear out login cache
     ABC_CHECK_RET(ABC_LoginClearKeyCache(pError));
 exit:
     if (cc != ABC_CC_Ok)
