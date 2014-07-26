@@ -726,10 +726,10 @@ extern "C" {
                                   tABC_Error *pError);
 
     tABC_CC ABC_ParseAmount(const char *szAmount,
-                            int64_t *pAmountOut,
+                            uint64_t *pAmountOut,
                             unsigned decimalPlaces);
 
-    tABC_CC ABC_FormatAmount(int64_t amount,
+    tABC_CC ABC_FormatAmount(uint64_t amount,
                              char **pszAmountOut,
                              unsigned decimalPlaces,
                              tABC_Error *pError);
