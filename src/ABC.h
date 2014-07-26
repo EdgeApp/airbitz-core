@@ -327,6 +327,8 @@ extern "C" {
      */
     typedef struct sABC_TxDetails
     {
+        /** login of user who created the transaction **/
+        char *szLogin;
         /** amount of bitcoins in satoshi (including fees if any) */
         int64_t amountSatoshi;
         /** airbitz fees in satoshi */
@@ -762,6 +764,7 @@ extern "C" {
                                       const char *szPassword,
                                       const char *szWalletUUID,
                                       const char *szRequestID,
+                                      unsigned char **pszURI,
                                       unsigned char **paData,
                                       unsigned int *pWidth,
                                       tABC_Error *pError);

@@ -55,6 +55,7 @@
 #define JSON_TX_ID_FIELD                        "ntxid"
 #define JSON_TX_STATE_FIELD                     "state"
 #define JSON_TX_INTERNAL_FIELD                  "internal"
+#define JSON_TX_LOGIN_FIELD                     "login"
 #define JSON_TX_AMOUNT_CURRENCY_FIELD           "amountCurrency"
 #define JSON_TX_NAME_FIELD                      "name"
 #define JSON_TX_BIZID_FIELD                     "bizId"
@@ -1475,6 +1476,7 @@ exit:
  * @param szPassword    Password for the account associated with this request
  * @param szWalletUUID  UUID of the wallet associated with this request
  * @param szRequestID   ID of this request
+ * @param pszURI        Pointer to string to store URI(optional)
  * @param paData        Pointer to store array of data bytes (0x0 white, 0x1 black)
  * @param pWidth        Pointer to store width of image (image will be square)
  * @param pError        A pointer to the location to store the error if there is one
@@ -1483,6 +1485,7 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
                                     const char *szPassword,
                                     const char *szWalletUUID,
                                     const char *szRequestID,
+                                    unsigned char **pszURI,
                                     unsigned char **paData,
                                     unsigned int *pWidth,
                                     tABC_Error *pError)
@@ -1547,6 +1550,13 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
     *pWidth = qr->width;
     *paData = aData;
     aData = NULL;
+
+    if (pszURI != NULL)
+    {
+        length = ABC_STRLEN(szURI); 
+        ABC_ALLOC(*pszURI, length);
+        ABC_STRDUP(*pszURI, szURI);
+    }
 
 exit:
     ABC_TxFreeAddress(pAddress);

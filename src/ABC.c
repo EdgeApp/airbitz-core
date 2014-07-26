@@ -1441,6 +1441,7 @@ exit:
  * @param szPassword    Password for the account associated with this request
  * @param szWalletUUID  UUID of the wallet associated with this request
  * @param szRequestID   ID of this request
+ * @param pszURI        Pointer to string to store URI -optional
  * @param paData        Pointer to store array of data bytes (0x0 white, 0x1 black)
  * @param pWidth        Pointer to store width of image (image will be square)
  * @param pError        A pointer to the location to store the error if there is one
@@ -1449,6 +1450,7 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
                                   const char *szPassword,
                                   const char *szWalletUUID,
                                   const char *szRequestID,
+                                  unsigned char **pszURI,
                                   unsigned char **paData,
                                   unsigned int *pWidth,
                                   tABC_Error *pError)
@@ -1460,7 +1462,7 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxGenerateRequestQRCode(szUserName, szPassword, szWalletUUID, szRequestID, paData, pWidth, pError));
+    ABC_CHECK_RET(ABC_TxGenerateRequestQRCode(szUserName, szPassword, szWalletUUID, szRequestID, pszURI, paData, pWidth, pError));
 
 exit:
     return cc;
