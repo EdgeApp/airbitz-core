@@ -18,6 +18,7 @@
 
 #define FALLBACK_OBELISK "tcp://obelisk3.airbitz.co:9091"
 #define TESTNET_OBELISK "tcp://obelisk-testnet2.airbitz.co:9091"
+#define NO_AB_FEES
 
 #define AB_MIN(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -519,6 +520,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
     {
         // Calculate AB Fees
         abFees = ABC_BridgeCalcAbFees(pSendInfo->pDetails->amountSatoshi, ppInfo);
+
         // Add in miners fees
         if (abFees > 0)
         {
@@ -992,12 +994,18 @@ void ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amoun
 static
 uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_AccountGeneralInfo *pInfo)
 {
+
+#ifdef NO_AB_FEES
+    return 0;
+#else
     uint64_t abFees =
         (uint64_t) ((double) amount *
                     (pInfo->pAirBitzFee->percentage * 0.01));
     abFees = AB_MAX(pInfo->pAirBitzFee->minSatoshi, abFees);
     abFees = AB_MIN(pInfo->pAirBitzFee->maxSatoshi, abFees);
+
     return abFees;
+#endif
 }
 
 static
