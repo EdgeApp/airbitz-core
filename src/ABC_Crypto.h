@@ -2,8 +2,9 @@
  * @file
  * AirBitz cryptographic function prototypes
  *
+ * See LICENSE for copy, modification, and use permissions 
  *
- * @author Adam Harris
+ * @author See AUTHORS
  * @version 1.0
  */
 

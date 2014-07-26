@@ -1,6 +1,11 @@
 /**
  * @file
- * AirBitz file-sync functions prototypes.
+ * AirBitz file-sync functions prototypes. 
+ *  
+ * See LICENSE for copy, modification, and use permissions 
+ *
+ * @author See AUTHORS
+ * @version 1.0 
  */
 
 #ifndef ABC_Sync_h
