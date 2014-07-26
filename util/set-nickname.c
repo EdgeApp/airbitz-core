@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
 {
     tABC_CC cc;
     tABC_Error error;
-    tABC_LoginSettings *pSettings = NULL;
+    tABC_AccountSettings *pSettings = NULL;
     unsigned char seed[] = {1, 2, 3};
 
     if (argc != 5)

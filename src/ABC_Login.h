@@ -126,18 +126,6 @@ extern "C" {
                                             char **pszQuestions,
                                             tABC_Error *pError);
 
-    tABC_CC ABC_LoginLoadSettings(const char *szUserName,
-                                    const char *szPassword,
-                                    tABC_LoginSettings **ppSettings,
-                                    tABC_Error *pError);
-
-    tABC_CC ABC_LoginSaveSettings(const char *szUserName,
-                                    const char *szPassword,
-                                    tABC_LoginSettings *pSettings,
-                                    tABC_Error *pError);
-
-    void ABC_LoginFreeSettings(tABC_LoginSettings *pSettings);
-
     tABC_CC ABC_LoginGetSyncKeys(const char *szUserName,
                                  const char *szPassword,
                                  tABC_SyncKeys **ppKeys,

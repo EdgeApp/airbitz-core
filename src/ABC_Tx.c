@@ -2553,7 +2553,7 @@ tABC_CC ABC_TxDefaultRequestDetails(const char *szUserName, const char *szPasswo
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    tABC_LoginSettings *pSettings = NULL;
+    tABC_AccountSettings *pSettings = NULL;
     tABC_U08Buf Label = ABC_BUF_NULL;
 
     if (ABC_STRLEN(pDetails->szName) == 0)
