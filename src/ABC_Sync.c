@@ -1,6 +1,11 @@
 /**
  * @file
- * AirBitz file-sync functions.
+ * AirBitz file-sync functions 
+ *  
+ * See LICENSE for copy, modification, and use permissions 
+ *
+ * @author See AUTHORS
+ * @version 1.0 
  */
 
 #include "ABC_Sync.h"

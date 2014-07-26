@@ -5,8 +5,10 @@
  * This file contains a bridge between the plain C code in the core, and
  * the C++ code in libbitcoin and friends.
  *
- * @author William Swanson
- * @version 0.1
+ * See LICENSE for copy, modification, and use permissions 
+ *
+ * @author See AUTHORS
+ * @version 1.0
  */
 
 #include "ABC_Bridge.h"

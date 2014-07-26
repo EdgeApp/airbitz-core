@@ -5,7 +5,9 @@
  * This file contains mutex functions to allow mutiple modules to
  * share a single recursive mutex.
  *
- * @author Adam Harris
+ * See LICENSE for copy, modification, and use permissions 
+ *
+ * @author See AUTHORS
  * @version 1.0
  */
 

@@ -1,7 +1,12 @@
 /**
  * @file
- * Core libgit2-based file-syncing algorithm.
- */
+ * Core libgit2-based file-syncing algorithm. 
+ *  
+ * See LICENSE for copy, modification, and use permissions 
+ *
+ * @author See AUTHORS
+ * @version 1.0
+ */ 
 
 #ifndef SYNC_H
 #define SYNC_H

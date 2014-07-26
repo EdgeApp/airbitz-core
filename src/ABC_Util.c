@@ -4,7 +4,9 @@
  *
  * This file contains misc utility functions
  *
- * @author Adam Harris
+ * See LICENSE for copy, modification, and use permissions 
+ *
+ * @author See AUTHORS
  * @version 1.0
  */
 
