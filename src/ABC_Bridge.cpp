@@ -105,10 +105,12 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
 {
     libwallet::uri_parse_result result;
     libbitcoin::payment_address address;
+    char *uriString;
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_BitcoinURIInfo *pInfo = NULL;
+    std::string tempStr = szURI;
 
     ABC_CHECK_NULL(szURI);
     ABC_CHECK_ASSERT(strlen(szURI) > 0, ABC_CC_Error, "No URI provided");
@@ -118,10 +120,25 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
     // allocate initial struct
     ABC_ALLOC_ARRAY(pInfo, 1, tABC_BitcoinURIInfo);
 
-    // parse and extract contents
-    if (!libwallet::uri_parse(szURI, result))
+    // XX semi-hack warning. Might not be BIP friendly. Convert "bitcoin://1zf7ef..." URIs to 
+    // "bitcoin:1zf7ef..." so that libwallet parser doesn't choke. "bitcoin://" URLs are the 
+    // only style that are understood by email and SMS readers and will get forwarded
+    // to bitcoin wallets. Airbitz wallet creates "bitcoin://" URIs when requesting funds via 
+    // email/SMS so it should be able to parse them as well. -paulvp
+
+    ABC_STRDUP(uriString, szURI);
+
+    if (0 == tempStr.find("bitcoin://", 0))
     {
-        if (!address.set_encoded(szURI))
+        tempStr.replace(0, 10, "bitcoin:");
+        std::size_t length = tempStr.copy(uriString,0xFFFFFFFF);
+        uriString[length] = '\0';
+    }
+
+    // parse and extract contents
+    if (!libwallet::uri_parse(uriString, result))
+    {
+        if (!address.set_encoded(uriString))
             ABC_RET_ERROR(ABC_CC_ParseError, "Malformed bitcoin URI");
         result.address = address;
     }
@@ -140,6 +157,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
 
 exit:
     ABC_BridgeFreeURIInfo(pInfo);
+    ABC_FREE(uriString);
 
     return cc;
 }
