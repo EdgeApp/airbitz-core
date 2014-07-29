@@ -562,6 +562,8 @@ extern "C" {
         tABC_BitcoinDenomination    bitcoinDenomination;
         /** use advanced features (e.g., allow offline wallet creation) */
         bool                        bAdvancedFeatures;
+        /** fullname (readonly. Set by core based on first, last, nick names) */
+        char                        *szFullName;
     } tABC_AccountSettings;
 
     /**

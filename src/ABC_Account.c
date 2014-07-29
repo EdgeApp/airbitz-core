@@ -4079,6 +4079,58 @@ tABC_CC ABC_AccountLoadSettings(const char *szUserName,
     // load them with the given key
     ABC_CHECK_RET(ABC_AccountLoadSettingsEnc(szUserName, LP2, ppSettings, pError));
 
+    //
+    // Create the user's "fullName" based on First, Last, Nick names
+    // Should probably be pulled out into its own function
+    //
+    {
+        size_t f, l, n;
+        char *fn, *ln, *nn;
+
+        f = ABC_STRLEN((*ppSettings)->szFirstName);
+        l = ABC_STRLEN((*ppSettings)->szLastName);
+        n = ABC_STRLEN((*ppSettings)->szNickname);
+
+        fn = (*ppSettings)->szFirstName;
+        ln = (*ppSettings)->szLastName;
+        nn = (*ppSettings)->szNickname;
+
+        if (f || l || n)
+        {
+            size_t bufLength = 5 + f + l + n;
+            char *fullName;
+
+            if (ABC_STRLEN((*ppSettings)->szFullName) < bufLength)
+            {
+                ABC_REALLOC((*ppSettings)->szFullName, bufLength);
+            }
+            fullName = (*ppSettings)->szFullName;
+
+            sprintf(fullName, "");
+
+            if (f)
+            {
+                sprintf(fullName, "%s", fn);
+            }
+            if (f && l)
+            {
+                sprintf(fullName, "%s ", fullName);
+            }
+            if (l)
+            {
+                sprintf(fullName, "%s%s", fullName, ln);
+            }
+            if ((f || l) && n)
+            {
+                sprintf(fullName, "%s - ", fullName);
+            }
+            if (n)
+            {
+                sprintf(fullName, "%s%s", fullName, nn);
+            }
+        }
+    }
+
 exit:
 
     ABC_AccountMutexUnlock(NULL);
