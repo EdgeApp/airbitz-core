@@ -1910,27 +1910,6 @@ exit:
 }
 
 /**
- * Gets the root account directory
- *
- * @param pszRootDir pointer to store allocated string
- *                   (the user is responsible for free'ing)
- */
-tABC_CC ABC_LoginGetRootDir(char **pszRootDir, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_NULL(pszRootDir);
-
-    // create the account directory string
-    ABC_ALLOC(*pszRootDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyRootDirName(*pszRootDir, pError));
-
-exit:
-
-    return cc;
-}
-
-/**
  * Copies the root account directory into the string given
  *
  * @param szRootDir pointer into which to copy the string
