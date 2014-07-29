@@ -7,7 +7,6 @@ int main(int argc, char *argv[])
     tABC_CC cc;
     tABC_Error error;
     unsigned char seed[] = {1, 2, 3};
-    char *szPIN = NULL;
 
     if (argc != 7)
     {
