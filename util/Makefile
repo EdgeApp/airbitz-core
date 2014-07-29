@@ -7,6 +7,7 @@ default: build/add-category.bin \
          build/change-password.bin \
          build/check-recovery-answers.bin \
          build/create-account.bin \
+         build/create-wallet.bin \
          build/get-categories.bin \
          build/get-pin.bin \
          build/get-question-choices.bin \
