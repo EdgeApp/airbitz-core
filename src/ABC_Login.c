@@ -2522,10 +2522,10 @@ tABC_CC ABC_LoginGetKey(const char *szUserName, const char *szPassword, tABC_Log
             ABC_BUF_SET(*pKey, pKeys->L2);
             break;
 
-        case ABC_LoginKey_LP2:
+        case ABC_LoginKey_MK:
             // this should already be in the cache
-            ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->LP2), ABC_CC_Error, "Expected to find LP2 in key cache");
-            ABC_BUF_SET(*pKey, pKeys->LP2);
+            ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->MK), ABC_CC_Error, "Expected to find MK in key cache");
+            ABC_BUF_SET(*pKey, pKeys->MK);
             break;
 
         case ABC_LoginKey_RepoAccountKey:
@@ -3002,7 +3002,7 @@ tABC_CC ABC_LoginGetSyncKeys(const char *szUserName,
     ABC_ALLOC(pKeys, sizeof(tABC_SyncKeys));
     ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &pKeys->szSyncDir, pError));
     ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_RepoAccountKey, &pKeys->SyncKey, pError));
-    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_LP2, &pKeys->MK, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_MK, &pKeys->MK, pError));
 
     *ppKeys = pKeys;
     pKeys = NULL;
