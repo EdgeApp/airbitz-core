@@ -21,6 +21,7 @@
 #define ABC_SERVER_LOGIN_PACK_GET_PATH      "account/loginpackage/get"
 #define ABC_SERVER_LOGIN_PACK_UPDATE_PATH   "account/loginpackage/update"
 #define ABC_SERVER_WALLET_CREATE_PATH       "wallet/create"
+#define ABC_SERVER_WALLET_ACTIVATE_PATH     "wallet/activate"
 #define ABC_SERVER_GET_QUESTIONS_PATH       "questions"
 #define ABC_SERVER_GET_INFO_PATH            "getinfo"
 
