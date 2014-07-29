@@ -14,6 +14,7 @@
 
 #define ABC_SERVER_ROOT                     "http://mainnet.auth.airbitz.co/api/v1"
 #define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
+#define ABC_SERVER_ACCOUNT_ACTIVATE         "account/activate"
 #define ABC_SERVER_GET_CARE_PACKAGE_PATH    "account/carepackage/get"
 #define ABC_SERVER_UPDATE_CARE_PACKAGE_PATH "account/carepackage/update"
 #define ABC_SERVER_CHANGE_PASSWORD_PATH     "account/password/update"

@@ -92,6 +92,7 @@ static tABC_CC ABC_LoginInitPackages(const char *szUserName, tABC_U08Buf L1, con
 static tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError);
 static tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError);
 static tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, const char *szCarePackage_JSON, const char *szLoginPackage_JSON, char *szRepoAcctKey, tABC_Error *pError);
+static tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pError);
 static tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U08Buf LRA1, tABC_U08Buf newP1, char *szLoginPackage, tABC_Error *pError);
 static tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA1, const char *szCarePackage, const char *szLoginPackage, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
@@ -527,7 +528,7 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
 
     // Create MK
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(ACCOUNT_MK_LENGTH, &MK, pError));
-    ABC_BUF_DUP(pKeys->MK, pKeys->MK);
+    ABC_BUF_DUP(pKeys->MK, MK);
 
     // Create Repo key
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(SYNC_KEY_LENGTH, &RepoAcctKey, pError));
@@ -586,6 +587,7 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
     ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
 
+    ABC_CHECK_RET(ABC_LoginServerActivate(pKeys->L1, pKeys->P1, pError));
     pKeys = NULL; // so we don't free what we just added to the cache
 exit:
     if (cc != ABC_CC_Ok)
@@ -839,8 +841,6 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1, tABC_U08Buf P1,
                         ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage_JSON,
                         ABC_SERVER_JSON_REPO_FIELD, szRepoAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
-    json_decref(pJSON_Root);
-    pJSON_Root = NULL;
     ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
 
     // send the command
@@ -850,34 +850,63 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1, tABC_U08Buf P1,
     ABC_DebugLog("Server results: %s", szResults);
 
     // decode the result
-    json_t *pJSON_Value = NULL;
-    json_error_t error;
-    pJSON_Root = json_loads(szResults, 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
+exit:
+    ABC_FREE_STR(szURL);
+    ABC_FREE_STR(szResults);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szL1_Base64);
+    ABC_FREE_STR(szP1_Base64);
+    if (pJSON_Root)     json_decref(pJSON_Root);
 
-    // get the status code
-    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
-    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
-    int statusCode = (int) json_integer_value(pJSON_Value);
+    return cc;
+}
 
-    // if there was a failure
-    if (ABC_Server_Code_Success != statusCode)
-    {
-        if (ABC_Server_Code_AccountExists == statusCode)
-        {
-            ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists on server");
-        }
-        else
-        {
-            // get the message
-            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
-            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
-            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
-        }
-    }
+/**
+ * Activate an account on the server.
+ *
+ * @param L1   Login hash for the account
+ * @param P1   Password hash for the account
+ */
+static
+tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1, tABC_U08Buf P1, tABC_Error *pError)
+{
 
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szURL     = NULL;
+    char *szResults = NULL;
+    char *szPost    = NULL;
+    char *szL1_Base64 = NULL;
+    char *szP1_Base64 = NULL;
+    json_t *pJSON_Root = NULL;
+
+    ABC_CHECK_NULL_BUF(L1);
+    ABC_CHECK_NULL_BUF(P1);
+
+    // create the URL
+    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_ACCOUNT_ACTIVATE);
+
+    // create base64 versions of L1 and P1
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(P1, &szP1_Base64, pError));
+
+    // create the post data
+    pJSON_Root = json_pack("{ssss}",
+                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                        ABC_SERVER_JSON_P1_FIELD, szP1_Base64);
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
+    json_decref(pJSON_Root);
+    pJSON_Root = NULL;
+    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %s", szResults);
+
+    // decode the result
+    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
 exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
@@ -1067,11 +1096,13 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     tABC_U08Buf LRA          = ABC_BUF_NULL;
     tABC_U08Buf LRA1         = ABC_BUF_NULL;
     tABC_U08Buf oldP1        = ABC_BUF_NULL;
-    char *szAccountDir = NULL;
-    char *szFilename = NULL;
-    char *szJSON = NULL;
+    tABC_U08Buf MK           = ABC_BUF_NULL;
+    char *szAccountDir        = NULL;
+    char *szFilename          = NULL;
+    char *szJSON              = NULL;
     char *szLoginPackage_JSON = NULL;
     json_t *pJSON_ELP2 = NULL;
+    json_t *pJSON_MK   = NULL;
 
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
@@ -1111,10 +1142,15 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
         ABC_CHECK_RET(
             ABC_LoginGetLoginPackageObjects(
                 pKeys->accountNum, NULL,
-                NULL, NULL, &pJSON_ELP2, NULL, pError));
+                &pJSON_MK, NULL, &pJSON_ELP2, NULL, pError));
 
         // get the LP2 by decrypting ELP2 with LRA2
         ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ELP2, LRA2, &oldLP2, pError));
+        // Get MK from old LP2
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_MK, oldLP2, &MK, pError));
+
+        // set the MK
+        ABC_BUF_DUP(pKeys->MK, MK);
 
         // create LRA1 as it will be needed for server communication later
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP1, &LRA1, pError));
@@ -1161,8 +1197,6 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage_JSON, pError));
 
-    // the keys for the account have all been updated so other functions can now be called that use them
-
     // set the new PIN
     ABC_CHECK_RET(ABC_SetPIN(pInfo->szUserName, pInfo->szNewPassword, pInfo->szPIN, pError));
 
@@ -1181,6 +1215,7 @@ exit:
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szLoginPackage_JSON);
     if (pJSON_ELP2) json_decref(pJSON_ELP2);
+    if (pJSON_MK) json_decref(pJSON_MK);
     if (cc != ABC_CC_Ok) ABC_LoginClearKeyCache(NULL);
 
     ABC_LoginMutexUnlock(NULL);
@@ -1243,36 +1278,13 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldP1, tABC_U0
                                ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
     }
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
-    json_decref(pJSON_Root);
-    pJSON_Root = NULL;
     ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
 
     // send the command
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
     ABC_DebugLog("Server results: %s", szResults);
 
-    // decode the result
-    json_t *pJSON_Value = NULL;
-    json_error_t error;
-    pJSON_Root = json_loads(szResults, 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-
-    // get the status code
-    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
-    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
-    int statusCode = (int) json_integer_value(pJSON_Value);
-
-    // if there was a failure
-    if (ABC_Server_Code_Success != statusCode)
-    {
-        // get the message
-        pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-        ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
-        ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
-    }
-
+    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
 exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
@@ -1345,49 +1357,12 @@ tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1,
                             ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
     }
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
-    json_decref(pJSON_Root);
-    pJSON_Root = NULL;
     ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
 
-    // send the command
-    //ABC_CHECK_RET(ABC_URLPostString("http://httpbin.org/post", szPost, &szResults, pError));
-    //ABC_DebugLog("Results: %s", szResults);
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
     ABC_DebugLog("Server results: %s", szResults);
 
-    // decode the result
-    json_t *pJSON_Value = NULL;
-    json_error_t error;
-    pJSON_Root = json_loads(szResults, 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-
-    // get the status code
-    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
-    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
-    int statusCode = (int) json_integer_value(pJSON_Value);
-
-    // if there was a failure
-    if (ABC_Server_Code_Success != statusCode)
-    {
-        if (ABC_Server_Code_NoAccount == statusCode)
-        {
-            ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "Account does not exist on server");
-        }
-        else if (ABC_Server_Code_InvalidPassword == statusCode)
-        {
-            ABC_RET_ERROR(ABC_CC_BadPassword, "Invalid password on server");
-        }
-        else
-        {
-            // get the message
-            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
-            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
-            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
-        }
-    }
-
+    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
 exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
@@ -2523,6 +2498,7 @@ tABC_CC ABC_LoginGetKey(const char *szUserName, const char *szPassword, tABC_Log
             break;
 
         case ABC_LoginKey_MK:
+        case ABC_LoginKey_LP2:
             // this should already be in the cache
             ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->MK), ABC_CC_Error, "Expected to find MK in key cache");
             ABC_BUF_SET(*pKey, pKeys->MK);
@@ -2580,9 +2556,9 @@ exit:
  * @param pbValid true is stored in here if they are correct
  */
 tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
-                                        const char *szRecoveryAnswers,
-                                        bool *pbValid,
-                                        tABC_Error *pError)
+                                      const char *szRecoveryAnswers,
+                                      bool *pbValid,
+                                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -2778,6 +2754,7 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    json_t  *pJSON_Value    = NULL;
     json_t  *pJSON_Root     = NULL;
     char    *szPost         = NULL;
     char    *szL1_Base64    = NULL;
@@ -2818,34 +2795,8 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
     ABC_DebugLog("Server results: %s", szResults);
 
-    // decode the result
-    json_t *pJSON_Value = NULL;
-    json_error_t error;
-    pJSON_Root = json_loads(szResults, 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-
-    // get the status code
-    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
-    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
-    int statusCode = (int) json_integer_value(pJSON_Value);
-
-    // if there was a failure
-    if (ABC_Server_Code_Success != statusCode)
-    {
-        if (ABC_Server_Code_NoAccount == statusCode)
-        {
-            ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "Account does not exist on server");
-        }
-        else
-        {
-            // get the message
-            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
-            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
-            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
-        }
-    }
+    // Check the result, and store json if successful
+    ABC_CHECK_RET(ABC_URLCheckResults(szResults, &pJSON_Root, pError));
 
     // get the care package
     pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
@@ -2855,7 +2806,6 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf P1, tABC_U08Buf LRA
     ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error care package JSON results");
     ABC_STRDUP(*szResponse, json_string_value(pJSON_Value));
 exit:
-
     if (pJSON_Root)     json_decref(pJSON_Root);
     ABC_FREE_STR(szPost);
     ABC_FREE_STR(szL1_Base64);
