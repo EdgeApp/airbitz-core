@@ -36,7 +36,7 @@
 #define WALLET_EMK_PREFIX                       "EMK_"
 #define WALLET_BITCOIN_PRIVATE_SEED_PREFIX      "EBPS_"
 #define WALLET_ACCOUNTS_WALLETS_FILENAME        "Wallets.json"
-#define WALLET_NAME_FILENAME                    "Wallet_Name.json"
+#define WALLET_NAME_FILENAME                    "WalletName.json"
 #define WALLET_ATTRIBUTES_FILENAME              "Attributes.json"
 #define WALLET_CURRENCY_FILENAME                "Currency.json"
 #define WALLET_ACCOUNTS_FILENAME                "Accounts.json"
