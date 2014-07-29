@@ -89,8 +89,6 @@ extern "C" {
                               tABC_U08Buf *pKey,
                               tABC_Error *pError);
 
-    tABC_CC ABC_LoginGetRootDir(char **pszRootDir, tABC_Error *pError);
-
     tABC_CC ABC_LoginGetDirName(const char *szUserName,
                                   char **pszDirName,
                                   tABC_Error *pError);
