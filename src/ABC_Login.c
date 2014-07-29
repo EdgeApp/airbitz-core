@@ -35,9 +35,9 @@
 #define ACCOUNT_DIR                             "Accounts"
 #define ACCOUNT_SYNC_DIR                        "sync"
 #define ACCOUNT_FOLDER_PREFIX                   "Account_"
-#define ACCOUNT_NAME_FILENAME                   "User_Name.json"
-#define ACCOUNT_CARE_PACKAGE_FILENAME           "Care_Package.json"
-#define ACCOUNT_LOGIN_PACKAGE_FILENAME          "Login_Package.json"
+#define ACCOUNT_NAME_FILENAME                   "UserName.json"
+#define ACCOUNT_CARE_PACKAGE_FILENAME           "CarePackage.json"
+#define ACCOUNT_LOGIN_PACKAGE_FILENAME          "LoginPackage.json"
 #define ACCOUNT_WALLETS_FILENAME                "Wallets.json"
 
 #define JSON_ACCT_USERNAME_FIELD                "userName"
@@ -651,7 +651,7 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     // Download CarePackage.json
     ABC_CHECK_RET(ABC_LoginServerGetCarePackage(L1, &szCarePackage, pError));
 
-    // Download Login_Package.json
+    // Download LoginPackage.json
     ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, P1, NULL_LRA1, &szLoginPackage, pError));
 
     // Setup initial account directories and files
@@ -2648,7 +2648,7 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
         ABC_BUF_APPEND_PTR(LRA, szRecoveryAnswers, strlen(szRecoveryAnswers));
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pSNRP1, &LRA1, pError));
 
-        // Fetch Login_Package using LRA1, if successful, szRecoveryAnswers are correct
+        // Fetch LoginPackage using LRA1, if successful, szRecoveryAnswers are correct
         ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, P1_NULL, LRA1, &szLoginPackage, pError));
 
         // Setup initial account and set the care package
