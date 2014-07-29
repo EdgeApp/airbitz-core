@@ -411,9 +411,9 @@ tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *p
         {
             ABC_CHECK_RET(ABC_FileIOCreateDir(szSyncDirectory, pError));
 
-			// Init repo
-			ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDirectory, pError));
-			ABC_FREE_STR(szSyncDirectory);
+            // Init repo
+            ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDirectory, pError));
+            ABC_FREE_STR(szSyncDirectory);
         }
 
         // Sync Wallet
