@@ -1161,9 +1161,6 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage_JSON, pError));
 
-    // change all the wallet keys - re-encrypted them with new LP2
-    ABC_CHECK_RET(ABC_WalletChangeEMKsForAccount(pInfo->szUserName, oldLP2, pKeys->LP2, pError));
-
     // the keys for the account have all been updated so other functions can now be called that use them
 
     // set the new PIN
