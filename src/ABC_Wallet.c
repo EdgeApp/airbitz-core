@@ -85,7 +85,6 @@ static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
 static tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError);
 static void    ABC_WalletFreeData(tWalletData *pData);
-static tABC_CC ABC_WalletChangeEMKForUUID(const char *szUserName, const char *szUUID, tABC_U08Buf oldLP2, tABC_U08Buf newLP2, tABC_Error *pError);
 static tABC_CC ABC_WalletMutexLock(tABC_Error *pError);
 static tABC_CC ABC_WalletMutexUnlock(tABC_Error *pError);
 
@@ -1595,116 +1594,6 @@ exit:
     ABC_FREE_STR(szJSON);
     ABC_UtilFreeStringArray(aszCurUUIDs, nCurUUIDs);
 
-    return cc;
-}
-
-/**
- * Re-encrypted the Master Keys for the wallets for a specified account.
- *
- * @param szUserName    UserName for the account associated with this wallet
- * @param oldLP2        Previous key used to encrypted the master keys
- * @param newLP2        The new key used to encrypted the master keys
- * @param pError        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_WalletChangeEMKsForAccount(const char *szUserName,
-                                       tABC_U08Buf oldLP2,
-                                       tABC_U08Buf newLP2,
-                                       tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    char **aszUUIDs = NULL;
-    unsigned int nUUIDs = 0;
-
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL_BUF(oldLP2);
-    ABC_CHECK_NULL_BUF(newLP2);
-
-    // clear the cache so no old keys will be flushed
-    ABC_CHECK_RET(ABC_WalletClearCache(pError));
-
-    // get the array of wallet UUIDs for this account
-    ABC_CHECK_RET(ABC_WalletGetUUIDs(szUserName, &aszUUIDs, &nUUIDs, pError));
-
-    // if we got anything
-    if (nUUIDs > 0)
-    {
-        for (int i = 0; i < nUUIDs; i++)
-        {
-            ABC_CHECK_RET(ABC_WalletChangeEMKForUUID(szUserName, aszUUIDs[i], oldLP2, newLP2, pError));
-        }
-    }
-
-exit:
-    ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
-
-    ABC_WalletMutexUnlock(NULL);
-    return cc;
-}
-
-/**
- * Re-encrypted the Master Keys for the wallets for a specified account.
- *
- * @param szUserName    UserName for the account associated with this wallet
- * @param oldLP2        Previous key used to encrypted the master keys
- * @param newLP2        The new key used to encrypted the master keys
- * @param pError        A pointer to the location to store the error if there is one
- */
-static
-tABC_CC ABC_WalletChangeEMKForUUID(const char *szUserName,
-                                   const char *szUUID,
-                                   tABC_U08Buf oldLP2,
-                                   tABC_U08Buf newLP2,
-                                   tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    tABC_U08Buf MK = ABC_BUF_NULL;
-    tABC_U08Buf WalletKey = ABC_BUF_NULL;
-    char *szAccountSyncDir = NULL;
-    char *szFilename = NULL;
-    char *szJSON = NULL;
-    char **aszUUIDs = NULL;
-    unsigned int nUUIDs = 0;
-
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szUUID);
-    ABC_CHECK_NULL_BUF(oldLP2);
-    ABC_CHECK_NULL_BUF(newLP2);
-
-    // get the local directory for this account
-    ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szAccountSyncDir, pError));
-
-    // get the MK using the old LP2
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s%s.json", szAccountSyncDir, WALLET_EMK_PREFIX, szUUID);
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, oldLP2, &MK, pError));
-
-    // write it back out using the new LP2
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(MK, newLP2, ABC_CryptoType_AES256, szFilename, pError));
-
-    // Get the wallet repo key file
-    sprintf(szFilename, "%s/%s_%s.%s", szAccountSyncDir, WALLET_SYNC_REPO_PREFIX_FIELD,
-                                       szUUID, WALLET_SYNC_REPO_SUFFIC_FIELD);
-    // decrypt the wallet repo key
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, oldLP2, &WalletKey, pError));
-
-    // write it back out using the new LP2
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(WalletKey, newLP2, ABC_CryptoType_AES256, szFilename, pError));
-
-exit:
-    ABC_BUF_FREE(MK);
-    ABC_BUF_FREE(WalletKey);
-    ABC_FREE_STR(szAccountSyncDir);
-    ABC_FREE_STR(szFilename);
-    ABC_FREE_STR(szJSON);
-    ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
-
-    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 

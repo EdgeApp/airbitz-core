@@ -95,11 +95,6 @@ extern "C" {
                                unsigned int countUUIDs,
                                tABC_Error *pError);
 
-    tABC_CC ABC_WalletChangeEMKsForAccount(const char *szUserName,
-                                           tABC_U08Buf oldLP2,
-                                           tABC_U08Buf newLP2,
-                                           tABC_Error *pError);
-
     tABC_CC ABC_WalletGetMK(const char *szUserName,
                             const char *szPassword,
                             const char *szUUID,
