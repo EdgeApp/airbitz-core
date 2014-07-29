@@ -294,6 +294,63 @@ exit:
     return cc;
 }
 
+/**
+ * Makes a URL post request and returns results in a string.
+ * @param szURL         The request URL.
+ * @param szPostData    The data to be posted in the request
+ * @param pszResults    The location to store the allocated string with results.
+ *                      The caller is responsible for free'ing this.
+ */
+tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    json_error_t error;
+    json_t *pJSON_Root = NULL;
+    json_t *pJSON_Value = NULL;
+
+    pJSON_Root = json_loads(szResults, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    // get the status code
+    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
+    int statusCode = (int) json_integer_value(pJSON_Value);
+
+    // if there was a failure
+    if (ABC_Server_Code_Success != statusCode)
+    {
+        if (ABC_Server_Code_AccountExists == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists on server");
+        }
+		else if (ABC_Server_Code_NoAccount == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "Account does not exist on server");
+        }
+        else if (ABC_Server_Code_InvalidPassword == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_BadPassword, "Invalid password on server");
+        }
+        else
+        {
+            // get the message
+            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
+            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
+            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
+        }
+    }
+	if (ppJSON_Result)
+	{
+		*ppJSON_Result = pJSON_Root;
+		pJSON_Root = NULL;
+	}
+exit:
+    if (pJSON_Root) json_decref(pJSON_Root);
+    return cc;
+}
+
 
 /**
  * This is the function that gets called by CURL when it has data to be saved from a request.

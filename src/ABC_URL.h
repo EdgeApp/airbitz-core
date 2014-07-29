@@ -41,6 +41,8 @@ extern "C" {
                               char **pszResults,
                               tABC_Error *pError);
 
+	tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError);
+
     tABC_CC ABC_URLMutexLock(tABC_Error *pError);
     tABC_CC ABC_URLMutexUnlock(tABC_Error *pError);
 
