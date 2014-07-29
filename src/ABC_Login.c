@@ -2497,6 +2497,16 @@ tABC_CC ABC_LoginGetKey(const char *szUserName, const char *szPassword, tABC_Log
             ABC_BUF_SET(*pKey, pKeys->L2);
             break;
 
+        case ABC_LoginKey_P1:
+            // TODO: Swith this to LP1
+            if (NULL == ABC_BUF_PTR(pKeys->P1))
+            {
+                ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->P, pKeys->pSNRP1, &(pKeys->P1), pError));
+            }
+            ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->P1), ABC_CC_Error, "Expected to find P1 in key cache");
+            ABC_BUF_SET(*pKey, pKeys->P1);
+            break;
+
         case ABC_LoginKey_MK:
         case ABC_LoginKey_LP2:
             // this should already be in the cache

@@ -57,6 +57,7 @@ extern "C" {
     typedef enum eABC_LoginKey
     {
         ABC_LoginKey_L1,
+        ABC_LoginKey_P1,
         ABC_LoginKey_L2,
         ABC_LoginKey_LP2,
         ABC_LoginKey_MK,
