@@ -59,6 +59,7 @@ extern "C" {
         ABC_LoginKey_L1,
         ABC_LoginKey_L2,
         ABC_LoginKey_LP2,
+        ABC_LoginKey_MK,
         ABC_LoginKey_RepoAccountKey,
         ABC_LoginKey_RQ
     } tABC_LoginKey;
