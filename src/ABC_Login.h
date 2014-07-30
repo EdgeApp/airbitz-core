@@ -95,10 +95,6 @@ extern "C" {
                                   char **pszDirName,
                                   tABC_Error *pError);
 
-    tABC_CC ABC_LoginGetSyncDirName(const char *szUserName,
-                                      char **pszDirName,
-                                      tABC_Error *pError);
-
     tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
                                             const char *szRecoveryAnswers,
                                             bool *pbValid,

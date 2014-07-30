@@ -260,8 +260,8 @@ extern "C" {
         char            *szUserName;
         /** wallet ISO 4217 currency code */
         int             currencyNum;
-        /** wallet attributes */
-        unsigned int    attributes;
+        /** true if the wallet is archived */
+        unsigned        archived;
         /** wallet balance */
         int64_t         balanceSatoshi;
     } tABC_WalletInfo;
@@ -630,11 +630,11 @@ extern "C" {
                              const char *szNewWalletName,
                              tABC_Error *pError);
 
-    tABC_CC ABC_SetWalletAttributes(const char *szUserName,
-                                    const char *szPassword,
-                                    const char *szUUID,
-                                    unsigned int attributes,
-                                    tABC_Error *pError);
+    tABC_CC ABC_SetWalletArchived(const char *szUserName,
+                                  const char *szPassword,
+                                  const char *szUUID,
+                                  unsigned int archived,
+                                  tABC_Error *pError);
 
     tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
                                      const char *szRecoveryAnswers,
@@ -656,6 +656,7 @@ extern "C" {
                                  tABC_Error *pError);
 
     tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
+                               const char *szPassword,
                                char ***paWalletUUID,
                                unsigned int *pCount,
                                tABC_Error *pError);

@@ -104,6 +104,7 @@ static tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir, tABC_Error *pE
 static tABC_CC ABC_LoginNextAccountNum(int *pAccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateRootDir(tABC_Error *pError);
 static tABC_CC ABC_LoginCopyRootDirName(char *szRootDir, tABC_Error *pError);
+static tABC_CC ABC_LoginGetSyncDirName(const char *szUserName, char **pszDirName, tABC_Error *pError);
 static tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginNumForUser(const char *szUserName, int *pAccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginUserForNum(unsigned int AccountNum, char **pszUserName, tABC_Error *pError);
@@ -1947,6 +1948,7 @@ exit:
  *
  * @param pszDirName Location to store allocated pointer (must be free'd by caller)
  */
+static
 tABC_CC ABC_LoginGetSyncDirName(const char *szUserName,
                                   char **pszDirName,
                                   tABC_Error *pError)
