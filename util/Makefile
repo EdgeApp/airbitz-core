@@ -3,7 +3,8 @@ CXXFLAGS += -Wall -D_GNU_SOURCE -I../src -std=c++11
 LDFLAGS  += -L../build/
 LIBS     += -labc -lpthread
 
-default: build/add-category.bin \
+default: build/account-decrypt.bin \
+         build/add-category.bin \
          build/change-password.bin \
          build/check-recovery-answers.bin \
          build/create-account.bin \
