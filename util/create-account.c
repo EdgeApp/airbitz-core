@@ -16,6 +16,5 @@ int main(int argc, char *argv[])
     MAIN_CHECK(ABC_Initialize(argv[1], NULL, 0, seed, sizeof(seed), &error));
     MAIN_CHECK(ABC_CreateAccount(argv[2], argv[3], "1234", NULL, NULL, &error));
 
-    printf("hey\n");
     return 0;
 }
