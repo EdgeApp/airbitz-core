@@ -35,7 +35,7 @@ extern "C" {
 
     void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys);
 
-    tABC_CC ABC_SyncInit(tABC_Error *pError);
+    tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError);
 
     void ABC_SyncTerminate();
 

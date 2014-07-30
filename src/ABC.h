@@ -586,6 +586,7 @@ extern "C" {
 
 
     tABC_CC ABC_Initialize(const char                   *szRootDir,
+                           const char                   *szCaCertPath,
                            tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
                            void                         *pData,
                            const unsigned char          *pSeedData,

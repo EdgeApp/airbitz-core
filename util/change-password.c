@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    MAIN_CHECK(ABC_Initialize(argv[1], NULL, 0, seed, sizeof(seed), &error));
+    MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, NULL, 0, seed, sizeof(seed), &error));
     if (strncmp(argv[2], "pw", 2) == 0)
     {
         MAIN_CHECK(ABC_ChangePassword(argv[3], argv[4], argv[5], argv[6], NULL, NULL, &error));

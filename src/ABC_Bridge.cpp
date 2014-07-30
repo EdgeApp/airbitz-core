@@ -1168,7 +1168,7 @@ tABC_CC ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tAB
     std::string encoded(bc::encode_hex(raw_tx));
     std::string pretty(bc::pretty(utx->tx));
 
-    url.append("http://blockchain.info/pushtx");
+    url.append("https://blockchain.info/pushtx");
     body.append("tx=");
     body.append(encoded);
 
@@ -1176,9 +1176,9 @@ tABC_CC ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tAB
     ABC_DebugLog("\n");
     ABC_DebugLog("%s\n", pretty.c_str());
 
-    pCurlHandle = curl_easy_init();
+    ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, url.c_str())) == 0,
-            ABC_CC_Error, "Curl failed to set URL\n");
+        ABC_CC_Error, "Curl failed to set URL\n");
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_POSTFIELDS, body.c_str())) == 0,
         ABC_CC_Error, "Curl failed to set post fields\n");
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &resBuffer)) == 0,

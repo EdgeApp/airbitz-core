@@ -40,7 +40,7 @@
 
 #define API_KEY_HEADER                      "Authorization: Token airbitz_api_key_goes_here"
 
-#define ABC_SERVER_ROOT                     "http://mainnet.auth.airbitz.co/api/v1"
+#define ABC_SERVER_ROOT                     "https://mainnet.auth.airbitz.co/api/v1"
 #define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
 #define ABC_SERVER_ACCOUNT_ACTIVATE         "account/activate"
 #define ABC_SERVER_GET_CARE_PACKAGE_PATH    "account/carepackage/get"
