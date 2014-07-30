@@ -61,12 +61,6 @@ extern "C" {
                               const char *szName,
                               tABC_Error *pError);
 
-    tABC_CC ABC_WalletSetAttributes(const char *szUserName,
-                                    const char *szPassword,
-                                    const char *szUUID,
-                                    unsigned int attributes,
-                                    tABC_Error *pError);
-
     tABC_CC ABC_WalletGetInfo(const char *szUserName,
                               const char *szPassword,
                               const char *szUUID,
@@ -74,11 +68,6 @@ extern "C" {
                               tABC_Error *pError);
 
     void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo);
-
-    tABC_CC ABC_WalletGetUUIDs(const char *szUserName,
-                               char ***paUUIDs,
-                               unsigned int *pCount,
-                               tABC_Error *pError);
 
     tABC_CC ABC_WalletGetWallets(const char *szUserName,
                                  const char *szPassword,
@@ -88,12 +77,6 @@ extern "C" {
 
     void ABC_WalletFreeInfoArray(tABC_WalletInfo **aWalletInfo,
                                  unsigned int nCount);
-
-    tABC_CC ABC_WalletSetOrder(const char *szUserName,
-                               const char *szPassword,
-                               char **aszUUIDArray,
-                               unsigned int countUUIDs,
-                               tABC_Error *pError);
 
     tABC_CC ABC_WalletGetMK(const char *szUserName,
                             const char *szPassword,

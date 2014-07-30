@@ -699,34 +699,39 @@ exit:
 }
 
 /**
- * Sets the attributes on a wallet.
- *
- * This function sets the attributes on a given wallet to those given.
- * The attributes would have already been set when the wallet was created so this would allow them
- * to be changed.
+ * Sets (or unsets) the archive bit on a wallet.
  *
  * @param szUserName            UserName for the account associated with this wallet
  * @param szPassword            Password for the account associated with this wallet
  * @param szUUID                UUID of the wallet
- * @param attributes            Attributes to be used for filtering (e.g., archive bit)
+ * @param archived              True if the archive bit should be set
  * @param pError                A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_SetWalletAttributes(const char *szUserName,
-                                const char *szPassword,
-                                const char *szUUID,
-                                unsigned int attributes,
-                                tABC_Error *pError)
+tABC_CC ABC_SetWalletArchived(const char *szUserName,
+                              const char *szPassword,
+                              const char *szUUID,
+                              unsigned int archived,
+                              tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+    tABC_AccountWalletInfo info;
+    memset(&info, 0, sizeof(tABC_AccountWalletInfo));
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_WalletSetAttributes(szUserName, szPassword, szUUID, attributes, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountWalletLoad(pKeys, szUUID, &info, pError));
+    info.archived = !!archived;
+    ABC_CHECK_RET(ABC_AccountWalletSave(pKeys, &info, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
+    ABC_AccountWalletInfoFree(&info);
 
     return cc;
 }
@@ -846,20 +851,25 @@ exit:
  * @param pError                A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
-                            char ***paWalletUUID,
-                            unsigned int *pCount,
-                            tABC_Error *pError)
+                           const char *szPassword,
+                           char ***paWalletUUID,
+                           unsigned int *pCount,
+                           tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_WalletGetUUIDs(szUserName, paWalletUUID, pCount, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, paWalletUUID, pCount, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -935,11 +945,15 @@ tABC_CC ABC_SetWalletOrder(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_WalletSetOrder(szUserName, szPassword, aszUUIDArray, countUUIDs, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountWalletReorder(pKeys, aszUUIDArray, countUUIDs, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
