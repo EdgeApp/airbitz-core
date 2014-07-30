@@ -11,6 +11,7 @@
 #define ABC_FileIO_h
 
 #include <jansson.h>
+#include <time.h>
 #include "ABC.h"
 #include "ABC_Util.h"
 
