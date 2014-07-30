@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    MAIN_CHECK(ABC_Initialize(argv[1], NULL, 0, seed, sizeof(seed), &error));
+    MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, NULL, 0, seed, sizeof(seed), &error));
     MAIN_CHECK(ABC_GetQuestionChoices(&pChoices, &error));
 
     printf("Choices:\n");

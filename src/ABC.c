@@ -87,6 +87,7 @@ static tABC_Currency gaCurrencies[] = {
  * @param pError                        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_Initialize(const char                   *szRootDir,
+                       const char                   *szCaCertPath,
                        tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
                        void                         *pData,
                        const unsigned char          *pSeedData,
@@ -115,7 +116,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_RET(ABC_MutexInitialize(pError));
 
     // initialize URL system
-    ABC_CHECK_RET(ABC_URLInitialize(pError));
+    ABC_CHECK_RET(ABC_URLInitialize(szCaCertPath, pError));
 
     // initialize the FileIO system
     ABC_CHECK_RET(ABC_FileIOInitialize(pError));
@@ -131,7 +132,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
 
     // initialize sync
-    ABC_CHECK_RET(ABC_SyncInit(pError));
+    ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
 
     if (szRootDir)
     {

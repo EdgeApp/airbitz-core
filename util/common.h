@@ -15,6 +15,8 @@
         return 1; \
     }
 
+#define CA_CERT "./ca-certificates.crt"
+
 /**
  * Examines a return code and prints an error if it is not OK.
  */

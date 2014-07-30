@@ -27,7 +27,7 @@
 #include "ABC_General.h"
 #include "ABC_Mutex.h"
 
-#define SYNC_SERVER "http://192.237.168.82/repos/"
+#define SYNC_SERVER "https://testnet.sync.airbitz.co/repos/"
 
 #define ACCOUNT_MK_LENGTH 32
 

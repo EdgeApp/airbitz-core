@@ -40,6 +40,7 @@
 
 #include "ABC.h"
 #include "ABC_Util.h"
+#include <curl/curl.h>
 
 #define ABC_URL_MAX_PATH_LENGTH 2048
 
@@ -47,7 +48,7 @@
 extern "C" {
 #endif
 
-    tABC_CC ABC_URLInitialize(tABC_Error *pError);
+    tABC_CC ABC_URLInitialize(const char *szCaCertPath, tABC_Error *pError);
 
     void ABC_URLTerminate();
 
@@ -70,6 +71,8 @@ extern "C" {
                               tABC_Error *pError);
 
 	tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError);
+
+    tABC_CC ABC_URLCurlHandleInit(CURL **ppCurlHandle, tABC_Error *pError);
 
     tABC_CC ABC_URLMutexLock(tABC_Error *pError);
     tABC_CC ABC_URLMutexUnlock(tABC_Error *pError);

@@ -383,13 +383,11 @@ tABC_CC ABC_ExchangeGet(const char *szUrl, tABC_U08Buf *pData, tABC_Error *pErro
 
     ABC_CHECK_RET(ABC_URLMutexLock(pError));
 
-    pCurlHandle = curl_easy_init();
-    // TODO: remove this!!!! and load the cacert for the platform you are on
-    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_SSL_VERIFYPEER, 0L)) == 0,
-            ABC_CC_Error, "Failed to ignore peer verify");
-
+    ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_SSL_VERIFYPEER, 1L)) == 0,
+        ABC_CC_Error, "Unable to verify servers cert");
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, szUrl)) == 0,
-            ABC_CC_Error, "Curl failed to set URL\n");
+        ABC_CC_Error, "Curl failed to set URL\n");
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, pData)) == 0,
         ABC_CC_Error, "Curl failed to set data\n");
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, ABC_ExchangeCurlWriteData)) == 0,
@@ -400,6 +398,7 @@ tABC_CC ABC_ExchangeGet(const char *szUrl, tABC_U08Buf *pData, tABC_Error *pErro
         ABC_CC_Error, "Curl failed to retrieve response info\n");
     ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, "Response code should be 200");
 exit:
+
     if (pCurlHandle != NULL)
         curl_easy_cleanup(pCurlHandle);
 

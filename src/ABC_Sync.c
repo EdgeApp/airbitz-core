@@ -1,11 +1,11 @@
 /**
  * @file
- * AirBitz file-sync functions 
- *  
- * See LICENSE for copy, modification, and use permissions 
+ * AirBitz file-sync functions
+ *
+ * See LICENSE for copy, modification, and use permissions
  *
  * @author See AUTHORS
- * @version 1.0 
+ * @version 1.0
  */
 
 #include "ABC_Sync.h"
@@ -20,6 +20,7 @@ static pthread_mutex_t gMutex;
 
 static tABC_CC ABC_SyncMutexLock(tABC_Error *pError);
 static tABC_CC ABC_SyncMutexUnlock(tABC_Error *pError);
+static char *gszCaCertPath = NULL;
 
 /**
  * Logs error information produced by libgit2.
@@ -65,7 +66,7 @@ void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys)
 /**
  * Initializes the underlying git library. Should be called at program start.
  */
-tABC_CC ABC_SyncInit(tABC_Error *pError)
+tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     int e;
@@ -83,6 +84,7 @@ tABC_CC ABC_SyncInit(tABC_Error *pError)
     e = git_threads_init();
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_threads_init failed");
 
+    ABC_STRDUP(gszCaCertPath, szCaCertPath);
 exit:
     if (e < 0) SyncLogGitError(e);
     return cc;
@@ -102,6 +104,7 @@ void ABC_SyncTerminate()
 
         gbInitialized = false;
     }
+    ABC_FREE_STR(gszCaCertPath);
 }
 
 /**
@@ -145,12 +148,22 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     int e;
 
     git_repository *repo = NULL;
+    git_config *cfg = NULL;
     int dirty, need_push;
 
     ABC_CHECK_RET(ABC_SyncMutexLock(pError));
 
     e = git_repository_open(&repo, szRepoPath);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_open failed");
+
+    e = git_repository_config(&cfg, repo);
+    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_config failed");
+
+    if (gszCaCertPath)
+    {
+        e = git_config_set_string(cfg, "http.sslcainfo", gszCaCertPath);
+        ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "http.sslcainfo failed");
+    }
 
     e = sync_fetch(repo, szServer);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_fetch failed");

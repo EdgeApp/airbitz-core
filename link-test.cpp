@@ -5,6 +5,6 @@
 
 int main()
 {
-    ABC_Initialize(0, 0, 0, 0, 0, 0);
+    ABC_Initialize(0, 0, 0, 0, 0, 0, 0);
     return 0;
 }

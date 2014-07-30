@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    MAIN_CHECK(ABC_Initialize(argv[1], NULL, 0, seed, sizeof(seed), &error));
+    MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, NULL, 0, seed, sizeof(seed), &error));
     MAIN_CHECK(ABC_CreateWallet(argv[2], argv[3], argv[4], CURRENCY_NUM_USD,
                                 0, NULL, &results, &error));
     return 0;

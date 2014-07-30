@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    MAIN_CHECK(ABC_Initialize(argv[1], NULL, 0, seed, sizeof(seed), &error));
+    MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, NULL, 0, seed, sizeof(seed), &error));
     MAIN_CHECK(ABC_SignIn(argv[2], argv[3], NULL, NULL, &error));
     MAIN_CHECK(ABC_ClearKeyCache(&error));
     return 0;

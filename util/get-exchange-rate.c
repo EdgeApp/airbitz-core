@@ -7,7 +7,6 @@ int main(int argc, char *argv[])
 {
     tABC_CC cc;
     tABC_Error error;
-    char *szPIN = NULL;
     unsigned char seed[] = {1, 2, 3};
 
     if (argc != 4)
@@ -17,13 +16,7 @@ int main(int argc, char *argv[])
     }
 
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, NULL, 0, seed, sizeof(seed), &error));
-    MAIN_CHECK(ABC_GetPIN(argv[2], argv[3], &szPIN, &error));
-    printf("%s\n", szPIN);
-    if (szPIN)
-    {
-        free(szPIN);
-    }
-    MAIN_CHECK(ABC_ClearKeyCache(&error));
-
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3],
+                                CURRENCY_NUM_USD, NULL, NULL, &error));
     return 0;
 }
