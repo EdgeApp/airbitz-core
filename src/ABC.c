@@ -171,8 +171,6 @@ void ABC_Terminate()
 
         ABC_MutexTerminate();
 
-        ABC_ExchangeTerminate();
-
         ABC_SyncTerminate();
 
         gbInitialized = false;
