@@ -1,11 +1,11 @@
 /**
  * @file
- * AirBitz file-sync functions prototypes. 
- *  
- * See LICENSE for copy, modification, and use permissions 
+ * AirBitz file-sync functions prototypes.
+ *
+ * See LICENSE for copy, modification, and use permissions
  *
  * @author See AUTHORS
- * @version 1.0 
+ * @version 1.0
  */
 
 #ifndef ABC_Sync_h
@@ -46,6 +46,10 @@ extern "C" {
                          const char *szServer,
                          int *pDirty,
                          tABC_Error *pError);
+
+    tABC_CC ABC_SyncGetServer(const char *szRepoKey,
+                              char **pszServer,
+                              tABC_Error *pError);
 
 #ifdef __cplusplus
 }

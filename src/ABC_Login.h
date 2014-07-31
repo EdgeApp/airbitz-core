@@ -91,10 +91,6 @@ extern "C" {
                               tABC_U08Buf *pKey,
                               tABC_Error *pError);
 
-    tABC_CC ABC_LoginGetDirName(const char *szUserName,
-                                  char **pszDirName,
-                                  tABC_Error *pError);
-
     tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
                                             const char *szRecoveryAnswers,
                                             bool *pbValid,
@@ -120,8 +116,6 @@ extern "C" {
                                  const char *szPassword,
                                  tABC_SyncKeys **ppKeys,
                                  tABC_Error *pError);
-
-    tABC_CC ABC_LoginPickRepo(const char *szRepoKey, char **szRepoPath, tABC_Error *pError);
 
     tABC_CC ABC_LoginSyncData(const char *szUserName,
                                 const char *szPassword,

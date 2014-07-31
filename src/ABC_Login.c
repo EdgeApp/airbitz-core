@@ -27,8 +27,6 @@
 #include "ABC_General.h"
 #include "ABC_Mutex.h"
 
-#define SYNC_SERVER "https://testnet.sync.airbitz.co/repos/"
-
 #define ACCOUNT_MK_LENGTH 32
 
 #define ACCOUNT_MAX                             1024  // maximum number of accounts
@@ -105,6 +103,7 @@ static tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir, tABC_Error *pE
 static tABC_CC ABC_LoginNextAccountNum(int *pAccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateRootDir(tABC_Error *pError);
 static tABC_CC ABC_LoginCopyRootDirName(char *szRootDir, tABC_Error *pError);
+static tABC_CC ABC_LoginGetDirName(const char *szUserName, char **pszDirName, tABC_Error *pError);
 static tABC_CC ABC_LoginGetSyncDirName(const char *szUserName, char **pszDirName, tABC_Error *pError);
 static tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginNumForUser(const char *szUserName, int *pAccountNum, tABC_Error *pError);
@@ -580,7 +579,7 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
     // Create Repo Path
-    ABC_CHECK_RET(ABC_LoginPickRepo(pKeys->szRepoAcctKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncGetServer(pKeys->szRepoAcctKey, &szRepoURL, pError));
     ABC_DebugLog("Pushing to: %s\n", szRepoURL);
 
     // Init the git repo and sync it
@@ -673,7 +672,7 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
     // Init the git repo and sync it
-    ABC_CHECK_RET(ABC_LoginPickRepo(pKeys->szRepoAcctKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncGetServer(pKeys->szRepoAcctKey, &szRepoURL, pError));
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
     ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
 
@@ -823,7 +822,7 @@ tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
 
     // Create repo URL
     char *szSyncKey = (char *) ABC_BUF_PTR(SyncKey);
-    ABC_CHECK_RET(ABC_LoginPickRepo(szSyncKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncGetServer(szSyncKey, &szRepoURL, pError));
 
     ABC_DebugLog("Fetching from: %s\n", szRepoURL);
 
@@ -1957,6 +1956,7 @@ exit:
  *
  * @param pszDirName Location to store allocated pointer (must be free'd by caller)
  */
+static
 tABC_CC ABC_LoginGetDirName(const char *szUserName, char **pszDirName, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -3022,30 +3022,6 @@ exit:
 }
 
 /**
- * Using the settings pick a repo and create the repo url
- *
- * @param szRepoKey    The repo key
- * @param szRepoPath   Pointer to pointer where the results will be store. Caller must free
- */
-tABC_CC ABC_LoginPickRepo(const char *szRepoKey, char **szRepoPath, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_U08Buf URL = ABC_BUF_NULL;
-
-    ABC_CHECK_NULL(szRepoKey);
-
-    ABC_BUF_DUP_PTR(URL, SYNC_SERVER, strlen(SYNC_SERVER));
-    ABC_BUF_APPEND_PTR(URL, szRepoKey, strlen(szRepoKey));
-    ABC_BUF_APPEND_PTR(URL, "", 1);
-
-    *szRepoPath = (char *)ABC_BUF_PTR(URL);
-    ABC_BUF_CLEAR(URL);
-    ABC_BUF_FREE(URL);
-exit:
-    return cc;
-}
-
-/**
  * Sync the account data
  *
  * @param szUserName    UserName for the account associated with the settings
@@ -3075,7 +3051,7 @@ tABC_CC ABC_LoginSyncData(const char *szUserName,
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
     // Create the repo url and sync it
-    ABC_CHECK_RET(ABC_LoginPickRepo(pKeys->szRepoAcctKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncGetServer(pKeys->szRepoAcctKey, &szRepoURL, pError));
 
     ABC_DebugLog("URL: %s %s\n", szFilename, szRepoURL);
 
