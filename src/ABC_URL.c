@@ -79,7 +79,10 @@ tABC_CC ABC_URLInitialize(const char *szCaCertPath, tABC_Error *pError)
         ABC_DebugLog("Curl init failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl init failed");
     }
-    ABC_STRDUP(gszCaCertPath, szCaCertPath);
+    if (szCaCertPath)
+    {
+        ABC_STRDUP(gszCaCertPath, szCaCertPath);
+    }
 
     gbInitialized = true;
 
