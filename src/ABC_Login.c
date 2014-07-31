@@ -89,6 +89,7 @@ static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
 static tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_LoginInitPackages(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, const char *szLoginPackage, char **szAccountDir, tABC_Error *pError);
+static tABC_CC ABC_LoginUpdatePackages(const char *szUserName, const char *szPassword, tABC_Error *pError);
 static tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError);
 static tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError);
 static tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, const char *szCarePackage_JSON, const char *szLoginPackage_JSON, char *szRepoAcctKey, tABC_Error *pError);
@@ -404,8 +405,7 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
     }
     else
     {
-        // Note: No password so don't try to login, just update account repo
-        ABC_LoginSyncData(pInfo->szUserName, NULL, &dataDirty, pError);
+        ABC_CHECK_RET(ABC_LoginUpdatePackages(pInfo->szUserName, pInfo->szPassword, pError));
     }
 
     // check the credentials
@@ -732,6 +732,51 @@ tABC_CC ABC_LoginInitPackages(const char *szUserName, tABC_U08Buf L1, const char
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage, pError));
 exit:
     ABC_FREE_STR(szJSON);
+    return cc;
+}
+
+static
+tABC_CC ABC_LoginUpdatePackages(const char *szUserName, const char *szPassword, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tAccountKeys *pKeys = NULL;
+    tABC_U08Buf NULL_LRA1 = ABC_BUF_NULL;
+    tABC_U08Buf P = ABC_BUF_NULL;
+    tABC_U08Buf P1 = ABC_BUF_NULL;
+    char *szCarePackage = NULL;
+    char *szLoginPackage = NULL;
+    char *szAccountDir = NULL;
+    char *szFilename = NULL;
+
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, NULL, &pKeys, pError));
+
+    ABC_BUF_DUP_PTR(P, szPassword, strlen(szPassword));
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(P, pKeys->pSNRP1, &P1, pError));
+
+    // Download CarePackage.json
+    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(pKeys->L1, &szCarePackage, pError));
+
+    // Download LoginPackage.json
+    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(pKeys->L1, P1, NULL_LRA1, &szLoginPackage, pError));
+
+    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
+
+    //  Save Care Package
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage, pError));
+
+    // Save Login Package
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage, pError));
+exit:
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szFilename);
+    ABC_FREE_STR(szCarePackage);
+    ABC_FREE_STR(szLoginPackage);
+    ABC_BUF_FREE(P);
+    ABC_BUF_FREE(P1);
     return cc;
 }
 
