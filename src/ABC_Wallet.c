@@ -293,7 +293,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
     // Create Repo URL
-    ABC_CHECK_RET(ABC_LoginPickRepo(pData->szWalletAcctKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncGetServer(pData->szWalletAcctKey, &szRepoURL, pError));
 
     ABC_DebugLog("Wallet Repo: %s %s\n", pData->szWalletSyncDir, szRepoURL);
 
@@ -434,7 +434,7 @@ tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const
     ABC_CHECK_ASSERT(NULL != pData->szWalletAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
 
     // Create Repo URL
-    ABC_CHECK_RET(ABC_LoginPickRepo(pData->szWalletAcctKey, &szRepoURL, pError));
+    ABC_CHECK_RET(ABC_SyncGetServer(pData->szWalletAcctKey, &szRepoURL, pError));
 
     ABC_DebugLog("Wallet Repo: %s %s\n", pData->szWalletSyncDir, szRepoURL);
 

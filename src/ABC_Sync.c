@@ -15,6 +15,8 @@
 
 #include <pthread.h>
 
+#define SYNC_SERVER "https://testnet.sync.airbitz.co/repos/"
+
 static bool gbInitialized = false;
 static pthread_mutex_t gMutex;
 
@@ -214,5 +216,31 @@ tABC_CC ABC_SyncMutexUnlock(tABC_Error *pError)
 
 exit:
 
+    return cc;
+}
+
+/**
+ * Using the settings pick a repo and create the repo URI.
+ *
+ * @param szRepoKey    The repo key.
+ * @param pszServer    Pointer to pointer where the resulting server URI
+ *                     will be stored. Caller must free.
+ */
+tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_U08Buf URL = ABC_BUF_NULL;
+
+    ABC_CHECK_NULL(szRepoKey);
+
+    ABC_BUF_DUP_PTR(URL, SYNC_SERVER, strlen(SYNC_SERVER));
+    ABC_BUF_APPEND_PTR(URL, szRepoKey, strlen(szRepoKey));
+    ABC_BUF_APPEND_PTR(URL, "", 1);
+
+    *pszServer = (char *)ABC_BUF_PTR(URL);
+    ABC_BUF_CLEAR(URL);
+    ABC_BUF_FREE(URL);
+
+exit:
     return cc;
 }
