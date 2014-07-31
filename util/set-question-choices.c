@@ -15,5 +15,6 @@ int main(int argc, char *argv[])
 
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, NULL, 0, seed, sizeof(seed), &error));
     MAIN_CHECK(ABC_SetAccountRecoveryQuestions(argv[2], argv[3], argv[4], argv[5], NULL, NULL, &error));
+    ABC_Terminate();
     return 0;
 }
