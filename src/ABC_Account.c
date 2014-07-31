@@ -1,6 +1,13 @@
 /**
  * @file
  * Functions for dealing with the contents of the account sync directory.
+ *
+ * This file contains all of the functions associated with account creation,
+ * viewing and modification.
+ *
+ * See LICENSE for copy, modification, and use permissions
+ *
+ * @author See AUTHORS
  */
 
 #include "ABC_Account.h"
@@ -435,6 +442,59 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
             // assign this source to the array
             pSettings->exchangeRateSources.aSources[i] = pSource;
         }
+
+        //
+        // Create the user's "fullName" based on First, Last, Nick names
+        // Should probably be pulled out into its own function
+        //
+        {
+            size_t f, l, n;
+            char *fn, *ln, *nn;
+
+            f = ABC_STRLEN((*ppSettings)->szFirstName);
+            l = ABC_STRLEN((*ppSettings)->szLastName);
+            n = ABC_STRLEN((*ppSettings)->szNickname);
+
+            fn = (*ppSettings)->szFirstName;
+            ln = (*ppSettings)->szLastName;
+            nn = (*ppSettings)->szNickname;
+
+            if (f || l || n)
+            {
+                size_t bufLength = 5 + f + l + n;
+                char *fullName;
+
+                if (ABC_STRLEN((*ppSettings)->szFullName) < bufLength)
+                {
+                    ABC_REALLOC((*ppSettings)->szFullName, bufLength);
+                }
+                fullName = (*ppSettings)->szFullName;
+
+                fullName[0] = 0;
+
+                if (f)
+                {
+                    sprintf(fullName, "%s", fn);
+                }
+                if (f && l)
+                {
+                    sprintf(fullName, "%s ", fullName);
+                }
+                if (l)
+                {
+                    sprintf(fullName, "%s%s", fullName, ln);
+                }
+                if ((f || l) && n)
+                {
+                    sprintf(fullName, "%s - ", fullName);
+                }
+                if (n)
+                {
+                    sprintf(fullName, "%s%s", fullName, nn);
+                }
+            }
+        }
+
     }
     else
     {

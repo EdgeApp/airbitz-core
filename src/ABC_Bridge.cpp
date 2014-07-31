@@ -5,8 +5,37 @@
  * This file contains a bridge between the plain C code in the core, and
  * the C++ code in libbitcoin and friends.
  *
- * @author William Swanson
- * @version 0.1
+ *  Copyright (c) 2014, Airbitz
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms are permitted provided that
+ *  the following conditions are met:
+ *
+ *  1. Redistributions of source code must retain the above copyright notice, this
+ *  list of conditions and the following disclaimer.
+ *  2. Redistributions in binary form must reproduce the above copyright notice,
+ *  this list of conditions and the following disclaimer in the documentation
+ *  and/or other materials provided with the distribution.
+ *  3. Redistribution or use of modified source code requires the express written
+ *  permission of Airbitz Inc.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ *  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *  The views and conclusions contained in the software and documentation are those
+ *  of the authors and should not be interpreted as representing official policies,
+ *  either expressed or implied, of the Airbitz Project.
+ *
+ *  @author See AUTHORS
+ *  @version 1.0
  */
 
 #include "ABC_Bridge.h"
@@ -14,14 +43,13 @@
 #include "ABC_Wallet.h"
 #include "ABC_URL.h"
 #include <curl/curl.h>
-#include <wallet/uri.hpp>
-#include <wallet/hd_keys.hpp>
-#include <wallet/key_formats.hpp>
+#include <wallet/wallet.hpp>
 #include <unordered_map>
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
 
-#define FALLBACK_OBELISK "tcp://obelisk2.airbitz.co:9091"
+#define FALLBACK_OBELISK "tcp://obelisk3.airbitz.co:9091"
 #define TESTNET_OBELISK "tcp://obelisk-testnet2.airbitz.co:9091"
+#define NO_AB_FEES
 
 #define AB_MIN(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -79,10 +107,12 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
 {
     libwallet::uri_parse_result result;
     libbitcoin::payment_address address;
+    char *uriString;
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_BitcoinURIInfo *pInfo = NULL;
+    std::string tempStr = szURI;
 
     ABC_CHECK_NULL(szURI);
     ABC_CHECK_ASSERT(strlen(szURI) > 0, ABC_CC_Error, "No URI provided");
@@ -92,10 +122,25 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
     // allocate initial struct
     ABC_ALLOC_ARRAY(pInfo, 1, tABC_BitcoinURIInfo);
 
-    // parse and extract contents
-    if (!libwallet::uri_parse(szURI, result))
+    // XX semi-hack warning. Might not be BIP friendly. Convert "bitcoin://1zf7ef..." URIs to 
+    // "bitcoin:1zf7ef..." so that libwallet parser doesn't choke. "bitcoin://" URLs are the 
+    // only style that are understood by email and SMS readers and will get forwarded
+    // to bitcoin wallets. Airbitz wallet creates "bitcoin://" URIs when requesting funds via 
+    // email/SMS so it should be able to parse them as well. -paulvp
+
+    ABC_STRDUP(uriString, szURI);
+
+    if (0 == tempStr.find("bitcoin://", 0))
     {
-        if (!address.set_encoded(szURI))
+        tempStr.replace(0, 10, "bitcoin:");
+        std::size_t length = tempStr.copy(uriString,0xFFFFFFFF);
+        uriString[length] = '\0';
+    }
+
+    // parse and extract contents
+    if (!libwallet::uri_parse(uriString, result))
+    {
+        if (!address.set_encoded(uriString))
             ABC_RET_ERROR(ABC_CC_ParseError, "Malformed bitcoin URI");
         result.address = address;
     }
@@ -114,6 +159,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
 
 exit:
     ABC_BridgeFreeURIInfo(pInfo);
+    ABC_FREE(uriString);
 
     return cc;
 }
@@ -146,7 +192,7 @@ void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo)
  * bitcoin to satoshis.
  */
 tABC_CC ABC_BridgeParseAmount(const char *szAmount,
-                              int64_t *pAmountOut,
+                              uint64_t *pAmountOut,
                               unsigned decimalPlaces)
 {
     *pAmountOut = libwallet::parse_amount(szAmount, decimalPlaces);
@@ -162,7 +208,7 @@ tABC_CC ABC_BridgeParseAmount(const char *szAmount,
  * @param decimal_places set to ABC_BITCOIN_DECIMAL_PLACE to convert
  * satoshis to bitcoins.
  */
-tABC_CC ABC_BridgeFormatAmount(int64_t amount,
+tABC_CC ABC_BridgeFormatAmount(uint64_t amount,
                                char **pszAmountOut,
                                unsigned decimalPlaces,
                                tABC_Error *pError)
@@ -523,6 +569,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
     {
         // Calculate AB Fees
         abFees = ABC_BridgeCalcAbFees(pSendInfo->pDetails->amountSatoshi, ppInfo);
+
         // Add in miners fees
         if (abFees > 0)
         {
@@ -713,6 +760,7 @@ ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *h
 {
     tABC_CC cc = ABC_CC_Ok;
 #if !NETWORK_FAKE
+    int height_;
     bc::hash_digest txId;
     auto row = watchers_.find(szWalletUUID);
     if (row == watchers_.end())
@@ -721,11 +769,11 @@ ABC_BridgeTxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *h
         goto exit;
     }
     txId = bc::decode_hash(szTxId);
-    *height = row->second->watcher->get_tx_height(txId);
-    if (*height == 0 && row->second->watcher->get_status() == libwallet::watcher::watcher_syncing)
+    if (!row->second->watcher->get_tx_height(txId, height_))
     {
         cc = ABC_CC_Synchronizing;
     }
+    *height = height_;
 exit:
 #else
     *height = 0;
@@ -995,12 +1043,18 @@ void ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amoun
 static
 uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo)
 {
+
+#ifdef NO_AB_FEES
+    return 0;
+#else
     uint64_t abFees =
         (uint64_t) ((double) amount *
                     (pInfo->pAirBitzFee->percentage * 0.01));
     abFees = AB_MAX(pInfo->pAirBitzFee->minSatoshi, abFees);
     abFees = AB_MIN(pInfo->pAirBitzFee->maxSatoshi, abFees);
+
     return abFees;
+#endif
 }
 
 static
