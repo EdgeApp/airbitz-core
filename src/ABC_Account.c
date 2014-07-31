@@ -337,6 +337,9 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
 
         // allocate the new settings object
         ABC_ALLOC(pSettings, sizeof(tABC_AccountSettings));
+        pSettings->szFirstName = NULL;
+        pSettings->szLastName = NULL;
+        pSettings->szNickname = NULL;
 
         // get the first name
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_FIRST_NAME_FIELD);
@@ -451,24 +454,24 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
             size_t f, l, n;
             char *fn, *ln, *nn;
 
-            f = ABC_STRLEN((*ppSettings)->szFirstName);
-            l = ABC_STRLEN((*ppSettings)->szLastName);
-            n = ABC_STRLEN((*ppSettings)->szNickname);
+            f = ABC_STRLEN(pSettings->szFirstName);
+            l = ABC_STRLEN(pSettings->szLastName);
+            n = ABC_STRLEN(pSettings->szNickname);
 
-            fn = (*ppSettings)->szFirstName;
-            ln = (*ppSettings)->szLastName;
-            nn = (*ppSettings)->szNickname;
+            fn = pSettings->szFirstName;
+            ln = pSettings->szLastName;
+            nn = pSettings->szNickname;
 
             if (f || l || n)
             {
                 size_t bufLength = 5 + f + l + n;
                 char *fullName;
 
-                if (ABC_STRLEN((*ppSettings)->szFullName) < bufLength)
+                if (ABC_STRLEN(pSettings->szFullName) < bufLength)
                 {
-                    ABC_REALLOC((*ppSettings)->szFullName, bufLength);
+                    ABC_REALLOC(pSettings->szFullName, bufLength);
                 }
-                fullName = (*ppSettings)->szFullName;
+                fullName = pSettings->szFullName;
 
                 fullName[0] = 0;
 
