@@ -84,7 +84,10 @@ tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError)
     e = git_threads_init();
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_threads_init failed");
 
-    ABC_STRDUP(gszCaCertPath, szCaCertPath);
+    if (szCaCertPath)
+    {
+        ABC_STRDUP(gszCaCertPath, szCaCertPath);
+    }
 exit:
     if (e < 0) SyncLogGitError(e);
     return cc;
