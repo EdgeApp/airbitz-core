@@ -846,7 +846,7 @@ tABC_CC ABC_AccountWalletsLoad(tABC_SyncKeys *pKeys,
 
     // Load the wallets into the array:
     ABC_ALLOC_ARRAY(aInfo, entries, tABC_AccountWalletInfo);
-    for (unsigned i = 0; i < entries; ++i)
+    for (unsigned i = 0; i < pFileList->nCount; ++i)
     {
         size_t len = strlen(pFileList->apFiles[i]->szName);
         if (5 <= len &&
