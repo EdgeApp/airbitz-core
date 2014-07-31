@@ -38,17 +38,22 @@
 #define ACCOUNT_LOGIN_PACKAGE_FILENAME          "LoginPackage.json"
 #define ACCOUNT_WALLETS_FILENAME                "Wallets.json"
 
+// UserName.json:
 #define JSON_ACCT_USERNAME_FIELD                "userName"
-#define JSON_ACCT_REPO_FIELD                    "RepoAcctKey"
-#define JSON_ACCT_WALLETS_FIELD                 "wallets"
+
+// CarePackage.json:
 #define JSON_ACCT_ERQ_FIELD                     "ERQ"
-#define JSON_ACCT_SNRP_FIELD_PREFIX             "SNRP"
-#define JSON_ACCT_QUESTIONS_FIELD               "questions"
+#define JSON_ACCT_SNRP2_FIELD                   "SNRP2"
+#define JSON_ACCT_SNRP3_FIELD                   "SNRP3"
+#define JSON_ACCT_SNRP4_FIELD                   "SNRP4"
+
+// LoginPackage.json:
 #define JSON_ACCT_MK_FIELD                      "MK"
 #define JSON_ACCT_SYNCKEY_FIELD                 "SyncKey"
 #define JSON_ACCT_ELP2_FIELD                    "ELP2"
 #define JSON_ACCT_ELRA3_FIELD                   "ELRA3"
 
+// Server:
 #define JSON_ACCT_CARE_PACKAGE                  "care_package"
 #define JSON_ACCT_LOGIN_PACKAGE                 "login_package"
 
@@ -1035,12 +1040,12 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     // update the care package
     // get the current care package
     ABC_CHECK_RET(ABC_LoginGetCarePackageObjects(
-                    AccountNum, NULL, NULL, 
+                    AccountNum, NULL, NULL,
                     &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
 
     // Create an updated CarePackage = ERQ, SNRP2, SNRP3, SNRP4
     ABC_CHECK_RET(ABC_LoginCreateCarePackageJSONString(
-                    pJSON_ERQ, pJSON_SNRP2, pJSON_SNRP3, 
+                    pJSON_ERQ, pJSON_SNRP2, pJSON_SNRP3,
                     pJSON_SNRP4, &szCarePackage_JSON, pError));
 
     // Client sends L1, P1, LRA1, CarePackage, to the server
@@ -1392,7 +1397,6 @@ tABC_CC ABC_LoginCreateCarePackageJSONString(const json_t *pJSON_ERQ,
     tABC_CC cc = ABC_CC_Ok;
 
     json_t *pJSON_Root = NULL;
-    char *szField = NULL;
 
     ABC_CHECK_NULL(pJSON_SNRP2);
     ABC_CHECK_NULL(pJSON_SNRP3);
@@ -1405,23 +1409,14 @@ tABC_CC ABC_LoginCreateCarePackageJSONString(const json_t *pJSON_ERQ,
     {
         json_object_set(pJSON_Root, JSON_ACCT_ERQ_FIELD, (json_t *) pJSON_ERQ);
     }
-
-    ABC_ALLOC(szField, ABC_MAX_STRING_LENGTH);
-
-    sprintf(szField, "%s%d", JSON_ACCT_SNRP_FIELD_PREFIX, 2);
-    json_object_set(pJSON_Root, szField, (json_t *) pJSON_SNRP2);
-
-    sprintf(szField, "%s%d", JSON_ACCT_SNRP_FIELD_PREFIX, 3);
-    json_object_set(pJSON_Root, szField, (json_t *) pJSON_SNRP3);
-
-    sprintf(szField, "%s%d", JSON_ACCT_SNRP_FIELD_PREFIX, 4);
-    json_object_set(pJSON_Root, szField, (json_t *) pJSON_SNRP4);
+    json_object_set(pJSON_Root, JSON_ACCT_SNRP2_FIELD, (json_t *) pJSON_SNRP2);
+    json_object_set(pJSON_Root, JSON_ACCT_SNRP3_FIELD, (json_t *) pJSON_SNRP3);
+    json_object_set(pJSON_Root, JSON_ACCT_SNRP4_FIELD, (json_t *) pJSON_SNRP4);
 
     *pszJSON = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
-    ABC_FREE_STR(szField);
 
     return cc;
 }
@@ -1574,7 +1569,6 @@ tABC_CC ABC_LoginGetCarePackageObjects(int          AccountNum,
     char *szAccountDir = NULL;
     char *szCarePackageFilename = NULL;
     char *szCarePackage_JSON = NULL;
-    char *szField = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_ERQ = NULL;
     json_t *pJSON_SNRP2 = NULL;
@@ -1612,21 +1606,16 @@ tABC_CC ABC_LoginGetCarePackageObjects(int          AccountNum,
     pJSON_ERQ = json_object_get(pJSON_Root, JSON_ACCT_ERQ_FIELD);
     //ABC_CHECK_ASSERT((pJSON_ERQ && json_is_object(pJSON_ERQ)), ABC_CC_JSONError, "Error parsing JSON care package - missing ERQ");
 
-    ABC_ALLOC(szField, ABC_MAX_STRING_LENGTH);
-
     // get SNRP2
-    sprintf(szField, "%s%d", JSON_ACCT_SNRP_FIELD_PREFIX, 2);
-    pJSON_SNRP2 = json_object_get(pJSON_Root, szField);
+    pJSON_SNRP2 = json_object_get(pJSON_Root, JSON_ACCT_SNRP2_FIELD);
     ABC_CHECK_ASSERT((pJSON_SNRP2 && json_is_object(pJSON_SNRP2)), ABC_CC_JSONError, "Error parsing JSON care package - missing SNRP2");
 
     // get SNRP3
-    sprintf(szField, "%s%d", JSON_ACCT_SNRP_FIELD_PREFIX, 3);
-    pJSON_SNRP3 = json_object_get(pJSON_Root, szField);
+    pJSON_SNRP3 = json_object_get(pJSON_Root, JSON_ACCT_SNRP3_FIELD);
     ABC_CHECK_ASSERT((pJSON_SNRP3 && json_is_object(pJSON_SNRP3)), ABC_CC_JSONError, "Error parsing JSON care package - missing SNRP3");
 
     // get SNRP4
-    sprintf(szField, "%s%d", JSON_ACCT_SNRP_FIELD_PREFIX, 4);
-    pJSON_SNRP4 = json_object_get(pJSON_Root, szField);
+    pJSON_SNRP4 = json_object_get(pJSON_Root, JSON_ACCT_SNRP4_FIELD);
     ABC_CHECK_ASSERT((pJSON_SNRP4 && json_is_object(pJSON_SNRP4)), ABC_CC_JSONError, "Error parsing JSON care package - missing SNRP4");
 
     // assign what we found (we need to increment the refs because they were borrowed from root)
@@ -1659,7 +1648,6 @@ exit:
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szCarePackageFilename);
     ABC_FREE_STR(szCarePackage_JSON);
-    ABC_FREE_STR(szField);
 
     return cc;
 }
