@@ -143,13 +143,13 @@ exit:
 
 void ABC_ExchangeTerminate()
 {
-    tABC_Error error;
     if (gbInitialized == true)
     {
+        ABC_ExchangeClearCache(NULL);
+
         pthread_mutex_destroy(&gMutex);
 
         gbInitialized = false;
-        ABC_ExchangeClearCache(&error);
     }
 }
 
