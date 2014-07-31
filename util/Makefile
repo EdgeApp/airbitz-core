@@ -15,6 +15,7 @@ default: build/account-decrypt.bin \
          build/get-question-choices.bin \
          build/get-exchange-rate.bin \
          build/get-settings.bin \
+         build/list-wallets.bin \
          build/remove-category.bin \
          build/set-nickname.bin \
          build/set-pin.bin \

@@ -87,7 +87,6 @@ static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
 static tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_LoginInitPackages(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, const char *szLoginPackage, char **szAccountDir, tABC_Error *pError);
-static tABC_CC ABC_LoginUpdatePackages(const char *szUserName, const char *szPassword, tABC_Error *pError);
 static tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError);
 static tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError);
 static tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1, tABC_U08Buf P1, const char *szCarePackage_JSON, const char *szLoginPackage_JSON, char *szRepoAcctKey, tABC_Error *pError);
@@ -404,7 +403,8 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
     }
     else
     {
-        ABC_CHECK_RET(ABC_LoginUpdatePackages(pInfo->szUserName, pInfo->szPassword, pError));
+        // Note: No password so don't try to login, just update account repo
+        ABC_LoginSyncData(pInfo->szUserName, NULL, &dataDirty, pError);
     }
 
     // check the credentials
@@ -735,51 +735,6 @@ exit:
 }
 
 static
-tABC_CC ABC_LoginUpdatePackages(const char *szUserName, const char *szPassword, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tAccountKeys *pKeys = NULL;
-    tABC_U08Buf NULL_LRA1 = ABC_BUF_NULL;
-    tABC_U08Buf P = ABC_BUF_NULL;
-    tABC_U08Buf P1 = ABC_BUF_NULL;
-    char *szCarePackage = NULL;
-    char *szLoginPackage = NULL;
-    char *szAccountDir = NULL;
-    char *szFilename = NULL;
-
-    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, NULL, &pKeys, pError));
-
-    ABC_BUF_DUP_PTR(P, szPassword, strlen(szPassword));
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(P, pKeys->pSNRP1, &P1, pError));
-
-    // Download CarePackage.json
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(pKeys->L1, &szCarePackage, pError));
-
-    // Download LoginPackage.json
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(pKeys->L1, P1, NULL_LRA1, &szLoginPackage, pError));
-
-    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
-
-    //  Save Care Package
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage, pError));
-
-    // Save Login Package
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage, pError));
-exit:
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szFilename);
-    ABC_FREE_STR(szCarePackage);
-    ABC_FREE_STR(szLoginPackage);
-    ABC_BUF_FREE(P);
-    ABC_BUF_FREE(P1);
-    return cc;
-}
-
-static
 tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1025,7 +980,6 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     }
     ABC_BUF_DUP(pKeys->LRA, pKeys->L);
     ABC_BUF_APPEND_PTR(pKeys->LRA, pInfo->szRecoveryAnswers, strlen(pInfo->szRecoveryAnswers));
-    //ABC_DEBUG(ABC_UtilHexDumpBuf("LRA", pKeys->LRA));
 
     // LRA1 = Scrypt(L + RA, SNRP1)
     if (ABC_BUF_PTR(pKeys->LRA1) != NULL)
@@ -1054,7 +1008,6 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
         ABC_BUF_FREE(pKeys->RQ);
     }
     ABC_BUF_DUP_PTR(pKeys->RQ, pInfo->szRecoveryQuestions, strlen(pInfo->szRecoveryQuestions));
-    //ABC_UtilHexDumpBuf("RQ", pKeys->RQ);
 
     // L1 = Scrypt(L, SNRP1)
     if (ABC_BUF_PTR(pKeys->L1) == NULL)
@@ -1068,34 +1021,27 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->P, pKeys->pSNRP1, &(pKeys->P1), pError));
     }
 
-    // ERQ = AES256(RQ, L2)
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(pKeys->RQ, pKeys->L2, ABC_CryptoType_AES256, &pJSON_ERQ, pError));
-
     // Create LoginPackage json
     ABC_CHECK_RET(
         ABC_LoginUpdateLoginPackageJSONString(
             pKeys, pKeys->MK, pKeys->szRepoAcctKey, pKeys->LP2, pKeys->LRA2,
             &szLoginPackage_JSON, pError));
 
-    // create the main account directory
-    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
-
-    // update login package
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage_JSON, pError));
+    // ERQ = AES256(RQ, L2)
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(
+                         pKeys->RQ, pKeys->L2, ABC_CryptoType_AES256,
+                         &pJSON_ERQ, pError));
 
     // update the care package
     // get the current care package
-    ABC_CHECK_RET(ABC_LoginGetCarePackageObjects(AccountNum, NULL, NULL, &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
+    ABC_CHECK_RET(ABC_LoginGetCarePackageObjects(
+                    AccountNum, NULL, NULL, 
+                    &pJSON_SNRP2, &pJSON_SNRP3, &pJSON_SNRP4, pError));
 
     // Create an updated CarePackage = ERQ, SNRP2, SNRP3, SNRP4
-    ABC_CHECK_RET(ABC_LoginCreateCarePackageJSONString(pJSON_ERQ, pJSON_SNRP2, pJSON_SNRP3, pJSON_SNRP4, &szCarePackage_JSON, pError));
-
-    // write the file care package to a file
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage_JSON, pError));
+    ABC_CHECK_RET(ABC_LoginCreateCarePackageJSONString(
+                    pJSON_ERQ, pJSON_SNRP2, pJSON_SNRP3, 
+                    pJSON_SNRP4, &szCarePackage_JSON, pError));
 
     // Client sends L1, P1, LRA1, CarePackage, to the server
     ABC_CHECK_RET(
@@ -1103,7 +1049,19 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
                                    szCarePackage_JSON, szLoginPackage_JSON,
                                    pError));
 
-    // Sync the data (ELP2 and ELRA2) with server
+    // create the main account directory
+    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
+
+    // write the file care package to a file
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage_JSON, pError));
+
+    // update login package
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage_JSON, pError));
+
     int dirty;
     ABC_CHECK_RET(ABC_LoginSyncData(pKeys->szUserName, pKeys->szPassword, &dirty, pError));
     ABC_CHECK_RET(ABC_WalletSyncAll(pKeys->szUserName, pKeys->szPassword, &dirty, pError));
@@ -1349,10 +1307,11 @@ exit:
  * This function sends LRA1 and Care Package to the server as part
  * of setting up the recovery data for an account
  *
- * @param L1            Login hash for the account
- * @param P1            Password hash for the account
- * @param LRA1          Scrypt'ed login and recovery answers
- * @param szCarePackage Care Package for account
+ * @param L1             Login hash for the account
+ * @param P1             Password hash for the account
+ * @param LRA1           Scrypt'ed login and recovery answers
+ * @param szCarePackage  Care Package for account
+ * @param szLoginPackage Login Package for account
  */
 static
 tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1,
@@ -1363,16 +1322,17 @@ tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szURL     = NULL;
-    char *szResults = NULL;
-    char *szPost    = NULL;
-    char *szL1_Base64 = NULL;
-    char *szP1_Base64 = NULL;
+    char *szURL         = NULL;
+    char *szResults     = NULL;
+    char *szPost        = NULL;
+    char *szL1_Base64   = NULL;
+    char *szP1_Base64   = NULL;
     char *szLRA1_Base64 = NULL;
-    json_t *pJSON_Root = NULL;
+    json_t *pJSON_Root  = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL(szCarePackage);
+    ABC_CHECK_NULL(szLoginPackage);
 
     // create the URL
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
@@ -1381,26 +1341,16 @@ tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf P1,
     // create base64 versions of L1, P1 and LRA1
     ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
     ABC_CHECK_RET(ABC_CryptoBase64Encode(P1, &szP1_Base64, pError));
-    if (ABC_BUF_PTR(LRA1) != NULL)
-    {
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(LRA1, &szLRA1_Base64, pError));
-        // create the post data
-        pJSON_Root = json_pack("{ssssssssss}",
-                            ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                            ABC_SERVER_JSON_P1_FIELD, szP1_Base64,
-                            ABC_SERVER_JSON_LRA1_FIELD, szLRA1_Base64,
-                            ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage,
-                            ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
-    }
-    else
-    {
-        // create the post data
-        pJSON_Root = json_pack("{ssssssss}",
-                            ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                            ABC_SERVER_JSON_P1_FIELD, szP1_Base64,
-                            ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage,
-                            ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
-    }
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(LRA1, &szLRA1_Base64, pError));
+
+    // create the post data
+    pJSON_Root = json_pack("{ssssssssss}",
+                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                        ABC_SERVER_JSON_P1_FIELD, szP1_Base64,
+                        ABC_SERVER_JSON_LRA1_FIELD, szLRA1_Base64,
+                        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage,
+                        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
+
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
 
@@ -1527,7 +1477,6 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
     bool bExists = false;
     char *szAccountDir = NULL;
     char *szFilename   = NULL;
-    json_t *pJSON_Root = NULL;
     json_t *pJSON_EMK            = NULL;
     json_t *pJSON_ESyncKey       = NULL;
     json_t *pJSON_ELP2           = NULL;
@@ -1564,7 +1513,7 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
         if (pJSON_ESyncKey) json_decref(pJSON_ESyncKey);
 
         tABC_U08Buf RepoBuf = ABC_BUF_NULL;
-        ABC_BUF_SET_PTR(RepoBuf, (unsigned char *)pKeys->szRepoAcctKey, strlen(pKeys->szRepoAcctKey) + 1);
+        ABC_BUF_SET_PTR(RepoBuf, (unsigned char *)szRepoAcctKey, strlen(szRepoAcctKey) + 1);
 
         ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(RepoBuf, pKeys->L2, ABC_CryptoType_AES256, &pJSON_ESyncKey, pError));
     }
@@ -1588,7 +1537,6 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
                                               szLoginPackage,
                                               pError));
 exit:
-    if (pJSON_Root) json_decref(pJSON_Root);
 
     return cc;
 }
