@@ -60,11 +60,15 @@
             <F N="ABC_Debug.c"/>
             <F N="ABC_Exchanges.c"/>
             <F N="ABC_FileIO.c"/>
+            <F N="ABC_General.c"/>
+            <F N="ABC_Login.c"/>
             <F N="ABC_Mutex.c"/>
+            <F N="ABC_Sync.c"/>
             <F N="ABC_Tx.c"/>
             <F N="ABC_URL.c"/>
             <F N="ABC_Util.c"/>
             <F N="ABC_Wallet.c"/>
+            <F N="sync.c"/>
         </Folder>
         <Folder
             Name="Header Files"
@@ -76,12 +80,16 @@
             <F N="ABC_Debug.h"/>
             <F N="ABC_Exchanges.h"/>
             <F N="ABC_FileIO.h"/>
+            <F N="ABC_General.h"/>
+            <F N="ABC_Login.h"/>
             <F N="ABC_Mutex.h"/>
             <F N="ABC_ServerDefs.h"/>
+            <F N="ABC_Sync.h"/>
             <F N="ABC_Tx.h"/>
             <F N="ABC_URL.h"/>
             <F N="ABC_Util.h"/>
             <F N="ABC_Wallet.h"/>
+            <F N="sync.h"/>
         </Folder>
         <Folder
             Name="Resource Files"
