@@ -96,7 +96,7 @@ typedef struct sWalletData
 static unsigned int gWalletsCacheCount = 0;
 static tWalletData **gaWalletsCacheArray = NULL;
 
-static tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1, tABC_U08Buf P1, const char *szRepoAcctKey, const char *szPath, tABC_Error *pError);
+static tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1, tABC_U08Buf LP1, const char *szRepoAcctKey, const char *szPath, tABC_Error *pError);
 static tABC_CC ABC_WalletSetCurrencyNum(const char *szUserName, const char *szPassword, const char *szUUID, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, const char *szUUID, const char *szAccount, tABC_Error *pError);
 static tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError);
@@ -226,7 +226,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     json_t *pJSON_Wallets  = NULL;
     tABC_SyncKeys *pKeys   = NULL;
     tABC_U08Buf L1            = ABC_BUF_NULL;
-    tABC_U08Buf P1            = ABC_BUF_NULL;
+    tABC_U08Buf LP1           = ABC_BUF_NULL;
     tABC_U08Buf WalletAcctKey = ABC_BUF_NULL;
 
     tWalletData *pData = NULL;
@@ -243,8 +243,8 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     // get L1
     ABC_CHECK_RET(ABC_LoginGetKey(pData->szUserName, pData->szPassword, ABC_LoginKey_L1, &L1, pError));
 
-    // get P1
-    ABC_CHECK_RET(ABC_LoginGetKey(pData->szUserName, pData->szPassword, ABC_LoginKey_P1, &P1, pError));
+    // get LP1
+    ABC_CHECK_RET(ABC_LoginGetKey(pData->szUserName, pData->szPassword, ABC_LoginKey_LP1, &LP1, pError));
 
     // create wallet guid
     ABC_CHECK_RET(ABC_CryptoGenUUIDString(&szUUID, pError));
@@ -284,7 +284,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     ABC_CHECK_RET(ABC_WalletSetCurrencyNum(pInfo->szUserName, pInfo->szPassword, szUUID, pInfo->currencyNum, pError));
 
     // Request remote wallet repo
-    ABC_CHECK_RET(ABC_WalletServerRepoPost(L1, P1, pData->szWalletAcctKey,
+    ABC_CHECK_RET(ABC_WalletServerRepoPost(L1, LP1, pData->szWalletAcctKey,
                                            ABC_SERVER_WALLET_CREATE_PATH, pError));
 
     // set this account for the wallet's first account
@@ -303,7 +303,7 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, szRepoURL, &dirty, pError));
 
     // Actiate the remote wallet
-    ABC_CHECK_RET(ABC_WalletServerRepoPost(L1, P1, pData->szWalletAcctKey,
+    ABC_CHECK_RET(ABC_WalletServerRepoPost(L1, LP1, pData->szWalletAcctKey,
                                            ABC_SERVER_WALLET_ACTIVATE_PATH, pError));
 
     // If everything worked, add the wallet to the account:
@@ -449,11 +449,11 @@ exit:
  * Creates an git repo on the server.
  *
  * @param L1   Login hash for the account
- * @param P1   Password hash for the account
+ * @param LP1  Password hash for the account
  */
 static
 tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
-                                 tABC_U08Buf P1,
+                                 tABC_U08Buf LP1,
                                  const char *szWalletAcctKey,
                                  const char *szPath,
                                  tABC_Error *pError)
@@ -464,24 +464,24 @@ tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
     char *szResults = NULL;
     char *szPost    = NULL;
     char *szL1_Base64 = NULL;
-    char *szP1_Base64 = NULL;
+    char *szLP1_Base64 = NULL;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
-    ABC_CHECK_NULL_BUF(P1);
+    ABC_CHECK_NULL_BUF(LP1);
 
     // create the URL
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, szPath);
 
-    // create base64 versions of L1 and P1
+    // create base64 versions of L1 and LP1
     ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(P1, &szP1_Base64, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
 
     // create the post data
     pJSON_Root = json_pack("{ssssss}",
                         ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                        ABC_SERVER_JSON_P1_FIELD, szP1_Base64,
+                        ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
                         ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
@@ -498,7 +498,7 @@ exit:
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
     ABC_FREE_STR(szL1_Base64);
-    ABC_FREE_STR(szP1_Base64);
+    ABC_FREE_STR(szLP1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
 
     return cc;
