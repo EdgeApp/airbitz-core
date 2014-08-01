@@ -69,7 +69,7 @@ void ABC_DebugLog(const char * format, ...)
 
     va_list	args;
     va_start(args, format);
-    vsprintf(&(szOut[strlen(szOut)]), format, args);
+    vsnprintf(&(szOut[strlen(szOut)]), BUF_SIZE, format, args);
     // if it doesn't end in an newline, add it
     if (szOut[strlen(szOut) - 1] != '\n')
     {
