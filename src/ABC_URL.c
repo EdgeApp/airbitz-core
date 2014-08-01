@@ -314,7 +314,7 @@ tABC_CC ABC_URLPostString(const char *szURL,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf Data;
+    tABC_U08Buf Data = ABC_BUF_NULL;
 
     ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
