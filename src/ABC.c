@@ -2590,3 +2590,38 @@ ABC_IsTestNet(bool *pResult, tABC_Error *pError)
 exit:
     return cc;
 }
+
+tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_U08Buf Version = ABC_BUF_NULL;
+    bool bTestnet = false;
+
+    ABC_IsTestNet(&bTestnet, pError);
+    ABC_BUF_DUP_PTR(Version, ABC_VERSION, strlen(ABC_VERSION));
+    ABC_BUF_APPEND_PTR(Version, "-", 1);
+    if (NETWORK_FAKE)
+    {
+        ABC_BUF_APPEND_PTR(Version, "fakenet", 7);
+    }
+    else if (bTestnet)
+    {
+        ABC_BUF_APPEND_PTR(Version, "testnet", 7);
+    }
+    else
+    {
+        ABC_BUF_APPEND_PTR(Version, "mainnet", 7);
+    }
+    // null byte
+    ABC_BUF_APPEND_PTR(Version, "", 1);
+
+    *szVersion = (char *)ABC_BUF_PTR(Version);
+    ABC_BUF_CLEAR(Version);
+exit:
+    ABC_BUF_FREE(Version);
+    return cc;
+}
