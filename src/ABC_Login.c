@@ -1012,7 +1012,7 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     {
         ABC_BUF_FREE(pKeys->RQ);
     }
-    ABC_BUF_DUP_PTR(pKeys->RQ, pInfo->szRecoveryQuestions, strlen(pInfo->szRecoveryQuestions));
+    ABC_BUF_DUP_PTR(pKeys->RQ, pInfo->szRecoveryQuestions, strlen(pInfo->szRecoveryQuestions) + 1);
 
     // L1 = Scrypt(L, SNRP1)
     if (ABC_BUF_PTR(pKeys->L1) == NULL)
@@ -1449,8 +1449,14 @@ tABC_CC ABC_LoginCreateLoginPackageJSONString(const json_t *pJSON_MK,
 
     json_object_set(pJSON_Root, JSON_ACCT_MK_FIELD, (json_t *) pJSON_MK);
     json_object_set(pJSON_Root, JSON_ACCT_SYNCKEY_FIELD, (json_t *) pJSON_SyncKey);
-    json_object_set(pJSON_Root, JSON_ACCT_ELP2_FIELD, (json_t *) pJSON_ELP2);
-    json_object_set(pJSON_Root, JSON_ACCT_ELRA3_FIELD, (json_t *) pJSON_ELRA2);
+    if (pJSON_ELP2)
+    {
+        json_object_set(pJSON_Root, JSON_ACCT_ELP2_FIELD, (json_t *) pJSON_ELP2);
+    }
+    if (pJSON_ELRA2)
+    {
+        json_object_set(pJSON_Root, JSON_ACCT_ELRA3_FIELD, (json_t *) pJSON_ELRA2);
+    }
     *pszJSON = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
@@ -1478,6 +1484,7 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
     json_t *pJSON_ELRA2          = NULL;
 
     ABC_CHECK_NULL(szLoginPackage);
+    ABC_CHECK_NULL(szRepoAcctKey);
 
     // get the main account directory
     ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -1532,6 +1539,13 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
                                               szLoginPackage,
                                               pError));
 exit:
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szFilename);
+
+    if (pJSON_EMK)      json_decref(pJSON_EMK);
+    if (pJSON_ESyncKey) json_decref(pJSON_ESyncKey);
+    if (pJSON_ELP2)     json_decref(pJSON_ELP2);
+    if (pJSON_ELRA2)    json_decref(pJSON_ELRA2);
 
     return cc;
 }
