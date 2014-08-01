@@ -60,6 +60,8 @@
 
 #define NETWORK_FAKE 0
 
+#define ABC_VERSION "0.1.0"
+
 #define ABC_MIN_USERNAME_LENGTH 3
 #define ABC_MIN_PIN_LENGTH 4
 
@@ -956,6 +958,8 @@ extern "C" {
                                           void *pData, tABC_Error *pError);
 
     tABC_CC ABC_IsTestNet(bool *pResult, tABC_Error *pError);
+
+    tABC_CC ABC_Version(char **szVersion, tABC_Error *pError);
 
     // temp functions
     void tempEventA();
