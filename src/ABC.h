@@ -64,6 +64,8 @@
 extern "C" {
 #endif
 
+    extern bool gbIsTestNet;
+
     /**
      * AirBitz Core Condition Codes
      *
