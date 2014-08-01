@@ -2321,10 +2321,10 @@ tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Err
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    // Sync the account data
-    ABC_CHECK_RET(ABC_LoginSyncData(szUserName, szPassword, &accountDirty, pError));
-    // Try to decrypt something, if it fails, notify password change
-    if (accountDirty && ABC_LoginTestCredentials(szUserName, szPassword, NULL) != ABC_CC_Ok )
+    tABC_CC fetchCC = ABC_LoginUpdateLoginPackageFromServer(szUserName, szPassword, pError);
+
+    // Try fetch login package, if it fails, notify password change
+    if (fetchCC == ABC_CC_BadPassword)
     {
         if (gfAsyncBitCoinEventCallback)
         {
@@ -2337,6 +2337,8 @@ tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Err
     }
     else
     {
+        // Sync the account data
+        ABC_CHECK_RET(ABC_LoginSyncData(szUserName, szPassword, &accountDirty, pError));
         // Sync Wallet Data
         ABC_CHECK_RET(ABC_WalletSyncAll(szUserName, szPassword, &walletDirty, pError));
         if ((accountDirty || walletDirty) && gfAsyncBitCoinEventCallback)

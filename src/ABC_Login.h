@@ -100,10 +100,6 @@ extern "C" {
                                         const char *szPassword,
                                         tABC_Error *pError);
 
-    tABC_CC ABC_LoginTestCredentials(const char *szUserName,
-                                       const char *szPassword,
-                                       tABC_Error *pError);
-
     tABC_CC ABC_LoginCheckValidUser(const char *szUserName,
                                       tABC_Error *pError);
 
@@ -116,6 +112,8 @@ extern "C" {
                                  const char *szPassword,
                                  tABC_SyncKeys **ppKeys,
                                  tABC_Error *pError);
+
+	tABC_CC ABC_LoginUpdateLoginPackageFromServer(const char *szUserName, const char *szPassword, tABC_Error *pError);
 
     tABC_CC ABC_LoginSyncData(const char *szUserName,
                                 const char *szPassword,

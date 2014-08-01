@@ -99,9 +99,9 @@ static tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Err
 static tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldLP1, tABC_U08Buf LRA1, tABC_U08Buf newLP1, char *szLoginPackage, tABC_Error *pError);
 static tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, const char *szCarePackage, const char *szLoginPackage, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
+static tABC_CC ABC_LoginGetCarePackageObjects(int AccountNum, const char *szCarePackage, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateLoginPackageJSONString(const json_t *pJSON_MK, const json_t *pJSON_RepoAcctKey, const json_t *pJSON_ELP2, const json_t *pJSON_ELRA2, char **pszJSON, tABC_Error *pError);
 static tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys, tABC_U08Buf MK, const char *szRepoAcctKey, tABC_U08Buf LP2, tABC_U08Buf LRA2, char **szLoginPackage, tABC_Error *pError);
-static tABC_CC ABC_LoginGetCarePackageObjects(int AccountNum, const char *szCarePackage, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
 static tABC_CC ABC_LoginGetLoginPackageObjects(int AccountNum, const char *szLoginPackage, json_t **ppJSON_EMK, json_t **ppJSON_ESyncKey, json_t **ppJSON_ELP2, json_t **ppJSON_ELRA2, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir, tABC_Error *pError);
 static tABC_CC ABC_LoginNextAccountNum(int *pAccountNum, tABC_Error *pError);
@@ -117,7 +117,7 @@ static void    ABC_LoginFreeAccountKeys(tAccountKeys *pAccountKeys);
 static tABC_CC ABC_LoginAddToKeyCache(tAccountKeys *pAccountKeys, tABC_Error *pError);
 static tABC_CC ABC_LoginKeyFromCacheByName(const char *szUserName, tAccountKeys **ppAccountKeys, tABC_Error *pError);
 static tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1, char **szResponse, tABC_Error *pError);
-static tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, char **szERepoAcctKey, tABC_Error *pError);
+static tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, char **szLoginPackage, tABC_Error *pError);
 static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, char *szURL, char *szField, char **szResponse, tABC_Error *pError);
 static tABC_CC ABC_LoginMutexLock(tABC_Error *pError);
 static tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError);
@@ -311,50 +311,6 @@ exit:
 }
 
 /**
- * Checks if the cached username and password are valid by decrypting a file with them.
- *
- * A remote device can change the password. This function will verify that the
- * password that is cached is still valid.
- *
- * @param szUserName UserName for validation
- * @param szPassword Password for validation
- */
-tABC_CC ABC_LoginTestCredentials(const char *szUserName,
-                                 const char *szPassword,
-                                 tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    tAccountKeys *pKeys = NULL;
-    json_t *pJSON_EMK   = NULL;
-    tABC_U08Buf MK      = ABC_BUF_NULL;
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
-
-    // check that this is a valid user
-    ABC_CHECK_RET(ABC_LoginCheckValidUser(szUserName, pError));
-
-    // cache up the keys
-    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
-
-    // Fetch MK from disk
-    ABC_CHECK_RET(
-        ABC_LoginGetLoginPackageObjects(
-            pKeys->accountNum, NULL, &pJSON_EMK, NULL, NULL, NULL, pError));
-
-    // Try to decrypt MK
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_EMK, pKeys->LP2, &MK, pError));
-exit:
-    if (pJSON_EMK) json_decref(pJSON_EMK);
-    ABC_BUF_FREE(MK);
-
-    return cc;
-}
-
-
-/**
  * Checks if the username is valid.
  *
  * If the username is not valid, an error will be returned
@@ -408,8 +364,11 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
     }
     else
     {
-        // Note: No password so don't try to login, just update account repo
-        ABC_LoginSyncData(pInfo->szUserName, NULL, &dataDirty, pError);
+        // If this fails, clear the cache and try to login on local data
+        if (ABC_LoginUpdateLoginPackageFromServer(pInfo->szUserName, pInfo->szPassword, pError) != ABC_CC_Ok)
+        {
+            ABC_LoginClearKeyCache(NULL);
+        }
     }
 
     // check the credentials
@@ -1784,6 +1743,32 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_LoginUpdateLoginPackageFromServer(const char *szUserName, const char *szPassword, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tAccountKeys *pKeys  = NULL;
+    char *szAccountDir   = NULL;
+    char *szFilename     = NULL;
+    char *szLoginPackage = NULL;
+    tABC_U08Buf LPA_NULL = ABC_BUF_NULL;
+
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_LP1, &(pKeys->LP1), pError));
+    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(pKeys->L1, pKeys->LP1, LPA_NULL, &szLoginPackage, pError));
+
+    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
+
+    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage, pError));
+exit:
+    ABC_FREE_STR(szAccountDir);
+    ABC_FREE_STR(szFilename);
+    ABC_FREE_STR(szLoginPackage);
+    return cc;
+}
+
 /**
  * Creates a new sync directory and all the files needed for the given account
  */
@@ -2755,7 +2740,7 @@ static
 tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
                                        tABC_U08Buf LP1,
                                        tABC_U08Buf LRA1,
-                                       char **szERepoAcctKey,
+                                       char **szLoginPackage,
                                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -2766,7 +2751,7 @@ tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_LOGIN_PACK_GET_PATH);
 
-    ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1, LRA1, szURL, JSON_ACCT_LOGIN_PACKAGE, szERepoAcctKey, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1, LRA1, szURL, JSON_ACCT_LOGIN_PACKAGE, szLoginPackage, pError));
 exit:
 
     ABC_FREE_STR(szURL);
