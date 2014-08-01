@@ -268,11 +268,11 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_ASSERT(strlen(szUserName) > ABC_MIN_USERNAME_LENGTH, ABC_CC_Error, "Username too short");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(szPIN);
-    ABC_CHECK_ASSERT(strlen(szPIN) > 0, ABC_CC_Error, "No PIN provided");
+    ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "PIN is too short");
 
     ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
                                               ABC_RequestType_CreateAccount,
@@ -575,6 +575,7 @@ tABC_CC ABC_SetPIN(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szPIN);
+    ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "Pin is too short");
 
     ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));

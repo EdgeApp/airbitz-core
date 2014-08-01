@@ -60,6 +60,9 @@
 
 #define NETWORK_FAKE 0
 
+#define ABC_MIN_USERNAME_LENGTH 3
+#define ABC_MIN_PIN_LENGTH 4
+
 #ifdef __cplusplus
 extern "C" {
 #endif
