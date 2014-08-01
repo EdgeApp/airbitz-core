@@ -1,2 +1,2 @@
 touch recipes/abc
-make abc.ios-universal
+make abc
