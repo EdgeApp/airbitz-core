@@ -2876,19 +2876,18 @@ tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecover
     ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP4, &pSNRP4, pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP4, &L2, pError));
 
+    tABC_U08Buf FinalRQ = ABC_BUF_NULL;
     // RQ - if ERQ available
     if (pJSON_ERQ != NULL)
     {
         ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ERQ, L2, &RQ, pError));
+        ABC_BUF_DUP(FinalRQ, RQ);
+        ABC_BUF_APPEND_PTR(FinalRQ, "", 1);
     }
     else
     {
-        ABC_RET_ERROR(ABC_CC_NoRecoveryQuestions, "There are no recovery questions for this user");
+        ABC_BUF_DUP_PTR(FinalRQ, "", 1);
     }
-
-    tABC_U08Buf FinalRQ;
-    ABC_BUF_DUP(FinalRQ, RQ);
-    ABC_BUF_APPEND_PTR(FinalRQ, "", 1);
     *szRecoveryQuestions = (char *) ABC_BUF_PTR(FinalRQ);
 exit:
     ABC_FREE_STR(szCarePackage);
