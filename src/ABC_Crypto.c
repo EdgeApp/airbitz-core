@@ -97,6 +97,10 @@ unsigned int g_timedScryptR = SCRYPT_DEFAULT_CLIENT_R;
 
 static unsigned char gaS1[] = { 0xb5, 0x86, 0x5f, 0xfb, 0x9f, 0xa7, 0xb3, 0xbf, 0xe4, 0xb2, 0x38, 0x4d, 0x47, 0xce, 0x83, 0x1e, 0xe2, 0x2a, 0x4a, 0x9d, 0x5c, 0x34, 0xc7, 0xef, 0x7d, 0x21, 0x46, 0x7c, 0xc7, 0x58, 0xf8, 0x1b };
 
+// Testnet salt. Just has to be different from mainnet salt so we can create users
+// with same login that exist on both testnet and mainnet and don't conflict 
+static unsigned char gaS1_testnet[] = { 0xa5, 0x96, 0x3f, 0x3b, 0x9c, 0xa6, 0xb3, 0xbf, 0xe4, 0xb2, 0x36, 0x42, 0x37, 0xfe, 0x87, 0x1e, 0xf2, 0x2a, 0x4a, 0x9d, 0x4c, 0x34, 0xa7, 0xef, 0x3d, 0x21, 0x47, 0x8c, 0xc7, 0x58, 0xf8, 0x1b };
+
 static
 tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
                                        const tABC_U08Buf Key,
@@ -140,7 +144,14 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
     ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
+    if (gbIsTestNet)
+    {
+        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1)); 
+    }
+    else
+    {
+        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1)); 
+    }
     gettimeofday(&timerStart, NULL);
     ABC_CHECK_RET(ABC_CryptoScrypt(Salt,
                                    Salt,
@@ -1279,7 +1290,14 @@ tABC_CC ABC_CryptoScryptS1(const tABC_U08Buf Data,
     ABC_CHECK_NULL(pScryptData);
 
     tABC_U08Buf Salt;
-    ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
+    if (gbIsTestNet)
+    {
+        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1)); 
+    }
+    else
+    {
+        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1)); 
+    }
     ABC_CHECK_RET(ABC_CryptoScrypt(Data,
                                    Salt,
                                    SCRYPT_DEFAULT_SERVER_N,
@@ -1399,7 +1417,14 @@ tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
     ABC_CHECK_NULL(ppSNRP);
 
     // get the server salt
-    ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
+    if (gbIsTestNet)
+    {
+        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1)); 
+    }
+    else
+    {
+        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1)); 
+    }
     //ABC_UtilHexDumpBuf("Salt", Salt);
 
     ABC_CHECK_RET(ABC_CryptoCreateSNRP(Salt,

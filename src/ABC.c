@@ -60,6 +60,7 @@
 static bool gbInitialized = false;
 static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
 static void *pAsyncBitCoinCallerData = NULL;
+bool gbIsTestNet = false;
 
 static tABC_Currency gaCurrencies[] = {
     { "CAD", 124, "Canadian dollar", "Canada, Saint Pierre and Miquelon" },
@@ -143,6 +144,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_RET(ABC_CryptoSetRandomSeed(Seed, pError));
 
     gbInitialized = true;
+    gbIsTestNet = ABC_BridgeIsTestNet();
 
 exit:
     ABC_BUF_FREE(Seed);

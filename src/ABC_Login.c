@@ -1904,7 +1904,14 @@ tABC_CC ABC_LoginCopyRootDirName(char *szRootDir, tABC_Error *pError)
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szFileIORootDir, pError));
 
     // create the account directory string
-    sprintf(szRootDir, "%s/%s", szFileIORootDir, ACCOUNT_DIR);
+    if (gbIsTestNet)
+    {
+        sprintf(szRootDir, "%s/%s-testnet", szFileIORootDir, ACCOUNT_DIR); 
+    }
+    else
+    {
+        sprintf(szRootDir, "%s/%s", szFileIORootDir, ACCOUNT_DIR); 
+    }
 
 exit:
     ABC_FREE_STR(szFileIORootDir);
