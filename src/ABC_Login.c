@@ -119,6 +119,7 @@ static tABC_CC ABC_LoginKeyFromCacheByName(const char *szUserName, tAccountKeys 
 static tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1, char **szResponse, tABC_Error *pError);
 static tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, char **szLoginPackage, tABC_Error *pError);
 static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, char *szURL, char *szField, char **szResponse, tABC_Error *pError);
+static tABC_CC ABC_LoginUpdateLoginPackageFromServerBuf(int AccountNum, tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError);
 static tABC_CC ABC_LoginMutexLock(tABC_Error *pError);
 static tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError);
 
@@ -364,10 +365,31 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
     }
     else
     {
-        // If this fails, clear the cache and try to login on local data
-        if (ABC_LoginUpdateLoginPackageFromServer(pInfo->szUserName, pInfo->szPassword, pError) != ABC_CC_Ok)
+        tAccountKeys *pKeys  = NULL;
+        ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, NULL, &pKeys, pError));
+        if (ABC_BUF_PTR(pKeys->P) == NULL)
         {
-            ABC_LoginClearKeyCache(NULL);
+            ABC_BUF_DUP_PTR(pKeys->P, pInfo->szPassword, strlen(pInfo->szPassword));
+        }
+        if (ABC_BUF_PTR(pKeys->LP) == NULL)
+        {
+            ABC_BUF_DUP(pKeys->LP, pKeys->L);
+            ABC_BUF_APPEND(pKeys->LP, pKeys->P);
+        }
+        if (ABC_BUF_PTR(pKeys->LP1) == NULL)
+        {
+            // LP1 = Scrypt(P, SNRP1)
+            ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->LP, pKeys->pSNRP1, &(pKeys->LP1), pError));
+        }
+
+        tABC_CC cc_fetch = ABC_LoginUpdateLoginPackageFromServerBuf(pKeys->accountNum, pKeys->L1, pKeys->LP1, pError);
+        // If it was not a bad password (possibly network issues),
+        // we clear the local cache and try to log in locally
+        if (cc_fetch == ABC_CC_BadPassword)
+        {
+            cc = cc_fetch;
+            pError->code = cc_fetch;
+            goto exit;
         }
     }
 
@@ -1178,6 +1200,9 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     // set the new PIN
     ABC_CHECK_RET(ABC_SetPIN(pInfo->szUserName, pInfo->szNewPassword, pInfo->szPIN, pError));
 
+    // Clear wallet cache
+    ABC_CHECK_RET(ABC_WalletClearCache(pError));
+
     // Sync the data (ELP2 and ELRA2) with server
     int dirty;
     ABC_CHECK_RET(ABC_LoginSyncData(pInfo->szUserName, pInfo->szNewPassword, &dirty, pError));
@@ -1747,17 +1772,27 @@ tABC_CC ABC_LoginUpdateLoginPackageFromServer(const char *szUserName, const char
 {
     tABC_CC cc = ABC_CC_Ok;
     tAccountKeys *pKeys  = NULL;
+
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_LP1, &(pKeys->LP1), pError));
+    ABC_CHECK_RET(ABC_LoginUpdateLoginPackageFromServerBuf(pKeys->accountNum, pKeys->L1, pKeys->LP1, pError));
+exit:
+    return cc;
+}
+
+static
+tABC_CC ABC_LoginUpdateLoginPackageFromServerBuf(int AccountNum, tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
     char *szAccountDir   = NULL;
     char *szFilename     = NULL;
     char *szLoginPackage = NULL;
     tABC_U08Buf LPA_NULL = ABC_BUF_NULL;
 
-    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
-    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_LP1, &(pKeys->LP1), pError));
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(pKeys->L1, pKeys->LP1, LPA_NULL, &szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, LP1, LPA_NULL, &szLoginPackage, pError));
 
     ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, AccountNum, pError));
 
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
