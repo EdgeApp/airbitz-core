@@ -61,13 +61,21 @@ typedef ABC_CSV(char) tABC_CSV;
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+    tABC_CC ABC_FilterExportData(const char *szWalletId,
+                                 const char *szStartDate,
+                                 const char *szEndDate,
+                                 tABC_TxInfo ***pTransactions,
+                                 int *iNumOfTransactions,
+                                 tABC_Error *pError);
     
-    tABC_CC ABC_ExportFormatCsv(const char *szWalletId,
-                                const char *szStartDate,
-                                const char *szEndDate,
+
+    tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
+                                int iTransactionCount,
                                 char **szCsvData,
                                 tABC_Error *pError);
-    
+
+
 #ifdef __cplusplus
 }
 #endif
