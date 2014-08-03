@@ -27,9 +27,13 @@ $(BIN_DIR)/test_sync: test_sync.o
 	mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
 
+$(BIN_DIR)/test_export: test_export.o
+	mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) -o $@
+
 default: all
 
-test_cases = $(BIN_DIR)/test_send $(BIN_DIR)/test_core $(BIN_DIR)/test_sync
+test_cases = $(BIN_DIR)/test_send $(BIN_DIR)/test_core $(BIN_DIR)/test_sync $(BIN_DIR)/test_export
 
 all: $(test_cases)
 
@@ -49,6 +53,9 @@ run_send: $(BIN_DIR)/test_send
 run_sync: $(BIN_DIR)/test_sync
 	$<
 
+run_export: $(BIN_DIR)/test_export
+	$<
+
 gdb_core: $(BIN_DIR)/test_core
 	gdb $<
 
@@ -57,6 +64,9 @@ gdb_send: $(BIN_DIR)/test_send
 
 gdb_sync: $(BIN_DIR)/test_sync
 	$(RM) -r sync_repo
+	gdb $<
+
+gdb_export: $(BIN_DIR)/test_export
 	gdb $<
 
 val_core: $(BIN_DIR)/test_core
