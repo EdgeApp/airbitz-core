@@ -222,44 +222,40 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_FilterTransactions(const char *szWalletId,
-                               const char *szStartDate,
-                               const char *szEndDate,
-                               tABC_TxInfo ***pTransactions,
-                               int *iNumOfTransactions,
-                               tABC_Error *pError)
+tABC_CC ABC_FilterExportData(const char *szWalletId,
+                             const char *szStartDate,
+                             const char *szEndDate,
+                             tABC_TxInfo ***pTransactions,
+                             int *iNumOfTransactions,
+                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-
+    
+//    tABC_TxInfo **pData = *pTransactions;
+    
+    debugGetTransactions(pTransactions, iNumOfTransactions, pError);
     
 exit:
     return cc;
 }
 
-tABC_CC ABC_ExportFormatCsv(const char *szWalletId,
-                            const char *szStartDate,
-                            const char *szEndDate,
+tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
+                            int iTransactionCount,
                             char **szCsvData,
                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_TxInfo **list;
-    int iListSize;
+
+    tABC_TxInfo **list = pTransactions;
+    int iListSize = iTransactionCount;
+
     char *szCurrRec;
     char *szFinalRec;
     unsigned long ulCsvDataLen = 0;
     tABC_U08Buf buff = ABC_BUF_NULL;
 
-    ABC_CHECK_NULL(szWalletId);
-    ABC_CHECK_NULL(szStartDate);
-    ABC_CHECK_NULL(szEndDate);
+    ABC_CHECK_NULL(pTransactions);
 
-#ifdef DEBUG_CSV
-    debugGetTransactions(&list, &iListSize, pError);
-#else
-    ABC_FilterTransactions(szWalletId, szStartDate, szEndDate, &list, &iListSize, pError);
-#endif
-    
     ABC_BUF_NEW(buff, ABC_CSV_MAX_REC_SZ);
     
     if (iListSize)
