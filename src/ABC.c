@@ -1562,7 +1562,6 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
                                       fRequestCallback,
                                       pData,
                                       pError));
-
     if (fRequestCallback)
     {
         pthread_t handle;
@@ -1694,13 +1693,16 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet name provided");
     ABC_CHECK_NULL(pDetails);
 
-    ABC_ALLOC(pTxSendInfo, sizeof(tABC_TxSendInfo));
-    ABC_STRDUP(pTxSendInfo->szUserName, szUserName);
-    ABC_STRDUP(pTxSendInfo->szPassword, szPassword);
-    ABC_STRDUP(pTxSendInfo->szWalletUUID, szWalletUUID);
-    ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
+    ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
+                                      szUserName,
+                                      szPassword,
+                                      szWalletUUID,
+                                      szDestAddress,
+                                      pDetails,
+                                      NULL,
+                                      NULL,
+                                      pError));
     pTxSendInfo->bTransfer = bTransfer;
-
     if (bTransfer)
     {
         ABC_CHECK_RET(ABC_TxCreateReceiveRequest(szUserName, szPassword,
