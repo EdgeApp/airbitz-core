@@ -757,7 +757,7 @@ tABC_CC ABC_SetWalletArchived(const char *szUserName,
     ABC_CHECK_RET(ABC_AccountWalletLoad(pKeys, szUUID, &info, pError));
     info.archived = !!archived;
     ABC_CHECK_RET(ABC_AccountWalletSave(pKeys, &info, pError));
-
+    ABC_CHECK_RET(ABC_WalletRemoveFromCache(szUUID, pError));
 exit:
     if (pKeys)          ABC_SyncFreeKeys(pKeys);
     ABC_AccountWalletInfoFree(&info);
