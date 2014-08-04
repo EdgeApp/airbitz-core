@@ -81,6 +81,8 @@ extern "C" {
 
     void * ABC_WalletCreateThreaded(void *pData);
 
+    tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
+
     tABC_CC ABC_WalletClearCache(tABC_Error *pError);
 
     tABC_CC ABC_WalletSetName(const char *szUserName,
