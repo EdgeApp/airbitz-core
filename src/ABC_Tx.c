@@ -197,7 +197,7 @@ static tABC_CC  ABC_TxLoadAddressAndAppendToArray(const char *szUserName, const 
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
 static tABC_CC  ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError);
-static bool     ABC_TxTransactionExists(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szID, tABC_Error *pError);
+static tABC_CC  ABC_TxTransactionExists(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szID, tABC_Tx **pTx, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
 static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError);
@@ -908,8 +908,8 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // Does the transaction already exist?
-    if (!ABC_TxTransactionExists(szUserName, szPassword,
-                                 szWalletUUID, szTxId, pError))
+    ABC_TxTransactionExists(szUserName, szPassword, szWalletUUID, szTxId, &pTx, pError);
+    if (pTx == NULL)
     {
         // create a transaction
         ABC_ALLOC(pTx, sizeof(tABC_Tx));
@@ -991,11 +991,26 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
             ABC_FREE_STR(info.szTxID);
             ABC_FREE_STR(info.szDescription);
         }
-        ABC_CHECK_RET(ABC_DataSyncAll(szUserName, szPassword, pError));
     }
     else
     {
         ABC_DebugLog("We already have %s\n", szTxId);
+        // Make sure all recycle bits are set
+        for (i = 0; i < outAddressCount; ++i)
+        {
+            ABC_CHECK_RET(ABC_TxFindRequest(
+                            szUserName, szPassword, szWalletUUID,
+                            paOutAddresses[i]->szAddress, &pAddress, pError));
+            if (pAddress)
+            {
+                pAddress->pStateInfo->bRecycleable = false;
+                ABC_CHECK_RET(ABC_TxSaveAddress(
+                        szUserName, szPassword, szWalletUUID,
+                        pAddress, pError));
+                ABC_TxFreeAddress(pAddress);
+            }
+            pAddress = NULL;
+        }
     }
 exit:
     ABC_TxMutexUnlock(NULL);
@@ -4239,11 +4254,12 @@ exit:
     return cc;
 }
 
-bool ABC_TxTransactionExists(const char *szUserName,
-                             const char *szPassword,
-                             const char *szWalletUUID,
-                             const char *szID,
-                             tABC_Error *pError)
+tABC_CC ABC_TxTransactionExists(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletUUID,
+                                const char *szID,
+                                tABC_Tx **pTx,
+                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szFilename = NULL;
@@ -4275,11 +4291,17 @@ bool ABC_TxTransactionExists(const char *szUserName,
         ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, szID, false, pError));
         ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     }
+    if (bExists)
+    {
+        ABC_CHECK_RET(ABC_TxLoadTransaction(szUserName, szPassword, szWalletUUID, szFilename, pTx, pError));
+    } else {
+        *pTx = NULL;
+    }
 exit:
     ABC_FREE_STR(szFilename);
 
     ABC_TxMutexUnlock(NULL);
-    return bExists;
+    return cc;
 }
 
 /**
