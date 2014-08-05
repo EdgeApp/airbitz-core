@@ -71,11 +71,11 @@ void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys)
 tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    int e;
+    int e = 0;
+    pthread_mutexattr_t mutexAttrib;
 
     ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "ABC_Sync has already been initalized");
 
-    pthread_mutexattr_t mutexAttrib;
     ABC_CHECK_ASSERT(0 == pthread_mutexattr_init(&mutexAttrib), ABC_CC_MutexError, "ABC_Sync could not create mutex attribute");
     ABC_CHECK_ASSERT(0 == pthread_mutexattr_settype(&mutexAttrib, PTHREAD_MUTEX_RECURSIVE), ABC_CC_MutexError, "ABC_Sync could not set mutex attributes");
     ABC_CHECK_ASSERT(0 == pthread_mutex_init(&gMutex, &mutexAttrib), ABC_CC_MutexError, "ABC_Sync could not create mutex");
@@ -120,7 +120,7 @@ tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
                          tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    int e;
+    int e = 0;
 
     git_repository *repo = NULL;
 
@@ -150,7 +150,7 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    int e;
+    int e = 0;
 
     git_repository *repo = NULL;
     git_config *cfg = NULL;

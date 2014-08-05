@@ -107,7 +107,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
 {
     libwallet::uri_parse_result result;
     libbitcoin::payment_address address;
-    char *uriString;
+    char *uriString = NULL;
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
