@@ -943,13 +943,14 @@ tABC_CC ABC_AccountWalletSave(tABC_SyncKeys *pKeys,
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
 
     char *szSyncKey = NULL;
     char *szMK = NULL;
     char *szBPS = NULL;
     json_t *pJSON = NULL;
     char *szFilename = NULL;
+
+    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
 
     // Hex-encode the keys:
     ABC_CHECK_RET(ABC_CryptoHexEncode(pInfo->SyncKey, &szSyncKey, pError));
