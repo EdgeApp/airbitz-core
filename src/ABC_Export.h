@@ -63,12 +63,12 @@ extern "C" {
 #endif
 
     tABC_CC ABC_FilterExportData(const char *szWalletId,
-                                 const char *szStartDate,
-                                 const char *szEndDate,
+                                 const int iStartDate,
+                                 const int iEndDate,
                                  tABC_TxInfo ***pTransactions,
                                  int *iNumOfTransactions,
                                  tABC_Error *pError);
-    
+
 
     tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
                                 int iTransactionCount,
