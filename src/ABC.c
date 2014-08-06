@@ -268,11 +268,12 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > ABC_MIN_USERNAME_LENGTH, ABC_CC_Error, "Username too short");
+    ABC_CHECK_ASSERT(strlen(szUserName) >= ABC_MIN_USERNAME_LENGTH, ABC_CC_Error, "Username too short");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(szPIN);
     ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "PIN is too short");
+    ABC_CHECK_NUMERIC(szPIN, ABC_CC_NonNumericPin, "The pin must be numeric.");
 
     ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
                                               ABC_RequestType_CreateAccount,
@@ -576,6 +577,7 @@ tABC_CC ABC_SetPIN(const char *szUserName,
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(szPIN);
     ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "Pin is too short");
+    ABC_CHECK_NUMERIC(szPIN, ABC_CC_NonNumericPin, "The pin must be numeric.");
 
     ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
@@ -757,7 +759,7 @@ tABC_CC ABC_SetWalletArchived(const char *szUserName,
     ABC_CHECK_RET(ABC_AccountWalletLoad(pKeys, szUUID, &info, pError));
     info.archived = !!archived;
     ABC_CHECK_RET(ABC_AccountWalletSave(pKeys, &info, pError));
-
+    ABC_CHECK_RET(ABC_WalletRemoveFromCache(szUUID, pError));
 exit:
     if (pKeys)          ABC_SyncFreeKeys(pKeys);
     ABC_AccountWalletInfoFree(&info);
@@ -1562,7 +1564,6 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
                                       fRequestCallback,
                                       pData,
                                       pError));
-
     if (fRequestCallback)
     {
         pthread_t handle;
@@ -1694,13 +1695,16 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet name provided");
     ABC_CHECK_NULL(pDetails);
 
-    ABC_ALLOC(pTxSendInfo, sizeof(tABC_TxSendInfo));
-    ABC_STRDUP(pTxSendInfo->szUserName, szUserName);
-    ABC_STRDUP(pTxSendInfo->szPassword, szPassword);
-    ABC_STRDUP(pTxSendInfo->szWalletUUID, szWalletUUID);
-    ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
+    ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
+                                      szUserName,
+                                      szPassword,
+                                      szWalletUUID,
+                                      szDestAddress,
+                                      pDetails,
+                                      NULL,
+                                      NULL,
+                                      pError));
     pTxSendInfo->bTransfer = bTransfer;
-
     if (bTransfer)
     {
         ABC_CHECK_RET(ABC_TxCreateReceiveRequest(szUserName, szPassword,
