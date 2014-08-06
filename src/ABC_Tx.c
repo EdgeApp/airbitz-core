@@ -665,6 +665,9 @@ tABC_CC ABC_TxGetPrivAddresses(const char *szUserName,
                                             seed,
                                             aAddresses[i]->seq,
                                             pError));
+        ABC_DebugLog("Private Seed N %s %d %s\n", aAddresses[i]->szPubAddress,
+                                                  aAddresses[i]->seq,
+                                                  sAddresses[i]);
     }
     *pCount = countAddresses;
     *paAddresses = sAddresses;
