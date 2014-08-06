@@ -60,7 +60,7 @@
 
 #define NETWORK_FAKE 0
 
-#define ABC_VERSION "0.1.0"
+#define ABC_VERSION "1.1.2"
 
 #define ABC_MIN_USERNAME_LENGTH 3
 #define ABC_MIN_PIN_LENGTH 4
