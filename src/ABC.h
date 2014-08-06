@@ -148,7 +148,9 @@ extern "C" {
         /** Not enough money to send transaction */
         ABC_CC_InsufficientFunds = 32,
         /** We are still sync-ing */
-        ABC_CC_Synchronizing = 33
+        ABC_CC_Synchronizing = 33,
+        /** Problem with the PIN */
+        ABC_CC_NonNumericPin = 34
     } tABC_CC;
 
     /**
