@@ -362,14 +362,14 @@ extern "C" {
      */
     typedef struct sABC_TxDetails
     {
-        /** login of user who created the transaction **/
-        char *szLogin;
         /** amount of bitcoins in satoshi (including fees if any) */
         int64_t amountSatoshi;
         /** airbitz fees in satoshi */
         int64_t amountFeesAirbitzSatoshi;
         /** miners fees in satoshi */
         int64_t amountFeesMinersSatoshi;
+        /** login of user who created the transaction **/
+        char *szLogin;
         /** amount in currency */
         double amountCurrency;
         /** payer or payee */
