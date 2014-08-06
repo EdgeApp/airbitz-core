@@ -223,8 +223,8 @@ exit:
 }
 
 tABC_CC ABC_FilterExportData(const char *szWalletId,
-                             const char *szStartDate,
-                             const char *szEndDate,
+                             const int szStartDate,
+                             const int szEndDate,
                              tABC_TxInfo ***pTransactions,
                              int *iNumOfTransactions,
                              tABC_Error *pError)
