@@ -104,7 +104,6 @@ static tABC_CC ABC_WalletGetRootDirName(char **pszRootDir, tABC_Error *pError);
 static tABC_CC ABC_WalletGetSyncDirName(char **pszDir, const char *szWalletUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, const char *szUUID, tWalletData **ppData, tABC_Error *pError);
 static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
-static tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError);
 static void    ABC_WalletFreeData(tWalletData *pData);
 static tABC_CC ABC_WalletMutexLock(tABC_Error *pError);
@@ -1007,7 +1006,6 @@ exit:
 /**
  * Remove from cache
  */
-static
 tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1016,25 +1014,31 @@ tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError)
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
     ABC_CHECK_NULL(szUUID);
 
+    bool bExists = false;
     for (i = 0; i < gWalletsCacheCount; ++i)
     {
         tWalletData *pWalletInfo = gaWalletsCacheArray[i];
         if (strcmp(pWalletInfo->szUUID, szUUID) == 0)
         {
-            // put the last element in this elements place
-            gaWalletsCacheArray[i] = gaWalletsCacheArray[gWalletsCacheCount - 1];
-
             // Delete this element
             ABC_WalletFreeData(pWalletInfo);
             pWalletInfo = NULL;
+
+            // put the last element in this elements place
+            gaWalletsCacheArray[i] = gaWalletsCacheArray[gWalletsCacheCount - 1];
+            gaWalletsCacheArray[gWalletsCacheCount - 1] = NULL;
+            bExists = true;
             break;
         }
     }
+    if (bExists)
+    {
+        // Reduce the count of cache
+        gWalletsCacheCount--;
+        // and resize
+        gaWalletsCacheArray = realloc(gaWalletsCacheArray, sizeof(tWalletData *) * gWalletsCacheCount);
+    }
 
-    // Reduce the count of cache
-    gWalletsCacheCount--;
-    // and resize
-    gaWalletsCacheArray = realloc(gaWalletsCacheArray, sizeof(tWalletData *) * (gWalletsCacheCount + 1));
 exit:
 
     ABC_WalletMutexUnlock(NULL);

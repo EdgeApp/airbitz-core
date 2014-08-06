@@ -107,6 +107,15 @@ extern "C" {
         ABC_CHECK_ASSERT(arg != NULL, ABC_CC_NULLPtr, "NULL pointer"); \
     } \
 
+#define ABC_CHECK_NUMERIC(str, err, desc) \
+    { \
+        if (str) { \
+            char *endstr = NULL; \
+            strtol(str, &endstr, 10); \
+            ABC_CHECK_ASSERT(*endstr == '\0', err, desc); \
+        } \
+    } \
+
 #define ABC_CHECK_RET(err) \
     { \
         cc = err; \

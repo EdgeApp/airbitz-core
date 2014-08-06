@@ -197,11 +197,13 @@ static tABC_CC  ABC_TxLoadAddressAndAppendToArray(const char *szUserName, const 
 static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
 static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
 static tABC_CC  ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError);
-static bool     ABC_TxTransactionExists(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szID, tABC_Error *pError);
+static tABC_CC  ABC_TxTransactionExists(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szID, tABC_Tx **pTx, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
 static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError);
 static int      ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo, tABC_Tx *pTx, tABC_Tx *pReceiveTx, tABC_Error *pError);
+static tABC_CC  ABC_TxWalletOwnsAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, bool *bFound, tABC_Error *pError);
+
 
 // fake code:
 #if NETWORK_FAKE
@@ -354,6 +356,9 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     tABC_Tx *pTx = NULL;
     tABC_Tx *pReceiveTx = NULL;
     tABC_UnsignedTx utx;
+    bool bFound = false;
+    tABC_WalletInfo *pWallet = NULL;
+    double Currency;
 
     // Change address variables
     tABC_TxAddress *pChangeAddr = NULL;
@@ -423,9 +428,30 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // copy the details
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
     // Add in tx fees to the amount of the tx
-    pTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi
-                                    + pInfo->pDetails->amountFeesAirbitzSatoshi
-                                    + pInfo->pDetails->amountFeesMinersSatoshi;
+
+    ABC_CHECK_RET(ABC_TxWalletOwnsAddress(pInfo->szUserName, pInfo->szPassword,
+                                          pInfo->szWalletUUID, pInfo->szDestAddress,
+                                          &bFound, pError));
+    if (bFound)
+    {
+        pTx->pDetails->amountSatoshi = pInfo->pDetails->amountFeesAirbitzSatoshi
+                                        + pInfo->pDetails->amountFeesMinersSatoshi;
+
+    }
+    else
+    {
+        pTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi
+                                        + pInfo->pDetails->amountFeesAirbitzSatoshi
+                                        + pInfo->pDetails->amountFeesMinersSatoshi;
+    }
+    ABC_CHECK_RET(ABC_GetWalletInfo(pInfo->szUserName, pInfo->szPassword,
+                                    pInfo->szWalletUUID, &pWallet, pError));
+    ABC_CHECK_RET(ABC_SatoshiToCurrency(
+                    pInfo->szUserName, pInfo->szPassword,
+                    pTx->pDetails->amountSatoshi, &Currency,
+                    pWallet->currencyNum, pError));
+    pTx->pDetails->amountCurrency = Currency;
+
     if (pTx->pDetails->amountSatoshi > 0)
         pTx->pDetails->amountSatoshi *= -1;
     if (pTx->pDetails->amountCurrency > 0)
@@ -532,6 +558,40 @@ exit:
     ABC_UtilFreeStringArray(paAddresses, countAddresses);
     ABC_TxFreeAddress(pChangeAddr);
     ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+tABC_CC ABC_TxWalletOwnsAddress(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletUUID,
+                                const char *szAddress,
+                                bool *bFound,
+                                tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char **paAddresses = NULL;
+    unsigned int countAddresses = 0;
+    *bFound = false;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_NULL(szAddress);
+
+    ABC_CHECK_RET(
+        ABC_TxGetPubAddresses(szUserName, szPassword, szWalletUUID,
+                              &paAddresses, &countAddresses, pError));
+    for (int i = 0; i < countAddresses; ++i)
+    {
+        if (strncmp(szAddress, paAddresses[i], strlen(szAddress)) == 0)
+        {
+            *bFound = true;
+            break;
+        }
+    }
+exit:
+    ABC_UtilFreeStringArray(paAddresses, countAddresses);
     return cc;
 }
 
@@ -848,8 +908,8 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // Does the transaction already exist?
-    if (!ABC_TxTransactionExists(szUserName, szPassword,
-                                 szWalletUUID, szTxId, pError))
+    ABC_TxTransactionExists(szUserName, szPassword, szWalletUUID, szTxId, &pTx, pError);
+    if (pTx == NULL)
     {
         // create a transaction
         ABC_ALLOC(pTx, sizeof(tABC_Tx));
@@ -931,11 +991,26 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
             ABC_FREE_STR(info.szTxID);
             ABC_FREE_STR(info.szDescription);
         }
-        ABC_CHECK_RET(ABC_DataSyncAll(szUserName, szPassword, pError));
     }
     else
     {
         ABC_DebugLog("We already have %s\n", szTxId);
+        // Make sure all recycle bits are set
+        for (i = 0; i < outAddressCount; ++i)
+        {
+            ABC_CHECK_RET(ABC_TxFindRequest(
+                            szUserName, szPassword, szWalletUUID,
+                            paOutAddresses[i]->szAddress, &pAddress, pError));
+            if (pAddress)
+            {
+                pAddress->pStateInfo->bRecycleable = false;
+                ABC_CHECK_RET(ABC_TxSaveAddress(
+                        szUserName, szPassword, szWalletUUID,
+                        pAddress, pError));
+                ABC_TxFreeAddress(pAddress);
+            }
+            pAddress = NULL;
+        }
     }
 exit:
     ABC_TxMutexUnlock(NULL);
@@ -1581,7 +1656,7 @@ tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
 
     if (pszURI != NULL)
     {
-        length = ABC_STRLEN(szURI); 
+        length = ABC_STRLEN(szURI);
         ABC_ALLOC(*pszURI, length);
         ABC_STRDUP(*pszURI, szURI);
     }
@@ -4179,11 +4254,12 @@ exit:
     return cc;
 }
 
-bool ABC_TxTransactionExists(const char *szUserName,
-                             const char *szPassword,
-                             const char *szWalletUUID,
-                             const char *szID,
-                             tABC_Error *pError)
+tABC_CC ABC_TxTransactionExists(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletUUID,
+                                const char *szID,
+                                tABC_Tx **pTx,
+                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szFilename = NULL;
@@ -4215,11 +4291,17 @@ bool ABC_TxTransactionExists(const char *szUserName,
         ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, szID, false, pError));
         ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     }
+    if (bExists)
+    {
+        ABC_CHECK_RET(ABC_TxLoadTransaction(szUserName, szPassword, szWalletUUID, szFilename, pTx, pError));
+    } else {
+        *pTx = NULL;
+    }
 exit:
     ABC_FREE_STR(szFilename);
 
     ABC_TxMutexUnlock(NULL);
-    return bExists;
+    return cc;
 }
 
 /**
@@ -4355,22 +4437,29 @@ ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
     // Populate Send Tx
-    ABC_FREE_STR(pTx->pDetails->szName);
-    ABC_FREE_STR(pTx->pDetails->szCategory);
-    ABC_STRDUP(pTx->pDetails->szName, pInfo->szSrcName);
-    ABC_STRDUP(pTx->pDetails->szCategory, pInfo->szSrcCategory);
+    if (pInfo->szSrcName)
+    {
+        ABC_FREE_STR(pTx->pDetails->szName);
+        ABC_STRDUP(pTx->pDetails->szName, pInfo->szSrcName);
+    }
+    if (pInfo->szSrcCategory)
+    {
+        ABC_FREE_STR(pTx->pDetails->szCategory);
+        ABC_STRDUP(pTx->pDetails->szCategory, pInfo->szSrcCategory);
+    }
 
     // Populate Recv Tx
-    ABC_FREE_STR(pReceiveTx->pDetails->szName);
-    ABC_FREE_STR(pReceiveTx->pDetails->szCategory);
-    ABC_STRDUP(pReceiveTx->pDetails->szName, pInfo->szDestName);
-    ABC_STRDUP(pReceiveTx->pDetails->szCategory, pInfo->szDestCategory);
+    if (pInfo->szDestName)
+    {
+        ABC_FREE_STR(pReceiveTx->pDetails->szName);
+        ABC_STRDUP(pReceiveTx->pDetails->szName, pInfo->szDestName);
+    }
 
-    ABC_DebugLog("Source: %s\n", pTx->pDetails->szName);
-    ABC_DebugLog("Source: %s\n", pTx->pDetails->szCategory);
-
-    ABC_DebugLog("Receive: %s\n", pReceiveTx->pDetails->szName);
-    ABC_DebugLog("Receive: %s\n", pReceiveTx->pDetails->szCategory);
+    if (pInfo->szDestCategory)
+    {
+        ABC_FREE_STR(pReceiveTx->pDetails->szCategory);
+        ABC_STRDUP(pReceiveTx->pDetails->szCategory, pInfo->szDestCategory);
+    }
 exit:
     return cc;
 }
