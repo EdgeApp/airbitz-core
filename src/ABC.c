@@ -171,6 +171,8 @@ void ABC_Terminate()
     {
         ABC_ClearKeyCache(NULL);
 
+        ABC_BridgeTerminate();
+
         ABC_URLTerminate();
 
         ABC_FileIOTerminate();
