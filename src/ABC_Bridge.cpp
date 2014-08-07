@@ -74,6 +74,7 @@ static uint8_t pubkey_version = 0x00;
 static uint8_t script_version = 0x05;
 typedef std::string WalletUUID;
 static std::map<WalletUUID, WatcherInfo*> watchers_;
+static void *gContext = NULL;
 
 #if !NETWORK_FAKE
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx);
@@ -97,7 +98,16 @@ static void       *ABC_BridgeWatcherStopThreaded(void *data);
 #endif
 
 /**
- * Prepares the event subsystem for operation.
+ * Frees resources used by the bridge.
+ */
+void ABC_BridgeTerminate()
+{
+    zmq_ctx_destroy(gContext);
+    gContext = NULL;
+}
+
+/**
+ * Prepares the bridge for operation.
  */
 tABC_CC ABC_BridgeInitialize(tABC_Error *pError)
 {
@@ -109,6 +119,10 @@ tABC_CC ABC_BridgeInitialize(tABC_Error *pError)
         script_version = 0xc4;
     }
 
+    gContext = zmq_ctx_new();
+    ABC_CHECK_SYS(gContext, "zmq_ctx_new");
+
+exit:
     return cc;
 }
 
@@ -403,7 +417,7 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     }
 
     watcherInfo = new WatcherInfo();
-    watcherInfo->watcher = new libwallet::watcher();
+    watcherInfo->watcher = new libwallet::watcher(gContext);
 
     ABC_STRDUP(szUserCopy, szUserName);
     ABC_STRDUP(szPassCopy, szPassword);
@@ -441,12 +455,12 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
         if (ABC_BridgeIsTestNet())
         {
             ABC_DebugLog("Using Fallback testnet obelisk servers: %s\n", TESTNET_OBELISK);
-            watcherInfo->watcher->connect(TESTNET_OBELISK);
+            ABC_CHECK_SYS(watcherInfo->watcher->connect(TESTNET_OBELISK), "watcher.connect");
         }
         else
         {
             ABC_DebugLog("Using Fallback obelisk servers: %s\n", FALLBACK_OBELISK);
-            watcherInfo->watcher->connect(FALLBACK_OBELISK);
+            ABC_CHECK_SYS(watcherInfo->watcher->connect(FALLBACK_OBELISK), "watcher.connect");
         }
     }
     ABC_BridgeWatcherLoad(watcherInfo, pError);
@@ -1287,7 +1301,6 @@ static void *ABC_BridgeWatcherStopThreaded(void *data)
     WatcherInfo *watcherInfo = (WatcherInfo *) data;
 
     ABC_DebugLog("Disconnecting");
-    watcherInfo->watcher->disconnect();
     if (watcherInfo->watcher != NULL) {
         delete watcherInfo->watcher;
     }
