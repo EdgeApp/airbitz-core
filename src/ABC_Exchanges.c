@@ -125,7 +125,6 @@ tABC_CC ABC_ExchangeCurrentRate(const char *szUserName, const char *szPassword,
     ABC_CHECK_RET(ABC_ExchangeGetFromCache(currencyNum, &pCache, pError));
     if (pCache)
     {
-        ABC_DebugLog("Using cache for currency %d:%f\n", currencyNum, pCache->exchange_rate);
         *pRate = pCache->exchange_rate;
     }
     else
@@ -134,8 +133,6 @@ tABC_CC ABC_ExchangeCurrentRate(const char *szUserName, const char *szPassword,
             ABC_ExchangeAlloc(szUserName, szPassword, currencyNum, NULL, NULL, &pInfo, pError));
         ABC_CHECK_RET(ABC_ExchangeGetRate(pInfo, pRate, pError));
         ABC_ExchangeFreeInfo(pInfo);
-
-        ABC_DebugLog("Falling back to disk %d:%f\n", currencyNum, *pRate);
     }
 exit:
     return cc;

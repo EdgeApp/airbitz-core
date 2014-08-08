@@ -441,8 +441,6 @@ tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const
     // Create Repo URL
     ABC_CHECK_RET(ABC_SyncGetServer(pData->szWalletAcctKey, &szRepoURL, pError));
 
-    ABC_DebugLog("Wallet Repo: %s %s\n", pData->szWalletSyncDir, szRepoURL);
-
     // Sync
     ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, szRepoURL, pDirty, pError));
 exit:
