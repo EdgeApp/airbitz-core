@@ -4,6 +4,7 @@ LDFLAGS  += -L../build/
 LIBS     += -labc -lpthread
 
 default: build/account-decrypt.bin \
+         build/account-encrypt.bin \
          build/add-category.bin \
          build/change-password.bin \
          build/check-recovery-answers.bin \
