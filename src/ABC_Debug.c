@@ -44,6 +44,8 @@
 #include <string.h>
 #include <stdarg.h>
 
+#include "ABC_Util.h"
+
 #define BUF_SIZE 16384
 
 #ifdef ANDROID
@@ -52,6 +54,26 @@
 /**
  * Logs the given string
  */
+
+#define ABC_LOG_FILE "abc.log"
+
+static char gszLogFile[ABC_MAX_STRING_LENGTH + 1];
+static void ABC_DebugAppendToLog(const char *szOut);
+
+tABC_CC ABC_DebugInitialize(const char *szRootDir, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szRootDir);
+
+    snprintf(gszLogFile, ABC_MAX_STRING_LENGTH, "%s/%s", szRootDir, ABC_LOG_FILE);
+    gszLogFile[ABC_MAX_STRING_LENGTH] = '\0';
+
+exit:
+    return cc;
+}
+
 void ABC_DebugLog(const char * format, ...)
 {
     static char szOut[BUF_SIZE];
@@ -82,6 +104,17 @@ void ABC_DebugLog(const char * format, ...)
     printf("%s", szOut);
 #endif
     va_end(args);
+    ABC_DebugAppendToLog(szOut);
+}
+
+static void ABC_DebugAppendToLog(const char *szOut)
+{
+    FILE *f = fopen(gszLogFile, "a");
+    if (f)
+    {
+        fwrite(szOut, 1, strlen(szOut), f);
+        fclose(f);
+    }
 }
 
 #else

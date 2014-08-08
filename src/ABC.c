@@ -113,6 +113,9 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
     pAsyncBitCoinCallerData = pData;
 
+    // initialize logging
+    ABC_CHECK_RET(ABC_DebugInitialize(szRootDir, pError));
+
     // initialize the mutex system
     ABC_CHECK_RET(ABC_MutexInitialize(pError));
 
