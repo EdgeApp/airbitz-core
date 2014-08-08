@@ -13,31 +13,33 @@ int main(int argc, char *argv[])
     unsigned char seed[] = {1, 2, 3};
     tABC_U08Buf data;
 
-    if (argc != 6)
+    if (argc != 8)
     {
-        fprintf(stderr, "usage: %s <dir> <user> <pass> <wallet-name> <addr>\n", argv[0]);
+        fprintf(stderr, "usage: %s <dir> <user> <pass> <wallet-name> <addr> <start> <end>\n", argv[0]);
         return 1;
     }
+    long start = atol(argv[6]);
+    long end = atol(argv[7]);
 
     char *szMatchAddr = argv[5];
 
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, NULL, 0, seed, sizeof(seed), &error));
     MAIN_CHECK(ABC_WalletGetBitcoinPrivateSeed(argv[2], argv[3], argv[4], &data, &error));
 
-    for (int32_t i = 0, c = 0; i < 4294967296; ++i, ++c)
+    for (long i = start, c = 0; i <= end; i++, ++c)
     {
         char *szPubAddress = NULL;
-        ABC_BridgeGetBitcoinPubAddress(&szPubAddress, data, i, NULL);
+        ABC_BridgeGetBitcoinPubAddress(&szPubAddress, data, (int32_t) i, NULL);
         if (strncmp(szPubAddress, szMatchAddr, strlen(szMatchAddr)) == 0)
         {
-            printf("Found %s at %d\n", szMatchAddr, i);
+            printf("Found %s at %ld\n", szMatchAddr, i);
             ABC_FREE(szPubAddress);
             break;
         }
         ABC_FREE(szPubAddress);
         if (c == 100000)
         {
-            printf("%d\n", i);
+            printf("%ld\n", i);
             c = 0;
         }
     }
