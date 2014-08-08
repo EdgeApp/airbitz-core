@@ -21,7 +21,10 @@ default: build/account-decrypt.bin \
          build/set-pin.bin \
          build/set-question-choices.bin \
          build/search-bitcoin-seed.bin \
-         build/sign-in.bin
+         build/sign-in.bin \
+         build/wallet-decrypt.bin \
+         build/wallet-encrypt.bin \
+         build/wallet-get-address.bin
 
 build/%.bin: build/%.o build/common.o
 	@mkdir -p build
