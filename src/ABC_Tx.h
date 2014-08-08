@@ -133,6 +133,11 @@ extern "C" {
                                      const char *szTxId, const char *szMalTxId,
                                      tABC_Error *pError);
 
+    tABC_CC ABC_TxCreateInitialAddresses(const char *szUserName,
+                                         const char *szPassword,
+                                         const char *szWalletUUID,
+                                         tABC_Error *pError);
+
     tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
                                        const char *szPassword,
                                        const char *szWalletUUID,

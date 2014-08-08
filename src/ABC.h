@@ -150,7 +150,9 @@ extern "C" {
         /** We are still sync-ing */
         ABC_CC_Synchronizing = 33,
         /** Problem with the PIN */
-        ABC_CC_NonNumericPin = 34
+        ABC_CC_NonNumericPin = 34,
+        /** Unable to find an address */
+        ABC_CC_NoAvailableAddress = 35
     } tABC_CC;
 
     /**
