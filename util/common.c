@@ -4,6 +4,7 @@
  */
 #include "common.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void PrintError(tABC_CC cc, tABC_Error *pError)
 {
@@ -14,3 +15,28 @@ void PrintError(tABC_CC cc, tABC_Error *pError)
                 pError->szSourceFunc, cc, pError->szDescription);
     }
 }
+
+char *Slurp(const char *szFilename)
+{
+    // Where's the error checking?
+    FILE *f;
+    long l;
+    char *buffer;
+
+    f = fopen(szFilename, "r");
+    fseek(f , 0L , SEEK_END);
+    l = ftell(f);
+    rewind(f);
+
+    buffer = malloc(l + 1);
+    if (!buffer) {
+        return NULL;
+    }
+    if (fread(buffer, l, 1, f) != 1) {
+        return NULL;
+    }
+
+    fclose(f);
+    return buffer;
+}
+

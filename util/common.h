@@ -22,4 +22,6 @@
  */
 void PrintError(tABC_CC cc, tABC_Error *pError);
 
+char *Slurp(const char *szFilename);
+
 #endif
