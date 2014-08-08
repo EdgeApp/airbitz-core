@@ -23,14 +23,25 @@ int main(int argc, char *argv[])
     details.szName = "";
     details.szCategory = "";
     details.szNotes = "";
+    details.attributes = 0x0;
+    details.bizId = 0x0;
+    details.attributes = 0x0;
+    details.bizId = 0;
+    details.amountSatoshi = 0;
+    details.amountCurrency = 0;
+    details.amountFeesAirbitzSatoshi = 0;
+    details.amountFeesMinersSatoshi = 0;
+
 
     char *szRequestID = NULL;
     char *szAddress = NULL;
+    printf("starting...");
     MAIN_CHECK(ABC_CreateReceiveRequest(argv[2], argv[3], argv[4],
                     &details, &szRequestID, &error));
 
     MAIN_CHECK(ABC_GetRequestAddress(argv[2], argv[3], argv[4],
                     szRequestID, &szAddress, &error));
+    printf("finishing...");
 
     printf("Address: %s\n", szAddress);
 
