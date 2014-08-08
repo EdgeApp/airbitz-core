@@ -60,7 +60,7 @@
 
 #define NETWORK_FAKE 0
 
-#define ABC_VERSION "0.1.0"
+#define ABC_VERSION "1.1.2"
 
 #define ABC_MIN_USERNAME_LENGTH 3
 #define ABC_MIN_PIN_LENGTH 4
@@ -148,7 +148,9 @@ extern "C" {
         /** Not enough money to send transaction */
         ABC_CC_InsufficientFunds = 32,
         /** We are still sync-ing */
-        ABC_CC_Synchronizing = 33
+        ABC_CC_Synchronizing = 33,
+        /** Problem with the PIN */
+        ABC_CC_NonNumericPin = 34
     } tABC_CC;
 
     /**
@@ -360,14 +362,14 @@ extern "C" {
      */
     typedef struct sABC_TxDetails
     {
-        /** login of user who created the transaction **/
-        char *szLogin;
         /** amount of bitcoins in satoshi (including fees if any) */
         int64_t amountSatoshi;
         /** airbitz fees in satoshi */
         int64_t amountFeesAirbitzSatoshi;
         /** miners fees in satoshi */
         int64_t amountFeesMinersSatoshi;
+        /** login of user who created the transaction **/
+        char *szLogin;
         /** amount in currency */
         double amountCurrency;
         /** payer or payee */
