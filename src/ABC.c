@@ -2630,7 +2630,8 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
 
     *szVersion = (char *)ABC_BUF_PTR(Version);
     ABC_BUF_CLEAR(Version);
-exit:
+
     ABC_BUF_FREE(Version);
+
     return cc;
 }
