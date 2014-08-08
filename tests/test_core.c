@@ -14,6 +14,7 @@
 
 #include "ABC.h"
 #include "ABC_Account.h"
+#include "ABC_General.h"
 #include "ABC_Tx.h"
 #include "ABC_Util.h"
 #include "ABC_Crypto.h"
@@ -104,6 +105,7 @@ static void test_initialize()
     tABC_Error Error;
     size_t size = 4;
     const char *datapath = "./tmp";
+    const char *capath = "../util/ca-certificates.crt";
     struct stat st = {0 };
     if (stat(datapath, &st) == -1)
     {
@@ -111,6 +113,7 @@ static void test_initialize()
     }
     char unsigned seed[] = "abcd";
     ABC_Initialize(datapath,
+                   capath,
                    ABC_BitCoin_Event_Callback,
                    NULL,
                    seed,
@@ -136,10 +139,10 @@ static void test_createaccount()
 static void update_info()
 {
     tABC_Error Error;
-    tABC_AccountGeneralInfo *pInfo;
-    ABC_AccountServerUpdateGeneralInfo(&Error);
-    ABC_AccountLoadGeneralInfo(&pInfo, &Error);
-    ABC_AccountFreeGeneralInfo(pInfo);
+    tABC_GeneralInfo *pInfo;
+    ABC_GeneralUpdateInfo(&Error);
+    ABC_GeneralGetInfo(&pInfo, &Error);
+    ABC_GeneralFreeInfo(pInfo);
     printABC_Error(&Error);
 }
 
@@ -298,7 +301,6 @@ static void test_receive_request_args(char *n, char *c, char *notes)
     Details.szName = n;
     Details.szCategory = c;
     Details.szNotes = notes;
-    Details.attributes = 0x1;
 
     char *szRequestID = NULL;
 
@@ -388,7 +390,7 @@ static void test_pendingrequests()
             tABC_RequestInfo *pInfo = aRequests[i];
             if (pInfo)
             {
-                WRAP_PRINTF(("Pending Request: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u, existing_satoshi: %ld, owed_satoshi: %ld\n",
+                WRAP_PRINTF(("Pending Request: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, category: %s, notes: %s, existing_satoshi: %ld, owed_satoshi: %ld\n",
                     pInfo->szID,
                     pInfo->timeCreation,
                     pInfo->pDetails->amountSatoshi,
@@ -396,7 +398,6 @@ static void test_pendingrequests()
                     pInfo->pDetails->szName,
                     pInfo->pDetails->szCategory,
                     pInfo->pDetails->szNotes,
-                    pInfo->pDetails->attributes,
                     pInfo->amountSatoshi,
                     pInfo->owedSatoshi));
             }
@@ -406,9 +407,6 @@ static void test_pendingrequests()
         tABC_TxDetails *pNewDetails;
         ABC_DuplicateTxDetails(&pNewDetails, aRequests[0]->pDetails, &Error);
         printABC_Error(&Error);
-
-        // change the attributes
-        pNewDetails->attributes++;
 
         // write it back out
         ABC_ModifyReceiveRequest(USERNAME,
@@ -443,7 +441,7 @@ static void test_transactions()
         tABC_TxInfo *pInfo = aTransactions[i];
         if (pInfo)
         {
-            WRAP_PRINTF(("Transaction: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, bizid: %u, category: %s, notes: %s, attributes: %u\n",
+            WRAP_PRINTF(("Transaction: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, bizid: %u, category: %s, notes: %s \n",
                 pInfo->szID,
                 pInfo->timeCreation,
                 pInfo->pDetails->amountSatoshi,
@@ -451,60 +449,10 @@ static void test_transactions()
                 pInfo->pDetails->szName,
                 pInfo->pDetails->bizId,
                 pInfo->pDetails->szCategory,
-                pInfo->pDetails->szNotes,
-                pInfo->pDetails->attributes));
+                pInfo->pDetails->szNotes));
         }
     }
     ABC_FreeTransactions(aTransactions, nCount);
-}
-
-static void test_searchtransactions_params(const char *query,
-                                           int expectedMatch)
-{
-    tABC_Error Error;
-    tABC_TxInfo **aTransactions = NULL;
-    unsigned int nCount = 0;
-    ABC_SearchTransactions(USERNAME, PASSWORD, WALLET_UUID, query,
-                           &aTransactions, &nCount, &Error);
-
-    WRAP_PRINTF(("Search Transactions for %s\n", query));
-    // list them
-    unsigned int i;
-    for (i = 0; i < nCount; i++) {
-        tABC_TxInfo *pInfo = aTransactions[i];
-        if (pInfo)
-        {
-            WRAP_PRINTF(("Transaction: %s, time: %ld, satoshi: %ld, currency: %lf, name: %s, category: %s, notes: %s, attributes: %u\n",
-                pInfo->szID,
-                pInfo->timeCreation,
-                pInfo->pDetails->amountSatoshi,
-                pInfo->pDetails->amountCurrency,
-                pInfo->pDetails->szName,
-                pInfo->pDetails->szCategory,
-                pInfo->pDetails->szNotes,
-                pInfo->pDetails->attributes));
-        }
-    }
-    ABC_FreeTransactions(aTransactions, nCount);
-
-    tABC_Error Error2;
-    if (nCount == expectedMatch)
-    {
-        Error2.code = ABC_CC_Ok;
-    }
-    else
-    {
-        Error2.code = ABC_CC_Error;
-    }
-    printABC_Error(&Error2);
-}
-
-static void test_searchtransactions()
-{
-    test_searchtransactions_params("airbitz", 2);
-    test_searchtransactions_params("10", 3);
-    test_searchtransactions_params("90", 0);
-    test_searchtransactions_params("more AIR Notes", 1);
 }
 
 static void test_bitcoinuri()
@@ -537,9 +485,11 @@ static void test_qrcode()
     tABC_Error Error;
     unsigned int width = 0;
     unsigned char *pData = NULL;
+    char *szURI = NULL;
+    const char *szRequestID = "0";
 
     ABC_GenerateRequestQRCode(USERNAME, PASSWORD, WALLET_UUID,
-                              "0", &pData, &width, &Error);
+                              szRequestID, &szURI, &pData, &width, &Error);
     printABC_Error(&Error);
 
     WRAP_PRINTF(("QRCode width: %d\n", width));
@@ -587,11 +537,9 @@ static void test_recoveryquestions()
 static void test_getrecoveryquestions()
 {
     tABC_Error Error;
-    TEST_WAIT_ON_CB(
-        ABC_GetQuestionChoices(USERNAME, ABC_Request_Callback,
-                            NULL, &Error);
-        printABC_Error(&Error);
-    )
+    char *szQuestions = NULL;
+    ABC_GetRecoveryQuestions(USERNAME, &szQuestions, &Error);
+    printABC_Error(&Error);
 }
 
 static void test_changepw_with_oldpw()
@@ -632,12 +580,11 @@ static void test_listwallets()
         tABC_WalletInfo *pInfo = aWalletInfo[i];
         if (pInfo)
         {
-            WRAP_PRINTF(("Account: %s, UUID: %s, Name: %s, currency: %d, attributes: %u, balance: %ld\n",
+            WRAP_PRINTF(("Account: %s, UUID: %s, Name: %s, currency: %d, balance: %ld\n",
                 pInfo->szUserName,
                 pInfo->szUUID,
                 pInfo->szName,
                 pInfo->currencyNum,
-                pInfo->attributes,
                 pInfo->balanceSatoshi));
         }
     }
@@ -662,12 +609,11 @@ static void test_reorderwallets()
     {
         tABC_WalletInfo *pInfo = aWalletInfo[i];
 
-        WRAP_PRINTF(("Account: %s, UUID: %s, Name: %s, currency: %d, attributes: %u, balance: %ld\n",
+        WRAP_PRINTF(("Account: %s, UUID: %s, Name: %s, currency: %d, balance: %ld\n",
                pInfo->szUserName,
                pInfo->szUUID,
                pInfo->szName,
                pInfo->currencyNum,
-               pInfo->attributes,
                (long) pInfo->balanceSatoshi));
 
         aszWallets[nCount - i - 1] = strdup(pInfo->szUUID);
@@ -692,12 +638,11 @@ static void test_reorderwallets()
         tABC_WalletInfo *pInfo = aWalletInfo[i];
         if (pInfo)
         {
-            WRAP_PRINTF(("Account: %s, UUID: %s, Name: %s, currency: %d, attributes: %u, balance: %ld\n",
+            WRAP_PRINTF(("Account: %s, UUID: %s, Name: %s, currency: %d, balance: %ld\n",
                 pInfo->szUserName,
                 pInfo->szUUID,
                 pInfo->szName,
                 pInfo->currencyNum,
-                pInfo->attributes,
                 (long) pInfo->balanceSatoshi));
         }
     }
@@ -902,9 +847,6 @@ int main(int argc, const char *argv[])
 
     printf("test_transactions();\n");
     test_transactions();
-
-    printf("test_searchtransactions();\n");
-    test_searchtransactions();
 
     printf("test_bitcoinuri();\n");
     test_bitcoinuri();
