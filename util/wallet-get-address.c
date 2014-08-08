@@ -16,8 +16,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    const char *szUserName = argv[2];
+    const char *szPassword = argv[3];
+    const char *szUUID = argv[4];
+
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, NULL, 0, seed, sizeof(seed), &error));
-    MAIN_CHECK(ABC_SignIn(argv[2], argv[3], NULL, NULL, &error));
+    MAIN_CHECK(ABC_SignIn(szUserName, szPassword, NULL, NULL, &error));
 
     tABC_TxDetails details;
     details.szName = "";
@@ -32,21 +36,34 @@ int main(int argc, char *argv[])
     details.amountFeesAirbitzSatoshi = 0;
     details.amountFeesMinersSatoshi = 0;
 
-
     char *szRequestID = NULL;
     char *szAddress = NULL;
+    char *szURI = NULL;
+    unsigned char *szData = NULL;
+    unsigned int width = 0;
     printf("starting...");
-    MAIN_CHECK(ABC_CreateReceiveRequest(argv[2], argv[3], argv[4],
+    MAIN_CHECK(ABC_CreateReceiveRequest(szUserName, szPassword, szUUID,
                     &details, &szRequestID, &error));
+
+    MAIN_CHECK(ABC_GenerateRequestQRCode(szUserName,
+                                      szPassword,
+                                      szUUID,
+                                      szRequestID,
+                                      &szURI,
+                                      &szData,
+                                      &width,
+                                      &error));
+
 
     MAIN_CHECK(ABC_GetRequestAddress(argv[2], argv[3], argv[4],
                     szRequestID, &szAddress, &error));
-    printf("finishing...");
 
+    printf("URI: %s\n", szURI);
     printf("Address: %s\n", szAddress);
 
     ABC_FREE_STR(szRequestID);
     ABC_FREE_STR(szAddress);
+    ABC_FREE_STR(szURI);
 
     return 0;
 }
