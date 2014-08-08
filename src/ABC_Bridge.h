@@ -131,6 +131,16 @@ extern "C" {
 
     bool ABC_BridgeIsTestNet();
 
+    void ABC_BridgeEnd();
+
+    tABC_CC ABC_BridgeBegin(tABC_Error *pError);
+
+    tABC_CC ABC_BridgeStop(tABC_Error *pError);
+
+    int ABC_BridgeWait();
+
+    tABC_CC ABC_BridgeUpdate(tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif
