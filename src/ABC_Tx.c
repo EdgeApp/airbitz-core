@@ -157,6 +157,7 @@ static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
 static void *pAsyncBitCoinCallerData = NULL;
 
 static tABC_CC  ABC_TxCreateNewAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, tABC_TxDetails *pDetails, tABC_TxAddress **ppAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateNewAddressForN(const char *szUserName, const char *szPassword, const char *szWalletUUID, int32_t N, tABC_Error *pError);
 static tABC_CC  ABC_GetAddressFilename(const char *szWalletUUID, const char *szRequestID, char **pszFilename, tABC_Error *pError);
 static tABC_CC  ABC_TxParseAddrFilename(const char *szFilename, char **pszID, char **pszPublicAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxSetAddressRecycle(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, bool bRecyclable, tABC_Error *pError);
@@ -1091,6 +1092,29 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_TxCreateInitialAddresses(const char *szUserName,
+                                     const char *szPassword,
+                                     const char *szWalletUUID,
+                                     tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_TxDetails *pDetails = NULL;
+    ABC_ALLOC(pDetails, sizeof(tABC_TxDetails));
+    ABC_STRDUP(pDetails->szName, "");
+    ABC_STRDUP(pDetails->szCategory, "");
+    ABC_STRDUP(pDetails->szNotes, "");
+
+    ABC_CHECK_RET(ABC_TxCreateNewAddress(
+                    szUserName, szPassword, szWalletUUID,
+                    pDetails, NULL, pError));
+exit:
+    ABC_FreeTxDetails(pDetails);
+
+    return cc;
+}
+
 /**
  * Creates a new address.
  * First looks to see if we can recycle one, if we can, that is the address returned.
@@ -1121,6 +1145,7 @@ tABC_CC ABC_TxCreateNewAddress(const char *szUserName,
     unsigned int countAddresses = 0;
     tABC_TxAddress *pAddress = NULL;
     int64_t N = -1;
+    int recyclable = 0;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
@@ -1130,7 +1155,6 @@ tABC_CC ABC_TxCreateNewAddress(const char *szUserName,
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
     ABC_CHECK_NULL(pDetails);
-    ABC_CHECK_NULL(ppAddress);
 
     // first look for an existing address that we can re-use
 
@@ -1148,69 +1172,126 @@ tABC_CC ABC_TxCreateNewAddress(const char *szUserName,
 
         // if we don't have an address yet and this one is available
         ABC_CHECK_NULL(aAddresses[i]->pStateInfo);
-        if ((pAddress == NULL) && (aAddresses[i]->pStateInfo->bRecycleable == true) && ((aAddresses[i]->pStateInfo->countActivities == 0)))
+        if (aAddresses[i]->pStateInfo->bRecycleable == true
+                && aAddresses[i]->pStateInfo->countActivities == 0)
         {
-            pAddress = aAddresses[i];
-            // set it to NULL so we don't free it as part of the array free, we will be sending this back to the caller
-            aAddresses[i] = NULL;
+            recyclable++;
+            if (pAddress == NULL)
+            {
+                char *szRegenAddress = NULL;
+                tABC_U08Buf Seed = ABC_BUF_NULL;
+                ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeedDisk(szUserName, szPassword, szWalletUUID, &Seed, pError));
+                ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&szRegenAddress, Seed, aAddresses[i]->seq, pError));
+
+                if (strncmp(aAddresses[i]->szPubAddress, szRegenAddress, strlen(aAddresses[i]->szPubAddress)) == 0)
+                {
+                    // set it to NULL so we don't free it as part of the array
+                    // free, we will be sending this back to the caller
+                    pAddress = aAddresses[i];
+                    aAddresses[i] = NULL;
+                    recyclable--;
+                }
+                else
+                {
+                    ABC_DebugLog("********************************\n");
+                    ABC_DebugLog("Address Corrupt\nInitially: %s, Now: %s\nSeq: %d",
+                                    aAddresses[i]->szPubAddress,
+                                    szRegenAddress,
+                                    aAddresses[i]->seq);
+                    ABC_DebugLog("********************************\n");
+                }
+                ABC_FREE_STR(szRegenAddress);
+                ABC_BUF_FREE(Seed);
+            }
         }
     }
-
-    // if we found an address, make it ours!
-    if (pAddress != NULL)
+    // Create a new address at N
+    if (recyclable <= 1)
     {
+        ABC_CHECK_RET(ABC_TxCreateNewAddressForN(szUserName, szPassword, szWalletUUID, N, pError));
+    }
+
+    // Does the caller want a result?
+    if (ppAddress)
+    {
+        // Did we find an address to use?
+        ABC_CHECK_ASSERT(pAddress != NULL, ABC_CC_NoAvailableAddress, "Unable to locate a non-corrupt address.");
+
         // free state and details as we will be setting them to new data below
         ABC_TxFreeAddressStateInfo(pAddress->pStateInfo);
         pAddress->pStateInfo = NULL;
         ABC_FreeTxDetails(pAddress->pDetails);
         pAddress->pDetails = NULL;
+
+        // copy over the info we were given
+        ABC_CHECK_RET(ABC_DuplicateTxDetails(&(pAddress->pDetails), pDetails, pError));
+
+        // create the state info
+        ABC_ALLOC(pAddress->pStateInfo, sizeof(tTxAddressStateInfo));
+        pAddress->pStateInfo->bRecycleable = true;
+        pAddress->pStateInfo->countActivities = 0;
+        pAddress->pStateInfo->aActivities = NULL;
+        pAddress->pStateInfo->timeCreation = time(NULL);
+
+        // assigned final address
+        *ppAddress = pAddress;
+        pAddress = NULL;
     }
-    else // if we didn't find an address, we need to create a new one
+exit:
+    ABC_TxFreeAddresses(aAddresses, countAddresses);
+    ABC_TxFreeAddress(pAddress);
+
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+static
+tABC_CC ABC_TxCreateNewAddressForN(const char *szUserName, const char *szPassword, const char *szWalletUUID, int32_t N, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    tABC_TxAddress *pAddress = NULL;
+
+    // Now we know the latest N, create a new address
+    ABC_ALLOC(pAddress, sizeof(tABC_TxAddress));
+
+    // get the private seed so we can generate the public address
+    tABC_U08Buf Seed = ABC_BUF_NULL;
+    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeedDisk(szUserName, szPassword, szWalletUUID, &Seed, pError));
+
+    // generate the public address
+    pAddress->szPubAddress = NULL;
+    pAddress->seq = N;
+    do
     {
-        ABC_ALLOC(pAddress, sizeof(tABC_TxAddress));
+        // move to the next sequence number
+        pAddress->seq++;
 
-        // get the private seed so we can generate the public address
-        tABC_U08Buf Seed = ABC_BUF_NULL;
-        ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(szUserName, szPassword, szWalletUUID, &Seed, pError));
+        // Get the public address for our sequence (it can return NULL, if it is invalid)
+        ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), Seed, pAddress->seq, pError));
+    } while (pAddress->szPubAddress == NULL);
 
-        // generate the public address
-        pAddress->szPubAddress = NULL;
-        pAddress->seq = (int32_t) N;
-        do
-        {
-            // move to the next sequence number
-            pAddress->seq++;
+    // set the final ID
+    ABC_ALLOC(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
+    sprintf(pAddress->szID, "%u", pAddress->seq);
 
-            // Get the public address for our sequence (it can return NULL, if it is invalid)
-            ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), Seed, pAddress->seq, pError));
-        } while (pAddress->szPubAddress == NULL);
-
-        // set the final ID
-        ABC_ALLOC(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
-        sprintf(pAddress->szID, "%u", pAddress->seq);
-    }
-
-    // add the info we have to this address
-
-    // copy over the info we were given
-    ABC_CHECK_RET(ABC_DuplicateTxDetails(&(pAddress->pDetails), pDetails, pError));
-
-    // create the state info
     ABC_ALLOC(pAddress->pStateInfo, sizeof(tTxAddressStateInfo));
     pAddress->pStateInfo->bRecycleable = true;
     pAddress->pStateInfo->countActivities = 0;
     pAddress->pStateInfo->aActivities = NULL;
     pAddress->pStateInfo->timeCreation = time(NULL);
 
-    // assigned final address
-    *ppAddress = pAddress;
-    pAddress = NULL;
+    ABC_ALLOC(pAddress->pDetails, sizeof(tABC_TxDetails));
+    ABC_STRDUP(pAddress->pDetails->szName, "");
+    ABC_STRDUP(pAddress->pDetails->szCategory, "");
+    ABC_STRDUP(pAddress->pDetails->szNotes, "");
 
+    // Save the new Address
+    ABC_CHECK_RET(ABC_TxSaveAddress(szUserName, szPassword, szWalletUUID, pAddress, pError));
 exit:
-    ABC_TxFreeAddresses(aAddresses, countAddresses);
     ABC_TxFreeAddress(pAddress);
+    ABC_BUF_FREE(Seed);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
