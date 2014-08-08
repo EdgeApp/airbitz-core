@@ -60,6 +60,8 @@
 
 #define SATOSHI_PER_BITCOIN                     100000000
 
+#define MIN_RECYCLABLE 5
+
 #define WATCH_ADDITIONAL_ADDRESSES              10
 
 #define TX_MAX_ADDR_ID_LENGTH                   20 // largest char count for the string version of the id number - 20 digits should handle it
@@ -1105,6 +1107,8 @@ tABC_CC ABC_TxCreateInitialAddresses(const char *szUserName,
     ABC_STRDUP(pDetails->szName, "");
     ABC_STRDUP(pDetails->szCategory, "");
     ABC_STRDUP(pDetails->szNotes, "");
+    pDetails->attributes = 0x0;
+    pDetails->bizId = 0;
 
     ABC_CHECK_RET(ABC_TxCreateNewAddress(
                     szUserName, szPassword, szWalletUUID,
@@ -1206,9 +1210,14 @@ tABC_CC ABC_TxCreateNewAddress(const char *szUserName,
         }
     }
     // Create a new address at N
-    if (recyclable <= 1)
+    if (recyclable <= MIN_RECYCLABLE)
     {
-        ABC_CHECK_RET(ABC_TxCreateNewAddressForN(szUserName, szPassword, szWalletUUID, N, pError));
+        for (int i = 0; i < MIN_RECYCLABLE - recyclable; ++i)
+        {
+            ABC_CHECK_RET(ABC_TxCreateNewAddressForN(
+                            szUserName, szPassword, szWalletUUID,
+                            N + i, pError));
+        }
     }
 
     // Does the caller want a result?
@@ -1285,6 +1294,12 @@ tABC_CC ABC_TxCreateNewAddressForN(const char *szUserName, const char *szPasswor
     ABC_STRDUP(pAddress->pDetails->szName, "");
     ABC_STRDUP(pAddress->pDetails->szCategory, "");
     ABC_STRDUP(pAddress->pDetails->szNotes, "");
+    pAddress->pDetails->attributes = 0x0;
+    pAddress->pDetails->bizId = 0;
+    pAddress->pDetails->amountSatoshi = 0;
+    pAddress->pDetails->amountCurrency = 0;
+    pAddress->pDetails->amountFeesAirbitzSatoshi = 0;
+    pAddress->pDetails->amountFeesMinersSatoshi = 0;
 
     // Save the new Address
     ABC_CHECK_RET(ABC_TxSaveAddress(szUserName, szPassword, szWalletUUID, pAddress, pError));
@@ -4061,6 +4076,8 @@ tABC_CC ABC_TxGetAddresses(const char *szUserName,
             {
                 // create the filename for this address
                 sprintf(szFilename, "%s/%s", szAddrDir, pFileList->apFiles[i]->szName);
+
+                ABC_DebugLog("%s\n", szFilename);
 
                 // add this address to the array
                 ABC_CHECK_RET(ABC_TxLoadAddressAndAppendToArray(szUserName, szPassword, szWalletUUID, szFilename, &aAddresses, &count, pError));
