@@ -967,6 +967,19 @@ extern "C" {
     void tempEventA();
     void tempEventB();
 
+    tABC_CC ABC_FilterExportData(const char *szWalletId,
+                                 const int iStartDate,
+                                 const int iEndDate,
+                                 tABC_TxInfo ***pTransactions,
+                                 int *iNumOfTransactions,
+                                 tABC_Error *pError);
+
+
+    tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
+                                int iTransactionCount,
+                                char **szCsvData,
+                                tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif
