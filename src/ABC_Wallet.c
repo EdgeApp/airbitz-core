@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "ABC_Wallet.h"
+#include "ABC_Tx.h"
 #include "ABC_Account.h"
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
@@ -316,6 +317,11 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     ABC_CHECK_RET(ABC_AccountWalletList(pKeys, NULL, &info.sortIndex, pError));
     ABC_CHECK_RET(ABC_AccountWalletSave(pKeys, &info, pError));
 
+    // Now the wallet is written to disk, generate some addresses
+    ABC_CHECK_RET(ABC_TxCreateInitialAddresses(
+                    pData->szUserName, pData->szPassword,
+                    pData->szUUID, pError));
+
     // After wallet is created, sync the account, ignoring any errors
     tABC_Error Error;
     ABC_CHECK_RET(ABC_LoginSyncData(pInfo->szUserName, pInfo->szPassword, &dirty, &Error));
@@ -434,8 +440,6 @@ tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const
 
     // Create Repo URL
     ABC_CHECK_RET(ABC_SyncGetServer(pData->szWalletAcctKey, &szRepoURL, pError));
-
-    ABC_DebugLog("Wallet Repo: %s %s\n", pData->szWalletSyncDir, szRepoURL);
 
     // Sync
     ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, szRepoURL, pDirty, pError));
@@ -1352,6 +1356,31 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeed(const char *szUserName, const char *szPa
 
 exit:
 
+    ABC_WalletMutexUnlock(NULL);
+    return cc;
+}
+
+tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(const char *szUserName, const char *szPassword, const char *szUUID, tABC_U08Buf *pSeed, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_AccountWalletInfo info;
+    tABC_SyncKeys *pKeys = NULL;
+
+    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(szUUID);
+    ABC_CHECK_NULL(pSeed);
+
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountWalletLoad(pKeys, szUUID, &info, pError));
+
+    // assign the address
+    ABC_BUF_DUP(*pSeed, info.BitcoinSeed);
+
+exit:
+    ABC_AccountWalletInfoFree(&info);
     ABC_WalletMutexUnlock(NULL);
     return cc;
 }
