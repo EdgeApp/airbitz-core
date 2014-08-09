@@ -8,7 +8,7 @@ CXXFLAGS += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c++11
 DEPS = jansson libbitcoin-watcher libcsv libgit2 libqrencode libsecp256k1 libssl zlib
 LIBS := $(shell pkg-config --libs --static $(DEPS)) \
         -lsodium \
-        -lcurl -lscrypt -lm
+        -lcurl -lscrypt -lm -lcsv
 
 # Do not use -lpthread on Android:
 ifneq (,$(findstring android,$(CC)))

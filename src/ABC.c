@@ -113,6 +113,9 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
     pAsyncBitCoinCallerData = pData;
 
+    // initialize logging
+    ABC_CHECK_RET(ABC_DebugInitialize(szRootDir, pError));
+
     // initialize the mutex system
     ABC_CHECK_RET(ABC_MutexInitialize(pError));
 
@@ -2627,7 +2630,8 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
 
     *szVersion = (char *)ABC_BUF_PTR(Version);
     ABC_BUF_CLEAR(Version);
-exit:
+
     ABC_BUF_FREE(Version);
+
     return cc;
 }

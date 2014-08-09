@@ -1926,11 +1926,11 @@ tABC_CC ABC_LoginCopyRootDirName(char *szRootDir, tABC_Error *pError)
     // create the account directory string
     if (gbIsTestNet)
     {
-        sprintf(szRootDir, "%s/%s-testnet", szFileIORootDir, ACCOUNT_DIR); 
+        sprintf(szRootDir, "%s/%s-testnet", szFileIORootDir, ACCOUNT_DIR);
     }
     else
     {
-        sprintf(szRootDir, "%s/%s", szFileIORootDir, ACCOUNT_DIR); 
+        sprintf(szRootDir, "%s/%s", szFileIORootDir, ACCOUNT_DIR);
     }
 
 exit:
@@ -3041,8 +3041,6 @@ tABC_CC ABC_LoginSyncData(const char *szUserName,
 
     // Create the repo url and sync it
     ABC_CHECK_RET(ABC_SyncGetServer(pKeys->szRepoAcctKey, &szRepoURL, pError));
-
-    ABC_DebugLog("URL: %s %s\n", szFilename, szRepoURL);
 
     // Sync repo
     ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, pDirty, pError));

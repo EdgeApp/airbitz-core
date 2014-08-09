@@ -1,12 +1,12 @@
 /**
  * @file
  * Core libgit2-based file-syncing algorithm.
- *  
- * See LICENSE for copy, modification, and use permissions 
+ *
+ * See LICENSE for copy, modification, and use permissions
  *
  * @author See AUTHORS
  * @version 1.0
- */ 
+ */
 
 #include "sync.h"
 #include <git2/sys/commit.h>
@@ -171,7 +171,7 @@ static int sync_lookup_soft(git_oid *out,
 /**
  * Merges two tree objects, producing a third tree.
  * The base tree allows the algorithm to distinguish between adds and deletes.
- * The algorithm always prefers the item from tree1 when there is a conflict.
+ * The algorithm always prefers the item from tree 1 when there is a conflict.
  */
 static int sync_merge_trees(git_oid *out,
                             git_repository *repo,
@@ -205,7 +205,7 @@ static int sync_merge_trees(git_oid *out,
         {
             e1 = i1 < size1 ? git_tree_entry_byindex(tree1, i1++) : NULL;
         }
-        if (state & ONLY2 || state == BOTH)
+        if (state == ONLY2 || state == BOTH)
         {
             e2 = i2 < size2 ? git_tree_entry_byindex(tree2, i2++) : NULL;
         }
