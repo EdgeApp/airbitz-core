@@ -1,11 +1,12 @@
 depends="libsodium"
 inherit lib
 
-source="http://download.zeromq.org/zeromq-4.0.3.tar.gz
-        https://raw.github.com/zeromq/cppzmq/master/zmq.hpp"
+version="4.0.3"
+source="http://download.zeromq.org/zeromq-$version.tar.gz#a363ddfff75f73976f656b3ba48f32544b214075
+        https://raw.github.com/zeromq/cppzmq/master/zmq.hpp#c9d69f8c657047cdc2b4b891924398e6a4b7969d"
 
 build() {
-    cd zeromq-4.0.3
+    cd zeromq-$version
     ./autogen.sh
     ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
     make || true # This fails, but doesn't affect anything

@@ -1,9 +1,10 @@
 inherit lib
 
-source="www.digip.org/jansson/releases/jansson-2.5.tar.bz2"
+version="2.5"
+source="www.digip.org/jansson/releases/jansson-$version.tar.bz2#144e31826b7ab9a648511759c43b23db5865f4db"
 
 build() {
-    cd jansson-2.5
+    cd jansson-$version
     ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
     make
     make install

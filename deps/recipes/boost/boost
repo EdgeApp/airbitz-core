@@ -1,14 +1,15 @@
 inherit lib
 
+version="1_55_0"
 source="
-http://softlayer-ams.dl.sourceforge.net/project/boost/boost/1.55.0/boost_1_55_0.tar.bz2
-https://raw2.github.com/MysticTreeGames/Boost-for-Android/master/patches/boost-1_55_0/boost-1_55_0.patch
+http://softlayer-dal.dl.sourceforge.net/project/boost/boost/1.55.0/boost_$version.tar.bz2#cef9a0cc7084b1d639e06cd3bc34e4251524c840
+https://raw2.github.com/MysticTreeGames/Boost-for-Android/master/patches/boost-$version/boost-$version.patch#806ca68e03c8af88a910cf56de161f2284f404f8
 "
 
 build() {
     LIBRARIES=--with-libraries=date_time,filesystem,program_options,regex,signals,system,thread,iostreams
 
-    cd boost_1_55_0
+    cd boost_$version
 
     echo Bootstrapping boost...
     ./bootstrap.sh --prefix=$install_dir $LIBRARIES

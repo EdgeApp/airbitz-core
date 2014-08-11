@@ -10,14 +10,15 @@ case $(uname -sm) in
     exit 1;;
 esac
 
-source="http://dl.google.com/android/ndk/android-ndk-r9c-${system}.tar.bz2"
+version="r9c"
+source="http://dl.google.com/android/ndk/android-ndk-$version-$system.tar.bz2#bd42f8448a82d7c8e953a7543dafd118c92a5a26"
 
 # Extracts a standalone toolchain from the NDK.
 # $1 arch name for installing the toolchain.
 # $2 NDK toolchain name.
 setup() {
     echo Unpacking toolchain...
-    cd android-ndk-r9c
+    cd android-ndk-$version
     ./build/tools/make-standalone-toolchain.sh --toolchain=$2-4.8 --install-dir=$work_dir/$1 --system=$system --verbose
 
     echo Patching toolchain...
