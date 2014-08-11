@@ -1,9 +1,10 @@
 inherit lib
 
-source="http://hyperrealm.com/libconfig/libconfig-1.4.9.tar.gz"
+version="1.4.9"
+source="http://hyperrealm.com/libconfig/libconfig-$version.tar.gz#b7a3c307dfb388e57d9a35c7f13f6232116930ec"
 
 build() {
-    cd libconfig-1.4.9
+    cd libconfig-$version
     rm -r aux-build
     autoreconf -i
     ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir

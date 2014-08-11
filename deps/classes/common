@@ -7,15 +7,35 @@ download_dir=$base_dir/download
 download() {
     mkdir -p $download_dir
     for s in $source; do
-        filename="$download_dir/$(echo $s | sed -e's@^.*/@@' -e's@\?.*$@@')"
-        if [ $filename != ${filename%.git} ]; then
-            if [ -e $filename ]; then
-                git --git-dir="$filename" fetch -f "$s" master:master
+        url=${s%#*} # Remove hash part
+        path=$download_dir/${url##*/}
+        path=${path%%\?*} # Remove query part
+        hash=${s##*#}
+        hash=${hash%"$url"}
+
+        # Download:
+        if [ $path != ${path%.git} ]; then
+            if [ -e "$path" ]; then
+                git --git-dir="$path" fetch -f "$url" master:master
             else
-                git clone --bare "$s" "$filename"
+                git clone --bare "$url" "$path"
             fi
         else
-            [ -e $filename ] || wget -O "$filename" "$s"
+            if [ ! -e "$path" ]; then
+                wget -O "$path" "$url"
+            fi
+
+            # Checksum:
+            output=$(shasum "$path")
+            output="${output%% *}"
+            if [ -n "$hash" -a "$hash" != "$output" ]; then
+                echo "error: checksum failed on $(relative path): expected $hash, got $output"
+                echo "deleting $(relative $path)"
+                rm "$path"
+                return 1
+            else
+                echo "SHA1 $(relative $path) = $output"
+            fi
         fi
     done
 }
@@ -24,12 +44,18 @@ task download
 # Unpacks the source files mentioned in $source with the .tar.* extension
 unpack() {
     for s in $source; do
-        filename="$download_dir/$(echo $s | sed -e's@^.*/@@' -e's@\?.*$@@')"
-        if echo $filename | grep -q -e'\.tar.*$' -e'\.tgz$'; then
-            echo "Unpacking $(relative $filename) to $(relative $work_dir)..."
-            tar -C $work_dir -xf $filename
-        elif [ $filename != ${filename%.git} ]; then
-            git --git-dir="$filename" --work-tree="$work_dir" reset --hard master
+        url=${s%#*} # Remove hash part
+        path=$download_dir/${url##*/}
+        path=${path%%\?*} # Remove query part
+        hash=${s##*#}
+        hash=${hash%"$url"}
+
+        # Unpack:
+        if [ $path != ${path%.git} ]; then
+            git --git-dir="$path" --work-tree="$work_dir" reset --hard "${hash:-master}"
+        elif [ $path != ${path%.tar*} -o $path != ${path%.tgz} ]; then
+            echo "Unpacking $(relative $path) to $(relative $work_dir)..."
+            tar -C "$work_dir" -xf "$path"
         fi
     done
 }

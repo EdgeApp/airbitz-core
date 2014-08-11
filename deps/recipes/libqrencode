@@ -1,14 +1,15 @@
 inherit lib
 
-source="http://megaui.net/fukuchi/works/qrencode/qrencode-3.4.3.tar.bz2"
+version="3.4.3"
+source="http://megaui.net/fukuchi/works/qrencode/qrencode-$version.tar.bz2#a5056cf2fdc699ecf1d3c0cbea7b50993b0bf54e"
 
 build() {
-    cd qrencode-3.4.3
+    cd qrencode-$version
 
     echo Patching...
     rm use/config.sub
     mkdir -p m4
-    cat configure.ac  | sed -e "/AM_PATH_SDL/d" > configure.ac.new
+    cat configure.ac | sed -e "/AM_PATH_SDL/d" > configure.ac.new
     mv configure.ac.new configure.ac
     ./autogen.sh
 

@@ -1,10 +1,11 @@
 depends="openssl"
 inherit lib
 
-source="http://curl.haxx.se/download/curl-7.34.0.tar.gz"
+version="7.34.0"
+source="http://curl.haxx.se/download/curl-$version.tar.gz#b74b59380e1736b2528cc03016614a78d8aa074e"
 
 build() {
-    cd curl-7.34.0
+    cd curl-$version
     ./configure --enable-static --disable-shared \
         --disable-ldap --without-libssh2 --without-librtmp --without-libidn \
         --host=$cross --prefix=$install_dir

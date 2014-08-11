@@ -1,9 +1,10 @@
 inherit lib
 
-source="http://download.dnscrypt.org/libsodium/releases/libsodium-0.5.0.tar.gz"
+version="0.5.0"
+source="http://download.dnscrypt.org/libsodium/releases/libsodium-$version.tar.gz#a1490d47d5fb776c47e03f888e8f2f3e93a3dea0"
 
 build() {
-    cd libsodium-0.5.0
+    cd libsodium-$version
     ./autogen.sh
     ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
     make

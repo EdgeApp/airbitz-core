@@ -2,7 +2,7 @@ depends="zlib"
 inherit lib
 
 version="1.0.1g"
-source="https://www.openssl.org/source/openssl-$version.tar.gz"
+source="https://www.openssl.org/source/openssl-$version.tar.gz#b28b3bcb1dc3ee7b55024c9f795be60eb3183e3c"
 
 build() {
     cd openssl-$version
