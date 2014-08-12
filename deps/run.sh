@@ -149,7 +149,7 @@ write_tasks() {
 
 recipe_dir=$(dirname $(recipe_file $recipe))
 log=$work_dir/$task.log
-echo "Running $recipe.$task (see $(relative $log))..."
+echo "Running $recipe.$task..."
 
 source $(recipe_file $recipe)
 
@@ -160,7 +160,14 @@ fi
 
 pushd . > /dev/null
 cd $work_dir
-$(echo $task | sed s/-/_/g) > $log 2>&1
+if ! $(echo $task | sed s/-/_/g) > $log 2>&1; then
+    status=$?
+    echo "Task failed (see $(relative $log) for full logs):"
+    echo "================================"
+    tail $log
+    echo "================================"
+    exit $status
+fi
 popd > /dev/null
 
 # The clean rule deletes the build directory, so only update the
