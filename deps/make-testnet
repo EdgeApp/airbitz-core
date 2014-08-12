@@ -1,0 +1,2 @@
+#!/bin/sh
+make BUILD_DIR=$(pwd)/build-testnet ENABLE_TESTNET=1 $@
