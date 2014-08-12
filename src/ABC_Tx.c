@@ -1036,12 +1036,24 @@ tABC_CC ABC_TxTrashAddresses(const char *szUserName,
                     szUserName, szPassword, szWalletUUID,
                     pAddress, pError));
             int changed = 0;
-            if (pAddress->pDetails->szName && ++changed)
+            if (ABC_STRLEN(pTx->pDetails->szName) == 0
+                    && ABC_STRLEN(pAddress->pDetails->szName) > 0)
+            {
                 ABC_STRDUP(pTx->pDetails->szName, pAddress->pDetails->szName);
-            if (pAddress->pDetails->szNotes && ++changed)
+                ++changed;
+            }
+            if (ABC_STRLEN(pTx->pDetails->szNotes) == 0
+                    && ABC_STRLEN(pAddress->pDetails->szNotes) > 0)
+            {
                 ABC_STRDUP(pTx->pDetails->szNotes, pAddress->pDetails->szNotes);
-            if (pAddress->pDetails->szCategory && ++changed)
+                ++changed;
+            }
+            if (ABC_STRLEN(pTx->pDetails->szCategory) == 0
+                    && ABC_STRLEN(pAddress->pDetails->szCategory))
+            {
                 ABC_STRDUP(pTx->pDetails->szCategory, pAddress->pDetails->szCategory);
+                ++changed;
+            }
             if (changed)
             {
                 ABC_CHECK_RET(
