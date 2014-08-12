@@ -1,7 +1,7 @@
 depends="openssl"
 inherit lib
 
-source="https://github.com/Airbitz/libgit2.git"
+source="https://github.com/Airbitz/libgit2.git#fb058ce6"
 
 build() {
     case $target in
