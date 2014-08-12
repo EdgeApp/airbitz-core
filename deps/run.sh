@@ -158,17 +158,14 @@ if ! contains $task $recipe_tasks; then
     exit 1
 fi
 
-pushd . > /dev/null
-cd $work_dir
-if ! $(echo $task | sed s/-/_/g) > $log 2>&1; then
+if ! ( cd $work_dir; $(echo $task | sed s/-/_/g) ) > $log 2>&1; then
     status=$?
     echo "Task failed (see $(relative $log) for full logs):"
     echo "================================"
     tail $log
     echo "================================"
-    exit $status
+    exit 1
 fi
-popd > /dev/null
 
 # The clean rule deletes the build directory, so only update the
 # task-done file if the directory still exists:
