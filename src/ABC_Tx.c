@@ -3356,6 +3356,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     // save out the transaction object to a file encrypted with the master key
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, MK, ABC_CryptoType_AES256, szFilename, pError));
 
+    ABC_CHECK_RET(ABC_WalletDirtyCache(szUserName, szPassword, szWalletUUID, pError));
 exit:
     ABC_FREE_STR(szFilename);
     ABC_CLEAR_FREE(ppJSON_Output, sizeof(json_t *) * pTx->countOutputs);

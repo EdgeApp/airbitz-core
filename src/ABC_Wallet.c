@@ -91,6 +91,8 @@ typedef struct sWalletData
     tABC_U08Buf     MK;
     tABC_U08Buf     BitcoinPrivateSeed;
     unsigned        archived;
+    bool            balanceDirty;
+    int64_t         balance;
 } tWalletData;
 
 // this holds all the of the currently cached wallets
@@ -410,6 +412,7 @@ tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *p
         ABC_CHECK_RET(ABC_WalletSyncData(szUserName, szPassword, szUUID, pInfo, &dirty, pError));
         if (dirty)
         {
+            ABC_CHECK_RET(ABC_WalletDirtyCache(szUserName, szPassword, szUUID, pError));
             *pDirty = 1;
         }
     }
@@ -913,6 +916,12 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
             pData->aszAccounts = NULL;
         }
 
+        pData->balance = 0;
+        pData->balanceDirty = true;
+
+        // Add to cache
+        ABC_CHECK_RET(ABC_WalletAddToCache(pData, pError));
+
         // hang on to this data
         *ppData = pData;
 
@@ -1115,6 +1124,29 @@ void ABC_WalletFreeData(tWalletData *pData)
     }
 }
 
+tABC_CC ABC_WalletDirtyCache(const char *szUserName,
+                             const char *szPassword,
+                             const char *szUUID,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tWalletData     *pData = NULL;
+
+    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_NULL(szUUID);
+
+    ABC_CHECK_RET(ABC_WalletCacheData(szUserName, szPassword, szUUID, &pData, pError));
+    pData->balanceDirty = true;
+exit:
+    ABC_CHECK_RET(ABC_WalletMutexUnlock(pError));
+    return cc;
+}
+
 /**
  * Gets information on the given wallet.
  *
@@ -1136,11 +1168,10 @@ tABC_CC ABC_WalletGetInfo(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    int i;
     tWalletData     *pData = NULL;
     tABC_WalletInfo *pInfo = NULL;
-    tABC_TxInfo **aTransactions = NULL;
-    unsigned int nCount = 0;
+    tABC_TxInfo     **aTransactions = NULL;
+    unsigned int    nTxCount = 0;
 
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
@@ -1168,15 +1199,21 @@ tABC_CC ABC_WalletGetInfo(const char *szUserName,
     pInfo->currencyNum = pData->currencyNum;
     pInfo->archived  = pData->archived;
 
-    ABC_CHECK_RET(
-        ABC_GetTransactions(szUserName, szPassword, szUUID,
-                            &aTransactions, &nCount, pError));
-    pInfo->balanceSatoshi = 0;
-    for (i = 0; i < nCount; i++)
+    if (pData->balanceDirty == true)
     {
-        tABC_TxInfo *pTxInfo = aTransactions[i];
-        pInfo->balanceSatoshi += pTxInfo->pDetails->amountSatoshi;
+        ABC_CHECK_RET(
+            ABC_GetTransactions(szUserName, szPassword, szUUID,
+                                &aTransactions, &nTxCount, pError));
+        pData->balance = 0;
+        for (int i = 0; i < nTxCount; i++)
+        {
+            tABC_TxInfo *pTxInfo = aTransactions[i];
+            pData->balance += pTxInfo->pDetails->amountSatoshi;
+        }
+        pData->balanceDirty = false;
     }
+    pInfo->balanceSatoshi = pData->balance;
+
 
     // assign it to the user's pointer
     *ppWalletInfo = pInfo;
@@ -1184,7 +1221,7 @@ tABC_CC ABC_WalletGetInfo(const char *szUserName,
 
 exit:
     ABC_CLEAR_FREE(pInfo, sizeof(tABC_WalletInfo));
-    ABC_FreeTransactions(aTransactions, nCount);
+    if (nTxCount > 0) ABC_FreeTransactions(aTransactions, nTxCount);
 
     ABC_CHECK_RET(ABC_WalletMutexUnlock(pError));
     return cc;
@@ -1409,7 +1446,6 @@ tABC_CC ABC_WalletCheckCredentials(const char *szUserName,
     // cache up the wallet (this will check that the wallet UUID is valid)
     tWalletData *pData = NULL;
     ABC_CHECK_RET(ABC_WalletCacheData(szUserName, szPassword, szUUID, &pData, pError));
-
 exit:
 
     return cc;
