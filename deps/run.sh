@@ -158,13 +158,23 @@ if ! contains $task $recipe_tasks; then
     exit 1
 fi
 
-if ! ( cd $work_dir; $(echo $task | sed s/-/_/g) ) > $log 2>&1; then
-    status=$?
+# Run the task:
+set +e
+(
+    set -e
+    cd $work_dir
+    $(echo $task | sed s/-/_/g)
+) > $log 2>&1
+status=$?
+set -e
+
+# Handle errors:
+if [ $status -ne 0 ]; then
     echo "Task failed (see $(relative $log) for full logs):"
     echo "================================"
     tail $log
     echo "================================"
-    exit 1
+    exit $status
 fi
 
 # The clean rule deletes the build directory, so only update the
