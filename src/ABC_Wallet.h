@@ -91,6 +91,11 @@ extern "C" {
                               const char *szName,
                               tABC_Error *pError);
 
+    tABC_CC ABC_WalletDirtyCache(const char *szUserName,
+                                 const char *szPassword,
+                                 const char *szUUID,
+                                 tABC_Error *pError);
+
     tABC_CC ABC_WalletGetInfo(const char *szUserName,
                               const char *szPassword,
                               const char *szUUID,
