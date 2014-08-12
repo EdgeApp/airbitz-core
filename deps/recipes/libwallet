@@ -1,7 +1,7 @@
 depends="libbitcoin curl"
 inherit lib
 
-source="https://github.com/Airbitz/libwallet.git"
+source="https://github.com/Airbitz/libwallet.git#27d3940a"
 
 build() {
     autoreconf -i
