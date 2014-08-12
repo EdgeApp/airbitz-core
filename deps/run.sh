@@ -12,10 +12,12 @@ task=$2
 
 # Essential directories:
 base_dir=$(pwd)
-build_dir=${BUILD_DIR:-$base_dir/build}
-work_dir=$build_dir/$recipe
 
+build_dir=${BUILD_DIR:-build}
 mkdir -p $build_dir
+build_dir=$(cd $build_dir; pwd)
+
+work_dir=$build_dir/$recipe
 mkdir -p $work_dir
 
 ################################################################################
