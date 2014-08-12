@@ -106,15 +106,15 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_NULL(pSeedData);
     ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "The core library has already been initalized");
 
+    // initialize logging
+    ABC_CHECK_RET(ABC_DebugInitialize(szRootDir, pError));
+
     // override the alloc and free of janson so we can have a secure method
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
     // Set the callback and caller data
     gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
     pAsyncBitCoinCallerData = pData;
-
-    // initialize logging
-    ABC_CHECK_RET(ABC_DebugInitialize(szRootDir, pError));
 
     // initialize the mutex system
     ABC_CHECK_RET(ABC_MutexInitialize(pError));
@@ -180,6 +180,8 @@ void ABC_Terminate()
         ABC_MutexTerminate();
 
         ABC_SyncTerminate();
+
+        ABC_DebugTerminate();
 
         gbInitialized = false;
     }

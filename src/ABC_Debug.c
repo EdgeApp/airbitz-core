@@ -43,10 +43,12 @@
 #include <time.h>
 #include <string.h>
 #include <stdarg.h>
+#include <pthread.h>
 
 #include "ABC_Util.h"
 
 #define BUF_SIZE 16384
+#define MAX_LOG_SIZE 102400 // Max size 100 KB
 
 #ifdef ANDROID
 #include <android/log.h>
@@ -57,8 +59,14 @@
 
 #define ABC_LOG_FILE "abc.log"
 
-static char gszLogFile[ABC_MAX_STRING_LENGTH + 1];
 static void ABC_DebugAppendToLog(const char *szOut);
+static tABC_CC ABC_DebugMutexLock(tABC_Error *pError);
+static tABC_CC ABC_DebugMutexUnlock(tABC_Error *pError);
+
+static FILE             *gfLog = NULL;
+static bool             gbInitialized = false;
+static pthread_mutex_t  gMutex;
+char gszLogFile[ABC_MAX_STRING_LENGTH + 1];
 
 tABC_CC ABC_DebugInitialize(const char *szRootDir, tABC_Error *pError)
 {
@@ -70,8 +78,31 @@ tABC_CC ABC_DebugInitialize(const char *szRootDir, tABC_Error *pError)
     snprintf(gszLogFile, ABC_MAX_STRING_LENGTH, "%s/%s", szRootDir, ABC_LOG_FILE);
     gszLogFile[ABC_MAX_STRING_LENGTH] = '\0';
 
+    pthread_mutexattr_t mutexAttrib;
+    ABC_CHECK_ASSERT(0 == pthread_mutexattr_init(&mutexAttrib), ABC_CC_MutexError, "ABC_Debug could not create mutex attribute");
+    ABC_CHECK_ASSERT(0 == pthread_mutexattr_settype(&mutexAttrib, PTHREAD_MUTEX_RECURSIVE), ABC_CC_MutexError, "ABC_Debug could not set mutex attributes");
+    ABC_CHECK_ASSERT(0 == pthread_mutex_init(&gMutex, &mutexAttrib), ABC_CC_MutexError, "ABC_Debug could not create mutex");
+    pthread_mutexattr_destroy(&mutexAttrib);
+
+    gbInitialized = true;
+
+    gfLog = fopen(gszLogFile, "a");
+    fseek(gfLog, 0L, SEEK_END);
 exit:
     return cc;
+}
+
+void ABC_DebugTerminate()
+{
+    if (gbInitialized == true)
+    {
+        pthread_mutex_destroy(&gMutex);
+        if (gfLog)
+        {
+            fclose(gfLog);
+        }
+        gbInitialized = false;
+    }
 }
 
 void ABC_DebugLog(const char * format, ...)
@@ -109,15 +140,61 @@ void ABC_DebugLog(const char * format, ...)
 
 static void ABC_DebugAppendToLog(const char *szOut)
 {
-    FILE *f = fopen(gszLogFile, "a");
-    if (f)
+    if (gbInitialized)
     {
-        fwrite(szOut, 1, strlen(szOut), f);
-        fclose(f);
+        ABC_DebugMutexLock(NULL);
+        if (gfLog)
+        {
+            size_t size = ftell(gfLog);
+            if (size > MAX_LOG_SIZE)
+            {
+                fclose(gfLog);
+                gfLog = fopen(gszLogFile, "w");
+            }
+
+            fwrite(szOut, 1, strlen(szOut), gfLog);
+            fflush(gfLog);
+        }
+        ABC_DebugMutexUnlock(NULL);
     }
 }
 
+static
+tABC_CC ABC_DebugMutexLock(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_Debug has not been initalized");
+    ABC_CHECK_ASSERT(0 == pthread_mutex_lock(&gMutex), ABC_CC_MutexError, "ABC_Debug error locking mutex");
+
+exit:
+
+    return cc;
+}
+
+static
+tABC_CC ABC_DebugMutexUnlock(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_Debug has not been initalized");
+    ABC_CHECK_ASSERT(0 == pthread_mutex_unlock(&gMutex), ABC_CC_MutexError, "ABC_Debug error unlocking mutex");
+
+exit:
+
+    return cc;
+}
+
 #else
+
+tABC_CC ABC_DebugInitialize(const char *szRootDir, tABC_Error *pError)
+{
+}
+
+void ABC_DebugTerminate()
+{
+}
+
 /**
  * Log string placeholder for non-debug build
  */

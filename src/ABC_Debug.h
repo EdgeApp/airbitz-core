@@ -50,6 +50,8 @@ extern "C" {
 #endif 
 
 tABC_CC ABC_DebugInitialize(const char *szRootDir, tABC_Error *pError);
+
+void ABC_DebugTerminate();
     
 void ABC_DebugLog(const char * format, ...);
 
