@@ -81,6 +81,8 @@ static void        ABC_BridgeHeightCallback(WatcherInfo *watcherInfo, size_t blo
 static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, libwallet::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::short_hash &addr);
+static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash);
+static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
 static tABC_CC     ABC_BridgeStringToEc(char *privKey, bc::elliptic_curve_key& key, tABC_Error *pError);
 static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo);
 static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo);
@@ -1056,13 +1058,38 @@ void ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amoun
 {
     bc::transaction_output_type output;
     output.value = amount;
-    output.script.push_operation({bc::opcode::dup, bc::data_chunk()});
-    output.script.push_operation({bc::opcode::hash160, bc::data_chunk()});
-    output.script.push_operation({bc::opcode::special,
-        bc::data_chunk(addr.begin(), addr.end())});
-    output.script.push_operation({bc::opcode::equalverify, bc::data_chunk()});
-    output.script.push_operation({bc::opcode::checksig, bc::data_chunk()});
+    if (pubkey_version)
+    {
+        output.script = ABC_BridgeCreatePubKeyHash(addr);
+    }
+    else if (script_version)
+    {
+        output.script = ABC_BridgeCreateScriptHash(addr);
+    }
     outputs.push_back(output);
+}
+
+static
+bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash)
+{
+    bc::script_type result;
+    result.push_operation({bc::opcode::hash160, bc::data_chunk()});
+    result.push_operation({bc::opcode::special, bc::data_chunk(script_hash.begin(), script_hash.end())});
+    result.push_operation({bc::opcode::equal, bc::data_chunk()});
+    return result;
+}
+
+static
+bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash)
+{
+    bc::script_type result;
+    result.push_operation({bc::opcode::dup, bc::data_chunk()});
+    result.push_operation({bc::opcode::hash160, bc::data_chunk()});
+    result.push_operation({bc::opcode::special,
+        bc::data_chunk(pubkey_hash.begin(), pubkey_hash.end())});
+    result.push_operation({bc::opcode::equalverify, bc::data_chunk()});
+    result.push_operation({bc::opcode::checksig, bc::data_chunk()});
+    return result;
 }
 
 static
