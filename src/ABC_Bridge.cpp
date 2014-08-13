@@ -1340,8 +1340,8 @@ static void *ABC_BridgeWatcherStopThreaded(void *data)
  */
 void ABC_BridgeEnd()
 {
-    delete gClient;
-    gClient = nullptr;
+    delete gThread;
+    gThread = nullptr;
 }
 
 /**
@@ -1353,7 +1353,7 @@ tABC_CC ABC_BridgeBegin(tABC_Error *pError)
 
     ABC_CHECK_NULL(gContext);
     ABC_CHECK_NULL(gClient);
-    gClient = new abc::bouncer_client(gContext);
+    gThread = new abc::bouncer_thread(gContext);
 
 exit:
     return cc;
