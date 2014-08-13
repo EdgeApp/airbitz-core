@@ -4120,8 +4120,6 @@ tABC_CC ABC_TxGetAddresses(const char *szUserName,
                 // create the filename for this address
                 sprintf(szFilename, "%s/%s", szAddrDir, pFileList->apFiles[i]->szName);
 
-                ABC_DebugLog("%s\n", szFilename);
-
                 // add this address to the array
                 ABC_CHECK_RET(ABC_TxLoadAddressAndAppendToArray(szUserName, szPassword, szWalletUUID, szFilename, &aAddresses, &count, pError));
             }
