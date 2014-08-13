@@ -80,7 +80,7 @@ static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitco
 static void        ABC_BridgeHeightCallback(WatcherInfo *watcherInfo, size_t block_height);
 static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, libwallet::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
-static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::short_hash &addr);
+static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr);
 static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash);
 static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
 static tABC_CC     ABC_BridgeStringToEc(char *privKey, bc::elliptic_curve_key& key, tABC_Error *pError);
@@ -602,13 +602,13 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
         {
             pSendInfo->pDetails->amountFeesAirbitzSatoshi = abFees;
             // Output to Airbitz
-            ABC_BridgeAppendOutput(outputs, abFees, ab.hash());
+            ABC_BridgeAppendOutput(outputs, abFees, ab);
             // Increment total tx amount to account for AB fees
             totalAmountSatoshi += abFees;
         }
     }
     // Output to  Destination Address
-    ABC_BridgeAppendOutput(outputs, pSendInfo->pDetails->amountSatoshi, dest.hash());
+    ABC_BridgeAppendOutput(outputs, pSendInfo->pDetails->amountSatoshi, dest);
 
     minerFees = ABC_BridgeCalcMinerFees(bc::satoshi_raw_size(utx->tx), ppInfo);
     if (minerFees > 0)
@@ -1054,17 +1054,17 @@ exit:
 }
 
 static
-void ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::short_hash &addr)
+void ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr)
 {
     bc::transaction_output_type output;
     output.value = amount;
-    if (pubkey_version)
+    if (addr.version() == pubkey_version)
     {
-        output.script = ABC_BridgeCreatePubKeyHash(addr);
+        output.script = ABC_BridgeCreatePubKeyHash(addr.hash());
     }
-    else if (script_version)
+    else if (addr.version() == script_version)
     {
-        output.script = ABC_BridgeCreateScriptHash(addr);
+        output.script = ABC_BridgeCreateScriptHash(addr.hash());
     }
     outputs.push_back(output);
 }
