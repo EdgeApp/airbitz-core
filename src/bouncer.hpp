@@ -10,7 +10,7 @@
 #ifndef ABC_BOUNCER_HPP
 #define ABC_BOUNCER_HPP
 
-#include <list>
+#include <vector>
 #include <bitcoin/client/zeromq_socket.hpp>
 
 namespace abc {
@@ -35,9 +35,6 @@ public:
     bool wait();
 
 private:
-    /**
-     * Handles messages sent to the bouncer specifically.
-     */
     void message(const data_chunk& data, bool more);
     void add(std::string local, std::string remote);
     void remove(std::string local);
@@ -55,7 +52,8 @@ private:
         libbitcoin::client::zeromq_socket local_socket_;
         libbitcoin::client::zeromq_socket remote_socket_;
     };
-    std::list<bouncer *> bouncers_;
+    std::vector<bouncer *> bouncers_;
+    std::vector<zmq_pollitem_t> items_;
 
     // Lifetime:
     bool shutdown_;

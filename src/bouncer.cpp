@@ -25,11 +25,12 @@ bouncer_thread::bouncer_thread(void *ctx)
   : ctx_(ctx), socket_(ctx),
     shutdown_(false), timeout_(0)
 {
-    socket_.connect(CONTROL_ADDRESS);
+    socket_.connect(CONTROL_ADDRESS); // TODO: Check for errors!
 }
 
 bool bouncer_thread::wait()
 {
+    // Figure out timeout:
     long poll_time = -1;
     if (timeout_.count())
     {
@@ -40,17 +41,39 @@ bool bouncer_thread::wait()
         else
             poll_time = (timeout_ - elapsed).count();
     }
-    /*
-    zmq_poll(..., poll_time);
-    for i in active items:
-        if i is user
-            handle(i) // forwarding data to internal socket so we don't wake up again
-        else
-            socket_.forward(*this);
-    */
+
+    // Figure out sockets:
+    items_.clear();
+    items_.reserve(2*bouncers_.size() + 1);
+    for (auto i: bouncers_)
+    {
+        items_.push_back(i->local_socket_.pollitem());
+        items_.push_back(i->remote_socket_.pollitem());
+    }
+    items_.push_back(socket_.pollitem());
+    zmq_poll(items_.data(), items_.size(), poll_time);
+
+    // Forward messages:
+    for (size_t i = 0; i < items_.size(); ++i)
+    {
+        if (items_[i].revents)
+        {
+            if (i == items_.size() - 1)
+                socket_.forward(*this);
+            else if (i & 1)
+                bouncers_[i/2]->remote_socket_.forward(
+                    bouncers_[i/2]->local_socket_);
+            else
+                bouncers_[i/2]->local_socket_.forward(
+                    bouncers_[i/2]->remote_socket_);
+        }
+    }
     return shutdown_;
 }
 
+/**
+ * Handles messages sent to the bouncer itself.
+ */
 void bouncer_thread::message(const data_chunk& data, bool more)
 {
     auto deserial = make_deserializer(data.begin(), data.end());
@@ -86,12 +109,17 @@ void bouncer_thread::message(const data_chunk& data, bool more)
 void bouncer_thread::add(std::string local, std::string remote)
 {
     bouncers_.push_back(new bouncer(ctx_, local, remote));
-    // items_[local] = *factory();
 }
 
 void bouncer_thread::remove(std::string local)
 {
-    //items_.erase[id]
+    auto i = std::find_if(bouncers_.begin(), bouncers_.end(),
+        [&local](bouncer* b){ return b->local_ == local; });
+    if (i != bouncers_.end())
+    {
+        delete *i;
+        bouncers_.erase(i);
+    }
 }
 
 bouncer_thread::bouncer::bouncer(void *ctx, std::string local, std::string remote)
@@ -104,7 +132,7 @@ bouncer_thread::bouncer::bouncer(void *ctx, std::string local, std::string remot
 bouncer_client::bouncer_client(void *ctx)
   : socket_(ctx)
 {
-    socket_.bind(CONTROL_ADDRESS);
+    socket_.bind(CONTROL_ADDRESS); // TODO: Check for errors!
 }
 
 void bouncer_client::shutdown()
