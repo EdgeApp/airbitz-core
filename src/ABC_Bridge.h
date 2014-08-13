@@ -46,6 +46,8 @@
 extern "C" {
 #endif
 
+    tABC_CC ABC_BridgeInitialize(tABC_Error *pError);
+
     tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
                                 tABC_BitcoinURIInfo **ppInfo,
                                 tABC_Error *pError);

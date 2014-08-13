@@ -70,6 +70,8 @@ struct WatcherInfo
     char *szPassword;
 };
 
+static uint8_t pubkey_version = 0x00;
+static uint8_t script_version = 0x05;
 typedef std::string WalletUUID;
 static std::map<WalletUUID, WatcherInfo*> watchers_;
 
@@ -91,6 +93,22 @@ static size_t      ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, siz
 static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx);
 static void       *ABC_BridgeWatcherStopThreaded(void *data);
 #endif
+
+/**
+ * Prepares the event subsystem for operation.
+ */
+tABC_CC ABC_BridgeInitialize(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    if (ABC_BridgeIsTestNet())
+    {
+        pubkey_version = 0x6f;
+        script_version = 0xc4;
+    }
+
+    return cc;
+}
 
 /**
  * Parses a Bitcoin URI and creates an info struct with the data found in the URI.
@@ -122,10 +140,10 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
     // allocate initial struct
     ABC_ALLOC_ARRAY(pInfo, 1, tABC_BitcoinURIInfo);
 
-    // XX semi-hack warning. Might not be BIP friendly. Convert "bitcoin://1zf7ef..." URIs to 
-    // "bitcoin:1zf7ef..." so that libwallet parser doesn't choke. "bitcoin://" URLs are the 
+    // XX semi-hack warning. Might not be BIP friendly. Convert "bitcoin://1zf7ef..." URIs to
+    // "bitcoin:1zf7ef..." so that libwallet parser doesn't choke. "bitcoin://" URLs are the
     // only style that are understood by email and SMS readers and will get forwarded
-    // to bitcoin wallets. Airbitz wallet creates "bitcoin://" URIs when requesting funds via 
+    // to bitcoin wallets. Airbitz wallet creates "bitcoin://" URIs when requesting funds via
     // email/SMS so it should be able to parse them as well. -paulvp
 
     ABC_STRDUP(uriString, szURI);
@@ -152,6 +170,13 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
         ABC_STRDUP(pInfo->szLabel, result.label.get().c_str());
     if (result.message)
         ABC_STRDUP(pInfo->szMessage, result.message.get().c_str());
+
+    // Reject altcoin addresses:
+    if (result.address.get().version() != pubkey_version &&
+        result.address.get().version() != script_version)
+    {
+        ABC_RET_ERROR(ABC_CC_ParseError, "Wrong network URI");
+    }
 
     // assign created info struct
     *ppInfo = pInfo;

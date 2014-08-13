@@ -119,6 +119,9 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // initialize the mutex system
     ABC_CHECK_RET(ABC_MutexInitialize(pError));
 
+    // initialize bridge
+    ABC_CHECK_RET(ABC_BridgeInitialize(pError));
+
     // initialize URL system
     ABC_CHECK_RET(ABC_URLInitialize(szCaCertPath, pError));
 
