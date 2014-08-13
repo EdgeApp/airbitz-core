@@ -362,6 +362,8 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
         // Try the server
         ABC_CHECK_RET(ABC_LoginFetch(pInfo, pError));
         ABC_CHECK_RET(ABC_LoginCheckValidUser(pInfo->szUserName, pError));
+        ABC_CHECK_RET(ABC_LoginCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
+        ABC_WalletSyncAll(pInfo->szUserName, pInfo->szPassword, &dataDirty, pError);
     }
     else
     {
@@ -391,16 +393,13 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
             pError->code = cc_fetch;
             goto exit;
         }
-    }
 
-    // check the credentials
-    ABC_CHECK_RET(ABC_LoginCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
+        // check the credentials
+        ABC_CHECK_RET(ABC_LoginCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
+    }
 
     // take this non-blocking opportunity to update the info from the server if needed
     ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
-
-    // And finally sync the wallets data, ignore failures
-    ABC_WalletSyncAll(pInfo->szUserName, pInfo->szPassword, &dataDirty, pError);
 exit:
     if (cc != ABC_CC_Ok)
     {
