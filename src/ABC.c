@@ -171,6 +171,8 @@ void ABC_Terminate()
     {
         ABC_ClearKeyCache(NULL);
 
+        ABC_BridgeTerminate();
+
         ABC_URLTerminate();
 
         ABC_FileIOTerminate();
@@ -2636,5 +2638,83 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
 
     ABC_BUF_FREE(Version);
 
+    return cc;
+}
+
+/**
+ * This should be called from the bouncer thread on exit to free resources
+ * used by ABC_EventWait.
+ */
+void ABC_EventEnd()
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    ABC_BridgeEnd();
+}
+
+/**
+ * This should be called from the bouncer thread on startup to allocate
+ * resources needed by ABC_EventWait.
+ */
+tABC_CC ABC_EventBegin(tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_BridgeBegin(pError));
+
+exit:
+    return cc;
+}
+
+/**
+ * Tells the bouncer thread to stop. This should be called from the main
+ * thread.
+ */
+tABC_CC ABC_EventStop(tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_BridgeStop(pError));
+
+exit:
+    return cc;
+}
+
+/**
+ * Sleeps until the core has work to do. This should be called from the
+ * bouncer thread.
+ * @return true if the thread should call this function again, or false
+ * if the thread should stop.
+ */
+int ABC_EventWait()
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    return ABC_BridgeWait();
+}
+
+/**
+ * Allows the core to run, reading data from its internal sockets and
+ * calling callbacks. This should be run from the main thread.
+ */
+tABC_CC ABC_EventUpdate(tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_BridgeUpdate(pError));
+
+exit:
     return cc;
 }

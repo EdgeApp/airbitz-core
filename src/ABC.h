@@ -982,6 +982,16 @@ extern "C" {
                                 char **szCsvData,
                                 tABC_Error *pError);
 
+    void ABC_EventEnd();
+
+    tABC_CC ABC_EventBegin(tABC_Error *pError);
+
+    tABC_CC ABC_EventStop(tABC_Error *pError);
+
+    int ABC_EventWait();
+
+    tABC_CC ABC_EventUpdate(tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif
