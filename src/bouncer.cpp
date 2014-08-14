@@ -8,10 +8,11 @@
  */
 
 #include "bouncer.hpp"
+#include <iostream>
 
 namespace abc {
 
-#define CONTROL_ADDRESS "ipc://abc-bouncer"
+#define CONTROL_ADDRESS "inproc://abc-bouncer"
 
 // Cross-thread message ID's:
 enum {
@@ -25,7 +26,8 @@ bouncer_thread::bouncer_thread(void *ctx)
   : ctx_(ctx), socket_(ctx),
     shutdown_(false), timeout_(0)
 {
-    socket_.connect(CONTROL_ADDRESS); // TODO: Check for errors!
+    if (!socket_.connect(CONTROL_ADDRESS)) // TODO: Report errors!
+        std::cout << "failed to setup thread socket" << std::endl;
 }
 
 bool bouncer_thread::wait()
@@ -68,7 +70,7 @@ bool bouncer_thread::wait()
                     bouncers_[i/2]->remote_socket_);
         }
     }
-    return shutdown_;
+    return !shutdown_;
 }
 
 /**
@@ -125,14 +127,17 @@ void bouncer_thread::remove(std::string local)
 bouncer_thread::bouncer::bouncer(void *ctx, std::string local, std::string remote)
   : local_(local), local_socket_(ctx), remote_socket_(ctx)
 {
-    local_socket_.bind(local); // TODO: Check for errors!
-    remote_socket_.connect(remote); // TODO: Check for errors!
+    if (!local_socket_.bind(local)) // TODO: Report errors!
+        std::cout << "bouncer: failed to bind local socket" << std::endl;
+    if (!remote_socket_.connect(remote)) // TODO: Report errors!
+        std::cout << "bouncer: failed to connect remote socket" << std::endl;
 }
 
 bouncer_client::bouncer_client(void *ctx)
-  : socket_(ctx)
+  : socket_(ctx), timeout_(std::chrono::steady_clock::now())
 {
-    socket_.bind(CONTROL_ADDRESS); // TODO: Check for errors!
+    if (!socket_.bind(CONTROL_ADDRESS)) // TODO: Report errors!
+        std::cout << "bouncer: failed to setup client socket" << std::endl;
 }
 
 void bouncer_client::shutdown()
@@ -147,6 +152,19 @@ void bouncer_client::shutdown()
 
 void bouncer_client::set_timeout(std::chrono::milliseconds delay)
 {
+    auto now = std::chrono::steady_clock::now();
+    auto then = now + delay;
+
+    auto spread = std::chrono::duration_cast<std::chrono::milliseconds>(
+        then - timeout_);
+
+    // Do not send the message if the bouncer is already scheduled to wake
+    // up at that time:
+    std::chrono::milliseconds epsilon(100);
+    if (-epsilon < spread && spread < epsilon)
+        return;
+    timeout_ = then;
+
     data_chunk data;
     data.resize(1 + 4);
     auto serial = make_serializer(data.begin());
