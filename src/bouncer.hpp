@@ -77,6 +77,8 @@ public:
 
 private:
     libbitcoin::client::zeromq_socket socket_;
+
+    std::chrono::steady_clock::time_point timeout_;
 };
 
 } // namespace abc
