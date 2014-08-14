@@ -42,6 +42,7 @@
 #include "ABC_General.h"
 #include "ABC_Wallet.h"
 #include "ABC_URL.h"
+#include "bouncer.hpp"
 #include <curl/curl.h>
 #include <wallet/wallet.hpp>
 #include <unordered_map>
@@ -74,6 +75,9 @@ static uint8_t pubkey_version = 0x00;
 static uint8_t script_version = 0x05;
 typedef std::string WalletUUID;
 static std::map<WalletUUID, WatcherInfo*> watchers_;
+static void *gContext = NULL;
+static abc::bouncer_thread* gThread = nullptr;
+static abc::bouncer_client* gClient = nullptr;
 
 #if !NETWORK_FAKE
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx);
@@ -97,7 +101,19 @@ static void       *ABC_BridgeWatcherStopThreaded(void *data);
 #endif
 
 /**
- * Prepares the event subsystem for operation.
+ * Frees resources used by the bridge.
+ */
+void ABC_BridgeTerminate()
+{
+    zmq_ctx_destroy(gContext);
+    gContext = NULL;
+
+    delete gClient;
+    gClient = nullptr;
+}
+
+/**
+ * Prepares the bridge for operation.
  */
 tABC_CC ABC_BridgeInitialize(tABC_Error *pError)
 {
@@ -109,6 +125,12 @@ tABC_CC ABC_BridgeInitialize(tABC_Error *pError)
         script_version = 0xc4;
     }
 
+    gContext = zmq_ctx_new();
+    ABC_CHECK_SYS(gContext, "zmq_ctx_new");
+
+    gClient = new abc::bouncer_client(gContext);
+
+exit:
     return cc;
 }
 
@@ -395,6 +417,8 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     char *szUserCopy;
     char *szPassCopy;
     char *szUUIDCopy;
+    std::string server;
+    std::string local = "inproc://";
 
     auto row = watchers_.find(szWalletUUID);
     if (row != watchers_.end()) {
@@ -403,7 +427,7 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     }
 
     watcherInfo = new WatcherInfo();
-    watcherInfo->watcher = new libwallet::watcher();
+    watcherInfo->watcher = new libwallet::watcher(gContext);
 
     ABC_STRDUP(szUserCopy, szUserName);
     ABC_STRDUP(szPassCopy, szPassword);
@@ -430,25 +454,32 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     };
     watcherInfo->watcher->set_height_callback(hcb);
 
+    // Select server:
     if (false && ppInfo->countObeliskServers > 0)
     {
         ABC_DebugLog("Using %s obelisk servers\n",
                 ppInfo->aszObeliskServers[0]);
-        watcherInfo->watcher->connect(ppInfo->aszObeliskServers[0]);
+        server = ppInfo->aszObeliskServers[0];
     }
     else
     {
         if (ABC_BridgeIsTestNet())
         {
             ABC_DebugLog("Using Fallback testnet obelisk servers: %s\n", TESTNET_OBELISK);
-            watcherInfo->watcher->connect(TESTNET_OBELISK);
+            server = TESTNET_OBELISK;
         }
         else
         {
             ABC_DebugLog("Using Fallback obelisk servers: %s\n", FALLBACK_OBELISK);
-            watcherInfo->watcher->connect(FALLBACK_OBELISK);
+            server = FALLBACK_OBELISK;
         }
     }
+
+    // Make network connections
+    local += szWalletUUID;
+    gClient->add_bouncer(local, server);
+    ABC_CHECK_SYS(watcherInfo->watcher->connect(local), "watcher.connect");
+
     ABC_BridgeWatcherLoad(watcherInfo, pError);
     watchers_[szWalletUUID] = watcherInfo;
 exit:
@@ -512,6 +543,7 @@ tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError)
         pthread_detach(handle);
     }
     // Remove watcher from map
+    gClient->remove_bouncer(szWalletUUID);
     watchers_.erase(szWalletUUID);
 exit:
 #endif // NETWORK_FAKE
@@ -1287,7 +1319,6 @@ static void *ABC_BridgeWatcherStopThreaded(void *data)
     WatcherInfo *watcherInfo = (WatcherInfo *) data;
 
     ABC_DebugLog("Disconnecting");
-    watcherInfo->watcher->disconnect();
     if (watcherInfo->watcher != NULL) {
         delete watcherInfo->watcher;
     }
@@ -1302,6 +1333,91 @@ static void *ABC_BridgeWatcherStopThreaded(void *data)
     return nullptr;
 }
 
-
 #endif // NETWORK_FAKE
+
+/**
+ * Frees the resources used by the event bouncer thread.
+ */
+void ABC_BridgeEnd()
+{
+    delete gThread;
+    gThread = nullptr;
+}
+
+/**
+ * Allocates the resources needed by the event bouncer thread.
+ */
+tABC_CC ABC_BridgeBegin(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_NULL(gContext);
+    ABC_CHECK_NULL(gClient);
+    gThread = new abc::bouncer_thread(gContext);
+
+exit:
+    return cc;
+}
+
+/**
+ * Asks the event bouncer thread to exit.
+ */
+tABC_CC ABC_BridgeStop(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_NULL(gClient);
+    gClient->shutdown();
+
+exit:
+    return cc;
+}
+
+/**
+ * Core event-notification mechanism.
+ *
+ * The core needs to respond to external events from time-to-time.
+ * These could be messages coming in from the network, timers going off,
+ * or other similar things.
+ *
+ * Since the core is a library without its own threads, it cannot act
+ * autonomously. Instead, the GUI needs to call into the core before
+ * it can do any work.
+ *
+ * To handle this, the GUI needs to spin up a thread which does nothing
+ * more than call ABC_BridgeWait in a loop. Each time ABC_BridgeWait returns,
+ * an event is waiting to be processed, and the GUI should call
+ * ABC_BridgeUpdate.
+ *
+ * Since ABC_BridgeUpdate can fire callbacks and such, the GUI probably wants
+ * to call this function from its main GUI thread, which is separate from the
+ * looper thread calling ABC_BridgeWait. To handle this, the GUI can use its
+ * native cross-thread messaging system to trigger the update.
+ *
+ * @return true if the thread should keep looping, or false if it should quit.
+ */
+int ABC_BridgeWait()
+{
+    return gThread->wait();
+}
+
+/**
+ * Processes incoming events. See ABC_BridgeWait.
+ */
+tABC_CC ABC_BridgeUpdate(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    std::chrono::milliseconds min_delay(0);
+    for (auto i: watchers_)
+    {
+        auto delay = i.second->watcher->wakeup();
+        if (delay.count() && (!min_delay.count() || delay < min_delay))
+            min_delay = delay;
+    }
+    if (min_delay.count())
+        gClient->set_timeout(min_delay);
+
+    return cc;
+}
 

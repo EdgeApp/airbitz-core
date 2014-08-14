@@ -46,6 +46,8 @@
 extern "C" {
 #endif
 
+    void ABC_BridgeTerminate();
+
     tABC_CC ABC_BridgeInitialize(tABC_Error *pError);
 
     tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
@@ -128,6 +130,16 @@ extern "C" {
     tABC_CC ABC_BridgeWatcherStatus(const char *szWalletUUID, tABC_Error *pError);
 
     bool ABC_BridgeIsTestNet();
+
+    void ABC_BridgeEnd();
+
+    tABC_CC ABC_BridgeBegin(tABC_Error *pError);
+
+    tABC_CC ABC_BridgeStop(tABC_Error *pError);
+
+    int ABC_BridgeWait();
+
+    tABC_CC ABC_BridgeUpdate(tABC_Error *pError);
 
 #ifdef __cplusplus
 }
