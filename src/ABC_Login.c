@@ -828,13 +828,11 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1, tABC_U08Buf LP1,
                         ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage_JSON,
                         ABC_SERVER_JSON_REPO_FIELD, szRepoAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
-    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+    ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
 
     // send the command
-    //ABC_CHECK_RET(ABC_URLPostString("http://httpbin.org/post", szPost, &szResults, pError));
-    //ABC_DebugLog("Results: %s", szResults);
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
-    ABC_DebugLog("Server results: %s", szResults);
+    ABC_DebugLog("Server results: %.50s", szResults);
 
     // decode the result
     ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
@@ -886,11 +884,11 @@ tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pEr
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
-    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+    ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
 
     // send the command
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
-    ABC_DebugLog("Server results: %s", szResults);
+    ABC_DebugLog("Server results: %.50s", szResults);
 
     // decode the result
     ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
@@ -1280,11 +1278,11 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldLP1, tABC_U
                                ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
     }
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
-    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+    ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
 
     // send the command
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
-    ABC_DebugLog("Server results: %s", szResults);
+    ABC_DebugLog("Server results: %.50s", szResults);
 
     ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
 exit:
@@ -1351,10 +1349,10 @@ tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf LP1,
                         ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
 
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
-    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+    ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
 
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
-    ABC_DebugLog("Server results: %s", szResults);
+    ABC_DebugLog("Server results: %.50s", szResults);
 
     ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
 exit:
@@ -2838,7 +2836,7 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LR
 
     // send the command
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
-    ABC_DebugLog("Server results: %s", szResults);
+    ABC_DebugLog("Server results: %.50s", szResults);
 
     // Check the result, and store json if successful
     ABC_CHECK_RET(ABC_URLCheckResults(szResults, &pJSON_Root, pError));
