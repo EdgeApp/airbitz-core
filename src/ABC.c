@@ -2120,13 +2120,15 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
 
     // must have 10 characters
     ABC_ALLOC(pRuleCount, sizeof(tABC_PasswordRule));
-    pRuleCount->szDescription = "Must have at least 10 characters";
+    char aPassRDesc[64];
+    snprintf(aPassRDesc, sizeof aPassRDesc, "Must have at least %d characters", ABC_MIN_PASS_LENGTH);
+    pRuleCount->szDescription = aPassRDesc;
     pRuleCount->bPassed = false;
     aRules[count] = pRuleCount;
     count++;
 
     // check the length
-    if (strlen(szPassword) >= 10)
+    if (strlen(szPassword) >= ABC_MIN_PASS_LENGTH)
     {
         pRuleCount->bPassed = true;
     }
