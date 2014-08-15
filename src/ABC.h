@@ -942,16 +942,14 @@ extern "C" {
                                 const char *szWalletUUID,
                                 tABC_Error *pError);
 
+    tABC_CC ABC_WatcherLoop(const char *szWalletUUID, tABC_Error *pError);
+
     tABC_CC ABC_WatchAddresses(const char *szUsername, const char *szPassword,
                                const char *szWalletUUID, tABC_Error *pError);
 
     tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError);
 
-    tABC_CC ABC_WatcherRestart(const char *szUserName,
-                               const char *szPassword,
-                               const char *szWalletUUID,
-                               bool clearCache,
-                               tABC_Error *pError);
+    tABC_CC ABC_WatcherDelete(const char *szWalletUUID, tABC_Error *pError);
 
     tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *height, tABC_Error *pError);
 

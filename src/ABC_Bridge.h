@@ -90,12 +90,11 @@ extern "C" {
                                    const char *walletUUID,
                                    tABC_Error *pError);
 
+    tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID, tABC_Error *pError);
+
     tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError);
 
-    tABC_CC ABC_BridgeWatcherRestart(const char *szUserName,
-                                     const char *szPassword,
-                                     const char *szWalletUUID,
-                                     bool clearCache, tABC_Error *pError);
+    tABC_CC ABC_BridgeWatcherDelete(const char *szWalletUUID, tABC_Error *pError);
 
     tABC_CC ABC_BridgeWatchAddr(const char *szUserName, const char *szPassword,
                                 const char *walletUUID, const char *address,

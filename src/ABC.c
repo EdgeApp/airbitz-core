@@ -2416,6 +2416,32 @@ exit:
 }
 
 /**
+ * Runs the watcher update loop. This function will run for an arbitrarily
+ * long amount of time as it works to keep the watcher up-to-date with the
+ * network. To cause the function to return, call ABC_WatcherStop.
+ *
+ * @param szUserName   UserName for the account
+ * @param szPassword   Password for the account
+ * @param szWalletUUID The wallet watcher to use
+ */
+tABC_CC ABC_WatcherLoop(const char *szWalletUUID,
+                        tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_BridgeWatcherLoop(szWalletUUID, pError));
+
+exit:
+
+    return cc;
+}
+
+/**
  * Stop the watcher for a wallet
  *
  * @param szUserName   UserName for the account
@@ -2440,7 +2466,7 @@ exit:
 }
 
 /**
- * Stop the watcher for a wallet
+ * Stop the watcher loop for a wallet.
  *
  * @param szWalletUUID The wallet watcher to use
  */
@@ -2461,18 +2487,12 @@ exit:
 }
 
 /**
- * Restart the watcher for a wallet
+ * Delete the watcher for a wallet. This must be called after the loop
+ * has completely stopped.
  *
- * @param szUserName   UserName for the account
- * @param szPassword   Password for the account
  * @param szWalletUUID The wallet watcher to use
- * @param clearCache   true if you want to rebuild the watcher cache
  */
-tABC_CC ABC_WatcherRestart(const char *szUserName,
-                           const char *szPassword,
-                           const char *szWalletUUID,
-                           bool clearCache,
-                           tABC_Error *pError)
+tABC_CC ABC_WatcherDelete(const char *szWalletUUID, tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
@@ -2481,7 +2501,7 @@ tABC_CC ABC_WatcherRestart(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_BridgeWatcherRestart(szUserName, szPassword, szWalletUUID, clearCache, pError));
+    ABC_CHECK_RET(ABC_BridgeWatcherDelete(szWalletUUID, pError));
 
 exit:
 
