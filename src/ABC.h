@@ -63,6 +63,7 @@
 #define ABC_VERSION "1.1.2"
 
 #define ABC_MIN_USERNAME_LENGTH 3
+#define ABC_MIN_PASS_LENGTH 10
 #define ABC_MIN_PIN_LENGTH 4
 
 #ifdef __cplusplus
