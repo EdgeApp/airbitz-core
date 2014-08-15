@@ -2094,28 +2094,28 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
 
     // must have upper case letter
     ABC_ALLOC(pRuleUC, sizeof(tABC_PasswordRule));
-    pRuleUC->szDescription = "Must have at least one upper case letter";
+    ABC_STRDUP(pRuleUC->szDescription, "Must have at least one upper case letter");
     pRuleUC->bPassed = false;
     aRules[count] = pRuleUC;
     count++;
 
     // must have lower case letter
     ABC_ALLOC(pRuleLC, sizeof(tABC_PasswordRule));
-    pRuleLC->szDescription = "Must have at least one lower case letter";
+    ABC_STRDUP(pRuleLC->szDescription, "Must have at least one lower case letter");
     pRuleLC->bPassed = false;
     aRules[count] = pRuleLC;
     count++;
 
     // must have number
     ABC_ALLOC(pRuleNum, sizeof(tABC_PasswordRule));
-    pRuleNum->szDescription = "Must have at least one number";
+    ABC_STRDUP(pRuleNum->szDescription, "Must have at least one number");
     pRuleNum->bPassed = false;
     aRules[count] = pRuleNum;
     count++;
 
     // must have special character
     ABC_ALLOC(pRuleSpec, sizeof(tABC_PasswordRule));
-    pRuleSpec->szDescription = "Must have at least one special character";
+    ABC_STRDUP(pRuleSpec->szDescription,  "Must have at least one special character");
     pRuleSpec->bPassed = false;
     aRules[count] = pRuleSpec;
     count++;
@@ -2123,8 +2123,8 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     // must have 10 characters
     ABC_ALLOC(pRuleCount, sizeof(tABC_PasswordRule));
     char aPassRDesc[64];
-    snprintf(aPassRDesc, sizeof aPassRDesc, "Must have at least %d characters", ABC_MIN_PASS_LENGTH);
-    pRuleCount->szDescription = aPassRDesc;
+    snprintf(aPassRDesc, sizeof(aPassRDesc), "Must have at least %d characters", ABC_MIN_PASS_LENGTH);
+    ABC_STRDUP(pRuleCount->szDescription, aPassRDesc);
     pRuleCount->bPassed = false;
     aRules[count] = pRuleCount;
     count++;
@@ -2237,6 +2237,7 @@ void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
     {
         for (int i = 0; i < nCount; i++)
         {
+            ABC_FREE_STR(aRules[i]->szDescription);
             // note we aren't free'ing the string because it uses heap strings
             ABC_CLEAR_FREE(aRules[i], sizeof(tABC_PasswordRule));
         }
