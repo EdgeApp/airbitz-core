@@ -4057,6 +4057,7 @@ tABC_CC ABC_TxGetAddresses(const char *szUserName,
     tABC_TxAddress **aAddresses = NULL;
     unsigned int count = 0;
 
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
@@ -4119,6 +4120,7 @@ exit:
     ABC_TxFreeAddresses(aAddresses, count);
 
     ABC_FileIOMutexUnlock(NULL);
+    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
