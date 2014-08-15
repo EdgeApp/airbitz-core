@@ -93,7 +93,6 @@ static void        *ABC_BridgeWatcherSerialize(void *pData);
 static tABC_CC     ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
 static size_t      ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx);
-static void       *ABC_BridgeWatcherStopThreaded(void *data);
 #endif
 
 /**
@@ -457,6 +456,22 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+#if !NETWORK_FAKE
+    auto row = watchers_.find(szWalletUUID);
+    if (row == watchers_.end())
+    {
+        ABC_DebugLog("Watcher %s does not exist\n", szWalletUUID);
+        goto exit;
+    }
+    row->second->watcher->loop();
+exit:
+#endif // NETWORK_FAKE
+    return cc;
+}
+
 tABC_CC ABC_BridgeWatchAddr(const char *szUserName,
                             const char *szPassword,
                             const char *szWalletUUID,
@@ -500,43 +515,49 @@ tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError)
     auto row = watchers_.find(szWalletUUID);
     if (row == watchers_.end())
     {
-        ABC_DebugLog("Watcher %s already initialized\n", szWalletUUID);
+        ABC_DebugLog("Watcher %s does not exist\n", szWalletUUID);
         goto exit;
     }
-
-    ABC_BridgeWatcherSerialize(row->second);
-
-    pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_BridgeWatcherStopThreaded, row->second))
-    {
-        pthread_detach(handle);
-    }
-    // Remove watcher from map
-    watchers_.erase(szWalletUUID);
+    row->second->watcher->stop();
 exit:
 #endif // NETWORK_FAKE
     return cc;
 }
 
-tABC_CC ABC_BridgeWatcherRestart(const char *szUserName,
-                                 const char *szPassword,
-                                 const char *szWalletUUID,
-                                 bool clearCache, tABC_Error *pError)
+tABC_CC ABC_BridgeWatcherDelete(const char *szWalletUUID, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 #if !NETWORK_FAKE
-    std::string filepath(ABC_BridgeWatcherFile(szUserName, szPassword, szWalletUUID));
-    auto row = watchers_.find(szWalletUUID);
-    ABC_CHECK_ASSERT(row != watchers_.end(),
-        ABC_CC_Error, "Unable find watcher");
 
-    ABC_BridgeWatcherStop(szWalletUUID, pError);
-    if (clearCache)
+    WatcherInfo *watcherInfo = NULL;
+
+    auto row = watchers_.find(szWalletUUID);
+    if (row == watchers_.end())
     {
-        std::remove(filepath.c_str());
+        ABC_DebugLog("Watcher %s does not exist\n", szWalletUUID);
+        goto exit;
     }
-    ABC_CHECK_RET(ABC_BridgeWatcherStart(szUserName, szPassword, szWalletUUID, pError));
-    ABC_CHECK_RET(ABC_WatchAddresses(szUserName, szPassword, szWalletUUID, pError));
+    watcherInfo = row->second;
+
+    // Remove info from map:
+    watchers_.erase(szWalletUUID);
+
+    // Delete watcher:
+    ABC_BridgeWatcherSerialize(watcherInfo);
+    if (watcherInfo->watcher != NULL) {
+        watcherInfo->watcher->disconnect();
+        delete watcherInfo->watcher;
+    }
+    watcherInfo->watcher = NULL;
+
+    // Delete info:
+    ABC_FREE_STR(watcherInfo->szUserName);
+    ABC_FREE_STR(watcherInfo->szPassword);
+    ABC_FREE_STR(watcherInfo->szWalletUUID);
+    if (watcherInfo != NULL) {
+        delete watcherInfo;
+    }
+
 exit:
 #endif // NETWORK_FAKE
     return cc;
@@ -1280,26 +1301,6 @@ static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx)
         for (auto b : bc::save_script(a.script))
             chunk.push_back(b);
     return bc::encode_hex(bc::sha256_hash(chunk));
-}
-
-static void *ABC_BridgeWatcherStopThreaded(void *data)
-{
-    WatcherInfo *watcherInfo = (WatcherInfo *) data;
-
-    ABC_DebugLog("Disconnecting");
-    watcherInfo->watcher->disconnect();
-    if (watcherInfo->watcher != NULL) {
-        delete watcherInfo->watcher;
-    }
-    ABC_DebugLog("Freeing");
-    watcherInfo->watcher = NULL;
-    ABC_FREE_STR(watcherInfo->szUserName);
-    ABC_FREE_STR(watcherInfo->szPassword);
-    ABC_FREE_STR(watcherInfo->szWalletUUID);
-    if (watcherInfo != NULL) {
-        delete watcherInfo;
-    }
-    return nullptr;
 }
 
 
