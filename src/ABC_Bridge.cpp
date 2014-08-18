@@ -899,8 +899,6 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
         cc = ABC_CC_Error;
         goto exit;
     }
-    ABC_DebugLog("ABC_BridgeTxCallback %s %s %s\n",
-        watcherInfo->szUserName, watcherInfo->szPassword, watcherInfo->szWalletUUID);
 
     txId = ABC_BridgeNonMalleableTxId(tx);
     malTxId = bc::encode_hex(bc::hash_transaction(tx));
