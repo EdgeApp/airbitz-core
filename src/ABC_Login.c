@@ -364,6 +364,7 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
         ABC_CHECK_RET(ABC_LoginCheckValidUser(pInfo->szUserName, pError));
         ABC_CHECK_RET(ABC_LoginCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
         ABC_WalletSyncAll(pInfo->szUserName, pInfo->szPassword, &dataDirty, pError);
+        ABC_CHECK_RET(ABC_WalletClearCache(pError));
     }
     else
     {
@@ -661,9 +662,6 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     ABC_CHECK_RET(ABC_SyncGetServer(pKeys->szRepoAcctKey, &szRepoURL, pError));
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
     ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
-
-    // Clear out login cache
-    ABC_CHECK_RET(ABC_LoginClearKeyCache(pError));
 exit:
     if (cc != ABC_CC_Ok)
     {
