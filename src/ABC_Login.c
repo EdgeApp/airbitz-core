@@ -466,7 +466,7 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_CryptoCreateJSONObjectSNRP(pKeys->pSNRP4, &pJSON_SNRP4, pError));
 
     // L = username
-    ABC_BUF_DUP_PTR(pKeys->L, pKeys->szUserName, strlen(pKeys->szUserName));
+    ABC_CHECK_RET(ABC_UtilBufDupUserPtr(pKeys->szUserName, &(pKeys->L), pError));
     //ABC_UtilHexDumpBuf("L", pKeys->L);
 
     // L1 = Scrypt(L, SNRP1)
@@ -629,7 +629,7 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     tABC_CryptoSNRP *pSNRP1 = NULL;
 
     // Create L, P, SNRP1, L1, LP1
-    ABC_BUF_DUP_PTR(L, pInfo->szUserName, strlen(pInfo->szUserName));
+    ABC_CHECK_RET(ABC_UtilBufDupUserPtr(pInfo->szUserName, &L, pError));
     ABC_BUF_DUP_PTR(P, pInfo->szPassword, strlen(pInfo->szPassword));
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP1, pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP1, &L1, pError));
@@ -2338,7 +2338,7 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
             ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP4, &(pKeys->pSNRP4), pError));
 
             // L = username
-            ABC_BUF_DUP_PTR(pKeys->L, pKeys->szUserName, strlen(pKeys->szUserName));
+            ABC_CHECK_RET(ABC_UtilBufDupUserPtr(pKeys->szUserName, &(pKeys->L), pError));
 
             // L1 = scrypt(L, SNRP1)
             ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP1, &(pKeys->L1), pError));
@@ -2632,7 +2632,7 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
     // and if successful, setup the account locally
     if (gCarePackageCache)
     {
-        ABC_BUF_DUP_PTR(L, szUserName, strlen(szUserName));
+        ABC_CHECK_RET(ABC_UtilBufDupUserPtr(szUserName, &L, pError));
 
         ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP1, pError));
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP1, &L1, pError));
@@ -2874,7 +2874,7 @@ tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecover
     json_t          *pJSON_SNRP4 = NULL;
 
     // Create L, SNRP1, L1
-    ABC_BUF_DUP_PTR(L, szUserName, strlen(szUserName));
+    ABC_CHECK_RET(ABC_UtilBufDupUserPtr(szUserName, &L, pError));
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP1, pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP1, &L1, pError));
 
