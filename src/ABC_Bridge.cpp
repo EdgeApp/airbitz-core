@@ -77,6 +77,7 @@ static std::map<WalletUUID, WatcherInfo*> watchers_;
 
 #if !NETWORK_FAKE
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx);
+static void        ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo, tABC_TxSendInfo *pSendInfo, tABC_UnsignedTx *pUtx, const std::error_code &e, const libbitcoin::transaction_type& tx);
 static void        ABC_BridgeHeightCallback(WatcherInfo *watcherInfo, size_t block_height);
 static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, libwallet::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
@@ -90,8 +91,6 @@ static std::string ABC_BridgeWatcherFile(const char *szUserName, const char *szP
 static tABC_CC     ABC_BridgeWatcherLoad(WatcherInfo *watcherInfo, tABC_Error *pError);
 static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
 static void        *ABC_BridgeWatcherSerialize(void *pData);
-static tABC_CC     ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
-static size_t      ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx);
 #endif
 
@@ -667,14 +666,17 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
 #if !NETWORK_FAKE
-    std::string txid, malleableId;
     std::vector<bc::elliptic_curve_key> keys;
     libwallet::unsigned_transaction_type *utx;
+    libwallet::watcher::tx_sent_callback scb;
+    WatcherInfo *watcherInfo = NULL;
 
     utx = (libwallet::unsigned_transaction_type *) pUtx->data;
     auto row = watchers_.find(pSendInfo->szWalletUUID);
     ABC_CHECK_ASSERT(row != watchers_.end(),
         ABC_CC_Error, "Unable find watcher");
+
+    watcherInfo = row->second;
 
     for (unsigned i = 0; i < keyCount; ++i)
     {
@@ -683,26 +685,15 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
         keys.push_back(k);
     }
 
+    scb = [watcherInfo, pSendInfo, pUtx](const std::error_code &e,
+                                         const::libbitcoin::transaction_type &tx)
+    {
+        ABC_BridgeSendTxCallback(watcherInfo, pSendInfo, pUtx, e, tx);
+    };
+    watcherInfo->watcher->set_tx_sent_callback(scb);
+
     if (!libwallet::sign_send_tx(*(row->second->watcher), *utx, keys))
         ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
-
-    txid = ABC_BridgeNonMalleableTxId(utx->tx);
-    ABC_STRDUP(pUtx->szTxId, txid.c_str());
-
-    malleableId = bc::encode_hex(bc::hash_transaction(utx->tx));
-    ABC_STRDUP(pUtx->szTxMalleableId, malleableId.c_str());
-
-    if (!ABC_BridgeIsTestNet())
-    {
-        if (ABC_BridgeBlockhainPostTx(utx, pError) != ABC_CC_Ok)
-        {
-            ABC_RET_ERROR(ABC_CC_ServerError, pError->szDescription);
-            ABC_DebugLog(pError->szDescription);
-        }
-    }
-
-    ABC_BridgeWatcherSerializeAsync(row->second);
-    ABC_BridgeExtractOutputs(row->second->watcher, utx, malleableId, pUtx, pError);
 exit:
 #endif // NETWORK_FAKE
     return cc;
@@ -982,6 +973,43 @@ exit:
 }
 
 static
+void ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo,
+                              tABC_TxSendInfo *pSendInfo,
+                              tABC_UnsignedTx *pUtx,
+                              const std::error_code &e,
+                              const libbitcoin::transaction_type& tx)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_Error *pError = new tABC_Error;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    std::string txid, malleableId;
+
+    libwallet::unsigned_transaction_type *utx =
+        (libwallet::unsigned_transaction_type *) pUtx->data;
+
+    if (e.value())
+    {
+        pError->code = ABC_CC_Error;
+        ABC_TxSendCompleteError(pSendInfo, pUtx, pError);
+    }
+    else
+    {
+        txid = ABC_BridgeNonMalleableTxId(utx->tx);
+        ABC_STRDUP(pUtx->szTxId, txid.c_str());
+
+        malleableId = bc::encode_hex(bc::hash_transaction(utx->tx));
+        ABC_STRDUP(pUtx->szTxMalleableId, malleableId.c_str());
+
+        ABC_BridgeWatcherSerializeAsync(watcherInfo);
+        ABC_BridgeExtractOutputs(watcherInfo->watcher, utx, malleableId, pUtx, pError);
+
+        ABC_TxSendComplete(pSendInfo, pUtx, pError);
+    }
+exit:
+    return;
+}
+
+static
 void ABC_BridgeHeightCallback(WatcherInfo *watcherInfo, size_t block_height)
 {
     tABC_Error error;
@@ -1223,67 +1251,6 @@ void *ABC_BridgeWatcherSerialize(void *pData)
         file.close();
     }
     return NULL;
-}
-
-static
-tABC_CC ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    CURL *pCurlHandle = NULL;
-    CURLcode curlCode;
-    long resCode;
-    std::string url, body, resBuffer;
-
-    bc::data_chunk raw_tx(satoshi_raw_size(utx->tx));
-    bc::satoshi_save(utx->tx, raw_tx.begin());
-    std::string encoded(bc::encode_hex(raw_tx));
-    std::string pretty(bc::pretty(utx->tx));
-
-    url.append("https://blockchain.info/pushtx");
-    body.append("tx=");
-    body.append(encoded);
-
-    ABC_DebugLog("%s\n", body.c_str());
-    ABC_DebugLog("\n");
-    ABC_DebugLog("%s\n", pretty.c_str());
-
-    ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
-    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, url.c_str())) == 0,
-        ABC_CC_Error, "Curl failed to set URL\n");
-    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_POSTFIELDS, body.c_str())) == 0,
-        ABC_CC_Error, "Curl failed to set post fields\n");
-    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &resBuffer)) == 0,
-        ABC_CC_Error, "Curl failed to set data\n");
-    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, ABC_BridgeCurlWriteData)) == 0,
-        ABC_CC_Error, "Curl failed to set callback\n");
-    ABC_CHECK_ASSERT((curlCode = curl_easy_perform(pCurlHandle)) == 0,
-        ABC_CC_Error, "Curl failed to perform\n");
-    ABC_CHECK_ASSERT((curlCode = curl_easy_getinfo(pCurlHandle, CURLINFO_RESPONSE_CODE, &resCode)) == 0,
-        ABC_CC_Error, "Curl failed to retrieve response info\n");
-
-    ABC_DebugLog("%s\n", resBuffer.c_str());
-    ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, resBuffer.c_str());
-exit:
-    if (pCurlHandle != NULL)
-        curl_easy_cleanup(pCurlHandle);
-
-    return cc;
-}
-
-static
-size_t ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData)
-{
-    std::string *pCurlBuffer = (std::string *) pUserData;
-    unsigned int dataAvailLength = (unsigned int) numMembers * (unsigned int) memberSize;
-    size_t amountWritten = 0;
-
-    if (pCurlBuffer)
-    {
-        pCurlBuffer->append((char *) pBuffer);
-        amountWritten = dataAvailLength;
-    }
-
-    return amountWritten;
 }
 
 /**

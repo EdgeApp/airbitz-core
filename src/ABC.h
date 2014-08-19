@@ -214,7 +214,8 @@ extern "C" {
         ABC_AsyncEventType_BlockHeightChange,
         ABC_AsyncEventType_ExchangeRateUpdate,
         ABC_AsyncEventType_DataSyncUpdate,
-        ABC_AsyncEventType_RemotePasswordChange
+        ABC_AsyncEventType_RemotePasswordChange,
+        ABC_AsyncEventType_SentFunds,
     } tABC_AsyncEventType;
 
     /**
@@ -231,6 +232,9 @@ extern "C" {
 
         /** type of event that occured */
         tABC_AsyncEventType eventType;
+
+        /* Return status of call */
+        tABC_Error status;
 
         /** if the event involved a wallet, this is its ID */
         char *szWalletUUID;
