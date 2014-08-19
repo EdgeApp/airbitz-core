@@ -41,7 +41,6 @@
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <jansson.h>
 #include "ABC.h"
 #include "ABC_Debug.h"
@@ -173,12 +172,6 @@ extern "C" {
         ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "strdup failed (returned NULL)"); \
     }
 
-#define ABC_STRLOWER(ptr) \
-    { \
-        char *p = ptr; \
-        while (*p != '\0') { *p = tolower(*p); ++p; } \
-    }
-
 #define ABC_FREE(ptr) \
     { \
         if (ptr != NULL) \
@@ -273,7 +266,6 @@ extern "C" {
                                                 (buf).end = (buf).p + __abc_buf_dup_size__; \
                                                 memcpy((buf).p, ptr, __abc_buf_dup_size__); \
                                             }
-
 #define ABC_BUF_SET(dst, src)               { (dst).p = (src).p; (dst).end = (src).end; }
 #define ABC_BUF_SET_PTR(buf, ptr, size)     { (buf).p = ptr; (buf).end = ptr + size; }
 #define ABC_BUF_ZERO(buf)                   { \
@@ -300,14 +292,6 @@ extern "C" {
 
     void ABC_UtilHexDumpBuf(const char *szDescription,
                             tABC_U08Buf Buf);
-
-    tABC_CC ABC_UtilUserFormat(const char *szUserName,
-                               char **szOut,
-                               tABC_Error *pError);
-
-    tABC_CC ABC_UtilBufDupUserPtr(const char *szUserName,
-                                  tABC_U08Buf *Buf,
-                                  tABC_Error *pError);
 
     tABC_CC ABC_UtilCreateValueJSONString(const char *szValue,
                                           const char *szFieldName,

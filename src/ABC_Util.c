@@ -100,39 +100,6 @@ void ABC_UtilHexDump(const char *szDescription,
     printf ("  %s\n", buff);
 }
 
-tABC_CC ABC_UtilUserFormat(const char *szUserName,
-                           char **szOut,
-                           tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szFormatted = NULL;
-
-    ABC_STRDUP(szFormatted, szUserName);
-    ABC_STRLOWER(szFormatted);
-
-    *szOut = szFormatted;
-    szFormatted = NULL;
-exit:
-
-    return cc;
-}
-
-tABC_CC ABC_UtilBufDupUserPtr(const char *szUserName,
-                              tABC_U08Buf *Buf,
-                              tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szFormatted = NULL;
-    ABC_CHECK_RET(ABC_UtilUserFormat(szUserName, &szFormatted, pError));
-    ABC_BUF_DUP_PTR(*Buf, szFormatted, strlen(szFormatted));
-exit:
-    ABC_FREE_STR(szFormatted);
-
-    return cc;
-}
-
 /**
  * Creates the json package with a single field and its value
  */
