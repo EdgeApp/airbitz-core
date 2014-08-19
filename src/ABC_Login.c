@@ -2033,6 +2033,7 @@ tABC_CC ABC_LoginNumForUser(const char *szUserName, int *pAccountNum, tABC_Error
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    char *szUserCopy    = NULL;
     char *szCurUserName = NULL;
     char *szAccountRoot = NULL;
     tABC_FileIOList *pFileList = NULL;
@@ -2042,6 +2043,8 @@ tABC_CC ABC_LoginNumForUser(const char *szUserName, int *pAccountNum, tABC_Error
 
     // assume we didn't find it
     *pAccountNum = -1;
+
+    ABC_CHECK_RET(ABC_UtilUserFormat(szUserName, &szUserCopy, pError));
 
     // make sure the accounts directory is in place
     ABC_CHECK_RET(ABC_LoginCreateRootDir(pError));
@@ -2067,9 +2070,10 @@ tABC_CC ABC_LoginNumForUser(const char *szUserName, int *pAccountNum, tABC_Error
 
                 // get the username for this account
                 ABC_CHECK_RET(ABC_LoginUserForNum(AccountNum, &szCurUserName, pError));
+                ABC_STRLOWER(szCurUserName);
 
                 // if this matches what we are looking for
-                if (strcmp(szUserName, szCurUserName) == 0)
+                if (strcmp(szUserCopy, szCurUserName) == 0)
                 {
                     *pAccountNum = AccountNum;
                     break;
@@ -2084,6 +2088,7 @@ tABC_CC ABC_LoginNumForUser(const char *szUserName, int *pAccountNum, tABC_Error
 exit:
     ABC_FREE_STR(szCurUserName);
     ABC_FREE_STR(szAccountRoot);
+    ABC_FREE_STR(szUserCopy);
     ABC_FileIOFreeFileList(pFileList);
 
     return cc;
