@@ -237,6 +237,14 @@ extern "C" {
                         char **pszUUID,
                         tABC_Error *pError);
 
+    tABC_CC ABC_TxSendCompleteError(tABC_TxSendInfo *pInfo,
+                                    tABC_UnsignedTx *utx,
+                                    tABC_Error *pError);
+
+    tABC_CC ABC_TxSendComplete(tABC_TxSendInfo *pInfo,
+                               tABC_UnsignedTx *utx,
+                               tABC_Error *pError);
+
     tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo,
                                 int64_t *pTotalFees,
                                 tABC_Error *pError);

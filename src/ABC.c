@@ -1583,7 +1583,6 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
     else
     {
         cc = ABC_TxSend(pTxSendInfo, (char**)pData, pError);
-        ABC_TxSendInfoFree(pTxSendInfo);
     }
 
 exit:
@@ -1667,7 +1666,6 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
     else
     {
         cc = ABC_TxSend(pTxSendInfo, (char**)pData, pError);
-        ABC_TxSendInfoFree(pTxSendInfo);
     }
 
 exit:

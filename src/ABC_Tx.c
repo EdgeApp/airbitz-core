@@ -332,9 +332,6 @@ void *ABC_TxSendThreaded(void *pData)
         results.szWalletUUID = strdup(pInfo->szWalletUUID);
         results.bSuccess = (CC == ABC_CC_Ok ? true : false);
         pInfo->fRequestCallback(&results);
-
-        // it is our responsibility to free the info struct
-        ABC_TxSendInfoFree(pInfo);
     }
 
     return NULL;
@@ -355,12 +352,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 #else
     tABC_CC cc = ABC_CC_Ok;
     tABC_U08Buf privSeed = ABC_BUF_NULL;
-    tABC_Tx *pTx = NULL;
-    tABC_Tx *pReceiveTx = NULL;
-    tABC_UnsignedTx utx;
-    bool bFound = false;
-    tABC_WalletInfo *pWallet = NULL;
-    double Currency;
+    tABC_UnsignedTx *pUtx;
 
     // Change address variables
     tABC_TxAddress *pChangeAddr = NULL;
@@ -372,10 +364,11 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
-    ABC_CHECK_NULL(pszTxID);
 
     // take this non-blocking opportunity to update the info from the server if needed
     ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
+
+    ABC_ALLOC(pUtx, sizeof(tABC_UnsignedTx));
 
     // find/create a change address
     ABC_CHECK_RET(ABC_TxCreateNewAddress(
@@ -395,7 +388,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // Make an unsigned transaction
     ABC_CHECK_RET(
         ABC_BridgeTxMake(pInfo, paAddresses, countAddresses,
-                         pChangeAddr->szPubAddress, &utx, pError));
+                         pChangeAddr->szPubAddress, pUtx, pError));
 
     // Fetch Private Seed
     ABC_CHECK_RET(
@@ -411,7 +404,51 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // Sign the transaction
     ABC_CHECK_RET(
         ABC_BridgeTxSignSend(pInfo, paPrivAddresses, privCountAddresses,
-                             &utx, pError));
+                             pUtx, pError));
+exit:
+    ABC_FREE(szPrivSeed);
+    ABC_TxFreeAddress(pChangeAddr);
+    ABC_UtilFreeStringArray(paAddresses, countAddresses);
+    ABC_TxMutexUnlock(NULL);
+    return cc;
+}
+
+tABC_CC ABC_TxSendCompleteError(tABC_TxSendInfo  *pInfo,
+                                tABC_UnsignedTx  *pUtx,
+                                tABC_Error       *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    if (gfAsyncBitCoinEventCallback)
+    {
+        tABC_AsyncBitCoinInfo info;
+        info.pData = pAsyncBitCoinCallerData;
+        info.status.code = pError->code;
+        info.eventType = ABC_AsyncEventType_SentFunds;
+        ABC_STRDUP(info.szWalletUUID, pInfo->szWalletUUID);
+        ABC_STRDUP(info.szDescription, "Send failed");
+        gfAsyncBitCoinEventCallback(&info);
+        ABC_FREE_STR(info.szWalletUUID);
+        ABC_FREE_STR(info.szDescription);
+    }
+exit:
+    ABC_FREE(pUtx->data);
+    ABC_FREE(pUtx);
+    ABC_TxSendInfoFree(pInfo);
+    return cc;
+}
+
+tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
+                           tABC_UnsignedTx  *pUtx,
+                           tABC_Error       *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_Tx *pTx = NULL;
+    tABC_Tx *pReceiveTx = NULL;
+    bool bFound = false;
+    tABC_WalletInfo *pWallet = NULL;
+    double Currency;
+
+    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // Start watching all addresses incuding new change addres
     ABC_CHECK_RET(ABC_TxWatchAddresses(pInfo->szUserName, pInfo->szPassword,
@@ -424,9 +461,9 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // set the state
     pTx->pStateInfo->timeCreation = time(NULL);
     pTx->pStateInfo->bInternal = true;
-    ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, utx.szTxMalleableId);
+    ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, pUtx->szTxMalleableId);
     // Copy outputs
-    ABC_TxCopyOuputs(pTx, utx.aOutputs, utx.countOutputs, pError);
+    ABC_TxCopyOuputs(pTx, pUtx->aOutputs, pUtx->countOutputs, pError);
     // copy the details
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
     // Add in tx fees to the amount of the tx
@@ -460,7 +497,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
         pTx->pDetails->amountCurrency *= -1.0;
 
     // Store transaction ID
-    ABC_STRDUP(pTx->szID, utx.szTxId);
+    ABC_STRDUP(pTx->szID, pUtx->szTxId);
     if (pInfo->bTransfer)
     {
         ABC_ALLOC(pReceiveTx, sizeof(tABC_Tx));
@@ -469,9 +506,9 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
         // set the state
         pReceiveTx->pStateInfo->timeCreation = time(NULL);
         pReceiveTx->pStateInfo->bInternal = true;
-        ABC_STRDUP(pReceiveTx->pStateInfo->szMalleableTxId, utx.szTxMalleableId);
+        ABC_STRDUP(pReceiveTx->pStateInfo->szMalleableTxId, pUtx->szTxMalleableId);
         // Copy outputs
-        ABC_TxCopyOuputs(pReceiveTx, utx.aOutputs, utx.countOutputs, pError);
+        ABC_TxCopyOuputs(pReceiveTx, pUtx->aOutputs, pUtx->countOutputs, pError);
         // copy the details
         ABC_CHECK_RET(ABC_TxDupDetails(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
 
@@ -489,7 +526,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
             pReceiveTx->pDetails->amountCurrency *= -1.0;
 
         // Store transaction ID
-        ABC_STRDUP(pReceiveTx->szID, utx.szTxId);
+        ABC_STRDUP(pReceiveTx->szID, pUtx->szTxId);
 
         // Set the payee and category for both txs
         ABC_CHECK_RET(ABC_TxTransferPopulate(pInfo, pTx, pReceiveTx, pError));
@@ -503,20 +540,27 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     ABC_CHECK_RET(
         ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword,
                               pInfo->szWalletUUID, pTx, pError));
-
-    // sync the data
-    ABC_CHECK_RET(ABC_DataSyncAll(pInfo->szUserName, pInfo->szPassword, pError));
-
-    // set the transaction id for the caller
-    ABC_STRDUP(*pszTxID, pTx->szID);
-
+    if (gfAsyncBitCoinEventCallback)
+    {
+        tABC_AsyncBitCoinInfo info;
+        info.pData = pAsyncBitCoinCallerData;
+        info.eventType = ABC_AsyncEventType_SentFunds;
+        info.status.code = ABC_CC_Ok;
+        ABC_STRDUP(info.szTxID, pTx->szID);
+        ABC_STRDUP(info.szWalletUUID, pInfo->szWalletUUID);
+        ABC_STRDUP(info.szDescription, "Send complete");
+        gfAsyncBitCoinEventCallback(&info);
+        ABC_FREE_STR(info.szTxID);
+        ABC_FREE_STR(info.szWalletUUID);
+        ABC_FREE_STR(info.szDescription);
+    }
 exit:
-    ABC_FREE(szPrivSeed);
     ABC_TxFreeTx(pTx);
     ABC_TxFreeTx(pReceiveTx);
-    ABC_TxFreeAddress(pChangeAddr);
-    ABC_UtilFreeStringArray(paAddresses, countAddresses);
-    ABC_TxFreeOutputs(utx.aOutputs, utx.countOutputs);
+    ABC_TxFreeOutputs(pUtx->aOutputs, pUtx->countOutputs);
+    ABC_FREE(pUtx->data);
+    ABC_FREE(pUtx);
+    ABC_TxSendInfoFree(pInfo);
     ABC_TxMutexUnlock(NULL);
     return cc;
 #endif
