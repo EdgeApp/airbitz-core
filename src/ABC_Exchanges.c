@@ -87,14 +87,10 @@ static void ABC_ExchangeFreeCacheEntry(tABC_ExchangeCacheEntry *pCache);
 /**
  * Initialize the AirBitz Exchanges.
  *
- * @param fAsyncBitCoinEventCallback    The function that should be called when there is an asynchronous
- *                                      BitCoin event
  * @param pData                         Pointer to data to be returned back in callback
  * @param pError                        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_ExchangeInitialize(tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                               void                        *pData,
-                               tABC_Error                  *pError)
+tABC_CC ABC_ExchangeInitialize(tABC_Error                  *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -129,8 +125,7 @@ tABC_CC ABC_ExchangeCurrentRate(const char *szUserName, const char *szPassword,
     }
     else
     {
-        ABC_CHECK_RET(
-            ABC_ExchangeAlloc(szUserName, szPassword, currencyNum, NULL, NULL, &pInfo, pError));
+        ABC_CHECK_RET(ABC_ExchangeAlloc(szUserName, szPassword, currencyNum, NULL, NULL, &pInfo, pError));
         ABC_CHECK_RET(ABC_ExchangeGetRate(pInfo, pRate, pError));
         ABC_ExchangeFreeInfo(pInfo);
     }

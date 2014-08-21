@@ -65,7 +65,6 @@
 struct WatcherInfo
 {
     libwallet::watcher *watcher;
-    libwallet::watcher::callback callback;
     std::set<std::string> addresses;
     char *szWalletUUID;
     char *szUserName;
@@ -77,10 +76,14 @@ static uint8_t script_version = 0x05;
 typedef std::string WalletUUID;
 static std::map<WalletUUID, WatcherInfo*> watchers_;
 
+// XXX: Hacky. These hold the state on a send which is used on the return
+// callback. It would be better to pass these into the watcher.
+static tABC_TxSendInfo *gSendInfo = NULL;
+static tABC_UnsignedTx *gUtx = NULL;
+
 #if !NETWORK_FAKE
-static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx);
-static void        ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo, tABC_TxSendInfo *pSendInfo, tABC_UnsignedTx *pUtx, const std::error_code &e, const libbitcoin::transaction_type& tx);
-static void        ABC_BridgeHeightCallback(WatcherInfo *watcherInfo, size_t block_height);
+static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
+static void        ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo, const std::error_code &e, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
 static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, libwallet::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr);
@@ -394,7 +397,6 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
 
 #if !NETWORK_FAKE
     tABC_GeneralInfo *ppInfo = NULL;
-    libwallet::watcher::block_height_callback hcb;
     WatcherInfo *watcherInfo = NULL;
     char *szUserCopy;
     char *szPassCopy;
@@ -417,22 +419,7 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     watcherInfo->szPassword = szPassCopy;
     watcherInfo->szWalletUUID = szUUIDCopy;
 
-    watcherInfo->callback = [watcherInfo] (const libbitcoin::transaction_type& tx)
-    {
-        ABC_BridgeTxCallback(watcherInfo, tx);
-    };
-
     ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
-    /* Set transaction callback */
-    ABC_DebugLog("Setting tx callback\n");
-    watcherInfo->watcher->set_callback(watcherInfo->callback);
-
-    ABC_DebugLog("Setting height callback\n");
-    hcb = [watcherInfo](const size_t height)
-    {
-        ABC_BridgeHeightCallback(watcherInfo, height);
-    };
-    watcherInfo->watcher->set_height_callback(hcb);
 
     if (false && ppInfo->countObeliskServers > 0)
     {
@@ -461,16 +448,46 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID, tABC_Error *pError)
+tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID, 
+                              tABC_BitCoin_Event_Callback fAsyncCallback,
+                              void *pData,
+                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 #if !NETWORK_FAKE
+    WatcherInfo *watcherInfo = NULL;
+    libwallet::watcher::block_height_callback heightCallback;
+    libwallet::watcher::callback txCallback;
+    libwallet::watcher::tx_sent_callback sendCallback;
+
     auto row = watchers_.find(szWalletUUID);
     if (row == watchers_.end())
     {
         ABC_DebugLog("Watcher %s does not exist\n", szWalletUUID);
         goto exit;
     }
+
+    watcherInfo = row->second;
+    txCallback = [watcherInfo, fAsyncCallback, pData] (const libbitcoin::transaction_type& tx)
+    {
+        ABC_BridgeTxCallback(watcherInfo, tx, fAsyncCallback, pData);
+    };
+    watcherInfo->watcher->set_callback(txCallback);
+
+    heightCallback = [watcherInfo, fAsyncCallback, pData](const size_t height)
+    {
+        tABC_Error error;
+        ABC_TxBlockHeightUpdate(height, fAsyncCallback, pData, &error);
+        ABC_BridgeWatcherSerializeAsync(watcherInfo);
+    };
+    watcherInfo->watcher->set_height_callback(heightCallback);
+
+    sendCallback = [watcherInfo, fAsyncCallback, pData](const std::error_code &e, const::libbitcoin::transaction_type &tx)
+    {
+        ABC_BridgeSendTxCallback(watcherInfo, e, tx, fAsyncCallback, pData);
+    };
+    watcherInfo->watcher->set_tx_sent_callback(sendCallback);
+
     row->second->watcher->loop();
 exit:
 #endif // NETWORK_FAKE
@@ -674,7 +691,6 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
 #if !NETWORK_FAKE
     std::vector<bc::elliptic_curve_key> keys;
     libwallet::unsigned_transaction_type *utx;
-    libwallet::watcher::tx_sent_callback scb;
     WatcherInfo *watcherInfo = NULL;
 
     utx = (libwallet::unsigned_transaction_type *) pUtx->data;
@@ -690,13 +706,9 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
         ABC_CHECK_RET(ABC_BridgeStringToEc(paPrivKey[i], k, pError));
         keys.push_back(k);
     }
-
-    scb = [watcherInfo, pSendInfo, pUtx](const std::error_code &e,
-                                         const::libbitcoin::transaction_type &tx)
-    {
-        ABC_BridgeSendTxCallback(watcherInfo, pSendInfo, pUtx, e, tx);
-    };
-    watcherInfo->watcher->set_tx_sent_callback(scb);
+    // Set global state....ewww
+    gSendInfo = pSendInfo;
+    gUtx = pUtx;
 
     if (!libwallet::sign_send_tx(*(row->second->watcher), *utx, keys))
     {
@@ -882,7 +894,9 @@ ABC_BridgeIsTestNet()
 
 #if !NETWORK_FAKE
 static
-void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx)
+void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx,
+                          tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                          void *pData)
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_Error error;
@@ -973,7 +987,10 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
             totalMeSatoshi, fees,
             iarr, iCount,
             oarr, oCount,
-            txId.c_str(), malTxId.c_str(), &error));
+            txId.c_str(), malTxId.c_str(), 
+            fAsyncBitCoinEventCallback,
+            pData,
+            &error));
     ABC_BridgeWatcherSerializeAsync(watcherInfo);
 exit:
     ABC_FREE(oarr);
@@ -982,15 +999,21 @@ exit:
 
 static
 void ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo,
-                              tABC_TxSendInfo *pSendInfo,
-                              tABC_UnsignedTx *pUtx,
                               const std::error_code &e,
-                              const libbitcoin::transaction_type& tx)
+                              const libbitcoin::transaction_type& tx,
+                              tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                              void *pData)
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_Error *pError = new tABC_Error;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     std::string txid, malleableId;
+
+    tABC_TxSendInfo *pSendInfo = gSendInfo;
+    tABC_UnsignedTx *pUtx = gUtx;
+
+    gSendInfo = NULL;
+    gUtx = NULL;
 
     libwallet::unsigned_transaction_type *utx =
         (libwallet::unsigned_transaction_type *) pUtx->data;
@@ -998,7 +1021,7 @@ void ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo,
     if (e.value())
     {
         pError->code = ABC_CC_Error;
-        ABC_TxSendCompleteError(pSendInfo, pUtx, pError);
+        ABC_TxSendCompleteError(pSendInfo, pUtx, fAsyncBitCoinEventCallback, pData, pError);
     }
     else
     {
@@ -1015,20 +1038,12 @@ void ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo,
         ABC_STRDUP(pUtx->szTxMalleableId, malleableId.c_str());
 
         ABC_BridgeWatcherSerializeAsync(watcherInfo);
-        ABC_BridgeExtractOutputs(watcherInfo->watcher, utx, malleableId, pUtx, pError);
+        ABC_BridgeExtractOutputs(watcherInfo->watcher, utx, malleableId, pUtx,pError);
 
-        ABC_TxSendComplete(pSendInfo, pUtx, pError);
+        ABC_TxSendComplete(pSendInfo, pUtx, fAsyncBitCoinEventCallback, pData, pError);
     }
 exit:
     return;
-}
-
-static
-void ABC_BridgeHeightCallback(WatcherInfo *watcherInfo, size_t block_height)
-{
-    tABC_Error error;
-    ABC_TxBlockHeightUpdate(block_height, &error);
-    ABC_BridgeWatcherSerializeAsync(watcherInfo);
 }
 
 static tABC_CC

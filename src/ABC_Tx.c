@@ -152,10 +152,6 @@ typedef struct sABC_TxAddress
     tTxAddressStateInfo *pStateInfo;
 } tABC_TxAddress;
 
-/** globally accessable function pointer for BitCoin event callbacks */
-static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
-static void *pAsyncBitCoinCallerData = NULL;
-
 static tABC_CC  ABC_TxCreateNewAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, tABC_TxDetails *pDetails, tABC_TxAddress **ppAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateNewAddressForN(const char *szUserName, const char *szPassword, const char *szWalletUUID, int32_t N, tABC_Error *pError);
 static tABC_CC  ABC_GetAddressFilename(const char *szWalletUUID, const char *szRequestID, char **pszFilename, tABC_Error *pError);
@@ -217,15 +213,9 @@ static tABC_CC  ABC_TxFakeSend(tABC_TxSendInfo  *pInfo, char **pszTxID, tABC_Err
 /**
  * Initializes the
  */
-tABC_CC ABC_TxInitialize(tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
-                         void                         *pData,
-                         tABC_Error                   *pError)
+tABC_CC ABC_TxInitialize(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-
-    gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
-    pAsyncBitCoinCallerData = pData;
-
     return cc;
 }
 
@@ -252,7 +242,6 @@ tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_NULL(szDestAddress);
     ABC_CHECK_NULL(pDetails);
-//    ABC_CHECK_NULL(fRequestCallback);
 
     ABC_ALLOC(pTxSendInfo, sizeof(tABC_TxSendInfo));
 
@@ -415,18 +404,20 @@ exit:
 
 tABC_CC ABC_TxSendCompleteError(tABC_TxSendInfo  *pInfo,
                                 tABC_UnsignedTx  *pUtx,
+                                tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                                void             *pData,
                                 tABC_Error       *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    if (gfAsyncBitCoinEventCallback)
+    if (fAsyncBitCoinEventCallback)
     {
         tABC_AsyncBitCoinInfo info;
-        info.pData = pAsyncBitCoinCallerData;
+        info.pData = pData;
         info.status.code = pError->code;
         info.eventType = ABC_AsyncEventType_SentFunds;
         ABC_STRDUP(info.szWalletUUID, pInfo->szWalletUUID);
         ABC_STRDUP(info.szDescription, "Send failed");
-        gfAsyncBitCoinEventCallback(&info);
+        fAsyncBitCoinEventCallback(&info);
         ABC_FREE_STR(info.szWalletUUID);
         ABC_FREE_STR(info.szDescription);
     }
@@ -439,6 +430,8 @@ exit:
 
 tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
                            tABC_UnsignedTx  *pUtx,
+                           tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                           void             *pData,
                            tABC_Error       *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -540,16 +533,16 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
     ABC_CHECK_RET(
         ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword,
                               pInfo->szWalletUUID, pTx, pError));
-    if (gfAsyncBitCoinEventCallback)
+    if (fAsyncBitCoinEventCallback)
     {
         tABC_AsyncBitCoinInfo info;
-        info.pData = pAsyncBitCoinCallerData;
+        info.pData = pData;
         info.eventType = ABC_AsyncEventType_SentFunds;
         info.status.code = ABC_CC_Ok;
         ABC_STRDUP(info.szTxID, pTx->szID);
         ABC_STRDUP(info.szWalletUUID, pInfo->szWalletUUID);
         ABC_STRDUP(info.szDescription, "Send complete");
-        gfAsyncBitCoinEventCallback(&info);
+        fAsyncBitCoinEventCallback(&info);
         ABC_FREE_STR(info.szTxID);
         ABC_FREE_STR(info.szWalletUUID);
         ABC_FREE_STR(info.szDescription);
@@ -887,15 +880,19 @@ exit:
 }
 
 tABC_CC
-ABC_TxBlockHeightUpdate(uint64_t height, tABC_Error *pError)
+ABC_TxBlockHeightUpdate(uint64_t height,
+                        tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                        void *pData,
+                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    if (gfAsyncBitCoinEventCallback)
+    if (fAsyncBitCoinEventCallback)
     {
         tABC_AsyncBitCoinInfo info;
         info.eventType = ABC_AsyncEventType_BlockHeightChange;
+        info.pData = pData;
         ABC_STRDUP(info.szDescription, "Block height change");
-        gfAsyncBitCoinEventCallback(&info);
+        fAsyncBitCoinEventCallback(&info);
         ABC_FREE_STR(info.szDescription);
     }
 exit:
@@ -917,6 +914,8 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
                                  tABC_TxOutput **paInAddresses, unsigned int inAddressCount,
                                  tABC_TxOutput **paOutAddresses, unsigned int outAddressCount,
                                  const char *szTxId, const char *szMalTxId,
+                                 tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                                 void *pData,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -984,15 +983,15 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
                         szUserName, szPassword, szWalletUUID, true,
                         pTx, paOutAddresses, outAddressCount, pError));
 
-        if (gfAsyncBitCoinEventCallback)
+        if (fAsyncBitCoinEventCallback)
         {
             tABC_AsyncBitCoinInfo info;
-            info.pData = pAsyncBitCoinCallerData;
+            info.pData = pData;
             info.eventType = ABC_AsyncEventType_IncomingBitCoin;
             ABC_STRDUP(info.szTxID, pTx->szID);
             ABC_STRDUP(info.szWalletUUID, szWalletUUID);
             ABC_STRDUP(info.szDescription, "Received funds");
-            gfAsyncBitCoinEventCallback(&info);
+            fAsyncBitCoinEventCallback(&info);
             ABC_FREE_STR(info.szTxID);
             ABC_FREE_STR(info.szDescription);
         }
@@ -4735,24 +4734,6 @@ static void *ABC_TxFakeReceiveThread(void *pData)
 
     // save the address
     ABC_CHECK_RET(ABC_TxSaveAddress(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pAddress, pError));
-
-    // alert the GUI
-    if (gfAsyncBitCoinEventCallback)
-    {
-        tABC_AsyncBitCoinInfo info;
-        info.pData = pAsyncBitCoinCallerData;
-        info.eventType = ABC_AsyncEventType_IncomingBitCoin;
-        ABC_STRDUP(info.szTxID, pTx->szID);
-        ABC_STRDUP(info.szWalletUUID, pInfo->szWalletUUID);
-        ABC_STRDUP(info.szDescription, "Received fake funds");
-        gfAsyncBitCoinEventCallback(&info);
-        ABC_FREE_STR(info.szTxID);
-        ABC_FREE_STR(info.szWalletUUID);
-        ABC_FREE_STR(info.szDescription);
-    }
-
-    //printf("We are here %s %s %s", pInfo->szUserName, pInfo->szWalletUUID, pInfo->szAddress);
-
 exit:
     ABC_TxFreeFakeRecieveInfo(pInfo);
     ABC_TxFreeAddress(pAddress);
@@ -4836,9 +4817,6 @@ tABC_CC ABC_TxFakeSend(tABC_TxSendInfo  *pInfo, char **pszTxID, tABC_Error *pErr
     }
     // save the transaction
     ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
-
-    // Sync the data
-    ABC_CHECK_RET(ABC_DataSyncAll(pInfo->szUserName, pInfo->szPassword, pError));
 
     // set the transaction id for the caller
     ABC_STRDUP(*pszTxID, pTx->szID);

@@ -79,9 +79,7 @@ extern "C" {
     } tABC_TxSendInfo;
 
 
-    tABC_CC ABC_TxInitialize(tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
-                             void                         *pData,
-                             tABC_Error                   *pError);
+    tABC_CC ABC_TxInitialize(tABC_Error *pError);
 
     tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
                              const tABC_TxDetails *pOldDetails,
@@ -122,7 +120,10 @@ extern "C" {
                                     int64_t *pSatoshi,
                                     tABC_Error *pError);
 
-    tABC_CC ABC_TxBlockHeightUpdate(uint64_t height, tABC_Error *pError);
+    tABC_CC ABC_TxBlockHeightUpdate(uint64_t height, 
+                                    tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                                    void *pData,
+                                    tABC_Error *pError);
 
     tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
                                      const char *szPassword,
@@ -131,6 +132,8 @@ extern "C" {
                                      tABC_TxOutput **paInAddress, unsigned int inAddressCount,
                                      tABC_TxOutput **paOutAddresses, unsigned int outAddressCount,
                                      const char *szTxId, const char *szMalTxId,
+                                     tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                                     void *pData,
                                      tABC_Error *pError);
 
     tABC_CC ABC_TxCreateInitialAddresses(const char *szUserName,
@@ -239,10 +242,14 @@ extern "C" {
 
     tABC_CC ABC_TxSendCompleteError(tABC_TxSendInfo *pInfo,
                                     tABC_UnsignedTx *utx,
+                                    tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                                    void             *pData,
                                     tABC_Error *pError);
 
     tABC_CC ABC_TxSendComplete(tABC_TxSendInfo *pInfo,
                                tABC_UnsignedTx *utx,
+                               tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                               void *pData,
                                tABC_Error *pError);
 
     tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo,
