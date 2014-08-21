@@ -62,10 +62,7 @@ extern "C" {
         void                  *pData;
     } tABC_ExchangeInfo;
 
-    tABC_CC ABC_ExchangeInitialize(
-                tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
-                void                         *pData,
-                tABC_Error                   *pError);
+    tABC_CC ABC_ExchangeInitialize(tABC_Error                   *pError);
 
     tABC_CC ABC_ExchangeCurrentRate(const char *szUserName, const char *szPassword,
                                     int currencyNum, double *pRate, tABC_Error *pError);

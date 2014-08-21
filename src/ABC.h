@@ -603,8 +603,6 @@ extern "C" {
 
     tABC_CC ABC_Initialize(const char                   *szRootDir,
                            const char                   *szCaCertPath,
-                           tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
-                           void                         *pData,
                            const unsigned char          *pSeedData,
                            unsigned int                 seedLength,
                            tABC_Error                   *pError);
@@ -937,7 +935,11 @@ extern "C" {
 
     void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings);
 
-    tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Error *pError);
+    tABC_CC ABC_DataSyncAll(const char *szUserName,
+                            const char *szPassword,
+                            tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                            void *pData,
+                            tABC_Error *pError);
 
     tABC_CC ABC_WatcherStatus(const char *szWalletUUID, tABC_Error *pError);
 
@@ -946,7 +948,10 @@ extern "C" {
                                 const char *szWalletUUID,
                                 tABC_Error *pError);
 
-    tABC_CC ABC_WatcherLoop(const char *szWalletUUID, tABC_Error *pError);
+    tABC_CC ABC_WatcherLoop(const char *szWalletUUID,
+                            tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                            void *pData,
+                            tABC_Error *pError);
 
     tABC_CC ABC_WatchAddresses(const char *szUsername, const char *szPassword,
                                const char *szWalletUUID, tABC_Error *pError);

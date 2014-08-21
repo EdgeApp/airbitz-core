@@ -90,7 +90,10 @@ extern "C" {
                                    const char *walletUUID,
                                    tABC_Error *pError);
 
-    tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID, tABC_Error *pError);
+    tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
+                                  tABC_BitCoin_Event_Callback fAsyncCallback,
+                                  void *pData,
+                                  tABC_Error *pError);
 
     tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError);
 

@@ -58,8 +58,6 @@
 #include "ABC_Sync.h"
 
 static bool gbInitialized = false;
-static tABC_BitCoin_Event_Callback gfAsyncBitCoinEventCallback = NULL;
-static void *pAsyncBitCoinCallerData = NULL;
 bool gbIsTestNet = false;
 
 static tABC_Currency gaCurrencies[] = {
@@ -89,8 +87,6 @@ static tABC_Currency gaCurrencies[] = {
  */
 tABC_CC ABC_Initialize(const char                   *szRootDir,
                        const char                   *szCaCertPath,
-                       tABC_BitCoin_Event_Callback  fAsyncBitCoinEventCallback,
-                       void                         *pData,
                        const unsigned char          *pSeedData,
                        unsigned int                 seedLength,
                        tABC_Error                   *pError)
@@ -112,10 +108,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // override the alloc and free of janson so we can have a secure method
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
-    // Set the callback and caller data
-    gfAsyncBitCoinEventCallback = fAsyncBitCoinEventCallback;
-    pAsyncBitCoinCallerData = pData;
-
     // initialize the mutex system
     ABC_CHECK_RET(ABC_MutexInitialize(pError));
 
@@ -129,10 +121,10 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_RET(ABC_FileIOInitialize(pError));
 
     // initialize Bitcoin transaction system
-    ABC_CHECK_RET(ABC_TxInitialize(fAsyncBitCoinEventCallback, pData, pError));
+    ABC_CHECK_RET(ABC_TxInitialize(pError));
 
     // initialize Bitcoin exchange system
-    ABC_CHECK_RET(ABC_ExchangeInitialize(fAsyncBitCoinEventCallback, pData, pError));
+    ABC_CHECK_RET(ABC_ExchangeInitialize(pError));
 
     // initialize Crypto perf checks to determine hashing power
     ABC_CHECK_RET(ABC_InitializeCrypto(pError));
@@ -2323,7 +2315,11 @@ void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings)
  * @param szUserName UserName for the account
  * @param szPassword Password for the account
  */
-tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Error *pError)
+tABC_CC ABC_DataSyncAll(const char *szUserName,
+                        const char *szPassword,
+                        tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                        void *pData,
+                        tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
@@ -2339,12 +2335,13 @@ tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Err
     // Try fetch login package, if it fails, notify password change
     if (fetchCC == ABC_CC_BadPassword)
     {
-        if (gfAsyncBitCoinEventCallback)
+        if (fAsyncBitCoinEventCallback)
         {
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_RemotePasswordChange;
+            info.pData = pData;
             ABC_STRDUP(info.szDescription, "Password changed");
-            gfAsyncBitCoinEventCallback(&info);
+            fAsyncBitCoinEventCallback(&info);
             ABC_FREE_STR(info.szDescription);
         }
     }
@@ -2354,12 +2351,13 @@ tABC_CC ABC_DataSyncAll(const char *szUserName, const char *szPassword, tABC_Err
         ABC_CHECK_RET(ABC_LoginSyncData(szUserName, szPassword, &accountDirty, pError));
         // Sync Wallet Data
         ABC_CHECK_RET(ABC_WalletSyncAll(szUserName, szPassword, &walletDirty, pError));
-        if ((accountDirty || walletDirty) && gfAsyncBitCoinEventCallback)
+        if ((accountDirty || walletDirty) && fAsyncBitCoinEventCallback)
         {
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
+            info.pData = pData;
             ABC_STRDUP(info.szDescription, "Data Updated");
-            gfAsyncBitCoinEventCallback(&info);
+            fAsyncBitCoinEventCallback(&info);
             ABC_FREE_STR(info.szDescription);
         }
     }
@@ -2426,6 +2424,8 @@ exit:
  * @param szWalletUUID The wallet watcher to use
  */
 tABC_CC ABC_WatcherLoop(const char *szWalletUUID,
+                        tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                        void *pData,
                         tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -2435,7 +2435,7 @@ tABC_CC ABC_WatcherLoop(const char *szWalletUUID,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_BridgeWatcherLoop(szWalletUUID, pError));
+    ABC_CHECK_RET(ABC_BridgeWatcherLoop(szWalletUUID, fAsyncBitCoinEventCallback, pData, pError));
 
 exit:
 
