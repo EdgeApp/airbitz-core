@@ -1,0 +1,7 @@
+#ifndef ABC_CONFIG_H
+#define ABC_CONFIG_H
+
+#define API_KEY_HEADER       "Authorization: Token <airbitz-auth-token>"
+#define CHAIN_API_USERPWD    "<chain-api-key>:<chain-api-key-secret>"
+
+#endif

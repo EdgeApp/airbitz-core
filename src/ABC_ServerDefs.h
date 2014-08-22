@@ -38,7 +38,7 @@
 #ifndef ABC_Defs_h
 #define ABC_Defs_h
 
-#define API_KEY_HEADER                      "Authorization: Token 0907a450f5479da4a03769ce8ecb47c184c85453"
+#include "config.h"
 
 #define ABC_SERVER_ROOT                     "https://mainnet.auth.airbitz.co/api/v1"
 #define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
