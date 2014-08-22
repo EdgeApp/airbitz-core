@@ -47,6 +47,8 @@
 #include <unordered_map>
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
 
+#include "config.h"
+
 #define FALLBACK_OBELISK "tcp://obelisk3.airbitz.co:9091"
 #define TESTNET_OBELISK "tcp://obelisk-testnet2.airbitz.co:9091"
 #define NO_AB_FEES
@@ -92,6 +94,10 @@ static tABC_CC     ABC_BridgeWatcherLoad(WatcherInfo *watcherInfo, tABC_Error *p
 static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
 static void        *ABC_BridgeWatcherSerialize(void *pData);
 static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx);
+
+static tABC_CC     ABC_BridgeChainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
+static size_t      ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 #endif
 
 /**
@@ -693,7 +699,9 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     watcherInfo->watcher->set_tx_sent_callback(scb);
 
     if (!libwallet::sign_send_tx(*(row->second->watcher), *utx, keys))
+    {
         ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
+    }
 exit:
 #endif // NETWORK_FAKE
     return cc;
@@ -994,6 +1002,12 @@ void ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo,
     }
     else
     {
+        ABC_BridgeChainPostTx(utx, pError);
+        if (!ABC_BridgeIsTestNet())
+        {
+            ABC_BridgeBlockhainPostTx(utx, pError);
+        }
+
         txid = ABC_BridgeNonMalleableTxId(utx->tx);
         ABC_STRDUP(pUtx->szTxId, txid.c_str());
 
@@ -1266,6 +1280,132 @@ static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx)
         for (auto b : bc::save_script(a.script))
             chunk.push_back(b);
     return bc::encode_hex(bc::sha256_hash(chunk));
+}
+
+static
+tABC_CC ABC_BridgeChainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    CURL *pCurlHandle = NULL;
+    CURLcode curlCode;
+    long resCode;
+    std::string url, resBuffer;
+    json_t *pJSON_Root = NULL;
+    char *szPut = NULL;
+
+    bc::data_chunk raw_tx(satoshi_raw_size(utx->tx));
+    bc::satoshi_save(utx->tx, raw_tx.begin());
+    std::string encoded(bc::encode_hex(raw_tx));
+    std::string pretty(bc::pretty(utx->tx));
+
+    if (ABC_BridgeIsTestNet())
+    {
+        url.append("https://api.chain.com/v1/testnet3/transactions");
+    }
+    else
+    {
+        url.append("https://api.chain.com/v1/bitcoin/transactions");
+    }
+
+    pJSON_Root = json_pack("{ss}", "hex", encoded.c_str());
+    szPut = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
+
+    ABC_DebugLog("URL: %s\n", url.c_str());
+    ABC_DebugLog("UserPwd: %s\n", CHAIN_API_USERPWD);
+    ABC_DebugLog("Body: %s\n", szPut);
+    ABC_DebugLog("\n");
+    ABC_DebugLog("%s\n", pretty.c_str());
+
+    ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, url.c_str())) == 0,
+        ABC_CC_Error, "Curl failed to set URL\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_USERPWD, CHAIN_API_USERPWD)) == 0,
+        ABC_CC_Error, "Curl failed to set User:Password\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_CUSTOMREQUEST, "PUT")) == 0,
+        ABC_CC_Error, "Curl failed to set Put\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_POSTFIELDS, szPut)) == 0,
+        ABC_CC_Error, "Curl failed to set post fields\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &resBuffer)) == 0,
+        ABC_CC_Error, "Curl failed to set data\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, ABC_BridgeCurlWriteData)) == 0,
+        ABC_CC_Error, "Curl failed to set callback\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_perform(pCurlHandle)) == 0,
+        ABC_CC_Error, "Curl failed to perform\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_getinfo(pCurlHandle, CURLINFO_RESPONSE_CODE, &resCode)) == 0,
+        ABC_CC_Error, "Curl failed to retrieve response info\n");
+
+    ABC_DebugLog("%s\n", resBuffer.c_str());
+    ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, resBuffer.c_str());
+exit:
+    if (pCurlHandle != NULL)
+    {
+        curl_easy_cleanup(pCurlHandle);
+    }
+    json_decref(pJSON_Root);
+    ABC_FREE_STR(szPut);
+    
+    return cc;
+}
+
+static
+tABC_CC ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    CURL *pCurlHandle = NULL;
+    CURLcode curlCode;
+    long resCode;
+    std::string url, body, resBuffer;
+
+    bc::data_chunk raw_tx(satoshi_raw_size(utx->tx));
+    bc::satoshi_save(utx->tx, raw_tx.begin());
+    std::string encoded(bc::encode_hex(raw_tx));
+    std::string pretty(bc::pretty(utx->tx));
+
+    url.append("https://blockchain.info/pushtx");
+    body.append("tx=");
+    body.append(encoded);
+
+    ABC_DebugLog("%s\n", body.c_str());
+    ABC_DebugLog("\n");
+    ABC_DebugLog("%s\n", pretty.c_str());
+
+    ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, url.c_str())) == 0,
+        ABC_CC_Error, "Curl failed to set URL\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_POSTFIELDS, body.c_str())) == 0,
+        ABC_CC_Error, "Curl failed to set post fields\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &resBuffer)) == 0,
+        ABC_CC_Error, "Curl failed to set data\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, ABC_BridgeCurlWriteData)) == 0,
+        ABC_CC_Error, "Curl failed to set callback\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_perform(pCurlHandle)) == 0,
+        ABC_CC_Error, "Curl failed to perform\n");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_getinfo(pCurlHandle, CURLINFO_RESPONSE_CODE, &resCode)) == 0,
+        ABC_CC_Error, "Curl failed to retrieve response info\n");
+
+    ABC_DebugLog("%s\n", resBuffer.c_str());
+    ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, resBuffer.c_str());
+exit:
+    if (pCurlHandle != NULL)
+        curl_easy_cleanup(pCurlHandle);
+
+    return cc;
+}
+
+static
+size_t ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData)
+{
+    std::string *pCurlBuffer = (std::string *) pUserData;
+    unsigned int dataAvailLength = (unsigned int) numMembers * (unsigned int) memberSize;
+    size_t amountWritten = 0;
+
+    if (pCurlBuffer)
+    {
+        pCurlBuffer->append((char *) pBuffer);
+        amountWritten = dataAvailLength;
+    }
+
+    return amountWritten;
 }
 
 
