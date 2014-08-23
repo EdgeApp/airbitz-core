@@ -8,7 +8,7 @@ namespace std {
 inline string to_string(int val)
 {
     char temp[64];
-    sprintf("%d", temp);
+    sprintf(temp, "%d", val);
     return string(temp);
 }
 
