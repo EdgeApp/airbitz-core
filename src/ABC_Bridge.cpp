@@ -1015,16 +1015,16 @@ void ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo,
     gSendInfo = NULL;
     gUtx = NULL;
 
-    libwallet::unsigned_transaction_type *utx =
-        (libwallet::unsigned_transaction_type *) pUtx->data;
-
-    if (e.value())
+    if (e.value() || pSendInfo == NULL || pUtx == NULL)
     {
         pError->code = ABC_CC_Error;
         ABC_TxSendCompleteError(pSendInfo, pUtx, fAsyncBitCoinEventCallback, pData, pError);
     }
     else
     {
+        libwallet::unsigned_transaction_type *utx =
+            (libwallet::unsigned_transaction_type *) pUtx->data;
+
         ABC_BridgeChainPostTx(utx, pError);
         if (!ABC_BridgeIsTestNet())
         {
@@ -1349,7 +1349,7 @@ tABC_CC ABC_BridgeChainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Er
     ABC_CHECK_ASSERT((curlCode = curl_easy_getinfo(pCurlHandle, CURLINFO_RESPONSE_CODE, &resCode)) == 0,
         ABC_CC_Error, "Curl failed to retrieve response info\n");
 
-    ABC_DebugLog("%s\n", resBuffer.c_str());
+    ABC_DebugLog("%.100s\n", resBuffer.c_str());
     ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, resBuffer.c_str());
 exit:
     if (pCurlHandle != NULL)
@@ -1398,7 +1398,7 @@ tABC_CC ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tAB
     ABC_CHECK_ASSERT((curlCode = curl_easy_getinfo(pCurlHandle, CURLINFO_RESPONSE_CODE, &resCode)) == 0,
         ABC_CC_Error, "Curl failed to retrieve response info\n");
 
-    ABC_DebugLog("%s\n", resBuffer.c_str());
+    ABC_DebugLog("%.100s\n", resBuffer.c_str());
     ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, resBuffer.c_str());
 exit:
     if (pCurlHandle != NULL)
