@@ -367,6 +367,7 @@ tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *p
     int dirty           = 0;
     unsigned int i      = 0;
     unsigned int nUUIDs = 0;
+    unsigned int nNew = 0;
 
     // Its not dirty...yet
     *pDirty = 0;
@@ -405,6 +406,7 @@ tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *p
             // Init repo
             ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDirectory, pError));
             ABC_FREE_STR(szSyncDirectory);
+            nNew++;
         }
 
         // Sync Wallet
@@ -415,6 +417,12 @@ tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *p
             ABC_CHECK_RET(ABC_WalletDirtyCache(szUserName, szPassword, szUUID, pError));
             *pDirty = 1;
         }
+    }
+
+    if (nNew > 0)
+    {
+        // If there are any new repos, clear wallet cache
+        ABC_CHECK_RET(ABC_WalletClearCache(pError));
     }
 exit:
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
