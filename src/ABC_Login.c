@@ -364,7 +364,6 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
         ABC_CHECK_RET(ABC_LoginCheckValidUser(pInfo->szUserName, pError));
         ABC_CHECK_RET(ABC_LoginCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
         ABC_WalletSyncAll(pInfo->szUserName, pInfo->szPassword, &dataDirty, pError);
-        ABC_CHECK_RET(ABC_WalletClearCache(pError));
     }
     else
     {
