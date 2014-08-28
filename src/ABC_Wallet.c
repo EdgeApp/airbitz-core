@@ -1210,7 +1210,10 @@ tABC_CC ABC_WalletGetInfo(const char *szUserName,
     if (pData->balanceDirty == true)
     {
         ABC_CHECK_RET(
-            ABC_GetTransactions(szUserName, szPassword, szUUID,
+            ABC_GetTransactions(szUserName, 
+                                szPassword, 
+                                szUUID, 
+                                ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
                                 &aTransactions, &nTxCount, pError));
         pData->balance = 0;
         for (int i = 0; i < nTxCount; i++)

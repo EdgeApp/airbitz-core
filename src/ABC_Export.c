@@ -222,23 +222,6 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_FilterExportData(const char *szWalletId,
-                             const int szStartDate,
-                             const int szEndDate,
-                             tABC_TxInfo ***pTransactions,
-                             int *iNumOfTransactions,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    
-//    tABC_TxInfo **pData = *pTransactions;
-    
-    debugGetTransactions(pTransactions, iNumOfTransactions, pError);
-    
-exit:
-    return cc;
-}
-
 tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
                             int iTransactionCount,
                             char **szCsvData,

@@ -160,7 +160,7 @@ static tABC_CC  ABC_TxSetAddressRecycle(const char *szUserName, const char *szPa
 static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *pbEquivalent, tABC_Error *pError);
 static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pType, char **pszBasename, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransactionInfo(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxInfo **ppTransaction, tABC_Error *pError);
-static tABC_CC  ABC_TxLoadTxAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadTxAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, int64_t startTime, int64_t endTime, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxGetAddressOwed(tABC_TxAddress *pAddr, int64_t *pSatoshiBalance, tABC_Error *pError);
 static tABC_CC  ABC_TxBuildFromLabel(const char *szUserName, const char *szPassword, char **pszLabel, tABC_Error *pError);
 static void     ABC_TxFreeRequest(tABC_RequestInfo *pRequest);
@@ -1901,7 +1901,9 @@ exit:
  *
  * @param szUserName        UserName for the account associated with the transactions
  * @param szPassword        Password for the account associated with the transactions
- * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions 
+ * @param startTime         Return transactions after this time 
+ * @param endTime           Return transactions before this time 
  * @param paTransactions    Pointer to store array of transactions info pointers
  * @param pCount            Pointer to store number of transactions
  * @param pError            A pointer to the location to store the error if there is one
@@ -1909,6 +1911,8 @@ exit:
 tABC_CC ABC_TxGetTransactions(const char *szUserName,
                               const char *szPassword,
                               const char *szWalletUUID,
+                              int64_t startTime,
+                              int64_t endTime,
                               tABC_TxInfo ***paTransactions,
                               unsigned int *pCount,
                               tABC_Error *pError)
@@ -1979,7 +1983,16 @@ tABC_CC ABC_TxGetTransactions(const char *szUserName,
                     if (bHasInternalEquivalent == false)
                     {
                         // add this transaction to the array
-                        ABC_CHECK_RET(ABC_TxLoadTxAndAppendToArray(szUserName, szPassword, szWalletUUID, szFilename, &aTransactions, &count, pError));
+                        
+                        ABC_CHECK_RET(ABC_TxLoadTxAndAppendToArray(szUserName, 
+                                                                   szPassword,
+                                                                   szWalletUUID, 
+                                                                   startTime, 
+                                                                   endTime, 
+                                                                   szFilename, 
+                                                                   &aTransactions, 
+                                                                   &count, 
+                                                                   pError));
                     }
                 }
             }
@@ -2044,7 +2057,8 @@ tABC_CC ABC_TxSearchTransactions(const char *szUserName,
     ABC_CHECK_NULL(pCount);
     *pCount = 0;
 
-    ABC_TxGetTransactions(szUserName, szPassword, szWalletUUID,
+    ABC_TxGetTransactions(szUserName, szPassword, szWalletUUID, 
+                          ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
                           &aTransactions, &count, pError);
     ABC_ALLOC(aSearchTransactions, sizeof(tABC_TxInfo*) * count);
     for (i = 0; i < count; i++) {
@@ -2325,6 +2339,8 @@ static
 tABC_CC ABC_TxLoadTxAndAppendToArray(const char *szUserName,
                                      const char *szPassword,
                                      const char *szWalletUUID,
+                                     int64_t startTime,
+                                     int64_t endTime,
                                      const char *szFilename,
                                      tABC_TxInfo ***paTransactions,
                                      unsigned int *pCount,
@@ -2355,25 +2371,31 @@ tABC_CC ABC_TxLoadTxAndAppendToArray(const char *szUserName,
     // load it into the info transaction structure
     ABC_CHECK_RET(ABC_TxLoadTransactionInfo(szUserName, szPassword, szWalletUUID, szFilename, &pTransaction, pError));
 
-    // create space for new entry
-    if (aTransactions == NULL)
+    if ((endTime == ABC_GET_TX_ALL_TIMES) ||
+        (pTransaction->timeCreation >= startTime &&
+         pTransaction->timeCreation < endTime))
     {
-        ABC_ALLOC(aTransactions, sizeof(tABC_TxInfo *));
-        count = 1;
-    }
-    else
-    {
-        count++;
-        ABC_REALLOC(aTransactions, sizeof(tABC_TxInfo *) * count);
-    }
+        // create space for new entry
+        if (aTransactions == NULL)
+        {
+            ABC_ALLOC(aTransactions, sizeof(tABC_TxInfo *));
+            count = 1;
+        }
+        else
+        {
+            count++;
+            ABC_REALLOC(aTransactions, sizeof(tABC_TxInfo *) * count);
+        }
 
-    // add it to the array
-    aTransactions[count - 1] = pTransaction;
-    pTransaction = NULL;
+        // add it to the array
+        aTransactions[count - 1] = pTransaction;
+        pTransaction = NULL;
 
-    // assign the values to the caller
-    *paTransactions = aTransactions;
-    *pCount = count;
+        // assign the values to the caller
+        *paTransactions = aTransactions;
+        *pCount = count;
+
+    }
 
 exit:
     ABC_TxFreeTransaction(pTransaction);

@@ -187,6 +187,8 @@ extern "C" {
     tABC_CC ABC_TxGetTransactions(const char *szUserName,
                                   const char *szPassword,
                                   const char *szWalletUUID,
+                                  int64_t startTime,
+                                  int64_t endTime,
                                   tABC_TxInfo ***paTransactions,
                                   unsigned int *pCount,
                                   tABC_Error *pError);
