@@ -957,6 +957,8 @@ extern "C" {
                             void *pData,
                             tABC_Error *pError);
 
+    tABC_CC ABC_WatcherConnect(const char *szWalletUUID, tABC_Error *pError);
+
     tABC_CC ABC_WatchAddresses(const char *szUsername, const char *szPassword,
                                const char *szWalletUUID, tABC_Error *pError);
 

@@ -95,6 +95,8 @@ extern "C" {
                                   void *pData,
                                   tABC_Error *pError);
 
+    tABC_CC ABC_BridgeWatcherConnect(const char *szWalletUUID, tABC_Error *pError);
+
     tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError);
 
     tABC_CC ABC_BridgeWatcherDelete(const char *szWalletUUID, tABC_Error *pError);
