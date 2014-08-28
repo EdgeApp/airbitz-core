@@ -399,7 +399,6 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
 
 #if !NETWORK_FAKE
-    tABC_GeneralInfo *ppInfo = NULL;
     WatcherInfo *watcherInfo = NULL;
     char *szUserCopy;
     char *szPassCopy;
@@ -422,32 +421,9 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     watcherInfo->szPassword = szPassCopy;
     watcherInfo->szWalletUUID = szUUIDCopy;
 
-    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
-
-    if (false && ppInfo->countObeliskServers > 0)
-    {
-        ABC_DebugLog("Using %s obelisk servers\n",
-                ppInfo->aszObeliskServers[0]);
-        watcherInfo->watcher->connect(ppInfo->aszObeliskServers[0]);
-    }
-    else
-    {
-        if (ABC_BridgeIsTestNet())
-        {
-            ABC_DebugLog("Using Fallback testnet obelisk servers: %s\n", TESTNET_OBELISK);
-            watcherInfo->watcher->connect(TESTNET_OBELISK);
-        }
-        else
-        {
-            ABC_DebugLog("Using Fallback obelisk servers: %s\n", FALLBACK_OBELISK);
-            watcherInfo->watcher->connect(FALLBACK_OBELISK);
-        }
-    }
-
     ABC_BridgeWatcherLoad(watcherInfo, pError);
     watchers_[szWalletUUID] = watcherInfo;
 exit:
-    ABC_GeneralFreeInfo(ppInfo);
 #endif // NETWORK_FAKE
     return cc;
 }
@@ -497,6 +473,49 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
 
     row->second->watcher->loop();
 exit:
+#endif // NETWORK_FAKE
+    return cc;
+}
+
+tABC_CC ABC_BridgeWatcherConnect(const char *szWalletUUID, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+#if !NETWORK_FAKE
+    tABC_GeneralInfo *ppInfo = NULL;
+    WatcherInfo *watcherInfo = NULL;
+
+    auto row = watchers_.find(szWalletUUID);
+    if (row == watchers_.end())
+    {
+        ABC_DebugLog("Watcher %s does not exist\n", szWalletUUID);
+        goto exit;
+    }
+
+    watcherInfo = row->second;
+
+    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
+    if (false && ppInfo->countObeliskServers > 0)
+    {
+        ABC_DebugLog("Using %s obelisk servers\n",
+                ppInfo->aszObeliskServers[0]);
+        watcherInfo->watcher->connect(ppInfo->aszObeliskServers[0]);
+    }
+    else
+    {
+        if (ABC_BridgeIsTestNet())
+        {
+            ABC_DebugLog("Using Fallback testnet obelisk servers: %s\n", TESTNET_OBELISK);
+            watcherInfo->watcher->connect(TESTNET_OBELISK);
+        }
+        else
+        {
+            ABC_DebugLog("Using Fallback obelisk servers: %s\n", FALLBACK_OBELISK);
+            watcherInfo->watcher->connect(FALLBACK_OBELISK);
+        }
+    }
+
+exit:
+    ABC_GeneralFreeInfo(ppInfo);
 #endif // NETWORK_FAKE
     return cc;
 }
