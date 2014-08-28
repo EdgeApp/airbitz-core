@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 
     char *szMatchAddr = argv[5];
 
-    MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, NULL, 0, seed, sizeof(seed), &error));
+    MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, seed, sizeof(seed), &error));
     MAIN_CHECK(ABC_WalletGetBitcoinPrivateSeed(argv[2], argv[3], argv[4], &data, &error));
 
     for (long i = start, c = 0; i <= end; i++, ++c)

@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, NULL, 0, seed, sizeof(seed), &error));
+    MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, seed, sizeof(seed), &error));
 
     MAIN_CHECK(ABC_LoginGetSyncKeys(argv[2], argv[3], &pKeys, &error));
     MAIN_CHECK(ABC_AccountWalletLoad(pKeys, argv[4], &info, &error));

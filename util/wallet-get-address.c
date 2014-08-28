@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     const char *szPassword = argv[3];
     const char *szUUID = argv[4];
 
-    MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, NULL, 0, seed, sizeof(seed), &error));
+    MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, seed, sizeof(seed), &error));
     MAIN_CHECK(ABC_SignIn(szUserName, szPassword, NULL, NULL, &error));
 
     tABC_TxDetails details;
