@@ -104,12 +104,6 @@ package_ios_universal() {
         mkdir -p $(dirname $package_dir/$f)
         ln -vs $build_dir/prefix/ios/armv7/$f $package_dir/$f
     done
-    for dep in $depends; do
-        for f in $(cat $build_dir/$dep/include-ios-armv7.txt); do
-            mkdir -p $(dirname $package_dir/$f)
-            ln -vs $build_dir/prefix/ios/armv7/$f $package_dir/$f
-        done
-    done
 
     # Make the archive:
     zip -r $recipe-ios-universal-$(date +%Y-%m-%d) $package_dir
