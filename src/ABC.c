@@ -1791,6 +1791,8 @@ exit:
 tABC_CC ABC_GetTransactions(const char *szUserName,
                             const char *szPassword,
                             const char *szWalletUUID,
+                            int64_t startTime,
+                            int64_t endTime,
                             tABC_TxInfo ***paTransactions,
                             unsigned int *pCount,
                             tABC_Error *pError)
@@ -1802,7 +1804,7 @@ tABC_CC ABC_GetTransactions(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxGetTransactions(szUserName, szPassword, szWalletUUID, paTransactions, pCount, pError));
+    ABC_CHECK_RET(ABC_TxGetTransactions(szUserName, szPassword, szWalletUUID, startTime, endTime, paTransactions, pCount, pError));
 
 exit:
     return cc;
@@ -2661,3 +2663,5 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
 
     return cc;
 }
+
+

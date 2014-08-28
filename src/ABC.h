@@ -66,6 +66,8 @@
 #define ABC_MIN_PASS_LENGTH 10
 #define ABC_MIN_PIN_LENGTH 4
 
+#define ABC_GET_TX_ALL_TIMES 0
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -860,6 +862,8 @@ extern "C" {
     tABC_CC ABC_GetTransactions(const char *szUserName,
                                 const char *szPassword,
                                 const char *szWalletUUID,
+                                int64_t startTime,
+                                int64_t endTime,
                                 tABC_TxInfo ***paTransactions,
                                 unsigned int *pCount,
                                 tABC_Error *pError);
