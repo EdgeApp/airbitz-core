@@ -524,7 +524,6 @@ tABC_CC ABC_BridgeWatchAddr(const char *szUserName,
                             const char *szPassword,
                             const char *szWalletUUID,
                             const char *pubAddress,
-                            bool prioritize,
                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -547,7 +546,38 @@ tABC_CC ABC_BridgeWatchAddr(const char *szUserName,
     }
     row->second->addresses.insert(pubAddress);
     row->second->watcher->watch_address(addr);
-    if (prioritize)
+exit:
+#endif // NETWORK_FAKE
+    return cc;
+}
+
+tABC_CC ABC_BridgePrioritizeAddress(const char *szUserName,
+                                    const char *szPassword,
+                                    const char *szWalletUUID,
+                                    const char *szAddress,
+                                    tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+#if !NETWORK_FAKE
+    auto row = watchers_.find(szWalletUUID);
+    bc::payment_address addr;
+
+    if (row == watchers_.end())
+    {
+        goto exit;
+    }
+
+    if (szAddress)
+    {
+        if (!addr.set_encoded(szAddress))
+        {
+            cc = ABC_CC_Error;
+            ABC_DebugLog("Invalid szAddress %s\n", szAddress);
+            goto exit;
+        }
+        row->second->watcher->prioritize_address(addr);
+    }
+    else
     {
         row->second->watcher->prioritize_address(addr);
     }
@@ -566,6 +596,7 @@ tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError)
         ABC_DebugLog("Watcher %s does not exist\n", szWalletUUID);
         goto exit;
     }
+    row->second->watcher->disconnect();
     row->second->watcher->stop();
 exit:
 #endif // NETWORK_FAKE
@@ -593,7 +624,6 @@ tABC_CC ABC_BridgeWatcherDelete(const char *szWalletUUID, tABC_Error *pError)
     // Delete watcher:
     ABC_BridgeWatcherSerialize(watcherInfo);
     if (watcherInfo->watcher != NULL) {
-        watcherInfo->watcher->disconnect();
         delete watcherInfo->watcher;
     }
     watcherInfo->watcher = NULL;
