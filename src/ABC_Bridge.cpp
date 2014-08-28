@@ -42,6 +42,7 @@
 #include "ABC_General.h"
 #include "ABC_Wallet.h"
 #include "ABC_URL.h"
+#include "picker.hpp"
 #include <curl/curl.h>
 #include <wallet/wallet.hpp>
 #include <unordered_map>
@@ -66,6 +67,8 @@ struct WatcherInfo
 {
     libwallet::watcher *watcher;
     std::set<std::string> addresses;
+    tABC_BitCoin_Event_Callback fAsyncCallback;
+    void *pData;
     char *szWalletUUID;
     char *szUserName;
     char *szPassword;
@@ -84,8 +87,8 @@ static tABC_UnsignedTx *gUtx = NULL;
 #if !NETWORK_FAKE
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
 static void        ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo, const std::error_code &e, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
-static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, libwallet::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
-static tABC_CC     ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, picker::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeTxErrorHandler(picker::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr);
 static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash);
 static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
@@ -98,8 +101,8 @@ static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
 static void        *ABC_BridgeWatcherSerialize(void *pData);
 static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx);
 
-static tABC_CC     ABC_BridgeChainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
-static tABC_CC     ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeChainPostTx(picker::unsigned_transaction_type *utx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeBlockhainPostTx(picker::unsigned_transaction_type *utx, tABC_Error *pError);
 static size_t      ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 #endif
 
@@ -440,6 +443,7 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
             watcherInfo->watcher->connect(FALLBACK_OBELISK);
         }
     }
+
     ABC_BridgeWatcherLoad(watcherInfo, pError);
     watchers_[szWalletUUID] = watcherInfo;
 exit:
@@ -468,6 +472,9 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     }
 
     watcherInfo = row->second;
+    watcherInfo->fAsyncCallback = fAsyncCallback;
+    watcherInfo->pData = pData;
+
     txCallback = [watcherInfo, fAsyncCallback, pData] (const libbitcoin::transaction_type& tx)
     {
         ABC_BridgeTxCallback(watcherInfo, tx, fAsyncCallback, pData);
@@ -482,10 +489,10 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     };
     watcherInfo->watcher->set_height_callback(heightCallback);
 
-    sendCallback = [watcherInfo, fAsyncCallback, pData](const std::error_code &e, const::libbitcoin::transaction_type &tx)
-    {
-        ABC_BridgeSendTxCallback(watcherInfo, e, tx, fAsyncCallback, pData);
-    };
+    // sendCallback = [watcherInfo, fAsyncCallback, pData](const std::error_code &e, const::libbitcoin::transaction_type &tx)
+    // {
+    //     ABC_BridgeSendTxCallback(watcherInfo, e, tx, fAsyncCallback, pData);
+    // };
     watcherInfo->watcher->set_tx_sent_callback(sendCallback);
 
     row->second->watcher->loop();
@@ -595,8 +602,8 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
 #if !NETWORK_FAKE
     tABC_GeneralInfo *ppInfo = NULL;
     bc::payment_address change, ab, dest;
-    libwallet::fee_schedule schedule;
-    libwallet::unsigned_transaction_type *utx;
+    picker::fee_schedule schedule;
+    picker::unsigned_transaction_type *utx;
     bc::transaction_output_list outputs;
     uint64_t totalAmountSatoshi = 0, abFees = 0, minerFees = 0;
     std::vector<bc::payment_address> addresses_;
@@ -607,7 +614,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
         ABC_CC_Error, "Unable find watcher");
 
     // Alloc a new utx
-    utx = new libwallet::unsigned_transaction_type();
+    utx = new picker::unsigned_transaction_type();
     ABC_CHECK_ASSERT(utx != NULL,
         ABC_CC_NULLPtr, "Unable alloc unsigned_transaction_type");
 
@@ -667,7 +674,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
                     change.encoded().c_str(),
                     pSendInfo->pDetails->amountSatoshi,
                     totalAmountSatoshi);
-    if (!libwallet::make_tx(*(row->second->watcher), addresses_, change,
+    if (!picker::make_tx(*(row->second->watcher), addresses_, change,
                             totalAmountSatoshi, schedule, outputs, *utx))
     {
         ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
@@ -690,10 +697,10 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     tABC_CC cc = ABC_CC_Ok;
 #if !NETWORK_FAKE
     std::vector<bc::elliptic_curve_key> keys;
-    libwallet::unsigned_transaction_type *utx;
+    picker::unsigned_transaction_type *utx;
     WatcherInfo *watcherInfo = NULL;
 
-    utx = (libwallet::unsigned_transaction_type *) pUtx->data;
+    utx = (picker::unsigned_transaction_type *) pUtx->data;
     auto row = watchers_.find(pSendInfo->szWalletUUID);
     ABC_CHECK_ASSERT(row != watchers_.end(),
         ABC_CC_Error, "Unable find watcher");
@@ -710,11 +717,36 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     gSendInfo = pSendInfo;
     gUtx = pUtx;
 
-    if (!libwallet::sign_send_tx(*(row->second->watcher), *utx, keys))
+    // Sign the transaction
+    if (!picker::sign_tx(*utx, keys))
     {
         ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
     }
+
+    // Send to chain
+    cc = ABC_BridgeChainPostTx(utx, pError);
+    // If we are not on testnet and chain failed try block chain as well
+    if (!ABC_BridgeIsTestNet())
+    {
+        if (cc == ABC_CC_Ok)
+            ABC_BridgeBlockhainPostTx(utx, pError);
+        else
+            cc = ABC_BridgeBlockhainPostTx(utx, pError);
+    }
+
+    if (cc == ABC_CC_Ok)
+    {
+        // This will mark the outputs as spent
+        watcherInfo->watcher->send_tx(utx->tx);
+        std::error_code e;
+        ABC_BridgeSendTxCallback(watcherInfo, e, utx->tx, watcherInfo->fAsyncCallback, watcherInfo->pData);
+    }
 exit:
+    if (cc != ABC_CC_Ok)
+    {
+        std::error_code e(1, std::system_category());
+        ABC_BridgeSendTxCallback(watcherInfo, e, utx->tx, watcherInfo->fAsyncCallback, watcherInfo->pData);
+    }
 #endif // NETWORK_FAKE
     return cc;
 }
@@ -1022,8 +1054,8 @@ void ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo,
     }
     else
     {
-        libwallet::unsigned_transaction_type *utx =
-            (libwallet::unsigned_transaction_type *) pUtx->data;
+        picker::unsigned_transaction_type *utx =
+            (picker::unsigned_transaction_type *) pUtx->data;
 
         ABC_BridgeChainPostTx(utx, pError);
         if (!ABC_BridgeIsTestNet())
@@ -1047,7 +1079,7 @@ exit:
 }
 
 static tABC_CC
-ABC_BridgeExtractOutputs(libwallet::watcher *watcher, libwallet::unsigned_transaction_type *utx,
+ABC_BridgeExtractOutputs(libwallet::watcher *watcher, picker::unsigned_transaction_type *utx,
                          std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1092,16 +1124,16 @@ exit:
 }
 
 static
-tABC_CC ABC_BridgeTxErrorHandler(libwallet::unsigned_transaction_type *utx, tABC_Error *pError)
+tABC_CC ABC_BridgeTxErrorHandler(picker::unsigned_transaction_type *utx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     switch (utx->code)
     {
-        case libwallet::insufficent_funds:
+        case picker::insufficent_funds:
             ABC_RET_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds.");
-        case libwallet::invalid_key:
+        case picker::invalid_key:
             ABC_RET_ERROR(ABC_CC_Error, "Invalid address.");
-        case libwallet::invalid_sig:
+        case picker::invalid_sig:
             ABC_RET_ERROR(ABC_CC_Error, "Unable to sign.");
         default:
             break;
@@ -1298,7 +1330,7 @@ static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx)
 }
 
 static
-tABC_CC ABC_BridgeChainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError)
+tABC_CC ABC_BridgeChainPostTx(picker::unsigned_transaction_type *utx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     CURL *pCurlHandle = NULL;
@@ -1363,7 +1395,7 @@ exit:
 }
 
 static
-tABC_CC ABC_BridgeBlockhainPostTx(libwallet::unsigned_transaction_type *utx, tABC_Error *pError)
+tABC_CC ABC_BridgeBlockhainPostTx(picker::unsigned_transaction_type *utx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     CURL *pCurlHandle = NULL;
