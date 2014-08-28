@@ -452,7 +452,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID, 
+tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
                               tABC_BitCoin_Event_Callback fAsyncCallback,
                               void *pData,
                               tABC_Error *pError)
@@ -479,7 +479,7 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     {
         ABC_BridgeTxCallback(watcherInfo, tx, fAsyncCallback, pData);
     };
-    watcherInfo->watcher->set_callback(txCallback);
+    watcherInfo->watcher->set_callback(std::move(txCallback));
 
     heightCallback = [watcherInfo, fAsyncCallback, pData](const size_t height)
     {
@@ -487,13 +487,13 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
         ABC_TxBlockHeightUpdate(height, fAsyncCallback, pData, &error);
         ABC_BridgeWatcherSerializeAsync(watcherInfo);
     };
-    watcherInfo->watcher->set_height_callback(heightCallback);
+    watcherInfo->watcher->set_height_callback(std::move(heightCallback));
 
     // sendCallback = [watcherInfo, fAsyncCallback, pData](const std::error_code &e, const::libbitcoin::transaction_type &tx)
     // {
     //     ABC_BridgeSendTxCallback(watcherInfo, e, tx, fAsyncCallback, pData);
     // };
-    watcherInfo->watcher->set_tx_sent_callback(sendCallback);
+    // watcherInfo->watcher->set_tx_sent_callback(sendCallback);
 
     row->second->watcher->loop();
 exit:
@@ -1019,7 +1019,7 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
             totalMeSatoshi, fees,
             iarr, iCount,
             oarr, oCount,
-            txId.c_str(), malTxId.c_str(), 
+            txId.c_str(), malTxId.c_str(),
             fAsyncBitCoinEventCallback,
             pData,
             &error));
@@ -1390,7 +1390,7 @@ exit:
     }
     json_decref(pJSON_Root);
     ABC_FREE_STR(szPut);
-    
+
     return cc;
 }
 
