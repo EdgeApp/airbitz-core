@@ -399,7 +399,6 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
 
 #if !NETWORK_FAKE
-    tABC_GeneralInfo *ppInfo = NULL;
     WatcherInfo *watcherInfo = NULL;
     char *szUserCopy;
     char *szPassCopy;
@@ -422,37 +421,14 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     watcherInfo->szPassword = szPassCopy;
     watcherInfo->szWalletUUID = szUUIDCopy;
 
-    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
-
-    if (false && ppInfo->countObeliskServers > 0)
-    {
-        ABC_DebugLog("Using %s obelisk servers\n",
-                ppInfo->aszObeliskServers[0]);
-        watcherInfo->watcher->connect(ppInfo->aszObeliskServers[0]);
-    }
-    else
-    {
-        if (ABC_BridgeIsTestNet())
-        {
-            ABC_DebugLog("Using Fallback testnet obelisk servers: %s\n", TESTNET_OBELISK);
-            watcherInfo->watcher->connect(TESTNET_OBELISK);
-        }
-        else
-        {
-            ABC_DebugLog("Using Fallback obelisk servers: %s\n", FALLBACK_OBELISK);
-            watcherInfo->watcher->connect(FALLBACK_OBELISK);
-        }
-    }
-
     ABC_BridgeWatcherLoad(watcherInfo, pError);
     watchers_[szWalletUUID] = watcherInfo;
 exit:
-    ABC_GeneralFreeInfo(ppInfo);
 #endif // NETWORK_FAKE
     return cc;
 }
 
-tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID, 
+tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
                               tABC_BitCoin_Event_Callback fAsyncCallback,
                               void *pData,
                               tABC_Error *pError)
@@ -479,7 +455,7 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     {
         ABC_BridgeTxCallback(watcherInfo, tx, fAsyncCallback, pData);
     };
-    watcherInfo->watcher->set_callback(txCallback);
+    watcherInfo->watcher->set_callback(std::move(txCallback));
 
     heightCallback = [watcherInfo, fAsyncCallback, pData](const size_t height)
     {
@@ -487,16 +463,59 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
         ABC_TxBlockHeightUpdate(height, fAsyncCallback, pData, &error);
         ABC_BridgeWatcherSerializeAsync(watcherInfo);
     };
-    watcherInfo->watcher->set_height_callback(heightCallback);
+    watcherInfo->watcher->set_height_callback(std::move(heightCallback));
 
     // sendCallback = [watcherInfo, fAsyncCallback, pData](const std::error_code &e, const::libbitcoin::transaction_type &tx)
     // {
     //     ABC_BridgeSendTxCallback(watcherInfo, e, tx, fAsyncCallback, pData);
     // };
-    watcherInfo->watcher->set_tx_sent_callback(sendCallback);
+    // watcherInfo->watcher->set_tx_sent_callback(sendCallback);
 
     row->second->watcher->loop();
 exit:
+#endif // NETWORK_FAKE
+    return cc;
+}
+
+tABC_CC ABC_BridgeWatcherConnect(const char *szWalletUUID, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+#if !NETWORK_FAKE
+    tABC_GeneralInfo *ppInfo = NULL;
+    WatcherInfo *watcherInfo = NULL;
+
+    auto row = watchers_.find(szWalletUUID);
+    if (row == watchers_.end())
+    {
+        ABC_DebugLog("Watcher %s does not exist\n", szWalletUUID);
+        goto exit;
+    }
+
+    watcherInfo = row->second;
+
+    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
+    if (false && ppInfo->countObeliskServers > 0)
+    {
+        ABC_DebugLog("Using %s obelisk servers\n",
+                ppInfo->aszObeliskServers[0]);
+        watcherInfo->watcher->connect(ppInfo->aszObeliskServers[0]);
+    }
+    else
+    {
+        if (ABC_BridgeIsTestNet())
+        {
+            ABC_DebugLog("Using Fallback testnet obelisk servers: %s\n", TESTNET_OBELISK);
+            watcherInfo->watcher->connect(TESTNET_OBELISK);
+        }
+        else
+        {
+            ABC_DebugLog("Using Fallback obelisk servers: %s\n", FALLBACK_OBELISK);
+            watcherInfo->watcher->connect(FALLBACK_OBELISK);
+        }
+    }
+
+exit:
+    ABC_GeneralFreeInfo(ppInfo);
 #endif // NETWORK_FAKE
     return cc;
 }
@@ -505,7 +524,6 @@ tABC_CC ABC_BridgeWatchAddr(const char *szUserName,
                             const char *szPassword,
                             const char *szWalletUUID,
                             const char *pubAddress,
-                            bool prioritize,
                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -528,7 +546,38 @@ tABC_CC ABC_BridgeWatchAddr(const char *szUserName,
     }
     row->second->addresses.insert(pubAddress);
     row->second->watcher->watch_address(addr);
-    if (prioritize)
+exit:
+#endif // NETWORK_FAKE
+    return cc;
+}
+
+tABC_CC ABC_BridgePrioritizeAddress(const char *szUserName,
+                                    const char *szPassword,
+                                    const char *szWalletUUID,
+                                    const char *szAddress,
+                                    tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+#if !NETWORK_FAKE
+    auto row = watchers_.find(szWalletUUID);
+    bc::payment_address addr;
+
+    if (row == watchers_.end())
+    {
+        goto exit;
+    }
+
+    if (szAddress)
+    {
+        if (!addr.set_encoded(szAddress))
+        {
+            cc = ABC_CC_Error;
+            ABC_DebugLog("Invalid szAddress %s\n", szAddress);
+            goto exit;
+        }
+        row->second->watcher->prioritize_address(addr);
+    }
+    else
     {
         row->second->watcher->prioritize_address(addr);
     }
@@ -547,6 +596,7 @@ tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError)
         ABC_DebugLog("Watcher %s does not exist\n", szWalletUUID);
         goto exit;
     }
+    row->second->watcher->disconnect();
     row->second->watcher->stop();
 exit:
 #endif // NETWORK_FAKE
@@ -574,7 +624,6 @@ tABC_CC ABC_BridgeWatcherDelete(const char *szWalletUUID, tABC_Error *pError)
     // Delete watcher:
     ABC_BridgeWatcherSerialize(watcherInfo);
     if (watcherInfo->watcher != NULL) {
-        watcherInfo->watcher->disconnect();
         delete watcherInfo->watcher;
     }
     watcherInfo->watcher = NULL;
@@ -1019,7 +1068,7 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
             totalMeSatoshi, fees,
             iarr, iCount,
             oarr, oCount,
-            txId.c_str(), malTxId.c_str(), 
+            txId.c_str(), malTxId.c_str(),
             fAsyncBitCoinEventCallback,
             pData,
             &error));
@@ -1390,7 +1439,7 @@ exit:
     }
     json_decref(pJSON_Root);
     ABC_FREE_STR(szPut);
-    
+
     return cc;
 }
 

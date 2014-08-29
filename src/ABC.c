@@ -2444,8 +2444,24 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_WatcherConnect(const char *szWalletUUID, tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_BridgeWatcherConnect(szWalletUUID, pError));
+
+exit:
+
+    return cc;
+}
+
 /**
- * Stop the watcher for a wallet
+ * Watch all the addresses for szWalletUUID
  *
  * @param szUserName   UserName for the account
  * @param szPassword   Password for the account
@@ -2462,6 +2478,32 @@ tABC_CC ABC_WatchAddresses(const char *szUserName, const char *szPassword,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_CHECK_RET(ABC_TxWatchAddresses(szUserName, szPassword, szWalletUUID, pError));
+
+exit:
+
+    return cc;
+}
+
+/**
+ * Watch a single address for a wallet
+ *
+ * @param szUserName   UserName for the account
+ * @param szPassword   Password for the account
+ * @param szWalletUUID The wallet watcher to use
+ * @param szAddress    The wallet watcher to use
+ */
+tABC_CC ABC_PrioritizeAddress(const char *szUserName, const char *szPassword,
+                              const char *szWalletUUID, const char *szAddress,
+                              tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_BridgePrioritizeAddress(szUserName, szPassword, szWalletUUID, szAddress, pError));
 
 exit:
 
