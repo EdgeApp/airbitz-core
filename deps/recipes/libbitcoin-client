@@ -1,7 +1,7 @@
 depends="libbitcoin zeromq"
 inherit lib
 
-source="https://github.com/Airbitz/libbitcoin-client.git#cc4da8d5"
+source="https://github.com/Airbitz/libbitcoin-client.git#bb49268"
 
 build() {
     autoreconf -i

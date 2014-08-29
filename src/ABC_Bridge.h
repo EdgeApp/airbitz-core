@@ -95,13 +95,21 @@ extern "C" {
                                   void *pData,
                                   tABC_Error *pError);
 
+    tABC_CC ABC_BridgeWatcherConnect(const char *szWalletUUID, tABC_Error *pError);
+
     tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError);
 
     tABC_CC ABC_BridgeWatcherDelete(const char *szWalletUUID, tABC_Error *pError);
 
     tABC_CC ABC_BridgeWatchAddr(const char *szUserName, const char *szPassword,
                                 const char *walletUUID, const char *address,
-                                bool prioritize, tABC_Error *pError);
+                                tABC_Error *pError);
+
+    tABC_CC ABC_BridgePrioritizeAddress(const char *szUserName,
+                                        const char *szPassword,
+                                        const char *szWalletUUID,
+                                        const char *szAddress,
+                                        tABC_Error *pError);
 
     tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
                              char **addresses, int addressCount,

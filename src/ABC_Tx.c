@@ -731,7 +731,7 @@ tABC_CC ABC_TxWatchAddresses(const char *szUserName,
         const tABC_TxAddress *a = aAddresses[i];
         ABC_CHECK_RET(
             ABC_BridgeWatchAddr(szUserName, szPassword, szWalletUUID,
-                                a->szPubAddress, false, pError));
+                                a->szPubAddress, pError));
     }
 exit:
     ABC_TxFreeAddresses(aAddresses, countAddresses);
@@ -1135,9 +1135,6 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
 
     // Watch this new address
     ABC_CHECK_RET(ABC_TxWatchAddresses(szUserName, szPassword, szWalletUUID, pError));
-    ABC_CHECK_RET(
-        ABC_BridgeWatchAddr(szUserName, szPassword, szWalletUUID,
-                            pAddress->szPubAddress, true, pError));
 #if NETWORK_FAKE
     if (!bTransfer)
     {
