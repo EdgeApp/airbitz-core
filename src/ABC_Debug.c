@@ -105,6 +105,18 @@ void ABC_DebugTerminate()
     }
 }
 
+tABC_CC ABC_DebugLogFilename(char **szFilename, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+	ABC_CHECK_NULL(szFilename);
+	ABC_STRDUP(*szFilename, gszLogFile);
+
+exit:
+    return cc;
+}
+
 void ABC_DebugLog(const char * format, ...)
 {
     static char szOut[BUF_SIZE];
