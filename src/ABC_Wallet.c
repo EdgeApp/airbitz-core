@@ -222,7 +222,6 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     char *szFilename       = NULL;
     char *szJSON           = NULL;
     char *szUUID           = NULL;
-    char *szRepoURL        = NULL;
     char *szWalletDir      = NULL;
     json_t *pJSON_Data     = NULL;
     json_t *pJSON_Wallets  = NULL;
@@ -294,15 +293,10 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
 
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
-    // Create Repo URL
-    ABC_CHECK_RET(ABC_SyncGetServer(pData->szWalletAcctKey, &szRepoURL, pError));
-
-    ABC_DebugLog("Wallet Repo: %s %s\n", pData->szWalletSyncDir, szRepoURL);
-
     // Init the git repo and sync it
     int dirty;
     ABC_CHECK_RET(ABC_SyncMakeRepo(pData->szWalletSyncDir, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, szRepoURL, &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, &dirty, pError));
 
     // Actiate the remote wallet
     ABC_CHECK_RET(ABC_WalletServerRepoPost(L1, LP1, pData->szWalletAcctKey,
@@ -342,7 +336,6 @@ exit:
         }
     }
     ABC_FREE_STR(szWalletDir);
-    ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szUUID);
@@ -442,20 +435,15 @@ tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char *szRepoURL = NULL;
     tWalletData *pData = NULL;
 
     // load the wallet data into the cache
     ABC_CHECK_RET(ABC_WalletCacheData(szUserName, szPassword, szUUID, &pData, pError));
     ABC_CHECK_ASSERT(NULL != pData->szWalletAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
 
-    // Create Repo URL
-    ABC_CHECK_RET(ABC_SyncGetServer(pData->szWalletAcctKey, &szRepoURL, pError));
-
     // Sync
-    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, szRepoURL, pDirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, pDirty, pError));
 exit:
-    ABC_FREE_STR(szRepoURL);
     return cc;
 }
 
@@ -1210,9 +1198,9 @@ tABC_CC ABC_WalletGetInfo(const char *szUserName,
     if (pData->balanceDirty == true)
     {
         ABC_CHECK_RET(
-            ABC_GetTransactions(szUserName, 
-                                szPassword, 
-                                szUUID, 
+            ABC_GetTransactions(szUserName,
+                                szPassword,
+                                szUUID,
                                 ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
                                 &aTransactions, &nTxCount, pError));
         pData->balance = 0;
