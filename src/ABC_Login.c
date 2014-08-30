@@ -433,7 +433,6 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     char                    *szERepoAcctKey      = NULL;
     char                    *szAccountDir        = NULL;
     char                    *szFilename          = NULL;
-    char                    *szRepoURL           = NULL;
 
     int AccountNum = 0;
     tABC_U08Buf MK          = ABC_BUF_NULL;
@@ -561,14 +560,10 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
-    // Create Repo Path
-    ABC_CHECK_RET(ABC_SyncGetServer(pKeys->szRepoAcctKey, &szRepoURL, pError));
-    ABC_DebugLog("Pushing to: %s\n", szRepoURL);
-
     // Init the git repo and sync it
     int dirty;
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, pKeys->szRepoAcctKey, &dirty, pError));
 
     ABC_CHECK_RET(ABC_LoginServerActivate(pKeys->L1, pKeys->LP1, pError));
     pKeys = NULL; // so we don't free what we just added to the cache
@@ -588,7 +583,6 @@ exit:
     if (pJSON_SNRP4)        json_decref(pJSON_SNRP4);
     if (pJSON_EMK)          json_decref(pJSON_EMK);
     if (pJSON_ESyncKey)     json_decref(pJSON_ESyncKey);
-    ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szCarePackage_JSON);
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szERepoAcctKey);
@@ -616,7 +610,6 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     char *szFilename        = NULL;
     char *szCarePackage     = NULL;
     char *szLoginPackage    = NULL;
-    char *szRepoURL         = NULL;
     tAccountKeys *pKeys     = NULL;
     tABC_U08Buf L           = ABC_BUF_NULL;
     tABC_U08Buf L1          = ABC_BUF_NULL;
@@ -658,16 +651,14 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
     // Init the git repo and sync it
-    ABC_CHECK_RET(ABC_SyncGetServer(pKeys->szRepoAcctKey, &szRepoURL, pError));
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, pKeys->szRepoAcctKey, &dirty, pError));
 exit:
     if (cc != ABC_CC_Ok)
     {
         ABC_FileIODeleteRecursive(szAccountDir, NULL);
         ABC_LoginClearKeyCache(NULL);
     }
-    ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szCarePackage);
@@ -728,7 +719,6 @@ tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
     char *szFilename        = NULL;
     char *szRepoAcctKey     = NULL;
     char *szREPO_JSON       = NULL;
-    char *szRepoURL         = NULL;
     json_t *pJSON_ESyncKey  = NULL;
 
     ABC_CHECK_RET(ABC_LoginGetKey(pKeys->szUserName, NULL, ABC_LoginKey_L2, &L2, pError));
@@ -761,20 +751,16 @@ tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
 
     // Create repo URL
     char *szSyncKey = (char *) ABC_BUF_PTR(SyncKey);
-    ABC_CHECK_RET(ABC_SyncGetServer(szSyncKey, &szRepoURL, pError));
-
-    ABC_DebugLog("Fetching from: %s\n", szRepoURL);
 
     // Init the git repo and sync it
     int dirty;
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szSyncKey, &dirty, pError));
 exit:
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szREPO_JSON);
     ABC_FREE_STR(szRepoAcctKey);
-    ABC_FREE_STR(szRepoURL);
     ABC_BUF_FREE(SyncKey);
     if (pJSON_ESyncKey) json_decref(pJSON_ESyncKey);
     return cc;
@@ -3022,7 +3008,6 @@ tABC_CC ABC_LoginSyncData(const char *szUserName,
     tAccountKeys *pKeys = NULL;
     char *szFilename    = NULL;
     char *szAccountDir  = NULL;
-    char *szRepoURL     = NULL;
 
     ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_ASSERT(NULL != pKeys->szRepoAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
@@ -3033,13 +3018,9 @@ tABC_CC ABC_LoginSyncData(const char *szUserName,
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
-    // Create the repo url and sync it
-    ABC_CHECK_RET(ABC_SyncGetServer(pKeys->szRepoAcctKey, &szRepoURL, pError));
-
     // Sync repo
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, pDirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, pKeys->szRepoAcctKey, pDirty, pError));
 exit:
-    ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
     return cc;

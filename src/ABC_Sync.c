@@ -11,11 +11,11 @@
 #include "ABC_Sync.h"
 #include "ABC_Util.h"
 #include "ABC_Mutex.h"
+#include "ABC_General.h"
 #include "sync.h"
 
+#include <stdlib.h>
 #include <pthread.h>
-
-#define SYNC_SERVER "https://testnet.sync.airbitz.co/repos/"
 
 static bool gbInitialized = false;
 static pthread_mutex_t gMutex;
@@ -23,6 +23,27 @@ static pthread_mutex_t gMutex;
 static tABC_CC ABC_SyncMutexLock(tABC_Error *pError);
 static tABC_CC ABC_SyncMutexUnlock(tABC_Error *pError);
 static char *gszCaCertPath = NULL;
+
+static char *gszCurrSyncServer = NULL;
+static int serverIdx = -1;
+
+static tABC_CC ABC_SyncServerRot(tABC_Error *pError);
+static tABC_CC ABC_SyncGetServer(const char *szRepoKey,
+                                 char **pszServer,
+                                 tABC_Error *pError);
+
+#define ABC_SYNC_ROT(code, desc) \
+    { \
+        e = code; \
+        if (0 > e) \
+        { \
+            ABC_CHECK_RET(ABC_SyncServerRot(pError)); \
+            ABC_FREE_STR(szServer); \
+            ABC_CHECK_RET(ABC_SyncGetServer(szRepoKey, &szServer, pError)); \
+            e = code; \
+        } \
+        ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, desc); \
+    }
 
 /**
  * Logs error information produced by libgit2.
@@ -110,6 +131,7 @@ void ABC_SyncTerminate()
         gbInitialized = false;
     }
     ABC_FREE_STR(gszCaCertPath);
+    ABC_FREE_STR(gszCurrSyncServer);
 }
 
 /**
@@ -145,18 +167,20 @@ exit:
  * otherwise.
  */
 tABC_CC ABC_SyncRepo(const char *szRepoPath,
-                     const char *szServer,
+                     const char *szRepoKey,
                      int *pDirty,
                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     int e = 0;
+    char *szServer = NULL;
 
     git_repository *repo = NULL;
     git_config *cfg = NULL;
     int dirty, need_push;
 
     ABC_CHECK_RET(ABC_SyncMutexLock(pError));
+    ABC_CHECK_RET(ABC_SyncGetServer(szRepoKey, &szServer, pError));
 
     e = git_repository_open(&repo, szRepoPath);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_open failed");
@@ -171,7 +195,7 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     }
 
     e = sync_fetch(repo, szServer);
-    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_fetch failed");
+    ABC_SYNC_ROT(sync_fetch(repo, szServer), "sync_fetch failed");
 
     e = SyncMaster(repo, &dirty, &need_push);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_master failed");
@@ -188,6 +212,7 @@ exit:
     if (e < 0) SyncLogGitError(e);
     if (repo) git_repository_free(repo);
 
+    ABC_FREE_STR(szServer);
     ABC_CHECK_RET(ABC_SyncMutexUnlock(pError));
 
     return cc;
@@ -220,12 +245,44 @@ exit:
 }
 
 /**
+ * Chooses a new server to use for syncing
+ */
+static
+tABC_CC ABC_SyncServerRot(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_GeneralInfo *pInfo = NULL;
+
+    ABC_CHECK_RET(ABC_GeneralGetInfo(&pInfo, pError));
+
+    if (serverIdx == -1)
+    {
+        // Choose a random server to start with
+        srand((unsigned) time(NULL));
+        serverIdx = rand() % pInfo->countSyncServers;
+    }
+    else
+    {
+        serverIdx++;
+    }
+    if (serverIdx >= pInfo->countSyncServers)
+    {
+        serverIdx = 0;
+    }
+    ABC_STRDUP(gszCurrSyncServer, pInfo->aszSyncServers[serverIdx]);
+exit:
+    ABC_GeneralFreeInfo(pInfo);
+    return cc;
+}
+
+/**
  * Using the settings pick a repo and create the repo URI.
  *
  * @param szRepoKey    The repo key.
  * @param pszServer    Pointer to pointer where the resulting server URI
  *                     will be stored. Caller must free.
  */
+static
 tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -233,13 +290,27 @@ tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *p
 
     ABC_CHECK_NULL(szRepoKey);
 
-    ABC_BUF_DUP_PTR(URL, SYNC_SERVER, strlen(SYNC_SERVER));
+    if (!gszCurrSyncServer)
+    {
+        ABC_CHECK_RET(ABC_SyncServerRot(pError));
+    }
+    ABC_CHECK_ASSERT(gszCurrSyncServer != NULL,
+        ABC_CC_SysError, "Unable to find a sync server");
+
+    ABC_BUF_DUP_PTR(URL, gszCurrSyncServer, strlen(gszCurrSyncServer));
+    // Do we have a trailing slash?
+    if (URL.p[strlen((char *) URL.p) - 1] != '/')
+    {
+        ABC_BUF_APPEND_PTR(URL, "/", 1);
+    }
     ABC_BUF_APPEND_PTR(URL, szRepoKey, strlen(szRepoKey));
     ABC_BUF_APPEND_PTR(URL, "", 1);
 
     *pszServer = (char *)ABC_BUF_PTR(URL);
     ABC_BUF_CLEAR(URL);
     ABC_BUF_FREE(URL);
+
+    ABC_DebugLog("Syncing to: %s\n", *pszServer);
 
 exit:
     return cc;
