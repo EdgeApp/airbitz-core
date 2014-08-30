@@ -396,6 +396,51 @@ exit:
 }
 
 /**
+ * Reads the given filename into a void *
+ */
+tABC_CC ABC_FileIOReadFile(const char  *szFilename,
+                           void        **pszData,
+                           size_t      *nSize,
+                           tABC_Error  *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    FILE *fp = NULL;
+
+    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
+    ABC_CHECK_NULL(szFilename);
+    ABC_CHECK_NULL(pszData);
+
+    // open the file
+    fp = fopen(szFilename, "rb");
+    if (fp == NULL)
+    {
+        ABC_RET_ERROR(ABC_CC_FileOpenError, "Could not open file for reading");
+    }
+
+    // get the length
+    fseek(fp, 0, SEEK_END);
+    *nSize = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    // create the memory
+    ABC_ALLOC(*pszData, *nSize);
+
+    // write the data
+    if (fread(*pszData, 1, *nSize, fp) != *nSize)
+    {
+        ABC_FREE_STR(*pszData);
+        ABC_RET_ERROR(ABC_CC_FileReadError, "Could not read from file");
+    }
+
+exit:
+    if (fp) fclose(fp);
+
+    ABC_FileIOMutexUnlock(NULL);
+    return cc;
+}
+
+/**
  * Reads the given filename into a JSON object
  * the JSON object must be deref'ed by the caller
  * if bMustExist is false, a new empty object is created if the file doesn't exist

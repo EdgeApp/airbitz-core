@@ -551,6 +551,20 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_BridgeWatchPath(const char *szUserName, const char *szPassword,
+							const char *szWalletUUID, char **szPath,
+							tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    std::string filepath(
+            ABC_BridgeWatcherFile(szUserName,
+                                  szPassword,
+                                  szWalletUUID));
+	ABC_STRDUP(*szPath, filepath.c_str());
+exit:
+	return cc;
+}
+
 tABC_CC ABC_BridgePrioritizeAddress(const char *szUserName,
                                     const char *szPassword,
                                     const char *szWalletUUID,

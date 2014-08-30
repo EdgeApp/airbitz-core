@@ -120,6 +120,10 @@ extern "C" {
                                 int *pDirty,
                                 tABC_Error *pError);
 
+	tABC_CC ABC_LoginUploadLogs(const char *szUserName,
+								const char *szPassword,
+								tABC_Error *pError);
+
     // Blocking functions:
     tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
                               tABC_Error *pError);
