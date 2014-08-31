@@ -48,6 +48,7 @@
 #define ABC_SERVER_CHANGE_PASSWORD_PATH     "account/password/update"
 #define ABC_SERVER_LOGIN_PACK_GET_PATH      "account/loginpackage/get"
 #define ABC_SERVER_LOGIN_PACK_UPDATE_PATH   "account/loginpackage/update"
+#define ABC_SERVER_DEBUG_PATH               "account/debug"
 #define ABC_SERVER_WALLET_CREATE_PATH       "wallet/create"
 #define ABC_SERVER_WALLET_ACTIVATE_PATH     "wallet/activate"
 #define ABC_SERVER_GET_QUESTIONS_PATH       "questions"

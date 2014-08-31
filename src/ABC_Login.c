@@ -16,6 +16,7 @@
 #include <jansson.h>
 #include "ABC_Login.h"
 #include "ABC_Account.h"
+#include "ABC_Bridge.h"
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
 #include "ABC_Crypto.h"
@@ -433,7 +434,6 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     char                    *szERepoAcctKey      = NULL;
     char                    *szAccountDir        = NULL;
     char                    *szFilename          = NULL;
-    char                    *szRepoURL           = NULL;
 
     int AccountNum = 0;
     tABC_U08Buf MK          = ABC_BUF_NULL;
@@ -561,14 +561,10 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
-    // Create Repo Path
-    ABC_CHECK_RET(ABC_SyncGetServer(pKeys->szRepoAcctKey, &szRepoURL, pError));
-    ABC_DebugLog("Pushing to: %s\n", szRepoURL);
-
     // Init the git repo and sync it
     int dirty;
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, pKeys->szRepoAcctKey, &dirty, pError));
 
     ABC_CHECK_RET(ABC_LoginServerActivate(pKeys->L1, pKeys->LP1, pError));
     pKeys = NULL; // so we don't free what we just added to the cache
@@ -588,7 +584,6 @@ exit:
     if (pJSON_SNRP4)        json_decref(pJSON_SNRP4);
     if (pJSON_EMK)          json_decref(pJSON_EMK);
     if (pJSON_ESyncKey)     json_decref(pJSON_ESyncKey);
-    ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szCarePackage_JSON);
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szERepoAcctKey);
@@ -616,7 +611,6 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     char *szFilename        = NULL;
     char *szCarePackage     = NULL;
     char *szLoginPackage    = NULL;
-    char *szRepoURL         = NULL;
     tAccountKeys *pKeys     = NULL;
     tABC_U08Buf L           = ABC_BUF_NULL;
     tABC_U08Buf L1          = ABC_BUF_NULL;
@@ -658,16 +652,14 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
     // Init the git repo and sync it
-    ABC_CHECK_RET(ABC_SyncGetServer(pKeys->szRepoAcctKey, &szRepoURL, pError));
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, pKeys->szRepoAcctKey, &dirty, pError));
 exit:
     if (cc != ABC_CC_Ok)
     {
         ABC_FileIODeleteRecursive(szAccountDir, NULL);
         ABC_LoginClearKeyCache(NULL);
     }
-    ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szCarePackage);
@@ -728,7 +720,6 @@ tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
     char *szFilename        = NULL;
     char *szRepoAcctKey     = NULL;
     char *szREPO_JSON       = NULL;
-    char *szRepoURL         = NULL;
     json_t *pJSON_ESyncKey  = NULL;
 
     ABC_CHECK_RET(ABC_LoginGetKey(pKeys->szUserName, NULL, ABC_LoginKey_L2, &L2, pError));
@@ -761,20 +752,16 @@ tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
 
     // Create repo URL
     char *szSyncKey = (char *) ABC_BUF_PTR(SyncKey);
-    ABC_CHECK_RET(ABC_SyncGetServer(szSyncKey, &szRepoURL, pError));
-
-    ABC_DebugLog("Fetching from: %s\n", szRepoURL);
 
     // Init the git repo and sync it
     int dirty;
     ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szSyncKey, &dirty, pError));
 exit:
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szREPO_JSON);
     ABC_FREE_STR(szRepoAcctKey);
-    ABC_FREE_STR(szRepoURL);
     ABC_BUF_FREE(SyncKey);
     if (pJSON_ESyncKey) json_decref(pJSON_ESyncKey);
     return cc;
@@ -3022,7 +3009,6 @@ tABC_CC ABC_LoginSyncData(const char *szUserName,
     tAccountKeys *pKeys = NULL;
     char *szFilename    = NULL;
     char *szAccountDir  = NULL;
-    char *szRepoURL     = NULL;
 
     ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_ASSERT(NULL != pKeys->szRepoAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
@@ -3033,15 +3019,112 @@ tABC_CC ABC_LoginSyncData(const char *szUserName,
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
 
-    // Create the repo url and sync it
-    ABC_CHECK_RET(ABC_SyncGetServer(pKeys->szRepoAcctKey, &szRepoURL, pError));
-
     // Sync repo
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szRepoURL, pDirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szFilename, pKeys->szRepoAcctKey, pDirty, pError));
 exit:
-    ABC_FREE_STR(szRepoURL);
     ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szFilename);
+    return cc;
+}
+
+/**
+ * Upload files to auth server for debugging
+ *
+ * @param szUserName    UserName for the account associated with the settings
+ * @param szPassword    Password for the account associated with the settings
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_LoginUploadLogs(const char *szUserName,
+                            const char *szPassword,
+                            tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    char *szL1_Base64     = NULL;
+    char *szLP1_Base64    = NULL;
+    char *szPost          = NULL;
+    char *szResults       = NULL;
+    char *szURL           = NULL;
+    char *szLogFilename   = NULL;
+    char *szLogData       = NULL;
+    char *szLogData_Hex   = NULL;
+    char *szWatchFilename = NULL;
+    void *szWatchData     = NULL;
+    char *szWatchData_Hex = NULL;
+    json_t *pJSON_Root    = NULL;
+    tAccountKeys *pKeys   = NULL;
+    tABC_U08Buf LogData   = ABC_BUF_NULL;
+    tABC_U08Buf WatchData = ABC_BUF_NULL;
+    size_t watcherSize    = 0;
+    unsigned int nCount   = 0;
+    tABC_WalletInfo **paWalletInfo = NULL;
+
+    // create the URL
+    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_DEBUG_PATH);
+
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
+
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(pKeys->L1, &szL1_Base64, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(pKeys->LP1, &szLP1_Base64, pError));
+
+    ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
+    ABC_CHECK_RET(ABC_FileIOReadFileStr(szLogFilename, &szLogData, pError));
+    ABC_BUF_SET_PTR(LogData, (unsigned char *)szLogData, strlen(szLogData) + 1);
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(LogData, &szLogData_Hex, pError));
+
+    ABC_CHECK_RET(ABC_GetWallets(szUserName, szPassword, &paWalletInfo, &nCount, pError));
+    json_t *pJSON_array = json_array();
+    for (int i = 0; i < nCount; ++i)
+    {
+        ABC_CHECK_RET(ABC_BridgeWatchPath(szUserName, szPassword,
+                                          paWalletInfo[i]->szUUID,
+                                          &szWatchFilename, pError));
+        ABC_CHECK_RET(ABC_FileIOReadFile(szWatchFilename, &szWatchData, &watcherSize, pError));
+        ABC_BUF_SET_PTR(WatchData, szWatchData, watcherSize);
+        ABC_CHECK_RET(ABC_CryptoBase64Encode(WatchData, &szWatchData_Hex, pError));
+
+        json_t *element = json_pack("s", szWatchData_Hex);
+        json_array_append_new(pJSON_array, element);
+
+        ABC_FREE_STR(szWatchFilename);
+        ABC_FREE(szWatchData);
+        ABC_BUF_CLEAR(WatchData);
+    }
+
+    pJSON_Root = json_pack("{ss, ss, ss}",
+                            ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                            ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
+                            "log", szLogData_Hex);
+    json_object_set(pJSON_Root, "watchers", pJSON_array);
+
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
+
+    ABC_CHECK_RET(ABC_URLPostString(
+        szURL, szPost, &szResults, pError));
+    ABC_DebugLog("%s\n", szResults);
+exit:
+    if (pJSON_Root) json_decref(pJSON_Root);
+    if (pJSON_array) json_decref(pJSON_array);
+    ABC_FREE_STR(szURL);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szResults);
+    ABC_FREE_STR(szLogFilename);
+    ABC_FREE_STR(szLogData);
+    ABC_FREE_STR(szLogData_Hex);
+    ABC_BUF_CLEAR(LogData);
+
+    ABC_FREE_STR(szWatchFilename);
+    ABC_FREE(szWatchData);
+    ABC_FREE_STR(szWatchData_Hex);
+    ABC_BUF_CLEAR(WatchData);
+
+    ABC_FreeWalletInfoArray(paWalletInfo, nCount);
+
+
     return cc;
 }
 
@@ -3068,3 +3151,4 @@ tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError)
 {
     return ABC_MutexUnlock(pError);
 }
+
