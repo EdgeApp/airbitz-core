@@ -983,6 +983,10 @@ extern "C" {
 
     tABC_CC ABC_Version(char **szVersion, tABC_Error *pError);
 
+    tABC_CC ABC_UploadLogs(const char *szUserName,
+                           const char *szPassword,
+                           tABC_Error *pError);
+
     // temp functions
     void tempEventA();
     void tempEventB();

@@ -43,13 +43,9 @@ extern "C" {
                              tABC_Error *pError);
 
     tABC_CC ABC_SyncRepo(const char *szRepoPath,
-                         const char *szServer,
+                         const char *szRepoKey,
                          int *pDirty,
                          tABC_Error *pError);
-
-    tABC_CC ABC_SyncGetServer(const char *szRepoKey,
-                              char **pszServer,
-                              tABC_Error *pError);
 
 #ifdef __cplusplus
 }

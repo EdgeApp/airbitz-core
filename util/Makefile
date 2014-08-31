@@ -10,6 +10,7 @@ default: build/account-decrypt.bin \
          build/check-recovery-answers.bin \
          build/create-account.bin \
          build/create-wallet.bin \
+         build/data-sync.bin \
          build/get-bitcoin-seed.bin \
          build/get-categories.bin \
          build/get-pin.bin \
@@ -23,6 +24,7 @@ default: build/account-decrypt.bin \
          build/set-question-choices.bin \
          build/search-bitcoin-seed.bin \
          build/sign-in.bin \
+         build/upload-logs.bin \
          build/wallet-decrypt.bin \
          build/wallet-encrypt.bin \
          build/wallet-get-address.bin

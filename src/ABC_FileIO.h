@@ -103,6 +103,11 @@ extern "C" {
                                   char        **pszData,
                                   tABC_Error  *pError);
 
+    tABC_CC ABC_FileIOReadFile(const char  *szFilename,
+                               void        **pszData,
+                               size_t      *nSize,
+                               tABC_Error  *pError);
+
     tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
                                      json_t **ppJSON_Data,
                                      bool bMustExist,

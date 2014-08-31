@@ -105,6 +105,10 @@ extern "C" {
                                 const char *walletUUID, const char *address,
                                 tABC_Error *pError);
 
+    tABC_CC ABC_BridgeWatchPath(const char *szUserName, const char *szPassword,
+                                const char *szWalletUUID, char **szPath,
+                                tABC_Error *pError);
+
     tABC_CC ABC_BridgePrioritizeAddress(const char *szUserName,
                                         const char *szPassword,
                                         const char *szWalletUUID,

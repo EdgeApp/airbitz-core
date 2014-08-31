@@ -47,12 +47,14 @@ extern "C" {
 #define ABC_DEBUG(cmd)      cmd
 #else
 #define ABC_DEBUG(cmd)
-#endif 
+#endif
 
 tABC_CC ABC_DebugInitialize(const char *szRootDir, tABC_Error *pError);
 
 void ABC_DebugTerminate();
-    
+
+tABC_CC ABC_DebugLogFilename(char **szFilename, tABC_Error *pError);
+
 void ABC_DebugLog(const char * format, ...);
 
 #ifdef __cplusplus
