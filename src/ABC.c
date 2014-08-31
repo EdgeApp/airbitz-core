@@ -47,6 +47,7 @@
 #include "ABC_Account.h"
 #include "ABC_General.h"
 #include "ABC_Bridge.h"
+#include "ABC_Export.h"
 #include "ABC_Util.h"
 #include "ABC_FileIO.h"
 #include "ABC_Wallet.h"
@@ -2706,4 +2707,41 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
     return cc;
 }
 
+tABC_CC ABC_CsvExport(const char *szUserName,
+                      const char *szPassword,
+                      const char *szUUID,
+                      int64_t startTime,
+                      int64_t endTime,
+                      char **szCsvData,
+                      tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    {
+        tABC_TxInfo **pTransactions;
+        unsigned int iCount;
+
+        ABC_CHECK_RET(ABC_GetTransactions(szUserName,
+                                          szPassword,
+                                          szUUID, 
+                                          startTime, endTime, 
+                                          &pTransactions, &iCount, pError));
+
+
+        ABC_CHECK_RET(ABC_ExportFormatCsv(szUserName, 
+                                          szPassword, 
+                                          pTransactions, 
+                                          iCount, 
+                                          szCsvData,
+                                          pError));
+    }
+
+exit:
+    return cc;
+}
 

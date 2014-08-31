@@ -16,8 +16,8 @@
 #define ABC_Export_h
 
 /* Maxium size of CSV record and fields in characters */
-#define ABC_CSV_MAX_REC_SZ  4096
-#define ABC_CSV_MAX_FLD_SZ  128
+#define ABC_CSV_MAX_REC_SZ  16384
+#define ABC_CSV_MAX_FLD_SZ  4096
 
 #define ABC_CSV_DFLT_DELIMITER "|"
 #define ABC_CSV_ALT1_DELIMITER ","
@@ -51,7 +51,7 @@
                                   _sz = csv_write(v.qv, sizeof(v.qv), v.ov, v.os); \
                                   v.qs = _sz; \
                                   ABC_ALLOC(d, v.qs+1+1); \
-                                  sprintf(d, "%s%s", v.qv, ABC_CSV_DFLT_DELIMITER); \
+                                  sprintf(d, "%s%s", v.qv, ABC_CSV_ALT1_DELIMITER); \
                                 }
 
 
@@ -62,8 +62,10 @@ typedef ABC_CSV(char) tABC_CSV;
 extern "C" {
 #endif
 
-    tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
-                                int iTransactionCount,
+    tABC_CC ABC_ExportFormatCsv(const char *szUserName,
+                                const char *szPassword,
+                                tABC_TxInfo **pTransactions,
+                                unsigned int iTransactionCount,
                                 char **szCsvData,
                                 tABC_Error *pError);
 
