@@ -14,11 +14,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <time.h>
 
 #include "ABC_Export.h"
 #include "ABC_Util.h"
 #include "csv.h"
 
+#define MAX_DATE_TIME_SIZE 20
 
 tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
 {
@@ -26,7 +28,8 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
     char **out = szCsvRec;
 
     /* header */
-    char *szTimeCreation = "DATE";
+    char *szDateCreation = "DATE";
+    char *szTimeCreation = "TIME";
     char *szName = "PAYEE_PAYER_NAME"; /* payee or payer */    
     char *szAmtBTC = "AMT_BTC";
     char *szCurrency = "USD";
@@ -47,20 +50,21 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
 //             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
-             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
-                szTimeCreation,
-                szName, 
-                szAmtBTC, 
-                szCurrency,
-                szCategory,
-                szNotes,
-                szAmtAirbitzBTC,
-                szAmtFeesMinersBTC,
+             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+             szDateCreation,
+             szTimeCreation,
+             szName, 
+             szAmtBTC, 
+             szCurrency,
+             szCategory,
+             szNotes,
+             szAmtAirbitzBTC,
+             szAmtFeesMinersBTC,
 //                szInputAddresses,
 //                szOutputAddresses
-                szCsvId, 
-                szCsvMaleableId, 
-                ABC_CSV_REC_TERM_NAME);
+             szCsvId, 
+             szCsvMaleableId, 
+             ABC_CSV_REC_TERM_NAME);
 exit:
     return cc;
 }
@@ -73,6 +77,7 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     char **out = szCsvRec;
 
     /* header */
+    char *szDateCreation;
     char *szTimeCreation;
     char *szName; /* payee or payer */    
     char *szAmtBTC;
@@ -86,13 +91,30 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     char *szCsvId;
     char *szCsvMaleableId;
 
+    char buff[MAX_DATE_TIME_SIZE];
     char *pFormatted = NULL;
+
+    time_t t = (time_t) pData->timeCreation;
+    struct tm *tmptr = localtime(&t); 
 
     tABC_CSV tmpCsvVar;
 
     ABC_CHECK_NULL(data);
 
-    ABC_CSV_INIT2(tmpCsvVar, pData->timeCreation, PRIu64);
+    if (!strftime(buff, sizeof buff, "%Y-%m-%d", tmptr)) 
+    {
+        cc = ABC_CC_Error;
+        goto exit;
+    }
+    ABC_CSV_INIT(tmpCsvVar, buff);
+    ABC_CSV_FMT(tmpCsvVar, szDateCreation);
+
+    if (!strftime(buff, sizeof buff, "%H:%M", tmptr)) 
+    {
+        cc = ABC_CC_Error;
+        goto exit;
+    }
+    ABC_CSV_INIT(tmpCsvVar, buff);
     ABC_CSV_FMT(tmpCsvVar, szTimeCreation);
 
     ABC_CSV_INIT(tmpCsvVar, pData->pDetails->szName);
@@ -130,22 +152,24 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
-             "%s%s%s%s%s%s%s%s%s%s%s",
-                szTimeCreation,
-                szName, 
-                szAmtBTC, 
-                szCurrency,
-                szCategory,
-                szNotes,
-                szAmtAirbitzBTC,
-                szAmtFeesMinersBTC,
+             "%s%s%s%s%s%s%s%s%s%s%s%s",
+             szDateCreation,
+             szTimeCreation,
+             szName, 
+             szAmtBTC, 
+             szCurrency,
+             szCategory,
+             szNotes,
+             szAmtAirbitzBTC,
+             szAmtFeesMinersBTC,
 //                szInputAddresses,
 //                szOutputAddresses
-                szCsvId, 
-                szCsvMaleableId, 
-                ABC_CSV_REC_TERM_VALUE);
+             szCsvId, 
+             szCsvMaleableId, 
+             ABC_CSV_REC_TERM_VALUE);
 
     ABC_FREE(szTimeCreation);
+    ABC_FREE(szDateCreation);
     ABC_FREE(szName);
     ABC_FREE(szAmtBTC);
     ABC_FREE(szCurrency);
