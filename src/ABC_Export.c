@@ -120,7 +120,7 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     ABC_CSV_INIT(tmpCsvVar, pData->pDetails->szName);
     ABC_CSV_FMT(tmpCsvVar, szName);
 
-    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountSatoshi,&pFormatted, ABC_BITCOIN_DECIMAL_PLACES, pError));
+    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountSatoshi,&pFormatted, ABC_BITCOIN_DECIMAL_PLACES, true, pError));
     ABC_CSV_INIT(tmpCsvVar, pFormatted);
     ABC_CSV_FMT(tmpCsvVar, szAmtBTC);
 
@@ -133,11 +133,11 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     ABC_CSV_INIT(tmpCsvVar, pData->pDetails->szNotes);
     ABC_CSV_FMT(tmpCsvVar, szNotes);
 
-    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountFeesAirbitzSatoshi,&pFormatted, ABC_BITCOIN_DECIMAL_PLACES, pError));
+    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountFeesAirbitzSatoshi,&pFormatted, ABC_BITCOIN_DECIMAL_PLACES, true, pError));
     ABC_CSV_INIT(tmpCsvVar, pFormatted);
     ABC_CSV_FMT(tmpCsvVar, szAmtAirbitzBTC);
 
-    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountFeesMinersSatoshi,&pFormatted, ABC_BITCOIN_DECIMAL_PLACES, pError));
+    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountFeesMinersSatoshi,&pFormatted, ABC_BITCOIN_DECIMAL_PLACES, true, pError));
     ABC_CSV_INIT(tmpCsvVar, pFormatted);
     ABC_CSV_FMT(tmpCsvVar, szAmtFeesMinersBTC);
 

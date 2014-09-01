@@ -1347,14 +1347,15 @@ exit:
  * @param decimalPlaces set to ABC_BITCOIN_DECIMAL_PLACE to convert
  * satoshis to bitcoins.
  */
-tABC_CC ABC_FormatAmount(uint64_t amount,
+tABC_CC ABC_FormatAmount(int64_t amount,
                          char **pszAmountOut,
                          unsigned decimalPlaces,
+                         bool bAddSign,
                          tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_CHECK_RET(ABC_BridgeFormatAmount(amount, pszAmountOut, decimalPlaces, pError));
+    ABC_CHECK_RET(ABC_BridgeFormatAmount(amount, pszAmountOut, decimalPlaces, bAddSign, pError));
 
 exit:
     return cc;

@@ -53,6 +53,7 @@
 #define FALLBACK_OBELISK "tcp://obelisk3.airbitz.co:9091"
 #define TESTNET_OBELISK "tcp://obelisk-testnet2.airbitz.co:9091"
 #define NO_AB_FEES
+#define MAX_BTC_STRING_SIZE 20
 
 #define AB_MIN(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -243,20 +244,37 @@ tABC_CC ABC_BridgeParseAmount(const char *szAmount,
  * @param pszAmountOut a pointer that will hold the output string. The
  * caller frees the returned value.
  * @param decimal_places set to ABC_BITCOIN_DECIMAL_PLACE to convert
- * satoshis to bitcoins.
+ * satoshis to bitcoins. 
+ * @param bAddSign set to 'true' to add negative symbol to string if 
+ * amount is negative 
  */
-tABC_CC ABC_BridgeFormatAmount(uint64_t amount,
+tABC_CC ABC_BridgeFormatAmount(int64_t amount,
                                char **pszAmountOut,
                                unsigned decimalPlaces,
+                               bool bAddSign,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    char *szBuff;
     std::string out;
 
     ABC_CHECK_NULL(pszAmountOut);
 
-    out = libwallet::format_amount(amount, decimalPlaces);
-    ABC_STRDUP(*pszAmountOut, out.c_str());
+    if (bAddSign && (amount < 0))
+    {
+        amount = llabs(amount);
+        out = libwallet::format_amount(amount, decimalPlaces);
+        ABC_ALLOC_ARRAY(szBuff, MAX_BTC_STRING_SIZE, char);
+        snprintf(szBuff, MAX_BTC_STRING_SIZE, "-%s", out.c_str());
+        *pszAmountOut = szBuff;
+
+    }
+    else
+    {
+        amount = llabs(amount);
+        out = libwallet::format_amount((uint64_t) amount, decimalPlaces);
+        ABC_STRDUP(*pszAmountOut, out.c_str()); 
+    }
 
 exit:
     return cc;
