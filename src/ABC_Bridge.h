@@ -58,9 +58,10 @@ extern "C" {
                                   uint64_t *pAmountOut,
                                   unsigned decimalPlaces);
 
-    tABC_CC ABC_BridgeFormatAmount(uint64_t amount,
+    tABC_CC ABC_BridgeFormatAmount(int64_t amount,
                                    char **pszAmountOut,
                                    unsigned decimalPlaces,
+                                   bool bAddSign,
                                    tABC_Error *pError);
 
     tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
