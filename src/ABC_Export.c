@@ -21,6 +21,7 @@
 #include "csv.h"
 
 #define MAX_DATE_TIME_SIZE 20
+#define MAX_AMOUNT_STRING_SIZE 20 // 21 million + 8 decimals + padding. ~20 digits
 
 tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
 {
@@ -37,8 +38,8 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
     char *szNotes = "NOTES";
     char *szAmtAirbitzBTC = "AMT_BTC_FEES_AB";
     char *szAmtFeesMinersBTC = "AMT_BTC_FEES_MINERS";
-//    char *szInputAddresses = "IN_ADDRESSES";
-//    char *szOutputAddresses = "OUT_ADDRESSES";
+    char *szInputAddresses = "IN_ADDRESSES";
+    char *szOutputAddresses = "OUT_ADDRESSES";
     char *szCsvId = "TXID";
     char *szCsvMaleableId = "MTXID";
 
@@ -49,8 +50,7 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
     
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
-//             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
-             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
              szDateCreation,
              szTimeCreation,
              szName, 
@@ -60,12 +60,77 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
              szNotes,
              szAmtAirbitzBTC,
              szAmtFeesMinersBTC,
-//                szInputAddresses,
-//                szOutputAddresses
+             szInputAddresses,
+             szOutputAddresses,
              szCsvId, 
              szCsvMaleableId, 
              ABC_CSV_REC_TERM_NAME);
 exit:
+    return cc;
+}
+
+tABC_CC ABC_ExportGetAddresses(tABC_TxInfo *pData, 
+                               char **szAddresses, 
+                               bool bInputs,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    int i;
+    int numAddr = 0;
+    char *szAmount = NULL;
+
+    // Clear string if allocated
+    if (*szAddresses != NULL)
+    {
+        strcpy(*szAddresses, "");
+    }
+
+    for (i = 0; i < pData->countOutputs; i++)
+    {
+        bool doCopy = false;
+        if (pData->aOutputs[i]->input)
+        {
+            if (bInputs)
+            {
+                // Found an input and want only inputs
+                doCopy = true;
+            }
+        }
+        else if (!bInputs)
+        {
+            // Found an output and want only outputs
+            doCopy = true;
+        }
+
+        if (doCopy)
+        {
+            int lengthNeeded;
+
+            ABC_ALLOC(szAmount, MAX_AMOUNT_STRING_SIZE)
+
+            ABC_CHECK_RET(ABC_FormatAmount(pData->aOutputs[i]->value, &szAmount, ABC_BITCOIN_DECIMAL_PLACES, false, pError));
+
+            lengthNeeded = ABC_STRLEN(*szAddresses) + ABC_STRLEN(pData->aOutputs[i]->szAddress) + ABC_STRLEN(szAmount) + 3;
+            
+            if (lengthNeeded > ABC_CSV_MAX_FLD_SZ) break;
+            
+            ABC_REALLOC(*szAddresses, lengthNeeded);
+
+            if (numAddr == 0)
+            {
+                snprintf(*szAddresses, lengthNeeded, "%s:%s", pData->aOutputs[i]->szAddress, szAmount); 
+            }
+            else
+            {
+                snprintf(*szAddresses, lengthNeeded, "%s %s:%s", *szAddresses, pData->aOutputs[i]->szAddress, szAmount); 
+            }
+            numAddr++;
+        }
+    }
+
+exit:
+    ABC_FREE(szAmount);
     return cc;
 }
 
@@ -141,6 +206,14 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     ABC_CSV_INIT(tmpCsvVar, pFormatted);
     ABC_CSV_FMT(tmpCsvVar, szAmtFeesMinersBTC);
 
+    ABC_CHECK_RET(ABC_ExportGetAddresses(pData, &pFormatted, true, pError));
+    ABC_CSV_INIT(tmpCsvVar, pFormatted);
+    ABC_CSV_FMT(tmpCsvVar, szInputAddresses);
+
+    ABC_CHECK_RET(ABC_ExportGetAddresses(pData, &pFormatted, false, pError));
+    ABC_CSV_INIT(tmpCsvVar, pFormatted);
+    ABC_CSV_FMT(tmpCsvVar, szOutputAddresses);
+
     ABC_CSV_INIT(tmpCsvVar, data->szID);
     ABC_CSV_FMT(tmpCsvVar, szCsvId);
 
@@ -152,7 +225,7 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
-             "%s%s%s%s%s%s%s%s%s%s%s%s",
+             "%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
              szDateCreation,
              szTimeCreation,
              szName, 
@@ -162,8 +235,8 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
              szNotes,
              szAmtAirbitzBTC,
              szAmtFeesMinersBTC,
-//                szInputAddresses,
-//                szOutputAddresses
+             szInputAddresses,
+             szOutputAddresses,
              szCsvId, 
              szCsvMaleableId, 
              ABC_CSV_REC_TERM_VALUE);
@@ -179,6 +252,7 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     ABC_FREE(szAmtFeesMinersBTC);
     ABC_FREE(szCsvId);
     ABC_FREE(szCsvMaleableId);
+    ABC_FREE(pFormatted);
 
     
 exit:
