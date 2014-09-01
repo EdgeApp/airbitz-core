@@ -34,7 +34,7 @@
                                 }
 
 #define ABC_CSV_INIT(fld, src)  { \
-                                  strcpy((fld).ov, src); \
+                                  strncpy((fld).ov, src, ABC_CSV_MAX_FLD_SZ); \
                                   memset((fld).qv, 0, sizeof((fld).qv)); \
                                   (fld).os = strlen(src); \
                                   (fld).qs = 0; \
@@ -42,7 +42,7 @@
 
 #define ABC_CSV_INIT2(fld, src, type) {\
                                         char _tmpXform[ABC_CSV_MAX_FLD_SZ]; \
-                                        sprintf(_tmpXform,"%" type, src); \
+                                        snprintf(_tmpXform,ABC_CSV_MAX_FLD_SZ,"%" type, src); \
                                         ABC_CSV_INIT(fld, _tmpXform); \
                                       }
 
@@ -51,7 +51,7 @@
                                   _sz = csv_write(v.qv, sizeof(v.qv), v.ov, v.os); \
                                   v.qs = _sz; \
                                   ABC_ALLOC(d, v.qs+1+1); \
-                                  sprintf(d, "%s%s", v.qv, ABC_CSV_ALT1_DELIMITER); \
+                                  snprintf(d, v.qs+1+1,"%s%s", v.qv, ABC_CSV_ALT1_DELIMITER); \
                                 }
 
 
