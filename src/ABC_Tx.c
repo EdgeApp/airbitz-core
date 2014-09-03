@@ -55,9 +55,6 @@
 #include "ABC_Debug.h"
 #include "ABC_Bridge.h"
 
-#include <unistd.h> // for fake code
-#include <pthread.h>
-
 #define SATOSHI_PER_BITCOIN                     100000000
 
 #define MIN_RECYCLABLE 5

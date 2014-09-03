@@ -2523,6 +2523,27 @@ exit:
 }
 
 /**
+ * Asks the wallet watcher to disconnect from the network.
+ *
+ * @param szWalletUUID The wallet watcher to use
+ */
+tABC_CC ABC_WatcherDisconnect(const char *szWalletUUID, tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_BridgeWatcherDisconnect(szWalletUUID, pError));
+
+exit:
+
+    return cc;
+}
+
+/**
  * Stop the watcher loop for a wallet.
  *
  * @param szWalletUUID The wallet watcher to use

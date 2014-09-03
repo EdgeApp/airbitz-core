@@ -606,6 +606,20 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_BridgeWatcherDisconnect(const char *szWalletUUID, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    auto row = watchers_.find(szWalletUUID);
+    if (row == watchers_.end())
+    {
+        ABC_DebugLog("Watcher %s does not exist\n", szWalletUUID);
+        goto exit;
+    }
+    row->second->watcher->disconnect();
+exit:
+    return cc;
+}
+
 tABC_CC ABC_BridgeWatcherStop(const char *szWalletUUID, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
