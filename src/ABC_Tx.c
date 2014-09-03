@@ -202,14 +202,6 @@ static int      ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo, tABC_Tx *pTx, tAB
 static tABC_CC  ABC_TxWalletOwnsAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, bool *bFound, tABC_Error *pError);
 static tABC_CC  ABC_TxTrashAddresses(const char *szUserName, const char *szPassword, const char *szWalletUUID, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
 
-
-// fake code:
-#if NETWORK_FAKE
-static tABC_CC  ABC_TxKickoffFakeReceive(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, tABC_Error *pError);
-static void     *ABC_TxFakeReceiveThread(void *);
-static tABC_CC  ABC_TxFakeSend(tABC_TxSendInfo  *pInfo, char **pszTxID, tABC_Error *pError);
-#endif
-
 /**
  * Initializes the
  */
@@ -336,9 +328,6 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
                    char             **pszTxID,
                    tABC_Error       *pError)
 {
-#if NETWORK_FAKE
-    return ABC_TxFakeSend(pInfo, pszTxID, pError);
-#else
     tABC_CC cc = ABC_CC_Ok;
     tABC_U08Buf privSeed = ABC_BUF_NULL;
     tABC_UnsignedTx *pUtx;
@@ -556,7 +545,6 @@ exit:
     ABC_TxSendInfoFree(pInfo);
     ABC_TxMutexUnlock(NULL);
     return cc;
-#endif
 }
 
 tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo, int64_t *pTotalFees, tABC_Error *pError)
@@ -1135,14 +1123,7 @@ tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
 
     // Watch this new address
     ABC_CHECK_RET(ABC_TxWatchAddresses(szUserName, szPassword, szWalletUUID, pError));
-#if NETWORK_FAKE
-    if (!bTransfer)
-    {
-        ABC_CHECK_RET(
-            ABC_TxKickoffFakeReceive(szUserName, szPassword,
-                                     szWalletUUID, pAddress->szID, pError));
-    }
-#endif
+
 exit:
     ABC_TxFreeAddress(pAddress);
 
@@ -4640,212 +4621,3 @@ ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo,
 exit:
     return cc;
 }
-
-#if NETWORK_FAKE
-// /////////////////////////////////////////////////////////////////////////////
-// Fake code begins here.
-// /////////////////////////////////////////////////////////////////////////////
-
-typedef struct sABC_FakeRecieveInfo
-{
-    char *szUserName;
-    char *szPassword;
-    char *szWalletUUID;
-    char *szAddress;
-} tABC_FakeRecieveInfo;
-
-static void ABC_TxFreeFakeRecieveInfo(tABC_FakeRecieveInfo *pInfo)
-{
-    if (pInfo)
-    {
-        ABC_FREE_STR(pInfo->szUserName);
-        ABC_FREE_STR(pInfo->szPassword);
-        ABC_FREE_STR(pInfo->szWalletUUID);
-        ABC_FREE_STR(pInfo->szAddress);
-        ABC_FREE(pInfo);
-    }
-}
-
-/**
- * Launches a thread with a few-second delay. Once the thread wakes up, it
- * creates a fake recieve transaction.
- */
-static
-tABC_CC ABC_TxKickoffFakeReceive(const char *szUserName,
-                                 const char *szPassword,
-                                 const char *szWalletUUID,
-                                 const char *szAddress,
-                                 tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_FakeRecieveInfo *pInfo = NULL;
-    pthread_t thread;
-    int rv = 0;
-
-    // copy the parameters:
-    ABC_ALLOC(pInfo, sizeof(tABC_FakeRecieveInfo));
-    ABC_STRDUP(pInfo->szUserName,   szUserName);
-    ABC_STRDUP(pInfo->szPassword,   szPassword);
-    ABC_STRDUP(pInfo->szWalletUUID, szWalletUUID);
-    ABC_STRDUP(pInfo->szAddress,    szAddress);
-
-    // launch the thread:
-    rv = pthread_create(&thread, NULL, ABC_TxFakeReceiveThread, pInfo);
-    ABC_CHECK_ASSERT(0 == rv, ABC_CC_SysError, "Cannot start fake thread.");
-
-    pInfo = NULL;
-exit:
-    ABC_TxFreeFakeRecieveInfo(pInfo);
-
-    return cc;
-}
-
-/**
- * The thread for creating fake recieve transactions.
- */
-static void *ABC_TxFakeReceiveThread(void *pData)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_Error *pError = NULL;
-    tABC_FakeRecieveInfo *pInfo = pData;
-
-    tABC_TxAddress *pAddress = NULL;
-    tABC_U08Buf TxID = ABC_BUF_NULL;
-    tABC_U08Buf TxMalID = ABC_BUF_NULL;
-    tABC_Tx *pTx = NULL;
-    tABC_U08Buf IncomingAddress = ABC_BUF_NULL;
-
-    // delay for simulation
-    sleep(2);
-
-    // grab the address
-    ABC_CHECK_RET(ABC_TxLoadAddress(pInfo->szUserName, pInfo->szPassword,
-                                    pInfo->szWalletUUID, pInfo->szAddress,
-                                    &pAddress, pError));
-
-    // create a transaction
-    ABC_ALLOC(pTx, sizeof(tABC_Tx));
-    ABC_ALLOC(pTx->pStateInfo, sizeof(tTxStateInfo));
-
-    // copy the details
-    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pAddress->pDetails, pError));
-
-    // set the state
-    pTx->pStateInfo->timeCreation = time(NULL);
-    pTx->pStateInfo->bInternal = false;
-
-    // create a random transaction id
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxID, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(TxID, &(pTx->szID), pError));
-
-    // create a random malleable transaction id
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxMalID, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(TxMalID, &(pTx->pStateInfo->szMalleableTxId), pError));
-
-    // save the transaction
-    ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
-
-    // add the transaction to the address
-    ABC_CHECK_RET(ABC_TxAddressAddTx(pAddress, pTx, pError));
-
-    // set the address as not recycled so it doens't get used again
-    pAddress->pStateInfo->bRecycleable = false;
-
-    // save the address
-    ABC_CHECK_RET(ABC_TxSaveAddress(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pAddress, pError));
-exit:
-    ABC_TxFreeFakeRecieveInfo(pInfo);
-    ABC_TxFreeAddress(pAddress);
-    ABC_BUF_FREE(TxID);
-    ABC_BUF_FREE(IncomingAddress);
-    ABC_TxFreeTx(pTx);
-
-    return NULL;
-}
-
-static
-tABC_CC ABC_TxFakeSend(tABC_TxSendInfo  *pInfo, char **pszTxID, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    tABC_Tx *pTx = NULL;
-    tABC_U08Buf TxID = ABC_BUF_NULL;
-    tABC_U08Buf TxMalID = ABC_BUF_NULL;
-    tABC_Tx *pReceiveTx = NULL;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
-    ABC_CHECK_NULL(pInfo);
-    ABC_CHECK_NULL(pszTxID);
-
-    // take this non-blocking opportunity to update the info from the server if needed
-    ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
-
-    // create a transaction
-    ABC_ALLOC(pTx, sizeof(tABC_Tx));
-    ABC_ALLOC(pTx->pStateInfo, sizeof(tTxStateInfo));
-
-    // copy the details
-    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
-    // Make sure values are negative
-    if (pTx->pDetails->amountSatoshi > 0)
-    {
-        pTx->pDetails->amountSatoshi *= -1;
-    }
-    if (pTx->pDetails->amountCurrency > 0)
-    {
-        pTx->pDetails->amountCurrency *= -1.0;
-    }
-
-    // set the state
-    pTx->pStateInfo->timeCreation = time(NULL);
-    pTx->pStateInfo->bInternal = true;
-
-    // create a random transaction id
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxID, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(TxID, &(pTx->szID), pError));
-
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &TxMalID, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(TxMalID, &(pTx->pStateInfo->szMalleableTxId), pError));
-
-    if (pInfo->bTransfer)
-    {
-        ABC_ALLOC(pReceiveTx, sizeof(tABC_Tx));
-        ABC_ALLOC(pReceiveTx->pStateInfo, sizeof(tTxStateInfo));
-
-        ABC_CHECK_RET(ABC_TxDupDetails(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
-        // Make sure values are positive
-        if (pReceiveTx->pDetails->amountSatoshi < 0)
-        {
-            pReceiveTx->pDetails->amountSatoshi *= -1;
-        }
-        if (pReceiveTx->pDetails->amountCurrency < 0)
-        {
-            pReceiveTx->pDetails->amountCurrency *= -1.0;
-        }
-        // set the state
-        pReceiveTx->pStateInfo->timeCreation = time(NULL);
-        pReceiveTx->pStateInfo->bInternal = true;
-        ABC_CHECK_RET(ABC_CryptoHexEncode(TxID, &(pReceiveTx->szID), pError));
-        ABC_CHECK_RET(ABC_CryptoHexEncode(TxMalID, &(pReceiveTx->pStateInfo->szMalleableTxId), pError));
-
-        // Set the payee and category for both txs
-        ABC_CHECK_RET(ABC_TxTransferPopulate(pInfo, pTx, pReceiveTx, pError));
-
-        // save the transaction
-        ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szDestWalletUUID, pReceiveTx, pError));
-    }
-    // save the transaction
-    ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword, pInfo->szWalletUUID, pTx, pError));
-
-    // set the transaction id for the caller
-    ABC_STRDUP(*pszTxID, pTx->szID);
-exit:
-    ABC_BUF_FREE(TxID);
-    ABC_BUF_FREE(TxMalID);
-    ABC_TxFreeTx(pTx);
-    ABC_TxFreeTx(pReceiveTx);
-
-    ABC_TxMutexUnlock(NULL);
-    return cc;
-}
-#endif // NETWORK_FAKE
