@@ -2695,11 +2695,7 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
     ABC_IsTestNet(&bTestnet, pError);
     ABC_BUF_DUP_PTR(Version, ABC_VERSION, strlen(ABC_VERSION));
     ABC_BUF_APPEND_PTR(Version, "-", 1);
-    if (NETWORK_FAKE)
-    {
-        ABC_BUF_APPEND_PTR(Version, "fakenet", 7);
-    }
-    else if (bTestnet)
+    if (bTestnet)
     {
         ABC_BUF_APPEND_PTR(Version, "testnet", 7);
     }
