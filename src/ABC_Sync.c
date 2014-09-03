@@ -253,6 +253,8 @@ tABC_CC ABC_SyncServerRot(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     tABC_GeneralInfo *pInfo = NULL;
 
+    ABC_CHECK_RET(ABC_SyncMutexLock(pError));
+
     ABC_CHECK_RET(ABC_GeneralGetInfo(&pInfo, pError));
 
     if (serverIdx == -1)
@@ -269,9 +271,12 @@ tABC_CC ABC_SyncServerRot(tABC_Error *pError)
     {
         serverIdx = 0;
     }
+    ABC_FREE_STR(gszCurrSyncServer);
     ABC_STRDUP(gszCurrSyncServer, pInfo->aszSyncServers[serverIdx]);
 exit:
     ABC_GeneralFreeInfo(pInfo);
+
+    ABC_SyncMutexUnlock(NULL);
     return cc;
 }
 
@@ -287,6 +292,8 @@ tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *p
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_U08Buf URL = ABC_BUF_NULL;
+
+    ABC_CHECK_RET(ABC_SyncMutexLock(pError));
 
     ABC_CHECK_NULL(szRepoKey);
 
@@ -313,5 +320,7 @@ tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *p
     ABC_DebugLog("Syncing to: %s\n", *pszServer);
 
 exit:
+    ABC_SyncMutexUnlock(NULL);
+
     return cc;
 }
