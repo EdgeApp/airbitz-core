@@ -136,6 +136,12 @@ static int sync_local_dirty(int *out,
     git_tree *tree = NULL;
     git_diff *diff = NULL;
 
+    if (git_repository_is_bare(repo))
+    {
+        *out = 0;
+        goto exit;
+    }
+
     git_oid tree_id;
     git_check(sync_get_tree(&tree_id, repo, commit_id));
     git_check(git_tree_lookup(&tree, repo, &tree_id));
@@ -187,8 +193,8 @@ static int sync_merge_trees(git_oid *out,
     size_t size1, size2;
     size_t i1 = 0;
     size_t i2 = 0;
-    const git_tree_entry *e1;
-    const git_tree_entry *e2;
+    const git_tree_entry *e1 = NULL;
+    const git_tree_entry *e2 = NULL;
     enum { ONLY1 = 1, ONLY2 = 2, BOTH = 3 } state = BOTH;
 
     git_check(git_tree_lookup(&base_tree, repo, base_id));
@@ -356,7 +362,14 @@ int sync_master(git_repository *repo,
             git_oid local_tree;
             git_oid base_tree;
             git_oid remote_tree;
-            git_check(sync_workdir_tree(&local_tree, repo));
+            if (local_dirty)
+            {
+                git_check(sync_workdir_tree(&local_tree, repo));
+            }
+            else
+            {
+                git_check(sync_get_tree(&local_tree, repo, &master_id));
+            }
             git_check(sync_get_tree(&remote_tree, repo, &remote_id));
             git_check(sync_get_tree(&base_tree, repo, &base_id));
 
@@ -383,7 +396,10 @@ int sync_master(git_repository *repo,
             // Fast-forward to remote:
             git_check(sync_fast_forward(repo, SYNC_REF_MASTER, &remote_id));
         }
-        git_check(sync_checkout(repo, SYNC_REF_MASTER));
+        if (!git_repository_is_bare(repo))
+        {
+            git_check(sync_checkout(repo, SYNC_REF_MASTER));
+        }
     }
     else if (local_dirty)
     {
