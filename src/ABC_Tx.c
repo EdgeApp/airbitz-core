@@ -1898,9 +1898,9 @@ exit:
  *
  * @param szUserName        UserName for the account associated with the transactions
  * @param szPassword        Password for the account associated with the transactions
- * @param szWalletUUID      UUID of the wallet associated with the transactions 
- * @param startTime         Return transactions after this time 
- * @param endTime           Return transactions before this time 
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param startTime         Return transactions after this time
+ * @param endTime           Return transactions before this time
  * @param paTransactions    Pointer to store array of transactions info pointers
  * @param pCount            Pointer to store number of transactions
  * @param pError            A pointer to the location to store the error if there is one
@@ -1980,15 +1980,15 @@ tABC_CC ABC_TxGetTransactions(const char *szUserName,
                     if (bHasInternalEquivalent == false)
                     {
                         // add this transaction to the array
-                        
-                        ABC_CHECK_RET(ABC_TxLoadTxAndAppendToArray(szUserName, 
+
+                        ABC_CHECK_RET(ABC_TxLoadTxAndAppendToArray(szUserName,
                                                                    szPassword,
-                                                                   szWalletUUID, 
-                                                                   startTime, 
-                                                                   endTime, 
-                                                                   szFilename, 
-                                                                   &aTransactions, 
-                                                                   &count, 
+                                                                   szWalletUUID,
+                                                                   startTime,
+                                                                   endTime,
+                                                                   szFilename,
+                                                                   &aTransactions,
+                                                                   &count,
                                                                    pError));
                     }
                 }
@@ -2054,7 +2054,7 @@ tABC_CC ABC_TxSearchTransactions(const char *szUserName,
     ABC_CHECK_NULL(pCount);
     *pCount = 0;
 
-    ABC_TxGetTransactions(szUserName, szPassword, szWalletUUID, 
+    ABC_TxGetTransactions(szUserName, szPassword, szWalletUUID,
                           ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
                           &aTransactions, &count, pError);
     ABC_ALLOC(aSearchTransactions, sizeof(tABC_TxInfo*) * count);

@@ -244,9 +244,9 @@ tABC_CC ABC_BridgeParseAmount(const char *szAmount,
  * @param pszAmountOut a pointer that will hold the output string. The
  * caller frees the returned value.
  * @param decimal_places set to ABC_BITCOIN_DECIMAL_PLACE to convert
- * satoshis to bitcoins. 
- * @param bAddSign set to 'true' to add negative symbol to string if 
- * amount is negative 
+ * satoshis to bitcoins.
+ * @param bAddSign set to 'true' to add negative symbol to string if
+ * amount is negative
  */
 tABC_CC ABC_BridgeFormatAmount(int64_t amount,
                                char **pszAmountOut,
@@ -273,7 +273,7 @@ tABC_CC ABC_BridgeFormatAmount(int64_t amount,
     {
         amount = llabs(amount);
         out = libwallet::format_amount((uint64_t) amount, decimalPlaces);
-        ABC_STRDUP(*pszAmountOut, out.c_str()); 
+        ABC_STRDUP(*pszAmountOut, out.c_str());
     }
 
 exit:
@@ -570,17 +570,17 @@ exit:
 }
 
 tABC_CC ABC_BridgeWatchPath(const char *szUserName, const char *szPassword,
-							const char *szWalletUUID, char **szPath,
-							tABC_Error *pError)
+                            const char *szWalletUUID, char **szPath,
+                            tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     std::string filepath(
             ABC_BridgeWatcherFile(szUserName,
                                   szPassword,
                                   szWalletUUID));
-	ABC_STRDUP(*szPath, filepath.c_str());
+    ABC_STRDUP(*szPath, filepath.c_str());
 exit:
-	return cc;
+    return cc;
 }
 
 tABC_CC ABC_BridgePrioritizeAddress(const char *szUserName,

@@ -2739,15 +2739,15 @@ tABC_CC ABC_CsvExport(const char *szUserName,
 
         ABC_CHECK_RET(ABC_GetTransactions(szUserName,
                                           szPassword,
-                                          szUUID, 
-                                          startTime, endTime, 
+                                          szUUID,
+                                          startTime, endTime,
                                           &pTransactions, &iCount, pError));
 
 
-        ABC_CHECK_RET(ABC_ExportFormatCsv(szUserName, 
-                                          szPassword, 
-                                          pTransactions, 
-                                          iCount, 
+        ABC_CHECK_RET(ABC_ExportFormatCsv(szUserName,
+                                          szPassword,
+                                          pTransactions,
+                                          iCount,
                                           szCsvData,
                                           pError));
     }
