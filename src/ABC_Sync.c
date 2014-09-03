@@ -305,8 +305,9 @@ tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *p
         ABC_CC_SysError, "Unable to find a sync server");
 
     ABC_BUF_DUP_PTR(URL, gszCurrSyncServer, strlen(gszCurrSyncServer));
+
     // Do we have a trailing slash?
-    if (URL.p[strlen((char *) URL.p) - 1] != '/')
+    if (URL.p[URL.end - URL.p - 1] != '/')
     {
         ABC_BUF_APPEND_PTR(URL, "/", 1);
     }
