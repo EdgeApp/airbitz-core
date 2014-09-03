@@ -965,6 +965,8 @@ extern "C" {
                                   const char *szWalletUUID, const char *szAddress,
                                   tABC_Error *pError);
 
+    tABC_CC ABC_WatcherDisconnect(const char *szWalletUUID, tABC_Error *pError);
+
     tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError);
 
     tABC_CC ABC_WatcherDelete(const char *szWalletUUID, tABC_Error *pError);
