@@ -76,7 +76,7 @@ typedef struct sAccountKeys
     tABC_U08Buf     LP1;
     tABC_U08Buf     LRA;
     tABC_U08Buf     LRA1;
-    tABC_U08Buf     L2;
+    tABC_U08Buf     L4;
     tABC_U08Buf     RQ;
     tABC_U08Buf     LP;
     tABC_U08Buf     LP2;
@@ -486,8 +486,8 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     // CarePackage = ERQ, SNRP2, SNRP3, SNRP4
     ABC_CHECK_RET(ABC_LoginCreateCarePackageJSONString(NULL, pJSON_SNRP2, pJSON_SNRP3, pJSON_SNRP4, &szCarePackage_JSON, pError));
 
-    // L2 = Scrypt(L + P, SNRP4)
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP4, &(pKeys->L2), pError));
+    // L4 = Scrypt(L + P, SNRP4)
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP4, &(pKeys->L4), pError));
 
     // LP2 = Scrypt(L + P, SNRP2)
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->LP, pKeys->pSNRP2, &(pKeys->LP2), pError));
@@ -614,7 +614,7 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     tAccountKeys *pKeys     = NULL;
     tABC_U08Buf L           = ABC_BUF_NULL;
     tABC_U08Buf L1          = ABC_BUF_NULL;
-    tABC_U08Buf L2          = ABC_BUF_NULL;
+    tABC_U08Buf L4          = ABC_BUF_NULL;
     tABC_U08Buf P           = ABC_BUF_NULL;
     tABC_U08Buf LP          = ABC_BUF_NULL;
     tABC_U08Buf LP1         = ABC_BUF_NULL;
@@ -669,7 +669,7 @@ exit:
     ABC_BUF_FREE(P);
     ABC_BUF_FREE(LP);
     ABC_BUF_FREE(LP1);
-    ABC_BUF_FREE(L2);
+    ABC_BUF_FREE(L4);
     ABC_CryptoFreeSNRP(&pSNRP1);
 
     return cc;
@@ -714,7 +714,7 @@ static
 tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_U08Buf L2          = ABC_BUF_NULL;
+    tABC_U08Buf L4          = ABC_BUF_NULL;
     tABC_U08Buf SyncKey     = ABC_BUF_NULL;
     char *szAccountDir      = NULL;
     char *szFilename        = NULL;
@@ -722,13 +722,13 @@ tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
     char *szREPO_JSON       = NULL;
     json_t *pJSON_ESyncKey  = NULL;
 
-    ABC_CHECK_RET(ABC_LoginGetKey(pKeys->szUserName, NULL, ABC_LoginKey_L2, &L2, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(pKeys->szUserName, NULL, ABC_LoginKey_L4, &L4, pError));
     ABC_CHECK_RET(
         ABC_LoginGetLoginPackageObjects(pKeys->accountNum, NULL, NULL,
                                         &pJSON_ESyncKey, NULL, NULL, pError));
 
     // Decrypt ESyncKey
-    tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONObject(pJSON_ESyncKey, L2, &SyncKey, pError);
+    tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONObject(pJSON_ESyncKey, L4, &SyncKey, pError);
     // check the results
     if (ABC_CC_DecryptFailure == CC_Decrypt)
     {
@@ -965,10 +965,10 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     }
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->LRA, pKeys->pSNRP3, &(pKeys->LRA3), pError));
 
-    // L2 = Scrypt(L, SNRP4)
-    if (ABC_BUF_PTR(pKeys->L2) == NULL)
+    // L4 = Scrypt(L, SNRP4)
+    if (ABC_BUF_PTR(pKeys->L4) == NULL)
     {
-        ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP4, &(pKeys->L2), pError));
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP4, &(pKeys->L4), pError));
     }
 
     // RQ
@@ -996,9 +996,9 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
             pKeys, pKeys->MK, pKeys->szRepoAcctKey, pKeys->LP2, pKeys->LRA3,
             &szLoginPackage_JSON, pError));
 
-    // ERQ = AES256(RQ, L2)
+    // ERQ = AES256(RQ, L4)
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(
-                         pKeys->RQ, pKeys->L2, ABC_CryptoType_AES256,
+                         pKeys->RQ, pKeys->L4, ABC_CryptoType_AES256,
                          &pJSON_ERQ, pError));
 
     // update the care package
@@ -1493,7 +1493,7 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
         tABC_U08Buf RepoBuf = ABC_BUF_NULL;
         ABC_BUF_SET_PTR(RepoBuf, (unsigned char *)szRepoAcctKey, strlen(szRepoAcctKey) + 1);
 
-        ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(RepoBuf, pKeys->L2, ABC_CryptoType_AES256, &pJSON_ESyncKey, pError));
+        ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(RepoBuf, pKeys->L4, ABC_CryptoType_AES256, &pJSON_ESyncKey, pError));
     }
     if (ABC_BUF_PTR(LP2) != NULL && ABC_BUF_PTR(LRA3) != NULL)
     {
@@ -2178,7 +2178,7 @@ static void ABC_LoginFreeAccountKeys(tAccountKeys *pAccountKeys)
         ABC_BUF_FREE(pAccountKeys->LP1);
         ABC_BUF_FREE(pAccountKeys->LRA);
         ABC_BUF_FREE(pAccountKeys->LRA1);
-        ABC_BUF_FREE(pAccountKeys->L2);
+        ABC_BUF_FREE(pAccountKeys->L4);
         ABC_BUF_FREE(pAccountKeys->RQ);
         ABC_BUF_FREE(pAccountKeys->LP);
         ABC_BUF_FREE(pAccountKeys->LP2);
@@ -2329,8 +2329,8 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
             // L1 = scrypt(L, SNRP1)
             ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP1, &(pKeys->L1), pError));
 
-            // L2 = scrypt(L, SNRP4)
-            ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP4, &(pKeys->L2), pError));
+            // L4 = scrypt(L, SNRP4)
+            ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP4, &(pKeys->L4), pError));
 
             // add new starting account keys to the key cache
             ABC_CHECK_RET(ABC_LoginAddToKeyCache(pKeys, pError));
@@ -2356,12 +2356,12 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
     // try to decrypt RepoAcctKey
     if (pJSON_ESyncKey)
     {
-        tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONObject(pJSON_ESyncKey, pFinalKeys->L2, &REPO_JSON, pError);
+        tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONObject(pJSON_ESyncKey, pFinalKeys->L4, &REPO_JSON, pError);
 
         // check the results
         if (ABC_CC_DecryptFailure == CC_Decrypt)
         {
-            ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt RepoAcctKey - bad L2");
+            ABC_RET_ERROR(ABC_CC_BadPassword, "Could not decrypt RepoAcctKey - bad L4");
         }
         else if (ABC_CC_Ok != CC_Decrypt)
         {
@@ -2502,15 +2502,15 @@ tABC_CC ABC_LoginGetKey(const char *szUserName, const char *szPassword, tABC_Log
             ABC_BUF_SET(*pKey, pKeys->L1);
             break;
 
-        case ABC_LoginKey_L2:
-            // L2 = Scrypt(L, SNRP4)
-            if (NULL == ABC_BUF_PTR(pKeys->L2))
+        case ABC_LoginKey_L4:
+            // L4 = Scrypt(L, SNRP4)
+            if (NULL == ABC_BUF_PTR(pKeys->L4))
             {
                 ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->L), ABC_CC_Error, "Expected to find L in key cache");
                 ABC_CHECK_ASSERT(NULL != pKeys->pSNRP4, ABC_CC_Error, "Expected to find SNRP4 in key cache");
-                ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP4, &(pKeys->L2), pError));
+                ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->L, pKeys->pSNRP4, &(pKeys->L4), pError));
             }
-            ABC_BUF_SET(*pKey, pKeys->L2);
+            ABC_BUF_SET(*pKey, pKeys->L4);
             break;
 
         case ABC_LoginKey_LP1:
@@ -2543,9 +2543,9 @@ tABC_CC ABC_LoginGetKey(const char *szUserName, const char *szPassword, tABC_Log
             // RQ - if ERQ available
             if (NULL == ABC_BUF_PTR(pKeys->RQ))
             {
-                // get L2
-                tABC_U08Buf L2;
-                ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_L2, &L2, pError));
+                // get L4
+                tABC_U08Buf L4;
+                ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_L4, &L4, pError));
 
                 // get ERQ
                 int AccountNum = -1;
@@ -2555,7 +2555,7 @@ tABC_CC ABC_LoginGetKey(const char *szUserName, const char *szPassword, tABC_Log
                 // RQ - if ERQ available
                 if (pJSON_ERQ != NULL)
                 {
-                    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ERQ, L2, &(pKeys->RQ), pError));
+                    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ERQ, L4, &(pKeys->RQ), pError));
                 }
                 else
                 {
@@ -2604,7 +2604,7 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
     // Use for the remote answers check
     tABC_U08Buf L           = ABC_BUF_NULL;
     tABC_U08Buf L1          = ABC_BUF_NULL;
-    tABC_U08Buf L2          = ABC_BUF_NULL;
+    tABC_U08Buf L4          = ABC_BUF_NULL;
     tABC_U08Buf LP1_NULL    = ABC_BUF_NULL;
     char *szLoginPackage    = NULL;
     tABC_CryptoSNRP *pSNRP1 = NULL;
@@ -2641,8 +2641,8 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
         // We have the care package so fetch keys without password
         ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, NULL, &pKeys, pError));
 
-        // L2 = Scrypt(L, SNRP4)
-        ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pKeys->pSNRP4, &L2, pError));
+        // L4 = Scrypt(L, SNRP4)
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pKeys->pSNRP4, &L4, pError));
 
         // Setup the account repo and sync
         ABC_CHECK_RET(ABC_LoginRepoSetup(pKeys, pError));
@@ -2852,7 +2852,7 @@ tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecover
     char *szCarePackage          = NULL;
     tABC_U08Buf L                = ABC_BUF_NULL;
     tABC_U08Buf L1               = ABC_BUF_NULL;
-    tABC_U08Buf L2               = ABC_BUF_NULL;
+    tABC_U08Buf L4               = ABC_BUF_NULL;
     tABC_U08Buf RQ               = ABC_BUF_NULL;
     tABC_CryptoSNRP *pSNRP1      = NULL;
     tABC_CryptoSNRP *pSNRP4      = NULL;
@@ -2873,15 +2873,15 @@ tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecover
     // get ERQ and SNRP4
     ABC_CHECK_RET(ABC_LoginGetCarePackageObjects(0, gCarePackageCache, &pJSON_ERQ, NULL, NULL, &pJSON_SNRP4, pError));
 
-    // Create L2
+    // Create L4
     ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP4, &pSNRP4, pError));
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP4, &L2, pError));
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP4, &L4, pError));
 
     tABC_U08Buf FinalRQ = ABC_BUF_NULL;
     // RQ - if ERQ available
     if (pJSON_ERQ != NULL)
     {
-        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ERQ, L2, &RQ, pError));
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ERQ, L4, &RQ, pError));
         ABC_BUF_DUP(FinalRQ, RQ);
         ABC_BUF_APPEND_PTR(FinalRQ, "", 1);
     }
@@ -2895,7 +2895,7 @@ exit:
     ABC_BUF_FREE(RQ);
     ABC_BUF_FREE(L);
     ABC_BUF_FREE(L1);
-    ABC_BUF_FREE(L2);
+    ABC_BUF_FREE(L4);
     if (pJSON_ERQ) json_decref(pJSON_ERQ);
     if (pJSON_SNRP4) json_decref(pJSON_SNRP4);
     return cc;
