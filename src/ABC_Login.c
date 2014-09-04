@@ -80,7 +80,7 @@ typedef struct sAccountKeys
     tABC_U08Buf     RQ;
     tABC_U08Buf     LP;
     tABC_U08Buf     LP2;
-    tABC_U08Buf     LRA2;
+    tABC_U08Buf     LRA3;
 } tAccountKeys;
 
 // When a recovers password from on a new device, care package is stored either
@@ -101,9 +101,9 @@ static tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1, tABC_U08Buf oldLP1,
 static tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, const char *szCarePackage, const char *szLoginPackage, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
 static tABC_CC ABC_LoginGetCarePackageObjects(int AccountNum, const char *szCarePackage, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
-static tABC_CC ABC_LoginCreateLoginPackageJSONString(const json_t *pJSON_MK, const json_t *pJSON_RepoAcctKey, const json_t *pJSON_ELP2, const json_t *pJSON_ELRA2, char **pszJSON, tABC_Error *pError);
-static tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys, tABC_U08Buf MK, const char *szRepoAcctKey, tABC_U08Buf LP2, tABC_U08Buf LRA2, char **szLoginPackage, tABC_Error *pError);
-static tABC_CC ABC_LoginGetLoginPackageObjects(int AccountNum, const char *szLoginPackage, json_t **ppJSON_EMK, json_t **ppJSON_ESyncKey, json_t **ppJSON_ELP2, json_t **ppJSON_ELRA2, tABC_Error *pError);
+static tABC_CC ABC_LoginCreateLoginPackageJSONString(const json_t *pJSON_MK, const json_t *pJSON_RepoAcctKey, const json_t *pJSON_ELP2, const json_t *pJSON_ELRA3, char **pszJSON, tABC_Error *pError);
+static tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys, tABC_U08Buf MK, const char *szRepoAcctKey, tABC_U08Buf LP2, tABC_U08Buf LRA3, char **szLoginPackage, tABC_Error *pError);
+static tABC_CC ABC_LoginGetLoginPackageObjects(int AccountNum, const char *szLoginPackage, json_t **ppJSON_EMK, json_t **ppJSON_ESyncKey, json_t **ppJSON_ELP2, json_t **ppJSON_ELRA3, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir, tABC_Error *pError);
 static tABC_CC ABC_LoginNextAccountNum(int *pAccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateRootDir(tABC_Error *pError);
@@ -958,12 +958,12 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->LRA, pKeys->pSNRP1, &(pKeys->LRA1), pError));
 
 
-    // LRA2 = Scrypt(L + RA, SNRP3)
-    if (ABC_BUF_PTR(pKeys->LRA2) != NULL)
+    // LRA3 = Scrypt(L + RA, SNRP3)
+    if (ABC_BUF_PTR(pKeys->LRA3) != NULL)
     {
-        ABC_BUF_FREE(pKeys->LRA2);
+        ABC_BUF_FREE(pKeys->LRA3);
     }
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->LRA, pKeys->pSNRP3, &(pKeys->LRA2), pError));
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->LRA, pKeys->pSNRP3, &(pKeys->LRA3), pError));
 
     // L2 = Scrypt(L, SNRP4)
     if (ABC_BUF_PTR(pKeys->L2) == NULL)
@@ -993,7 +993,7 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     // Create LoginPackage json
     ABC_CHECK_RET(
         ABC_LoginUpdateLoginPackageJSONString(
-            pKeys, pKeys->MK, pKeys->szRepoAcctKey, pKeys->LP2, pKeys->LRA2,
+            pKeys, pKeys->MK, pKeys->szRepoAcctKey, pKeys->LP2, pKeys->LRA3,
             &szLoginPackage_JSON, pError));
 
     // ERQ = AES256(RQ, L2)
@@ -1064,7 +1064,7 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
 
     tAccountKeys *pKeys = NULL;
     tABC_U08Buf oldLP2       = ABC_BUF_NULL;
-    tABC_U08Buf LRA2         = ABC_BUF_NULL;
+    tABC_U08Buf LRA3         = ABC_BUF_NULL;
     tABC_U08Buf LRA          = ABC_BUF_NULL;
     tABC_U08Buf LRA1         = ABC_BUF_NULL;
     tABC_U08Buf oldLP1       = ABC_BUF_NULL;
@@ -1088,13 +1088,13 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     // get the keys for this user (note: password can be NULL for this call)
     ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
 
-    // we need to obtain the original LP2 and LRA2
+    // we need to obtain the original LP2 and LRA3
     if (pInfo->szPassword != NULL)
     {
         // we had the password so we should have the LP2 key
         ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->LP2), ABC_CC_Error, "Expected to find LP2 in key cache");
         ABC_BUF_DUP(oldLP2, pKeys->LP2);
-        ABC_BUF_DUP(LRA2, pKeys->LRA2);
+        ABC_BUF_DUP(LRA3, pKeys->LRA3);
 
         // create the old LP1 for use in server auth -> LP1 = Scrypt(LP, SNRP1)
         tABC_U08Buf LP1 = ABC_BUF_NULL;
@@ -1106,23 +1106,23 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     }
     else
     {
-        // we have the recovery questions so we can make the LRA2
+        // we have the recovery questions so we can make the LRA3
 
         // LRA = L + RA
         ABC_BUF_DUP(LRA, pKeys->L);
         ABC_BUF_APPEND_PTR(LRA, pInfo->szRecoveryAnswers, strlen(pInfo->szRecoveryAnswers));
 
-        // LRA2 = Scrypt(LRA, SNRP3)
+        // LRA3 = Scrypt(LRA, SNRP3)
         ABC_CHECK_ASSERT(NULL != pKeys->pSNRP3, ABC_CC_Error, "Expected to find SNRP3 in key cache");
-        ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP3, &LRA2, pError));
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP3, &LRA3, pError));
 
         ABC_CHECK_RET(
             ABC_LoginGetLoginPackageObjects(
                 pKeys->accountNum, NULL,
                 &pJSON_MK, NULL, &pJSON_ELP2, NULL, pError));
 
-        // get the LP2 by decrypting ELP2 with LRA2
-        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ELP2, LRA2, &oldLP2, pError));
+        // get the LP2 by decrypting ELP2 with LRA3
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ELP2, LRA3, &oldLP2, pError));
         // Get MK from old LP2
         ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_MK, oldLP2, &MK, pError));
 
@@ -1133,7 +1133,7 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP1, &LRA1, pError));
     }
 
-    // we now have oldLP2 and oldLRA2
+    // we now have oldLP2 and oldLRA3
 
     // time to set the new data for this account
 
@@ -1169,7 +1169,7 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     }
 
     // Update Login Package
-    ABC_CHECK_RET(ABC_LoginUpdateLoginPackageJSONString(pKeys, pKeys->MK, pKeys->szRepoAcctKey, pKeys->LP2, LRA2, &szLoginPackage_JSON, pError));
+    ABC_CHECK_RET(ABC_LoginUpdateLoginPackageJSONString(pKeys, pKeys->MK, pKeys->szRepoAcctKey, pKeys->LP2, LRA3, &szLoginPackage_JSON, pError));
 
     // server change password - Server will need L1, (P1 or LRA1) and new_P1
     ABC_CHECK_RET(ABC_LoginServerChangePassword(pKeys->L1, oldLP1, LRA1, pKeys->LP1, szLoginPackage_JSON, pError));
@@ -1184,13 +1184,13 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     // Clear wallet cache
     ABC_CHECK_RET(ABC_WalletClearCache(pError));
 
-    // Sync the data (ELP2 and ELRA2) with server
+    // Sync the data (ELP2 and ELRA3) with server
     int dirty;
     ABC_CHECK_RET(ABC_LoginSyncData(pInfo->szUserName, pInfo->szNewPassword, &dirty, pError));
     ABC_CHECK_RET(ABC_WalletSyncAll(pInfo->szUserName, pInfo->szNewPassword, &dirty, pError));
 exit:
     ABC_BUF_FREE(oldLP2);
-    ABC_BUF_FREE(LRA2);
+    ABC_BUF_FREE(LRA3);
     ABC_BUF_FREE(LRA);
     ABC_BUF_FREE(LRA1);
     ABC_BUF_FREE(oldLP1);
@@ -1409,7 +1409,7 @@ static
 tABC_CC ABC_LoginCreateLoginPackageJSONString(const json_t *pJSON_MK,
                                               const json_t *pJSON_SyncKey,
                                               const json_t *pJSON_ELP2,
-                                              const json_t *pJSON_ELRA2,
+                                              const json_t *pJSON_ELRA3,
                                               char         **pszJSON,
                                               tABC_Error   *pError)
 {
@@ -1429,9 +1429,9 @@ tABC_CC ABC_LoginCreateLoginPackageJSONString(const json_t *pJSON_MK,
     {
         json_object_set(pJSON_Root, JSON_ACCT_ELP2_FIELD, (json_t *) pJSON_ELP2);
     }
-    if (pJSON_ELRA2)
+    if (pJSON_ELRA3)
     {
-        json_object_set(pJSON_Root, JSON_ACCT_ELRA3_FIELD, (json_t *) pJSON_ELRA2);
+        json_object_set(pJSON_Root, JSON_ACCT_ELRA3_FIELD, (json_t *) pJSON_ELRA3);
     }
     *pszJSON = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 exit:
@@ -1445,7 +1445,7 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
                                               tABC_U08Buf MK,
                                               const char *szRepoAcctKey,
                                               tABC_U08Buf LP2,
-                                              tABC_U08Buf LRA2,
+                                              tABC_U08Buf LRA3,
                                               char **szLoginPackage,
                                               tABC_Error *pError)
 {
@@ -1457,7 +1457,7 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
     json_t *pJSON_EMK            = NULL;
     json_t *pJSON_ESyncKey       = NULL;
     json_t *pJSON_ELP2           = NULL;
-    json_t *pJSON_ELRA2          = NULL;
+    json_t *pJSON_ELRA3          = NULL;
 
     ABC_CHECK_NULL(szLoginPackage);
     ABC_CHECK_NULL(szRepoAcctKey);
@@ -1477,7 +1477,7 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
                                             &pJSON_EMK,
                                             &pJSON_ESyncKey,
                                             &pJSON_ELP2,
-                                            &pJSON_ELRA2,
+                                            &pJSON_ELRA3,
                                             pError));
     }
 
@@ -1495,23 +1495,23 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
 
         ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(RepoBuf, pKeys->L2, ABC_CryptoType_AES256, &pJSON_ESyncKey, pError));
     }
-    if (ABC_BUF_PTR(LP2) != NULL && ABC_BUF_PTR(LRA2) != NULL)
+    if (ABC_BUF_PTR(LP2) != NULL && ABC_BUF_PTR(LRA3) != NULL)
     {
         if (pJSON_ELP2) json_decref(pJSON_ELP2);
-        if (pJSON_ELRA2) json_decref(pJSON_ELRA2);
+        if (pJSON_ELRA3) json_decref(pJSON_ELRA3);
 
-        // write out new ELP2.json <- LP2 encrypted with recovery key (LRA2)
-        ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LP2, LRA2, ABC_CryptoType_AES256, &pJSON_ELP2, pError));
+        // write out new ELP2.json <- LP2 encrypted with recovery key (LRA3)
+        ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LP2, LRA3, ABC_CryptoType_AES256, &pJSON_ELP2, pError));
 
-        // write out new ELRA2.json <- LRA2 encrypted with LP2 (L+P,S2)
-        ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LRA2, LP2, ABC_CryptoType_AES256, &pJSON_ELRA2, pError));
+        // write out new ELRA3.json <- LRA3 encrypted with LP2 (L+P,S2)
+        ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LRA3, LP2, ABC_CryptoType_AES256, &pJSON_ELRA3, pError));
     }
 
     ABC_CHECK_RET(
         ABC_LoginCreateLoginPackageJSONString(pJSON_EMK,
                                               pJSON_ESyncKey,
                                               pJSON_ELP2,
-                                              pJSON_ELRA2,
+                                              pJSON_ELRA3,
                                               szLoginPackage,
                                               pError));
 exit:
@@ -1521,7 +1521,7 @@ exit:
     if (pJSON_EMK)      json_decref(pJSON_EMK);
     if (pJSON_ESyncKey) json_decref(pJSON_ESyncKey);
     if (pJSON_ELP2)     json_decref(pJSON_ELP2);
-    if (pJSON_ELRA2)    json_decref(pJSON_ELRA2);
+    if (pJSON_ELRA3)    json_decref(pJSON_ELRA3);
 
     return cc;
 }
@@ -1653,7 +1653,7 @@ exit:
  * @param ppJSON_EMK      Pointer store EMK JSON object (can be NULL) - caller expected to decref
  * @param ppJSON_ESyncKey Pointer store ESyncKey JSON object (can be NULL) - caller expected to decref
  * @param ppJSON_ELP2     Pointer store ELP2 JSON object (can be NULL) - caller expected to decref
- * @param ppJSON_ELRA2    Pointer store ELRA JSON object (can be NULL) - caller expected to decref
+ * @param ppJSON_ELRA3    Pointer store ELRA JSON object (can be NULL) - caller expected to decref
  * @param pError          A pointer to the location to store the error if there is one
  */
 static
@@ -1662,7 +1662,7 @@ tABC_CC ABC_LoginGetLoginPackageObjects(int          AccountNum,
                                         json_t       **ppJSON_EMK,
                                         json_t       **ppJSON_ESyncKey,
                                         json_t       **ppJSON_ELP2,
-                                        json_t       **ppJSON_ELRA2,
+                                        json_t       **ppJSON_ELRA3,
                                         tABC_Error   *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1674,7 +1674,7 @@ tABC_CC ABC_LoginGetLoginPackageObjects(int          AccountNum,
     json_t *pJSON_EMK            = NULL;
     json_t *pJSON_ESyncKey       = NULL;
     json_t *pJSON_ELP2           = NULL;
-    json_t *pJSON_ELRA2          = NULL;
+    json_t *pJSON_ELRA3          = NULL;
 
     // if we supply a care package, use it instead
     if (szLoginPackage)
@@ -1717,11 +1717,11 @@ tABC_CC ABC_LoginGetLoginPackageObjects(int          AccountNum,
     {
         ABC_CHECK_ASSERT((pJSON_ELP2 && json_is_object(pJSON_ELP2)), ABC_CC_JSONError, "Error parsing JSON care package - missing LP2");
     }
-    // get LRA2
-    pJSON_ELRA2 = json_object_get(pJSON_Root, JSON_ACCT_ELRA3_FIELD);
-    if (pJSON_ELRA2)
+    // get LRA3
+    pJSON_ELRA3 = json_object_get(pJSON_Root, JSON_ACCT_ELRA3_FIELD);
+    if (pJSON_ELRA3)
     {
-        ABC_CHECK_ASSERT((pJSON_ELRA2 && json_is_object(pJSON_ELRA2)), ABC_CC_JSONError, "Error parsing JSON care package - missing LRA2");
+        ABC_CHECK_ASSERT((pJSON_ELRA3 && json_is_object(pJSON_ELRA3)), ABC_CC_JSONError, "Error parsing JSON care package - missing LRA3");
     }
 
     if (ppJSON_EMK)
@@ -1736,9 +1736,9 @@ tABC_CC ABC_LoginGetLoginPackageObjects(int          AccountNum,
     {
         *ppJSON_ELP2 = json_incref(pJSON_ELP2);
     }
-    if (ppJSON_ELRA2)
+    if (ppJSON_ELRA3)
     {
-        *ppJSON_ELRA2 = json_incref(pJSON_ELRA2);
+        *ppJSON_ELRA3 = json_incref(pJSON_ELRA3);
     }
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
@@ -2182,7 +2182,7 @@ static void ABC_LoginFreeAccountKeys(tAccountKeys *pAccountKeys)
         ABC_BUF_FREE(pAccountKeys->RQ);
         ABC_BUF_FREE(pAccountKeys->LP);
         ABC_BUF_FREE(pAccountKeys->LP2);
-        ABC_BUF_FREE(pAccountKeys->LRA2);
+        ABC_BUF_FREE(pAccountKeys->LRA3);
     }
 }
 
@@ -2285,14 +2285,14 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
     json_t       *pJSON_SNRP4        = NULL;
     json_t       *pJSON_EMK          = NULL;
     json_t       *pJSON_ESyncKey     = NULL;
-    json_t       *pJSON_ELRA2        = NULL;
+    json_t       *pJSON_ELRA3        = NULL;
     tABC_U08Buf  REPO_JSON           = ABC_BUF_NULL;
     tABC_U08Buf  MK                  = ABC_BUF_NULL;
     json_t       *pJSON_Root         = NULL;
     tABC_U08Buf  P                   = ABC_BUF_NULL;
     tABC_U08Buf  LP                  = ABC_BUF_NULL;
     tABC_U08Buf  LP2                 = ABC_BUF_NULL;
-    tABC_U08Buf  LRA2                = ABC_BUF_NULL;
+    tABC_U08Buf  LRA3                = ABC_BUF_NULL;
 
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
@@ -2351,7 +2351,7 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
     ABC_CHECK_RET(
         ABC_LoginGetLoginPackageObjects(
             pFinalKeys->accountNum, NULL,
-            &pJSON_EMK, &pJSON_ESyncKey, NULL, &pJSON_ELRA2, pError));
+            &pJSON_EMK, &pJSON_ESyncKey, NULL, &pJSON_ELRA3, pError));
 
     // try to decrypt RepoAcctKey
     if (pJSON_ESyncKey)
@@ -2412,9 +2412,9 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
                 goto exit;
             }
 
-            if (pJSON_ELRA2 != NULL)
+            if (pJSON_ELRA3 != NULL)
             {
-                ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ELRA2, LP2, &LRA2, pError));
+                ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ELRA3, LP2, &LRA3, pError));
             }
 
             // if we got here, then the password was good so we can add what we just calculated to the keys
@@ -2427,10 +2427,10 @@ tABC_CC ABC_LoginCacheKeys(const char *szUserName, const char *szPassword, tAcco
             ABC_BUF_CLEAR(LP);
             ABC_BUF_SET(pFinalKeys->LP2, LP2);
             ABC_BUF_CLEAR(LP2);
-            if (pJSON_ELRA2 != NULL)
+            if (pJSON_ELRA3 != NULL)
             {
-                ABC_BUF_SET(pFinalKeys->LRA2, LRA2);
-                ABC_BUF_CLEAR(LRA2);
+                ABC_BUF_SET(pFinalKeys->LRA3, LRA3);
+                ABC_BUF_CLEAR(LRA3);
             }
         }
         else
@@ -2592,7 +2592,7 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
 
     tAccountKeys *pKeys    = NULL;
     tABC_U08Buf LRA        = ABC_BUF_NULL;
-    tABC_U08Buf LRA2       = ABC_BUF_NULL;
+    tABC_U08Buf LRA3       = ABC_BUF_NULL;
     tABC_U08Buf LRA1       = ABC_BUF_NULL;
     tABC_U08Buf LP2        = ABC_BUF_NULL;
     json_t *pJSON_ELP2     = NULL;
@@ -2669,8 +2669,8 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
     }
     else
     {
-        // create our LRA2 = Scrypt(L + RA, SNRP3)
-        ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP3, &LRA2, pError));
+        // create our LRA3 = Scrypt(L + RA, SNRP3)
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP3, &LRA3, pError));
 
         // create our LRA1 = Scrypt(L + RA, SNRP1)
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP1, &LRA1, pError));
@@ -2681,7 +2681,7 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
         // attempt to decode ELP2
         ABC_CHECK_RET(
             ABC_LoginGetLoginPackageObjects(pKeys->accountNum, NULL, NULL, NULL, &pJSON_ELP2, NULL, pError));
-        tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONObject(pJSON_ELP2, LRA2, &LP2, pError);
+        tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONObject(pJSON_ELP2, LRA3, &LP2, pError);
 
         // check the results
         if (ABC_CC_Ok == CC_Decrypt)
@@ -2705,8 +2705,8 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
         {
             ABC_BUF_SET(pKeys->LRA, LRA);
             ABC_BUF_CLEAR(LRA); // so we don't free as we exit
-            ABC_BUF_SET(pKeys->LRA2, LRA2);
-            ABC_BUF_CLEAR(LRA2); // so we don't free as we exit
+            ABC_BUF_SET(pKeys->LRA3, LRA3);
+            ABC_BUF_CLEAR(LRA3); // so we don't free as we exit
             ABC_BUF_SET(pKeys->LRA1, LRA1);
             ABC_BUF_CLEAR(LRA1); // so we don't free as we exit
             ABC_BUF_SET(pKeys->LP2, LP2);
@@ -2715,7 +2715,7 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
     }
 exit:
     ABC_BUF_FREE(LRA);
-    ABC_BUF_FREE(LRA2);
+    ABC_BUF_FREE(LRA3);
     ABC_BUF_FREE(LRA1);
     ABC_BUF_FREE(LP2);
     ABC_FREE_STR(szAccountDir);
