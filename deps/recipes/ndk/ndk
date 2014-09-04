@@ -1,17 +1,20 @@
 # This recipe contains the setup tasks for unpacking and installing the NDK
 inherit common
 
+version="r9c"
+
 # Select the correct NDK version for the host system:
 case $(uname -sm) in
-"Linux x86_64")  system=linux-x86_64 ;;
-"Darwin x86_64") system=darwin-x86_64 ;;
+"Linux x86_64")
+    system=linux-x86_64
+    source="http://dl.google.com/android/ndk/android-ndk-$version-$system.tar.bz2#bd42f8448a82d7c8e953a7543dafd118c92a5a26" ;;
+"Darwin x86_64")
+    system=darwin-x86_64
+    source="http://dl.google.com/android/ndk/android-ndk-$version-$system.tar.bz2#08e2c0f6576549bd189d0482d86c9f6ad6e57f7d" ;;
 *)
     echo "Unknown host platform!"
     exit 1;;
 esac
-
-version="r9c"
-source="http://dl.google.com/android/ndk/android-ndk-$version-$system.tar.bz2#bd42f8448a82d7c8e953a7543dafd118c92a5a26"
 
 # Extracts a standalone toolchain from the NDK.
 # $1 arch name for installing the toolchain.
