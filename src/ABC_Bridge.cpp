@@ -50,8 +50,8 @@
 
 #include "config.h"
 
-#define FALLBACK_OBELISK "tcp://obelisk3.airbitz.co:9091"
-#define TESTNET_OBELISK "tcp://obelisk-testnet2.airbitz.co:9091"
+#define FALLBACK_OBELISK "tcp://obelisk.airbitz.co:9091"
+#define TESTNET_OBELISK "tcp://obelisk-testnet.airbitz.co:9091"
 #define NO_AB_FEES
 #define MAX_BTC_STRING_SIZE 20
 
@@ -79,6 +79,9 @@ static uint8_t pubkey_version = 0x00;
 static uint8_t script_version = 0x05;
 typedef std::string WalletUUID;
 static std::map<WalletUUID, WatcherInfo*> watchers_;
+
+// The last obelisk server we connected to:
+static unsigned gLastObelisk = 0;
 
 // XXX: Hacky. These hold the state on a send which is used on the return
 // callback. It would be better to pass these into the watcher.
@@ -452,6 +455,7 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     libwallet::watcher::block_height_callback heightCallback;
     libwallet::watcher::callback txCallback;
     libwallet::watcher::tx_sent_callback sendCallback;
+    libwallet::watcher::fail_callback failCallback;
 
     auto row = watchers_.find(szWalletUUID);
     if (row == watchers_.end())
@@ -484,6 +488,13 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     // };
     // watcherInfo->watcher->set_tx_sent_callback(sendCallback);
 
+    failCallback = [watcherInfo]()
+    {
+        tABC_Error error;
+        ABC_BridgeWatcherConnect(watcherInfo->szWalletUUID, &error);
+    };
+    watcherInfo->watcher->set_fail_callback(std::move(failCallback));
+
     row->second->watcher->loop();
 exit:
     return cc;
@@ -494,6 +505,7 @@ tABC_CC ABC_BridgeWatcherConnect(const char *szWalletUUID, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     tABC_GeneralInfo *ppInfo = NULL;
     WatcherInfo *watcherInfo = NULL;
+    const char *szServer = NULL;
 
     auto row = watchers_.find(szWalletUUID);
     if (row == watchers_.end())
@@ -501,29 +513,22 @@ tABC_CC ABC_BridgeWatcherConnect(const char *szWalletUUID, tABC_Error *pError)
         ABC_DebugLog("Watcher %s does not exist\n", szWalletUUID);
         goto exit;
     }
-
     watcherInfo = row->second;
 
-    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
-    if (false && ppInfo->countObeliskServers > 0)
+    // Pick a server:
+    szServer = ABC_BridgeIsTestNet() ? TESTNET_OBELISK : FALLBACK_OBELISK;
+    if (ABC_CC_Ok == ABC_GeneralGetInfo(&ppInfo, pError) &&
+        0 < ppInfo->countObeliskServers)
     {
-        ABC_DebugLog("Using %s obelisk servers\n",
-                ppInfo->aszObeliskServers[0]);
-        watcherInfo->watcher->connect(ppInfo->aszObeliskServers[0]);
+        ++gLastObelisk;
+        if (ppInfo->countObeliskServers <= gLastObelisk)
+            gLastObelisk = 0;
+        szServer = ppInfo->aszObeliskServers[gLastObelisk];
     }
-    else
-    {
-        if (ABC_BridgeIsTestNet())
-        {
-            ABC_DebugLog("Using Fallback testnet obelisk servers: %s\n", TESTNET_OBELISK);
-            watcherInfo->watcher->connect(TESTNET_OBELISK);
-        }
-        else
-        {
-            ABC_DebugLog("Using Fallback obelisk servers: %s\n", FALLBACK_OBELISK);
-            watcherInfo->watcher->connect(FALLBACK_OBELISK);
-        }
-    }
+
+    // Connect:
+    ABC_DebugLog("Connecting to %s\n", szServer);
+    watcherInfo->watcher->connect(szServer);
 
 exit:
     ABC_GeneralFreeInfo(ppInfo);
