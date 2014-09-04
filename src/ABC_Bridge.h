@@ -142,8 +142,6 @@ extern "C" {
 
     tABC_CC ABC_BridgeTxBlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError);
 
-    tABC_CC ABC_BridgeWatcherStatus(const char *szWalletUUID, tABC_Error *pError);
-
     bool ABC_BridgeIsTestNet();
 
 #ifdef __cplusplus
