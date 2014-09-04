@@ -965,25 +965,6 @@ exit:
     return cc;
 }
 
-tABC_CC
-ABC_BridgeWatcherStatus(const char *szWalletUUID, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    auto row = watchers_.find(szWalletUUID);
-    if (row == watchers_.end())
-    {
-        cc = ABC_CC_Synchronizing;
-        goto exit;
-    }
-
-    if (row->second->watcher->get_status() == libwallet::watcher::watcher_syncing)
-    {
-        cc = ABC_CC_Synchronizing;
-    }
-exit:
-    return cc;
-}
-
 bool
 ABC_BridgeIsTestNet()
 {
