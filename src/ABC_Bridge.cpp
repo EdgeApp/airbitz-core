@@ -505,7 +505,7 @@ tABC_CC ABC_BridgeWatcherConnect(const char *szWalletUUID, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     tABC_GeneralInfo *ppInfo = NULL;
     WatcherInfo *watcherInfo = NULL;
-    const char *szServer = NULL;
+    const char *szServer = FALLBACK_OBELISK;
 
     auto row = watchers_.find(szWalletUUID);
     if (row == watchers_.end())
@@ -516,8 +516,11 @@ tABC_CC ABC_BridgeWatcherConnect(const char *szWalletUUID, tABC_Error *pError)
     watcherInfo = row->second;
 
     // Pick a server:
-    szServer = ABC_BridgeIsTestNet() ? TESTNET_OBELISK : FALLBACK_OBELISK;
-    if (ABC_CC_Ok == ABC_GeneralGetInfo(&ppInfo, pError) &&
+    if (ABC_BridgeIsTestNet())
+    {
+        szServer = TESTNET_OBELISK;
+    }
+    else if (ABC_CC_Ok == ABC_GeneralGetInfo(&ppInfo, pError) &&
         0 < ppInfo->countObeliskServers)
     {
         ++gLastObelisk;
