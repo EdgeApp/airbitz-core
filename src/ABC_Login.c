@@ -364,7 +364,6 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
         ABC_CHECK_RET(ABC_LoginFetch(pInfo, pError));
         ABC_CHECK_RET(ABC_LoginCheckValidUser(pInfo->szUserName, pError));
         ABC_CHECK_RET(ABC_LoginCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
-        ABC_WalletSyncAll(pInfo->szUserName, pInfo->szPassword, &dataDirty, pError);
     }
     else
     {
@@ -1033,7 +1032,6 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
 
     int dirty;
     ABC_CHECK_RET(ABC_LoginSyncData(pKeys->szUserName, pKeys->szPassword, &dirty, pError));
-    ABC_CHECK_RET(ABC_WalletSyncAll(pKeys->szUserName, pKeys->szPassword, &dirty, pError));
 exit:
     if (pJSON_ERQ)          json_decref(pJSON_ERQ);
     if (pJSON_SNRP2)        json_decref(pJSON_SNRP2);
@@ -1187,7 +1185,6 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     // Sync the data (ELP2 and ELRA3) with server
     int dirty;
     ABC_CHECK_RET(ABC_LoginSyncData(pInfo->szUserName, pInfo->szNewPassword, &dirty, pError));
-    ABC_CHECK_RET(ABC_WalletSyncAll(pInfo->szUserName, pInfo->szNewPassword, &dirty, pError));
 exit:
     ABC_BUF_FREE(oldLP2);
     ABC_BUF_FREE(LRA3);

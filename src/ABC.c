@@ -2338,8 +2338,37 @@ tABC_CC ABC_DataSyncAll(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
-    int accountDirty = 0;
     int walletDirty = 0;
+
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_DataSyncAccount(szUserName, szPassword, fAsyncBitCoinEventCallback, pData, pError));
+    // Sync Wallet Data
+    ABC_CHECK_RET(ABC_WalletSyncAll(szUserName, szPassword, &walletDirty, pError));
+    if (walletDirty && fAsyncBitCoinEventCallback)
+    {
+        tABC_AsyncBitCoinInfo info;
+        info.eventType = ABC_AsyncEventType_DataSyncUpdate;
+        info.pData = pData;
+        ABC_STRDUP(info.szDescription, "Data Updated");
+        fAsyncBitCoinEventCallback(&info);
+        ABC_FREE_STR(info.szDescription);
+    }
+exit:
+    return cc;
+}
+
+tABC_CC ABC_DataSyncAccount(const char *szUserName,
+                            const char *szPassword,
+                            tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                            void *pData,
+                            tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    int accountDirty = 0;
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
@@ -2363,17 +2392,46 @@ tABC_CC ABC_DataSyncAll(const char *szUserName,
     {
         // Sync the account data
         ABC_CHECK_RET(ABC_LoginSyncData(szUserName, szPassword, &accountDirty, pError));
-        // Sync Wallet Data
-        ABC_CHECK_RET(ABC_WalletSyncAll(szUserName, szPassword, &walletDirty, pError));
-        if ((accountDirty || walletDirty) && fAsyncBitCoinEventCallback)
+        if (accountDirty && fAsyncBitCoinEventCallback)
         {
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
             info.pData = pData;
-            ABC_STRDUP(info.szDescription, "Data Updated");
+            ABC_STRDUP(info.szDescription, "Account Updated");
             fAsyncBitCoinEventCallback(&info);
             ABC_FREE_STR(info.szDescription);
         }
+    }
+exit:
+    return cc;
+}
+
+tABC_CC ABC_DataSyncWallet(const char *szUserName,
+                           const char *szPassword,
+                           const char *szWalletUUID,
+                           tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                           void *pData,
+                           tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    int dirty = 0;
+
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(fAsyncBitCoinEventCallback);
+
+        // Sync the account data
+    ABC_CHECK_RET(ABC_WalletSyncData(szUserName, szPassword, szWalletUUID, &dirty, pError));
+    if (dirty)
+    {
+        tABC_AsyncBitCoinInfo info;
+        info.eventType = ABC_AsyncEventType_DataSyncUpdate;
+        info.pData = pData;
+        ABC_STRDUP(info.szDescription, "Wallet Updated");
+        fAsyncBitCoinEventCallback(&info);
+        ABC_FREE_STR(info.szDescription);
     }
 exit:
     return cc;

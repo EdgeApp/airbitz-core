@@ -353,74 +353,29 @@ tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *p
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     char **aszUUIDs                = NULL;
-    char *szDirectory              = NULL;
-    char *szSyncDirectory          = NULL;
-    tABC_GeneralInfo *pInfo        = NULL;
     tABC_SyncKeys *pKeys           = NULL;
-    int dirty           = 0;
     unsigned int i      = 0;
     unsigned int nUUIDs = 0;
-    unsigned int nNew = 0;
 
     // Its not dirty...yet
     *pDirty = 0;
-
-    // Fetch general info
-    ABC_CHECK_RET(ABC_GeneralGetInfo(&pInfo, pError));
 
     // Get the wallet list
     ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &aszUUIDs, &nUUIDs, pError));
 
-    // create the wallet root directory if necessary
-    ABC_CHECK_RET(ABC_WalletCreateRootDir(pError));
-
     for (i = 0; i < nUUIDs; ++i)
     {
         char *szUUID = aszUUIDs[i];
-        bool bExists = false;
-
-        // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
-        ABC_CHECK_RET(ABC_WalletGetDirName(&szDirectory, szUUID, pError));
-        ABC_CHECK_RET(ABC_FileIOFileExists(szDirectory, &bExists, pError));
-        if (!bExists)
-        {
-            ABC_CHECK_RET(ABC_FileIOCreateDir(szDirectory, pError));
-            ABC_FREE_STR(szDirectory);
-        }
-
-        // create the wallet sync dir under the main dir
-        ABC_CHECK_RET(ABC_WalletGetSyncDirName(&szSyncDirectory, szUUID, pError));
-        ABC_CHECK_RET(ABC_FileIOFileExists(szSyncDirectory, &bExists, pError));
-        if (!bExists)
-        {
-            ABC_CHECK_RET(ABC_FileIOCreateDir(szSyncDirectory, pError));
-
-            // Init repo
-            ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDirectory, pError));
-            ABC_FREE_STR(szSyncDirectory);
-            nNew++;
-        }
-
-        // Sync Wallet
-        dirty = 0;
-        ABC_CHECK_RET(ABC_WalletSyncData(szUserName, szPassword, szUUID, pInfo, &dirty, pError));
+        int dirty = 0;
+        ABC_CHECK_RET(ABC_WalletSyncData(szUserName, szPassword, szUUID, &dirty, pError));
         if (dirty)
         {
-            ABC_CHECK_RET(ABC_WalletDirtyCache(szUserName, szPassword, szUUID, pError));
             *pDirty = 1;
         }
     }
-
-    if (nNew > 0)
-    {
-        // If there are any new repos, clear wallet cache
-        ABC_CHECK_RET(ABC_WalletClearCache(pError));
-    }
 exit:
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
-    ABC_FREE_STR(szDirectory);
-    ABC_FREE_STR(szSyncDirectory);
     ABC_SyncFreeKeys(pKeys);
 
     return cc;
@@ -429,13 +384,44 @@ exit:
 /**
  * Sync the wallet's data
  */
-tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const char *szUUID,
-                           tABC_GeneralInfo *pInfo, int *pDirty, tABC_Error *pError)
+tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword,
+                           const char *szUUID, int *pDirty, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tWalletData *pData = NULL;
+    tABC_GeneralInfo *pInfo = NULL;
+    char *szDirectory       = NULL;
+    char *szSyncDirectory   = NULL;
+    tWalletData *pData      = NULL;
+    bool bExists            = false;
+    bool bNew               = false;
+
+    // Fetch general info
+    ABC_CHECK_RET(ABC_GeneralGetInfo(&pInfo, pError));
+
+    // create the wallet root directory if necessary
+    ABC_CHECK_RET(ABC_WalletCreateRootDir(pError));
+
+    // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
+    ABC_CHECK_RET(ABC_WalletGetDirName(&szDirectory, szUUID, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(szDirectory, &bExists, pError));
+    if (!bExists)
+    {
+        ABC_CHECK_RET(ABC_FileIOCreateDir(szDirectory, pError));
+    }
+
+    // create the wallet sync dir under the main dir
+    ABC_CHECK_RET(ABC_WalletGetSyncDirName(&szSyncDirectory, szUUID, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(szSyncDirectory, &bExists, pError));
+    if (!bExists)
+    {
+        ABC_CHECK_RET(ABC_FileIOCreateDir(szSyncDirectory, pError));
+
+        // Init repo
+        ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDirectory, pError));
+        bNew = true;
+    }
 
     // load the wallet data into the cache
     ABC_CHECK_RET(ABC_WalletCacheData(szUserName, szPassword, szUUID, &pData, pError));
@@ -443,7 +429,15 @@ tABC_CC ABC_WalletSyncData(const char *szUserName, const char *szPassword, const
 
     // Sync
     ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, pDirty, pError));
+    if (*pDirty || bNew)
+    {
+        *pDirty = 1;
+        ABC_CHECK_RET(ABC_WalletClearCache(pError));
+    }
 exit:
+    ABC_FREE_STR(szSyncDirectory);
+    ABC_FREE_STR(szDirectory);
+    ABC_GeneralFreeInfo(pInfo);
     return cc;
 }
 
@@ -844,11 +838,6 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         ABC_CHECK_RET(ABC_WalletGetDirName(&(pData->szWalletDir), szUUID, pError));
         ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), szUUID, pError));
 
-        // make sure this wallet exists
-        bool bExists = false;
-        ABC_CHECK_RET(ABC_FileIOFileExists(pData->szWalletSyncDir, &bExists, pError));
-        ABC_CHECK_ASSERT(bExists == true, ABC_CC_InvalidWalletID, "Wallet does not exist");
-
         // Get the wallet info from the account:
         ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
         ABC_CHECK_RET(ABC_AccountWalletLoad(pKeys, szUUID, &info, pError));
@@ -865,53 +854,66 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
         // Encode the sync key into our struct:
         ABC_CHECK_RET(ABC_CryptoHexEncode(info.SyncKey, &(pData->szWalletAcctKey), pError));
 
-        // get the name
-        ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-        sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_NAME_FILENAME);
-        bExists = false;
-        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-        if (true == bExists)
-        {
-            ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
-            ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_NAME_FIELD, &(pData->szName), pError));
-            ABC_BUF_FREE(Data);
-        }
-        else
+        // make sure this wallet exists, if it doesn't leave fields empty
+        bool bExists = false;
+        ABC_CHECK_RET(ABC_FileIOFileExists(pData->szWalletSyncDir, &bExists, pError));
+        if (!bExists)
         {
             ABC_STRDUP(pData->szName, "");
-        }
-
-        // get the currency num
-        sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_CURRENCY_FILENAME);
-        bExists = false;
-        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-        if (true == bExists)
-        {
-            ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
-            ABC_CHECK_RET(ABC_UtilGetIntValueFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_CURRENCY_NUM_FIELD, (int *) &(pData->currencyNum), pError));
-            ABC_BUF_FREE(Data);
-        }
-        else
-        {
             pData->currencyNum = -1;
-        }
-
-        // get the accounts
-        sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_ACCOUNTS_FILENAME);
-        bExists = false;
-        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-        if (true == bExists)
-        {
-            ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
-            ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_ACCOUNTS_FIELD, &(pData->aszAccounts), &(pData->numAccounts), pError));
-            ABC_BUF_FREE(Data);
-        }
-        else
-        {
             pData->numAccounts = 0;
             pData->aszAccounts = NULL;
         }
+        else
+        {
+            // get the name
+            ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+            sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_NAME_FILENAME);
+            bExists = false;
+            ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+            if (true == bExists)
+            {
+                ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
+                ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_NAME_FIELD, &(pData->szName), pError));
+                ABC_BUF_FREE(Data);
+            }
+            else
+            {
+                ABC_STRDUP(pData->szName, "");
+            }
 
+            // get the currency num
+            sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_CURRENCY_FILENAME);
+            bExists = false;
+            ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+            if (true == bExists)
+            {
+                ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
+                ABC_CHECK_RET(ABC_UtilGetIntValueFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_CURRENCY_NUM_FIELD, (int *) &(pData->currencyNum), pError));
+                ABC_BUF_FREE(Data);
+            }
+            else
+            {
+                pData->currencyNum = -1;
+            }
+
+            // get the accounts
+            sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_ACCOUNTS_FILENAME);
+            bExists = false;
+            ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+            if (true == bExists)
+            {
+                ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
+                ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_ACCOUNTS_FIELD, &(pData->aszAccounts), &(pData->numAccounts), pError));
+                ABC_BUF_FREE(Data);
+            }
+            else
+            {
+                pData->numAccounts = 0;
+                pData->aszAccounts = NULL;
+            }
+
+        }
         pData->balance = 0;
         pData->balanceDirty = true;
 

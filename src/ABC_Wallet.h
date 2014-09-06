@@ -161,7 +161,6 @@ extern "C" {
     tABC_CC ABC_WalletSyncData(const char *szUserName,
                                const char *szPassword,
                                const char *szUUID,
-                               tABC_GeneralInfo *pInfo,
                                int *pDirty,
                                tABC_Error *pError);
 
