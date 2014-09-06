@@ -944,6 +944,19 @@ extern "C" {
                             void *pData,
                             tABC_Error *pError);
 
+    tABC_CC ABC_DataSyncAccount(const char *szUserName,
+                                const char *szPassword,
+                                tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                                void *pData,
+                                tABC_Error *pError);
+
+    tABC_CC ABC_DataSyncWallet(const char *szUserName,
+                            const char *szPassword,
+                            const char *szWalletUUID,
+                            tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                            void *pData,
+                            tABC_Error *pError);
+
     tABC_CC ABC_WatcherStart(const char *szUserName,
                                 const char *szPassword,
                                 const char *szWalletUUID,
