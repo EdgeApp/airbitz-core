@@ -102,7 +102,7 @@ static std::string ABC_BridgeWatcherFile(const char *szUserName, const char *szP
 static tABC_CC     ABC_BridgeWatcherLoad(WatcherInfo *watcherInfo, tABC_Error *pError);
 static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
 static void        *ABC_BridgeWatcherSerialize(void *pData);
-static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx);
+static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx);
 
 static tABC_CC     ABC_BridgeChainPostTx(picker::unsigned_transaction_type *utx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeBlockhainPostTx(picker::unsigned_transaction_type *utx, tABC_Error *pError);
@@ -1366,18 +1366,15 @@ void *ABC_BridgeWatcherSerialize(void *pData)
 }
 
 /**
- * Create a malleable tx id
+ * Create a non-malleable tx id
  *
- * @param tx    The libbitcoin transaction_type which will be used to create a malleable txid
+ * @param tx    The transaction to hash in a non-malleable way
  */
-static std::string ABC_BridgeNonMalleableTxId(const bc::transaction_type& tx)
+static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
 {
-    bc::data_chunk chunk;
-    std::string txid;
-    for (auto a : tx.inputs)
-        for (auto b : bc::save_script(a.script))
-            chunk.push_back(b);
-    return bc::encode_hex(bc::sha256_hash(chunk));
+    for (auto& input: tx.inputs)
+        input.script = bc::script_type();
+    return bc::encode_hex(bc::hash_transaction(tx, bc::sighash::all));
 }
 
 static
