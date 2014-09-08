@@ -350,7 +350,6 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    int dataDirty;
 
     ABC_CHECK_NULL(pInfo);
 
@@ -613,7 +612,6 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     tAccountKeys *pKeys     = NULL;
     tABC_U08Buf L           = ABC_BUF_NULL;
     tABC_U08Buf L1          = ABC_BUF_NULL;
-    tABC_U08Buf L4          = ABC_BUF_NULL;
     tABC_U08Buf P           = ABC_BUF_NULL;
     tABC_U08Buf LP          = ABC_BUF_NULL;
     tABC_U08Buf LP1         = ABC_BUF_NULL;
@@ -668,7 +666,6 @@ exit:
     ABC_BUF_FREE(P);
     ABC_BUF_FREE(LP);
     ABC_BUF_FREE(LP1);
-    ABC_BUF_FREE(L4);
     ABC_CryptoFreeSNRP(&pSNRP1);
 
     return cc;
