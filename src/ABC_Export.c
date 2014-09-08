@@ -82,8 +82,8 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
     char *szAmtFeesMinersBTC = "AMT_BTC_FEES_MINERS";
     char *szInputAddresses = "IN_ADDRESSES";
     char *szOutputAddresses = "OUT_ADDRESSES";
-    char *szCsvId = "TXID";
-    char *szCsvMaleableId = "MTXID";
+    char *szCsvTxid = "TXID";
+    char *szCsvNtxid = "NTXID";
 
     ABC_CHECK_NULL(szCsvRec);
 
@@ -104,8 +104,8 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
              szAmtFeesMinersBTC,
              szInputAddresses,
              szOutputAddresses,
-             szCsvId,
-             szCsvMaleableId,
+             szCsvTxid,
+             szCsvNtxid,
              ABC_CSV_REC_TERM_NAME);
 exit:
     return cc;
@@ -195,8 +195,8 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     char *szAmtFeesMinersBTC;
     char *szInputAddresses;
     char *szOutputAddresses;
-    char *szCsvId;
-    char *szCsvMaleableId;
+    char *szCsvTxid;
+    char *szCsvNtxid;
 
     char buff[MAX_DATE_TIME_SIZE];
     char *pFormatted = NULL;
@@ -256,11 +256,11 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     ABC_CSV_INIT(tmpCsvVar, pFormatted);
     ABC_CSV_FMT(tmpCsvVar, szOutputAddresses);
 
-    ABC_CSV_INIT(tmpCsvVar, data->szID);
-    ABC_CSV_FMT(tmpCsvVar, szCsvId);
-
     ABC_CSV_INIT(tmpCsvVar, data->szMalleableTxId);
-    ABC_CSV_FMT(tmpCsvVar, szCsvMaleableId);
+    ABC_CSV_FMT(tmpCsvVar, szCsvTxid);
+
+    ABC_CSV_INIT(tmpCsvVar, data->szID);
+    ABC_CSV_FMT(tmpCsvVar, szCsvNtxid);
 
     /* Allocated enough space for one CSV REC - Determined by adding all field when quoted */
     ABC_ALLOC(*szCsvRec, ABC_CSV_MAX_REC_SZ+1);
@@ -279,8 +279,8 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
              szAmtFeesMinersBTC,
              szInputAddresses,
              szOutputAddresses,
-             szCsvId,
-             szCsvMaleableId,
+             szCsvTxid,
+             szCsvNtxid,
              ABC_CSV_REC_TERM_VALUE);
 
     ABC_FREE(szTimeCreation);
@@ -292,8 +292,8 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     ABC_FREE(szNotes);
     ABC_FREE(szAmtAirbitzBTC);
     ABC_FREE(szAmtFeesMinersBTC);
-    ABC_FREE(szCsvId);
-    ABC_FREE(szCsvMaleableId);
+    ABC_FREE(szCsvTxid);
+    ABC_FREE(szCsvNtxid);
     ABC_FREE(pFormatted);
 
 
