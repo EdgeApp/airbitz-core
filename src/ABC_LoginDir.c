@@ -5,17 +5,26 @@
 
 #include "ABC_LoginDir.h"
 #include "ABC_FileIO.h"
+#include "ABC_Sync.h"
 #include "ABC_Util.h"
 #include <jansson.h>
 
 #define ACCOUNT_MAX                             1024  // maximum number of accounts
 #define ACCOUNT_DIR                             "Accounts"
-#define ACCOUNT_SYNC_DIR                        "sync"
 #define ACCOUNT_FOLDER_PREFIX                   "Account"
+#define ACCOUNT_NAME_FILENAME                   "UserName.json"
+#define ACCOUNT_SYNC_DIR                        "sync"
 
+// UserName.json:
+#define JSON_ACCT_USERNAME_FIELD                "userName"
+
+static tABC_CC ABC_LoginDirNewNumber(int *pAccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginUserForNum(unsigned int AccountNum, char **pszUserName, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateRootDir(tABC_Error *pError);
 static tABC_CC ABC_LoginCopyRootDirName(char *szRootDir, tABC_Error *pError);
+static tABC_CC ABC_LoginGetDirName(const char *szUserName, char **pszDirName, tABC_Error *pError);
+static tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError);
+static tABC_CC ABC_LoginMakeFilename(char **pszOut, unsigned AccountNum, const char *szFile, tABC_Error *pError);
 
 /**
  * Checks if the username is valid.
@@ -112,9 +121,55 @@ exit:
     return cc;
 }
 
+
+/**
+ * The account does not exist, so create and populate a directory.
+ */
+tABC_CC ABC_LoginDirCreate(const char *szUserName,
+                           const char *szCarePackageJSON,
+                           const char *szLoginPackageJSON,
+                           tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    int     AccountNum = 0;
+    char    szAccountDir[ABC_FILEIO_MAX_PATH_LENGTH] = "";
+    char    szSyncDir[ABC_FILEIO_MAX_PATH_LENGTH] = "";
+    char    *szNameJSON = NULL;
+
+    // Find next available account number:
+    ABC_CHECK_RET(ABC_LoginDirNewNumber(&AccountNum, pError));
+
+    // Create main account directory:
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, AccountNum, pError));
+    ABC_CHECK_RET(ABC_FileIOCreateDir(szAccountDir, pError));
+
+    // Write user name:
+    ABC_CHECK_RET(ABC_UtilCreateValueJSONString(szUserName, JSON_ACCT_USERNAME_FIELD, &szNameJSON, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szNameJSON, AccountNum, ACCOUNT_NAME_FILENAME, pError));
+
+    // Save packages:
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szCarePackageJSON, AccountNum, ACCOUNT_CARE_PACKAGE_FILENAME, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szLoginPackageJSON, AccountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
+
+    // Create sync dir, and sync:
+    snprintf(szSyncDir, sizeof(szSyncDir), "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
+    ABC_CHECK_RET(ABC_FileIOCreateDir(szSyncDir, pError));
+    ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDir, pError));
+
+exit:
+    if (cc != ABC_CC_Ok && szAccountDir[0])
+    {
+        ABC_FileIODeleteRecursive(szAccountDir, NULL);
+    }
+    ABC_FREE_STR(szNameJSON);
+    return cc;
+}
+
 /**
  * Finds the next available account number (the number is just used for the directory name)
  */
+static
 tABC_CC ABC_LoginDirNewNumber(int *pAccountNum,
                               tABC_Error *pError)
 {
@@ -171,29 +226,15 @@ static tABC_CC ABC_LoginUserForNum(unsigned int AccountNum, char **pszUserName, 
     tABC_CC cc = ABC_CC_Ok;
 
     json_t *root = NULL;
-    char *szAccountNameJSON = NULL;
-    char *szAccountRoot = NULL;
-    char *szAccountNamePath = NULL;
+    char *szJSON = NULL;
 
     ABC_CHECK_NULL(pszUserName);
 
-    // make sure the accounts directory is in place
-    ABC_CHECK_RET(ABC_LoginCreateRootDir(pError));
-
-    // get the account root directory string
-    ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
-
-    // create the path to the account name file
-    ABC_ALLOC(szAccountNamePath, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szAccountNamePath, "%s/%s%d/%s", szAccountRoot, ACCOUNT_FOLDER_PREFIX, AccountNum, ACCOUNT_NAME_FILENAME);
-
-    // read in the json
-    ABC_CHECK_RET(ABC_FileIOReadFileStr(szAccountNamePath, &szAccountNameJSON, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileLoad(&szJSON, AccountNum, ACCOUNT_NAME_FILENAME, pError));
 
     // parse out the user name
     json_error_t error;
-    root = json_loads(szAccountNameJSON, 0, &error);
+    root = json_loads(szJSON, 0, &error);
     ABC_CHECK_ASSERT(root != NULL, ABC_CC_JSONError, "Error parsing JSON account name");
     ABC_CHECK_ASSERT(json_is_object(root), ABC_CC_JSONError, "Error parsing JSON account name");
 
@@ -205,9 +246,7 @@ static tABC_CC ABC_LoginUserForNum(unsigned int AccountNum, char **pszUserName, 
 
 exit:
     if (root)               json_decref(root);
-    ABC_FREE_STR(szAccountNameJSON);
-    ABC_FREE_STR(szAccountRoot);
-    ABC_FREE_STR(szAccountNamePath);
+    ABC_FREE_STR(szJSON);
 
     return cc;
 }
@@ -236,30 +275,6 @@ tABC_CC ABC_LoginCreateRootDir(tABC_Error *pError)
 
 exit:
     ABC_FREE_STR(szAccountRoot);
-
-    return cc;
-}
-
-/**
- * Creates a new sync directory and all the files needed for the given account
- */
-tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir,
-                              tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szFilename = NULL;
-
-    ABC_CHECK_NULL(szAccountsRootDir);
-
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-
-    // create the sync directory
-    sprintf(szFilename, "%s/%s", szAccountsRootDir, ACCOUNT_SYNC_DIR);
-    ABC_CHECK_RET(ABC_FileIOCreateDir(szFilename, pError));
-
-exit:
-    ABC_FREE_STR(szFilename);
 
     return cc;
 }
@@ -301,6 +316,7 @@ exit:
  *
  * @param pszDirName Location to store allocated pointer (must be free'd by caller)
  */
+static
 tABC_CC ABC_LoginGetDirName(const char *szUserName, char **pszDirName, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -362,6 +378,7 @@ exit:
 /*
  * Copies the account directory name into the string given
  */
+static
 tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -380,5 +397,90 @@ tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Err
 exit:
     ABC_FREE_STR(szAccountRoot);
 
+    return cc;
+}
+
+/**
+ * Reads a file from the account directory.
+ */
+tABC_CC ABC_LoginDirFileLoad(char **pszData,
+                             unsigned AccountNum,
+                             const char *szFile,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szFilename = NULL;
+
+    ABC_CHECK_RET(ABC_LoginMakeFilename(&szFilename, AccountNum, szFile, pError));
+    ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, pszData, pError));
+
+exit:
+    ABC_FREE_STR(szFilename);
+    return cc;
+}
+
+/**
+ * Writes a file to the account directory.
+ */
+tABC_CC ABC_LoginDirFileSave(const char *szData,
+                             unsigned AccountNum,
+                             const char *szFile,
+                             tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szFilename = NULL;
+
+    ABC_CHECK_RET(ABC_LoginMakeFilename(&szFilename, AccountNum, szFile, pError));
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szData, pError));
+
+exit:
+    ABC_FREE_STR(szFilename);
+    return cc;
+}
+
+/**
+ * Determines whether or not a file exists in the account directory.
+ */
+tABC_CC ABC_LoginDirFileExists(bool *pbExists,
+                               unsigned AccountNum,
+                               const char *szFile,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szFilename = NULL;
+
+    ABC_CHECK_RET(ABC_LoginMakeFilename(&szFilename, AccountNum, szFile, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, pbExists, pError));
+
+exit:
+    ABC_FREE_STR(szFilename);
+    return cc;
+}
+
+/**
+ * Assembles a filename from its component parts.
+ */
+static
+tABC_CC ABC_LoginMakeFilename(char **pszOut, unsigned AccountNum, const char *szFile, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char szAccountRoot[ABC_FILEIO_MAX_PATH_LENGTH];
+    char szFilename[ABC_FILEIO_MAX_PATH_LENGTH];
+
+    // make sure the accounts directory is in place
+    ABC_CHECK_RET(ABC_LoginCreateRootDir(pError));
+
+    // Form the filename:
+    ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
+    snprintf(szFilename, sizeof(szFilename),
+        "%s/%s%d/%s",
+        szAccountRoot,
+        ACCOUNT_FOLDER_PREFIX, AccountNum,
+        szFile);
+
+    ABC_STRDUP(*pszOut, szFilename);
+
+exit:
     return cc;
 }
