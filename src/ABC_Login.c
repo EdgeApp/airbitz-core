@@ -91,7 +91,7 @@ static char *gCarePackageCache = NULL;
 static unsigned int gAccountKeysCacheCount = 0;
 static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
-static tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError);
+static tABC_CC ABC_LoginFetch(const char *szUserName, const char *szPassword, tABC_Error *pError);
 static tABC_CC ABC_LoginInitPackages(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, const char *szLoginPackage, char **szAccountDir, tABC_Error *pError);
 static tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError);
 static tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError);
@@ -123,163 +123,6 @@ static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U0
 static tABC_CC ABC_LoginUpdateLoginPackageFromServerBuf(int AccountNum, tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError);
 static tABC_CC ABC_LoginMutexLock(tABC_Error *pError);
 static tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError);
-
-/**
- * Allocates and fills in an account request structure with the info given.
- *
- * @param ppAccountRequestInfo      Pointer to store allocated request info
- * @param requestType               Type of request this is being used for
- * @param szUserName                UserName for the account
- * @param szPassword                Password for the account (can be NULL for some requests)
- * @param szRecoveryQuestions       Recovery questions seperated by newlines (can be NULL for some requests)
- * @param szRecoveryAnswers         Recovery answers seperated by newlines (can be NULL for some requests)
- * @param szPIN                     PIN number for the account (can be NULL for some requests)
- * @param szNewPassword             New password for the account (for change password requests)
- * @param fRequestCallback          The function that will be called when the account create process has finished.
- * @param pData                     Pointer to data to be returned back in callback
- * @param pError                    A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_LoginRequestInfoAlloc(tABC_LoginRequestInfo **ppAccountRequestInfo,
-                                    tABC_RequestType requestType,
-                                    const char *szUserName,
-                                    const char *szPassword,
-                                    const char *szRecoveryQuestions,
-                                    const char *szRecoveryAnswers,
-                                    const char *szPIN,
-                                    const char *szNewPassword,
-                                    tABC_Request_Callback fRequestCallback,
-                                    void *pData,
-                                    tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_NULL(ppAccountRequestInfo);
-    ABC_CHECK_NULL(szUserName);
-
-    tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-    ABC_ALLOC(pAccountRequestInfo, sizeof(tABC_LoginRequestInfo));
-
-    pAccountRequestInfo->requestType = requestType;
-
-    ABC_STRDUP(pAccountRequestInfo->szUserName, szUserName);
-
-    if (NULL != szPassword)
-    {
-        ABC_STRDUP(pAccountRequestInfo->szPassword, szPassword);
-    }
-
-    if (NULL != szRecoveryQuestions)
-    {
-        ABC_STRDUP(pAccountRequestInfo->szRecoveryQuestions, szRecoveryQuestions);
-    }
-
-    if (NULL != szRecoveryAnswers)
-    {
-        ABC_STRDUP(pAccountRequestInfo->szRecoveryAnswers, szRecoveryAnswers);
-    }
-
-    if (NULL != szPIN)
-    {
-        ABC_STRDUP(pAccountRequestInfo->szPIN, szPIN);
-    }
-
-    if (NULL != szNewPassword)
-    {
-        ABC_STRDUP(pAccountRequestInfo->szNewPassword, szNewPassword);
-    }
-
-    pAccountRequestInfo->pData = pData;
-
-    pAccountRequestInfo->fRequestCallback = fRequestCallback;
-
-    *ppAccountRequestInfo = pAccountRequestInfo;
-
-exit:
-
-    return cc;
-}
-
-/**
- * Frees the account creation info structure
- */
-void ABC_LoginRequestInfoFree(tABC_LoginRequestInfo *pAccountRequestInfo)
-{
-    if (pAccountRequestInfo)
-    {
-        ABC_FREE_STR(pAccountRequestInfo->szUserName);
-
-        ABC_FREE_STR(pAccountRequestInfo->szPassword);
-
-        ABC_FREE_STR(pAccountRequestInfo->szRecoveryQuestions);
-
-        ABC_FREE_STR(pAccountRequestInfo->szRecoveryAnswers);
-
-        ABC_FREE_STR(pAccountRequestInfo->szPIN);
-
-        ABC_FREE_STR(pAccountRequestInfo->szNewPassword);
-
-        ABC_CLEAR_FREE(pAccountRequestInfo, sizeof(tABC_LoginRequestInfo));
-    }
-}
-
-/**
- * Performs the request specified. Assumes it is running in a thread.
- *
- * The function assumes it is in it's own thread (i.e., thread safe)
- * The callback will be called when it has finished.
- * The caller needs to handle potentially being in a seperate thread
- *
- * @param pData Structure holding all the data needed to create an account (should be a tABC_LoginCreateInfo)
- */
-void *ABC_LoginRequestThreaded(void *pData)
-{
-    tABC_LoginRequestInfo *pInfo = (tABC_LoginRequestInfo *)pData;
-    if (pInfo)
-    {
-        tABC_RequestResults results;
-
-        results.requestType = pInfo->requestType;
-
-        results.bSuccess = false;
-
-        tABC_CC CC = ABC_CC_Error;
-
-        // perform the appropriate request
-        if (ABC_RequestType_CreateAccount == pInfo->requestType)
-        {
-            // create the account
-            CC = ABC_LoginCreate(pInfo, &(results.errorInfo));
-        }
-        else if (ABC_RequestType_AccountSignIn == pInfo->requestType)
-        {
-            // sign-in
-            CC = ABC_LoginSignIn(pInfo, &(results.errorInfo));
-        }
-        else if (ABC_RequestType_SetAccountRecoveryQuestions == pInfo->requestType)
-        {
-            // set the recovery information
-            CC = ABC_LoginSetRecovery(pInfo, &(results.errorInfo));
-        }
-        else if (ABC_RequestType_ChangePassword == pInfo->requestType)
-        {
-            // change the password
-            CC = ABC_LoginChangePassword(pInfo, &(results.errorInfo));
-        }
-
-
-        results.errorInfo.code = CC;
-
-        // we are done so load up the info and ship it back to the caller via the callback
-        results.pData = pInfo->pData;
-        results.bSuccess = (CC == ABC_CC_Ok ? true : false);
-        pInfo->fRequestCallback(&results);
-
-        // it is our responsibility to free the info struct
-        ABC_LoginRequestInfoFree(pInfo);
-    }
-
-    return NULL;
-}
 
 /**
  * Checks if the username and password are valid.
@@ -345,32 +188,31 @@ exit:
  * Signs into an account
  * This cache's the keys for an account
  */
-tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
-                          tABC_Error *pError)
+tABC_CC ABC_LoginSignIn(const char *szUserName,
+                        const char *szPassword,
+                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(pInfo);
 
     // Clear out any old data
     ABC_LoginClearKeyCache(NULL);
 
     // check that this is a valid user, ignore Error
-    if (ABC_LoginCheckValidUser(pInfo->szUserName, NULL) != ABC_CC_Ok)
+    if (ABC_LoginCheckValidUser(szUserName, NULL) != ABC_CC_Ok)
     {
         // Try the server
-        ABC_CHECK_RET(ABC_LoginFetch(pInfo, pError));
-        ABC_CHECK_RET(ABC_LoginCheckValidUser(pInfo->szUserName, pError));
-        ABC_CHECK_RET(ABC_LoginCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
+        ABC_CHECK_RET(ABC_LoginFetch(szUserName, szPassword, pError));
+        ABC_CHECK_RET(ABC_LoginCheckValidUser(szUserName, pError));
+        ABC_CHECK_RET(ABC_LoginCheckCredentials(szUserName, szPassword, pError));
     }
     else
     {
         tAccountKeys *pKeys  = NULL;
-        ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, NULL, &pKeys, pError));
+        ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, NULL, &pKeys, pError));
         if (ABC_BUF_PTR(pKeys->P) == NULL)
         {
-            ABC_BUF_DUP_PTR(pKeys->P, pInfo->szPassword, strlen(pInfo->szPassword));
+            ABC_BUF_DUP_PTR(pKeys->P, szPassword, strlen(szPassword));
         }
         if (ABC_BUF_PTR(pKeys->LP) == NULL)
         {
@@ -394,7 +236,7 @@ tABC_CC ABC_LoginSignIn(tABC_LoginRequestInfo *pInfo,
         }
 
         // check the credentials
-        ABC_CHECK_RET(ABC_LoginCheckCredentials(pInfo->szUserName, pInfo->szPassword, pError));
+        ABC_CHECK_RET(ABC_LoginCheckCredentials(szUserName, szPassword, pError));
     }
 
     // take this non-blocking opportunity to update the info from the server if needed
@@ -411,8 +253,9 @@ exit:
 /**
  * Create and account
  */
-tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
-                          tABC_Error *pError)
+tABC_CC ABC_LoginCreate(const char *szUserName,
+                        const char *szPassword,
+                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -438,11 +281,9 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     tABC_U08Buf RepoAcctKey = ABC_BUF_NULL;
 
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
-    ABC_CHECK_NULL(pInfo);
-
 
     // check locally that the account name is available
-    ABC_CHECK_RET(ABC_LoginNumForUser(pInfo->szUserName, &AccountNum, pError));
+    ABC_CHECK_RET(ABC_LoginNumForUser(szUserName, &AccountNum, pError));
     if (AccountNum >= 0)
     {
         ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists");
@@ -450,8 +291,8 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
 
     // create an account keys struct
     ABC_ALLOC(pKeys, sizeof(tAccountKeys));
-    ABC_STRDUP(pKeys->szUserName, pInfo->szUserName);
-    ABC_STRDUP(pKeys->szPassword, pInfo->szPassword);
+    ABC_STRDUP(pKeys->szUserName, szUserName);
+    ABC_STRDUP(pKeys->szPassword, szPassword);
 
     // generate the SNRP's
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&(pKeys->pSNRP1), pError));
@@ -540,11 +381,8 @@ tABC_CC ABC_LoginCreate(tABC_LoginRequestInfo *pInfo,
     ABC_CHECK_RET(ABC_LoginAddToKeyCache(pKeys, pError));
 
     // Populate the sync dir with files:
-    ABC_CHECK_RET(ABC_LoginGetSyncKeys(pInfo->szUserName, pInfo->szPassword, &pSyncKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pSyncKeys, pError));
     ABC_CHECK_RET(ABC_AccountCreate(pSyncKeys, pError));
-
-    // Saving PIN in settings
-    ABC_CHECK_RET(ABC_SetPIN(pInfo->szUserName, pInfo->szPassword, pInfo->szPIN, pError));
 
     // take this opportunity to download the questions they can choose from for recovery
     ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
@@ -601,7 +439,7 @@ exit:
  * @param szPassword   Password
  */
 static
-tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
+tABC_CC ABC_LoginFetch(const char *szUserName, const char *szPassword, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     int dirty;
@@ -619,8 +457,8 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
     tABC_CryptoSNRP *pSNRP1 = NULL;
 
     // Create L, P, SNRP1, L1, LP1
-    ABC_BUF_DUP_PTR(L, pInfo->szUserName, strlen(pInfo->szUserName));
-    ABC_BUF_DUP_PTR(P, pInfo->szPassword, strlen(pInfo->szPassword));
+    ABC_BUF_DUP_PTR(L, szUserName, strlen(szUserName));
+    ABC_BUF_DUP_PTR(P, szPassword, strlen(szPassword));
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP1, pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP1, &L1, pError));
     ABC_BUF_DUP(LP, L);
@@ -635,12 +473,12 @@ tABC_CC ABC_LoginFetch(tABC_LoginRequestInfo *pInfo, tABC_Error *pError)
 
     // Setup initial account directories and files
     ABC_CHECK_RET(
-        ABC_LoginInitPackages(pInfo->szUserName, L1,
+        ABC_LoginInitPackages(szUserName, L1,
                               szCarePackage, szLoginPackage,
                               &szAccountDir, pError));
 
     // We have the care package so fetch keys
-    ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
 
     //  Create sync directory and sync
     ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, pError));
@@ -892,8 +730,11 @@ exit:
  * @param pInfo     Pointer to recovery information data
  * @param pError    A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
-                               tABC_Error *pError)
+tABC_CC ABC_LoginSetRecovery(const char *szUserName,
+                             const char *szPassword,
+                             const char *szRecoveryQuestions,
+                             const char *szRecoveryAnswers,
+                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -908,19 +749,18 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     char            *szFilename          = NULL;
 
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
-    ABC_CHECK_NULL(pInfo);
 
     int AccountNum = 0;
 
     // check locally for the account
-    ABC_CHECK_RET(ABC_LoginNumForUser(pInfo->szUserName, &AccountNum, pError));
+    ABC_CHECK_RET(ABC_LoginNumForUser(szUserName, &AccountNum, pError));
     if (AccountNum < 0)
     {
         ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "No account by that name");
     }
 
     // cache up the keys
-    ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
 
     // the following should all be available
     // szUserName, szPassword, L, P, LP2, SNRP2, SNRP3, SNRP4
@@ -944,7 +784,7 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
         ABC_BUF_FREE(pKeys->LRA);
     }
     ABC_BUF_DUP(pKeys->LRA, pKeys->L);
-    ABC_BUF_APPEND_PTR(pKeys->LRA, pInfo->szRecoveryAnswers, strlen(pInfo->szRecoveryAnswers));
+    ABC_BUF_APPEND_PTR(pKeys->LRA, szRecoveryAnswers, strlen(szRecoveryAnswers));
 
     // LRA1 = Scrypt(L + RA, SNRP1)
     if (ABC_BUF_PTR(pKeys->LRA1) != NULL)
@@ -972,7 +812,7 @@ tABC_CC ABC_LoginSetRecovery(tABC_LoginRequestInfo *pInfo,
     {
         ABC_BUF_FREE(pKeys->RQ);
     }
-    ABC_BUF_DUP_PTR(pKeys->RQ, pInfo->szRecoveryQuestions, strlen(pInfo->szRecoveryQuestions) + 1);
+    ABC_BUF_DUP_PTR(pKeys->RQ, szRecoveryQuestions, strlen(szRecoveryQuestions) + 1);
 
     // L1 = Scrypt(L, SNRP1)
     if (ABC_BUF_PTR(pKeys->L1) == NULL)
@@ -1052,7 +892,10 @@ exit:
  * @param pInfo     Pointer to password change information data
  * @param pError    A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
+tABC_CC ABC_LoginChangePassword(const char *szUserName,
+                                const char *szPassword,
+                                const char *szRecoveryAnswers,
+                                const char *szNewPassword,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1072,19 +915,16 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     json_t *pJSON_MK   = NULL;
 
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
-    ABC_CHECK_NULL(pInfo);
-    ABC_CHECK_NULL(pInfo->szUserName);
-    ABC_CHECK_NULL(pInfo->szNewPassword);
 
     // get the account directory and set up for creating needed filenames
-    ABC_CHECK_RET(ABC_LoginGetDirName(pInfo->szUserName, &szAccountDir, pError));
+    ABC_CHECK_RET(ABC_LoginGetDirName(szUserName, &szAccountDir, pError));
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
     // get the keys for this user (note: password can be NULL for this call)
-    ABC_CHECK_RET(ABC_LoginCacheKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
 
     // we need to obtain the original LP2 and LRA3
-    if (pInfo->szPassword != NULL)
+    if (szPassword != NULL)
     {
         // we had the password so we should have the LP2 key
         ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(pKeys->LP2), ABC_CC_Error, "Expected to find LP2 in key cache");
@@ -1105,7 +945,7 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
 
         // LRA = L + RA
         ABC_BUF_DUP(LRA, pKeys->L);
-        ABC_BUF_APPEND_PTR(LRA, pInfo->szRecoveryAnswers, strlen(pInfo->szRecoveryAnswers));
+        ABC_BUF_APPEND_PTR(LRA, szRecoveryAnswers, strlen(szRecoveryAnswers));
 
         // LRA3 = Scrypt(LRA, SNRP3)
         ABC_CHECK_ASSERT(NULL != pKeys->pSNRP3, ABC_CC_Error, "Expected to find SNRP3 in key cache");
@@ -1134,7 +974,7 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
 
     // set new password
     ABC_FREE_STR(pKeys->szPassword);
-    ABC_STRDUP(pKeys->szPassword, pInfo->szNewPassword);
+    ABC_STRDUP(pKeys->szPassword, szNewPassword);
 
     // set new P
     ABC_BUF_FREE(pKeys->P);
@@ -1173,15 +1013,12 @@ tABC_CC ABC_LoginChangePassword(tABC_LoginRequestInfo *pInfo,
     sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage_JSON, pError));
 
-    // set the new PIN
-    ABC_CHECK_RET(ABC_SetPIN(pInfo->szUserName, pInfo->szNewPassword, pInfo->szPIN, pError));
-
     // Clear wallet cache
     ABC_CHECK_RET(ABC_WalletClearCache(pError));
 
     // Sync the data (ELP2 and ELRA3) with server
     int dirty;
-    ABC_CHECK_RET(ABC_LoginSyncData(pInfo->szUserName, pInfo->szNewPassword, &dirty, pError));
+    ABC_CHECK_RET(ABC_LoginSyncData(szUserName, szNewPassword, &dirty, pError));
 exit:
     ABC_BUF_FREE(oldLP2);
     ABC_BUF_FREE(LRA3);
