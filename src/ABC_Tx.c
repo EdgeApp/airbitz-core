@@ -2824,34 +2824,12 @@ tABC_CC ABC_TxBuildFromLabel(const char *szUserName, const char *szPassword,
     *pszLabel = NULL;
 
     ABC_CHECK_RET(ABC_LoadAccountSettings(szUserName, szPassword, &pSettings, pError));
-    if (ABC_STRLEN(pSettings->szFirstName) > 0)
+
+    if (pSettings->bNameOnPayments)
     {
-        ABC_BUF_DUP_PTR(Label, pSettings->szFirstName, strlen(pSettings->szFirstName));
+        ABC_BUF_DUP_PTR(Label, pSettings->szFullName, strlen(pSettings->szFullName));
     }
-    if (ABC_STRLEN(pSettings->szLastName) > 0)
-    {
-        if (ABC_BUF_PTR(Label) == NULL)
-        {
-            ABC_BUF_DUP_PTR(Label, pSettings->szLastName, strlen(pSettings->szLastName));
-        }
-        else
-        {
-            ABC_BUF_APPEND_PTR(Label, " ", 1);
-            ABC_BUF_APPEND_PTR(Label, pSettings->szLastName, strlen(pSettings->szLastName));
-        }
-    }
-    if (ABC_STRLEN(pSettings->szNickname) > 0)
-    {
-        if (ABC_BUF_PTR(Label) == NULL)
-        {
-            ABC_BUF_DUP_PTR(Label, pSettings->szNickname, strlen(pSettings->szNickname));
-        }
-        else
-        {
-            ABC_BUF_APPEND_PTR(Label, " - ", 3);
-            ABC_BUF_APPEND_PTR(Label, pSettings->szNickname, strlen(pSettings->szNickname));
-        }
-    }
+
     if (ABC_BUF_PTR(Label) != NULL)
     {
         // Append null byte
