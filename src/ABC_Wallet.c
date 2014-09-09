@@ -241,11 +241,8 @@ tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
     ABC_STRDUP(pData->szPassword, pInfo->szPassword);
     pData->archived = 0;
 
-    // get L1
-    ABC_CHECK_RET(ABC_LoginGetKey(pData->szUserName, pData->szPassword, ABC_LoginKey_L1, &L1, pError));
-
-    // get LP1
-    ABC_CHECK_RET(ABC_LoginGetKey(pData->szUserName, pData->szPassword, ABC_LoginKey_LP1, &LP1, pError));
+    // get L1 & LP1:
+    ABC_CHECK_RET(ABC_LoginGetServerKeys(pData->szUserName, pData->szPassword, &L1, &LP1, pError));
 
     // create wallet guid
     ABC_CHECK_RET(ABC_CryptoGenUUIDString(&szUUID, pError));

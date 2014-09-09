@@ -83,6 +83,17 @@ typedef struct sAccountKeys
     tABC_U08Buf     LRA3;
 } tAccountKeys;
 
+typedef enum eABC_LoginKey
+{
+    ABC_LoginKey_L1,
+    ABC_LoginKey_L4,
+    ABC_LoginKey_LP1,
+    ABC_LoginKey_LP2,
+    ABC_LoginKey_MK,
+    ABC_LoginKey_RepoAccountKey,
+    ABC_LoginKey_RQ
+} tABC_LoginKey;
+
 // When a recovers password from on a new device, care package is stored either
 // rather than creating an account directory
 static char *gCarePackageCache = NULL;
@@ -91,6 +102,9 @@ static char *gCarePackageCache = NULL;
 static unsigned int gAccountKeysCacheCount = 0;
 static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
+
+static tABC_CC ABC_LoginGetKey(const char *szUserName, const char *szPassword, tABC_LoginKey keyType, tABC_U08Buf *pKey, tABC_Error *pError);
+static tABC_CC ABC_LoginCheckValidUser(const char *szUserName, tABC_Error *pError);
 static tABC_CC ABC_LoginFetch(const char *szUserName, const char *szPassword, tABC_Error *pError);
 static tABC_CC ABC_LoginInitPackages(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, const char *szLoginPackage, char **szAccountDir, tABC_Error *pError);
 static tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError);
@@ -162,6 +176,7 @@ exit:
  *
  * @param szUserName UserName for validation
  */
+static
 tABC_CC ABC_LoginCheckValidUser(const char *szUserName,
                                   tABC_Error *pError)
 {
@@ -2305,6 +2320,7 @@ exit:
  * Retrieves the specified key from the key cache
  * if the account associated with the username and password is not currently in the cache, it is added
  */
+static
 tABC_CC ABC_LoginGetKey(const char *szUserName, const char *szPassword, tABC_LoginKey keyType, tABC_U08Buf *pKey, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -2814,6 +2830,41 @@ tABC_CC ABC_LoginGetSyncKeys(const char *szUserName,
 exit:
     if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
+    ABC_LoginMutexUnlock(NULL);
+    return cc;
+}
+
+/**
+ * Obtains the information needed to access the server for a given account.
+ *
+ * @param szUserName UserName for the account to access
+ * @param szPassword Password for the account to access
+ * @param pL1        A buffer to receive L1. Do *not* free this.
+ * @param pLP1       A buffer to receive LP1. Do *not* free this.
+ * @param pError     A pointer to the location to store the error if there is one
+ */
+
+tABC_CC ABC_LoginGetServerKeys(const char *szUserName,
+                               const char *szPassword,
+                               tABC_U08Buf *pL1,
+                               tABC_U08Buf *pLP1,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(pL1);
+    ABC_CHECK_NULL(pLP1);
+
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_L1, pL1, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_LP1, pLP1, pError));
+
+exit:
     ABC_LoginMutexUnlock(NULL);
     return cc;
 }
