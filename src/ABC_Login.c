@@ -15,7 +15,6 @@
 #include "ABC_LoginServer.h"
 #include "ABC_Account.h"
 #include "ABC_Util.h"
-#include "ABC_FileIO.h"
 #include "ABC_Crypto.h"
 #include "ABC_Sync.h"
 #include "ABC_Wallet.h"
@@ -23,9 +22,6 @@
 #include "ABC_Mutex.h"
 
 #define ACCOUNT_MK_LENGTH 32
-
-#define ACCOUNT_CARE_PACKAGE_FILENAME           "CarePackage.json"
-#define ACCOUNT_LOGIN_PACKAGE_FILENAME          "LoginPackage.json"
 
 // CarePackage.json:
 #define JSON_ACCT_ERQ_FIELD                     "ERQ"
@@ -86,8 +82,7 @@ static tAccountKeys **gaAccountKeysCacheArray = NULL;
 
 static tABC_CC ABC_LoginGetKey(const char *szUserName, const char *szPassword, tABC_LoginKey keyType, tABC_U08Buf *pKey, tABC_Error *pError);
 static tABC_CC ABC_LoginFetch(const char *szUserName, const char *szPassword, tABC_Error *pError);
-static tABC_CC ABC_LoginInitPackages(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, const char *szLoginPackage, char **szAccountDir, tABC_Error *pError);
-static tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError);
+static tABC_CC ABC_LoginSyncUsingLRA(const tAccountKeys *pKeys, tABC_Error *pError);
 static tABC_CC ABC_LoginFetchRecoveryQuestions(const char *szUserName, char **szRecoveryQuestions, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateCarePackageJSONString(const json_t *pJSON_ERQ, const json_t *pJSON_SNRP2, const json_t *pJSON_SNRP3, const json_t *pJSON_SNRP4, char **pszJSON, tABC_Error *pError);
 static tABC_CC ABC_LoginGetCarePackageObjects(int AccountNum, const char *szCarePackage, json_t **ppJSON_ERQ, json_t **ppJSON_SNRP2, json_t **ppJSON_SNRP3, json_t **ppJSON_SNRP4, tABC_Error *pError);
@@ -208,7 +203,6 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_GeneralInfo        *pGeneralInfo        = NULL;
     tABC_AccountSettings    *pSettings           = NULL;
     tAccountKeys            *pKeys               = NULL;
     tABC_SyncKeys           *pSyncKeys           = NULL;
@@ -222,8 +216,7 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
     char                    *szLoginPackage_JSON = NULL;
     char                    *szJSON              = NULL;
     char                    *szERepoAcctKey      = NULL;
-    char                    *szAccountDir        = NULL;
-    char                    *szFilename          = NULL;
+    char                    *szSyncDir           = NULL;
 
     int AccountNum = 0;
     tABC_U08Buf MK          = ABC_BUF_NULL;
@@ -280,23 +273,6 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
     // LP2 = Scrypt(L + P, SNRP2)
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(pKeys->LP, pKeys->pSNRP2, &(pKeys->LP2), pError));
 
-    // find the next available account number on this device
-    ABC_CHECK_RET(ABC_LoginDirNewNumber(&(pKeys->accountNum), pError));
-
-    // create the main account directory
-    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
-    ABC_CHECK_RET(ABC_FileIOCreateDir(szAccountDir, pError));
-
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-
-    // create the name file data and write the file
-    ABC_CHECK_RET(ABC_UtilCreateValueJSONString(pKeys->szUserName, JSON_ACCT_USERNAME_FIELD, &szJSON, pError));
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_NAME_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
-    ABC_FREE_STR(szJSON);
-    szJSON = NULL;
-
     // Create MK
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(ACCOUNT_MK_LENGTH, &MK, pError));
     ABC_BUF_DUP(pKeys->MK, MK);
@@ -317,14 +293,14 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
                     pKeys->szRepoAcctKey, pError));
 
     // write the file care package to a file
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage_JSON, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szCarePackage_JSON, AccountNum, ACCOUNT_CARE_PACKAGE_FILENAME, pError));
 
     // write the file login package to a file
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage_JSON, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szLoginPackage_JSON, AccountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
 
-    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, pError));
+    // Write that all to disk:
+    ABC_CHECK_RET(ABC_LoginDirCreate(szUserName,
+        szCarePackage_JSON, szLoginPackage_JSON, pError));
 
     // we now have a new account so go ahead and cache it's keys
     ABC_CHECK_RET(ABC_LoginAddToKeyCache(pKeys, pError));
@@ -333,31 +309,21 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pSyncKeys, pError));
     ABC_CHECK_RET(ABC_AccountCreate(pSyncKeys, pError));
 
+    // Sync the repo:
+    int dirty;
+    ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szSyncDir, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szSyncDir, pKeys->szRepoAcctKey, &dirty, pError));
+
+    ABC_CHECK_RET(ABC_LoginServerActivate(pKeys->L1, pKeys->LP1, pError));
+    pKeys = NULL; // so we don't free what we just added to the cache
+
     // take this opportunity to download the questions they can choose from for recovery
     ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
 
     // also take this non-blocking opportunity to update the info from the server if needed
     ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
 
-    // Load the general info
-    ABC_CHECK_RET(ABC_GeneralGetInfo(&pGeneralInfo, pError));
-
-    // Create
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
-
-    // Init the git repo and sync it
-    int dirty;
-    ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, pKeys->szRepoAcctKey, &dirty, pError));
-
-    ABC_CHECK_RET(ABC_LoginServerActivate(pKeys->L1, pKeys->LP1, pError));
-    pKeys = NULL; // so we don't free what we just added to the cache
 exit:
-    if (cc != ABC_CC_Ok)
-    {
-        ABC_FileIODeleteRecursive(szAccountDir, NULL);
-    }
     if (pKeys)
     {
         ABC_LoginFreeAccountKeys(pKeys);
@@ -372,9 +338,7 @@ exit:
     ABC_FREE_STR(szCarePackage_JSON);
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szERepoAcctKey);
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szFilename);
-    ABC_GeneralFreeInfo(pGeneralInfo);
+    ABC_FREE_STR(szSyncDir);
     ABC_AccountSettingsFree(pSettings);
 
     ABC_LoginMutexUnlock(NULL);
@@ -392,10 +356,9 @@ tABC_CC ABC_LoginFetch(const char *szUserName, const char *szPassword, tABC_Erro
 {
     tABC_CC cc = ABC_CC_Ok;
     int dirty;
-    char *szAccountDir      = NULL;
-    char *szFilename        = NULL;
     char *szCarePackage     = NULL;
     char *szLoginPackage    = NULL;
+    char *szSyncDir         = NULL;
     tAccountKeys *pKeys     = NULL;
     tABC_U08Buf L           = ABC_BUF_NULL;
     tABC_U08Buf L1          = ABC_BUF_NULL;
@@ -421,33 +384,18 @@ tABC_CC ABC_LoginFetch(const char *szUserName, const char *szPassword, tABC_Erro
     ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, LP1, NULL_LRA1, &szLoginPackage, pError));
 
     // Setup initial account directories and files
-    ABC_CHECK_RET(
-        ABC_LoginInitPackages(szUserName, L1,
-                              szCarePackage, szLoginPackage,
-                              &szAccountDir, pError));
+    ABC_CHECK_RET(ABC_LoginDirCreate(
+        szUserName, szCarePackage, szLoginPackage, pError));
 
-    // We have the care package so fetch keys
+    // Do initial sync:
     ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szSyncDir, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szSyncDir, pKeys->szRepoAcctKey, &dirty, pError));
 
-    //  Create sync directory and sync
-    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, pError));
-
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
-
-    // Init the git repo and sync it
-    ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, pKeys->szRepoAcctKey, &dirty, pError));
 exit:
-    if (cc != ABC_CC_Ok)
-    {
-        ABC_FileIODeleteRecursive(szAccountDir, NULL);
-        ABC_LoginClearKeyCache(NULL);
-    }
-    ABC_FREE_STR(szFilename);
-    ABC_FREE_STR(szAccountDir);
     ABC_FREE_STR(szCarePackage);
     ABC_FREE_STR(szLoginPackage);
+    ABC_FREE_STR(szSyncDir);
     ABC_BUF_FREE(L);
     ABC_BUF_FREE(L1);
     ABC_BUF_FREE(P);
@@ -459,64 +407,24 @@ exit:
 }
 
 /**
- * The account does not exist, so create and populate a directory.
- */
-static
-tABC_CC ABC_LoginInitPackages(const char *szUserName, tABC_U08Buf L1, const char *szCarePackage, const char *szLoginPackage, char **szAccountDir, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    char *szFilename    = NULL;
-    char *szJSON        = NULL;
-    int AccountNum      = 0;
-
-    // find the next available account number on this device
-    ABC_CHECK_RET(ABC_LoginDirNewNumber(&AccountNum, pError));
-
-    // create the main account directory
-    ABC_ALLOC(*szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(*szAccountDir, AccountNum, pError));
-    ABC_CHECK_RET(ABC_FileIOCreateDir(*szAccountDir, pError));
-
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-
-    // create the name file data and write the file
-    ABC_CHECK_RET(ABC_UtilCreateValueJSONString(szUserName, JSON_ACCT_USERNAME_FIELD, &szJSON, pError));
-    sprintf(szFilename, "%s/%s", *szAccountDir, ACCOUNT_NAME_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
-
-    //  Save Care Package
-    sprintf(szFilename, "%s/%s", *szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage, pError));
-
-    // Save Login Package
-    sprintf(szFilename, "%s/%s", *szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage, pError));
-exit:
-    ABC_FREE_STR(szJSON);
-    return cc;
-}
-
-/**
  * Only used by ABC_LoginCheckRecoveryAnswers.
  */
 static
-tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
+tABC_CC ABC_LoginSyncUsingLRA(const tAccountKeys *pKeys, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+
+    json_t *pJSON_ESyncKey  = NULL;
     tABC_U08Buf L4          = ABC_BUF_NULL;
     tABC_U08Buf SyncKey     = ABC_BUF_NULL;
-    char *szAccountDir      = NULL;
-    char *szFilename        = NULL;
-    char *szRepoAcctKey     = NULL;
-    char *szREPO_JSON       = NULL;
-    json_t *pJSON_ESyncKey  = NULL;
+    char *szSyncDir         = NULL;
 
-    ABC_CHECK_RET(ABC_LoginGetKey(pKeys->szUserName, NULL, ABC_LoginKey_L4, &L4, pError));
     ABC_CHECK_RET(
         ABC_LoginGetLoginPackageObjects(pKeys->accountNum, NULL, NULL,
                                         &pJSON_ESyncKey, NULL, NULL, pError));
 
     // Decrypt ESyncKey
+    ABC_CHECK_RET(ABC_LoginGetKey(pKeys->szUserName, NULL, ABC_LoginKey_L4, &L4, pError));
     tABC_CC CC_Decrypt = ABC_CryptoDecryptJSONObject(pJSON_ESyncKey, L4, &SyncKey, pError);
     // check the results
     if (ABC_CC_DecryptFailure == CC_Decrypt)
@@ -529,30 +437,15 @@ tABC_CC ABC_LoginRepoSetup(const tAccountKeys *pKeys, tABC_Error *pError)
         goto exit;
     }
 
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
-
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
-
-    //  Create sync directory and sync
-    ABC_CHECK_RET(ABC_LoginCreateSync(szAccountDir, pError));
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
-
-    // Create repo URL
-    char *szSyncKey = (char *) ABC_BUF_PTR(SyncKey);
-
-    // Init the git repo and sync it
+    // Sync with that:
     int dirty;
-    ABC_CHECK_RET(ABC_SyncMakeRepo(szFilename, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, szSyncKey, &dirty, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncDirName(pKeys->szUserName, &szSyncDir, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(szSyncDir, (char *)SyncKey.p, &dirty, pError));
+
 exit:
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szFilename);
-    ABC_FREE_STR(szREPO_JSON);
-    ABC_FREE_STR(szRepoAcctKey);
-    ABC_BUF_FREE(SyncKey);
     if (pJSON_ESyncKey) json_decref(pJSON_ESyncKey);
+    ABC_FREE_STR(szSyncDir);
+    ABC_BUF_FREE(SyncKey);
     return cc;
 }
 
@@ -580,8 +473,6 @@ tABC_CC ABC_LoginSetRecovery(const char *szUserName,
     json_t          *pJSON_SNRP4         = NULL;
     char            *szCarePackage_JSON  = NULL;
     char            *szLoginPackage_JSON = NULL;
-    char            *szAccountDir        = NULL;
-    char            *szFilename          = NULL;
 
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
 
@@ -689,18 +580,9 @@ tABC_CC ABC_LoginSetRecovery(const char *szUserName,
                                    szCarePackage_JSON, szLoginPackage_JSON,
                                    pError));
 
-    // create the main account directory
-    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
-
-    // write the file care package to a file
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szCarePackage_JSON, pError));
-
-    // update login package
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage_JSON, pError));
+    // Save new package contents:
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szCarePackage_JSON, AccountNum, ACCOUNT_CARE_PACKAGE_FILENAME, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szLoginPackage_JSON, AccountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
 
     int dirty;
     ABC_CHECK_RET(ABC_LoginSyncData(pKeys->szUserName, pKeys->szPassword, &dirty, pError));
@@ -711,8 +593,6 @@ exit:
     if (pJSON_SNRP4)        json_decref(pJSON_SNRP4);
     ABC_FREE_STR(szCarePackage_JSON);
     ABC_FREE_STR(szLoginPackage_JSON);
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szFilename);
 
     ABC_LoginMutexUnlock(NULL);
     return cc;
@@ -742,18 +622,13 @@ tABC_CC ABC_LoginChangePassword(const char *szUserName,
     tABC_U08Buf LRA1         = ABC_BUF_NULL;
     tABC_U08Buf oldLP1       = ABC_BUF_NULL;
     tABC_U08Buf MK           = ABC_BUF_NULL;
-    char *szAccountDir        = NULL;
-    char *szFilename          = NULL;
+    int AccountNum           = 0;
     char *szJSON              = NULL;
     char *szLoginPackage_JSON = NULL;
     json_t *pJSON_ELP2 = NULL;
     json_t *pJSON_MK   = NULL;
 
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
-
-    // get the account directory and set up for creating needed filenames
-    ABC_CHECK_RET(ABC_LoginGetDirName(szUserName, &szAccountDir, pError));
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
 
     // get the keys for this user (note: password can be NULL for this call)
     ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
@@ -844,9 +719,9 @@ tABC_CC ABC_LoginChangePassword(const char *szUserName,
     // server change password - Server will need L1, (P1 or LRA1) and new_P1
     ABC_CHECK_RET(ABC_LoginServerChangePassword(pKeys->L1, oldLP1, LRA1, pKeys->LP1, szLoginPackage_JSON, pError));
 
-    // Write the new Login Package
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage_JSON, pError));
+    // Save new package contents:
+    ABC_CHECK_RET(ABC_LoginDirGetNumber(szUserName, &AccountNum, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szLoginPackage_JSON, AccountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
 
     // Clear wallet cache
     ABC_CHECK_RET(ABC_WalletClearCache(pError));
@@ -860,8 +735,6 @@ exit:
     ABC_BUF_FREE(LRA);
     ABC_BUF_FREE(LRA1);
     ABC_BUF_FREE(oldLP1);
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szLoginPackage_JSON);
     if (pJSON_ELP2) json_decref(pJSON_ELP2);
@@ -973,8 +846,6 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
 
     bool bExists = false;
-    char *szAccountDir = NULL;
-    char *szFilename   = NULL;
     json_t *pJSON_EMK            = NULL;
     json_t *pJSON_ESyncKey       = NULL;
     json_t *pJSON_ELP2           = NULL;
@@ -983,15 +854,7 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
     ABC_CHECK_NULL(szLoginPackage);
     ABC_CHECK_NULL(szRepoAcctKey);
 
-    // get the main account directory
-    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
-
-    // create the name of the care package file
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
-
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileExists(&bExists, pKeys->accountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
     if (bExists)
     {
         ABC_CHECK_RET(ABC_LoginGetLoginPackageObjects(pKeys->accountNum, NULL,
@@ -1036,9 +899,6 @@ tABC_CC ABC_LoginUpdateLoginPackageJSONString(tAccountKeys *pKeys,
                                               szLoginPackage,
                                               pError));
 exit:
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szFilename);
-
     if (pJSON_EMK)      json_decref(pJSON_EMK);
     if (pJSON_ESyncKey) json_decref(pJSON_ESyncKey);
     if (pJSON_ELP2)     json_decref(pJSON_ELP2);
@@ -1077,8 +937,6 @@ tABC_CC ABC_LoginGetCarePackageObjects(int          AccountNum,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szAccountDir = NULL;
-    char *szCarePackageFilename = NULL;
     char *szCarePackage_JSON = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_ERQ = NULL;
@@ -1094,17 +952,7 @@ tABC_CC ABC_LoginGetCarePackageObjects(int          AccountNum,
     else
     {
         ABC_CHECK_ASSERT(AccountNum >= 0, ABC_CC_AccountDoesNotExist, "Bad account number");
-
-        // get the main account directory
-        ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-        ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, AccountNum, pError));
-
-        // create the name of the care package file
-        ABC_ALLOC(szCarePackageFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-        sprintf(szCarePackageFilename, "%s/%s", szAccountDir, ACCOUNT_CARE_PACKAGE_FILENAME);
-
-        // load the care package
-        ABC_CHECK_RET(ABC_FileIOReadFileStr(szCarePackageFilename, &szCarePackage_JSON, pError));
+        ABC_CHECK_RET(ABC_LoginDirFileLoad(&szCarePackage_JSON, AccountNum, ACCOUNT_CARE_PACKAGE_FILENAME, pError));
     }
 
     // decode the json
@@ -1156,8 +1004,6 @@ tABC_CC ABC_LoginGetCarePackageObjects(int          AccountNum,
 
 exit:
     if (pJSON_Root)             json_decref(pJSON_Root);
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szCarePackageFilename);
     ABC_FREE_STR(szCarePackage_JSON);
 
     return cc;
@@ -1188,8 +1034,6 @@ tABC_CC ABC_LoginGetLoginPackageObjects(int          AccountNum,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szAccountDir           = NULL;
-    char *szLoginPackageFilename = NULL;
     char *szLoginPackage_JSON    = NULL;
     json_t *pJSON_Root           = NULL;
     json_t *pJSON_EMK            = NULL;
@@ -1205,17 +1049,7 @@ tABC_CC ABC_LoginGetLoginPackageObjects(int          AccountNum,
     else
     {
         ABC_CHECK_ASSERT(AccountNum >= 0, ABC_CC_AccountDoesNotExist, "Bad account number");
-
-        // get the main account directory
-        ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-        ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, AccountNum, pError));
-
-        // create the name of the care package file
-        ABC_ALLOC(szLoginPackageFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-        sprintf(szLoginPackageFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
-
-        // load the care package
-        ABC_CHECK_RET(ABC_FileIOReadFileStr(szLoginPackageFilename, &szLoginPackage_JSON, pError));
+        ABC_CHECK_RET(ABC_LoginDirFileLoad(&szLoginPackage_JSON, AccountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
     }
 
     // decode the json
@@ -1263,8 +1097,6 @@ tABC_CC ABC_LoginGetLoginPackageObjects(int          AccountNum,
     }
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szLoginPackageFilename);
     ABC_FREE_STR(szLoginPackage_JSON);
 
     return cc;
@@ -1286,22 +1118,13 @@ static
 tABC_CC ABC_LoginUpdateLoginPackageFromServerBuf(int AccountNum, tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    char *szAccountDir   = NULL;
-    char *szFilename     = NULL;
     char *szLoginPackage = NULL;
     tABC_U08Buf LPA_NULL = ABC_BUF_NULL;
 
     ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, LP1, LPA_NULL, &szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szLoginPackage, AccountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
 
-    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, AccountNum, pError));
-
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_LOGIN_PACKAGE_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szLoginPackage, pError));
 exit:
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szLoginPackage);
     return cc;
 }
@@ -1776,10 +1599,6 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
     tABC_U08Buf LRA1       = ABC_BUF_NULL;
     tABC_U08Buf LP2        = ABC_BUF_NULL;
     json_t *pJSON_ELP2     = NULL;
-    char *szAccountDir     = NULL;
-    char *szAccountSyncDir = NULL;
-    char *szFilename       = NULL;
-    bool bExists           = false;
 
     // Use for the remote answers check
     tABC_U08Buf L           = ABC_BUF_NULL;
@@ -1810,18 +1629,18 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
         ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, LP1_NULL, LRA1, &szLoginPackage, pError));
 
         // Setup initial account and set the care package
-        ABC_CHECK_RET(
-            ABC_LoginInitPackages(szUserName, L1,
-                                  gCarePackageCache, szLoginPackage,
-                                  &szAccountDir, pError));
+        ABC_CHECK_RET(ABC_LoginDirCreate(
+            szUserName, gCarePackageCache, szLoginPackage, pError));
+
+        // The directory exists, so delete this:
         ABC_FREE_STR(gCarePackageCache);
         gCarePackageCache = NULL;
 
         // We have the care package so fetch keys without password
         ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, NULL, &pKeys, pError));
 
-        // Setup the account repo and sync
-        ABC_CHECK_RET(ABC_LoginRepoSetup(pKeys, pError));
+        // download all files:
+        ABC_CHECK_RET(ABC_LoginSyncUsingLRA(pKeys, pError));
     }
 
     // pull this account into the cache
@@ -1850,9 +1669,6 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
 
         // create our LRA1 = Scrypt(L + RA, SNRP1)
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pKeys->pSNRP1, &LRA1, pError));
-
-        ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &szAccountSyncDir, pError));
-        ABC_CHECK_RET(ABC_FileIOFileExists(szAccountSyncDir, &bExists, pError));
 
         // attempt to decode ELP2
         ABC_CHECK_RET(
@@ -1894,9 +1710,6 @@ exit:
     ABC_BUF_FREE(LRA3);
     ABC_BUF_FREE(LRA1);
     ABC_BUF_FREE(LP2);
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szAccountSyncDir);
-    ABC_FREE_STR(szFilename);
     if (pJSON_ELP2) json_decref(pJSON_ELP2);
 
     ABC_BUF_FREE(L1);

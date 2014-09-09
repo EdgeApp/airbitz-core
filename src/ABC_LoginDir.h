@@ -12,11 +12,8 @@
 extern "C" {
 #endif
 
-    #define ACCOUNT_SYNC_DIR                        "sync"
-    #define ACCOUNT_NAME_FILENAME                   "UserName.json"
-
-    // UserName.json:
-    #define JSON_ACCT_USERNAME_FIELD                "userName"
+    #define ACCOUNT_CARE_PACKAGE_FILENAME           "CarePackage.json"
+    #define ACCOUNT_LOGIN_PACKAGE_FILENAME          "LoginPackage.json"
 
     tABC_CC ABC_LoginDirExists(const char *szUserName,
                                tABC_Error *pError);
@@ -25,23 +22,29 @@ extern "C" {
                                   int *pAccountNum,
                                   tABC_Error *pError);
 
-    tABC_CC ABC_LoginDirNewNumber(int *pAccountNum,
-                                  tABC_Error *pError);
-
-    tABC_CC ABC_LoginCreateSync(const char *szAccountsRootDir,
-                                tABC_Error *pError);
-
-    tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir,
-                                        int AccountNum,
-                                        tABC_Error *pError);
-
-    tABC_CC ABC_LoginGetDirName(const char *szUserName,
-                                char **pszDirName,
-                                tABC_Error *pError);
+    tABC_CC ABC_LoginDirCreate(const char *szUserName,
+                               const char *szCarePackageJSON,
+                               const char *szLoginPackageJSON,
+                               tABC_Error *pError);
 
     tABC_CC ABC_LoginGetSyncDirName(const char *szUserName,
                                     char **pszDirName,
                                     tABC_Error *pError);
+
+    tABC_CC ABC_LoginDirFileLoad(char **pszData,
+                                 unsigned AccountNum,
+                                 const char *szFile,
+                                 tABC_Error *pError);
+
+    tABC_CC ABC_LoginDirFileSave(const char *szData,
+                                 unsigned AccountNum,
+                                 const char *szFile,
+                                 tABC_Error *pError);
+
+    tABC_CC ABC_LoginDirFileExists(bool *pbExists,
+                                   unsigned AccountNum,
+                                   const char *szFile,
+                                   tABC_Error *pError);
 
 #ifdef __cplusplus
 }
