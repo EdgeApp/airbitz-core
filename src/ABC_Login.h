@@ -17,24 +17,7 @@
 extern "C" {
 #endif
 
-    typedef enum eABC_LoginKey
-    {
-        ABC_LoginKey_L1,
-        ABC_LoginKey_L4,
-        ABC_LoginKey_LP1,
-        ABC_LoginKey_LP2,
-        ABC_LoginKey_MK,
-        ABC_LoginKey_RepoAccountKey,
-        ABC_LoginKey_RQ
-    } tABC_LoginKey;
-
     tABC_CC ABC_LoginClearKeyCache(tABC_Error *pError);
-
-    tABC_CC ABC_LoginGetKey(const char *szUserName,
-                              const char *szPassword,
-                              tABC_LoginKey keyType,
-                              tABC_U08Buf *pKey,
-                              tABC_Error *pError);
 
     tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
                                             const char *szRecoveryAnswers,
@@ -45,10 +28,6 @@ extern "C" {
                                         const char *szPassword,
                                         tABC_Error *pError);
 
-    tABC_CC ABC_LoginCheckValidUser(const char *szUserName,
-                                      tABC_Error *pError);
-
-
     tABC_CC ABC_LoginGetRecoveryQuestions(const char *szUserName,
                                             char **pszQuestions,
                                             tABC_Error *pError);
@@ -57,6 +36,12 @@ extern "C" {
                                  const char *szPassword,
                                  tABC_SyncKeys **ppKeys,
                                  tABC_Error *pError);
+
+    tABC_CC ABC_LoginGetServerKeys(const char *szUserName,
+                                   const char *szPassword,
+                                   tABC_U08Buf *pL1,
+                                   tABC_U08Buf *pLP1,
+                                   tABC_Error *pError);
 
 	tABC_CC ABC_LoginUpdateLoginPackageFromServer(const char *szUserName, const char *szPassword, tABC_Error *pError);
 
