@@ -2598,7 +2598,6 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
     // Use for the remote answers check
     tABC_U08Buf L           = ABC_BUF_NULL;
     tABC_U08Buf L1          = ABC_BUF_NULL;
-    tABC_U08Buf L4          = ABC_BUF_NULL;
     tABC_U08Buf LP1_NULL    = ABC_BUF_NULL;
     char *szLoginPackage    = NULL;
     tABC_CryptoSNRP *pSNRP1 = NULL;
@@ -2634,9 +2633,6 @@ tABC_CC ABC_LoginCheckRecoveryAnswers(const char *szUserName,
 
         // We have the care package so fetch keys without password
         ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, NULL, &pKeys, pError));
-
-        // L4 = Scrypt(L, SNRP4)
-        ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pKeys->pSNRP4, &L4, pError));
 
         // Setup the account repo and sync
         ABC_CHECK_RET(ABC_LoginRepoSetup(pKeys, pError));

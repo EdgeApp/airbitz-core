@@ -81,8 +81,6 @@ extern "C" {
 
     void *ABC_LoginRequestThreaded(void *pData);
 
-    void *ABC_LoginSetRecoveryThreaded(void *pData);
-
     tABC_CC ABC_LoginClearKeyCache(tABC_Error *pError);
 
     tABC_CC ABC_LoginGetKey(const char *szUserName,
