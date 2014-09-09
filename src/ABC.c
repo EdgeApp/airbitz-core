@@ -45,6 +45,7 @@
 #include "ABC.h"
 #include "ABC_Login.h"
 #include "ABC_LoginRequest.h"
+#include "ABC_LoginServer.h"
 #include "ABC_Account.h"
 #include "ABC_General.h"
 #include "ABC_Bridge.h"
@@ -2822,7 +2823,7 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
 
-    ABC_CHECK_RET(ABC_LoginUploadLogs(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_LoginServerUploadLogs(szUserName, szPassword, pError));
 exit:
 
     return cc;
