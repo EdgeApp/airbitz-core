@@ -28,7 +28,7 @@ extern "C" {
         /** The directory that contains the synced files: */
         char *szSyncDir;
         /** The sync key used to access the server: */
-        tABC_U08Buf SyncKey;
+        const char *szSyncKey;
         /** The encryption key used to protect the contents: */
         tABC_U08Buf MK;
     } tABC_SyncKeys;

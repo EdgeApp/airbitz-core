@@ -2416,6 +2416,7 @@ tABC_CC ABC_LoginGetSyncKeys(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_SyncKeys *pKeys = NULL;
+    tABC_U08Buf tempSyncKey;
 
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
@@ -2426,8 +2427,9 @@ tABC_CC ABC_LoginGetSyncKeys(const char *szUserName,
 
     ABC_ALLOC(pKeys, sizeof(tABC_SyncKeys));
     ABC_CHECK_RET(ABC_LoginGetSyncDirName(szUserName, &pKeys->szSyncDir, pError));
-    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_RepoAccountKey, &pKeys->SyncKey, pError));
+    ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_RepoAccountKey, &tempSyncKey, pError));
     ABC_CHECK_RET(ABC_LoginGetKey(szUserName, szPassword, ABC_LoginKey_MK, &pKeys->MK, pError));
+    pKeys->szSyncKey = (char*)tempSyncKey.p;
 
     *ppKeys = pKeys;
     pKeys = NULL;
@@ -2482,31 +2484,19 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_LoginSyncData(const char *szUserName,
-                            const char *szPassword,
-                            int *pDirty,
-                            tABC_Error *pError)
+                          const char *szPassword,
+                          int *pDirty,
+                          tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tAccountKeys *pKeys = NULL;
-    char *szFilename    = NULL;
-    char *szAccountDir  = NULL;
+    tABC_SyncKeys *pKeys = NULL;
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(pKeys->szSyncDir, pKeys->szSyncKey, pDirty, pError));
 
-    ABC_CHECK_RET(ABC_LoginCacheKeys(szUserName, szPassword, &pKeys, pError));
-    ABC_CHECK_ASSERT(NULL != pKeys->szRepoAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
-
-    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, pKeys->accountNum, pError));
-
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
-
-    // Sync repo
-    ABC_CHECK_RET(ABC_SyncRepo(szFilename, pKeys->szRepoAcctKey, pDirty, pError));
 exit:
-    ABC_FREE_STR(szAccountDir);
-    ABC_FREE_STR(szFilename);
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
