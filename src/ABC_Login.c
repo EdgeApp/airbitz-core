@@ -8,6 +8,7 @@
 
 #include "ABC_Login.h"
 #include "ABC_LoginObject.h"
+#include "ABC_General.h"
 #include "ABC_Util.h"
 #include "ABC_Mutex.h"
 
@@ -124,6 +125,9 @@ tABC_CC ABC_LoginSignIn(const char *szUserName,
 
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
+    // Take this non-blocking opportunity to update the general info:
+    ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
+
 exit:
     ABC_LoginMutexUnlock(NULL);
 
@@ -146,6 +150,10 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
 
     ABC_LoginCacheClear();
     ABC_CHECK_RET(ABC_LoginObjectCreate(szUserName, szPassword, &gLoginCache, pError));
+
+    // Take this non-blocking opportunity to update the general info:
+    ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
+    ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
 
 exit:
     ABC_LoginMutexUnlock(NULL);
