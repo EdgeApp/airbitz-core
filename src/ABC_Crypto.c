@@ -1491,9 +1491,9 @@ tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
     // create the jansson object
     *ppJSON_SNRP = json_pack("{sssisisi}",
                              JSON_ENC_SALT_FIELD, szSalt_Hex,
-                             JSON_ENC_N_FIELD, g_timedScryptN,
-                             JSON_ENC_R_FIELD, g_timedScryptR,
-                             JSON_ENC_P_FIELD, SCRYPT_DEFAULT_CLIENT_P);
+                             JSON_ENC_N_FIELD, pSNRP->N,
+                             JSON_ENC_R_FIELD, pSNRP->r,
+                             JSON_ENC_P_FIELD, pSNRP->p);
 
 exit:
     ABC_FREE_STR(szSalt_Hex);
