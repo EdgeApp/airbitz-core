@@ -44,6 +44,8 @@
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Login.h"
+#include "ABC_LoginRequest.h"
+#include "ABC_LoginServer.h"
 #include "ABC_Account.h"
 #include "ABC_General.h"
 #include "ABC_Bridge.h"
@@ -202,28 +204,28 @@ tABC_CC ABC_SignIn(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
-    ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                              ABC_RequestType_AccountSignIn,
-                                              szUserName,
-                                              szPassword,
-                                              NULL, // recovery questions
-                                              NULL, // recovery answers
-                                              NULL, // PIN
-                                              NULL, // new password
-                                              fRequestCallback,
-                                              pData,
-                                              pError));
-
     if (fRequestCallback)
     {
+        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
+
+        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
+                                                  ABC_RequestType_AccountSignIn,
+                                                  szUserName,
+                                                  szPassword,
+                                                  NULL, // recovery questions
+                                                  NULL, // recovery answers
+                                                  NULL, // PIN
+                                                  NULL, // new password
+                                                  fRequestCallback,
+                                                  pData,
+                                                  pError));
+
         pthread_t handle;
         if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
         {
@@ -232,8 +234,7 @@ tABC_CC ABC_SignIn(const char *szUserName,
     }
     else
     {
-        cc = ABC_LoginSignIn(pAccountRequestInfo, pError);
-        ABC_LoginRequestInfoFree(pAccountRequestInfo);
+        ABC_CHECK_RET(ABC_LoginSignIn(szUserName, szPassword, pError));
     }
 
 exit:
@@ -265,8 +266,6 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) >= ABC_MIN_USERNAME_LENGTH, ABC_CC_Error, "Username too short");
@@ -276,20 +275,21 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "PIN is too short");
     ABC_CHECK_NUMERIC(szPIN, ABC_CC_NonNumericPin, "The pin must be numeric.");
 
-    ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                              ABC_RequestType_CreateAccount,
-                                              szUserName,
-                                              szPassword,
-                                              NULL, // recovery questions
-                                              NULL, // recovery answers
-                                              szPIN,
-                                              NULL, // new password
-                                              fRequestCallback,
-                                              pData,
-                                              pError));
-
     if (fRequestCallback)
     {
+        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
+
+        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
+                                                  ABC_RequestType_CreateAccount,
+                                                  szUserName,
+                                                  szPassword,
+                                                  NULL, // recovery questions
+                                                  NULL, // recovery answers
+                                                  szPIN,
+                                                  NULL, // new password
+                                                  fRequestCallback,
+                                                  pData,
+                                                  pError));
         pthread_t handle;
         if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
         {
@@ -298,8 +298,8 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     }
     else
     {
-        cc = ABC_LoginCreate(pAccountRequestInfo, pError);
-        ABC_LoginRequestInfoFree(pAccountRequestInfo);
+        ABC_CHECK_RET(ABC_LoginCreate(szUserName, szPassword, pError));
+        ABC_CHECK_RET(ABC_SetPIN(szUserName, szPassword, szPIN, pError));
     }
 
 exit:
@@ -334,8 +334,6 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_LoginRequestInfo *pInfo = NULL;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
@@ -346,20 +344,22 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     ABC_CHECK_NULL(szRecoveryAnswers);
     ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error, "No recovery answers provided");
 
-    ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pInfo,
-                                              ABC_RequestType_SetAccountRecoveryQuestions,
-                                              szUserName,
-                                              szPassword,
-                                              szRecoveryQuestions,
-                                              szRecoveryAnswers,
-                                              NULL, // PIN
-                                              NULL, // new password
-                                              fRequestCallback,
-                                              pData,
-                                              pError));
-
     if (fRequestCallback)
     {
+    tABC_LoginRequestInfo *pInfo = NULL;
+
+        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pInfo,
+                                                  ABC_RequestType_SetAccountRecoveryQuestions,
+                                                  szUserName,
+                                                  szPassword,
+                                                  szRecoveryQuestions,
+                                                  szRecoveryAnswers,
+                                                  NULL, // PIN
+                                                  NULL, // new password
+                                                  fRequestCallback,
+                                                  pData,
+                                                  pError));
+
         pthread_t handle;
         if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pInfo))
         {
@@ -368,8 +368,8 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     }
     else
     {
-        cc = ABC_LoginSetRecovery(pInfo, pError);
-        ABC_LoginRequestInfoFree(pInfo);
+        ABC_CHECK_RET(ABC_LoginSetRecovery(szUserName, szPassword,
+            szRecoveryQuestions, szRecoveryAnswers, pError));
     }
 
 exit:
@@ -1098,8 +1098,6 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
@@ -1110,20 +1108,22 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     ABC_CHECK_NULL(szNewPIN);
     ABC_CHECK_ASSERT(strlen(szNewPIN) > 0, ABC_CC_Error, "No new PIN provided");
 
-    ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                              ABC_RequestType_ChangePassword,
-                                              szUserName,
-                                              szPassword,
-                                              NULL, // recovery questions
-                                              NULL, // recovery answers
-                                              szNewPIN,
-                                              szNewPassword,
-                                              fRequestCallback,
-                                              pData,
-                                              pError));
-
     if (fRequestCallback)
     {
+        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
+
+        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
+                                                  ABC_RequestType_ChangePassword,
+                                                  szUserName,
+                                                  szPassword,
+                                                  NULL, // recovery questions
+                                                  NULL, // recovery answers
+                                                  szNewPIN,
+                                                  szNewPassword,
+                                                  fRequestCallback,
+                                                  pData,
+                                                  pError));
+
         pthread_t handle;
         if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
         {
@@ -1132,8 +1132,9 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     }
     else
     {
-        cc = ABC_LoginChangePassword(pAccountRequestInfo, pError);
-        ABC_LoginRequestInfoFree(pAccountRequestInfo);
+        ABC_CHECK_RET(ABC_LoginChangePassword(szUserName, szPassword, NULL,
+            szNewPassword, pError));
+        ABC_CHECK_RET(ABC_SetPIN(szUserName, szNewPassword, szNewPIN, pError));
     }
 
 exit:
@@ -1169,8 +1170,6 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
@@ -1181,20 +1180,22 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     ABC_CHECK_NULL(szNewPIN);
     ABC_CHECK_ASSERT(strlen(szNewPIN) > 0, ABC_CC_Error, "No new PIN provided");
 
-    ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                              ABC_RequestType_ChangePassword,
-                                              szUserName,
-                                              NULL, // recovery questions
-                                              NULL, // password
-                                              szRecoveryAnswers,
-                                              szNewPIN,
-                                              szNewPassword,
-                                              fRequestCallback,
-                                              pData,
-                                              pError));
-
     if (fRequestCallback)
     {
+        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
+
+        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
+                                                  ABC_RequestType_ChangePassword,
+                                                  szUserName,
+                                                  NULL, // recovery questions
+                                                  NULL, // password
+                                                  szRecoveryAnswers,
+                                                  szNewPIN,
+                                                  szNewPassword,
+                                                  fRequestCallback,
+                                                  pData,
+                                                  pError));
+
         pthread_t handle;
         if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
         {
@@ -1203,8 +1204,9 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     }
     else
     {
-        cc = ABC_LoginChangePassword(pAccountRequestInfo, pError);
-        ABC_LoginRequestInfoFree(pAccountRequestInfo);
+        ABC_CHECK_RET(ABC_LoginChangePassword(szUserName, NULL,
+            szRecoveryAnswers, szNewPassword, pError));
+        ABC_CHECK_RET(ABC_SetPIN(szUserName, szNewPassword, szNewPIN, pError));
     }
 
 exit:
@@ -2821,7 +2823,7 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
 
-    ABC_CHECK_RET(ABC_LoginUploadLogs(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_LoginServerUploadLogs(szUserName, szPassword, pError));
 exit:
 
     return cc;

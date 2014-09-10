@@ -275,6 +275,12 @@ extern "C" {
                                                 } \
                                             }
 #define ABC_CHECK_NULL_BUF(arg)             { ABC_CHECK_ASSERT(ABC_BUF_PTR(arg) != NULL, ABC_CC_NULLPtr, "NULL ABC_Buf pointer"); }
+
+#define ABC_BUF_SWAP(a, b)                  { \
+                                                void *t; \
+                                                t = (a).p;   (a).p   = (b).p;   (b).p   = t; \
+                                                t = (a).end; (a).end = (b).end; (b).end = t; \
+                                            }
 /* example usage
 {
     tABC_U08Buf mybuf = ABC_BUF_NULL; // declares buf and inits pointers to NULL
