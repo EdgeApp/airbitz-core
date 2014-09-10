@@ -20,7 +20,7 @@
 
 // LoginPackage.json:
 #define JSON_ACCT_MK_FIELD                      "MK"
-#define JSON_ACCT_SYNCKEY_FIELD                 "SyncKey"
+#define JSON_ACCT_ESYNCKEY_FIELD                "ESyncKey"
 #define JSON_ACCT_ELP2_FIELD                    "ELP2"
 #define JSON_ACCT_ELRA3_FIELD                   "ELRA3"
 
@@ -712,10 +712,9 @@ tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
     char    *szLoginPackage = NULL;
     json_t  *pJSON_Root     = NULL;
     json_t  *pJSON_MK       = NULL;
-    json_t  *pJSON_SyncKey  = NULL;
+    json_t  *pJSON_ESyncKey  = NULL;
     json_t  *pJSON_ELP2     = NULL;
     json_t  *pJSON_ELRA3    = NULL;
-    tABC_U08Buf SyncKey     = ABC_BUF_NULL;
     int     e;
 
     // Load the package from disk:
@@ -741,7 +740,7 @@ tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
     // Unpack the contents:
     e = json_unpack(pJSON_Root, "{s:o, s:o, s?o, s?o}",
                     JSON_ACCT_MK_FIELD,         &pJSON_MK,
-                    JSON_ACCT_SYNCKEY_FIELD,    &pJSON_SyncKey,
+                    JSON_ACCT_ESYNCKEY_FIELD,   &pJSON_ESyncKey,
                     JSON_ACCT_ELP2_FIELD,       &pJSON_ELP2,
                     JSON_ACCT_ELRA3_FIELD,      &pJSON_ELRA3);
     ABC_CHECK_SYS(!e, "Error parsing LoginPackage JSON");
@@ -763,14 +762,12 @@ tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
     ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_MK, pSelf->LP2, &pSelf->MK, pError));
 
     // Decrypt SyncKey:
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_SyncKey, pSelf->L4, &SyncKey, pError));
-    ABC_STRDUP(pSelf->szSyncKey, (char *)ABC_BUF_PTR(SyncKey));
-    ABC_CHECK_RET(ABC_CryptoHexDecode(pSelf->szSyncKey, &pSelf->SyncKey, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ESyncKey, pSelf->MK, &pSelf->SyncKey, pError));
+    ABC_CHECK_RET(ABC_CryptoHexEncode(pSelf->SyncKey, &pSelf->szSyncKey, pError));
 
 exit:
     ABC_FREE_STR(szLoginPackage);
     if (pJSON_Root)     json_decref(pJSON_Root);
-    ABC_BUF_FREE(SyncKey);
     return cc;
 }
 
@@ -835,26 +832,24 @@ tABC_CC ABC_LoginObjectWriteLoginPackage(tABC_LoginObject *pSelf,
     tABC_CC cc = ABC_CC_Ok;
     ABC_CHECK_NULL(pszLoginPackage);
 
-    json_t *pJSON_Root      = NULL;
-    json_t *pJSON_MK        = NULL;
-    json_t *pJSON_SyncKey   = NULL;
-    json_t *pJSON_ELP2      = NULL;
-    json_t *pJSON_ELRA3     = NULL;
+    json_t  *pJSON_Root     = NULL;
+    json_t  *pJSON_MK       = NULL;
+    json_t  *pJSON_ESyncKey = NULL;
+    json_t  *pJSON_ELP2     = NULL;
+    json_t  *pJSON_ELRA3    = NULL;
 
     // Encrypt MK:
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(pSelf->MK, pSelf->LP2,
         ABC_CryptoType_AES256, &pJSON_MK, pError));
 
     // Encrypt SyncKey:
-    tABC_U08Buf SyncKey = ABC_BUF_NULL;
-    ABC_BUF_SET_PTR(SyncKey, (unsigned char *)pSelf->szSyncKey, strlen(pSelf->szSyncKey) + 1);
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(SyncKey, pSelf->L4,
-        ABC_CryptoType_AES256, &pJSON_SyncKey, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(pSelf->SyncKey, pSelf->MK,
+        ABC_CryptoType_AES256, &pJSON_ESyncKey, pError));
 
     // Build the main body:
     pJSON_Root = json_pack("{s:o, s:o}",
-        JSON_ACCT_MK_FIELD,      pJSON_MK,
-        JSON_ACCT_SYNCKEY_FIELD, pJSON_SyncKey);
+        JSON_ACCT_MK_FIELD,         pJSON_MK,
+        JSON_ACCT_ESYNCKEY_FIELD,   pJSON_ESyncKey);
 
     // Build the recovery, if any:
     if (ABC_BUF_SIZE(pSelf->LRA3))
@@ -875,7 +870,7 @@ tABC_CC ABC_LoginObjectWriteLoginPackage(tABC_LoginObject *pSelf,
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
     if (pJSON_MK)       json_decref(pJSON_MK);
-    if (pJSON_SyncKey)  json_decref(pJSON_SyncKey);
+    if (pJSON_ESyncKey) json_decref(pJSON_ESyncKey);
     if (pJSON_ELP2)     json_decref(pJSON_ELP2);
     if (pJSON_ELRA3)    json_decref(pJSON_ELRA3);
 
