@@ -2825,7 +2825,7 @@ tABC_CC ABC_TxBuildFromLabel(const char *szUserName, const char *szPassword,
 
     ABC_CHECK_RET(ABC_LoadAccountSettings(szUserName, szPassword, &pSettings, pError));
 
-    if (pSettings->bNameOnPayments)
+    if (pSettings->bNameOnPayments && pSettings->szFullName)
     {
         ABC_BUF_DUP_PTR(Label, pSettings->szFullName, strlen(pSettings->szFullName));
     }
