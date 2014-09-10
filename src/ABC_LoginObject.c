@@ -8,6 +8,7 @@
 #include "ABC_LoginServer.h"
 #include "ABC_Account.h"
 #include "ABC_Crypto.h"
+#include <ctype.h>
 
 #define ACCOUNT_MK_LENGTH 32
 
@@ -52,6 +53,7 @@ struct sABC_LoginObject
     char            *szSyncKey; // Hex-encoded
 };
 
+static tABC_CC ABC_LoginObjectFixUserName(const char *szUserName, char **pszOut, tABC_Error *pError);
 static tABC_CC ABC_LoginObjectSetupUser(tABC_LoginObject *pSelf, const char *szUserName, tABC_Error *pError);
 static tABC_CC ABC_LoginObjectLoadCarePackage(tABC_LoginObject *pSelf, tABC_Error *pError);
 static tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf, tABC_Error *pError);
@@ -456,19 +458,28 @@ exit:
 }
 
 /**
- * Obtains an account object's user name.
- * @param pszUserName   The user name. Do *not* free this.
+ * Determines whether or not the given string matches the account's
+ * username.
+ * @param szUserName    The user name to check.
+ * @param pMatch        Set to 1 if the names match.
  */
-tABC_CC ABC_LoginObjectGetUserName(tABC_LoginObject *pSelf,
-                                   const char **pszUserName,
-                                   tABC_Error *pError)
+tABC_CC ABC_LoginObjectCheckUserName(tABC_LoginObject *pSelf,
+                                     const char *szUserName,
+                                     int *pMatch,
+                                     tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_CHECK_NULL(pSelf);
 
-    *pszUserName = pSelf->szUserName;
+    char *szFixed;
+    *pMatch = 0;
+
+    ABC_CHECK_RET(ABC_LoginObjectFixUserName(szUserName, &szFixed, pError));
+    if (!strcmp(szFixed, pSelf->szUserName))
+        *pMatch = 1;
 
 exit:
+    ABC_FREE_STR(szFixed);
     return cc;
 }
 
@@ -548,6 +559,56 @@ exit:
 }
 
 /**
+ * Re-formats a username to all-lowercase, checking for disallowed
+ * characters and collapsing spaces.
+ */
+static
+tABC_CC ABC_LoginObjectFixUserName(const char *szUserName,
+                                   char **pszOut,
+                                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szOut = malloc(strlen(szUserName));
+    ABC_CHECK_NULL(szOut);
+
+    const char *si = szUserName;
+    char *di = szOut;
+
+    // Collapse leading & internal spaces:
+    do
+    {
+        while (isspace(*si))
+            ++si;
+        while (*si && !isspace(*si))
+            *di++ = *si++;
+        *di++ = ' ';
+    }
+    while (*si);
+    *--di = 0;
+
+    // Stomp trailing space, if any:
+    --di;
+    if (szOut < di && ' ' == *di)
+        *di = 0;
+
+    // Scan for bad characters, and make lowercase:
+    for (di = szOut; *di; ++di)
+    {
+        if (*di < ' ' || '~' < *di)
+            cc = ABC_CC_NotSupported;
+        if ('A' <= *di && *di <= 'Z')
+            *di = *di - 'A' + 'a';
+    }
+
+    *pszOut = szOut;
+    szOut = NULL;
+
+exit:
+    ABC_FREE_STR(szOut);
+    return cc;
+}
+
+/**
  * Sets up the username and L1 parameters in the login object.
  */
 static
@@ -558,7 +619,7 @@ tABC_CC ABC_LoginObjectSetupUser(tABC_LoginObject *pSelf,
     tABC_CC cc = ABC_CC_Ok;
 
     // Set up identity:
-    ABC_STRDUP(pSelf->szUserName, szUserName);
+    ABC_CHECK_RET(ABC_LoginObjectFixUserName(szUserName, &pSelf->szUserName, pError));
     ABC_CHECK_RET(ABC_LoginDirGetNumber(szUserName, &pSelf->AccountNum, pError));
 
     // Load SRNP1:
