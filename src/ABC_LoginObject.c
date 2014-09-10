@@ -104,7 +104,6 @@ tABC_CC ABC_LoginObjectCreate(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_LoginObject    *pSelf          = NULL;
-    tABC_U08Buf         P               = ABC_BUF_NULL;
     tABC_U08Buf         LP              = ABC_BUF_NULL;
     char                *szCarePackage  = NULL;
     char                *szLoginPackage = NULL;
@@ -123,19 +122,13 @@ tABC_CC ABC_LoginObjectCreate(const char *szUserName,
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pSelf->pSNRP3, pError));
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pSelf->pSNRP4, pError));
 
-    // L = username:
+    // L4  = Scrypt(L, SNRP4):
     tABC_U08Buf L = ABC_BUF_NULL;
     ABC_BUF_SET_PTR(L, (unsigned char *)pSelf->szUserName, strlen(pSelf->szUserName));
-
-    // L4  = Scrypt(L, SNRP4):
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSelf->pSNRP4, &pSelf->L4, pError));
 
-    // P = password:
-    ABC_BUF_DUP_PTR(P, (unsigned char *)szPassword, strlen(szPassword));
-
     // LP = L + P:
-    ABC_BUF_DUP(LP, L);
-    ABC_BUF_APPEND(LP, P);
+    ABC_BUF_STRCAT(LP, pSelf->szUserName, szPassword);
 
     // LP1 = Scrypt(LP, SNRP1):
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pSelf->pSNRP1, &pSelf->LP1, pError));
@@ -181,7 +174,6 @@ tABC_CC ABC_LoginObjectCreate(const char *szUserName,
 
 exit:
     ABC_LoginObjectFree(pSelf);
-    ABC_BUF_FREE(P);
     ABC_BUF_FREE(LP);
     ABC_FREE_STR(szCarePackage);
     ABC_FREE_STR(szLoginPackage);
@@ -204,7 +196,6 @@ tABC_CC ABC_LoginObjectFromPassword(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_LoginObject    *pSelf          = NULL;
-    tABC_U08Buf         P               = ABC_BUF_NULL;
     tABC_U08Buf         LP              = ABC_BUF_NULL;
 
     // Allocate self:
@@ -214,16 +205,8 @@ tABC_CC ABC_LoginObjectFromPassword(const char *szUserName,
     // Load CarePackage:
     ABC_CHECK_RET(ABC_LoginObjectLoadCarePackage(pSelf, pError));
 
-    // L = username:
-    tABC_U08Buf L = ABC_BUF_NULL;
-    ABC_BUF_SET_PTR(L, (unsigned char *)pSelf->szUserName, strlen(pSelf->szUserName));
-
-    // P = password:
-    ABC_BUF_DUP_PTR(P, (unsigned char *)szPassword, strlen(szPassword));
-
     // LP = L + P:
-    ABC_BUF_DUP(LP, L);
-    ABC_BUF_APPEND(LP, P);
+    ABC_BUF_STRCAT(LP, pSelf->szUserName, szPassword);
 
     // LP1 = Scrypt(LP, SNRP1):
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pSelf->pSNRP1, &pSelf->LP1, pError));
@@ -245,7 +228,6 @@ tABC_CC ABC_LoginObjectFromPassword(const char *szUserName,
 
 exit:
     ABC_LoginObjectFree(pSelf);
-    ABC_BUF_FREE(P);
     ABC_BUF_FREE(LP);
     return cc;
 }
@@ -266,7 +248,6 @@ tABC_CC ABC_LoginObjectFromRecovery(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_LoginObject    *pSelf          = NULL;
-    tABC_U08Buf         RA              = ABC_BUF_NULL;
     tABC_U08Buf         LRA             = ABC_BUF_NULL;
 
     // Allocate self:
@@ -276,16 +257,8 @@ tABC_CC ABC_LoginObjectFromRecovery(const char *szUserName,
     // Load CarePackage:
     ABC_CHECK_RET(ABC_LoginObjectLoadCarePackage(pSelf, pError));
 
-    // L = username:
-    tABC_U08Buf L = ABC_BUF_NULL;
-    ABC_BUF_SET_PTR(L, (unsigned char *)pSelf->szUserName, strlen(pSelf->szUserName));
-
-    // RA = recovery answers:
-    ABC_BUF_DUP_PTR(RA, (unsigned char *)szRecoveryAnswers, strlen(szRecoveryAnswers));
-
     // LRA = L + RA:
-    ABC_BUF_DUP(LRA, L);
-    ABC_BUF_APPEND(LRA, RA);
+    ABC_BUF_STRCAT(LRA, pSelf->szUserName, szRecoveryAnswers);
 
     // LRA1 = Scrypt(LRA, SNRP1):
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pSelf->pSNRP1, &pSelf->LRA1, pError));
@@ -307,7 +280,6 @@ tABC_CC ABC_LoginObjectFromRecovery(const char *szUserName,
 
 exit:
     ABC_LoginObjectFree(pSelf);
-    ABC_BUF_FREE(RA);
     ABC_BUF_FREE(LRA);
     return cc;
 }
@@ -377,22 +349,13 @@ tABC_CC ABC_LoginObjectSetPassword(tABC_LoginObject *pSelf,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_U08Buf P           = ABC_BUF_NULL;
     tABC_U08Buf LP          = ABC_BUF_NULL;
     tABC_U08Buf LP1         = ABC_BUF_NULL;
     tABC_U08Buf LP2         = ABC_BUF_NULL;
     char *szLoginPackage    = NULL;
 
-    // L = username:
-    tABC_U08Buf L = ABC_BUF_NULL;
-    ABC_BUF_SET_PTR(L, (unsigned char *)pSelf->szUserName, strlen(pSelf->szUserName));
-
-    // P = password:
-    ABC_BUF_DUP_PTR(P, (unsigned char *)szPassword, strlen(szPassword));
-
     // LP = L + P:
-    ABC_BUF_DUP(LP, L);
-    ABC_BUF_APPEND(LP, P);
+    ABC_BUF_STRCAT(LP, pSelf->szUserName, szPassword);
 
     // LP1 = Scrypt(LP, SNRP1):
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pSelf->pSNRP1, &LP1, pError));
@@ -420,7 +383,6 @@ tABC_CC ABC_LoginObjectSetPassword(tABC_LoginObject *pSelf,
     ABC_CHECK_RET(ABC_LoginDirFileSave(szLoginPackage, pSelf->AccountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
 
 exit:
-    ABC_BUF_FREE(P);
     ABC_BUF_FREE(LP);
     ABC_BUF_FREE(LP1);
     ABC_BUF_FREE(LP2);
@@ -441,7 +403,6 @@ tABC_CC ABC_LoginObjectSetRecovery(tABC_LoginObject *pSelf,
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_U08Buf RQ          = ABC_BUF_NULL;
-    tABC_U08Buf RA          = ABC_BUF_NULL;
     tABC_U08Buf LRA         = ABC_BUF_NULL;
     tABC_U08Buf LRA1        = ABC_BUF_NULL;
     tABC_U08Buf LRA3        = ABC_BUF_NULL;
@@ -451,16 +412,8 @@ tABC_CC ABC_LoginObjectSetRecovery(tABC_LoginObject *pSelf,
     // RQ = recovery questions:
     ABC_BUF_DUP_PTR(RQ, (unsigned char *)szRecoveryQuestions, strlen(szRecoveryQuestions) + 1);
 
-    // L = username:
-    tABC_U08Buf L = ABC_BUF_NULL;
-    ABC_BUF_SET_PTR(L, (unsigned char *)pSelf->szUserName, strlen(pSelf->szUserName));
-
-    // RA = recovery answers:
-    ABC_BUF_DUP_PTR(RA, (unsigned char *)szRecoveryAnswers, strlen(szRecoveryAnswers));
-
     // LRA = L + RA:
-    ABC_BUF_DUP(LRA, L);
-    ABC_BUF_APPEND(LRA, RA);
+    ABC_BUF_STRCAT(LRA, pSelf->szUserName, szRecoveryAnswers);
 
     // LRA1 = Scrypt(LRA, SNRP1):
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pSelf->pSNRP1, &LRA1, pError));
@@ -493,7 +446,6 @@ tABC_CC ABC_LoginObjectSetRecovery(tABC_LoginObject *pSelf,
 
 exit:
     ABC_BUF_FREE(RQ);
-    ABC_BUF_FREE(RA);
     ABC_BUF_FREE(LRA);
     ABC_BUF_FREE(LRA1);
     ABC_BUF_FREE(LRA3);
@@ -654,8 +606,8 @@ tABC_CC ABC_LoginObjectLoadCarePackage(tABC_LoginObject *pSelf,
     // Parse the JSON:
     json_error_t error;
     pJSON_Root = json_loads(szCarePackage, 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON care package");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON care package");
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing CarePackage JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing CarePackage JSON");
 
     // Unpack the contents:
     e = json_unpack(pJSON_Root, "{s:o, s:o, s:o, s?o}",
@@ -663,12 +615,7 @@ tABC_CC ABC_LoginObjectLoadCarePackage(tABC_LoginObject *pSelf,
                     JSON_ACCT_SNRP3_FIELD, &pJSON_SNRP3,
                     JSON_ACCT_SNRP4_FIELD, &pJSON_SNRP4,
                     JSON_ACCT_ERQ_FIELD,   &pJSON_ERQ);
-    ABC_CHECK_SYS(!e, "Error parsing JSON care package");
-
-    // Validate SNRP's:
-    ABC_CHECK_ASSERT((pJSON_SNRP2 && json_is_object(pJSON_SNRP2)), ABC_CC_JSONError, "Error parsing JSON care package - missing SNRP2");
-    ABC_CHECK_ASSERT((pJSON_SNRP3 && json_is_object(pJSON_SNRP3)), ABC_CC_JSONError, "Error parsing JSON care package - missing SNRP3");
-    ABC_CHECK_ASSERT((pJSON_SNRP4 && json_is_object(pJSON_SNRP4)), ABC_CC_JSONError, "Error parsing JSON care package - missing SNRP4");
+    ABC_CHECK_SYS(!e, "Error parsing CarePackage JSON");
 
     // Decode SNRP's:
     ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP2, &pSelf->pSNRP2, pError));
@@ -727,8 +674,8 @@ tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
     // Parse the JSON:
     json_error_t error;
     pJSON_Root = json_loads(szLoginPackage, 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON login package");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON login package");
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing LoginPackage JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing LoginPackage JSON");
 
     // Unpack the contents:
     e = json_unpack(pJSON_Root, "{s:o, s:o, s?o, s?o}",
@@ -736,11 +683,7 @@ tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
                     JSON_ACCT_SYNCKEY_FIELD,    &pJSON_SyncKey,
                     JSON_ACCT_ELP2_FIELD,       &pJSON_ELP2,
                     JSON_ACCT_ELRA3_FIELD,      &pJSON_ELRA3);
-    ABC_CHECK_SYS(!e, "Error parsing JSON login package");
-
-    // Validate access keys:
-    ABC_CHECK_ASSERT((pJSON_MK && json_is_object(pJSON_MK)), ABC_CC_JSONError, "Error parsing JSON login package - missing MK");
-    ABC_CHECK_ASSERT((pJSON_SyncKey && json_is_object(pJSON_SyncKey)), ABC_CC_JSONError, "Error parsing JSON login package - missing SyncKey");
+    ABC_CHECK_SYS(!e, "Error parsing LoginPackage JSON");
 
     // Use one login key to gain access to the other:
     if (ABC_BUF_PTR(pSelf->LP2) && !ABC_BUF_PTR(pSelf->LRA3) &&
@@ -753,6 +696,7 @@ tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
     {
         ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ELP2, pSelf->LRA3, &pSelf->LP2, pError));
     }
+    ABC_CHECK_ASSERT(ABC_BUF_PTR(pSelf->LP2), ABC_CC_DecryptFailure, "Error loading LoginPackage - cannot get LP2");
 
     // Decrypt MK:
     ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_MK, pSelf->LP2, &pSelf->MK, pError));
