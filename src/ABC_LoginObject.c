@@ -22,6 +22,8 @@
 #define JSON_ACCT_EMK_LP2_FIELD                 "EMK_LP2"
 #define JSON_ACCT_EMK_LRA3_FIELD                "EMK_LRA3"
 #define JSON_ACCT_ESYNCKEY_FIELD                "ESyncKey"
+#define JSON_ACCT_ELP1_FIELD                    "ELP1"
+#define JSON_ACCT_ELRA1_FIELD                   "ELRA1"
 
 struct sABC_LoginObject
 {
@@ -37,7 +39,7 @@ struct sABC_LoginObject
 
     // Login server keys:
     tABC_U08Buf     L1;
-    tABC_U08Buf     LP1;        // Absent when logging in with LRA!
+    tABC_U08Buf     LP1;
     tABC_U08Buf     LRA1;       // Optional
 
     // Recovery:
@@ -733,7 +735,9 @@ tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
     tABC_CC cc = ABC_CC_Ok;
     char    *szLoginPackage = NULL;
     json_t  *pJSON_Root     = NULL;
-    json_t  *pJSON_ESyncKey = NULL;
+    json_t  *pJSON_ESyncKey  = NULL;
+    json_t  *pJSON_ELP1     = NULL;
+    json_t  *pJSON_ELRA1    = NULL;
     int     e;
 
     // Load the package from disk:
@@ -757,10 +761,12 @@ tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing LoginPackage JSON");
 
     // Unpack the contents:
-    e = json_unpack(pJSON_Root, "{s?o, s?o, s:o}",
+    e = json_unpack(pJSON_Root, "{s?o, s?o, s:o, s?o, s?o}",
                     JSON_ACCT_EMK_LP2_FIELD,     &pSelf->EMK_LP2,
                     JSON_ACCT_EMK_LRA3_FIELD,    &pSelf->EMK_LRA3,
-                    JSON_ACCT_ESYNCKEY_FIELD,    &pJSON_ESyncKey);
+                    JSON_ACCT_ESYNCKEY_FIELD,    &pJSON_ESyncKey,
+                    JSON_ACCT_ELP1_FIELD,        &pJSON_ELP1,
+                    JSON_ACCT_ELRA1_FIELD,       &pJSON_ELRA1);
     ABC_CHECK_SYS(!e, "Error parsing LoginPackage JSON");
 
     // Save the EMK's:
@@ -783,6 +789,16 @@ tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
     // Decrypt SyncKey:
     ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ESyncKey, pSelf->MK, &pSelf->SyncKey, pError));
     ABC_CHECK_RET(ABC_CryptoHexEncode(pSelf->SyncKey, &pSelf->szSyncKey, pError));
+
+    // Decrypt server keys:
+    if (pJSON_ELP1 && !ABC_BUF_PTR(pSelf->LP1))
+    {
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ELP1, pSelf->MK, &pSelf->LP1, pError));
+    }
+    if (pJSON_ELRA1 && !ABC_BUF_PTR(pSelf->LRA1))
+    {
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ELRA1, pSelf->MK, &pSelf->LRA1, pError));
+    }
 
 exit:
     ABC_FREE_STR(szLoginPackage);
@@ -853,6 +869,8 @@ tABC_CC ABC_LoginObjectWriteLoginPackage(tABC_LoginObject *pSelf,
 
     json_t  *pJSON_Root     = NULL;
     json_t  *pJSON_ESyncKey = NULL;
+    json_t  *pJSON_ELP1     = NULL;
+    json_t  *pJSON_ELRA1    = NULL;
 
     // Encrypt SyncKey:
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(pSelf->SyncKey, pSelf->MK,
@@ -872,6 +890,20 @@ tABC_CC ABC_LoginObjectWriteLoginPackage(tABC_LoginObject *pSelf,
         json_object_set(pJSON_Root, JSON_ACCT_EMK_LRA3_FIELD, pSelf->EMK_LRA3);
     }
 
+    // Write server keys:
+    if (ABC_BUF_PTR(pSelf->LP1))
+    {
+        ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(pSelf->LP1, pSelf->MK,
+            ABC_CryptoType_AES256, &pJSON_ELP1, pError));
+        json_object_set(pJSON_Root, JSON_ACCT_ELP1_FIELD, pJSON_ELP1);
+    }
+    if (ABC_BUF_PTR(pSelf->LRA1))
+    {
+        ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(pSelf->LRA1, pSelf->MK,
+            ABC_CryptoType_AES256, &pJSON_ELRA1, pError));
+        json_object_set(pJSON_Root, JSON_ACCT_ELRA1_FIELD, pJSON_ELRA1);
+    }
+
     // Write out:
     *pszLoginPackage = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
     ABC_CHECK_NULL(*pszLoginPackage);
@@ -879,6 +911,8 @@ tABC_CC ABC_LoginObjectWriteLoginPackage(tABC_LoginObject *pSelf,
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
     if (pJSON_ESyncKey) json_decref(pJSON_ESyncKey);
+    if (pJSON_ELP1)     json_decref(pJSON_ELP1);
+    if (pJSON_ELRA1)    json_decref(pJSON_ELRA1);
 
     return cc;
 }
