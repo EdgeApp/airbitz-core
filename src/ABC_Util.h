@@ -204,6 +204,14 @@ extern "C" {
         } \
     }
 
+#define ABC_SWAP(a, b) \
+    { \
+        unsigned char temp[sizeof(a) == sizeof(b) ? (signed)sizeof(a) : -1]; \
+        memcpy(temp, &b, sizeof(a)); \
+        memcpy(&b,   &a, sizeof(a)); \
+        memcpy(&a, temp, sizeof(a)); \
+    }
+
 #define ABC_BUF(type)                       struct {  \
                                                     type *p;  \
                                                     type *end;  \
@@ -285,9 +293,8 @@ extern "C" {
 #define ABC_CHECK_NULL_BUF(arg)             { ABC_CHECK_ASSERT(ABC_BUF_PTR(arg) != NULL, ABC_CC_NULLPtr, "NULL ABC_Buf pointer"); }
 
 #define ABC_BUF_SWAP(a, b)                  { \
-                                                void *t; \
-                                                t = (a).p;   (a).p   = (b).p;   (b).p   = t; \
-                                                t = (a).end; (a).end = (b).end; (b).end = t; \
+                                                ABC_SWAP((a).p,   (b).p); \
+                                                ABC_SWAP((a).end, (b).end); \
                                             }
 /* example usage
 {
