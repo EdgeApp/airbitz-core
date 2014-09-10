@@ -35,6 +35,11 @@ struct sABC_LoginObject
     tABC_CryptoSNRP *pSNRP3;
     tABC_CryptoSNRP *pSNRP4;
 
+    // Login server keys:
+    tABC_U08Buf     L1;
+    tABC_U08Buf     LP1;        // Absent when logging in with LRA!
+    tABC_U08Buf     LRA1;       // Optional
+
     // Recovery:
     tABC_U08Buf     L4;
     tABC_U08Buf     RQ;         // Optional
@@ -45,11 +50,6 @@ struct sABC_LoginObject
     tABC_U08Buf     MK;
     tABC_U08Buf     SyncKey;
     char            *szSyncKey; // Hex-encoded
-
-    // Login server keys:
-    tABC_U08Buf     L1;
-    tABC_U08Buf     LP1;        // Absent when logging in with LRA!
-    tABC_U08Buf     LRA1;       // Optional
 };
 
 static tABC_CC ABC_LoginObjectSetupUser(tABC_LoginObject *pSelf, const char *szUserName, tABC_Error *pError);
@@ -65,15 +65,26 @@ void ABC_LoginObjectFree(tABC_LoginObject *pSelf)
 {
     if (pSelf)
     {
+        ABC_FREE_STR(pSelf->szUserName);
+
         ABC_CryptoFreeSNRP(&pSelf->pSNRP1);
         ABC_CryptoFreeSNRP(&pSelf->pSNRP2);
         ABC_CryptoFreeSNRP(&pSelf->pSNRP3);
         ABC_CryptoFreeSNRP(&pSelf->pSNRP4);
+
+        ABC_BUF_FREE(pSelf->L1);
+        ABC_BUF_FREE(pSelf->LP1);
+        ABC_BUF_FREE(pSelf->LRA1);
+
+        ABC_BUF_FREE(pSelf->L4);
+        ABC_BUF_FREE(pSelf->RQ);
+
         ABC_BUF_FREE(pSelf->LP2);
         ABC_BUF_FREE(pSelf->LRA3);
         ABC_BUF_FREE(pSelf->MK);
         ABC_BUF_FREE(pSelf->SyncKey);
         ABC_FREE_STR(pSelf->szSyncKey);
+
         ABC_CLEAR_FREE(pSelf, sizeof(tABC_LoginObject));
     }
 }
