@@ -16,6 +16,7 @@
 tABC_LoginObject *gLoginCache = NULL;
 
 static void ABC_LoginCacheClear();
+static void ABC_LoginCacheClearOther(const char *szUserName);
 static tABC_CC ABC_LoginCacheObject(const char *szUserName, const char *szPassword, tABC_Error *pError);
 static tABC_CC ABC_LoginMutexLock(tABC_Error *pError);
 static tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError);
@@ -24,19 +25,38 @@ static tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError);
  * Clears the cached login object.
  * The caller should already be holding the login mutex.
  */
-static void ABC_LoginCacheClear()
+static
+void ABC_LoginCacheClear()
 {
     ABC_LoginObjectFree(gLoginCache);
     gLoginCache = NULL;
 }
 
 /**
+ * Clears the cache if the current object doesn't match the given username.
+ */
+static
+void ABC_LoginCacheClearOther(const char *szUserName)
+{
+    if (gLoginCache)
+    {
+        tABC_Error error;
+        int match = 0;
+
+        ABC_LoginObjectCheckUserName(gLoginCache, szUserName, &match, &error);
+        if (!match)
+            ABC_LoginCacheClear();
+    }
+}
+
+/**
  * Loads the account for the given user into the login object cache.
  * The caller should already be holding the login mutex.
  */
-static tABC_CC ABC_LoginCacheObject(const char *szUserName,
-                                    const char *szPassword,
-                                    tABC_Error *pError)
+static
+tABC_CC ABC_LoginCacheObject(const char *szUserName,
+                             const char *szPassword,
+                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -45,13 +65,7 @@ static tABC_CC ABC_LoginCacheObject(const char *szUserName,
     ABC_CHECK_NULL(szPassword);
 
     // Clear the cache if it has the wrong object:
-    if (gLoginCache)
-    {
-        const char *szCacheName = "";
-        ABC_CHECK_RET(ABC_LoginObjectGetUserName(gLoginCache, &szCacheName, pError));
-        if (strcmp(szCacheName, szUserName))
-            ABC_LoginCacheClear();
-    }
+    ABC_LoginCacheClearOther(szUserName);
 
     // Load the right object, if necessary:
     if (!gLoginCache)
@@ -217,13 +231,7 @@ tABC_CC ABC_LoginChangePassword(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
 
     // Clear the cache if it has the wrong object:
-    if (gLoginCache)
-    {
-        const char *szCacheName = "";
-        ABC_CHECK_RET(ABC_LoginObjectGetUserName(gLoginCache, &szCacheName, pError));
-        if (strcmp(szCacheName, szUserName))
-            ABC_LoginCacheClear();
-    }
+    ABC_LoginCacheClearOther(szUserName);
 
     // Load the right object, if necessary:
     if (!gLoginCache)

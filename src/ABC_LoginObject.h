@@ -53,9 +53,10 @@ extern "C" {
                                        tABC_Error *pError);
 
     // Read accessors:
-    tABC_CC ABC_LoginObjectGetUserName(tABC_LoginObject *pSelf,
-                                       const char **pszUserName,
-                                       tABC_Error *pError);
+    tABC_CC ABC_LoginObjectCheckUserName(tABC_LoginObject *pSelf,
+                                         const char *szUserName,
+                                         int *pMatch,
+                                         tABC_Error *pError);
 
     tABC_CC ABC_LoginObjectGetSyncKeys(tABC_LoginObject *pSelf,
                                        tABC_SyncKeys **ppKeys,
