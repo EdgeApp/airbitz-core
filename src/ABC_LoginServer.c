@@ -142,74 +142,6 @@ exit:
 }
 
 /**
- * Set recovery questions and answers on the server.
- *
- * This function sends LRA1 and Care Package to the server as part
- * of setting up the recovery data for an account
- *
- * @param L1             Login hash for the account
- * @param LP1            Password hash for the account
- * @param LRA1           Scrypt'ed login and recovery answers
- * @param szCarePackage  Care Package for account
- * @param szLoginPackage Login Package for account
- */
-tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1, tABC_U08Buf LP1,
-                                   tABC_U08Buf LRA1,
-                                   const char *szCarePackage,
-                                   const char *szLoginPackage,
-                                   tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szURL         = NULL;
-    char *szResults     = NULL;
-    char *szPost        = NULL;
-    char *szL1_Base64   = NULL;
-    char *szLP1_Base64  = NULL;
-    char *szLRA1_Base64 = NULL;
-    json_t *pJSON_Root  = NULL;
-
-    ABC_CHECK_NULL_BUF(L1);
-    ABC_CHECK_NULL(szCarePackage);
-    ABC_CHECK_NULL(szLoginPackage);
-
-    // create the URL
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_UPDATE_CARE_PACKAGE_PATH);
-
-    // create base64 versions of L1, LP1 and LRA1
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LRA1, &szLRA1_Base64, pError));
-
-    // create the post data
-    pJSON_Root = json_pack("{ssssssssss}",
-                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                        ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
-                        ABC_SERVER_JSON_LRA1_FIELD, szLRA1_Base64,
-                        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage,
-                        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
-
-    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
-    ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
-
-    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
-    ABC_DebugLog("Server results: %.50s", szResults);
-
-    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
-exit:
-    ABC_FREE_STR(szURL);
-    ABC_FREE_STR(szResults);
-    ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szL1_Base64);
-    ABC_FREE_STR(szLP1_Base64);
-    ABC_FREE_STR(szLRA1_Base64);
-    if (pJSON_Root)     json_decref(pJSON_Root);
-
-    return cc;
-}
-
-/**
  * Changes the password for an account on the server.
  *
  * This function sends information to the server to change the password for an account.
@@ -221,9 +153,11 @@ exit:
  */
 tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
                                       tABC_U08Buf oldLP1,
-                                      tABC_U08Buf LRA1,
-                                      tABC_U08Buf newP1,
-                                      char *szLoginPackage,
+                                      tABC_U08Buf oldLRA1,
+                                      tABC_U08Buf newLP1,
+                                      tABC_U08Buf newLRA1,
+                                      const char *szCarePackage,
+                                      const char *szLoginPackage,
                                       tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -231,43 +165,52 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     char *szURL     = NULL;
     char *szResults = NULL;
     char *szPost    = NULL;
-    char *szL1_Base64 = NULL;
-    char *szOldP1_Base64 = NULL;
-    char *szNewLP1_Base64 = NULL;
-    char *szAuth_Base64 = NULL;
+    char *szBase64_L1       = NULL;
+    char *szBase64_OldLP1   = NULL;
+    char *szBase64_NewLP1   = NULL;
+    char *szBase64_OldLRA1  = NULL;
+    char *szBase64_NewLRA1  = NULL;
+    json_t *pJSON_OldLRA1   = NULL;
+    json_t *pJSON_NewLRA1   = NULL;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
-    ABC_CHECK_NULL_BUF(newP1);
+    ABC_CHECK_NULL_BUF(oldLP1);
+    ABC_CHECK_NULL_BUF(newLP1);
 
     // create the URL
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_CHANGE_PASSWORD_PATH);
 
-    // create base64 versions of L1 and newP1
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(newP1, &szNewLP1_Base64, pError));
+    // create base64 versions of L1, oldLP1, and newLP1:
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1,     &szBase64_L1,     pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(oldLP1, &szBase64_OldLP1, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(newLP1, &szBase64_NewLP1, pError));
+
+    // Encode those:
+    pJSON_Root = json_pack("{ss, ss, ss, ss, ss}",
+                           ABC_SERVER_JSON_L1_FIELD,      szBase64_L1,
+                           ABC_SERVER_JSON_LP1_FIELD,     szBase64_OldLP1,
+                           ABC_SERVER_JSON_NEW_LP1_FIELD, szBase64_NewLP1,
+                           ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  szCarePackage,
+                           ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
+    ABC_CHECK_NULL(pJSON_Root);
+
+    // set up the recovery, if any:
+    if (ABC_BUF_PTR(oldLRA1))
+    {
+        ABC_CHECK_RET(ABC_CryptoBase64Encode(oldLRA1, &szBase64_OldLRA1, pError));
+        pJSON_OldLRA1 = json_string(szBase64_OldLRA1);
+        json_object_set(pJSON_Root, ABC_SERVER_JSON_LRA1_FIELD, pJSON_OldLRA1);
+    }
+    if (ABC_BUF_PTR(newLRA1))
+    {
+        ABC_CHECK_RET(ABC_CryptoBase64Encode(newLRA1, &szBase64_NewLRA1, pError));
+        pJSON_NewLRA1 = json_string(szBase64_NewLRA1);
+        json_object_set(pJSON_Root, ABC_SERVER_JSON_NEW_LRA1_FIELD, pJSON_NewLRA1);
+    }
 
     // create the post data
-    if (ABC_BUF_PTR(oldLP1) != NULL)
-    {
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(oldLP1, &szAuth_Base64, pError));
-        pJSON_Root = json_pack("{ssssssss}",
-                               ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                               ABC_SERVER_JSON_LP1_FIELD, szAuth_Base64,
-                               ABC_SERVER_JSON_NEW_LP1_FIELD, szNewLP1_Base64,
-                               ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
-    }
-    else
-    {
-        ABC_CHECK_ASSERT(NULL != ABC_BUF_PTR(LRA1), ABC_CC_Error, "LRA1 missing for server password change auth");
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(LRA1, &szAuth_Base64, pError));
-        pJSON_Root = json_pack("{ssssssss}",
-                               ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                               ABC_SERVER_JSON_LRA1_FIELD, szAuth_Base64,
-                               ABC_SERVER_JSON_NEW_LP1_FIELD, szNewLP1_Base64,
-                               ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
-    }
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
 
@@ -280,10 +223,13 @@ exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szL1_Base64);
-    ABC_FREE_STR(szOldP1_Base64);
-    ABC_FREE_STR(szNewLP1_Base64);
-    ABC_FREE_STR(szAuth_Base64);
+    ABC_FREE_STR(szBase64_L1);
+    ABC_FREE_STR(szBase64_OldLP1);
+    ABC_FREE_STR(szBase64_NewLP1);
+    ABC_FREE_STR(szBase64_OldLRA1);
+    ABC_FREE_STR(szBase64_NewLRA1);
+    if (pJSON_OldLRA1)  json_decref(pJSON_OldLRA1);
+    if (pJSON_NewLRA1)  json_decref(pJSON_NewLRA1);
     if (pJSON_Root)     json_decref(pJSON_Root);
 
     return cc;

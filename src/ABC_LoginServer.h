@@ -24,18 +24,13 @@ extern "C" {
                                     tABC_U08Buf LP1,
                                     tABC_Error *pError);
 
-    tABC_CC ABC_LoginServerSetRecovery(tABC_U08Buf L1,
-                                       tABC_U08Buf LP1,
-                                       tABC_U08Buf LRA1,
-                                       const char *szCarePackage,
-                                       const char *szLoginPackage,
-                                       tABC_Error *pError);
-
     tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
                                           tABC_U08Buf oldLP1,
-                                          tABC_U08Buf LRA1,
+                                          tABC_U08Buf oldLRA1,
                                           tABC_U08Buf newLP1,
-                                          char *szLoginPackage,
+                                          tABC_U08Buf newLRA1,
+                                          const char *szCarePackage,
+                                          const char *szLoginPackage,
                                           tABC_Error *pError);
 
     tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
