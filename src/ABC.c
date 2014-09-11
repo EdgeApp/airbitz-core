@@ -1819,6 +1819,7 @@ tABC_CC ABC_GetTransactions(const char *szUserName,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_CHECK_RET(ABC_TxGetTransactions(szUserName, szPassword, szWalletUUID, startTime, endTime, paTransactions, pCount, pError));
+    ABC_CHECK_RET(ABC_BridgeFilterTransactions(szWalletUUID, *paTransactions, pCount, pError));
 
 exit:
     return cc;
