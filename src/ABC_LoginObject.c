@@ -369,6 +369,7 @@ tABC_CC ABC_LoginObjectSetPassword(tABC_LoginObject *pSelf,
     tABC_U08Buf LP1         = ABC_BUF_NULL;
     tABC_U08Buf LP2         = ABC_BUF_NULL;
     json_t *EMK_LP2         = NULL;
+    char *szCarePackage     = NULL;
     char *szLoginPackage    = NULL;
 
     // LP = L + P:
@@ -388,11 +389,12 @@ tABC_CC ABC_LoginObjectSetPassword(tABC_LoginObject *pSelf,
     tABC_LoginObject temp = *pSelf;
     temp.LP1 = LP1;
     temp.EMK_LP2 = EMK_LP2;
+    ABC_CHECK_RET(ABC_LoginObjectWriteCarePackage(&temp, &szCarePackage, pError));
     ABC_CHECK_RET(ABC_LoginObjectWriteLoginPackage(&temp, &szLoginPackage, pError));
 
     // Change the server login:
-    ABC_CHECK_RET(ABC_LoginServerChangePassword(temp.L1, pSelf->LP1, temp.LRA1,
-        temp.LP1, szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerChangePassword(pSelf->L1, pSelf->LP1, pSelf->LRA1,
+        temp.LP1, temp.LRA1, szCarePackage, szLoginPackage, pError));
 
     // It's official now, so update pSelf:
     ABC_BUF_SWAP(pSelf->LP1, LP1);
@@ -406,6 +408,7 @@ exit:
     ABC_BUF_FREE(LP1);
     ABC_BUF_FREE(LP2);
     if (EMK_LP2) json_decref(EMK_LP2);
+    ABC_FREE_STR(szCarePackage);
     ABC_FREE_STR(szLoginPackage);
 
     return cc;
@@ -455,8 +458,8 @@ tABC_CC ABC_LoginObjectSetRecovery(tABC_LoginObject *pSelf,
     ABC_CHECK_RET(ABC_LoginObjectWriteLoginPackage(&temp, &szLoginPackage, pError));
 
     // Change the server login:
-    ABC_CHECK_RET(ABC_LoginServerSetRecovery(temp.L1, temp.LP1, temp.LRA1,
-        szCarePackage, szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerChangePassword(pSelf->L1, pSelf->LP1, pSelf->LRA1,
+        temp.LP1, temp.LRA1, szCarePackage, szLoginPackage, pError));
 
     // It's official now, so update pSelf:
     ABC_BUF_SWAP(pSelf->RQ,   RQ);
