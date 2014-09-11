@@ -86,6 +86,8 @@ extern "C" {
                              tABC_Error *pError);
 
     void ABC_TxFreeDetails(tABC_TxDetails *pDetails);
+    void ABC_TxFreeOutput(tABC_TxOutput *pOutputs);
+    void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
     tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
                                 const char *szUserName,
@@ -120,7 +122,7 @@ extern "C" {
                                     int64_t *pSatoshi,
                                     tABC_Error *pError);
 
-    tABC_CC ABC_TxBlockHeightUpdate(uint64_t height, 
+    tABC_CC ABC_TxBlockHeightUpdate(uint64_t height,
                                     tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
                                     void *pData,
                                     tABC_Error *pError);

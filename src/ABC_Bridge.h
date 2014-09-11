@@ -142,6 +142,16 @@ extern "C" {
 
     tABC_CC ABC_BridgeTxBlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError);
 
+    tABC_CC ABC_BridgeTxDetails(const char *szWalletUUID, const char *szTxID,
+                                tABC_TxOutput ***paOutputs, unsigned int *pCount,
+                                int64_t *pFees, tABC_Error *pError);
+
+    tABC_CC ABC_BridgeTxDetailsSplit(const char *szWalletUUID, const char *szTxID,
+                                     tABC_TxOutput ***iarr, unsigned int *pInCount,
+                                     tABC_TxOutput ***oarr, unsigned int *pOutCount,
+                                     int64_t *pFees,
+                                     tABC_Error *pError);
+
     bool ABC_BridgeIsTestNet();
 
 #ifdef __cplusplus
