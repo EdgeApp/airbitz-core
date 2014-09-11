@@ -1102,6 +1102,50 @@ exit:
     return cc;
 }
 
+/**
+ * Filters a transaction list, removing any that aren't found in the
+ * watcher database.
+ * @param aTransactions The array to filter. This will be modified in-place.
+ * @param pCount        The array length. This will be updated upon return.
+ */
+tABC_CC ABC_BridgeFilterTransactions(const char *szWalletUUID,
+                                     tABC_TxInfo **aTransactions,
+                                     unsigned int *pCount,
+                                     tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    WatcherInfo *watcherInfo = NULL;
+    tABC_TxInfo *const *end = aTransactions + *pCount;
+    tABC_TxInfo *const *si = aTransactions;
+    tABC_TxInfo **di = aTransactions;
+
+    auto row = watchers_.find(szWalletUUID);
+    ABC_CHECK_ASSERT(row != watchers_.end(),
+        ABC_CC_Synchronizing, "Unable to find watcher");
+    watcherInfo = row->second;
+
+    while (si < end)
+    {
+        tABC_TxInfo *pTx = *si++;
+
+        int height;
+        bc::hash_digest txid;
+        txid = bc::decode_hash(pTx->szMalleableTxId);
+        if (watcherInfo->watcher->get_tx_height(txid, height))
+        {
+            *di++ = pTx;
+        }
+        else
+        {
+            ABC_TxFreeTransaction(pTx);
+        }
+    }
+    *pCount = di - aTransactions;
+
+exit:
+    return cc;
+}
+
 bool
 ABC_BridgeIsTestNet()
 {
