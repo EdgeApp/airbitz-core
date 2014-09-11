@@ -2,4 +2,4 @@
 util=build/list-wallets.bin
 
 export LD_LIBRARY_PATH="../build/:$LD_LIBRARY_PATH"
-make $util && ./$util $@
+make $util && ./$util "$@"
