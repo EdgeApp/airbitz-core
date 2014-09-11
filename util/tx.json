@@ -1,0 +1,43 @@
+{
+    "ntxid": "22716a4597e8c37258ea38a5e7139ecec8dfc955dbe31f8c80258fe1f3db1ee6",
+    "state": {
+        "creationDate": 1410430020,
+        "malleableTxId": "22b21a7664a50595bbd673f8d207b78f74c7d32f87617a28c041e3f96cae495f",
+        "internal": false
+    },
+    "meta": {
+        "amountSatoshi": 500000,
+        "amountFeeAirBitzSatoshi": 0,
+        "amountFeeMinersSatoshi": 10000,
+        "amountCurrency": 2.3799999999999999,
+        "name": "",
+        "bizId": 0,
+        "category": "Transfer:Wallet:Airbitz",
+        "notes": "",
+        "attributes": 0
+    },
+    "outputs": [
+        {
+            "input": true,
+            "value": 990000,
+            "address": "1MDvtLv3KCgK5XHjga3GXBdVmDZGn7f2Yg",
+            "txid": "775ab7c9a6bd3e77202e315e7bac37a94d71d6ac0de85fcee57bc1ad9c15b4e3",
+            "index": 1308014229927755776
+        },
+        {
+            "input": false,
+            "value": 500000,
+            "address": "15sXhZm1ZZ94hB9pJGAcuavYm8kbmqAgKv",
+            "txid": "22b21a7664a50595bbd673f8d207b78f74c7d32f87617a28c041e3f96cae495f",
+            "index": 1800401500073906080
+        },
+        {
+            "input": false,
+            "value": 480000,
+            "address": "1JmZZY1bj29S84B19TG1QMowCcei1F8wsz",
+            "txid": "22b21a7664a50595bbd673f8d207b78f74c7d32f87617a28c041e3f96cae495f",
+            "index": 3755016572560961690
+        }
+    ]
+}
+
