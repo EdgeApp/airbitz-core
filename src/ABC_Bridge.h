@@ -152,6 +152,11 @@ extern "C" {
                                      int64_t *pFees,
                                      tABC_Error *pError);
 
+    tABC_CC ABC_BridgeFilterTransactions(const char *szWalletUUID,
+                                         tABC_TxInfo **aTransactions,
+                                         unsigned int *pCount,
+                                         tABC_Error *pError);
+
     bool ABC_BridgeIsTestNet();
 
 #ifdef __cplusplus
