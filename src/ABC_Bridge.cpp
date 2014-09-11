@@ -986,7 +986,7 @@ tABC_CC ABC_BridgeTxDetails(const char *szWalletUUID, const char *szTxID,
                                            pFees, pError));
     farr = (tABC_TxOutput **) malloc(sizeof(tABC_TxOutput *) * (inCount + outCount));
     totalCount = outCount + inCount;
-    for (int i = 0; i < totalCount; ++i) {
+    for (unsigned i = 0; i < totalCount; ++i) {
         if (i < inCount) {
             farr[i] = paInArr[i];
             paInArr[i] = NULL;
