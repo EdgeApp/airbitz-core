@@ -64,12 +64,12 @@ static void SyncLogGitError(int e)
 static int SyncMaster(git_repository *repo, int *dirty, int *need_push)
 {
     int e;
-    // tABC_CC cc;
+    tABC_CC cc;
 
-    // ABC_CHECK_RET(ABC_MutexLock(NULL));
+    ABC_CHECK_RET(ABC_MutexLock(NULL));
     e = sync_master(repo, dirty, need_push);
-    // exit:
-    // ABC_MutexUnlock(NULL);
+exit:
+    ABC_MutexUnlock(NULL);
     return e;
 }
 

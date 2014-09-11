@@ -437,7 +437,6 @@ tABC_CC ABC_LoginSyncData(const char *szUserName,
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
 
     // Load the account into the cache:
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
@@ -446,7 +445,6 @@ tABC_CC ABC_LoginSyncData(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginObjectSync(gLoginCache, pDirty, pError));
 
 exit:
-    ABC_LoginMutexUnlock(NULL);
     return cc;
 }
 
