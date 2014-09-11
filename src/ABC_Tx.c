@@ -182,8 +182,6 @@ static tABC_CC  ABC_TxCreateAddressDir(const char *szWalletUUID, tABC_Error *pEr
 static void     ABC_TxFreeAddress(tABC_TxAddress *pAddress);
 static void     ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo);
 static void     ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count);
-static void     ABC_TxFreeOutput(tABC_TxOutput *pOutputs);
-static void     ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 static tABC_CC  ABC_TxGetAddresses(const char *szUserName, const char *szPassword, const char *szWalletUUID, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static int      ABC_TxAddrPtrCompare(const void * a, const void * b);
 static tABC_CC  ABC_TxLoadAddressAndAppendToArray(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szFilename, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
@@ -2987,59 +2985,12 @@ tABC_CC ABC_TxLoadTransaction(const char *szUserName,
     // get the details object
     ABC_CHECK_RET(ABC_TxDecodeTxDetails(pJSON_Root, &(pTx->pDetails), pError));
 
-    // get the addresses array (if it exists)
-    json_t *jsonOutputs = json_object_get(pJSON_Root, JSON_TX_OUTPUTS_FIELD);
-    if (jsonOutputs)
-    {
-        ABC_CHECK_ASSERT(json_is_array(jsonOutputs), ABC_CC_JSONError, "Error parsing JSON transaction package - missing addresses array");
-
-        // get the number of elements in the array
-        pTx->countOutputs = (int) json_array_size(jsonOutputs);
-
-        if (pTx->countOutputs > 0)
-        {
-            ABC_ALLOC(pTx->aOutputs, sizeof(tABC_TxOutput *) * pTx->countOutputs);
-
-            for (int i = 0; i < pTx->countOutputs; i++)
-            {
-                ABC_ALLOC(pTx->aOutputs[i], sizeof(tABC_TxOutput));
-
-                json_t *pJSON_Elem = json_array_get(jsonOutputs, i);
-                ABC_CHECK_ASSERT((pJSON_Elem && json_is_object(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON transaction output - missing object");
-
-                json_t *jsonVal = json_object_get(pJSON_Elem, JSON_TX_OUTPUT_FLAG);
-                ABC_CHECK_ASSERT((jsonVal && json_is_boolean(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction output - missing input boolean");
-                pTx->aOutputs[i]->input = json_is_true(jsonVal) ? true : false;
-
-                jsonVal = json_object_get(pJSON_Elem, JSON_TX_OUTPUT_VALUE);
-                ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing address array element");
-                pTx->aOutputs[i]->value = json_integer_value(jsonVal);
-
-                jsonVal = json_object_get(pJSON_Elem, JSON_TX_OUTPUT_ADDRESS);
-                ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing address array element");
-                ABC_STRDUP(pTx->aOutputs[i]->szAddress, json_string_value(jsonVal));
-
-                jsonVal = json_object_get(pJSON_Elem, JSON_TX_OUTPUT_TXID);
-                if (jsonVal)
-                {
-                    ABC_CHECK_ASSERT(json_is_string(jsonVal), ABC_CC_JSONError, "Error parsing JSON transaction package - missing txid");
-                    ABC_STRDUP(pTx->aOutputs[i]->szTxId, json_string_value(jsonVal));
-                }
-
-                jsonVal = json_object_get(pJSON_Elem, JSON_TX_OUTPUT_INDEX);
-                if (jsonVal)
-                {
-                    ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError, "Error parsing JSON transaction package - missing index");
-                    pTx->aOutputs[i]->index = json_integer_value(jsonVal);
-                }
-            }
-        }
-    }
-    else
-    {
-        pTx->countOutputs = 0;
-    }
-
+    // get advanced details
+    ABC_CHECK_RET(
+        ABC_BridgeTxDetails(szWalletUUID, pTx->pStateInfo->szMalleableTxId,
+                            &(pTx->aOutputs), &(pTx->countOutputs),
+                            &(pTx->pDetails->amountFeesMinersSatoshi),
+                            pError));
     // assign final result
     *ppTx = pTx;
     pTx = NULL;
@@ -4011,7 +3962,6 @@ void ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo)
 /**
  * Free's an array of  ABC_TxFreeAddress structs
  */
-static
 void ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count)
 {
     if ((aAddresses != NULL) && (count > 0))
@@ -4025,7 +3975,6 @@ void ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count)
     }
 }
 
-static
 void ABC_TxFreeOutput(tABC_TxOutput *pOutput)
 {
     if (pOutput)
@@ -4036,8 +3985,7 @@ void ABC_TxFreeOutput(tABC_TxOutput *pOutput)
     }
 }
 
-static void
-ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count)
+void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count)
 {
     if ((aOutputs != NULL) && (count > 0))
     {
