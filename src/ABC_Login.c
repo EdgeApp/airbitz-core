@@ -10,6 +10,7 @@
 #include "ABC_LoginObject.h"
 #include "ABC_General.h"
 #include "ABC_Util.h"
+#include "ABC_Wallet.h"
 #include "ABC_Mutex.h"
 
 // We cache a single login object, which is fine for the UI's needs:
@@ -250,6 +251,9 @@ tABC_CC ABC_LoginChangePassword(const char *szUserName,
 
     // Do the change:
     ABC_CHECK_RET(ABC_LoginObjectSetPassword(gLoginCache, szNewPassword, pError));
+
+    // Clear wallet cache
+    ABC_CHECK_RET(ABC_WalletClearCache(pError));
 
 exit:
     ABC_LoginMutexUnlock(NULL);
