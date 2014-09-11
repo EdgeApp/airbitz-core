@@ -676,18 +676,20 @@ tABC_CC ABC_LoginObjectLoadCarePackage(tABC_LoginObject *pSelf,
     json_t  *pJSON_ERQ      = NULL;
     int     e;
 
-    // Load the package from disk:
-    if (0 <= pSelf->AccountNum)
+    // Fetch the package from the server:
+    cc = ABC_LoginServerGetCarePackage(pSelf->L1, &szCarePackage, pError);
+
+    // If that didn't work, load the package from disk:
+    if (cc != ABC_CC_Ok && 0 <= pSelf->AccountNum)
     {
+        tABC_Error error;
         ABC_LoginDirFileLoad(&szCarePackage,
-            pSelf->AccountNum, ACCOUNT_CARE_PACKAGE_FILENAME, pError);
+            pSelf->AccountNum, ACCOUNT_CARE_PACKAGE_FILENAME, &error);
     }
 
     // If that didn't work, fetch the package from the server:
     if (!szCarePackage)
-    {
-        ABC_CHECK_RET(ABC_LoginServerGetCarePackage(pSelf->L1, &szCarePackage, pError));
-    }
+        goto exit;
 
     // Parse the JSON:
     json_error_t error;
@@ -743,19 +745,21 @@ tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
     json_t  *pJSON_ELRA1    = NULL;
     int     e;
 
-    // Load the package from disk:
-    if (0 <= pSelf->AccountNum)
+    // Fetch the package from the server:
+    cc = ABC_LoginServerGetLoginPackage(pSelf->L1,
+        pSelf->LP1, pSelf->LRA1, &szLoginPackage, pError);
+
+    // If that didn't work, load the package from disk:
+    if (cc != ABC_CC_Ok && 0 <= pSelf->AccountNum)
     {
+        tABC_Error error;
         ABC_LoginDirFileLoad(&szLoginPackage,
-            pSelf->AccountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, pError);
+            pSelf->AccountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, &error);
     }
 
-    // If that didn't work, fetch the package from the server:
+    // If that didn't work, we have an error:
     if (!szLoginPackage)
-    {
-        ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(pSelf->L1,
-            pSelf->LP1, pSelf->LRA1, &szLoginPackage, pError));
-    }
+        goto exit;
 
     // Parse the JSON:
     json_error_t error;
