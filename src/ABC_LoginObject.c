@@ -494,9 +494,7 @@ tABC_CC ABC_LoginObjectCheckUserName(tABC_LoginObject *pSelf,
                                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_CHECK_NULL(pSelf);
-
-    char *szFixed;
+    char *szFixed = NULL;
     *pMatch = 0;
 
     ABC_CHECK_RET(ABC_LoginObjectFixUserName(szUserName, &szFixed, pError));
@@ -517,8 +515,6 @@ tABC_CC ABC_LoginObjectGetSyncKeys(tABC_LoginObject *pSelf,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_CHECK_NULL(pSelf);
-
     tABC_SyncKeys *pKeys = NULL;
 
     ABC_ALLOC(pKeys, sizeof(tABC_SyncKeys));
@@ -822,8 +818,6 @@ tABC_CC ABC_LoginObjectWriteCarePackage(tABC_LoginObject *pSelf,
                                         tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_CHECK_NULL(pszCarePackage);
-
     json_t *pJSON_Root  = NULL;
     json_t *pJSON_SNRP2 = NULL;
     json_t *pJSON_SNRP3 = NULL;
@@ -872,8 +866,6 @@ tABC_CC ABC_LoginObjectWriteLoginPackage(tABC_LoginObject *pSelf,
                                          tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_CHECK_NULL(pszLoginPackage);
-
     json_t  *pJSON_Root     = NULL;
     json_t  *pJSON_ESyncKey = NULL;
     json_t  *pJSON_ELP1     = NULL;

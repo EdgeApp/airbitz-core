@@ -385,6 +385,7 @@ tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
     size_t watcherSize    = 0;
     unsigned int nCount   = 0;
     tABC_WalletInfo **paWalletInfo = NULL;
+    json_t *pJSON_array = NULL;
 
     // create the URL
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
@@ -400,7 +401,7 @@ tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
     ABC_CHECK_RET(ABC_CryptoBase64Encode(LogData, &szLogData_Hex, pError));
 
     ABC_CHECK_RET(ABC_GetWallets(szUserName, szPassword, &paWalletInfo, &nCount, pError));
-    json_t *pJSON_array = json_array();
+    pJSON_array = json_array();
     for (int i = 0; i < nCount; ++i)
     {
         ABC_CHECK_RET(ABC_BridgeWatchPath(szUserName, szPassword,
