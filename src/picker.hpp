@@ -36,8 +36,6 @@ struct unsigned_transaction_type
 {
     bc::transaction_type tx;
     int code;
-    uint64_t fees;
-    std::map<bc::hash_digest, bc::payment_address> output_map;
 };
 
 struct fee_schedule
@@ -54,7 +52,10 @@ BC_API bool make_tx(
              bc::transaction_output_list& outputs,
              unsigned_transaction_type& utx);
 
-BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& keys, bc::ec_secret nonce);
+BC_API bool sign_tx(unsigned_transaction_type& utx,
+                    std::vector<std::string>& keys,
+                    libwallet::watcher& watcher,
+                    bc::ec_secret nonce);
 
 }
 
