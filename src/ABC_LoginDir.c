@@ -98,7 +98,11 @@ tABC_CC ABC_LoginDirGetNumber(const char *szUserName,
                 unsigned int AccountNum = (unsigned int) strtol(szAccountNum, NULL, 10); // 10 is for base-10
 
                 // get the username for this account
-                ABC_CHECK_RET(ABC_LoginUserForNum(AccountNum, &szCurUserName, pError));
+                tABC_Error error;
+                if (ABC_CC_Ok != ABC_LoginUserForNum(AccountNum, &szCurUserName, &error))
+                {
+                    continue;
+                }
 
                 // if this matches what we are looking for
                 if (strcmp(szUserName, szCurUserName) == 0)
