@@ -82,6 +82,8 @@
 #define SCRYPT_DEFAULT_CLIENT_N    16384
 #define SCRYPT_DEFAULT_CLIENT_R    1
 #define SCRYPT_DEFAULT_CLIENT_P    1
+#define SCRYPT_MAX_CLIENT_N        (1 << 20)
+#define SCRYPT_TARGET_USECONDS     2000000
 
 #define SCRYPT_DEFAULT_LENGTH      32
 #define SCRYPT_DEFAULT_SALT_LENGTH 32
@@ -98,7 +100,7 @@ unsigned int g_timedScryptR = SCRYPT_DEFAULT_CLIENT_R;
 static unsigned char gaS1[] = { 0xb5, 0x86, 0x5f, 0xfb, 0x9f, 0xa7, 0xb3, 0xbf, 0xe4, 0xb2, 0x38, 0x4d, 0x47, 0xce, 0x83, 0x1e, 0xe2, 0x2a, 0x4a, 0x9d, 0x5c, 0x34, 0xc7, 0xef, 0x7d, 0x21, 0x46, 0x7c, 0xc7, 0x58, 0xf8, 0x1b };
 
 // Testnet salt. Just has to be different from mainnet salt so we can create users
-// with same login that exist on both testnet and mainnet and don't conflict 
+// with same login that exist on both testnet and mainnet and don't conflict
 static unsigned char gaS1_testnet[] = { 0xa5, 0x96, 0x3f, 0x3b, 0x9c, 0xa6, 0xb3, 0xbf, 0xe4, 0xb2, 0x36, 0x42, 0x37, 0xfe, 0x87, 0x1e, 0xf2, 0x2a, 0x4a, 0x9d, 0x4c, 0x34, 0xa7, 0xef, 0x3d, 0x21, 0x47, 0x8c, 0xc7, 0x58, 0xf8, 0x1b };
 
 static
@@ -146,11 +148,11 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     if (gbIsTestNet)
     {
-        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1)); 
+        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1));
     }
     else
     {
-        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1)); 
+        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
     }
     gettimeofday(&timerStart, NULL);
     ABC_CHECK_RET(ABC_CryptoScrypt(Salt,
@@ -165,32 +167,38 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
 
     // Totaltime is in uSec
     totalTime = 1000000 * (timerEnd.tv_sec - timerStart.tv_sec);
-    totalTime += (timerEnd.tv_usec - timerStart.tv_usec);
+    totalTime += timerEnd.tv_usec;
+    totalTime -= timerStart.tv_usec;
 
 #ifdef TIMED_SCRYPT_PARAMS
-    if (totalTime > 2000000)
+    if (totalTime >= SCRYPT_TARGET_USECONDS)
     {
-        // Very slow device. But we'll cap it at 2 seconds max equivalent
+        // Very slow device.
         // Do nothing, use default scrypt settings which are lowest we'll go
     }
-    else if (totalTime >= 250000)
+    else if (totalTime >= SCRYPT_TARGET_USECONDS / 8)
     {
-        // Medium speed device. scale R between 1 to 8 assuming linear affect on
-        // hashing time and targetting 2 sec hash
-        // Don't touch N
-        g_timedScryptR = 2000000 / totalTime;
-    } 
-    else 
+        // Medium speed device.
+        // Scale R between 1 to 8 assuming linear effect on hashing time.
+        // Don't touch N.
+        g_timedScryptR = SCRYPT_TARGET_USECONDS / totalTime;
+    }
+    else if (totalTime > 0)
     {
-        // Very fast device. Need to Adjust scryptN to make scrypt even stronger
+        // Very fast device.
         g_timedScryptR = 8;
-        unsigned int temp = 250000 / totalTime;
+
+        // Need to adjust scryptN to make scrypt even stronger:
+        unsigned int temp = (SCRYPT_TARGET_USECONDS / 8) / totalTime;
         g_timedScryptN <<= (temp - 1);
+        if (SCRYPT_MAX_CLIENT_N < g_timedScryptN || !g_timedScryptN)
+        {
+            g_timedScryptN = SCRYPT_MAX_CLIENT_N;
+        }
     }
 #endif
 
-
-    ABC_DebugLog("Scrypt timing: %d\n", totalTime); 
+    ABC_DebugLog("Scrypt timing: %d\n", totalTime);
     ABC_DebugLog("Scrypt N = %d\n",g_timedScryptN);
     ABC_DebugLog("Scrypt R = %d\n",g_timedScryptR);
 
@@ -636,7 +644,7 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
 exit:
     ABC_BUF_FREE(Data);
     if (pJSON_Root) json_decref(pJSON_Root);
-    
+
     return cc;
 }
 
@@ -1292,11 +1300,11 @@ tABC_CC ABC_CryptoScryptS1(const tABC_U08Buf Data,
     tABC_U08Buf Salt;
     if (gbIsTestNet)
     {
-        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1)); 
+        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1));
     }
     else
     {
-        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1)); 
+        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
     }
     ABC_CHECK_RET(ABC_CryptoScrypt(Data,
                                    Salt,
@@ -1419,11 +1427,11 @@ tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
     // get the server salt
     if (gbIsTestNet)
     {
-        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1)); 
+        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1));
     }
     else
     {
-        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1)); 
+        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
     }
     //ABC_UtilHexDumpBuf("Salt", Salt);
 
@@ -1621,7 +1629,7 @@ tABC_CC ABC_CryptoHMAC512(tABC_U08Buf Data,
     HMAC(EVP_sha512(), ABC_BUF_PTR(Key), ABC_BUF_SIZE(Key), ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data), ABC_BUF_PTR(*pDataHMAC), NULL);
 
 exit:
-    
+
     return cc;
 }
 
