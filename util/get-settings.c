@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
     printf("First name: %s\n", pSettings->szFirstName ? pSettings->szFirstName : "(none)");
     printf("Last name: %s\n", pSettings->szLastName ? pSettings->szLastName : "(none)");
     printf("Nickname: %s\n", pSettings->szNickname ? pSettings->szNickname : "(none)");
+    printf("PIN: %s\n", pSettings->szPIN ? pSettings->szPIN : "(none)");
     printf("List name on payments: %s\n", pSettings->bNameOnPayments ? "yes" : "no");
     printf("Minutes before auto logout: %d\n", pSettings->minutesAutoLogout);
     printf("Language: %s\n", pSettings->szLanguage);

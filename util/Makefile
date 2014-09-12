@@ -13,7 +13,6 @@ default: build/account-decrypt.bin \
          build/data-sync.bin \
          build/get-bitcoin-seed.bin \
          build/get-categories.bin \
-         build/get-pin.bin \
          build/get-question-choices.bin \
          build/get-exchange-rate.bin \
          build/get-settings.bin \
