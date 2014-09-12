@@ -434,6 +434,7 @@ tABC_CC ABC_LoginObjectSetRecovery(tABC_LoginObject *pSelf,
 
     tABC_CryptoSNRP *pSNRP3 = NULL;
     tABC_CryptoSNRP *pSNRP4 = NULL;
+    tABC_U08Buf L4          = ABC_BUF_NULL;
     tABC_U08Buf RQ          = ABC_BUF_NULL;
     tABC_U08Buf LRA         = ABC_BUF_NULL;
     tABC_U08Buf LRA1        = ABC_BUF_NULL;
@@ -445,6 +446,11 @@ tABC_CC ABC_LoginObjectSetRecovery(tABC_LoginObject *pSelf,
     // Update scrypt parameters:
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pSNRP3, pError));
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pSNRP4, pError));
+
+    // L4  = Scrypt(L, SNRP4):
+    tABC_U08Buf L = ABC_BUF_NULL;
+    ABC_BUF_SET_PTR(L, (unsigned char *)pSelf->szUserName, strlen(pSelf->szUserName));
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP4, &L4, pError));
 
     // RQ = recovery questions:
     ABC_BUF_DUP_PTR(RQ, (unsigned char *)szRecoveryQuestions, strlen(szRecoveryQuestions) + 1);
@@ -464,11 +470,12 @@ tABC_CC ABC_LoginObjectSetRecovery(tABC_LoginObject *pSelf,
 
     // Write new packages:
     tABC_LoginObject temp = *pSelf;
-    temp.pSNRP3 = pSNRP3;
-    temp.pSNRP4 = pSNRP4;
-    temp.RQ   = RQ;
-    temp.LRA1 = LRA1;
-    temp.EMK_LRA3 = EMK_LRA3;
+    temp.pSNRP3     = pSNRP3;
+    temp.pSNRP4     = pSNRP4;
+    temp.L4         = L4;
+    temp.RQ         = RQ;
+    temp.LRA1       = LRA1;
+    temp.EMK_LRA3   = EMK_LRA3;
     ABC_CHECK_RET(ABC_LoginObjectWriteCarePackage(&temp, &szCarePackage, pError));
     ABC_CHECK_RET(ABC_LoginObjectWriteLoginPackage(&temp, &szLoginPackage, pError));
 
@@ -477,11 +484,12 @@ tABC_CC ABC_LoginObjectSetRecovery(tABC_LoginObject *pSelf,
         temp.LP1, temp.LRA1, szCarePackage, szLoginPackage, pError));
 
     // It's official now, so update pSelf:
-    ABC_SWAP(pSelf->pSNRP3, pSNRP3);
-    ABC_SWAP(pSelf->pSNRP4, pSNRP4);
-    ABC_BUF_SWAP(pSelf->RQ,   RQ);
-    ABC_BUF_SWAP(pSelf->LRA1, LRA1);
-    ABC_SWAP(pSelf->EMK_LRA3, EMK_LRA3);
+    ABC_SWAP(pSelf->pSNRP3,     pSNRP3);
+    ABC_SWAP(pSelf->pSNRP4,     pSNRP4);
+    ABC_BUF_SWAP(pSelf->L4,     L4);
+    ABC_BUF_SWAP(pSelf->RQ,     RQ);
+    ABC_BUF_SWAP(pSelf->LRA1,   LRA1);
+    ABC_SWAP(pSelf->EMK_LRA3,   EMK_LRA3);
 
     // Change the on-disk login:
     ABC_CHECK_RET(ABC_LoginDirFileSave(szCarePackage, pSelf->AccountNum, ACCOUNT_CARE_PACKAGE_FILENAME, pError));
@@ -490,6 +498,7 @@ tABC_CC ABC_LoginObjectSetRecovery(tABC_LoginObject *pSelf,
 exit:
     ABC_CryptoFreeSNRP(&pSNRP3);
     ABC_CryptoFreeSNRP(&pSNRP4);
+    ABC_BUF_FREE(L4);
     ABC_BUF_FREE(RQ);
     ABC_BUF_FREE(LRA);
     ABC_BUF_FREE(LRA1);
