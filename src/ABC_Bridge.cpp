@@ -767,7 +767,6 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
     }
 
     pUtx->data = (void *) utx;
-    pUtx->fees = minerFees;
 exit:
     ABC_GeneralFreeInfo(ppInfo);
     return cc;
@@ -805,7 +804,7 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     std::copy(Nonce.p, Nonce.end, nonce.begin());
 
     // Sign the transaction
-    if (!picker::sign_tx(*utx, keys, nonce))
+    if (!picker::sign_tx(*utx, keys, *watcherInfo->watcher, nonce))
     {
         ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
     }
