@@ -19,7 +19,7 @@
 #include "ABC_Debug.h"
 #include "ABC_ServerDefs.h"
 
-#define GENERAL_INFO_FILENAME                   "Info.json"
+#define GENERAL_INFO_FILENAME                   "Servers.json"
 #define GENERAL_QUESTIONS_FILENAME              "Questions.json"
 #define GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS   (24 * 60 * 60) // how many seconds old can the info file before it should be updated
 
