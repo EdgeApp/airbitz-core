@@ -347,7 +347,6 @@ tABC_CC ABC_LoginObjectUpdateLoginPackage(tABC_LoginObject *pSelf,
     char *szLoginPackage = NULL;
 
     ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(pSelf->L1, pSelf->LP1, pSelf->LRA1, &szLoginPackage, pError));
-    ABC_CHECK_RET(ABC_LoginDirFileSave(szLoginPackage, pSelf->AccountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
 
 exit:
     ABC_FREE_STR(szLoginPackage);
