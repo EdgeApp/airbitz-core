@@ -26,7 +26,8 @@ default: build/account-decrypt.bin \
          build/upload-logs.bin \
          build/wallet-decrypt.bin \
          build/wallet-encrypt.bin \
-         build/wallet-get-address.bin
+         build/wallet-get-address.bin \
+         build/washer.bin
 
 build/%.bin: build/%.o build/common.o
 	@mkdir -p build
