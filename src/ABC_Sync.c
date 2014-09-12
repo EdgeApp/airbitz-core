@@ -63,7 +63,7 @@ static void SyncLogGitError(int e)
 
 static int SyncMaster(git_repository *repo, int *dirty, int *need_push)
 {
-    int e;
+    int e = 0;
     tABC_CC cc;
 
     ABC_CHECK_RET(ABC_MutexLock(NULL));
