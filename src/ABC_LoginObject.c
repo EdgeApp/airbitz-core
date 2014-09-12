@@ -597,6 +597,7 @@ tABC_CC ABC_LoginObjectGetRQ(const char *szUserName,
 
     // Load CarePackage:
     ABC_CHECK_RET(ABC_LoginObjectLoadCarePackage(pSelf, pError));
+    ABC_CHECK_ASSERT(ABC_BUF_PTR(pSelf->RQ), ABC_CC_NoRecoveryQuestions, "No recovery questions");
 
     // Write the output:
     ABC_STRDUP(*pszRecoveryQuestions, (char *)ABC_BUF_PTR(pSelf->RQ));
@@ -742,7 +743,7 @@ tABC_CC ABC_LoginObjectLoadCarePackage(tABC_LoginObject *pSelf,
     // Get the ERQ (if any):
     if (pJSON_ERQ && json_is_object(pJSON_ERQ))
     {
-        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pJSON_ERQ, pSelf->L4, &pSelf->RQ, pError));
+        ABC_CryptoDecryptJSONObject(pJSON_ERQ, pSelf->L4, &pSelf->RQ, pError);
     }
 
 exit:
