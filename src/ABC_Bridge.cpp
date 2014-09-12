@@ -42,6 +42,7 @@
 #include "ABC_General.h"
 #include "ABC_Wallet.h"
 #include "ABC_URL.h"
+#include "ABC_Crypto.h"
 #include "picker.hpp"
 #include <curl/curl.h>
 #include <wallet/wallet.hpp>
@@ -95,7 +96,6 @@ static tABC_CC     ABC_BridgeTxErrorHandler(picker::unsigned_transaction_type *u
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr);
 static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash);
 static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
-static tABC_CC     ABC_BridgeStringToEc(char *privKey, bc::elliptic_curve_key& key, tABC_Error *pError);
 static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo);
 static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo);
 static std::string ABC_BridgeWatcherFile(const char *szUserName, const char *szPassword, const char *szWalletUUID);
@@ -780,9 +780,10 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    std::vector<bc::elliptic_curve_key> keys;
     picker::unsigned_transaction_type *utx;
     WatcherInfo *watcherInfo = NULL;
+    std::vector<std::string> keys;
+    tABC_U08Buf Nonce = ABC_BUF_NULL;
 
     utx = (picker::unsigned_transaction_type *) pUtx->data;
     auto row = watchers_.find(pSendInfo->szWalletUUID);
@@ -793,16 +794,18 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
 
     for (unsigned i = 0; i < keyCount; ++i)
     {
-        bc::elliptic_curve_key k;
-        ABC_CHECK_RET(ABC_BridgeStringToEc(paPrivKey[i], k, pError));
-        keys.push_back(k);
+        keys.push_back(std::string(paPrivKey[i]));
     }
     // Set global state....ewww
     gSendInfo = pSendInfo;
     gUtx = pUtx;
 
+    ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &Nonce, pError));
+    bc::ec_secret nonce;
+    std::copy(Nonce.p, Nonce.end, nonce.begin());
+
     // Sign the transaction
-    if (!picker::sign_tx(*utx, keys))
+    if (!picker::sign_tx(*utx, keys, nonce))
     {
         ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
     }
@@ -831,6 +834,7 @@ exit:
         std::error_code e(1, std::system_category());
         ABC_BridgeSendTxCallback(watcherInfo, e, utx->tx, watcherInfo->fAsyncCallback, watcherInfo->pData);
     }
+    ABC_BUF_FREE(Nonce);
     return cc;
 }
 
@@ -1367,25 +1371,6 @@ tABC_CC ABC_BridgeTxErrorHandler(picker::unsigned_transaction_type *utx, tABC_Er
         default:
             break;
     }
-exit:
-    return cc;
-}
-
-static
-tABC_CC ABC_BridgeStringToEc(char *privKey, bc::elliptic_curve_key& key, tABC_Error *pError)
-{
-    bool compressed = true;
-    tABC_CC cc = ABC_CC_Ok;
-    bc::secret_parameter secret;
-
-    secret = bc::decode_hash(privKey);
-    if (secret == bc::null_hash)
-    {
-        secret = libwallet::wif_to_secret(privKey);
-        compressed = libwallet::is_wif_compressed(privKey);
-    }
-    ABC_CHECK_ASSERT(key.set_secret(secret, compressed) == true,
-            ABC_CC_Error, "Unable to create elliptic_curve_key");
 exit:
     return cc;
 }
