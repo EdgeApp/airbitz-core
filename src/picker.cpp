@@ -85,7 +85,7 @@ BC_API bool make_tx(
     return true;
 }
 
-BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<elliptic_curve_key>& keys)
+BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& keys, bc::ec_secret nonce)
 {
     std::map<data_chunk, elliptic_curve_key> key_map;
     for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
@@ -100,26 +100,31 @@ BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<elliptic_curve_k
             utx.code = invalid_key;
             return false;
         }
-        elliptic_curve_key key;
-        /* Find an elliptic_curve_key for this input */
+
+        // Find an elliptic_curve_key for this input:
+        bc::ec_secret secret;
+        bc::ec_point pubkey;
+        bool found = false;
         for (auto k : keys)
         {
-            payment_address a;
-            set_public_key(a, k.public_key());
+            secret = bc::decode_hash(k);
+            pubkey = bc::secret_to_public_key(secret, true);
 
+            payment_address a;
+            set_public_key(a, pubkey);
             if (a.encoded() == pa->second.encoded())
             {
-                key.set_secret(k.secret());
+                found = true;
                 break;
             }
         }
-        data_chunk public_key = key.public_key();
-        if (public_key.empty())
+        if (!found)
         {
             utx.code = invalid_key;
             return false;
         }
-        /* Create the input script */
+
+        // Create the input script:
         script_type sig_script = build_pubkey_hash_script(pa->second.hash());
 
         hash_digest sig_hash =
@@ -129,14 +134,14 @@ BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<elliptic_curve_k
             utx.code = invalid_sig;
             return false;
         }
-        data_chunk signature = key.sign(sig_hash);
+        data_chunk signature = sign(secret, sig_hash, nonce);
         signature.push_back(0x01);
 
         script_type new_script_object;
         operation opsig = create_data_operation(signature);
         new_script_object.push_operation(opsig);
 
-        operation opkey = create_data_operation(public_key);
+        operation opkey = create_data_operation(pubkey);
         new_script_object.push_operation(opkey);
 
         utx.tx.inputs[i].script = new_script_object;

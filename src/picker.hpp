@@ -54,7 +54,7 @@ BC_API bool make_tx(
              bc::transaction_output_list& outputs,
              unsigned_transaction_type& utx);
 
-BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<bc::elliptic_curve_key>& keys);
+BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& keys, bc::ec_secret nonce);
 
 }
 
