@@ -832,6 +832,8 @@ exit:
     {
         std::error_code e(1, std::system_category());
         ABC_BridgeSendTxCallback(watcherInfo, e, utx->tx, watcherInfo->fAsyncCallback, watcherInfo->pData);
+        cc = ABC_CC_Ok;
+        pError->code = ABC_CC_Ok;
     }
     ABC_BUF_FREE(Nonce);
     return cc;
