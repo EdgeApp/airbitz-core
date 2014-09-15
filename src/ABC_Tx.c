@@ -985,6 +985,8 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
                         szUserName, szPassword, szWalletUUID, false,
                         pTx, paOutAddresses, outAddressCount, pError));
     }
+    // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
+    ABC_CHECK_RET(ABC_WalletDirtyCache(szUserName, szPassword, szWalletUUID, pError));
 exit:
     ABC_TxMutexUnlock(NULL);
     ABC_BUF_FREE(TxID);
