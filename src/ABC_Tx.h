@@ -54,9 +54,6 @@ extern "C" {
      */
     typedef struct sABC_TxSendInfo
     {
-        /** data pointer given by caller at initial create call time */
-        void                    *pData;
-
         char                    *szUserName;
         char                    *szPassword;
         char                    *szWalletUUID;
@@ -71,8 +68,6 @@ extern "C" {
         char                    *szSrcCategory;
 
         tABC_TxDetails          *pDetails;
-
-        tABC_Request_Callback   fRequestCallback;
 
         /** information the error if there was a failure */
         tABC_Error  errorInfo;
@@ -95,14 +90,10 @@ extern "C" {
                                 const char *szWalletUUID,
                                 const char *szDestAddress,
                                 const tABC_TxDetails *pDetails,
-                                tABC_Request_Callback fRequestCallback,
-                                void *pData,
                                 tABC_Error *pError);
 
 
     void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo);
-
-    void *ABC_TxSendThreaded(void *pData);
 
     double ABC_TxSatoshiToBitcoin(int64_t satoshi);
 
@@ -244,16 +235,8 @@ extern "C" {
                         char **pszUUID,
                         tABC_Error *pError);
 
-    tABC_CC ABC_TxSendCompleteError(tABC_TxSendInfo *pInfo,
-                                    tABC_UnsignedTx *utx,
-                                    tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                                    void             *pData,
-                                    tABC_Error *pError);
-
     tABC_CC ABC_TxSendComplete(tABC_TxSendInfo *pInfo,
                                tABC_UnsignedTx *utx,
-                               tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                               void *pData,
                                tABC_Error *pError);
 
     tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo,

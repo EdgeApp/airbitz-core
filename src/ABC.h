@@ -215,7 +215,6 @@ extern "C" {
         ABC_AsyncEventType_ExchangeRateUpdate,
         ABC_AsyncEventType_DataSyncUpdate,
         ABC_AsyncEventType_RemotePasswordChange,
-        ABC_AsyncEventType_SentFunds,
     } tABC_AsyncEventType;
 
     /**
@@ -822,16 +821,14 @@ extern "C" {
                                     const char *szWalletUUID,
                                     const char *szDestAddress,
                                     tABC_TxDetails *pDetails,
-                                    tABC_Request_Callback fRequestCallback,
-                                    void *pData,
+                                    char **szTxId,
                                     tABC_Error *pError);
 
     tABC_CC ABC_InitiateTransfer(const char *szUserName,
                                  const char *szPassword,
                                  tABC_TransferDetails *pTransfer,
                                  tABC_TxDetails *pDetails,
-                                 tABC_Request_Callback fRequestCallback,
-                                 void *pData,
+                                 char **szTxId,
                                  tABC_Error *pError);
 
     tABC_CC ABC_CalcSendFees(const char *szUserName,
