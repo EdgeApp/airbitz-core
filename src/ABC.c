@@ -1549,8 +1549,7 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
                                 const char *szWalletUUID,
                                 const char *szDestAddress,
                                 tABC_TxDetails *pDetails,
-                                tABC_Request_Callback fRequestCallback,
-                                void *pData,
+                                char **pszTxId,
                                 tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -1568,6 +1567,7 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet name provided");
     ABC_CHECK_NULL(pDetails);
+    ABC_CHECK_NULL(pszTxId);
 
     ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
                                       szUserName,
@@ -1575,21 +1575,8 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
                                       szWalletUUID,
                                       szDestAddress,
                                       pDetails,
-                                      fRequestCallback,
-                                      pData,
                                       pError));
-    if (fRequestCallback)
-    {
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_TxSendThreaded, pTxSendInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        cc = ABC_TxSend(pTxSendInfo, (char**)pData, pError);
-    }
+    cc = ABC_TxSend(pTxSendInfo, pszTxId, pError);
 
 exit:
 
@@ -1616,8 +1603,7 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
                              const char *szPassword,
                              tABC_TransferDetails *pTransfer,
                              tABC_TxDetails *pDetails,
-                             tABC_Request_Callback fRequestCallback,
-                             void *pData,
+                             char **pszTxId,
                              tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -1639,6 +1625,7 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
     ABC_CHECK_NULL(pTransfer->szDestWalletUUID);
     ABC_CHECK_ASSERT(strlen(pTransfer->szDestWalletUUID) > 0, ABC_CC_Error, "No destination wallet name provided");
     ABC_CHECK_NULL(pDetails);
+    ABC_CHECK_NULL(pszTxId);
 
     ABC_CHECK_RET(ABC_TxCreateReceiveRequest(szUserName, szPassword,
                                              pTransfer->szDestWalletUUID, pDetails,
@@ -1652,8 +1639,6 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
                                       pTransfer->szSrcWalletUUID,
                                       szRequestAddress,
                                       pDetails,
-                                      fRequestCallback,
-                                      pData,
                                       pError));
     pTxSendInfo->bTransfer = true;
     ABC_STRDUP(pTxSendInfo->szDestWalletUUID, pTransfer->szDestWalletUUID);
@@ -1661,18 +1646,7 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
     ABC_STRDUP(pTxSendInfo->szDestCategory, pTransfer->szDestCategory);
     ABC_STRDUP(pTxSendInfo->szSrcName, pTransfer->szSrcName);
     ABC_STRDUP(pTxSendInfo->szSrcCategory, pTransfer->szSrcCategory);
-    if (fRequestCallback)
-    {
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_TxSendThreaded, pTxSendInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        cc = ABC_TxSend(pTxSendInfo, (char**)pData, pError);
-    }
+    cc = ABC_TxSend(pTxSendInfo, pszTxId, pError);
 
 exit:
     ABC_FREE_STR(szRequestId);
@@ -1713,8 +1687,6 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
                                       szWalletUUID,
                                       szDestAddress,
                                       pDetails,
-                                      NULL,
-                                      NULL,
                                       pError));
     pTxSendInfo->bTransfer = bTransfer;
     if (bTransfer)

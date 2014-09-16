@@ -84,13 +84,7 @@ static std::map<WalletUUID, WatcherInfo*> watchers_;
 // The last obelisk server we connected to:
 static unsigned gLastObelisk = 0;
 
-// XXX: Hacky. These hold the state on a send which is used on the return
-// callback. It would be better to pass these into the watcher.
-static tABC_TxSendInfo *gSendInfo = NULL;
-static tABC_UnsignedTx *gUtx = NULL;
-
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
-static void        ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo, const std::error_code &e, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
 static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, picker::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(picker::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr);
@@ -482,12 +476,6 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     };
     watcherInfo->watcher->set_height_callback(std::move(heightCallback));
 
-    // sendCallback = [watcherInfo, fAsyncCallback, pData](const std::error_code &e, const::libbitcoin::transaction_type &tx)
-    // {
-    //     ABC_BridgeSendTxCallback(watcherInfo, e, tx, fAsyncCallback, pData);
-    // };
-    // watcherInfo->watcher->set_tx_sent_callback(sendCallback);
-
     failCallback = [watcherInfo]()
     {
         tABC_Error error;
@@ -779,15 +767,16 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    picker::unsigned_transaction_type *utx;
+
     WatcherInfo *watcherInfo = NULL;
+    picker::unsigned_transaction_type *utx;
     std::vector<std::string> keys;
+    std::string txid, malleableId;
     tABC_U08Buf Nonce = ABC_BUF_NULL;
 
     utx = (picker::unsigned_transaction_type *) pUtx->data;
     auto row = watchers_.find(pSendInfo->szWalletUUID);
-    ABC_CHECK_ASSERT(row != watchers_.end(),
-        ABC_CC_Error, "Unable find watcher");
+    ABC_CHECK_ASSERT(row != watchers_.end(), ABC_CC_Error, "Unable find watcher");
 
     watcherInfo = row->second;
 
@@ -795,10 +784,6 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     {
         keys.push_back(std::string(paPrivKey[i]));
     }
-    // Set global state....ewww
-    gSendInfo = pSendInfo;
-    gUtx = pUtx;
-
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &Nonce, pError));
     bc::ec_secret nonce;
     std::copy(Nonce.p, Nonce.end, nonce.begin());
@@ -820,19 +805,21 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
             cc = ABC_BridgeBlockhainPostTx(utx, pError);
     }
 
-    if (cc == ABC_CC_Ok)
-    {
-        // This will mark the outputs as spent
-        watcherInfo->watcher->send_tx(utx->tx);
-        std::error_code e;
-        ABC_BridgeSendTxCallback(watcherInfo, e, utx->tx, watcherInfo->fAsyncCallback, watcherInfo->pData);
-    }
+    // Make sure the send was successful
+    ABC_CHECK_ASSERT(ABC_CC_Ok == cc, cc, "Unable to send transaction");
+
+    // This will mark the outputs as spent
+    watcherInfo->watcher->send_tx(utx->tx);
+
+    txid = ABC_BridgeNonMalleableTxId(utx->tx);
+    ABC_STRDUP(pUtx->szTxId, txid.c_str());
+
+    malleableId = bc::encode_hex(bc::hash_transaction(utx->tx));
+    ABC_STRDUP(pUtx->szTxMalleableId, malleableId.c_str());
+
+    ABC_BridgeWatcherSerializeAsync(watcherInfo);
+    ABC_BridgeExtractOutputs(watcherInfo->watcher, utx, malleableId, pUtx,pError);
 exit:
-    if (cc != ABC_CC_Ok)
-    {
-        std::error_code e(1, std::system_category());
-        ABC_BridgeSendTxCallback(watcherInfo, e, utx->tx, watcherInfo->fAsyncCallback, watcherInfo->pData);
-    }
     ABC_BUF_FREE(Nonce);
     return cc;
 }
@@ -1262,55 +1249,6 @@ exit:
     ABC_FREE(iarr);
 }
 
-static
-void ABC_BridgeSendTxCallback(WatcherInfo *watcherInfo,
-                              const std::error_code &e,
-                              const libbitcoin::transaction_type& tx,
-                              tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                              void *pData)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_Error *pError = new tABC_Error;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    std::string txid, malleableId;
-
-    tABC_TxSendInfo *pSendInfo = gSendInfo;
-    tABC_UnsignedTx *pUtx = gUtx;
-
-    gSendInfo = NULL;
-    gUtx = NULL;
-
-    if (e.value() || pSendInfo == NULL || pUtx == NULL)
-    {
-        pError->code = ABC_CC_Error;
-        ABC_TxSendCompleteError(pSendInfo, pUtx, fAsyncBitCoinEventCallback, pData, pError);
-    }
-    else
-    {
-        picker::unsigned_transaction_type *utx =
-            (picker::unsigned_transaction_type *) pUtx->data;
-
-        ABC_BridgeChainPostTx(utx, pError);
-        if (!ABC_BridgeIsTestNet())
-        {
-            ABC_BridgeBlockhainPostTx(utx, pError);
-        }
-
-        txid = ABC_BridgeNonMalleableTxId(utx->tx);
-        ABC_STRDUP(pUtx->szTxId, txid.c_str());
-
-        malleableId = bc::encode_hex(bc::hash_transaction(utx->tx));
-        ABC_STRDUP(pUtx->szTxMalleableId, malleableId.c_str());
-
-        ABC_BridgeWatcherSerializeAsync(watcherInfo);
-        ABC_BridgeExtractOutputs(watcherInfo->watcher, utx, malleableId, pUtx,pError);
-
-        ABC_TxSendComplete(pSendInfo, pUtx, fAsyncBitCoinEventCallback, pData, pError);
-    }
-exit:
-    return;
-}
-
 static tABC_CC
 ABC_BridgeExtractOutputs(libwallet::watcher *watcher, picker::unsigned_transaction_type *utx,
                          std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError)
@@ -1593,7 +1531,7 @@ tABC_CC ABC_BridgeChainPostTx(picker::unsigned_transaction_type *utx, tABC_Error
         ABC_CC_Error, "Curl failed to retrieve response info\n");
 
     ABC_DebugLog("%.100s\n", resBuffer.c_str());
-    ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, resBuffer.c_str());
+    ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, "Error when sending tx to chain");
 exit:
     if (pCurlHandle != NULL)
     {
@@ -1642,7 +1580,7 @@ tABC_CC ABC_BridgeBlockhainPostTx(picker::unsigned_transaction_type *utx, tABC_E
         ABC_CC_Error, "Curl failed to retrieve response info\n");
 
     ABC_DebugLog("%.100s\n", resBuffer.c_str());
-    ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, resBuffer.c_str());
+    ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, "Error when sending tx to blockchain");
 exit:
     if (pCurlHandle != NULL)
         curl_easy_cleanup(pCurlHandle);
