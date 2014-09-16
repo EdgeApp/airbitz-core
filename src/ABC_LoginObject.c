@@ -618,7 +618,7 @@ tABC_CC ABC_LoginObjectFixUserName(const char *szUserName,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    char *szOut = malloc(strlen(szUserName));
+    char *szOut = malloc(strlen(szUserName) + 1);
     ABC_CHECK_NULL(szOut);
 
     const char *si = szUserName;
