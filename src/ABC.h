@@ -999,10 +999,6 @@ extern "C" {
                            const char *szPassword,
                            tABC_Error *pError);
 
-    // temp functions
-    void tempEventA();
-    void tempEventB();
-
     tABC_CC ABC_CsvExport(const char *szUserName,
                           const char *szPassword,
                           const char *szUUID,
