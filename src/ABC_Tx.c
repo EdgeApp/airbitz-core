@@ -215,8 +215,6 @@ tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
                             const char *szWalletUUID,
                             const char *szDestAddress,
                             const tABC_TxDetails *pDetails,
-                            tABC_Request_Callback fRequestCallback,
-                            void *pData,
                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -238,10 +236,6 @@ tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
     ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
 
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTxSendInfo->pDetails), pDetails, pError));
-
-    pTxSendInfo->fRequestCallback = fRequestCallback;
-
-    pTxSendInfo->pData = pData;
 
     *ppTxSendInfo = pTxSendInfo;
     pTxSendInfo = NULL;
@@ -278,42 +272,6 @@ void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo)
 }
 
 /**
- * Sends a transaction. Assumes it is running in a thread.
- *
- * This function sends a transaction.
- * The function assumes it is in it's own thread (i.e., thread safe)
- * The callback will be called when it has finished.
- * The caller needs to handle potentially being in a seperate thread
- *
- * @param pData Structure holding all the data needed to send a transaction (should be a tABC_TxSendInfo)
- */
-void *ABC_TxSendThreaded(void *pData)
-{
-    tABC_TxSendInfo *pInfo = (tABC_TxSendInfo *)pData;
-    if (pInfo)
-    {
-        tABC_RequestResults results;
-        memset(&results, 0, sizeof(tABC_RequestResults));
-
-        results.requestType = ABC_RequestType_SendBitcoin;
-
-        results.bSuccess = false;
-
-        // send the transaction
-        tABC_CC CC = ABC_TxSend(pInfo, (char **) &(results.pRetData), &(results.errorInfo));
-        results.errorInfo.code = CC;
-
-        // we are done so load up the info and ship it back to the caller via the callback
-        results.pData = pInfo->pData;
-        results.szWalletUUID = strdup(pInfo->szWalletUUID);
-        results.bSuccess = (CC == ABC_CC_Ok ? true : false);
-        pInfo->fRequestCallback(&results);
-    }
-
-    return NULL;
-}
-
-/**
  * Sends the transaction with the given info.
  *
  * @param pInfo Pointer to transaction information
@@ -325,7 +283,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_U08Buf privSeed = ABC_BUF_NULL;
-    tABC_UnsignedTx *pUtx;
+    tABC_UnsignedTx *pUtx = NULL;
 
     // Change address variables
     tABC_TxAddress *pChangeAddr = NULL;
@@ -373,48 +331,31 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
                                pInfo->szWalletUUID, privSeed,
                                &paPrivAddresses, &privCountAddresses,
                                pError));
-    // Sign the transaction
+    // Sign and send transaction
     ABC_CHECK_RET(
         ABC_BridgeTxSignSend(pInfo, paPrivAddresses, privCountAddresses,
                              pUtx, pError));
+
+    // Update the ABC db
+    ABC_CHECK_RET(ABC_TxSendComplete(pInfo, pUtx, pError));
+
+    // return the new tx id
+    ABC_STRDUP(*pszTxID, pUtx->szTxId);
 exit:
     ABC_FREE(szPrivSeed);
     ABC_TxFreeAddress(pChangeAddr);
     ABC_UtilFreeStringArray(paAddresses, countAddresses);
-    ABC_TxMutexUnlock(NULL);
-    return cc;
-}
-
-tABC_CC ABC_TxSendCompleteError(tABC_TxSendInfo  *pInfo,
-                                tABC_UnsignedTx  *pUtx,
-                                tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                                void             *pData,
-                                tABC_Error       *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    if (fAsyncBitCoinEventCallback)
-    {
-        tABC_AsyncBitCoinInfo info;
-        info.pData = pData;
-        info.status.code = pError->code;
-        info.eventType = ABC_AsyncEventType_SentFunds;
-        ABC_STRDUP(info.szWalletUUID, pInfo->szWalletUUID);
-        ABC_STRDUP(info.szDescription, "Send failed");
-        fAsyncBitCoinEventCallback(&info);
-        ABC_FREE_STR(info.szWalletUUID);
-        ABC_FREE_STR(info.szDescription);
-    }
-exit:
+    ABC_TxSendInfoFree(pInfo);
+    ABC_TxFreeOutputs(pUtx->aOutputs, pUtx->countOutputs);
     ABC_FREE(pUtx->data);
     ABC_FREE(pUtx);
-    ABC_TxSendInfoFree(pInfo);
+
+    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
 tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
                            tABC_UnsignedTx  *pUtx,
-                           tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                           void             *pData,
                            tABC_Error       *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -516,27 +457,9 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
     ABC_CHECK_RET(
         ABC_TxSaveTransaction(pInfo->szUserName, pInfo->szPassword,
                               pInfo->szWalletUUID, pTx, pError));
-    if (fAsyncBitCoinEventCallback)
-    {
-        tABC_AsyncBitCoinInfo info;
-        info.pData = pData;
-        info.eventType = ABC_AsyncEventType_SentFunds;
-        info.status.code = ABC_CC_Ok;
-        ABC_STRDUP(info.szTxID, pTx->szID);
-        ABC_STRDUP(info.szWalletUUID, pInfo->szWalletUUID);
-        ABC_STRDUP(info.szDescription, "Send complete");
-        fAsyncBitCoinEventCallback(&info);
-        ABC_FREE_STR(info.szTxID);
-        ABC_FREE_STR(info.szWalletUUID);
-        ABC_FREE_STR(info.szDescription);
-    }
 exit:
     ABC_TxFreeTx(pTx);
     ABC_TxFreeTx(pReceiveTx);
-    ABC_TxFreeOutputs(pUtx->aOutputs, pUtx->countOutputs);
-    ABC_FREE(pUtx->data);
-    ABC_FREE(pUtx);
-    ABC_TxSendInfoFree(pInfo);
     ABC_TxMutexUnlock(NULL);
     return cc;
 }
