@@ -21,7 +21,7 @@ build() {
 
     echo Building boost...
     export NO_BZIP2=1
-    ./bjam -q -d+2 toolset=clang-env link=static threading=multi install
+    ./bjam -q -d+2 toolset=gcc-env link=static threading=multi install
 }
 
 include="include/boost/*"

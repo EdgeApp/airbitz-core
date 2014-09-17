@@ -2,12 +2,13 @@ import os ;
 local AR = [ os.environ AR ] ;
 local CXX = [ os.environ CXX ] ;
 local CFLAGS = [ os.environ CFLAGS ] ;
+local RANLIB = [ os.environ RANLIB ] ;
 
-using clang : env
-:
-$(CXX)
-:
+# We aren't necessarily using GCC, but the "gcc" toolchain lets us specify
+# our own binaries for everything. The final toolchain name is "gcc-env":
+using gcc : env : $(CXX) :
 <archiver>$(AR)
+<ranlib>$(RANLIB)
 <compileflags>$(CFLAGS)
 <compileflags>-fvisibility=hidden
 <compileflags>-fvisibility-inlines-hidden
