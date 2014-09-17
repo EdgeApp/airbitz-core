@@ -21,7 +21,7 @@ tABC_CC TestSync(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     int dirty;
 
-    ABC_CHECK_RET(ABC_SyncInit(pError));
+    ABC_CHECK_RET(ABC_SyncInit("../util", pError));
 
     ABC_CHECK_RET(TestRecreateDir("server.git", pError));
     ABC_CHECK_RET(TestRecreateDir("sync_a", pError));
@@ -63,10 +63,7 @@ tABC_CC TestSync(tABC_Error *pError)
     ABC_CHECK_RET(ABC_SyncRepo("sync_b", "server.git", &dirty, pError));
     ABC_CHECK_RET(ABC_SyncRepo("sync_a", "server.git", &dirty, pError));
 
-    ABC_SyncTerminate();
-
-    ABC_CHECK_RET(ABC_SyncInit(pError));
-    ABC_CHECK_RET(ABC_SyncMakeRepo("sync_repo", pError));
+    // When this is done, the two subdirs should match exactly.
 
 exit:
     ABC_SyncTerminate();
