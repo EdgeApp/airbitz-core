@@ -2,12 +2,19 @@
 #include "ABC_Util.h"
 #include <stdio.h>
 
+#include <ABC_Account.h>
+#include <ABC_Crypto.h>
+#include <ABC_Login.h>
+#include <ABC_FileIO.h>
+#include <ABC_Wallet.h>
+
 int main(int argc, char *argv[])
 {
     tABC_CC cc;
     tABC_Error error;
     unsigned char seed[] = {1, 2, 3};
-    tABC_WalletInfo **paWalletInfo = NULL;
+    tABC_SyncKeys *pKeys = NULL;
+    char **aszUUIDs;
     unsigned int count = 0;
 
     if (argc != 4)
@@ -16,17 +23,42 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Setup:
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, seed, sizeof(seed), &error));
-    MAIN_CHECK(ABC_GetWallets(argv[2], argv[3],
-                           &paWalletInfo,
-                           &count,
-                           &error));
+    MAIN_CHECK(ABC_LoginGetSyncKeys(argv[2], argv[3], &pKeys, &error));
+    MAIN_CHECK(ABC_DataSyncAll(argv[2], argv[3], NULL, NULL, &error));
+
+    // Iterate over wallets:
+    MAIN_CHECK(ABC_GetWalletUUIDs(argv[2], argv[3],
+        &aszUUIDs, &count, &error));
     for (int i = 0; i < count; ++i)
     {
-        tABC_WalletInfo *wallet = paWalletInfo[i];
-        printf("%s - %s\n", wallet->szName, wallet->szUUID);
+        // Print the UUID:
+        printf("%s: ", aszUUIDs[i]);
+
+        // Get wallet name filename:
+        char *szDir;
+        char szFilename[ABC_FILEIO_MAX_PATH_LENGTH];
+        MAIN_CHECK(ABC_WalletGetDirName(&szDir, aszUUIDs[i], &error));
+        snprintf(szFilename, sizeof(szFilename),
+            "%s/sync/WalletName.json", szDir);
+
+        // Print wallet name:
+        tABC_U08Buf data;
+        tABC_AccountWalletInfo info = {0};
+        MAIN_CHECK(ABC_AccountWalletLoad(pKeys, aszUUIDs[i], &info, &error));
+        if (ABC_CC_Ok ==ABC_CryptoDecryptJSONFile(szFilename, info.MK, &data, &error))
+        {
+            fwrite(data.p, data.end - data.p, 1, stdout);
+            printf("\n");
+            ABC_BUF_FREE(data);
+        }
+        ABC_AccountWalletInfoFree(&info);
     }
     printf("\n");
-    ABC_FreeWalletInfoArray(paWalletInfo, count);
+
+    // Clean up:
+    ABC_SyncFreeKeys(pKeys);
+    ABC_UtilFreeStringArray(aszUUIDs, count);
     return 0;
 }
