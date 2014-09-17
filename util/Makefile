@@ -1,5 +1,5 @@
-CFLAGS   += -Wall -D_GNU_SOURCE -I../src -std=c99 -O2
-CXXFLAGS += -Wall -D_GNU_SOURCE -I../src -std=c++11 -O2 \
+CFLAGS   += -Wall -D_GNU_SOURCE -I../abcd -I../src -std=c99 -O2
+CXXFLAGS += -Wall -D_GNU_SOURCE -I../abcd -I../src -std=c++11 -O2 \
 	$(shell pkg-config --cflags libwallet)
 LDFLAGS  += -L../build/
 LIBS     += -labc -lpthread \
