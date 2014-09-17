@@ -1,7 +1,7 @@
-build
-sync_a
-sync_b
-server.git
-test_core
-test_sync
-tmp
+/build
+/server.git
+/sync_a
+/sync_b
+/test_core
+/test_sync
+/tmp

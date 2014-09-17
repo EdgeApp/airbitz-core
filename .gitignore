@@ -1,7 +1,8 @@
 *.o
+*~
 .*.swp
 .DS_Store
+*.vpj
+*.vpw
+*.vpwhistu
 /build
-/deps/build
-/deps/build.testnet
-*~
