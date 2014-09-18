@@ -448,6 +448,5 @@ exit:
 
     ABC_FreeWalletInfoArray(paWalletInfo, nCount);
 
-
     return cc;
 }
