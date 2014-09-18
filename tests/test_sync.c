@@ -1,7 +1,7 @@
 #include <ABC.h>
-#include <ABC_FileIO.h>
-#include <ABC_Sync.h>
-#include <ABC_Util.h>
+#include <util/ABC_FileIO.h>
+#include <util/ABC_Sync.h>
+#include <util/ABC_Util.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>

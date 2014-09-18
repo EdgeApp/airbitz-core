@@ -38,20 +38,20 @@
  *  @version 1.0
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 #include "ABC_Wallet.h"
 #include "ABC_Tx.h"
 #include "ABC_Account.h"
-#include "ABC_Util.h"
-#include "ABC_FileIO.h"
-#include "ABC_Crypto.h"
 #include "ABC_Login.h"
-#include "ABC_Mutex.h"
 #include "ABC_ServerDefs.h"
-#include "ABC_Sync.h"
-#include "ABC_URL.h"
+#include "util/ABC_Crypto.h"
+#include "util/ABC_FileIO.h"
+#include "util/ABC_Mutex.h"
+#include "util/ABC_Sync.h"
+#include "util/ABC_Util.h"
+#include "util/ABC_URL.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #define WALLET_KEY_LENGTH                       AES_256_KEY_LENGTH
 

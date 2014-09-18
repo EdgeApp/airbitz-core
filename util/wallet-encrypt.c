@@ -1,10 +1,9 @@
 #include "common.h"
 #include <stdio.h>
 
-#include <ABC_Login.h>
-#include <ABC_Account.h>
-#include <ABC_Crypto.h>
-#include <ABC_Wallet.h>
+#include "ABC_Login.h"
+#include "ABC_Account.h"
+#include "util/ABC_Crypto.h"
 
 int main(int argc, char *argv[])
 {

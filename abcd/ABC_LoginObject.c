@@ -7,7 +7,7 @@
 #include "ABC_LoginDir.h"
 #include "ABC_LoginServer.h"
 #include "ABC_Account.h"
-#include "ABC_Crypto.h"
+#include "util/ABC_Crypto.h"
 #include <ctype.h>
 
 #define ACCOUNT_MK_LENGTH 32

@@ -41,9 +41,9 @@
 #include "ABC_Bridge.h"
 #include "ABC_General.h"
 #include "ABC_Wallet.h"
-#include "ABC_URL.h"
-#include "ABC_Crypto.h"
-#include "picker.hpp"
+#include "util/ABC_Crypto.h"
+#include "util/ABC_URL.h"
+#include "util/picker.hpp"
 #include <curl/curl.h>
 #include <wallet/wallet.hpp>
 #include <unordered_map>

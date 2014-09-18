@@ -23,8 +23,8 @@ libabc.so: $(WORK_DIR)/libabc.so link-test
 libabc.a:  $(WORK_DIR)/libabc.a
 
 objects=$(addprefix $(WORK_DIR)/,\
-	$(patsubst %.c,%.o,$(wildcard abcd/*.c src/*.c)) \
-	$(patsubst %.cpp,%.o,$(wildcard abcd/*.cpp src/*.cpp)))
+	$(patsubst %.c,%.o,$(wildcard abcd/*.c abcd/util/*.c src/*.c)) \
+	$(patsubst %.cpp,%.o,$(wildcard abcd/*.cpp abcd/util/*.cpp src/*.cpp)))
 
 $(WORK_DIR)/libabc.a: $(objects)
 	$(AR) rcs $@ $^

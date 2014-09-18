@@ -11,10 +11,10 @@
  */
 
 #include "ABC_Account.h"
-#include "ABC_Crypto.h"
-#include "ABC_FileIO.h"
-#include "ABC_Mutex.h"
-#include "ABC_Util.h"
+#include "util/ABC_Crypto.h"
+#include "util/ABC_FileIO.h"
+#include "util/ABC_Mutex.h"
+#include "util/ABC_Util.h"
 
 #define ACCOUNT_CATEGORIES_FILENAME             "Categories.json"
 #define ACCOUNT_SETTINGS_FILENAME               "Settings.json"

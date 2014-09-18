@@ -39,7 +39,7 @@
 #define ABC_Account_h
 
 #include "ABC.h"
-#include "ABC_Sync.h"
+#include "util/ABC_Sync.h"
 
 #ifdef __cplusplus
 extern "C" {

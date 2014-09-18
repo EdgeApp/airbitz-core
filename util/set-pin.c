@@ -1,6 +1,4 @@
 #include "common.h"
-#include "ABC_Util.h"
-
 #include <stdio.h>
 
 int main(int argc, char *argv[])

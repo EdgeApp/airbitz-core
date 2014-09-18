@@ -1,3 +1,14 @@
+#define RED  "\x1B[31m"
+#define GRN  "\x1B[32m"
+#define NRM  "\x1B[0m"
+
+#include "ABC.h"
+#include "ABC_Account.h"
+#include "ABC_General.h"
+#include "ABC_Tx.h"
+#include "ABC_Exchanges.h"
+#include "util/ABC_Util.h"
+#include "util/ABC_Crypto.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -7,19 +18,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#define RED  "\x1B[31m"
-#define GRN  "\x1B[32m"
-#define NRM  "\x1B[0m"
-
-#include "ABC.h"
-#include "ABC_Account.h"
-#include "ABC_General.h"
-#include "ABC_Tx.h"
-#include "ABC_Util.h"
-#include "ABC_Crypto.h"
-#include "ABC_Util.h"
-#include "ABC_Exchanges.h"
 
 #define TEST_WAIT_ON_CB(codeBlock) \
     { \

@@ -38,22 +38,21 @@
  *  @version 1.0
  */
 
+#include "ABC_Tx.h"
+#include "ABC_Exchanges.h"
+#include "ABC_Login.h"
+#include "ABC_Wallet.h"
+#include "ABC_Bridge.h"
+#include "util/ABC_Crypto.h"
+#include "util/ABC_Debug.h"
+#include "util/ABC_FileIO.h"
+#include "util/ABC_Mutex.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <time.h>
 #include <string.h>
 #include <qrencode.h>
-#include "ABC_Tx.h"
-#include "ABC_Exchanges.h"
-#include "ABC_Util.h"
-#include "ABC_FileIO.h"
-#include "ABC_Crypto.h"
-#include "ABC_Login.h"
-#include "ABC_Mutex.h"
-#include "ABC_Wallet.h"
-#include "ABC_Debug.h"
-#include "ABC_Bridge.h"
 
 #define SATOSHI_PER_BITCOIN                     100000000
 

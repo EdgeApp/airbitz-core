@@ -6,13 +6,13 @@
 #include "ABC_LoginServer.h"
 #include "ABC_Login.h"
 #include "ABC_ServerDefs.h"
-#include "ABC_URL.h"
-#include "ABC_Util.h"
+#include "util/ABC_URL.h"
+#include "util/ABC_Util.h"
 
 // For debug upload:
 #include "ABC_Bridge.h"
-#include "ABC_Crypto.h"
-#include "ABC_FileIO.h"
+#include "util/ABC_Crypto.h"
+#include "util/ABC_FileIO.h"
 
 // Server strings:
 #define JSON_ACCT_CARE_PACKAGE                  "care_package"

@@ -4,9 +4,9 @@
  */
 
 #include "ABC_LoginDir.h"
-#include "ABC_FileIO.h"
-#include "ABC_Sync.h"
-#include "ABC_Util.h"
+#include "util/ABC_FileIO.h"
+#include "util/ABC_Sync.h"
+#include "util/ABC_Util.h"
 #include <jansson.h>
 
 #define ACCOUNT_MAX                             1024  // maximum number of accounts

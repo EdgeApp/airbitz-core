@@ -34,17 +34,16 @@
  *  @author See AUTHORS
  *  @version 1.0
  */
+
+#include "ABC_Exchanges.h"
+#include "ABC_Login.h"
+#include "ABC_Account.h"
+#include "util/ABC_FileIO.h"
+#include "util/ABC_URL.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <curl/curl.h>
 #include <pthread.h>
-
-#include "ABC_Exchanges.h"
-#include "ABC_Util.h"
-#include "ABC_FileIO.h"
-#include "ABC_Login.h"
-#include "ABC_Account.h"
-#include "ABC_URL.h"
 
 #define EXCHANGE_RATE_DIRECTORY "Exchanges"
 
