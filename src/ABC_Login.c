@@ -9,9 +9,9 @@
 #include "ABC_Login.h"
 #include "ABC_LoginObject.h"
 #include "ABC_General.h"
-#include "ABC_Util.h"
 #include "ABC_Wallet.h"
-#include "ABC_Mutex.h"
+#include "util/ABC_Mutex.h"
+#include "util/ABC_Util.h"
 
 // We cache a single login object, which is fine for the UI's needs:
 tABC_LoginObject *gLoginCache = NULL;

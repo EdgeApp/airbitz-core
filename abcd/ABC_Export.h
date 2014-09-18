@@ -12,7 +12,7 @@
 #define ABC_Export_h
 
 #include "ABC.h"
-#include "ABC_Util.h"
+#include "util/ABC_Util.h"
 
 #ifdef __cplusplus
 extern "C" {

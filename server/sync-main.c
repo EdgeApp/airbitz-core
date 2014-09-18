@@ -1,5 +1,5 @@
+#include <util/sync.h>
 #include <stdio.h>
-#include <sync.h>
 
 static void print_error()
 {

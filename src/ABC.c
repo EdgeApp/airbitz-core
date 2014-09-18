@@ -35,13 +35,6 @@
  *  @version 1.0
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <pthread.h>
-#include <jansson.h>
-#include <math.h>
-#include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Login.h"
 #include "ABC_LoginRequest.h"
@@ -50,15 +43,22 @@
 #include "ABC_General.h"
 #include "ABC_Bridge.h"
 #include "ABC_Export.h"
-#include "ABC_Util.h"
-#include "ABC_FileIO.h"
 #include "ABC_Wallet.h"
-#include "ABC_Crypto.h"
-#include "ABC_URL.h"
-#include "ABC_Mutex.h"
 #include "ABC_Tx.h"
 #include "ABC_Exchanges.h"
-#include "ABC_Sync.h"
+#include "util/ABC_Crypto.h"
+#include "util/ABC_Debug.h"
+#include "util/ABC_FileIO.h"
+#include "util/ABC_Mutex.h"
+#include "util/ABC_Sync.h"
+#include "util/ABC_URL.h"
+#include "util/ABC_Util.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <pthread.h>
+#include <jansson.h>
+#include <math.h>
 
 static bool gbInitialized = false;
 bool gbIsTestNet = false;
