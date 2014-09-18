@@ -960,7 +960,7 @@ exit:
 
 tABC_CC ABC_BridgeTxDetails(const char *szWalletUUID, const char *szTxID,
                             tABC_TxOutput ***paOutputs, unsigned int *pCount,
-                            int64_t *pFees, tABC_Error *pError)
+                            int64_t *pAmount, int64_t *pFees, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_TxOutput **paInArr = NULL;
@@ -973,7 +973,7 @@ tABC_CC ABC_BridgeTxDetails(const char *szWalletUUID, const char *szTxID,
     ABC_CHECK_RET(ABC_BridgeTxDetailsSplit(szWalletUUID, szTxID,
                                            &paInArr, &inCount,
                                            &paOutArr, &outCount,
-                                           pFees, pError));
+                                           pAmount, pFees, pError));
     farr = (tABC_TxOutput **) malloc(sizeof(tABC_TxOutput *) * (inCount + outCount));
     totalCount = outCount + inCount;
     for (unsigned i = 0; i < totalCount; ++i) {
@@ -998,7 +998,7 @@ exit:
 tABC_CC ABC_BridgeTxDetailsSplit(const char *szWalletUUID, const char *szTxID,
                                  tABC_TxOutput ***paInputs, unsigned int *pInCount,
                                  tABC_TxOutput ***paOutputs, unsigned int *pOutCount,
-                                 int64_t *pFees,
+                                 int64_t *pAmount, int64_t *pFees,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1083,6 +1083,7 @@ tABC_CC ABC_BridgeTxDetailsSplit(const char *szWalletUUID, const char *szTxID,
     *pInCount = iCount;
     *paOutputs = paOutArr;
     *pOutCount = oCount;
+    *pAmount = totalMeSatoshi;
     *pFees = fees;
     paInArr = NULL;
     paOutArr = NULL;

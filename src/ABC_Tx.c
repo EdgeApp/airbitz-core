@@ -2913,6 +2913,7 @@ tABC_CC ABC_TxLoadTransaction(const char *szUserName,
     ABC_CHECK_RET(
         ABC_BridgeTxDetails(szWalletUUID, pTx->pStateInfo->szMalleableTxId,
                             &(pTx->aOutputs), &(pTx->countOutputs),
+                            &(pTx->pDetails->amountSatoshi),
                             &(pTx->pDetails->amountFeesMinersSatoshi),
                             pError));
     // assign final result
