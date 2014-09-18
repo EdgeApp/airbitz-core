@@ -460,4 +460,3 @@ exit:
 
     return strJSON;
 }
-

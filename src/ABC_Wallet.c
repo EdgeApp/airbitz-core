@@ -1472,4 +1472,3 @@ tABC_CC ABC_WalletMutexUnlock(tABC_Error *pError)
 {
     return ABC_MutexUnlock(pError);
 }
-

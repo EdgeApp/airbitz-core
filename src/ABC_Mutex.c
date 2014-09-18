@@ -111,7 +111,6 @@ tABC_CC ABC_MutexUnlock(tABC_Error *pError)
     ABC_CHECK_ASSERT(0 == pthread_mutex_unlock(&gMutex), ABC_CC_MutexError, "ABC_Mutex error unlocking mutex");
 
 exit:
-    
+
     return cc;
 }
-
