@@ -1,7 +1,9 @@
 CFLAGS   += -Wall -D_GNU_SOURCE -I../src -std=c99 -O2
-CXXFLAGS += -Wall -D_GNU_SOURCE -I../src -std=c++11 -O2
+CXXFLAGS += -Wall -D_GNU_SOURCE -I../src -std=c++11 -O2 \
+	$(shell pkg-config --cflags libwallet)
 LDFLAGS  += -L../build/
-LIBS     += -labc -lpthread
+LIBS     += -labc -lpthread \
+	$(shell pkg-config --libs libwallet)
 
 default: build/account-decrypt.bin \
          build/account-encrypt.bin \
@@ -11,6 +13,7 @@ default: build/account-decrypt.bin \
          build/create-account.bin \
          build/create-wallet.bin \
          build/data-sync.bin \
+         build/generate-addresses.bin \
          build/get-bitcoin-seed.bin \
          build/get-categories.bin \
          build/get-question-choices.bin \
@@ -31,11 +34,15 @@ default: build/account-decrypt.bin \
 
 build/%.bin: build/%.o build/common.o
 	@mkdir -p build
-	$(CC) -g $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(CXX) -g $(LDFLAGS) -o $@ $^ $(LIBS)
 
 build/%.o: %.c common.h
 	@mkdir -p build
 	$(CC) -c -g $(CFLAGS) -o $@ $<
+
+build/%.o: %.cpp common.h
+	@mkdir -p build
+	$(CXX) -c -g $(CXXFLAGS) -o $@ $<
 
 clean:
 	$(RM) -r build

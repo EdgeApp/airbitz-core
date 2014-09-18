@@ -8,6 +8,10 @@
 
 #include <ABC.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define MAIN_CHECK(f) \
     if (ABC_CC_Ok != (cc = f))\
     { \
@@ -23,5 +27,9 @@
 void PrintError(tABC_CC cc, tABC_Error *pError);
 
 char *Slurp(const char *szFilename);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
