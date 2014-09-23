@@ -868,7 +868,7 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
         }
         for (i = 0; i < outAddressCount; ++i)
         {
-            ABC_DebugLog("Saving Output address: %s\n", paOutAddresses[i]);
+            ABC_DebugLog("Saving Output address: %s\n", paOutAddresses[i]->szAddress);
             int newi = i + inAddressCount;
             ABC_ALLOC(pTx->aOutputs[newi], sizeof(tABC_TxOutput));
             ABC_STRDUP(pTx->aOutputs[newi]->szAddress, paOutAddresses[i]->szAddress);
