@@ -1530,6 +1530,7 @@ tABC_CC ABC_BridgeChainPostTx(picker::unsigned_transaction_type *utx, tABC_Error
     ABC_CHECK_ASSERT((curlCode = curl_easy_getinfo(pCurlHandle, CURLINFO_RESPONSE_CODE, &resCode)) == 0,
         ABC_CC_Error, "Curl failed to retrieve response info\n");
 
+    ABC_DebugLog("Chain Response Code: %d\n", resCode);
     ABC_DebugLog("%.100s\n", resBuffer.c_str());
     ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, "Error when sending tx to chain");
 exit:
@@ -1579,6 +1580,7 @@ tABC_CC ABC_BridgeBlockhainPostTx(picker::unsigned_transaction_type *utx, tABC_E
     ABC_CHECK_ASSERT((curlCode = curl_easy_getinfo(pCurlHandle, CURLINFO_RESPONSE_CODE, &resCode)) == 0,
         ABC_CC_Error, "Curl failed to retrieve response info\n");
 
+    ABC_DebugLog("Blockchain Response Code: %d\n", resCode);
     ABC_DebugLog("%.100s\n", resBuffer.c_str());
     ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, "Error when sending tx to blockchain");
 exit:
