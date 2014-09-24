@@ -1532,7 +1532,8 @@ tABC_CC ABC_BridgeChainPostTx(picker::unsigned_transaction_type *utx, tABC_Error
 
     ABC_DebugLog("Chain Response Code: %d\n", resCode);
     ABC_DebugLog("%.100s\n", resBuffer.c_str());
-    ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, "Error when sending tx to chain");
+    ABC_CHECK_ASSERT(resCode == 201 || resCode == 200,
+            ABC_CC_Error, "Error when sending tx to chain");
 exit:
     if (pCurlHandle != NULL)
     {
