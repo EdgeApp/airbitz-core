@@ -10,6 +10,9 @@ build() {
     *)          cmakeflags="-C$recipe_dir/../../classes/native.cmake" ;;
     esac
 
+    echo Patching...
+    patch -p1 < $recipe_dir/getaddrinfo.patch
+
     mkdir -p build
     cd build
     cmake .. $cmakeflags \
