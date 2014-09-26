@@ -889,6 +889,9 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
                         szUserName, szPassword, szWalletUUID, true,
                         pTx, paOutAddresses, outAddressCount, pError));
 
+        // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
+        ABC_CHECK_RET(ABC_WalletDirtyCache(szUserName, szPassword, szWalletUUID, pError));
+
         if (fAsyncBitCoinEventCallback)
         {
             tABC_AsyncBitCoinInfo info;
@@ -908,6 +911,22 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
         ABC_CHECK_RET(ABC_TxTrashAddresses(
                         szUserName, szPassword, szWalletUUID, false,
                         pTx, paOutAddresses, outAddressCount, pError));
+
+        // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
+        ABC_CHECK_RET(ABC_WalletDirtyCache(szUserName, szPassword, szWalletUUID, pError));
+
+        if (fAsyncBitCoinEventCallback)
+        {
+            tABC_AsyncBitCoinInfo info;
+            info.pData = pData;
+            info.eventType = ABC_AsyncEventType_DataSyncUpdate;
+            ABC_STRDUP(info.szTxID, pTx->szID);
+            ABC_STRDUP(info.szWalletUUID, szWalletUUID);
+            ABC_STRDUP(info.szDescription, "Updated balance");
+            fAsyncBitCoinEventCallback(&info);
+            ABC_FREE_STR(info.szTxID);
+            ABC_FREE_STR(info.szDescription);
+        }
     }
 exit:
     ABC_TxMutexUnlock(NULL);
