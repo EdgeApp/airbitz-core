@@ -863,6 +863,12 @@ tABC_CC ABC_LoginObjectWriteCarePackage(tABC_LoginObject *pSelf,
         JSON_ACCT_SNRP2_FIELD, pJSON_SNRP2,
         JSON_ACCT_SNRP3_FIELD, pJSON_SNRP3,
         JSON_ACCT_SNRP4_FIELD, pJSON_SNRP4);
+    ABC_CHECK_NULL(pJSON_Root);
+
+    // The objects now belong to pJSON_Root:
+    pJSON_SNRP2 = NULL;
+    pJSON_SNRP3 = NULL;
+    pJSON_SNRP4 = NULL;
 
     // Build the ERQ, if any:
     if (ABC_BUF_SIZE(pSelf->RQ))
@@ -907,6 +913,10 @@ tABC_CC ABC_LoginObjectWriteLoginPackage(tABC_LoginObject *pSelf,
     // Build the main body:
     pJSON_Root = json_pack("{s:o}",
         JSON_ACCT_ESYNCKEY_FIELD,   pJSON_ESyncKey);
+    ABC_CHECK_NULL(pJSON_Root);
+
+    // The object now belongs to pJSON_Root:
+    pJSON_ESyncKey = NULL;
 
     // Write master keys:
     if (pSelf->EMK_LP2)
