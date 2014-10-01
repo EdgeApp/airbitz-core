@@ -26,35 +26,6 @@ static tABC_CC ABC_LoginGetDirName(const char *szUserName, char **pszDirName, tA
 static tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginMakeFilename(char **pszOut, unsigned AccountNum, const char *szFile, tABC_Error *pError);
 
-/**
- * Checks if the username is valid.
- *
- * If the username is not valid, an error will be returned
- *
- * @param szUserName UserName for validation
- */
-tABC_CC ABC_LoginDirExists(const char *szUserName,
-                           tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(szUserName);
-
-    int AccountNum = 0;
-
-    // check locally for the account
-    ABC_CHECK_RET(ABC_LoginDirGetNumber(szUserName, &AccountNum, pError));
-    if (AccountNum < 0)
-    {
-        ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "No account by that name");
-    }
-
-exit:
-
-    return cc;
-}
-
 /*
  * returns the account number associated with the given user name
  * -1 is returned if the account does not exist
