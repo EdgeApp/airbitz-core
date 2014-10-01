@@ -15,9 +15,6 @@ extern "C" {
     #define ACCOUNT_CARE_PACKAGE_FILENAME           "CarePackage.json"
     #define ACCOUNT_LOGIN_PACKAGE_FILENAME          "LoginPackage.json"
 
-    tABC_CC ABC_LoginDirExists(const char *szUserName,
-                               tABC_Error *pError);
-
     tABC_CC ABC_LoginDirGetNumber(const char *szUserName,
                                   int *pAccountNum,
                                   tABC_Error *pError);
