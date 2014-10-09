@@ -338,21 +338,6 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_LoginObjectUpdateLoginPackage(tABC_LoginObject *pSelf,
-                                          tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    char *szLoginPackage = NULL;
-
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(pSelf->L1, pSelf->LP1, pSelf->LRA1, &szLoginPackage, pError));
-
-exit:
-    ABC_FREE_STR(szLoginPackage);
-    return cc;
-}
-
 /**
  * Changes the password on an existing login object.
  * @param pSelf         An already-loaded login object.
