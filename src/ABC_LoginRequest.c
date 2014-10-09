@@ -153,10 +153,6 @@ void *ABC_LoginRequestThreaded(void *pData)
             // change the password
             CC = ABC_LoginChangePassword(pInfo->szUserName, pInfo->szPassword,
                 pInfo->szRecoveryAnswers, pInfo->szNewPassword, &(results.errorInfo));
-
-            // hack to set pin:
-            tABC_Error error;
-            ABC_SetPIN(pInfo->szUserName, pInfo->szPassword, pInfo->szPIN, &error);
         }
 
 
