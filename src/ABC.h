@@ -690,7 +690,7 @@ extern "C" {
     tABC_CC ABC_ChangePassword(const char *szUserName,
                                const char *szPassword,
                                const char *szNewPassword,
-                               const char *szNewPIN,
+                               const char *szDeprecated,
                                tABC_Request_Callback fRequestCallback,
                                void *pData,
                                tABC_Error *pError);
@@ -698,7 +698,7 @@ extern "C" {
     tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
                                                   const char *szRecoveryAnswers,
                                                   const char *szNewPassword,
-                                                  const char *szNewPIN,
+                                                  const char *szDeprecated,
                                                   tABC_Request_Callback fRequestCallback,
                                                   void *pData,
                                                   tABC_Error *pError);
