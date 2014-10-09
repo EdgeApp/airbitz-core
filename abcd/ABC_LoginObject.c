@@ -700,6 +700,7 @@ tABC_CC ABC_LoginObjectLoadCarePackage(tABC_LoginObject *pSelf,
     // If that didn't work, fetch the package from the server:
     if (!szCarePackage)
         goto exit;
+    cc = ABC_CC_Ok;
 
     // Parse the JSON:
     json_error_t error;
@@ -770,6 +771,7 @@ tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
     // If that didn't work, we have an error:
     if (!szLoginPackage)
         goto exit;
+    cc = ABC_CC_Ok;
 
     // Parse the JSON:
     json_error_t error;
