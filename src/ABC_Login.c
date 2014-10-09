@@ -8,6 +8,7 @@
 
 #include "ABC_Login.h"
 #include "ABC_LoginObject.h"
+#include "ABC_LoginServer.h"
 #include "ABC_General.h"
 #include "ABC_Wallet.h"
 #include "util/ABC_Mutex.h"
@@ -21,6 +22,7 @@ static void ABC_LoginCacheClearOther(const char *szUserName);
 static tABC_CC ABC_LoginCacheObject(const char *szUserName, const char *szPassword, tABC_Error *pError);
 static tABC_CC ABC_LoginMutexLock(tABC_Error *pError);
 static tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError);
+static tABC_CC ABC_LoginServerKeyCopy(const char *szUserName, const char *szPassword, tABC_U08Buf L1Copy, tABC_U08Buf LP1Copy, tABC_Error *pError);
 
 /**
  * Clears the cached login object.
@@ -401,6 +403,35 @@ exit:
     return cc;
 }
 
+static
+tABC_CC ABC_LoginServerKeyCopy(const char *szUserName,
+                               const char *szPassword,
+                               tABC_U08Buf L1Copy,
+                               tABC_U08Buf LP1Copy,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_U08Buf L1  = ABC_BUF_NULL;
+    tABC_U08Buf LP1 = ABC_BUF_NULL;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPassword);
+
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
+
+    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_LoginObjectGetServerKeys(gLoginCache, &L1, &LP1, pError));
+
+    ABC_BUF_DUP(L1Copy, L1);
+    ABC_BUF_DUP(LP1Copy, LP1);
+
+exit:
+    ABC_LoginMutexUnlock(NULL);
+
+    return cc;
+}
+
 /**
  * Downloads and saves a new LoginPackage from the server.
  */
@@ -410,18 +441,23 @@ tABC_CC ABC_LoginUpdateLoginPackageFromServer(const char *szUserName,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    tABC_U08Buf L1       = ABC_BUF_NULL;
+    tABC_U08Buf LP1      = ABC_BUF_NULL;
+    tABC_U08Buf LRA1     = ABC_BUF_NULL;
+    char *szLoginPackage = NULL;
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
 
-    // Load the account into the cache:
-    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_LoginServerKeyCopy(szUserName, szPassword, L1, LP1, pError));
 
-    // Do the update:
-    ABC_CHECK_RET(ABC_LoginObjectUpdateLoginPackage(gLoginCache, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &szLoginPackage, pError));
 
 exit:
-    ABC_LoginMutexUnlock(NULL);
+    ABC_BUF_FREE(L1);
+    ABC_BUF_FREE(LP1);
+    ABC_FREE_STR(szLoginPackage);
+
     return cc;
 }
 

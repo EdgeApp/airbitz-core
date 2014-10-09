@@ -39,9 +39,6 @@ extern "C" {
                                 int *pDirty,
                                 tABC_Error *pError);
 
-    tABC_CC ABC_LoginObjectUpdateLoginPackage(tABC_LoginObject *pSelf,
-                                              tABC_Error *pError);
-
     // Write accessors:
     tABC_CC ABC_LoginObjectSetPassword(tABC_LoginObject *pSelf,
                                        const char *szPassword,
