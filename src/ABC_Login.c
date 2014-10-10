@@ -22,7 +22,7 @@ static void ABC_LoginCacheClearOther(const char *szUserName);
 static tABC_CC ABC_LoginCacheObject(const char *szUserName, const char *szPassword, tABC_Error *pError);
 static tABC_CC ABC_LoginMutexLock(tABC_Error *pError);
 static tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError);
-static tABC_CC ABC_LoginServerKeyCopy(const char *szUserName, const char *szPassword, tABC_U08Buf L1Copy, tABC_U08Buf LP1Copy, tABC_Error *pError);
+static tABC_CC ABC_LoginCopyServerKeys(const char *szUserName, const char *szPassword, tABC_U08Buf *pL1Copy, tABC_U08Buf *pLP1Copy, tABC_Error *pError);
 
 /**
  * Clears the cached login object.
@@ -404,27 +404,27 @@ exit:
 }
 
 static
-tABC_CC ABC_LoginServerKeyCopy(const char *szUserName,
-                               const char *szPassword,
-                               tABC_U08Buf L1Copy,
-                               tABC_U08Buf LP1Copy,
-                               tABC_Error *pError)
+tABC_CC ABC_LoginCopyServerKeys(const char *szUserName,
+                                const char *szPassword,
+                                tABC_U08Buf *pL1Copy,
+                                tABC_U08Buf *pLP1Copy,
+                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_U08Buf L1  = ABC_BUF_NULL;
     tABC_U08Buf LP1 = ABC_BUF_NULL;
 
+    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
-
-    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
 
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
     ABC_CHECK_RET(ABC_LoginObjectGetServerKeys(gLoginCache, &L1, &LP1, pError));
 
-    ABC_BUF_DUP(L1Copy, L1);
-    ABC_BUF_DUP(LP1Copy, LP1);
+    ABC_BUF_DUP(*pL1Copy, L1);
+    ABC_BUF_DUP(*pLP1Copy, LP1);
 
 exit:
     ABC_LoginMutexUnlock(NULL);
@@ -449,7 +449,7 @@ tABC_CC ABC_LoginUpdateLoginPackageFromServer(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
 
-    ABC_CHECK_RET(ABC_LoginServerKeyCopy(szUserName, szPassword, L1, LP1, pError));
+    ABC_CHECK_RET(ABC_LoginCopyServerKeys(szUserName, szPassword, &L1, &LP1, pError));
 
     ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &szLoginPackage, pError));
 
