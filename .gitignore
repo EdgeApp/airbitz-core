@@ -6,3 +6,4 @@
 *.vpw
 *.vpwhistu
 /build
+/abcd/config.h
