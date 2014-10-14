@@ -7,3 +7,4 @@
 *.vpwhistu
 /build
 /abcd/config.h
+/src/config.h
