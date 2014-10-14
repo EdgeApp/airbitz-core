@@ -29,6 +29,7 @@
 #define JSON_ACCT_PIN_FIELD                     "PIN"
 #define JSON_ACCT_NAME_ON_PAYMENTS_FIELD        "nameOnPayments"
 #define JSON_ACCT_MINUTES_AUTO_LOGOUT_FIELD     "minutesAutoLogout"
+#define JSON_ACCT_RECOVERY_REMINDER_COUNT       "recoveryReminderCount"
 #define JSON_ACCT_LANGUAGE_FIELD                "language"
 #define JSON_ACCT_NUM_CURRENCY_FIELD            "numCurrency"
 #define JSON_ACCT_EX_RATE_SOURCES_FIELD         "exchangeRateSources"
@@ -249,6 +250,7 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     pSettings->szNickname = NULL;
     pSettings->bNameOnPayments = false;
     pSettings->minutesAutoLogout = 60;
+    pSettings->recoveryReminderCount = 0;
     ABC_STRDUP(pSettings->szLanguage, "en");
     pSettings->currencyNum = CURRENCY_NUM_USD;
 
@@ -381,6 +383,14 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_MINUTES_AUTO_LOGOUT_FIELD);
         ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
         pSettings->minutesAutoLogout = (int) json_integer_value(pJSON_Value);
+
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_RECOVERY_REMINDER_COUNT);
+        if (pJSON_Value) {
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
+            pSettings->recoveryReminderCount = (int) json_integer_value(pJSON_Value);
+        } else {
+            pSettings->recoveryReminderCount = 0;
+        }
 
         // get language
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_LANGUAGE_FIELD);
@@ -584,6 +594,10 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
 
     // set minutes auto logout
     retVal = json_object_set_new(pJSON_Root, JSON_ACCT_MINUTES_AUTO_LOGOUT_FIELD, json_integer(pSettings->minutesAutoLogout));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // set recovery reminder count
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_RECOVERY_REMINDER_COUNT, json_integer(pSettings->recoveryReminderCount));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // set language
