@@ -567,6 +567,8 @@ extern "C" {
         bool                        bNameOnPayments;
         /** how many minutes before auto logout */
         int                         minutesAutoLogout;
+        /** Number of times we have reminded the user to setup recovery q's */
+        int                         recoveryReminderCount;
         /** language (ISO 639-1) */
         char                        *szLanguage;
         /** default ISO 4217 currency code */
