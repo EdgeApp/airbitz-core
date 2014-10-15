@@ -3,8 +3,14 @@ inherit lib
 source="https://github.com/Airbitz/secp256k1.git#61a20351"
 
 build() {
+    # Optimize:
+    export CFLAGS=-O2
+    sed -i 's/#define WINDOW_G 14/#define WINDOW_G 12/' src/ecmult_impl.h
+
+    # Build:
     autoreconf -i
     ./configure --enable-static --disable-shared  --disable-tests --host=$cross --prefix=$install_dir
+    make clean
     make
     make install
 }
