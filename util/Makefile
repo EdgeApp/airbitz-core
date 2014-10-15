@@ -9,6 +9,7 @@ default: build/account-decrypt.bin \
          build/account-encrypt.bin \
          build/add-category.bin \
          build/change-password.bin \
+         build/check-password.bin \
          build/check-recovery-answers.bin \
          build/create-account.bin \
          build/create-wallet.bin \

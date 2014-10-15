@@ -2064,7 +2064,7 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     ABC_CHECK_NULL(paRules);
     ABC_CHECK_NULL(pCountRules);
 
-    // we know there will be 5 rules (lots of magic numbers in this function...sorry)
+    // we know there will be 4 rules (lots of magic numbers in this function...sorry)
     ABC_ALLOC(aRules, sizeof(tABC_PasswordRule *) * 4);
 
     // must have upper case letter
