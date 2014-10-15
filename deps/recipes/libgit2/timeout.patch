@@ -1,0 +1,65 @@
+diff --git a/src/netops.c b/src/netops.c
+index 8a60299..09ec8e2 100644
+--- a/src/netops.c
++++ b/src/netops.c
+@@ -429,6 +429,40 @@ static int gitno__close(GIT_SOCKET s)
+ #endif
+ }
+ 
++static
++int timeout_connect(int sock, struct sockaddr *addr,
++					socklen_t addr_len, struct timeval *tv)
++{
++	fd_set fdset;
++	int flags = 0;
++	int so_error;
++	socklen_t len = sizeof(so_error);
++
++	if ((flags = fcntl(sock, F_GETFL, 0)) < 0)
++		return -1;
++
++	if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0)
++		return -1;
++
++	if (connect(sock, addr, addr_len) == 0)
++		goto exit;
++
++	FD_ZERO(&fdset);
++	FD_SET(sock, &fdset);
++
++	if (select(sock + 1, NULL, &fdset, NULL, tv) > 0)
++	{
++		getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
++		if (so_error == 0)
++			goto exit;
++	}
++	return -1;
++exit:
++	if (fcntl(sock, F_SETFL, flags) < 0)
++		return -1;
++	return 0;
++}
++
+ int gitno_connect(gitno_socket *s_out, const char *host, const char *port, int flags)
+ {
+ 	struct addrinfo *info = NULL, *p;
+@@ -436,6 +470,10 @@ int gitno_connect(gitno_socket *s_out, const char *host, const char *port, int f
+ 	GIT_SOCKET s = INVALID_SOCKET;
+ 	int ret;
+ 
++	struct timeval sto;
++	sto.tv_sec = 10;
++	sto.tv_usec = 0;
++
+ #ifdef GIT_WIN32
+ 	/* on win32, the WSA context needs to be initialized
+ 	 * before any socket calls can be performed */
+@@ -474,7 +512,7 @@ int gitno_connect(gitno_socket *s_out, const char *host, const char *port, int f
+ 			break;
+ 		}
+ 
+-		if (connect(s, p->ai_addr, (socklen_t)p->ai_addrlen) == 0)
++		if (timeout_connect(s, p->ai_addr, p->ai_addrlen, &sto) == 0)
+ 			break;
+ 
+ 		/* If we can't connect, try the next one */
