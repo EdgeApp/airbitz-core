@@ -2054,7 +2054,9 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     tABC_PasswordRule *pRuleLC = NULL;
     tABC_PasswordRule *pRuleUC = NULL;
     tABC_PasswordRule *pRuleNum = NULL;
-    tABC_PasswordRule *pRuleSpec = NULL;
+    // We don't require a special character, but we still include it in our
+    // time to crack calculations
+    bool bSpecChar = false;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szPassword);
@@ -2063,7 +2065,7 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     ABC_CHECK_NULL(pCountRules);
 
     // we know there will be 5 rules (lots of magic numbers in this function...sorry)
-    ABC_ALLOC(aRules, sizeof(tABC_PasswordRule *) * 5);
+    ABC_ALLOC(aRules, sizeof(tABC_PasswordRule *) * 4);
 
     // must have upper case letter
     ABC_ALLOC(pRuleUC, sizeof(tABC_PasswordRule));
@@ -2084,13 +2086,6 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     ABC_STRDUP(pRuleNum->szDescription, "Must have at least one number");
     pRuleNum->bPassed = false;
     aRules[count] = pRuleNum;
-    count++;
-
-    // must have special character
-    ABC_ALLOC(pRuleSpec, sizeof(tABC_PasswordRule));
-    ABC_STRDUP(pRuleSpec->szDescription,  "Must have at least one special character");
-    pRuleSpec->bPassed = false;
-    aRules[count] = pRuleSpec;
     count++;
 
     // must have 10 characters
@@ -2129,7 +2124,7 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
         }
         else
         {
-            pRuleSpec->bPassed = true;
+            bSpecChar = true;
         }
     }
 
@@ -2165,7 +2160,7 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
         {
             N += 10; // number of numeric charcters
         }
-        if (pRuleSpec->bPassed)
+        if (bSpecChar)
         {
             N += 35; // number of non-alphanumeric characters on keyboard (iOS)
         }
