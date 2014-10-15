@@ -4,8 +4,11 @@ source="https://github.com/Airbitz/secp256k1.git#61a20351"
 
 build() {
     # Optimize:
-    export CFLAGS=-O2
-    sed -i 's/#define WINDOW_G 14/#define WINDOW_G 12/' src/ecmult_impl.h
+    case $(uname -sm) in
+    "Linux x86_64")
+        export CFLAGS=-O2
+        sed -i 's/#define WINDOW_G 14/#define WINDOW_G 12/' src/ecmult_impl.h ;;
+    esac
 
     # Build:
     autoreconf -i
