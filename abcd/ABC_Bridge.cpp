@@ -868,15 +868,10 @@ tABC_CC ABC_BridgeMaxSpendable(const char *szUserName,
 
         // Calculate total of utxos for these addresses
         ABC_DebugLog("Get UTOXs for %d\n", countAddresses);
-        for (unsigned i = 0; i < countAddresses; ++i)
+        auto utxos = row->second->watcher->get_utxos(true);
+        for (const auto& utxo: utxos)
         {
-            bc::payment_address pa;
-            ABC_CHECK_ASSERT(true == pa.set_encoded(paAddresses[i]),
-                ABC_CC_Error, "Bad source address");
-            for (auto l : row->second->watcher->get_utxos(pa))
-            {
-                total += l.value;
-            }
+            total += utxo.value;
         }
         if (!bTransfer)
         {

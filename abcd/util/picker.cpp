@@ -47,14 +47,7 @@ BC_API bool make_tx(
     utx.tx.outputs = outputs;
 
     // Gather all the unspent outputs in the wallet:
-    output_info_list unspent;
-    for (auto pa : addresses)
-    {
-        for (auto npa : watcher.get_utxos(pa))
-        {
-            unspent.push_back(npa);
-        }
-    }
+    auto unspent = watcher.get_utxos(true);
 
     // Select a collection of outputs that satisfies our requirements:
     select_outputs_result utxos = select_outputs(unspent, amountSatoshi);
