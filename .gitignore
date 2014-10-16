@@ -5,3 +5,4 @@
 /deps/build
 /deps/build.testnet
 *~
+/src/config.h
