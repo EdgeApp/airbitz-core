@@ -42,9 +42,11 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 #include <pthread.h>
+#include <openssl/ssl.h>
 #include "ABC.h"
 #include "ABC_FileIO.h"
 #include "ABC_Util.h"
+#include "ABC_Pin.h"
 #include "ABC_Debug.h"
 #include "ABC_URL.h"
 #include "ABC_ServerDefs.h"
@@ -53,7 +55,8 @@ static char *gszCaCertPath = NULL;
 static bool gbInitialized = false;
 static pthread_mutex_t  gMutex; // to block multiple threads from accessing curl at the same time
 
-static size_t ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
+static CURLcode ABC_URLSSLCallback(CURL *curl, void *ssl_ctx, void *userptr);
+static size_t   ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 
 /**
  * Initialize the URL system
@@ -141,7 +144,6 @@ tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
-
     if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, ABC_URLCurlWriteData)) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
@@ -208,6 +210,14 @@ exit:
     return cc;
 }
 
+static
+CURLcode ABC_URLSSLCallback(CURL *curl, void *ssl_ctx, void *userptr)
+{
+    SSL_CTX_set_verify((SSL_CTX *)ssl_ctx,
+        SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE, ABC_PinCertCallback);
+    return 0;
+}
+
 /**
  * Makes a URL post request.
  *
@@ -241,6 +251,8 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
     // Set the ca certificate
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_CAINFO, gszCaCertPath)) == 0,
         ABC_CC_Error, "Curl failed to set ca-certificates.crt");
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_SSL_CTX_FUNCTION, ABC_URLSSLCallback)) == 0,
+        ABC_CC_Error, "Curl failed to set ssl callback");
 
     // set the URL
     if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, szURL)) != 0)
