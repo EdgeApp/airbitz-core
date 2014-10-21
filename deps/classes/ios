@@ -30,9 +30,10 @@ build_ios() {
     export CPP="clang -E"
     export CXX="clang++"
 
-    export CFLAGS="-arch $1 -isysroot $platform_dir/SDKs/${2}7.1.sdk -miphoneos-version-min=7.0 -isystem${install_dir}/include"
-    export CXXFLAGS="-arch $1 -isysroot $platform_dir/SDKs/${2}7.1.sdk -miphoneos-version-min=7.0 -isystem${install_dir}/include"
-    export LDFLAGS="-arch $1 -isysroot $platform_dir/SDKs/${2}7.1.sdk -miphoneos-version-min=7.0 -L${install_dir}/lib"
+    sdk_flags="-arch $1 -isysroot $platform_dir/SDKs/${2}7.1.sdk -miphoneos-version-min=7.0 -O2"
+    export CFLAGS="$sdk_flags -isystem${install_dir}/include"
+    export CXXFLAGS="$sdk_flags -isystem${install_dir}/include"
+    export LDFLAGS="$sdk_flags -L${install_dir}/lib"
 
     export PATH=$xcode_dir/Toolchains/XcodeDefault.xctoolchain/usr/bin:$xcode_dir/usr/bin:$PATH
     export PKG_CONFIG_PATH=$install_dir/lib/pkgconfig

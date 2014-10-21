@@ -28,8 +28,8 @@ build_android() {
     export STRINGS="${cross}-strings"
     export STRIP="${cross}-strip"
 
-    export CFLAGS="-fPIC -isystem${install_dir}/include"
-    export CXXFLAGS="-fPIC -isystem${install_dir}/include"
+    export CFLAGS="-isystem${install_dir}/include -fPIC -O2"
+    export CXXFLAGS="-isystem${install_dir}/include -fPIC -O2"
     export LDFLAGS="-L${install_dir}/lib"
 
     export PATH=$build_dir/ndk/$1/bin:$PATH
