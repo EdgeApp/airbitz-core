@@ -4,7 +4,6 @@ source="https://github.com/Airbitz/secp256k1.git#61a20351"
 
 build() {
     # Optimize:
-    export CFLAGS="$CFLAGS -O2"
     patch -p1 < $recipe_dir/optimize.patch
 
     # Build:
