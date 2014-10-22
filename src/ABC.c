@@ -44,6 +44,7 @@
 #include "ABC_Bridge.h"
 #include "ABC_Export.h"
 #include "ABC_Wallet.h"
+#include "ABC_WalletAsync.h"
 #include "ABC_Tx.h"
 #include "ABC_Exchanges.h"
 #include "util/ABC_Crypto.h"
@@ -346,7 +347,7 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
 
     if (fRequestCallback)
     {
-    tABC_LoginRequestInfo *pInfo = NULL;
+        tABC_LoginRequestInfo *pInfo = NULL;
 
         ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pInfo,
                                                   ABC_RequestType_SetAccountRecoveryQuestions,
@@ -408,7 +409,6 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_WalletCreateInfo *pWalletCreateInfo = NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
@@ -418,17 +418,19 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_CHECK_NULL(szWalletName);
     ABC_CHECK_ASSERT(strlen(szWalletName) > 0, ABC_CC_Error, "No wallet name provided");
 
-    ABC_CHECK_RET(ABC_WalletCreateInfoAlloc(&pWalletCreateInfo,
-                                            szUserName,
-                                            szPassword,
-                                            szWalletName,
-                                            currencyNum,
-                                            attributes,
-                                            fRequestCallback,
-                                            pData,
-                                            pError));
     if (fRequestCallback)
     {
+        tABC_WalletCreateInfo *pWalletCreateInfo = NULL;
+        ABC_CHECK_RET(ABC_WalletCreateInfoAlloc(&pWalletCreateInfo,
+                                                szUserName,
+                                                szPassword,
+                                                szWalletName,
+                                                currencyNum,
+                                                attributes,
+                                                fRequestCallback,
+                                                pData,
+                                                pError));
+
         pthread_t handle;
         if (!pthread_create(&handle, NULL, ABC_WalletCreateThreaded, pWalletCreateInfo))
         {
@@ -441,8 +443,8 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
         char * output = NULL;
         ABC_ALLOC(output, 100*sizeof(char));
         results->pRetData = output;
-        cc = ABC_WalletCreate(pWalletCreateInfo, (char**) &(results->pRetData), pError);
-        ABC_WalletCreateInfoFree(pWalletCreateInfo);
+        ABC_CHECK_RET(ABC_WalletCreate(szUserName, szPassword, szWalletName,
+            currencyNum, attributes, (char**) &(results->pRetData), pError));
     }
 
 exit:
