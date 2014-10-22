@@ -46,41 +46,6 @@
 extern "C" {
 #endif
 
-    /**
-     * AirBitz Core Create Wallet Structure
-     *
-     * This structure contains the detailed information associated
-     * with creating a new wallet.
-     *
-     */
-    typedef struct sABC_WalletCreateInfo
-    {
-        /** data pointer given by caller at initial create call time */
-        void                    *pData;
-
-        char                    *szUserName;
-        char                    *szPassword;
-        char                    *szWalletName;
-        int                     currencyNum;
-        unsigned int            attributes;
-        tABC_Request_Callback   fRequestCallback;
-    } tABC_WalletCreateInfo;
-
-
-    tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
-                                      const char *szUserName,
-                                      const char *szPassword,
-                                      const char *szWalletName,
-                                      int        currencyNum,
-                                      unsigned int  attributes,
-                                      tABC_Request_Callback fRequestCallback,
-                                      void *pData,
-                                      tABC_Error *pError);
-
-    void ABC_WalletCreateInfoFree(tABC_WalletCreateInfo *pWalletCreateInfo);
-
-    void * ABC_WalletCreateThreaded(void *pData);
-
     tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
 
     tABC_CC ABC_WalletClearCache(tABC_Error *pError);
@@ -149,7 +114,11 @@ extern "C" {
                                        tABC_Error *pError);
 
     // Blocking functions:
-    tABC_CC ABC_WalletCreate(tABC_WalletCreateInfo *pInfo,
+    tABC_CC ABC_WalletCreate(const char *szUserName,
+                             const char *szPassword,
+                             const char *szWalletName,
+                             int  currencyNum,
+                             unsigned int attributes,
                              char **pszUUID,
                              tABC_Error *pError);
 
