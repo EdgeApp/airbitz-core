@@ -80,8 +80,6 @@ typedef struct sWalletData
 {
     char            *szUUID;
     char            *szName;
-    char            *szUserName;
-    char            *szPassword;
     char            *szWalletDir;
     char            *szWalletSyncDir;
     char            *szWalletAcctKey;
@@ -144,12 +142,10 @@ tABC_CC ABC_WalletCreate(const char *szUserName,
 
     // create a new wallet data struct
     ABC_ALLOC(pData, sizeof(tWalletData));
-    ABC_STRDUP(pData->szUserName, szUserName);
-    ABC_STRDUP(pData->szPassword, szPassword);
     pData->archived = 0;
 
     // get L1 & LP1:
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(pData->szUserName, pData->szPassword, &L1, &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
 
     // create wallet guid
     ABC_CHECK_RET(ABC_CryptoGenUUIDString(&szUUID, pError));
@@ -213,18 +209,18 @@ tABC_CC ABC_WalletCreate(const char *szUserName,
     info.BitcoinSeed = pData->BitcoinPrivateSeed;
     info.SyncKey = WalletAcctKey;
     info.archived = 0;
-    ABC_CHECK_RET(ABC_LoginGetSyncKeys(pData->szUserName, pData->szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_AccountWalletList(pKeys, NULL, &info.sortIndex, pError));
     ABC_CHECK_RET(ABC_AccountWalletSave(pKeys, &info, pError));
 
     // Now the wallet is written to disk, generate some addresses
     ABC_CHECK_RET(ABC_TxCreateInitialAddresses(
-                    pData->szUserName, pData->szPassword,
+                    szUserName, szPassword,
                     pData->szUUID, pError));
 
     // After wallet is created, sync the account, ignoring any errors
     tABC_Error Error;
-    ABC_CHECK_RET(ABC_LoginSyncData(szUserName, szPassword, &dirty, &Error));
+    ABC_CHECK_RET(ABC_SyncRepo(pKeys->szSyncDir, pKeys->szSyncKey, &dirty, &Error));
 
     pData = NULL; // so we don't free what we just added to the cache
 exit:
@@ -723,14 +719,6 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
 
         // if we don't do this, we'll free it below but it isn't ours, it is from the cache
         pData = NULL;
-
-        // if the username and password doesn't match
-        if ((0 != strcmp((*ppData)->szUserName, szUserName)) ||
-            (0 != strcmp((*ppData)->szPassword, szPassword)))
-        {
-            *ppData = NULL;
-            ABC_RET_ERROR(ABC_CC_Error, "Incorrect username and password for wallet UUID");
-        }
     }
     else
     {
@@ -738,8 +726,6 @@ tABC_CC ABC_WalletCacheData(const char *szUserName, const char *szPassword, cons
 
         // create a new wallet data struct
         ABC_ALLOC(pData, sizeof(tWalletData));
-        ABC_STRDUP(pData->szUserName, szUserName);
-        ABC_STRDUP(pData->szPassword, szPassword);
         ABC_STRDUP(pData->szUUID, szUUID);
         ABC_CHECK_RET(ABC_WalletGetDirName(&(pData->szWalletDir), szUUID, pError));
         ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), szUUID, pError));
@@ -1007,10 +993,6 @@ void ABC_WalletFreeData(tWalletData *pData)
         ABC_FREE_STR(pData->szUUID);
 
         ABC_FREE_STR(pData->szName);
-
-        ABC_FREE_STR(pData->szUserName);
-
-        ABC_FREE_STR(pData->szPassword);
 
         ABC_FREE_STR(pData->szWalletDir);
 
