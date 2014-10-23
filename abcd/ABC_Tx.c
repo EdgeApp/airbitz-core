@@ -323,8 +323,8 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // Fetch Private Seed
     ABC_CHECK_RET(
         ABC_WalletGetBitcoinPrivateSeed(
-            pInfo->szUserName, pInfo->szPassword,
-            pInfo->szWalletUUID, &privSeed, pError));
+            ABC_WalletID(pInfo->szUserName, pInfo->szPassword,
+            pInfo->szWalletUUID), &privSeed, pError));
     // Fetch the private addresses
     ABC_CHECK_RET(
         ABC_TxGetPrivAddresses(pInfo->szUserName, pInfo->szPassword,
@@ -890,7 +890,7 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
                         pTx, paOutAddresses, outAddressCount, pError));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
-        ABC_CHECK_RET(ABC_WalletDirtyCache(szUserName, szPassword, szWalletUUID, pError));
+        ABC_CHECK_RET(ABC_WalletDirtyCache(ABC_WalletID(szUserName, szPassword, szWalletUUID), pError));
 
         if (fAsyncBitCoinEventCallback)
         {
@@ -913,7 +913,7 @@ tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
                         pTx, paOutAddresses, outAddressCount, pError));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
-        ABC_CHECK_RET(ABC_WalletDirtyCache(szUserName, szPassword, szWalletUUID, pError));
+        ABC_CHECK_RET(ABC_WalletDirtyCache(ABC_WalletID(szUserName, szPassword, szWalletUUID), pError));
 
         if (fAsyncBitCoinEventCallback)
         {
@@ -1158,7 +1158,7 @@ tABC_CC ABC_TxCreateNewAddress(const char *szUserName,
             {
                 char *szRegenAddress = NULL;
                 tABC_U08Buf Seed = ABC_BUF_NULL;
-                ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeedDisk(szUserName, szPassword, szWalletUUID, &Seed, pError));
+                ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeedDisk(ABC_WalletID(szUserName, szPassword, szWalletUUID), &Seed, pError));
                 ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&szRegenAddress, Seed, aAddresses[i]->seq, pError));
 
                 if (strncmp(aAddresses[i]->szPubAddress, szRegenAddress, strlen(aAddresses[i]->szPubAddress)) == 0)
@@ -1240,7 +1240,7 @@ tABC_CC ABC_TxCreateNewAddressForN(const char *szUserName, const char *szPasswor
 
     // get the private seed so we can generate the public address
     tABC_U08Buf Seed = ABC_BUF_NULL;
-    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeedDisk(szUserName, szPassword, szWalletUUID, &Seed, pError));
+    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeedDisk(ABC_WalletID(szUserName, szPassword, szWalletUUID), &Seed, pError));
 
     // generate the public address
     pAddress->szPubAddress = NULL;
@@ -2832,7 +2832,7 @@ tABC_CC ABC_TxCreateTxFilename(char **pszFilename, const char *szUserName, const
 
     // Get the master key we will need to encode the filename
     // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+    ABC_CHECK_RET(ABC_WalletGetMK(ABC_WalletID(szUserName, szPassword, szWalletUUID), &MK, pError));
 
     ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
 
@@ -2890,7 +2890,7 @@ tABC_CC ABC_TxLoadTransaction(const char *szUserName,
 
     // Get the master key we will need to decode the transaction data
     // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+    ABC_CHECK_RET(ABC_WalletGetMK(ABC_WalletID(szUserName, szPassword, szWalletUUID), &MK, pError));
 
     // make sure the transaction exists
     bool bExists = false;
@@ -3196,7 +3196,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
 
     // Get the master key we will need to encode the transaction data
     // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+    ABC_CHECK_RET(ABC_WalletGetMK(ABC_WalletID(szUserName, szPassword, szWalletUUID), &MK, pError));
 
     // create the json for the transaction
     pJSON_Root = json_object();
@@ -3256,7 +3256,7 @@ tABC_CC ABC_TxSaveTransaction(const char *szUserName,
     // save out the transaction object to a file encrypted with the master key
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, MK, ABC_CryptoType_AES256, szFilename, pError));
 
-    ABC_CHECK_RET(ABC_WalletDirtyCache(szUserName, szPassword, szWalletUUID, pError));
+    ABC_CHECK_RET(ABC_WalletDirtyCache(ABC_WalletID(szUserName, szPassword, szWalletUUID), pError));
 exit:
     ABC_FREE_STR(szFilename);
     ABC_CLEAR_FREE(ppJSON_Output, sizeof(json_t *) * pTx->countOutputs);
@@ -3501,7 +3501,7 @@ tABC_CC ABC_TxLoadAddressFile(const char *szUserName,
 
     // Get the master key we will need to decode the transaction data
     // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+    ABC_CHECK_RET(ABC_WalletGetMK(ABC_WalletID(szUserName, szPassword, szWalletUUID), &MK, pError));
 
     // make sure the addresss exists
     bool bExists = false;
@@ -3663,7 +3663,7 @@ tABC_CC ABC_TxSaveAddress(const char *szUserName,
 
     // Get the master key we will need to encode the address data
     // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+    ABC_CHECK_RET(ABC_WalletGetMK(ABC_WalletID(szUserName, szPassword, szWalletUUID), &MK, pError));
 
     // create the json for the transaction
     pJSON_Root = json_object();
@@ -3801,7 +3801,7 @@ tABC_CC ABC_TxCreateAddressFilename(char **pszFilename, const char *szUserName, 
 
     // Get the master key we will need to encode the filename
     // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(szUserName, szPassword, szWalletUUID, &MK, pError));
+    ABC_CHECK_RET(ABC_WalletGetMK(ABC_WalletID(szUserName, szPassword, szWalletUUID), &MK, pError));
 
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
 
