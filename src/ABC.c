@@ -725,7 +725,7 @@ tABC_CC ABC_RenameWallet(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_WalletSetName(szUserName, szPassword, szUUID, szNewWalletName, pError));
+    ABC_CHECK_RET(ABC_WalletSetName(ABC_WalletID(szUserName, szPassword, szUUID), szNewWalletName, pError));
 
 exit:
 
@@ -826,7 +826,7 @@ tABC_CC ABC_GetWalletInfo(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_WalletGetInfo(szUserName, szPassword, szUUID, ppWalletInfo, pError));
+    ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(szUserName, szPassword, szUUID), ppWalletInfo, pError));
     ABC_STRDUP((*ppWalletInfo)->szUserName, szUserName);
 
 exit:
@@ -873,7 +873,7 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
     // DO NOT free pSeedBuf
     // This points to an internal struct in the wallet cache
     //
-    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(szUserName, szPassword, szUUID, &pSeedBuf, pError));
+    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(szUserName, szPassword, szUUID), &pSeedBuf, pError));
     ABC_CHECK_RET(ABC_CryptoHexEncode(pSeedBuf, pszWalletSeed, pError));
 
 exit:
@@ -2396,7 +2396,7 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
     ABC_CHECK_NULL(fAsyncBitCoinEventCallback);
 
         // Sync the account data
-    ABC_CHECK_RET(ABC_WalletSyncData(szUserName, szPassword, szWalletUUID, &dirty, pError));
+    ABC_CHECK_RET(ABC_WalletSyncData(ABC_WalletID(szUserName, szPassword, szWalletUUID), &dirty, pError));
     if (dirty)
     {
         tABC_AsyncBitCoinInfo info;

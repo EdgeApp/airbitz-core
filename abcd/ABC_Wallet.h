@@ -46,24 +46,31 @@
 extern "C" {
 #endif
 
+    /* Temporary struct to bundle wallet identification. This will become
+     * an opaque pointer to the wallet itself at some point. */
+    typedef struct sABC_WalletID
+    {
+        const char *szUserName;
+        const char *szPassword;
+        const char *szUUID;
+    } tABC_WalletID;
+
+    tABC_WalletID ABC_WalletID(const char *szUserName,
+                               const char *szPassword,
+                               const char *szUUID);
+
     tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
 
     tABC_CC ABC_WalletClearCache(tABC_Error *pError);
 
-    tABC_CC ABC_WalletSetName(const char *szUserName,
-                              const char *szPassword,
-                              const char *szUUID,
+    tABC_CC ABC_WalletSetName(tABC_WalletID self,
                               const char *szName,
                               tABC_Error *pError);
 
-    tABC_CC ABC_WalletDirtyCache(const char *szUserName,
-                                 const char *szPassword,
-                                 const char *szUUID,
+    tABC_CC ABC_WalletDirtyCache(tABC_WalletID self,
                                  tABC_Error *pError);
 
-    tABC_CC ABC_WalletGetInfo(const char *szUserName,
-                              const char *szPassword,
-                              const char *szUUID,
+    tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
                               tABC_WalletInfo **ppWalletInfo,
                               tABC_Error *pError);
 
@@ -78,21 +85,15 @@ extern "C" {
     void ABC_WalletFreeInfoArray(tABC_WalletInfo **aWalletInfo,
                                  unsigned int nCount);
 
-    tABC_CC ABC_WalletGetMK(const char *szUserName,
-                            const char *szPassword,
-                            const char *szUUID,
+    tABC_CC ABC_WalletGetMK(tABC_WalletID self,
                             tABC_U08Buf *pMK,
                             tABC_Error *pError);
 
-    tABC_CC ABC_WalletGetBitcoinPrivateSeed(const char *szUserName,
-                                            const char *szPassword,
-                                            const char *szUUID,
+    tABC_CC ABC_WalletGetBitcoinPrivateSeed(tABC_WalletID self,
                                             tABC_U08Buf *pSeed,
                                             tABC_Error *pError);
 
-    tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(const char *szUserName,
-                                                const char *szPassword,
-                                                const char *szUUID,
+    tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self,
                                                 tABC_U08Buf *pSeed,
                                                 tABC_Error *pError);
 
@@ -122,9 +123,7 @@ extern "C" {
                               int *pDirty,
                               tABC_Error *pError);
 
-    tABC_CC ABC_WalletSyncData(const char *szUserName,
-                               const char *szPassword,
-                               const char *szUUID,
+    tABC_CC ABC_WalletSyncData(tABC_WalletID self,
                                int *pDirty,
                                tABC_Error *pError);
 
