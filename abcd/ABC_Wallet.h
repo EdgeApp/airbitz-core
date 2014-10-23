@@ -108,11 +108,6 @@ extern "C" {
                                         const char *szWalletUUID,
                                         tABC_Error *pError);
 
-    tABC_CC ABC_WalletCheckCredentials(const char *szUserName,
-                                       const char *szPassword,
-                                       const char *szUUID,
-                                       tABC_Error *pError);
-
     // Blocking functions:
     tABC_CC ABC_WalletCreate(const char *szUserName,
                              const char *szPassword,

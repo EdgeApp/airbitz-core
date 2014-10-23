@@ -1308,35 +1308,6 @@ exit:
 }
 
 /**
- * Checks if the username, password and Wallet UUID are valid.
- *
- * @param szUserName    UserName for validation
- * @param szPassword    Password for validation
- * @param szUUID        Wallet UUID
- */
-tABC_CC ABC_WalletCheckCredentials(const char *szUserName,
-                                   const char *szPassword,
-                                   const char *szUUID,
-                                   tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
-
-    // check that this is a valid user and password
-    ABC_CHECK_RET(ABC_LoginCheckCredentials(szUserName, szPassword, pError));
-
-    // cache up the wallet (this will check that the wallet UUID is valid)
-    tWalletData *pData = NULL;
-    ABC_CHECK_RET(ABC_WalletCacheData(szUserName, szPassword, szUUID, &pData, pError));
-exit:
-
-    return cc;
-}
-
-/**
  * Locks the mutex
  *
  * ABC_Wallet uses the same mutex as ABC_Login so that there will be no situation in
