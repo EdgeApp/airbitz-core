@@ -378,8 +378,8 @@ tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
     void *szWatchData     = NULL;
     char *szWatchData_Hex = NULL;
     json_t *pJSON_Root    = NULL;
-    tABC_U08Buf L1        = ABC_BUF_NULL; // Do not free
-    tABC_U08Buf LP1       = ABC_BUF_NULL; // Do not free
+    tABC_U08Buf L1        = ABC_BUF_NULL;
+    tABC_U08Buf LP1       = ABC_BUF_NULL;
     tABC_U08Buf LogData   = ABC_BUF_NULL;
     tABC_U08Buf WatchData = ABC_BUF_NULL;
     size_t watcherSize    = 0;
@@ -439,6 +439,8 @@ exit:
     ABC_FREE_STR(szLogFilename);
     ABC_FREE_STR(szLogData);
     ABC_FREE_STR(szLogData_Hex);
+    ABC_BUF_FREE(L1);
+    ABC_BUF_FREE(LP1);
     ABC_BUF_CLEAR(LogData);
 
     ABC_FREE_STR(szWatchFilename);
