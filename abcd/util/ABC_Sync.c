@@ -74,14 +74,15 @@ exit:
 }
 
 /**
- * Frees a tABC_SyncKeys structure. While the keys inside the structure do
- * not need to be freed, the string and the structure itself certainly do.
+ * Frees a tABC_SyncKeys structure and all its members.
  */
 void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys)
 {
     if (pKeys)
     {
         ABC_FREE_STR(pKeys->szSyncDir);
+        ABC_FREE_STR(pKeys->szSyncKey);
+        ABC_BUF_FREE(pKeys->MK);
         ABC_CLEAR_FREE(pKeys, sizeof(tABC_SyncKeys));
     }
 }

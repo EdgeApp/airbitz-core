@@ -532,8 +532,8 @@ tABC_CC ABC_LoginObjectGetSyncKeys(tABC_LoginObject *pSelf,
 
     ABC_ALLOC(pKeys, sizeof(tABC_SyncKeys));
     ABC_CHECK_RET(ABC_LoginGetSyncDirName(pSelf->szUserName, &pKeys->szSyncDir, pError));
-    ABC_BUF_SET(pKeys->MK, pSelf->MK);
-    pKeys->szSyncKey = pSelf->szSyncKey;
+    ABC_BUF_DUP(pKeys->MK, pSelf->MK);
+    ABC_STRDUP(pKeys->szSyncKey, pSelf->szSyncKey);
 
     *ppKeys = pKeys;
     pKeys = NULL;
