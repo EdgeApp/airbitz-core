@@ -243,6 +243,8 @@ exit:
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szUUID);
+    ABC_BUF_FREE(L1);
+    ABC_BUF_FREE(LP1);
     if (pKeys)              ABC_SyncFreeKeys(pKeys);
     if (pJSON_Data)         json_decref(pJSON_Data);
     if (pJSON_Wallets)      json_decref(pJSON_Wallets);

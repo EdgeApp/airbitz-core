@@ -547,8 +547,8 @@ exit:
 
 /**
  * Obtains an account object's user name.
- * @param pL1       The hashed user name. Do *not* free this.
- * @param pLP1      The hashed user name & password. Do *not* free this.
+ * @param pL1       The hashed user name. The caller must free this.
+ * @param pLP1      The hashed user name & password. The caller must free this.
  */
 tABC_CC ABC_LoginObjectGetServerKeys(tABC_LoginObject *pSelf,
                                      tABC_U08Buf *pL1,
@@ -558,8 +558,8 @@ tABC_CC ABC_LoginObjectGetServerKeys(tABC_LoginObject *pSelf,
     tABC_CC cc = ABC_CC_Ok;
     ABC_CHECK_NULL(pSelf);
 
-    ABC_BUF_SET(*pL1, pSelf->L1);
-    ABC_BUF_SET(*pLP1, pSelf->LP1);
+    ABC_BUF_DUP(*pL1, pSelf->L1);
+    ABC_BUF_DUP(*pLP1, pSelf->LP1);
 
 exit:
     return cc;
