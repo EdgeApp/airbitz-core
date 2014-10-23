@@ -42,6 +42,7 @@
 #include "ABC_Tx.h"
 #include "ABC_Account.h"
 #include "ABC_Login.h"
+#include "ABC_LoginServer.h"
 #include "ABC_ServerDefs.h"
 #include "util/ABC_Crypto.h"
 #include "util/ABC_FileIO.h"
@@ -56,9 +57,6 @@
 #define WALLET_KEY_LENGTH                       AES_256_KEY_LENGTH
 
 #define WALLET_BITCOIN_PRIVATE_SEED_LENGTH      32
-
-#define ABC_SERVER_JSON_REPO_WALLET_FIELD       "repo_wallet_key"
-#define ABC_SERVER_JSON_EREPO_WALLET_FIELD      "erepo_wallet_key"
 
 #define WALLET_DIR                              "Wallets"
 #define WALLET_SYNC_DIR                         "sync"
@@ -97,7 +95,6 @@ typedef struct sWalletData
 static unsigned int gWalletsCacheCount = 0;
 static tWalletData **gaWalletsCacheArray = NULL;
 
-static tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1, tABC_U08Buf LP1, const char *szRepoAcctKey, const char *szPath, tABC_Error *pError);
 static tABC_CC ABC_WalletSetCurrencyNum(const char *szUserName, const char *szPassword, const char *szUUID, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_WalletAddAccount(const char *szUserName, const char *szPassword, const char *szUUID, const char *szAccount, tABC_Error *pError);
 static tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError);
@@ -340,65 +337,6 @@ exit:
     ABC_FREE_STR(szSyncDirectory);
     ABC_FREE_STR(szDirectory);
     ABC_GeneralFreeInfo(pInfo);
-    return cc;
-}
-
-/**
- * Creates an git repo on the server.
- *
- * @param L1   Login hash for the account
- * @param LP1  Password hash for the account
- */
-static
-tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
-                                 tABC_U08Buf LP1,
-                                 const char *szWalletAcctKey,
-                                 const char *szPath,
-                                 tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szURL     = NULL;
-    char *szResults = NULL;
-    char *szPost    = NULL;
-    char *szL1_Base64 = NULL;
-    char *szLP1_Base64 = NULL;
-    json_t *pJSON_Root = NULL;
-
-    ABC_CHECK_NULL_BUF(L1);
-    ABC_CHECK_NULL_BUF(LP1);
-
-    // create the URL
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, szPath);
-
-    // create base64 versions of L1 and LP1
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
-
-    // create the post data
-    pJSON_Root = json_pack("{ssssss}",
-                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                        ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
-                        ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey);
-    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
-    json_decref(pJSON_Root);
-    pJSON_Root = NULL;
-    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
-
-    // send the command
-    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
-    ABC_DebugLog("Server results: %s", szResults);
-
-    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
-exit:
-    ABC_FREE_STR(szURL);
-    ABC_FREE_STR(szResults);
-    ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szL1_Base64);
-    ABC_FREE_STR(szLP1_Base64);
-    if (pJSON_Root)     json_decref(pJSON_Root);
-
     return cc;
 }
 
