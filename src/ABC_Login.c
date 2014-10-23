@@ -475,16 +475,16 @@ tABC_CC ABC_LoginSyncData(const char *szUserName,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
+    tABC_SyncKeys *pKeys = NULL;
 
-    // Load the account into the cache:
-    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+    // Get the sync keys:
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
 
-    // Do the update:
-    ABC_CHECK_RET(ABC_LoginObjectSync(gLoginCache, pDirty, pError));
+    // Do the sync:
+    ABC_CHECK_RET(ABC_SyncRepo(pKeys->szSyncDir, pKeys->szSyncKey, pDirty, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
