@@ -96,35 +96,6 @@ exit:
 }
 
 /**
- * Checks if the username and password are valid.
- *
- * If the login info is valid, the keys for this account
- * are also cached.
- * If the creditials are not valid, an error will be returned
- *
- * @param szUserName UserName for validation
- * @param szPassword Password for validation
- */
-tABC_CC ABC_LoginCheckCredentials(const char *szUserName,
-                                  const char *szPassword,
-                                  tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
-
-    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
-
-exit:
-    ABC_LoginMutexUnlock(NULL);
-
-    return cc;
-}
-
-/**
  * Signs into an account
  * This cache's the keys for an account
  */

@@ -1772,9 +1772,6 @@ tABC_CC ABC_TxGetTransaction(const char *szUserName,
     ABC_CHECK_NULL(ppTransaction);
     *ppTransaction = NULL;
 
-    // validate the creditials
-    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
-
     // find the filename of the existing transaction
 
     // first try the internal
@@ -1851,9 +1848,6 @@ tABC_CC ABC_TxGetTransactions(const char *szUserName,
     *paTransactions = NULL;
     ABC_CHECK_NULL(pCount);
     *pCount = 0;
-
-    // validate the creditials
-    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
 
     // get the directory name
     ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
@@ -2385,9 +2379,6 @@ tABC_CC ABC_TxSetTransactionDetails(const char *szUserName,
     ABC_CHECK_NULL(szID);
     ABC_CHECK_ASSERT(strlen(szID) > 0, ABC_CC_Error, "No transaction ID provided");
 
-    // validate the creditials
-    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
-
     // find the filename of the existing transaction
 
     // first try the internal
@@ -2471,9 +2462,6 @@ tABC_CC ABC_TxGetTransactionDetails(const char *szUserName,
     ABC_CHECK_NULL(szID);
     ABC_CHECK_ASSERT(strlen(szID) > 0, ABC_CC_Error, "No transaction ID provided");
     ABC_CHECK_NULL(ppDetails);
-
-    // validate the creditials
-    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
 
     // find the filename of the existing transaction
 
@@ -3978,9 +3966,6 @@ tABC_CC ABC_TxGetAddresses(const char *szUserName,
     ABC_CHECK_NULL(pCount);
     *pCount = 0;
 
-    // validate the creditials
-    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
-
     // get the directory name
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
 
@@ -4297,9 +4282,6 @@ tABC_CC ABC_TxTransactionExists(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
     ABC_CHECK_NULL(szID);
     ABC_CHECK_ASSERT(strlen(szID) > 0, ABC_CC_Error, "No transaction ID provided");
-
-    // validate the creditials
-    ABC_CHECK_RET(ABC_WalletCheckCredentials(szUserName, szPassword, szWalletUUID, pError));
 
     // first try the internal
     ABC_CHECK_RET(ABC_TxCreateTxFilename(&szFilename, szUserName, szPassword, szWalletUUID, szID, true, pError));

@@ -18,10 +18,6 @@ extern "C" {
 
     tABC_CC ABC_LoginClearKeyCache(tABC_Error *pError);
 
-    tABC_CC ABC_LoginCheckCredentials(const char *szUserName,
-                                      const char *szPassword,
-                                      tABC_Error *pError);
-
     // Blocking functions (see ABC_LoginRequest):
     tABC_CC ABC_LoginSignIn(const char *szUserName,
                             const char *szPassword,
