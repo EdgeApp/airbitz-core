@@ -62,6 +62,7 @@ typedef enum
     ABC_LRA3
 } tABC_KeyType;
 
+static tABC_CC ABC_LoginObjectSync(tABC_LoginObject *pSelf, int *pDirty, tABC_Error *pError);
 static tABC_CC ABC_LoginObjectFixUserName(const char *szUserName, char **pszOut, tABC_Error *pError);
 static tABC_CC ABC_LoginObjectSetupUser(tABC_LoginObject *pSelf, const char *szUserName, tABC_Error *pError);
 static tABC_CC ABC_LoginObjectLoadCarePackage(tABC_LoginObject *pSelf, tABC_Error *pError);
@@ -304,6 +305,7 @@ exit:
  * Syncs the repository with the server.
  * @param pSelf         An already-loaded login object.
  */
+static
 tABC_CC ABC_LoginObjectSync(tABC_LoginObject *pSelf,
                             int *pDirty,
                             tABC_Error *pError)
