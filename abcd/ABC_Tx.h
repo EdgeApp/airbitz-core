@@ -250,14 +250,6 @@ extern "C" {
                                 unsigned int *pCount,
                                 tABC_Error *pError);
 
-    tABC_CC ABC_TxGetPrivAddresses(const char *szUserName,
-                                   const char *szPassword,
-                                   const char *szWalletUUID,
-                                   tABC_U08Buf seed,
-                                   char ***paAddresses,
-                                   unsigned int *pCount,
-                                   tABC_Error *pError);
-
     tABC_CC ABC_TxWatchAddresses(const char *szUserName,
                                  const char *szPassword,
                                  const char *szWalletUUID,
