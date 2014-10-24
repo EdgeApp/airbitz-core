@@ -462,8 +462,7 @@ tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
     pJSON_array = json_array();
     for (int i = 0; i < nCount; ++i)
     {
-        ABC_CHECK_RET(ABC_BridgeWatchPath(szUserName, szPassword,
-                                          paWalletInfo[i]->szUUID,
+        ABC_CHECK_RET(ABC_BridgeWatchPath(paWalletInfo[i]->szUUID,
                                           &szWatchFilename, pError));
         ABC_CHECK_RET(ABC_FileIOReadFile(szWatchFilename, &szWatchData, &watcherSize, pError));
         ABC_BUF_SET_PTR(WatchData, szWatchData, watcherSize);

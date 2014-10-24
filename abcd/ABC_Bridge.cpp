@@ -71,9 +71,7 @@ struct WatcherInfo
     std::set<std::string> addresses;
     tABC_BitCoin_Event_Callback fAsyncCallback;
     void *pData;
-    char *szWalletUUID;
-    char *szUserName;
-    char *szPassword;
+    tABC_WalletID wallet;
 };
 
 static uint8_t pubkey_version = 0x00;
@@ -92,7 +90,7 @@ static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_h
 static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
 static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo);
 static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo);
-static std::string ABC_BridgeWatcherFile(const char *szUserName, const char *szPassword, const char *szWalletUUID);
+static std::string ABC_BridgeWatcherFile(const char *szWalletUUID);
 static tABC_CC     ABC_BridgeWatcherLoad(WatcherInfo *watcherInfo, tABC_Error *pError);
 static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
 static void        *ABC_BridgeWatcherSerialize(void *pData);
@@ -404,9 +402,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
-                               const char *szPassword,
-                               const char *szWalletUUID,
+tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -416,25 +412,25 @@ tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
     char *szPassCopy;
     char *szUUIDCopy;
 
-    auto row = watchers_.find(szWalletUUID);
+    auto row = watchers_.find(self.szUUID);
     if (row != watchers_.end()) {
-        ABC_DebugLog("Watcher %s already initialized\n", szWalletUUID);
+        ABC_DebugLog("Watcher %s already initialized\n", self.szUUID);
         goto exit;
     }
 
     watcherInfo = new WatcherInfo();
     watcherInfo->watcher = new libwallet::watcher();
 
-    ABC_STRDUP(szUserCopy, szUserName);
-    ABC_STRDUP(szPassCopy, szPassword);
-    ABC_STRDUP(szUUIDCopy, szWalletUUID);
+    ABC_STRDUP(szUserCopy, self.szUserName);
+    ABC_STRDUP(szPassCopy, self.szPassword);
+    ABC_STRDUP(szUUIDCopy, self.szUUID);
 
-    watcherInfo->szUserName = szUserCopy;
-    watcherInfo->szPassword = szPassCopy;
-    watcherInfo->szWalletUUID = szUUIDCopy;
+    watcherInfo->wallet.szUserName = szUserCopy;
+    watcherInfo->wallet.szPassword = szPassCopy;
+    watcherInfo->wallet.szUUID = szUUIDCopy;
 
     ABC_BridgeWatcherLoad(watcherInfo, pError);
-    watchers_[szWalletUUID] = watcherInfo;
+    watchers_[self.szUUID] = watcherInfo;
 exit:
     return cc;
 }
@@ -479,7 +475,7 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     failCallback = [watcherInfo]()
     {
         tABC_Error error;
-        ABC_BridgeWatcherConnect(watcherInfo->szWalletUUID, &error);
+        ABC_BridgeWatcherConnect(watcherInfo->wallet.szUUID, &error);
     };
     watcherInfo->watcher->set_fail_callback(std::move(failCallback));
 
@@ -526,9 +522,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeWatchAddr(const char *szUserName,
-                            const char *szPassword,
-                            const char *szWalletUUID,
+tABC_CC ABC_BridgeWatchAddr(const char *szWalletUUID,
                             const char *pubAddress,
                             tABC_Error *pError)
 {
@@ -555,23 +549,18 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeWatchPath(const char *szUserName, const char *szPassword,
-                            const char *szWalletUUID, char **szPath,
+tABC_CC ABC_BridgeWatchPath(const char *szWalletUUID, char **szPath,
                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     std::string filepath(
-            ABC_BridgeWatcherFile(szUserName,
-                                  szPassword,
-                                  szWalletUUID));
+            ABC_BridgeWatcherFile(szWalletUUID));
     ABC_STRDUP(*szPath, filepath.c_str());
 exit:
     return cc;
 }
 
-tABC_CC ABC_BridgePrioritizeAddress(const char *szUserName,
-                                    const char *szPassword,
-                                    const char *szWalletUUID,
+tABC_CC ABC_BridgePrioritizeAddress(const char *szWalletUUID,
                                     const char *szAddress,
                                     tABC_Error *pError)
 {
@@ -636,6 +625,9 @@ tABC_CC ABC_BridgeWatcherDelete(const char *szWalletUUID, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     WatcherInfo *watcherInfo = NULL;
+    char *szUserName = const_cast<char*>(watcherInfo->wallet.szUserName);
+    char *szPassword = const_cast<char*>(watcherInfo->wallet.szPassword);
+    char *szUUID     = const_cast<char*>(watcherInfo->wallet.szUUID);
 
     auto row = watchers_.find(szWalletUUID);
     if (row == watchers_.end())
@@ -656,9 +648,9 @@ tABC_CC ABC_BridgeWatcherDelete(const char *szWalletUUID, tABC_Error *pError)
     watcherInfo->watcher = NULL;
 
     // Delete info:
-    ABC_FREE_STR(watcherInfo->szUserName);
-    ABC_FREE_STR(watcherInfo->szPassword);
-    ABC_FREE_STR(watcherInfo->szWalletUUID);
+    ABC_FREE_STR(szUserName);
+    ABC_FREE_STR(szPassword);
+    ABC_FREE_STR(szUUID);
     if (watcherInfo != NULL) {
         delete watcherInfo;
     }
@@ -824,9 +816,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeMaxSpendable(const char *szUserName,
-                               const char *szPassword,
-                               const char *szWalletUUID,
+tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
                                const char *szDestAddress,
                                bool bTransfer,
                                uint64_t *pMaxSatoshi,
@@ -843,23 +833,20 @@ tABC_CC ABC_BridgeMaxSpendable(const char *szUserName,
     char **paAddresses = NULL;
     unsigned int countAddresses = 0;
 
-    auto row = watchers_.find(szWalletUUID);
+    auto row = watchers_.find(self.szUUID);
     uint64_t total = 0;
 
     ABC_CHECK_ASSERT(row != watchers_.end(),
         ABC_CC_Error, "Unable find watcher");
 
-    SendInfo.wallet.szUserName = szUserName;
-    SendInfo.wallet.szPassword = szPassword;
-    SendInfo.wallet.szUUID = szWalletUUID;
+    SendInfo.wallet = self;
     ABC_STRDUP(SendInfo.szDestAddress, szDestAddress);
 
     // Snag the latest general info
     ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
     // Fetch all the payment addresses for this wallet
     ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(ABC_WalletID(szUserName, szPassword, szWalletUUID),
-                              &paAddresses, &countAddresses, pError));
+        ABC_TxGetPubAddresses(self, &paAddresses, &countAddresses, pError));
     if (countAddresses > 0)
     {
         // This is needed to pass to the ABC_BridgeTxMake
@@ -1227,7 +1214,7 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
                     totalMeSatoshi, totalInSatoshi, totalOutSatoshi, fees);
     ABC_CHECK_RET(
         ABC_TxReceiveTransaction(
-            ABC_WalletID(watcherInfo->szUserName, watcherInfo->szPassword, watcherInfo->szWalletUUID),
+            watcherInfo->wallet,
             totalMeSatoshi, fees,
             iarr, iCount,
             oarr, oCount,
@@ -1380,7 +1367,7 @@ uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo)
 }
 
 static
-std::string ABC_BridgeWatcherFile(const char *szUserName, const char *szPassword, const char *szWalletUUID)
+std::string ABC_BridgeWatcherFile(const char *szWalletUUID)
 {
     char *szDirName = NULL;
     tABC_Error error;
@@ -1400,9 +1387,7 @@ tABC_CC ABC_BridgeWatcherLoad(WatcherInfo *watcherInfo, tABC_Error *pError)
     std::streampos size;
 
     std::string filepath(
-            ABC_BridgeWatcherFile(watcherInfo->szUserName,
-                                  watcherInfo->szPassword,
-                                  watcherInfo->szWalletUUID));
+            ABC_BridgeWatcherFile(watcherInfo->wallet.szUUID));
 
     struct stat buffer;
     if (stat(filepath.c_str(), &buffer) == 0)
@@ -1440,9 +1425,7 @@ void *ABC_BridgeWatcherSerialize(void *pData)
     bc::data_chunk db;
     WatcherInfo *watcherInfo = (WatcherInfo *) pData;
     std::string filepath(
-            ABC_BridgeWatcherFile(watcherInfo->szUserName,
-                                  watcherInfo->szPassword,
-                                  watcherInfo->szWalletUUID));
+            ABC_BridgeWatcherFile(watcherInfo->wallet.szUUID));
 
     std::ofstream file(filepath);
     if (!file.is_open())
