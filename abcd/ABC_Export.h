@@ -18,9 +18,7 @@
 extern "C" {
 #endif
 
-    tABC_CC ABC_ExportFormatCsv(const char *szUserName,
-                                const char *szPassword,
-                                tABC_TxInfo **pTransactions,
+    tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
                                 unsigned int iTransactionCount,
                                 char **szCsvData,
                                 tABC_Error *pError);

@@ -2835,8 +2835,8 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
     return cc;
 }
 
-tABC_CC ABC_CsvExport(const char *szUserName,
-                      const char *szPassword,
+tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
+                      const char *szPassword, /* DEPRECATED */
                       const char *szUUID,
                       int64_t startTime,
                       int64_t endTime,
@@ -2861,9 +2861,7 @@ tABC_CC ABC_CsvExport(const char *szUserName,
                                           &pTransactions, &iCount, pError));
 
 
-        ABC_CHECK_RET(ABC_ExportFormatCsv(szUserName,
-                                          szPassword,
-                                          pTransactions,
+        ABC_CHECK_RET(ABC_ExportFormatCsv(pTransactions,
                                           iCount,
                                           szCsvData,
                                           pError));
