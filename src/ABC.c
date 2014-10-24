@@ -1725,7 +1725,7 @@ tABC_CC ABC_MaxSpendable(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_RET(
-        ABC_BridgeMaxSpendable(szUserName, szPassword, szWalletUUID,
+        ABC_BridgeMaxSpendable(ABC_WalletID(szUserName, szPassword, szWalletUUID),
                                szDestAddress, bTransfer, pMaxSatoshi, pError));
 exit:
     return cc;
@@ -2424,7 +2424,7 @@ tABC_CC ABC_WatcherStart(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_BridgeWatcherStart(szUserName, szPassword, szWalletUUID, pError));
+    ABC_CHECK_RET(ABC_BridgeWatcherStart(ABC_WalletID(szUserName, szPassword, szWalletUUID), pError));
 
 exit:
 
@@ -2502,8 +2502,8 @@ exit:
 /**
  * Watch a single address for a wallet
  *
- * @param szUserName   UserName for the account
- * @param szPassword   Password for the account
+ * @param szUserName   DEPRECATED. Completely unused.
+ * @param szPassword   DEPRECATED. Completely unused.
  * @param szWalletUUID The wallet watcher to use
  * @param szAddress    The wallet watcher to use
  */
@@ -2518,7 +2518,7 @@ tABC_CC ABC_PrioritizeAddress(const char *szUserName, const char *szPassword,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_BridgePrioritizeAddress(szUserName, szPassword, szWalletUUID, szAddress, pError));
+    ABC_CHECK_RET(ABC_BridgePrioritizeAddress(szWalletUUID, szAddress, pError));
 
 exit:
 

@@ -244,7 +244,7 @@ int main(int argc, const char *argv[])
         printf("Failed Watch Start\n");
     }
     /* Add a public address */
-    if (ABC_BridgeWatchAddr(USERNAME, PASSWORD, WALLET_UUID,
+    if (ABC_BridgeWatchAddr(WALLET_UUID,
                             NET_ADDR, true, &pError) != ABC_CC_Ok)
     {
     }

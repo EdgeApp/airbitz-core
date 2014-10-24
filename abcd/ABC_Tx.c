@@ -596,7 +596,7 @@ tABC_CC ABC_TxWatchAddresses(tABC_WalletID self,
     {
         const tABC_TxAddress *a = aAddresses[i];
         ABC_CHECK_RET(
-            ABC_BridgeWatchAddr(self.szUserName, self.szPassword, self.szUUID,
+            ABC_BridgeWatchAddr(self.szUUID,
                                 a->szPubAddress, pError));
     }
 exit:
