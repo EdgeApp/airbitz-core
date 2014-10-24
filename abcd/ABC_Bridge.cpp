@@ -408,9 +408,6 @@ tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
 
     WatcherInfo *watcherInfo = NULL;
-    char *szUserCopy;
-    char *szPassCopy;
-    char *szUUIDCopy;
 
     auto row = watchers_.find(self.szUUID);
     if (row != watchers_.end()) {
@@ -421,13 +418,7 @@ tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
     watcherInfo = new WatcherInfo();
     watcherInfo->watcher = new libwallet::watcher();
 
-    ABC_STRDUP(szUserCopy, self.szUserName);
-    ABC_STRDUP(szPassCopy, self.szPassword);
-    ABC_STRDUP(szUUIDCopy, self.szUUID);
-
-    watcherInfo->wallet.szUserName = szUserCopy;
-    watcherInfo->wallet.szPassword = szPassCopy;
-    watcherInfo->wallet.szUUID = szUUIDCopy;
+    ABC_CHECK_RET(ABC_WalletIDCopy(&watcherInfo->wallet, self, pError));
 
     ABC_BridgeWatcherLoad(watcherInfo, pError);
     watchers_[self.szUUID] = watcherInfo;
@@ -625,9 +616,6 @@ tABC_CC ABC_BridgeWatcherDelete(const char *szWalletUUID, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     WatcherInfo *watcherInfo = NULL;
-    char *szUserName = const_cast<char*>(watcherInfo->wallet.szUserName);
-    char *szPassword = const_cast<char*>(watcherInfo->wallet.szPassword);
-    char *szUUID     = const_cast<char*>(watcherInfo->wallet.szUUID);
 
     auto row = watchers_.find(szWalletUUID);
     if (row == watchers_.end())
@@ -648,9 +636,7 @@ tABC_CC ABC_BridgeWatcherDelete(const char *szWalletUUID, tABC_Error *pError)
     watcherInfo->watcher = NULL;
 
     // Delete info:
-    ABC_FREE_STR(szUserName);
-    ABC_FREE_STR(szPassword);
-    ABC_FREE_STR(szUUID);
+    ABC_WalletIDFree(watcherInfo->wallet);
     if (watcherInfo != NULL) {
         delete watcherInfo;
     }

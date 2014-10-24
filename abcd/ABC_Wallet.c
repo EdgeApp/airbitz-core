@@ -122,6 +122,40 @@ tABC_WalletID ABC_WalletID(const char *szUserName,
 }
 
 /**
+ * Copies the strings from one tABC_WalletID struct to another.
+ */
+tABC_CC ABC_WalletIDCopy(tABC_WalletID *out,
+                         tABC_WalletID in,
+                         tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_STRDUP(out->szUserName, in.szUserName);
+    ABC_STRDUP(out->szPassword, in.szPassword);
+    ABC_STRDUP(out->szUUID,     in.szUUID);
+
+exit:
+    return cc;
+}
+
+/**
+ * Frees the strings inside a tABC_WalletID struct.
+ *
+ * This is normally not necessary, except in cases where ABC_WalletIDCopy
+ * has been used.
+ */
+void ABC_WalletIDFree(tABC_WalletID in)
+{
+    char *szUserName = (char *)in.szUserName;
+    char *szPassword = (char *)in.szPassword;
+    char *szUUID     = (char *)in.szUUID;
+
+    ABC_FREE_STR(szUserName);
+    ABC_FREE_STR(szPassword);
+    ABC_FREE_STR(szUUID);
+}
+
+/**
  * Creates the wallet with the given info.
  *
  * @param pszUUID Pointer to hold allocated pointer to UUID string
