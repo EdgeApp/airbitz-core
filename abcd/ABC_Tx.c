@@ -225,9 +225,7 @@ tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
 
     ABC_ALLOC(pTxSendInfo, sizeof(tABC_TxSendInfo));
 
-    ABC_STRDUP(pTxSendInfo->wallet.szUserName, self.szUserName);
-    ABC_STRDUP(pTxSendInfo->wallet.szPassword, self.szPassword);
-    ABC_STRDUP(pTxSendInfo->wallet.szUUID, self.szUUID);
+    ABC_CHECK_RET(ABC_WalletIDCopy(&pTxSendInfo->wallet, self, pError));
     ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
 
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTxSendInfo->pDetails), pDetails, pError));
@@ -248,13 +246,7 @@ void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo)
 {
     if (pTxSendInfo)
     {
-        char *szUserName = (char *)pTxSendInfo->wallet.szUserName;
-        char *szPassword = (char *)pTxSendInfo->wallet.szPassword;
-        char *szUUID     = (char *)pTxSendInfo->wallet.szUUID;
-
-        ABC_FREE_STR(szUserName);
-        ABC_FREE_STR(szPassword);
-        ABC_FREE_STR(szUUID);
+        ABC_WalletIDFree(pTxSendInfo->wallet);
         ABC_FREE_STR(pTxSendInfo->szDestAddress);
 
         ABC_FREE_STR(pTxSendInfo->szDestWalletUUID);
