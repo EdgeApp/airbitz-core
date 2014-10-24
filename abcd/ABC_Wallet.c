@@ -225,9 +225,8 @@ tABC_CC ABC_WalletCreate(const char *szUserName,
     ABC_CHECK_RET(ABC_AccountWalletSave(pKeys, &info, pError));
 
     // Now the wallet is written to disk, generate some addresses
-    ABC_CHECK_RET(ABC_TxCreateInitialAddresses(
-                    szUserName, szPassword,
-                    pData->szUUID, pError));
+    ABC_CHECK_RET(ABC_TxCreateInitialAddresses(ABC_WalletID(
+                    szUserName, szPassword, pData->szUUID), pError));
 
     // After wallet is created, sync the account, ignoring any errors
     tABC_Error Error;

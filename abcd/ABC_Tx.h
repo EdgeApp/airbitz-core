@@ -39,6 +39,7 @@
 #define ABC_Tx_h
 
 #include "ABC.h"
+#include "ABC_Wallet.h"
 #include "util/ABC_Util.h"
 
 #ifdef __cplusplus
@@ -54,9 +55,7 @@ extern "C" {
      */
     typedef struct sABC_TxSendInfo
     {
-        char                    *szUserName;
-        char                    *szPassword;
-        char                    *szWalletUUID;
+        tABC_WalletID           wallet;
         char                    *szDestAddress;
 
         // Transfer from money from one wallet to another
@@ -85,9 +84,7 @@ extern "C" {
     void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
     tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
-                                const char *szUserName,
-                                const char *szPassword,
-                                const char *szWalletUUID,
+                                tABC_WalletID self,
                                 const char *szDestAddress,
                                 const tABC_TxDetails *pDetails,
                                 tABC_Error *pError);
@@ -118,9 +115,7 @@ extern "C" {
                                     void *pData,
                                     tABC_Error *pError);
 
-    tABC_CC ABC_TxReceiveTransaction(const char *szUserName,
-                                     const char *szPassword,
-                                     const char *szWalletUUID,
+    tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
                                      uint64_t amountSatoshi, uint64_t feeSatoshi,
                                      tABC_TxOutput **paInAddress, unsigned int inAddressCount,
                                      tABC_TxOutput **paOutAddresses, unsigned int outAddressCount,
@@ -129,66 +124,48 @@ extern "C" {
                                      void *pData,
                                      tABC_Error *pError);
 
-    tABC_CC ABC_TxCreateInitialAddresses(const char *szUserName,
-                                         const char *szPassword,
-                                         const char *szWalletUUID,
+    tABC_CC ABC_TxCreateInitialAddresses(tABC_WalletID self,
                                          tABC_Error *pError);
 
-    tABC_CC ABC_TxCreateReceiveRequest(const char *szUserName,
-                                       const char *szPassword,
-                                       const char *szWalletUUID,
+    tABC_CC ABC_TxCreateReceiveRequest(tABC_WalletID self,
                                        tABC_TxDetails *pDetails,
                                        char **pszRequestID,
                                        bool bTransfer,
                                        tABC_Error *pError);
 
-    tABC_CC ABC_TxModifyReceiveRequest(const char *szUserName,
-                                       const char *szPassword,
-                                       const char *szWalletUUID,
+    tABC_CC ABC_TxModifyReceiveRequest(tABC_WalletID self,
                                        const char *szRequestID,
                                        tABC_TxDetails *pDetails,
                                        tABC_Error *pError);
 
-    tABC_CC ABC_TxFinalizeReceiveRequest(const char *szUserName,
-                                         const char *szPassword,
-                                         const char *szWalletUUID,
+    tABC_CC ABC_TxFinalizeReceiveRequest(tABC_WalletID self,
                                          const char *szRequestID,
                                          tABC_Error *pError);
 
-    tABC_CC ABC_TxCancelReceiveRequest(const char *szUserName,
-                                       const char *szPassword,
-                                       const char *szWalletUUID,
+    tABC_CC ABC_TxCancelReceiveRequest(tABC_WalletID self,
                                        const char *szRequestID,
                                        tABC_Error *pError);
 
-    tABC_CC ABC_TxGenerateRequestQRCode(const char *szUserName,
-                                        const char *szPassword,
-                                        const char *szWalletUUID,
+    tABC_CC ABC_TxGenerateRequestQRCode(tABC_WalletID self,
                                         const char *szRequestID,
                                         char **pszURI,
                                         unsigned char **paData,
                                         unsigned int *pWidth,
                                         tABC_Error *pError);
 
-    tABC_CC ABC_TxGetTransaction(const char *szUserName,
-                                 const char *szPassword,
-                                 const char *szWalletUUID,
+    tABC_CC ABC_TxGetTransaction(tABC_WalletID self,
                                  const char *szID,
                                  tABC_TxInfo **ppTransaction,
                                  tABC_Error *pError);
 
-    tABC_CC ABC_TxGetTransactions(const char *szUserName,
-                                  const char *szPassword,
-                                  const char *szWalletUUID,
+    tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
                                   int64_t startTime,
                                   int64_t endTime,
                                   tABC_TxInfo ***paTransactions,
                                   unsigned int *pCount,
                                   tABC_Error *pError);
 
-    tABC_CC ABC_TxSearchTransactions(const char *szUserName,
-                                     const char *szPassword,
-                                     const char *szWalletUUID,
+    tABC_CC ABC_TxSearchTransactions(tABC_WalletID self,
                                      const char *szQuery,
                                      tABC_TxInfo ***paTransactions,
                                      unsigned int *pCount,
@@ -199,30 +176,22 @@ extern "C" {
     void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
                                 unsigned int count);
 
-    tABC_CC ABC_TxSetTransactionDetails(const char *szUserName,
-                                        const char *szPassword,
-                                        const char *szWalletUUID,
+    tABC_CC ABC_TxSetTransactionDetails(tABC_WalletID self,
                                         const char *szID,
                                         tABC_TxDetails *pDetails,
                                         tABC_Error *pError);
 
-    tABC_CC ABC_TxGetTransactionDetails(const char *szUserName,
-                                        const char *szPassword,
-                                        const char *szWalletUUID,
+    tABC_CC ABC_TxGetTransactionDetails(tABC_WalletID self,
                                         const char *szID,
                                         tABC_TxDetails **ppDetails,
                                         tABC_Error *pError);
 
-    tABC_CC ABC_TxGetRequestAddress(const char *szUserName,
-                                    const char *szPassword,
-                                    const char *szWalletUUID,
+    tABC_CC ABC_TxGetRequestAddress(tABC_WalletID self,
                                     const char *szRequestID,
                                     char **pszAddress,
                                     tABC_Error *pError);
 
-    tABC_CC ABC_TxGetPendingRequests(const char *szUserName,
-                                     const char *szPassword,
-                                     const char *szWalletUUID,
+    tABC_CC ABC_TxGetPendingRequests(tABC_WalletID self,
                                      tABC_RequestInfo ***paRequests,
                                      unsigned int *pCount,
                                      tABC_Error *pError);
@@ -243,16 +212,12 @@ extern "C" {
                                 int64_t *pTotalFees,
                                 tABC_Error *pError);
 
-    tABC_CC ABC_TxGetPubAddresses(const char *szUserName,
-                                const char *szPassword,
-                                const char *szWalletUUID,
+    tABC_CC ABC_TxGetPubAddresses(tABC_WalletID self,
                                 char ***paAddresses,
                                 unsigned int *pCount,
                                 tABC_Error *pError);
 
-    tABC_CC ABC_TxWatchAddresses(const char *szUserName,
-                                 const char *szPassword,
-                                 const char *szWalletUUID,
+    tABC_CC ABC_TxWatchAddresses(tABC_WalletID self,
                                  tABC_Error *pError);
 
 #ifdef __cplusplus
