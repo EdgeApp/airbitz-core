@@ -683,7 +683,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
     std::vector<bc::payment_address> addresses_;
 
     // Find a watcher to use
-    auto row = watchers_.find(pSendInfo->szWalletUUID);
+    auto row = watchers_.find(pSendInfo->wallet.szUUID);
     ABC_CHECK_ASSERT(row != watchers_.end(),
         ABC_CC_Error, "Unable find watcher");
 
@@ -775,7 +775,7 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     tABC_U08Buf Nonce = ABC_BUF_NULL;
 
     utx = (picker::unsigned_transaction_type *) pUtx->data;
-    auto row = watchers_.find(pSendInfo->szWalletUUID);
+    auto row = watchers_.find(pSendInfo->wallet.szUUID);
     ABC_CHECK_ASSERT(row != watchers_.end(), ABC_CC_Error, "Unable find watcher");
 
     watcherInfo = row->second;
@@ -833,7 +833,7 @@ tABC_CC ABC_BridgeMaxSpendable(const char *szUserName,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_TxSendInfo SendInfo;
+    tABC_TxSendInfo SendInfo = {0};
     tABC_TxDetails Details;
     tABC_GeneralInfo *ppInfo = NULL;
     tABC_UnsignedTx utx;
@@ -849,16 +849,16 @@ tABC_CC ABC_BridgeMaxSpendable(const char *szUserName,
     ABC_CHECK_ASSERT(row != watchers_.end(),
         ABC_CC_Error, "Unable find watcher");
 
-    ABC_STRDUP(SendInfo.szUserName, szUserName);
-    ABC_STRDUP(SendInfo.szPassword, szPassword);
-    ABC_STRDUP(SendInfo.szWalletUUID, szWalletUUID);
+    SendInfo.wallet.szUserName = szUserName;
+    SendInfo.wallet.szPassword = szPassword;
+    SendInfo.wallet.szUUID = szWalletUUID;
     ABC_STRDUP(SendInfo.szDestAddress, szDestAddress);
 
     // Snag the latest general info
     ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
     // Fetch all the payment addresses for this wallet
     ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(szUserName, szPassword, szWalletUUID,
+        ABC_TxGetPubAddresses(ABC_WalletID(szUserName, szPassword, szWalletUUID),
                               &paAddresses, &countAddresses, pError));
     if (countAddresses > 0)
     {
@@ -903,9 +903,6 @@ tABC_CC ABC_BridgeMaxSpendable(const char *szUserName,
         *pMaxSatoshi = 0;
     }
 exit:
-    ABC_FREE_STR(SendInfo.szUserName);
-    ABC_FREE_STR(SendInfo.szPassword);
-    ABC_FREE_STR(SendInfo.szWalletUUID);
     ABC_FREE_STR(SendInfo.szDestAddress);
     ABC_GeneralFreeInfo(ppInfo);
     ABC_UtilFreeStringArray(paAddresses, countAddresses);
@@ -1230,7 +1227,7 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
                     totalMeSatoshi, totalInSatoshi, totalOutSatoshi, fees);
     ABC_CHECK_RET(
         ABC_TxReceiveTransaction(
-            watcherInfo->szUserName, watcherInfo->szPassword, watcherInfo->szWalletUUID,
+            ABC_WalletID(watcherInfo->szUserName, watcherInfo->szPassword, watcherInfo->szWalletUUID),
             totalMeSatoshi, fees,
             iarr, iCount,
             oarr, oCount,
