@@ -194,6 +194,7 @@ static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Erro
 static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError);
 static int      ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo, tABC_Tx *pTx, tABC_Tx *pReceiveTx, tABC_Error *pError);
 static tABC_CC  ABC_TxWalletOwnsAddress(const char *szUserName, const char *szPassword, const char *szWalletUUID, const char *szAddress, bool *bFound, tABC_Error *pError);
+static tABC_CC  ABC_TxGetPrivAddresses(const char *szUserName, const char *szPassword, const char *szWalletUUID, tABC_U08Buf seed, char ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxTrashAddresses(const char *szUserName, const char *szPassword, const char *szWalletUUID, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
 
 /**
@@ -585,6 +586,7 @@ exit:
  * @param pCount            Pointer to store number of addresses
  * @param pError            A pointer to the location to store the error if there is one
  */
+static
 tABC_CC ABC_TxGetPrivAddresses(const char *szUserName,
                                const char *szPassword,
                                const char *szWalletUUID,
