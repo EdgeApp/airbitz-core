@@ -304,8 +304,6 @@ typedef struct sABC_WalletInfo
     char            *szUUID;
     /** wallet name */
     char            *szName;
-    /** account associated with this wallet */
-    char            *szUserName; /* DEPRECATED! Do not use! */
     /** wallet ISO 4217 currency code */
     int             currencyNum;
     /** true if the wallet is archived */

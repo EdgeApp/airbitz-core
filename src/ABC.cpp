@@ -1196,7 +1196,6 @@ tABC_CC ABC_GetWalletInfo(const char *szUserName,
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(pKeys, szUUID), ppWalletInfo, pError));
-    ABC_STRDUP((*ppWalletInfo)->szUserName, szUserName);
 
 exit:
     return cc;
@@ -1303,17 +1302,12 @@ tABC_CC ABC_GetWallets(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    unsigned i = 0;
     AutoSyncKeys pKeys;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_WalletGetWallets(pKeys, paWalletInfo, pCount, pError));
-    for (i = 0; i < *pCount; ++i)
-    {
-        ABC_STRDUP((*paWalletInfo)[i]->szUserName, szUserName);
-    }
 
 exit:
     return cc;
