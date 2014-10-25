@@ -81,8 +81,7 @@ extern "C" {
 
     void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo);
 
-    tABC_CC ABC_WalletGetWallets(const char *szUserName,
-                                 const char *szPassword,
+    tABC_CC ABC_WalletGetWallets(tABC_SyncKeys *pKeys,
                                  tABC_WalletInfo ***paWalletInfo,
                                  unsigned int *pCount,
                                  tABC_Error *pError);
@@ -115,16 +114,17 @@ extern "C" {
                                         tABC_Error *pError);
 
     // Blocking functions:
-    tABC_CC ABC_WalletCreate(const char *szUserName,
-                             const char *szPassword,
+    tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
+                             tABC_U08Buf L1,
+                             tABC_U08Buf LP1,
+                             const char *szUserName,
                              const char *szWalletName,
                              int  currencyNum,
                              unsigned int attributes,
                              char **pszUUID,
                              tABC_Error *pError);
 
-    tABC_CC ABC_WalletSyncAll(const char *szUserName,
-                              const char *szPassword,
+    tABC_CC ABC_WalletSyncAll(tABC_SyncKeys *pKeys,
                               int *pDirty,
                               tABC_Error *pError);
 

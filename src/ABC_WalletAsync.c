@@ -47,8 +47,10 @@
  * populates it with the data given
  */
 tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
+                                  tABC_SyncKeys *pKeys,
+                                  tABC_U08Buf L1,
+                                  tABC_U08Buf LP1,
                                   const char *szUserName,
-                                  const char *szPassword,
                                   const char *szWalletName,
                                   int        currencyNum,
                                   unsigned int attributes,
@@ -58,17 +60,14 @@ tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_CHECK_NULL(ppWalletCreateInfo);
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_NULL(szWalletName);
-    /* ABC_CHECK_NULL(fRequestCallback); */
-
     tABC_WalletCreateInfo *pWalletCreateInfo;
     ABC_ALLOC(pWalletCreateInfo, sizeof(tABC_WalletCreateInfo));
 
+    ABC_CHECK_RET(ABC_SyncKeysCopy(&pWalletCreateInfo->pKeys, pKeys, pError));
+    ABC_BUF_DUP(pWalletCreateInfo->L1, L1);
+    ABC_BUF_DUP(pWalletCreateInfo->LP1, LP1);
     ABC_STRDUP(pWalletCreateInfo->szUserName, szUserName);
-    ABC_STRDUP(pWalletCreateInfo->szPassword, szPassword);
+
     ABC_STRDUP(pWalletCreateInfo->szWalletName, szWalletName);
     pWalletCreateInfo->currencyNum = currencyNum;
     pWalletCreateInfo->attributes = attributes;
@@ -91,8 +90,11 @@ void ABC_WalletCreateInfoFree(tABC_WalletCreateInfo *pWalletCreateInfo)
 {
     if (pWalletCreateInfo)
     {
+        ABC_SyncFreeKeys(pWalletCreateInfo->pKeys);
+        ABC_BUF_FREE(pWalletCreateInfo->L1);
+        ABC_BUF_FREE(pWalletCreateInfo->LP1);
         ABC_FREE_STR(pWalletCreateInfo->szUserName);
-        ABC_FREE_STR(pWalletCreateInfo->szPassword);
+
         ABC_FREE_STR(pWalletCreateInfo->szWalletName);
 
         ABC_CLEAR_FREE(pWalletCreateInfo, sizeof(tABC_WalletCreateInfo));
@@ -122,7 +124,7 @@ void *ABC_WalletCreateThreaded(void *pData)
         results.bSuccess = false;
 
         // create the wallet
-        tABC_CC CC = ABC_WalletCreate(pInfo->szUserName, pInfo->szPassword,
+        tABC_CC CC = ABC_WalletCreate(pInfo->pKeys, pInfo->L1, pInfo->LP1, pInfo->szUserName,
             pInfo->szWalletName, pInfo->currencyNum, pInfo->attributes,
             (char **) &(results.pRetData), &(results.errorInfo));
         results.errorInfo.code = CC;
