@@ -40,6 +40,7 @@
 
 #include "ABC.h"
 #include "ABC_Wallet.h"
+#include "util/ABC_Sync.h"
 #include "util/ABC_Util.h"
 
 #ifdef __cplusplus
@@ -96,15 +97,13 @@ extern "C" {
 
     int64_t ABC_TxBitcoinToSatoshi(double bitcoin);
 
-    tABC_CC ABC_TxSatoshiToCurrency(const char *szUserName,
-                                    const char *szPassword,
+    tABC_CC ABC_TxSatoshiToCurrency(tABC_SyncKeys *pKeys,
                                     int64_t satoshi,
                                     double *pCurrency,
                                     int currencyNum,
                                     tABC_Error *pError);
 
-    tABC_CC ABC_TxCurrencyToSatoshi(const char *szUserName,
-                                    const char *szPassword,
+    tABC_CC ABC_TxCurrencyToSatoshi(tABC_SyncKeys *pKeys,
                                     double currency,
                                     int currencyNum,
                                     int64_t *pSatoshi,

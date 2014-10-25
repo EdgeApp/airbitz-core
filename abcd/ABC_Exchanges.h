@@ -39,6 +39,7 @@
 #define ABC_Exchanges_h
 
 #include "ABC.h"
+#include "util/ABC_Sync.h"
 #include "util/ABC_Util.h"
 
 #ifdef __cplusplus
@@ -50,12 +51,10 @@ extern "C" {
      */
     typedef struct sABC_ExchangeInfo
     {
+        /** Access to the account settings */
+        tABC_SyncKeys         *pKeys;
         /** The currency to request or update **/
         int                   currencyNum;
-        /** Username used to access account settings **/
-        char                  *szUserName;
-        /** Password used to access account settings **/
-        char                  *szPassword;
         /** Callback fired after a update **/
         tABC_Request_Callback fRequestCallback;
         /** Data to return with the callback **/
@@ -64,7 +63,7 @@ extern "C" {
 
     tABC_CC ABC_ExchangeInitialize(tABC_Error                   *pError);
 
-    tABC_CC ABC_ExchangeCurrentRate(const char *szUserName, const char *szPassword,
+    tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
                                     int currencyNum, double *pRate, tABC_Error *pError);
 
     tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
@@ -73,7 +72,7 @@ extern "C" {
 
     void ABC_ExchangeTerminate();
 
-    tABC_CC ABC_ExchangeAlloc(const char *szUserName, const char *szPassword,
+    tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
                               int currencyNum,
                               tABC_Request_Callback fRequestCallback, void *pData,
                               tABC_ExchangeInfo **ppInfo, tABC_Error *pError);

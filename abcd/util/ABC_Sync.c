@@ -74,6 +74,29 @@ exit:
 }
 
 /**
+ * Copies a tABC_SyncKeys structure and all its contents.
+ */
+tABC_CC ABC_SyncKeysCopy(tABC_SyncKeys **ppOut,
+                         tABC_SyncKeys *pIn,
+                         tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_SyncKeys *pKeys = NULL;
+
+    ABC_ALLOC(pKeys, sizeof(tABC_SyncKeys));
+    ABC_STRDUP(pKeys->szSyncDir, pIn->szSyncDir);
+    ABC_STRDUP(pKeys->szSyncKey, pIn->szSyncKey);
+    ABC_BUF_DUP(pKeys->MK, pIn->MK);
+
+    *ppOut = pKeys;
+    pKeys = NULL;
+
+exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
+    return cc;
+}
+
+/**
  * Frees a tABC_SyncKeys structure and all its members.
  */
 void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys)

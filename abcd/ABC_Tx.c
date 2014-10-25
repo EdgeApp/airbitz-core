@@ -685,8 +685,7 @@ int64_t ABC_TxBitcoinToSatoshi(double bitcoin)
  * @param currencyNum Currency ISO 4217 num
  * @param pError      A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxSatoshiToCurrency(const char *szUserName,
-                                const char *szPassword,
+tABC_CC ABC_TxSatoshiToCurrency(tABC_SyncKeys *pKeys,
                                 int64_t satoshi,
                                 double *pCurrency,
                                 int currencyNum,
@@ -699,8 +698,7 @@ tABC_CC ABC_TxSatoshiToCurrency(const char *szUserName,
     ABC_CHECK_NULL(pCurrency);
     *pCurrency = 0.0;
 
-    ABC_CHECK_RET(ABC_ExchangeCurrentRate(szUserName, szPassword,
-                                          currencyNum, &pRate, pError));
+    ABC_CHECK_RET(ABC_ExchangeCurrentRate(pKeys, currencyNum, &pRate, pError));
     *pCurrency = ABC_SatoshiToBitcoin(satoshi) * pRate;
 exit:
 
@@ -715,8 +713,7 @@ exit:
  * @param pSatoshi    Pointer to location to store amount converted to Satoshi
  * @param pError      A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxCurrencyToSatoshi(const char *szUserName,
-                                const char *szPassword,
+tABC_CC ABC_TxCurrencyToSatoshi(tABC_SyncKeys *pKeys,
                                 double currency,
                                 int currencyNum,
                                 int64_t *pSatoshi,
@@ -729,8 +726,7 @@ tABC_CC ABC_TxCurrencyToSatoshi(const char *szUserName,
     ABC_CHECK_NULL(pSatoshi);
     *pSatoshi = 0;
 
-    ABC_CHECK_RET(ABC_ExchangeCurrentRate(szUserName, szPassword,
-                                          currencyNum, &pRate, pError));
+    ABC_CHECK_RET(ABC_ExchangeCurrentRate(pKeys, currencyNum, &pRate, pError));
     *pSatoshi = ABC_BitcoinToSatoshi(currency) / pRate;
 exit:
 
