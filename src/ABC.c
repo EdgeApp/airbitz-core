@@ -1294,11 +1294,14 @@ tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(szUserName, szPassword, satoshi, pCurrency, currencyNum, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(pKeys, satoshi, pCurrency, currencyNum, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -1323,11 +1326,15 @@ tABC_CC ABC_CurrencyToSatoshi(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxCurrencyToSatoshi(szUserName, szPassword, currency, currencyNum, pSatoshi, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxCurrencyToSatoshi(pKeys, currency, currencyNum, pSatoshi, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -2665,14 +2672,17 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(
-        ABC_ExchangeAlloc(szUserName, szPassword, currencyNum,
+        ABC_ExchangeAlloc(pKeys, currencyNum,
                           fRequestCallback, pData, &pInfo, pError));
     if (fRequestCallback)
     {
@@ -2689,6 +2699,7 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
     }
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 

@@ -33,6 +33,10 @@ extern "C" {
         tABC_U08Buf MK;
     } tABC_SyncKeys;
 
+    tABC_CC ABC_SyncKeysCopy(tABC_SyncKeys **ppOut,
+                             tABC_SyncKeys *pIn,
+                             tABC_Error *pError);
+
     void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys);
 
     tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError);
