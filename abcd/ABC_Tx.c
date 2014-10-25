@@ -39,6 +39,7 @@
  */
 
 #include "ABC_Tx.h"
+#include "ABC_Account.h"
 #include "ABC_Exchanges.h"
 #include "ABC_Login.h"
 #include "ABC_Wallet.h"
@@ -383,8 +384,8 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
                                         + pInfo->pDetails->amountFeesMinersSatoshi;
     }
     ABC_CHECK_RET(ABC_WalletGetInfo(pInfo->wallet, &pWallet, pError));
-    ABC_CHECK_RET(ABC_SatoshiToCurrency(
-                    pInfo->wallet.szUserName, pInfo->wallet.szPassword,
+    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(
+                    pInfo->wallet.pKeys,
                     pTx->pDetails->amountSatoshi, &Currency,
                     pWallet->currencyNum, pError));
     pTx->pDetails->amountCurrency = Currency;
@@ -2460,7 +2461,7 @@ tABC_CC ABC_TxBuildFromLabel(tABC_WalletID self,
     ABC_CHECK_NULL(pszLabel);
     *pszLabel = NULL;
 
-    ABC_CHECK_RET(ABC_LoadAccountSettings(self.szUserName, self.szPassword, &pSettings, pError));
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(self.pKeys, &pSettings, pError));
 
     if (pSettings->bNameOnPayments && pSettings->szFullName)
     {

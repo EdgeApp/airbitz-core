@@ -40,6 +40,7 @@
 
 #include "ABC.h"
 #include "ABC_General.h"
+#include "util/ABC_Sync.h"
 #include "util/ABC_Util.h"
 
 #ifdef __cplusplus
@@ -50,13 +51,11 @@ extern "C" {
      * an opaque pointer to the wallet itself at some point. */
     typedef struct sABC_WalletID
     {
-        const char *szUserName;
-        const char *szPassword;
+        tABC_SyncKeys *pKeys;
         const char *szUUID;
     } tABC_WalletID;
 
-    tABC_WalletID ABC_WalletID(const char *szUserName,
-                               const char *szPassword,
+    tABC_WalletID ABC_WalletID(tABC_SyncKeys *pKeys,
                                const char *szUUID);
 
     tABC_CC ABC_WalletIDCopy(tABC_WalletID *out,
