@@ -2899,12 +2899,22 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+    tABC_U08Buf L1       = ABC_BUF_NULL;
+    tABC_U08Buf LP1      = ABC_BUF_NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
 
-    ABC_CHECK_RET(ABC_LoginServerUploadLogs(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginServerUploadLogs(L1, LP1, pKeys, pError));
+
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
+    ABC_BUF_FREE(L1);
+    ABC_BUF_FREE(LP1);
 
     return cc;
 }

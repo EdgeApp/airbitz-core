@@ -415,8 +415,9 @@ exit:
  * @param szPassword    Password for the account associated with the settings
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
-                                  const char *szPassword,
+tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
+                                  tABC_U08Buf LP1,
+                                  tABC_SyncKeys *pKeys,
                                   tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -436,8 +437,6 @@ tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
     void *szWatchData     = NULL;
     char *szWatchData_Hex = NULL;
     json_t *pJSON_Root    = NULL;
-    tABC_U08Buf L1        = ABC_BUF_NULL;
-    tABC_U08Buf LP1       = ABC_BUF_NULL;
     tABC_U08Buf LogData   = ABC_BUF_NULL;
     tABC_U08Buf WatchData = ABC_BUF_NULL;
     size_t watcherSize    = 0;
@@ -449,7 +448,6 @@ tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_DEBUG_PATH);
 
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
     ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
     ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
 
@@ -458,7 +456,7 @@ tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
     ABC_BUF_SET_PTR(LogData, (unsigned char *)szLogData, strlen(szLogData) + 1);
     ABC_CHECK_RET(ABC_CryptoBase64Encode(LogData, &szLogData_Hex, pError));
 
-    ABC_CHECK_RET(ABC_GetWallets(szUserName, szPassword, &paWalletInfo, &nCount, pError));
+    ABC_CHECK_RET(ABC_WalletGetWallets(pKeys, &paWalletInfo, &nCount, pError));
     pJSON_array = json_array();
     for (int i = 0; i < nCount; ++i)
     {
@@ -496,8 +494,6 @@ exit:
     ABC_FREE_STR(szLogFilename);
     ABC_FREE_STR(szLogData);
     ABC_FREE_STR(szLogData_Hex);
-    ABC_BUF_FREE(L1);
-    ABC_BUF_FREE(LP1);
     ABC_BUF_CLEAR(LogData);
 
     ABC_FREE_STR(szWatchFilename);
