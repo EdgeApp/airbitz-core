@@ -1096,10 +1096,6 @@ tABC_CC ABC_WalletGetInfo(const char *szUserName,
     {
         ABC_STRDUP(pInfo->szName, pData->szName);
     }
-    if (pData->szUserName != NULL)
-    {
-        ABC_STRDUP(pInfo->szUserName, pData->szUserName);
-    }
     pInfo->currencyNum = pData->currencyNum;
     pInfo->archived  = pData->archived;
 
