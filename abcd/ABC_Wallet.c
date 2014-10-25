@@ -155,8 +155,10 @@ void ABC_WalletIDFree(tABC_WalletID in)
  *
  * @param pszUUID Pointer to hold allocated pointer to UUID string
  */
-tABC_CC ABC_WalletCreate(const char *szUserName,
-                         const char *szPassword,
+tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
+                         tABC_U08Buf L1,
+                         tABC_U08Buf LP1,
+                         const char *szUserName,
                          const char *szWalletName,
                          int  currencyNum,
                          unsigned int attributes,
@@ -171,9 +173,6 @@ tABC_CC ABC_WalletCreate(const char *szUserName,
     char *szWalletDir      = NULL;
     json_t *pJSON_Data     = NULL;
     json_t *pJSON_Wallets  = NULL;
-    tABC_SyncKeys *pKeys   = NULL;
-    tABC_U08Buf L1            = ABC_BUF_NULL;
-    tABC_U08Buf LP1           = ABC_BUF_NULL;
     tABC_U08Buf WalletAcctKey = ABC_BUF_NULL;
 
     tWalletData *pData = NULL;
@@ -183,10 +182,6 @@ tABC_CC ABC_WalletCreate(const char *szUserName,
     // create a new wallet data struct
     ABC_ALLOC(pData, sizeof(tWalletData));
     pData->archived = 0;
-
-    // get account keys:
-    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
 
     // create wallet guid
     ABC_CHECK_RET(ABC_CryptoGenUUIDString(&szUUID, pError));
@@ -277,9 +272,6 @@ exit:
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szJSON);
     ABC_FREE_STR(szUUID);
-    ABC_BUF_FREE(L1);
-    ABC_BUF_FREE(LP1);
-    if (pKeys)              ABC_SyncFreeKeys(pKeys);
     if (pJSON_Data)         json_decref(pJSON_Data);
     if (pJSON_Wallets)      json_decref(pJSON_Wallets);
     if (pData)              ABC_WalletFreeData(pData);
@@ -287,13 +279,12 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *pDirty, tABC_Error *pError)
+tABC_CC ABC_WalletSyncAll(tABC_SyncKeys *pKeys, int *pDirty, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     char **aszUUIDs                = NULL;
-    tABC_SyncKeys *pKeys           = NULL;
     unsigned int i      = 0;
     unsigned int nUUIDs = 0;
 
@@ -301,7 +292,6 @@ tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *p
     *pDirty = 0;
 
     // Get the wallet list
-    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &aszUUIDs, &nUUIDs, pError));
 
     for (i = 0; i < nUUIDs; ++i)
@@ -316,7 +306,6 @@ tABC_CC ABC_WalletSyncAll(const char *szUserName, const char *szPassword, int *p
     }
 exit:
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
-    ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -1078,14 +1067,11 @@ void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo)
  * This function allocates and fills in an array of wallet info structures with the information
  * associated with the wallets of the given user
  *
- * @param szUserName            UserName for the account associated with this wallet
- * @param szPassword            Password for the account associated with this wallet
  * @param paWalletInfo          Pointer to store the allocated array of wallet info structs
  * @param pCount                Pointer to store number of wallets in the array
  * @param pError                A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_WalletGetWallets(const char *szUserName,
-                             const char *szPassword,
+tABC_CC ABC_WalletGetWallets(tABC_SyncKeys *pKeys,
                              tABC_WalletInfo ***paWalletInfo,
                              unsigned int *pCount,
                              tABC_Error *pError)
@@ -1096,19 +1082,15 @@ tABC_CC ABC_WalletGetWallets(const char *szUserName,
     char **aszUUIDs = NULL;
     unsigned int nUUIDs = 0;
     tABC_WalletInfo **aWalletInfo = NULL;
-    tABC_SyncKeys *pKeys = NULL;
 
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
     ABC_CHECK_NULL(paWalletInfo);
     *paWalletInfo = NULL;
     ABC_CHECK_NULL(pCount);
     *pCount = 0;
 
     // get the array of wallet UUIDs for this account
-    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &aszUUIDs, &nUUIDs, pError));
 
     // if we got anything
@@ -1120,7 +1102,6 @@ tABC_CC ABC_WalletGetWallets(const char *szUserName,
         {
             tABC_WalletInfo *pInfo = NULL;
             ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(pKeys, aszUUIDs[i]), &pInfo, pError));
-            ABC_STRDUP(pInfo->szUserName, szUserName);
 
             aWalletInfo[i] = pInfo;
         }
@@ -1135,7 +1116,6 @@ tABC_CC ABC_WalletGetWallets(const char *szUserName,
 exit:
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
     ABC_WalletFreeInfoArray(aWalletInfo, nUUIDs);
-    ABC_SyncFreeKeys(pKeys);
 
     ABC_CHECK_RET(ABC_WalletMutexUnlock(pError));
     return cc;

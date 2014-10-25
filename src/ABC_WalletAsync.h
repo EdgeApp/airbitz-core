@@ -39,6 +39,8 @@
 #define ABC_WalletAsync_h
 
 #include "ABC.h"
+#include "util/ABC_Sync.h"
+#include "util/ABC_Util.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,8 +58,11 @@ extern "C" {
         /** data pointer given by caller at initial create call time */
         void                    *pData;
 
+        tABC_SyncKeys           *pKeys;
+        tABC_U08Buf             L1;
+        tABC_U08Buf             LP1;
         char                    *szUserName;
-        char                    *szPassword;
+
         char                    *szWalletName;
         int                     currencyNum;
         unsigned int            attributes;
@@ -65,8 +70,10 @@ extern "C" {
     } tABC_WalletCreateInfo;
 
     tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
+                                      tABC_SyncKeys *pKeys,
+                                      tABC_U08Buf L1,
+                                      tABC_U08Buf LP1,
                                       const char *szUserName,
-                                      const char *szPassword,
                                       const char *szWalletName,
                                       int        currencyNum,
                                       unsigned int  attributes,
