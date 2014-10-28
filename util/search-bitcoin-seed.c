@@ -1,6 +1,7 @@
 #include "common.h"
 #include <stdio.h>
 
+#include "ABC_Login.h"
 #include "ABC_Bridge.h"
 #include "ABC_Wallet.h"
 #include "util/ABC_Crypto.h"
@@ -11,6 +12,7 @@ int main(int argc, char *argv[])
     tABC_CC cc;
     tABC_Error error;
     unsigned char seed[] = {1, 2, 3};
+    tABC_SyncKeys *pKeys = NULL;
     tABC_U08Buf data;
 
     if (argc != 8)
@@ -24,7 +26,8 @@ int main(int argc, char *argv[])
     char *szMatchAddr = argv[5];
 
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, seed, sizeof(seed), &error));
-    MAIN_CHECK(ABC_WalletGetBitcoinPrivateSeed(argv[2], argv[3], argv[4], &data, &error));
+    MAIN_CHECK(ABC_LoginGetSyncKeys(argv[2], argv[3], &pKeys, &error));
+    MAIN_CHECK(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[4]), &data, &error));
 
     for (long i = start, c = 0; i <= end; i++, ++c)
     {
@@ -44,6 +47,7 @@ int main(int argc, char *argv[])
         }
     }
 
+    ABC_SyncFreeKeys(pKeys);
     ABC_BUF_FREE(data);
 
     return 0;
