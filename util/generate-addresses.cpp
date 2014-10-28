@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdio.h>
 
+#include "ABC_Login.h"
 #include "ABC_Wallet.h"
 #include "util/ABC_Util.h"
 #include <wallet/wallet.hpp>
@@ -11,6 +12,7 @@ int main(int argc, char *argv[])
     tABC_CC cc;
     tABC_Error error;
     unsigned char rngseed[] = {1, 2, 3};
+    tABC_SyncKeys *pKeys = NULL;
     tABC_U08Buf data;
 
     if (argc != 6)
@@ -20,7 +22,8 @@ int main(int argc, char *argv[])
     }
 
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, rngseed, sizeof(rngseed), &error));
-    MAIN_CHECK(ABC_WalletGetBitcoinPrivateSeed(argv[2], argv[3], argv[4], &data, &error));
+    MAIN_CHECK(ABC_LoginGetSyncKeys(argv[2], argv[3], &pKeys, &error));
+    MAIN_CHECK(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[4]), &data, &error));
 
     libbitcoin::data_chunk seed(data.p, data.end);
     libwallet::hd_private_key m(seed);
@@ -33,6 +36,7 @@ int main(int argc, char *argv[])
         std::cout << "watch " << m00n.address().encoded() << std::endl;
     }
 
+    ABC_SyncFreeKeys(pKeys);
     ABC_BUF_FREE(data);
 
     return 0;
