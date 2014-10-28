@@ -3,7 +3,7 @@
  * An object representing a logged-in account.
  */
 
-#include "ABC_LoginObject.h"
+#include "ABC_Login.h"
 #include "ABC_LoginDir.h"
 #include "ABC_LoginServer.h"
 #include "ABC_Account.h"
@@ -25,7 +25,7 @@
 #define JSON_ACCT_ELP1_FIELD                    "ELP1"
 #define JSON_ACCT_ELRA1_FIELD                   "ELRA1"
 
-struct sABC_LoginObject
+struct sABC_Login
 {
     // Identity:
     char            *szUserName;
@@ -62,18 +62,18 @@ typedef enum
     ABC_LRA3
 } tABC_KeyType;
 
-static tABC_CC ABC_LoginObjectSync(tABC_LoginObject *pSelf, int *pDirty, tABC_Error *pError);
-static tABC_CC ABC_LoginObjectFixUserName(const char *szUserName, char **pszOut, tABC_Error *pError);
-static tABC_CC ABC_LoginObjectSetupUser(tABC_LoginObject *pSelf, const char *szUserName, tABC_Error *pError);
-static tABC_CC ABC_LoginObjectLoadCarePackage(tABC_LoginObject *pSelf, tABC_Error *pError);
-static tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf, tABC_KeyType type, tABC_U08Buf Key, tABC_Error *pError);
-static tABC_CC ABC_LoginObjectWriteCarePackage(tABC_LoginObject *pSelf, char **pszCarePackage, tABC_Error *pError);
-static tABC_CC ABC_LoginObjectWriteLoginPackage(tABC_LoginObject *pSelf, char **pszLoginPackage, tABC_Error *pError);
+static tABC_CC ABC_LoginSync(tABC_Login *pSelf, int *pDirty, tABC_Error *pError);
+static tABC_CC ABC_LoginFixUserName(const char *szUserName, char **pszOut, tABC_Error *pError);
+static tABC_CC ABC_LoginSetupUser(tABC_Login *pSelf, const char *szUserName, tABC_Error *pError);
+static tABC_CC ABC_LoginLoadCarePackage(tABC_Login *pSelf, tABC_Error *pError);
+static tABC_CC ABC_LoginLoadLoginPackage(tABC_Login *pSelf, tABC_KeyType type, tABC_U08Buf Key, tABC_Error *pError);
+static tABC_CC ABC_LoginWriteCarePackage(tABC_Login *pSelf, char **pszCarePackage, tABC_Error *pError);
+static tABC_CC ABC_LoginWriteLoginPackage(tABC_Login *pSelf, char **pszLoginPackage, tABC_Error *pError);
 
 /**
  * Deletes a login object and all its contents.
  */
-void ABC_LoginObjectFree(tABC_LoginObject *pSelf)
+void ABC_LoginFree(tABC_Login *pSelf)
 {
     if (pSelf)
     {
@@ -98,7 +98,7 @@ void ABC_LoginObjectFree(tABC_LoginObject *pSelf)
         if (pSelf->EMK_LP2)  json_decref(pSelf->EMK_LP2);
         if (pSelf->EMK_LRA3) json_decref(pSelf->EMK_LRA3);
 
-        ABC_CLEAR_FREE(pSelf, sizeof(tABC_LoginObject));
+        ABC_CLEAR_FREE(pSelf, sizeof(tABC_Login));
     }
 }
 
@@ -109,14 +109,14 @@ void ABC_LoginObjectFree(tABC_LoginObject *pSelf)
  * @param szPassword    The password for the account.
  * @param ppSelf        The returned login object.
  */
-tABC_CC ABC_LoginObjectCreate(const char *szUserName,
-                              const char *szPassword,
-                              tABC_LoginObject **ppSelf,
-                              tABC_Error *pError)
+tABC_CC ABC_LoginCreate(const char *szUserName,
+                        const char *szPassword,
+                        tABC_Login **ppSelf,
+                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_LoginObject    *pSelf          = NULL;
+    tABC_Login          *pSelf          = NULL;
     tABC_U08Buf         LP              = ABC_BUF_NULL;
     tABC_U08Buf         LP2             = ABC_BUF_NULL;
     char                *szCarePackage  = NULL;
@@ -124,8 +124,8 @@ tABC_CC ABC_LoginObjectCreate(const char *szUserName,
     tABC_SyncKeys       *pSyncKeys      = NULL;
 
     // Allocate self:
-    ABC_ALLOC(pSelf, sizeof(tABC_LoginObject));
-    ABC_CHECK_RET(ABC_LoginObjectSetupUser(pSelf, szUserName, pError));
+    ABC_ALLOC(pSelf, sizeof(tABC_Login));
+    ABC_CHECK_RET(ABC_LoginSetupUser(pSelf, szUserName, pError));
     if (0 <= pSelf->AccountNum)
     {
         ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists");
@@ -161,8 +161,8 @@ tABC_CC ABC_LoginObjectCreate(const char *szUserName,
 
     // At this point, the login object is fully-formed in memory!
     // Now we need to save it to disk and upload it to the server:
-    ABC_CHECK_RET(ABC_LoginObjectWriteCarePackage(pSelf, &szCarePackage, pError));
-    ABC_CHECK_RET(ABC_LoginObjectWriteLoginPackage(pSelf, &szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginWriteCarePackage(pSelf, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginWriteLoginPackage(pSelf, &szLoginPackage, pError));
 
     // Create the account and repo on server:
     ABC_CHECK_RET(ABC_LoginServerCreate(pSelf->L1, pSelf->LP1,
@@ -174,12 +174,12 @@ tABC_CC ABC_LoginObjectCreate(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginDirGetNumber(pSelf->szUserName, &pSelf->AccountNum, pError));
 
     // Populate the sync dir with files:
-    ABC_CHECK_RET(ABC_LoginObjectGetSyncKeys(pSelf, &pSyncKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(pSelf, &pSyncKeys, pError));
     ABC_CHECK_RET(ABC_AccountCreate(pSyncKeys, pError));
 
     // Upload the sync dir:
     int dirty;
-    ABC_CHECK_RET(ABC_LoginObjectSync(pSelf, &dirty, pError));
+    ABC_CHECK_RET(ABC_LoginSync(pSelf, &dirty, pError));
 
     // Latch the account:
     ABC_CHECK_RET(ABC_LoginServerActivate(pSelf->L1, pSelf->LP1, pError));
@@ -189,7 +189,7 @@ tABC_CC ABC_LoginObjectCreate(const char *szUserName,
     pSelf = NULL;
 
 exit:
-    ABC_LoginObjectFree(pSelf);
+    ABC_LoginFree(pSelf);
     ABC_BUF_FREE(LP);
     ABC_BUF_FREE(LP2);
     ABC_FREE_STR(szCarePackage);
@@ -205,23 +205,23 @@ exit:
  * @param szPassword    The password for the account.
  * @param ppSelf        The returned login object.
  */
-tABC_CC ABC_LoginObjectFromPassword(const char *szUserName,
-                                    const char *szPassword,
-                                    tABC_LoginObject **ppSelf,
-                                    tABC_Error *pError)
+tABC_CC ABC_LoginFromPassword(const char *szUserName,
+                              const char *szPassword,
+                              tABC_Login **ppSelf,
+                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_LoginObject    *pSelf          = NULL;
+    tABC_Login          *pSelf          = NULL;
     tABC_U08Buf         LP              = ABC_BUF_NULL;
     tABC_U08Buf         LP2             = ABC_BUF_NULL;
 
     // Allocate self:
-    ABC_ALLOC(pSelf, sizeof(tABC_LoginObject));
-    ABC_CHECK_RET(ABC_LoginObjectSetupUser(pSelf, szUserName, pError));
+    ABC_ALLOC(pSelf, sizeof(tABC_Login));
+    ABC_CHECK_RET(ABC_LoginSetupUser(pSelf, szUserName, pError));
 
     // Load CarePackage:
-    ABC_CHECK_RET(ABC_LoginObjectLoadCarePackage(pSelf, pError));
+    ABC_CHECK_RET(ABC_LoginLoadCarePackage(pSelf, pError));
 
     // LP = L + P:
     ABC_BUF_STRCAT(LP, pSelf->szUserName, szPassword);
@@ -231,19 +231,19 @@ tABC_CC ABC_LoginObjectFromPassword(const char *szUserName,
 
     // Load the login package using LP2 = Scrypt(LP, SNRP2):
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pSelf->pSNRP2, &LP2, pError));
-    ABC_CHECK_RET(ABC_LoginObjectLoadLoginPackage(pSelf, ABC_LP2, LP2, pError));
+    ABC_CHECK_RET(ABC_LoginLoadLoginPackage(pSelf, ABC_LP2, LP2, pError));
 
     // At this point, the login object is fully-formed in memory!
     // Now we need to sync with the server:
     int dirty;
-    ABC_CHECK_RET(ABC_LoginObjectSync(pSelf, &dirty, pError));
+    ABC_CHECK_RET(ABC_LoginSync(pSelf, &dirty, pError));
 
     // Assign the final output:
     *ppSelf = pSelf;
     pSelf = NULL;
 
 exit:
-    ABC_LoginObjectFree(pSelf);
+    ABC_LoginFree(pSelf);
     ABC_BUF_FREE(LP);
     ABC_BUF_FREE(LP2);
     return cc;
@@ -257,23 +257,23 @@ exit:
  * @param szPassword    The password for the account.
  * @param ppSelf        The returned login object.
  */
-tABC_CC ABC_LoginObjectFromRecovery(const char *szUserName,
-                                    const char *szRecoveryAnswers,
-                                    tABC_LoginObject **ppSelf,
-                                    tABC_Error *pError)
+tABC_CC ABC_LoginFromRecovery(const char *szUserName,
+                              const char *szRecoveryAnswers,
+                              tABC_Login **ppSelf,
+                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_LoginObject    *pSelf          = NULL;
+    tABC_Login          *pSelf          = NULL;
     tABC_U08Buf         LRA             = ABC_BUF_NULL;
     tABC_U08Buf         LRA3            = ABC_BUF_NULL;
 
     // Allocate self:
-    ABC_ALLOC(pSelf, sizeof(tABC_LoginObject));
-    ABC_CHECK_RET(ABC_LoginObjectSetupUser(pSelf, szUserName, pError));
+    ABC_ALLOC(pSelf, sizeof(tABC_Login));
+    ABC_CHECK_RET(ABC_LoginSetupUser(pSelf, szUserName, pError));
 
     // Load CarePackage:
-    ABC_CHECK_RET(ABC_LoginObjectLoadCarePackage(pSelf, pError));
+    ABC_CHECK_RET(ABC_LoginLoadCarePackage(pSelf, pError));
 
     // LRA = L + RA:
     ABC_BUF_STRCAT(LRA, pSelf->szUserName, szRecoveryAnswers);
@@ -283,19 +283,19 @@ tABC_CC ABC_LoginObjectFromRecovery(const char *szUserName,
 
     // Load the login package using LRA3 = Scrypt(LRA, SNRP3):
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pSelf->pSNRP3, &LRA3, pError));
-    ABC_CHECK_RET(ABC_LoginObjectLoadLoginPackage(pSelf, ABC_LRA3, LRA3, pError));
+    ABC_CHECK_RET(ABC_LoginLoadLoginPackage(pSelf, ABC_LRA3, LRA3, pError));
 
     // At this point, the login object is fully-formed in memory!
     // Now we need to sync with the server:
     int dirty;
-    ABC_CHECK_RET(ABC_LoginObjectSync(pSelf, &dirty, pError));
+    ABC_CHECK_RET(ABC_LoginSync(pSelf, &dirty, pError));
 
     // Assign the final output:
     *ppSelf = pSelf;
     pSelf = NULL;
 
 exit:
-    ABC_LoginObjectFree(pSelf);
+    ABC_LoginFree(pSelf);
     ABC_BUF_FREE(LRA);
     ABC_BUF_FREE(LRA3);
     return cc;
@@ -306,9 +306,9 @@ exit:
  * @param pSelf         An already-loaded login object.
  */
 static
-tABC_CC ABC_LoginObjectSync(tABC_LoginObject *pSelf,
-                            int *pDirty,
-                            tABC_Error *pError)
+tABC_CC ABC_LoginSync(tABC_Login *pSelf,
+                      int *pDirty,
+                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -320,8 +320,8 @@ tABC_CC ABC_LoginObjectSync(tABC_LoginObject *pSelf,
     // Create the directory if it does not exist:
     if (pSelf->AccountNum < 0)
     {
-        ABC_CHECK_RET(ABC_LoginObjectWriteCarePackage(pSelf, &szCarePackage, pError));
-        ABC_CHECK_RET(ABC_LoginObjectWriteLoginPackage(pSelf, &szLoginPackage, pError));
+        ABC_CHECK_RET(ABC_LoginWriteCarePackage(pSelf, &szCarePackage, pError));
+        ABC_CHECK_RET(ABC_LoginWriteLoginPackage(pSelf, &szLoginPackage, pError));
 
         // Create the account directory:
         ABC_CHECK_RET(ABC_LoginDirCreate(pSelf->szUserName,
@@ -330,7 +330,7 @@ tABC_CC ABC_LoginObjectSync(tABC_LoginObject *pSelf,
     }
 
     // Now do the sync:
-    ABC_CHECK_RET(ABC_LoginObjectGetSyncKeys(pSelf, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(pSelf, &pKeys, pError));
     ABC_CHECK_RET(ABC_SyncRepo(pKeys->szSyncDir, pKeys->szSyncKey, pDirty, pError));
 
 exit:
@@ -345,9 +345,9 @@ exit:
  * @param pSelf         An already-loaded login object.
  * @param szPassword    The new password.
  */
-tABC_CC ABC_LoginObjectSetPassword(tABC_LoginObject *pSelf,
-                                   const char *szPassword,
-                                   tABC_Error *pError)
+tABC_CC ABC_LoginSetPassword(tABC_Login *pSelf,
+                             const char *szPassword,
+                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -376,12 +376,12 @@ tABC_CC ABC_LoginObjectSetPassword(tABC_LoginObject *pSelf,
     // At this point, we have all the new stuff sitting in memory!
 
     // Write new packages:
-    tABC_LoginObject temp = *pSelf;
+    tABC_Login temp = *pSelf;
     temp.pSNRP2 = pSNRP2;
     temp.LP1 = LP1;
     temp.EMK_LP2 = EMK_LP2;
-    ABC_CHECK_RET(ABC_LoginObjectWriteCarePackage(&temp, &szCarePackage, pError));
-    ABC_CHECK_RET(ABC_LoginObjectWriteLoginPackage(&temp, &szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginWriteCarePackage(&temp, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginWriteLoginPackage(&temp, &szLoginPackage, pError));
 
     // Change the server login:
     ABC_CHECK_RET(ABC_LoginServerChangePassword(pSelf->L1, pSelf->LP1, pSelf->LRA1,
@@ -412,10 +412,10 @@ exit:
  * Changes the recovery questions and answers on an existing login object.
  * @param pSelf         An already-loaded login object.
  */
-tABC_CC ABC_LoginObjectSetRecovery(tABC_LoginObject *pSelf,
-                                   const char *szRecoveryQuestions,
-                                   const char *szRecoveryAnswers,
-                                   tABC_Error *pError)
+tABC_CC ABC_LoginSetRecovery(tABC_Login *pSelf,
+                             const char *szRecoveryQuestions,
+                             const char *szRecoveryAnswers,
+                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -456,15 +456,15 @@ tABC_CC ABC_LoginObjectSetRecovery(tABC_LoginObject *pSelf,
     // At this point, we have all the new stuff sitting in memory!
 
     // Write new packages:
-    tABC_LoginObject temp = *pSelf;
+    tABC_Login temp = *pSelf;
     temp.pSNRP3     = pSNRP3;
     temp.pSNRP4     = pSNRP4;
     temp.L4         = L4;
     temp.RQ         = RQ;
     temp.LRA1       = LRA1;
     temp.EMK_LRA3   = EMK_LRA3;
-    ABC_CHECK_RET(ABC_LoginObjectWriteCarePackage(&temp, &szCarePackage, pError));
-    ABC_CHECK_RET(ABC_LoginObjectWriteLoginPackage(&temp, &szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginWriteCarePackage(&temp, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginWriteLoginPackage(&temp, &szLoginPackage, pError));
 
     // Change the server login:
     ABC_CHECK_RET(ABC_LoginServerChangePassword(pSelf->L1, pSelf->LP1, pSelf->LRA1,
@@ -503,16 +503,16 @@ exit:
  * @param szUserName    The user name to check.
  * @param pMatch        Set to 1 if the names match.
  */
-tABC_CC ABC_LoginObjectCheckUserName(tABC_LoginObject *pSelf,
-                                     const char *szUserName,
-                                     int *pMatch,
-                                     tABC_Error *pError)
+tABC_CC ABC_LoginCheckUserName(tABC_Login *pSelf,
+                               const char *szUserName,
+                               int *pMatch,
+                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szFixed = NULL;
     *pMatch = 0;
 
-    ABC_CHECK_RET(ABC_LoginObjectFixUserName(szUserName, &szFixed, pError));
+    ABC_CHECK_RET(ABC_LoginFixUserName(szUserName, &szFixed, pError));
     if (!strcmp(szFixed, pSelf->szUserName))
         *pMatch = 1;
 
@@ -525,9 +525,9 @@ exit:
  * Obtains the sync keys for accessing an account's repo.
  * @param ppKeys    The returned keys. Call ABC_SyncFreeKeys when done.
  */
-tABC_CC ABC_LoginObjectGetSyncKeys(tABC_LoginObject *pSelf,
-                                   tABC_SyncKeys **ppKeys,
-                                   tABC_Error *pError)
+tABC_CC ABC_LoginGetSyncKeys(tABC_Login *pSelf,
+                             tABC_SyncKeys **ppKeys,
+                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_SyncKeys *pKeys = NULL;
@@ -550,10 +550,10 @@ exit:
  * @param pL1       The hashed user name. The caller must free this.
  * @param pLP1      The hashed user name & password. The caller must free this.
  */
-tABC_CC ABC_LoginObjectGetServerKeys(tABC_LoginObject *pSelf,
-                                     tABC_U08Buf *pL1,
-                                     tABC_U08Buf *pLP1,
-                                     tABC_Error *pError)
+tABC_CC ABC_LoginGetServerKeys(tABC_Login *pSelf,
+                               tABC_U08Buf *pL1,
+                               tABC_U08Buf *pLP1,
+                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_CHECK_NULL(pSelf);
@@ -570,27 +570,27 @@ exit:
  *
  * @param pszRecoveryQuestions The returned questions. The caller frees this.
  */
-tABC_CC ABC_LoginObjectGetRQ(const char *szUserName,
-                             char **pszRecoveryQuestions,
-                             tABC_Error *pError)
+tABC_CC ABC_LoginGetRQ(const char *szUserName,
+                       char **pszRecoveryQuestions,
+                       tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_LoginObject    *pSelf  = NULL;
+    tABC_Login *pSelf  = NULL;
 
     // Allocate self:
-    ABC_ALLOC(pSelf, sizeof(tABC_LoginObject));
-    ABC_CHECK_RET(ABC_LoginObjectSetupUser(pSelf, szUserName, pError));
+    ABC_ALLOC(pSelf, sizeof(tABC_Login));
+    ABC_CHECK_RET(ABC_LoginSetupUser(pSelf, szUserName, pError));
 
     // Load CarePackage:
-    ABC_CHECK_RET(ABC_LoginObjectLoadCarePackage(pSelf, pError));
+    ABC_CHECK_RET(ABC_LoginLoadCarePackage(pSelf, pError));
     ABC_CHECK_ASSERT(ABC_BUF_PTR(pSelf->RQ), ABC_CC_NoRecoveryQuestions, "No recovery questions");
 
     // Write the output:
     ABC_STRDUP(*pszRecoveryQuestions, (char *)ABC_BUF_PTR(pSelf->RQ));
 
 exit:
-    ABC_LoginObjectFree(pSelf);
+    ABC_LoginFree(pSelf);
 
     return cc;
 }
@@ -600,9 +600,9 @@ exit:
  * characters and collapsing spaces.
  */
 static
-tABC_CC ABC_LoginObjectFixUserName(const char *szUserName,
-                                   char **pszOut,
-                                   tABC_Error *pError)
+tABC_CC ABC_LoginFixUserName(const char *szUserName,
+                             char **pszOut,
+                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szOut = malloc(strlen(szUserName) + 1);
@@ -649,14 +649,14 @@ exit:
  * Sets up the username and L1 parameters in the login object.
  */
 static
-tABC_CC ABC_LoginObjectSetupUser(tABC_LoginObject *pSelf,
-                                 const char *szUserName,
-                                 tABC_Error *pError)
+tABC_CC ABC_LoginSetupUser(tABC_Login *pSelf,
+                           const char *szUserName,
+                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     // Set up identity:
-    ABC_CHECK_RET(ABC_LoginObjectFixUserName(szUserName, &pSelf->szUserName, pError));
+    ABC_CHECK_RET(ABC_LoginFixUserName(szUserName, &pSelf->szUserName, pError));
     ABC_CHECK_RET(ABC_LoginDirGetNumber(szUserName, &pSelf->AccountNum, pError));
 
     // Load SRNP1:
@@ -676,8 +676,8 @@ exit:
  * either from disk or from the server.
  */
 static
-tABC_CC ABC_LoginObjectLoadCarePackage(tABC_LoginObject *pSelf,
-                                       tABC_Error *pError)
+tABC_CC ABC_LoginLoadCarePackage(tABC_Login *pSelf,
+                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char    *szCarePackage  = NULL;
@@ -745,10 +745,10 @@ exit:
  * either from disk or from the server.
  */
 static
-tABC_CC ABC_LoginObjectLoadLoginPackage(tABC_LoginObject *pSelf,
-                                        tABC_KeyType type,
-                                        tABC_U08Buf Key,
-                                        tABC_Error *pError)
+tABC_CC ABC_LoginLoadLoginPackage(tABC_Login *pSelf,
+                                  tABC_KeyType type,
+                                  tABC_U08Buf Key,
+                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char    *szLoginPackage = NULL;
@@ -831,9 +831,9 @@ exit:
  * Serializes the CarePackage objects to a JSON string.
  */
 static
-tABC_CC ABC_LoginObjectWriteCarePackage(tABC_LoginObject *pSelf,
-                                        char **pszCarePackage,
-                                        tABC_Error *pError)
+tABC_CC ABC_LoginWriteCarePackage(tABC_Login *pSelf,
+                                  char **pszCarePackage,
+                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     json_t *pJSON_Root  = NULL;
@@ -885,9 +885,9 @@ exit:
  * Serializes the CarePackage objects to a JSON string.
  */
 static
-tABC_CC ABC_LoginObjectWriteLoginPackage(tABC_LoginObject *pSelf,
-                                         char **pszLoginPackage,
-                                         tABC_Error *pError)
+tABC_CC ABC_LoginWriteLoginPackage(tABC_Login *pSelf,
+                                   char **pszLoginPackage,
+                                   tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     json_t  *pJSON_Root     = NULL;
