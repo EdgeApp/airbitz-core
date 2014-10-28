@@ -7,7 +7,7 @@
  */
 
 #include "ABC_LoginShim.h"
-#include "ABC_LoginObject.h"
+#include "ABC_Login.h"
 #include "ABC_LoginServer.h"
 #include "ABC_General.h"
 #include "ABC_Wallet.h"
@@ -15,7 +15,7 @@
 #include "util/ABC_Util.h"
 
 // We cache a single login object, which is fine for the UI's needs:
-tABC_LoginObject *gLoginCache = NULL;
+tABC_Login *gLoginCache = NULL;
 
 static void ABC_LoginCacheClear();
 static void ABC_LoginCacheClearOther(const char *szUserName);
@@ -30,7 +30,7 @@ static tABC_CC ABC_LoginShimMutexUnlock(tABC_Error *pError);
 static
 void ABC_LoginCacheClear()
 {
-    ABC_LoginObjectFree(gLoginCache);
+    ABC_LoginFree(gLoginCache);
     gLoginCache = NULL;
 }
 
@@ -45,7 +45,7 @@ void ABC_LoginCacheClearOther(const char *szUserName)
         tABC_Error error;
         int match = 0;
 
-        ABC_LoginObjectCheckUserName(gLoginCache, szUserName, &match, &error);
+        ABC_LoginCheckUserName(gLoginCache, szUserName, &match, &error);
         if (!match)
             ABC_LoginCacheClear();
     }
@@ -72,7 +72,7 @@ tABC_CC ABC_LoginCacheObject(const char *szUserName,
     if (!gLoginCache)
     {
         ABC_CHECK_ASSERT(szPassword, ABC_CC_NULLPtr, "Not logged in");
-        ABC_CHECK_RET(ABC_LoginObjectFromPassword(szUserName, szPassword,
+        ABC_CHECK_RET(ABC_LoginFromPassword(szUserName, szPassword,
             &gLoginCache, pError));
     }
 
@@ -134,7 +134,7 @@ tABC_CC ABC_LoginShimNewAccount(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
 
     ABC_LoginCacheClear();
-    ABC_CHECK_RET(ABC_LoginObjectCreate(szUserName, szPassword, &gLoginCache, pError));
+    ABC_CHECK_RET(ABC_LoginCreate(szUserName, szPassword, &gLoginCache, pError));
 
     // Take this non-blocking opportunity to update the general info:
     ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
@@ -170,7 +170,7 @@ tABC_CC ABC_LoginShimSetRecovery(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
     // Do the change:
-    ABC_CHECK_RET(ABC_LoginObjectSetRecovery(gLoginCache,
+    ABC_CHECK_RET(ABC_LoginSetRecovery(gLoginCache,
         szRecoveryQuestions, szRecoveryAnswers, pError));
 
 exit:
@@ -208,18 +208,18 @@ tABC_CC ABC_LoginShimSetPassword(const char *szUserName,
     {
         if (szPassword)
         {
-            ABC_CHECK_RET(ABC_LoginObjectFromPassword(szUserName, szPassword,
+            ABC_CHECK_RET(ABC_LoginFromPassword(szUserName, szPassword,
                 &gLoginCache, pError));
         }
         else
         {
-            ABC_CHECK_RET(ABC_LoginObjectFromRecovery(szUserName, szRecoveryAnswers,
+            ABC_CHECK_RET(ABC_LoginFromRecovery(szUserName, szRecoveryAnswers,
                 &gLoginCache, pError));
         }
     }
 
     // Do the change:
-    ABC_CHECK_RET(ABC_LoginObjectSetPassword(gLoginCache, szNewPassword, pError));
+    ABC_CHECK_RET(ABC_LoginSetPassword(gLoginCache, szNewPassword, pError));
 
     // Clear wallet cache
     ABC_CHECK_RET(ABC_WalletClearCache(pError));
@@ -245,8 +245,8 @@ tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
     ABC_CHECK_NULL(szRecoveryAnswers);
     ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
 
-    tABC_LoginObject *pObject = NULL;
-    cc = ABC_LoginObjectFromRecovery(szUserName, szRecoveryAnswers,
+    tABC_Login *pObject = NULL;
+    cc = ABC_LoginFromRecovery(szUserName, szRecoveryAnswers,
         &pObject, pError);
 
     if (ABC_CC_Ok == cc)
@@ -291,7 +291,7 @@ tABC_CC ABC_LoginShimGetRecovery(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(pszQuestions);
 
-    ABC_CHECK_RET(ABC_LoginObjectGetRQ(szUserName, pszQuestions, pError));
+    ABC_CHECK_RET(ABC_LoginGetRQ(szUserName, pszQuestions, pError));
 
 exit:
     return cc;
@@ -322,7 +322,7 @@ tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
     // Grab the keys:
-    ABC_CHECK_RET(ABC_LoginObjectGetSyncKeys(gLoginCache, ppKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(gLoginCache, ppKeys, pError));
 
 exit:
     ABC_LoginShimMutexUnlock(NULL);
@@ -359,7 +359,7 @@ tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
     // Grab the keys:
-    ABC_CHECK_RET(ABC_LoginObjectGetServerKeys(gLoginCache, pL1, pLP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKeys(gLoginCache, pL1, pLP1, pError));
 
 exit:
     ABC_LoginShimMutexUnlock(NULL);
