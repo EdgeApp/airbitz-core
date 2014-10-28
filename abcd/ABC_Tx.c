@@ -41,7 +41,6 @@
 #include "ABC_Tx.h"
 #include "ABC_Account.h"
 #include "ABC_Exchanges.h"
-#include "ABC_Login.h"
 #include "ABC_Wallet.h"
 #include "ABC_Bridge.h"
 #include "util/ABC_Crypto.h"
