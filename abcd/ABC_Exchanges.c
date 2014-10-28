@@ -110,7 +110,7 @@ exit:
 /**
  * Fetches the current rate and requests a new value if the current value is old.
  */
-tABC_CC ABC_ExchangeCurrentRate(const char *szUserName, const char *szPassword,
+tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
                                 int currencyNum, double *pRate, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -124,7 +124,7 @@ tABC_CC ABC_ExchangeCurrentRate(const char *szUserName, const char *szPassword,
     }
     else
     {
-        ABC_CHECK_RET(ABC_ExchangeAlloc(szUserName, szPassword, currencyNum, NULL, NULL, &pInfo, pError));
+        ABC_CHECK_RET(ABC_ExchangeAlloc(pKeys, currencyNum, NULL, NULL, &pInfo, pError));
         ABC_CHECK_RET(ABC_ExchangeGetRate(pInfo, pRate, pError));
         ABC_ExchangeFreeInfo(pInfo);
     }
@@ -485,14 +485,12 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
                                   char **szSource, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_SyncKeys *pKeys = NULL;
     tABC_AccountSettings *pAccountSettings = NULL;
 
     *szSource = NULL;
-    if (pInfo->szUserName && pInfo->szPassword)
+    if (pInfo->pKeys)
     {
-        ABC_CHECK_RET(ABC_LoginGetSyncKeys(pInfo->szUserName, pInfo->szPassword, &pKeys, pError));
-        ABC_AccountSettingsLoad(pKeys,
+        ABC_AccountSettingsLoad(pInfo->pKeys,
                                 &pAccountSettings,
                                 pError);
     }
@@ -533,7 +531,6 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
         }
     }
 exit:
-    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     ABC_FreeAccountSettings(pAccountSettings);
 
     return cc;
@@ -661,7 +658,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_ExchangeAlloc(const char *szUserName, const char *szPassword,
+tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
                           int currencyNum,
                           tABC_Request_Callback fRequestCallback, void *pData,
                           tABC_ExchangeInfo **ppInfo, tABC_Error *pError)
@@ -670,8 +667,7 @@ tABC_CC ABC_ExchangeAlloc(const char *szUserName, const char *szPassword,
     tABC_ExchangeInfo *pInfo;
 
     ABC_ALLOC(pInfo, sizeof(tABC_ExchangeInfo));
-    ABC_STRDUP(pInfo->szUserName, szUserName);
-    ABC_STRDUP(pInfo->szPassword, szPassword);
+    ABC_CHECK_RET(ABC_SyncKeysCopy(&pInfo->pKeys, pKeys, pError));
     pInfo->fRequestCallback = fRequestCallback;
     pInfo->pData = pData;
     pInfo->currencyNum = currencyNum;
@@ -685,8 +681,7 @@ void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo)
 {
     if (pInfo)
     {
-        ABC_FREE_STR(pInfo->szUserName);
-        ABC_FREE_STR(pInfo->szPassword);
+        ABC_SyncFreeKeys(pInfo->pKeys);
         ABC_CLEAR_FREE(pInfo, sizeof(tABC_ExchangeInfo));
     }
 }

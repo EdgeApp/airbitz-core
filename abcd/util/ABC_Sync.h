@@ -28,10 +28,14 @@ extern "C" {
         /** The directory that contains the synced files: */
         char *szSyncDir;
         /** The sync key used to access the server: */
-        const char *szSyncKey;
+        char *szSyncKey;
         /** The encryption key used to protect the contents: */
         tABC_U08Buf MK;
     } tABC_SyncKeys;
+
+    tABC_CC ABC_SyncKeysCopy(tABC_SyncKeys **ppOut,
+                             tABC_SyncKeys *pIn,
+                             tABC_Error *pError);
 
     void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys);
 

@@ -22,7 +22,6 @@ static void ABC_LoginCacheClearOther(const char *szUserName);
 static tABC_CC ABC_LoginCacheObject(const char *szUserName, const char *szPassword, tABC_Error *pError);
 static tABC_CC ABC_LoginMutexLock(tABC_Error *pError);
 static tABC_CC ABC_LoginMutexUnlock(tABC_Error *pError);
-static tABC_CC ABC_LoginCopyServerKeys(const char *szUserName, const char *szPassword, tABC_U08Buf *pL1Copy, tABC_U08Buf *pLP1Copy, tABC_Error *pError);
 
 /**
  * Clears the cached login object.
@@ -93,35 +92,6 @@ tABC_CC ABC_LoginClearKeyCache(tABC_Error *pError)
 
 exit:
     ABC_LoginMutexUnlock(NULL);
-    return cc;
-}
-
-/**
- * Checks if the username and password are valid.
- *
- * If the login info is valid, the keys for this account
- * are also cached.
- * If the creditials are not valid, an error will be returned
- *
- * @param szUserName UserName for validation
- * @param szPassword Password for validation
- */
-tABC_CC ABC_LoginCheckCredentials(const char *szUserName,
-                                  const char *szPassword,
-                                  tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
-
-    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
-
-exit:
-    ABC_LoginMutexUnlock(NULL);
-
     return cc;
 }
 
@@ -370,8 +340,8 @@ exit:
  *
  * @param szUserName UserName for the account to access
  * @param szPassword Password for the account to access
- * @param pL1        A buffer to receive L1. Do *not* free this.
- * @param pLP1       A buffer to receive LP1. Do *not* free this.
+ * @param pL1        A buffer to receive L1. The caller must free this.
+ * @param pLP1       A buffer to receive LP1. The caller must free this.
  * @param pError     A pointer to the location to store the error if there is one
  */
 
@@ -403,35 +373,6 @@ exit:
     return cc;
 }
 
-static
-tABC_CC ABC_LoginCopyServerKeys(const char *szUserName,
-                                const char *szPassword,
-                                tABC_U08Buf *pL1Copy,
-                                tABC_U08Buf *pLP1Copy,
-                                tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    tABC_U08Buf L1  = ABC_BUF_NULL;
-    tABC_U08Buf LP1 = ABC_BUF_NULL;
-
-    ABC_CHECK_RET(ABC_LoginMutexLock(pError));
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
-
-    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
-    ABC_CHECK_RET(ABC_LoginObjectGetServerKeys(gLoginCache, &L1, &LP1, pError));
-
-    ABC_BUF_DUP(*pL1Copy, L1);
-    ABC_BUF_DUP(*pLP1Copy, LP1);
-
-exit:
-    ABC_LoginMutexUnlock(NULL);
-
-    return cc;
-}
-
 /**
  * Downloads and saves a new LoginPackage from the server.
  */
@@ -449,7 +390,7 @@ tABC_CC ABC_LoginUpdateLoginPackageFromServer(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
 
-    ABC_CHECK_RET(ABC_LoginCopyServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
 
     ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &szLoginPackage, pError));
 
@@ -475,16 +416,16 @@ tABC_CC ABC_LoginSyncData(const char *szUserName,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
+    tABC_SyncKeys *pKeys = NULL;
 
-    // Load the account into the cache:
-    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+    // Get the sync keys:
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
 
-    // Do the update:
-    ABC_CHECK_RET(ABC_LoginObjectSync(gLoginCache, pDirty, pError));
+    // Do the sync:
+    ABC_CHECK_RET(ABC_SyncRepo(pKeys->szSyncDir, pKeys->szSyncKey, pDirty, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
