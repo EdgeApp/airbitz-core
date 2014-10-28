@@ -86,9 +86,7 @@ extern "C" {
                                             int32_t N,
                                             tABC_Error *pError);
 
-    tABC_CC ABC_BridgeWatcherStart(const char *szUserName,
-                                   const char *szPassword,
-                                   const char *walletUUID,
+    tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
                                    tABC_Error *pError);
 
     tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
@@ -104,17 +102,13 @@ extern "C" {
 
     tABC_CC ABC_BridgeWatcherDelete(const char *szWalletUUID, tABC_Error *pError);
 
-    tABC_CC ABC_BridgeWatchAddr(const char *szUserName, const char *szPassword,
-                                const char *walletUUID, const char *address,
+    tABC_CC ABC_BridgeWatchAddr(const char *szWalletUUID, const char *address,
                                 tABC_Error *pError);
 
-    tABC_CC ABC_BridgeWatchPath(const char *szUserName, const char *szPassword,
-                                const char *szWalletUUID, char **szPath,
+    tABC_CC ABC_BridgeWatchPath(const char *szWalletUUID, char **szPath,
                                 tABC_Error *pError);
 
-    tABC_CC ABC_BridgePrioritizeAddress(const char *szUserName,
-                                        const char *szPassword,
-                                        const char *szWalletUUID,
+    tABC_CC ABC_BridgePrioritizeAddress(const char *szWalletUUID,
                                         const char *szAddress,
                                         tABC_Error *pError);
 
@@ -130,9 +124,7 @@ extern "C" {
                                  tABC_UnsignedTx *pUtx,
                                  tABC_Error *pError);
 
-    tABC_CC ABC_BridgeMaxSpendable(const char *szUsername,
-                                   const char *szPassword,
-                                   const char *szWalletUUID,
+    tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
                                    const char *szDestAddress,
                                    bool bTransfer,
                                    uint64_t *pMaxSatoshi,

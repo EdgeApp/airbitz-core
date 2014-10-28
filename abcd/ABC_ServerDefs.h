@@ -68,6 +68,9 @@
 #define ABC_SERVER_JSON_STATUS_CODE_FIELD   "status_code"
 #define ABC_SERVER_JSON_RESULTS_FIELD       "results"
 
+#define ABC_SERVER_JSON_REPO_WALLET_FIELD       "repo_wallet_key"
+#define ABC_SERVER_JSON_EREPO_WALLET_FIELD      "erepo_wallet_key"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -44,6 +44,7 @@
 #include "ABC_Bridge.h"
 #include "ABC_Export.h"
 #include "ABC_Wallet.h"
+#include "ABC_WalletAsync.h"
 #include "ABC_Tx.h"
 #include "ABC_Exchanges.h"
 #include "util/ABC_Crypto.h"
@@ -346,7 +347,7 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
 
     if (fRequestCallback)
     {
-    tABC_LoginRequestInfo *pInfo = NULL;
+        tABC_LoginRequestInfo *pInfo = NULL;
 
         ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pInfo,
                                                   ABC_RequestType_SetAccountRecoveryQuestions,
@@ -408,7 +409,9 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_WalletCreateInfo *pWalletCreateInfo = NULL;
+    tABC_SyncKeys *pKeys = NULL;
+    tABC_U08Buf L1       = ABC_BUF_NULL;
+    tABC_U08Buf LP1      = ABC_BUF_NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
@@ -418,17 +421,25 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_CHECK_NULL(szWalletName);
     ABC_CHECK_ASSERT(strlen(szWalletName) > 0, ABC_CC_Error, "No wallet name provided");
 
-    ABC_CHECK_RET(ABC_WalletCreateInfoAlloc(&pWalletCreateInfo,
-                                            szUserName,
-                                            szPassword,
-                                            szWalletName,
-                                            currencyNum,
-                                            attributes,
-                                            fRequestCallback,
-                                            pData,
-                                            pError));
+    // get account keys:
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+
     if (fRequestCallback)
     {
+        tABC_WalletCreateInfo *pWalletCreateInfo = NULL;
+        ABC_CHECK_RET(ABC_WalletCreateInfoAlloc(&pWalletCreateInfo,
+                                                pKeys,
+                                                L1,
+                                                LP1,
+                                                szUserName,
+                                                szWalletName,
+                                                currencyNum,
+                                                attributes,
+                                                fRequestCallback,
+                                                pData,
+                                                pError));
+
         pthread_t handle;
         if (!pthread_create(&handle, NULL, ABC_WalletCreateThreaded, pWalletCreateInfo))
         {
@@ -441,11 +452,14 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
         char * output = NULL;
         ABC_ALLOC(output, 100*sizeof(char));
         results->pRetData = output;
-        cc = ABC_WalletCreate(pWalletCreateInfo, (char**) &(results->pRetData), pError);
-        ABC_WalletCreateInfoFree(pWalletCreateInfo);
+        ABC_CHECK_RET(ABC_WalletCreate(pKeys, L1, LP1, szUserName, szWalletName,
+            currencyNum, attributes, (char**) &(results->pRetData), pError));
     }
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
+    ABC_BUF_FREE(L1);
+    ABC_BUF_FREE(LP1);
 
     return cc;
 }
@@ -721,11 +735,15 @@ tABC_CC ABC_RenameWallet(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_WalletSetName(szUserName, szPassword, szUUID, szNewWalletName, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_WalletSetName(ABC_WalletID(pKeys, szUUID), szNewWalletName, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -822,11 +840,16 @@ tABC_CC ABC_GetWalletInfo(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_WalletGetInfo(szUserName, szPassword, szUUID, ppWalletInfo, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(pKeys, szUUID), ppWalletInfo, pError));
+    ABC_STRDUP((*ppWalletInfo)->szUserName, szUserName);
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -862,6 +885,7 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf pSeedBuf = ABC_BUF_NULL;
+    tABC_SyncKeys *pKeys = NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
@@ -870,10 +894,12 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
     // DO NOT free pSeedBuf
     // This points to an internal struct in the wallet cache
     //
-    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(szUserName, szPassword, szUUID, &pSeedBuf, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, szUUID), &pSeedBuf, pError));
     ABC_CHECK_RET(ABC_CryptoHexEncode(pSeedBuf, pszWalletSeed, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     //
     // Do not free the pSeedBuf
@@ -939,11 +965,20 @@ tABC_CC ABC_GetWallets(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    unsigned i = 0;
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_WalletGetWallets(szUserName, szPassword, paWalletInfo, pCount, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_WalletGetWallets(pKeys, paWalletInfo, pCount, pError));
+    for (i = 0; i < *pCount; ++i)
+    {
+        ABC_STRDUP((*paWalletInfo)[i]->szUserName, szUserName);
+    }
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -1285,11 +1320,14 @@ tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(szUserName, szPassword, satoshi, pCurrency, currencyNum, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(pKeys, satoshi, pCurrency, currencyNum, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -1314,11 +1352,15 @@ tABC_CC ABC_CurrencyToSatoshi(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxCurrencyToSatoshi(szUserName, szPassword, currency, currencyNum, pSatoshi, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxCurrencyToSatoshi(pKeys, currency, currencyNum, pSatoshi, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -1389,11 +1431,15 @@ tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(szUserName, szPassword, szWalletUUID, pDetails, pszRequestID, false, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(ABC_WalletID(pKeys, szWalletUUID), pDetails, pszRequestID, false, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -1422,11 +1468,15 @@ tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxModifyReceiveRequest(szUserName, szPassword, szWalletUUID, szRequestID, pDetails, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxModifyReceiveRequest(ABC_WalletID(pKeys, szWalletUUID), szRequestID, pDetails, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -1451,10 +1501,15 @@ tABC_CC ABC_FinalizeReceiveRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxFinalizeReceiveRequest(szUserName, szPassword, szWalletUUID, szRequestID, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxFinalizeReceiveRequest(ABC_WalletID(pKeys, szWalletUUID), szRequestID, pError));
+
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -1479,11 +1534,15 @@ tABC_CC ABC_CancelReceiveRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxCancelReceiveRequest(szUserName, szPassword, szWalletUUID, szRequestID, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxCancelReceiveRequest(ABC_WalletID(pKeys, szWalletUUID), szRequestID, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -1514,11 +1573,15 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxGenerateRequestQRCode(szUserName, szPassword, szWalletUUID, szRequestID, pszURI, paData, pWidth, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxGenerateRequestQRCode(ABC_WalletID(pKeys, szWalletUUID), szRequestID, pszURI, paData, pWidth, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
@@ -1552,6 +1615,7 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_TxSendInfo *pTxSendInfo = NULL;
+    tABC_SyncKeys *pKeys = NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
@@ -1563,16 +1627,16 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
     ABC_CHECK_NULL(pDetails);
     ABC_CHECK_NULL(pszTxId);
 
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
-                                      szUserName,
-                                      szPassword,
-                                      szWalletUUID,
+                                      ABC_WalletID(pKeys, szWalletUUID),
                                       szDestAddress,
                                       pDetails,
                                       pError));
     cc = ABC_TxSend(pTxSendInfo, pszTxId, pError);
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -1606,6 +1670,7 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_TxSendInfo *pTxSendInfo = NULL;
+    tABC_SyncKeys *pKeys = NULL;
 
     char *szRequestId = NULL;
     char *szRequestAddress = NULL;
@@ -1621,16 +1686,16 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
     ABC_CHECK_NULL(pDetails);
     ABC_CHECK_NULL(pszTxId);
 
-    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(szUserName, szPassword,
-                                             pTransfer->szDestWalletUUID, pDetails,
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(ABC_WalletID(pKeys,
+                                             pTransfer->szDestWalletUUID), pDetails,
                                              &szRequestId, true, pError));
     ABC_CHECK_RET(ABC_GetRequestAddress(szUserName, szPassword,
                                         pTransfer->szDestWalletUUID, szRequestId,
                                         &szRequestAddress, pError));
     ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
-                                      szUserName,
-                                      szPassword,
-                                      pTransfer->szSrcWalletUUID,
+                                      ABC_WalletID(pKeys,
+                                          pTransfer->szSrcWalletUUID),
                                       szRequestAddress,
                                       pDetails,
                                       pError));
@@ -1643,6 +1708,7 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
     cc = ABC_TxSend(pTxSendInfo, pszTxId, pError);
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     ABC_FREE_STR(szRequestId);
     ABC_FREE_STR(szRequestAddress);
 
@@ -1666,6 +1732,8 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
     char *szRequestId = NULL;
     char *szRequestAddress = NULL;
     tABC_TxSendInfo *pTxSendInfo = NULL;
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
@@ -1675,18 +1743,17 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet name provided");
     ABC_CHECK_NULL(pDetails);
 
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
-                                      szUserName,
-                                      szPassword,
-                                      szWalletUUID,
+                                      ABC_WalletID(pKeys, szWalletUUID),
                                       szDestAddress,
                                       pDetails,
                                       pError));
     pTxSendInfo->bTransfer = bTransfer;
     if (bTransfer)
     {
-        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(szUserName, szPassword,
-                                                 pTxSendInfo->szDestAddress, pDetails,
+        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(ABC_WalletID(pKeys,
+                                                 pTxSendInfo->szDestAddress), pDetails,
                                                  &szRequestId, true, pError));
         ABC_CHECK_RET(ABC_GetRequestAddress(szUserName, szPassword,
                                             pTxSendInfo->szDestAddress, szRequestId,
@@ -1700,7 +1767,9 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
 
     pDetails->amountFeesAirbitzSatoshi = pTxSendInfo->pDetails->amountFeesAirbitzSatoshi;
     pDetails->amountFeesMinersSatoshi = pTxSendInfo->pDetails->amountFeesMinersSatoshi;
+
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     ABC_FREE_STR(szRequestId);
     ABC_FREE_STR(szRequestAddress);
     ABC_TxSendInfoFree(pTxSendInfo);
@@ -1720,10 +1789,14 @@ tABC_CC ABC_MaxSpendable(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(
-        ABC_BridgeMaxSpendable(szUserName, szPassword, szWalletUUID,
+        ABC_BridgeMaxSpendable(ABC_WalletID(pKeys, szWalletUUID),
                                szDestAddress, bTransfer, pMaxSatoshi, pError));
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
@@ -1750,11 +1823,15 @@ tABC_CC ABC_GetTransaction(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxGetTransaction(szUserName, szPassword, szWalletUUID, szID, ppTransaction, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxGetTransaction(ABC_WalletID(pKeys, szWalletUUID), szID, ppTransaction, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
@@ -1782,12 +1859,16 @@ tABC_CC ABC_GetTransactions(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxGetTransactions(szUserName, szPassword, szWalletUUID, startTime, endTime, paTransactions, pCount, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxGetTransactions(ABC_WalletID(pKeys, szWalletUUID), startTime, endTime, paTransactions, pCount, pError));
     ABC_CHECK_RET(ABC_BridgeFilterTransactions(szWalletUUID, *paTransactions, pCount, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
@@ -1815,13 +1896,17 @@ tABC_CC ABC_SearchTransactions(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(
-            ABC_TxSearchTransactions(szUserName, szPassword, szWalletUUID,
+            ABC_TxSearchTransactions(ABC_WalletID(pKeys, szWalletUUID),
                                      szQuery, paTransactions,
                                      pCount, pError));
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
@@ -1873,11 +1958,15 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxSetTransactionDetails(szUserName, szPassword, szWalletUUID, szID, pDetails, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxSetTransactionDetails(ABC_WalletID(pKeys, szWalletUUID), szID, pDetails, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
@@ -1904,11 +1993,15 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxGetTransactionDetails(szUserName, szPassword, szWalletUUID, szID, ppDetails, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxGetTransactionDetails(ABC_WalletID(pKeys, szWalletUUID), szID, ppDetails, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
@@ -1934,11 +2027,15 @@ tABC_CC ABC_GetRequestAddress(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxGetRequestAddress(szUserName, szPassword, szWalletUUID, szRequestID, pszAddress, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxGetRequestAddress(ABC_WalletID(pKeys, szWalletUUID), szRequestID, pszAddress, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
@@ -1964,11 +2061,15 @@ tABC_CC ABC_GetPendingRequests(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxGetPendingRequests(szUserName, szPassword, szWalletUUID, paRequests, pCount, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxGetPendingRequests(ABC_WalletID(pKeys, szWalletUUID), paRequests, pCount, pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
@@ -2303,13 +2404,15 @@ tABC_CC ABC_DataSyncAll(const char *szUserName,
 
     tABC_CC cc = ABC_CC_Ok;
     int walletDirty = 0;
+    tABC_SyncKeys *pKeys = NULL;
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_DataSyncAccount(szUserName, szPassword, fAsyncBitCoinEventCallback, pData, pError));
     // Sync Wallet Data
-    ABC_CHECK_RET(ABC_WalletSyncAll(szUserName, szPassword, &walletDirty, pError));
+    ABC_CHECK_RET(ABC_WalletSyncAll(pKeys, &walletDirty, pError));
     if (walletDirty && fAsyncBitCoinEventCallback)
     {
         tABC_AsyncBitCoinInfo info;
@@ -2320,6 +2423,8 @@ tABC_CC ABC_DataSyncAll(const char *szUserName,
         ABC_FREE_STR(info.szDescription);
     }
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
+
     return cc;
 }
 
@@ -2381,13 +2486,15 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
 
     tABC_CC cc = ABC_CC_Ok;
     int dirty = 0;
+    tABC_SyncKeys *pKeys = NULL;
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(fAsyncBitCoinEventCallback);
 
         // Sync the account data
-    ABC_CHECK_RET(ABC_WalletSyncData(szUserName, szPassword, szWalletUUID, &dirty, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_WalletSyncData(ABC_WalletID(pKeys, szWalletUUID), &dirty, pError));
     if (dirty)
     {
         tABC_AsyncBitCoinInfo info;
@@ -2398,6 +2505,7 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
         ABC_FREE_STR(info.szDescription);
     }
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
@@ -2418,11 +2526,15 @@ tABC_CC ABC_WatcherStart(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_BridgeWatcherStart(szUserName, szPassword, szWalletUUID, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_BridgeWatcherStart(ABC_WalletID(pKeys, szWalletUUID), pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -2486,11 +2598,15 @@ tABC_CC ABC_WatchAddresses(const char *szUserName, const char *szPassword,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_TxWatchAddresses(szUserName, szPassword, szWalletUUID, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_TxWatchAddresses(ABC_WalletID(pKeys, szWalletUUID), pError));
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
 
     return cc;
 }
@@ -2498,8 +2614,8 @@ exit:
 /**
  * Watch a single address for a wallet
  *
- * @param szUserName   UserName for the account
- * @param szPassword   Password for the account
+ * @param szUserName   DEPRECATED. Completely unused.
+ * @param szPassword   DEPRECATED. Completely unused.
  * @param szWalletUUID The wallet watcher to use
  * @param szAddress    The wallet watcher to use
  */
@@ -2514,7 +2630,7 @@ tABC_CC ABC_PrioritizeAddress(const char *szUserName, const char *szPassword,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_BridgePrioritizeAddress(szUserName, szPassword, szWalletUUID, szAddress, pError));
+    ABC_CHECK_RET(ABC_BridgePrioritizeAddress(szWalletUUID, szAddress, pError));
 
 exit:
 
@@ -2661,14 +2777,17 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(
-        ABC_ExchangeAlloc(szUserName, szPassword, currencyNum,
+        ABC_ExchangeAlloc(pKeys, currencyNum,
                           fRequestCallback, pData, &pInfo, pError));
     if (fRequestCallback)
     {
@@ -2685,6 +2804,7 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
     }
 
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
@@ -2734,8 +2854,8 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
     return cc;
 }
 
-tABC_CC ABC_CsvExport(const char *szUserName,
-                      const char *szPassword,
+tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
+                      const char *szPassword, /* DEPRECATED */
                       const char *szUUID,
                       int64_t startTime,
                       int64_t endTime,
@@ -2760,9 +2880,7 @@ tABC_CC ABC_CsvExport(const char *szUserName,
                                           &pTransactions, &iCount, pError));
 
 
-        ABC_CHECK_RET(ABC_ExportFormatCsv(szUserName,
-                                          szPassword,
-                                          pTransactions,
+        ABC_CHECK_RET(ABC_ExportFormatCsv(pTransactions,
                                           iCount,
                                           szCsvData,
                                           pError));
@@ -2781,12 +2899,22 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_SyncKeys *pKeys = NULL;
+    tABC_U08Buf L1       = ABC_BUF_NULL;
+    tABC_U08Buf LP1      = ABC_BUF_NULL;
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPassword);
 
-    ABC_CHECK_RET(ABC_LoginServerUploadLogs(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginServerUploadLogs(L1, LP1, pKeys, pError));
+
 exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
+    ABC_BUF_FREE(L1);
+    ABC_BUF_FREE(LP1);
 
     return cc;
 }

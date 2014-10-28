@@ -43,8 +43,15 @@ extern "C" {
                                            char **szLoginPackage,
                                            tABC_Error *pError);
 
-    tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
-                                      const char *szPassword,
+    tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
+                                     tABC_U08Buf LP1,
+                                     const char *szWalletAcctKey,
+                                     const char *szPath,
+                                     tABC_Error *pError);
+
+    tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
+                                      tABC_U08Buf LP1,
+                                      tABC_SyncKeys *pKeys,
                                       tABC_Error *pError);
 
 #ifdef __cplusplus

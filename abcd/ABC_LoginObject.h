@@ -34,11 +34,6 @@ extern "C" {
                                         tABC_LoginObject **ppSelf,
                                         tABC_Error *pError);
 
-    // Actions:
-    tABC_CC ABC_LoginObjectSync(tABC_LoginObject *pSelf,
-                                int *pDirty,
-                                tABC_Error *pError);
-
     // Write accessors:
     tABC_CC ABC_LoginObjectSetPassword(tABC_LoginObject *pSelf,
                                        const char *szPassword,

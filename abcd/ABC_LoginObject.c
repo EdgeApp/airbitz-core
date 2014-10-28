@@ -62,6 +62,7 @@ typedef enum
     ABC_LRA3
 } tABC_KeyType;
 
+static tABC_CC ABC_LoginObjectSync(tABC_LoginObject *pSelf, int *pDirty, tABC_Error *pError);
 static tABC_CC ABC_LoginObjectFixUserName(const char *szUserName, char **pszOut, tABC_Error *pError);
 static tABC_CC ABC_LoginObjectSetupUser(tABC_LoginObject *pSelf, const char *szUserName, tABC_Error *pError);
 static tABC_CC ABC_LoginObjectLoadCarePackage(tABC_LoginObject *pSelf, tABC_Error *pError);
@@ -304,6 +305,7 @@ exit:
  * Syncs the repository with the server.
  * @param pSelf         An already-loaded login object.
  */
+static
 tABC_CC ABC_LoginObjectSync(tABC_LoginObject *pSelf,
                             int *pDirty,
                             tABC_Error *pError)
@@ -532,8 +534,8 @@ tABC_CC ABC_LoginObjectGetSyncKeys(tABC_LoginObject *pSelf,
 
     ABC_ALLOC(pKeys, sizeof(tABC_SyncKeys));
     ABC_CHECK_RET(ABC_LoginGetSyncDirName(pSelf->szUserName, &pKeys->szSyncDir, pError));
-    ABC_BUF_SET(pKeys->MK, pSelf->MK);
-    pKeys->szSyncKey = pSelf->szSyncKey;
+    ABC_BUF_DUP(pKeys->MK, pSelf->MK);
+    ABC_STRDUP(pKeys->szSyncKey, pSelf->szSyncKey);
 
     *ppKeys = pKeys;
     pKeys = NULL;
@@ -545,8 +547,8 @@ exit:
 
 /**
  * Obtains an account object's user name.
- * @param pL1       The hashed user name. Do *not* free this.
- * @param pLP1      The hashed user name & password. Do *not* free this.
+ * @param pL1       The hashed user name. The caller must free this.
+ * @param pLP1      The hashed user name & password. The caller must free this.
  */
 tABC_CC ABC_LoginObjectGetServerKeys(tABC_LoginObject *pSelf,
                                      tABC_U08Buf *pL1,
@@ -556,8 +558,8 @@ tABC_CC ABC_LoginObjectGetServerKeys(tABC_LoginObject *pSelf,
     tABC_CC cc = ABC_CC_Ok;
     ABC_CHECK_NULL(pSelf);
 
-    ABC_BUF_SET(*pL1, pSelf->L1);
-    ABC_BUF_SET(*pLP1, pSelf->LP1);
+    ABC_BUF_DUP(*pL1, pSelf->L1);
+    ABC_BUF_DUP(*pLP1, pSelf->LP1);
 
 exit:
     return cc;

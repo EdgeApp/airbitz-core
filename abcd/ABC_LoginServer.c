@@ -351,14 +351,73 @@ exit:
 }
 
 /**
+ * Creates an git repo on the server.
+ *
+ * @param L1   Login hash for the account
+ * @param LP1  Password hash for the account
+ */
+tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
+                                 tABC_U08Buf LP1,
+                                 const char *szWalletAcctKey,
+                                 const char *szPath,
+                                 tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szURL     = NULL;
+    char *szResults = NULL;
+    char *szPost    = NULL;
+    char *szL1_Base64 = NULL;
+    char *szLP1_Base64 = NULL;
+    json_t *pJSON_Root = NULL;
+
+    ABC_CHECK_NULL_BUF(L1);
+    ABC_CHECK_NULL_BUF(LP1);
+
+    // create the URL
+    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, szPath);
+
+    // create base64 versions of L1 and LP1
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
+
+    // create the post data
+    pJSON_Root = json_pack("{ssssss}",
+                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                        ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
+                        ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey);
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
+    json_decref(pJSON_Root);
+    pJSON_Root = NULL;
+    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %s", szResults);
+
+    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
+exit:
+    ABC_FREE_STR(szURL);
+    ABC_FREE_STR(szResults);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szL1_Base64);
+    ABC_FREE_STR(szLP1_Base64);
+    if (pJSON_Root)     json_decref(pJSON_Root);
+
+    return cc;
+}
+
+/**
  * Upload files to auth server for debugging
  *
  * @param szUserName    UserName for the account associated with the settings
  * @param szPassword    Password for the account associated with the settings
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
-                                  const char *szPassword,
+tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
+                                  tABC_U08Buf LP1,
+                                  tABC_SyncKeys *pKeys,
                                   tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -378,8 +437,6 @@ tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
     void *szWatchData     = NULL;
     char *szWatchData_Hex = NULL;
     json_t *pJSON_Root    = NULL;
-    tABC_U08Buf L1        = ABC_BUF_NULL; // Do not free
-    tABC_U08Buf LP1       = ABC_BUF_NULL; // Do not free
     tABC_U08Buf LogData   = ABC_BUF_NULL;
     tABC_U08Buf WatchData = ABC_BUF_NULL;
     size_t watcherSize    = 0;
@@ -391,7 +448,6 @@ tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_DEBUG_PATH);
 
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
     ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
     ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
 
@@ -400,12 +456,11 @@ tABC_CC ABC_LoginServerUploadLogs(const char *szUserName,
     ABC_BUF_SET_PTR(LogData, (unsigned char *)szLogData, strlen(szLogData) + 1);
     ABC_CHECK_RET(ABC_CryptoBase64Encode(LogData, &szLogData_Hex, pError));
 
-    ABC_CHECK_RET(ABC_GetWallets(szUserName, szPassword, &paWalletInfo, &nCount, pError));
+    ABC_CHECK_RET(ABC_WalletGetWallets(pKeys, &paWalletInfo, &nCount, pError));
     pJSON_array = json_array();
     for (int i = 0; i < nCount; ++i)
     {
-        ABC_CHECK_RET(ABC_BridgeWatchPath(szUserName, szPassword,
-                                          paWalletInfo[i]->szUUID,
+        ABC_CHECK_RET(ABC_BridgeWatchPath(paWalletInfo[i]->szUUID,
                                           &szWatchFilename, pError));
         ABC_CHECK_RET(ABC_FileIOReadFile(szWatchFilename, &szWatchData, &watcherSize, pError));
         ABC_BUF_SET_PTR(WatchData, szWatchData, watcherSize);

@@ -1,6 +1,6 @@
 /**
  * @file
- * AirBitz Exchange functions
+ * AirBitz Wallet function prototypes
  *
  *  Copyright (c) 2014, Airbitz
  *  All rights reserved.
@@ -35,8 +35,8 @@
  *  @version 1.0
  */
 
-#ifndef ABC_Exchanges_h
-#define ABC_Exchanges_h
+#ifndef ABC_WalletAsync_h
+#define ABC_WalletAsync_h
 
 #include "ABC.h"
 #include "util/ABC_Sync.h"
@@ -47,36 +47,43 @@ extern "C" {
 #endif
 
     /**
-     * AirBitz Exchange Info Structure
+     * AirBitz Core Create Wallet Structure
+     *
+     * This structure contains the detailed information associated
+     * with creating a new wallet.
+     *
      */
-    typedef struct sABC_ExchangeInfo
+    typedef struct sABC_WalletCreateInfo
     {
-        /** Access to the account settings */
-        tABC_SyncKeys         *pKeys;
-        /** The currency to request or update **/
-        int                   currencyNum;
-        /** Callback fired after a update **/
-        tABC_Request_Callback fRequestCallback;
-        /** Data to return with the callback **/
-        void                  *pData;
-    } tABC_ExchangeInfo;
+        /** data pointer given by caller at initial create call time */
+        void                    *pData;
 
-    tABC_CC ABC_ExchangeInitialize(tABC_Error                   *pError);
+        tABC_SyncKeys           *pKeys;
+        tABC_U08Buf             L1;
+        tABC_U08Buf             LP1;
+        char                    *szUserName;
 
-    tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
-                                    int currencyNum, double *pRate, tABC_Error *pError);
+        char                    *szWalletName;
+        int                     currencyNum;
+        unsigned int            attributes;
+        tABC_Request_Callback   fRequestCallback;
+    } tABC_WalletCreateInfo;
 
-    tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
+    tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
+                                      tABC_SyncKeys *pKeys,
+                                      tABC_U08Buf L1,
+                                      tABC_U08Buf LP1,
+                                      const char *szUserName,
+                                      const char *szWalletName,
+                                      int        currencyNum,
+                                      unsigned int  attributes,
+                                      tABC_Request_Callback fRequestCallback,
+                                      void *pData,
+                                      tABC_Error *pError);
 
-    void *ABC_ExchangeUpdateThreaded(void *pData);
+    void ABC_WalletCreateInfoFree(tABC_WalletCreateInfo *pWalletCreateInfo);
 
-    void ABC_ExchangeTerminate();
-
-    tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
-                              int currencyNum,
-                              tABC_Request_Callback fRequestCallback, void *pData,
-                              tABC_ExchangeInfo **ppInfo, tABC_Error *pError);
-    void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo);
+    void *ABC_WalletCreateThreaded(void *pData);
 
 #ifdef __cplusplus
 }
