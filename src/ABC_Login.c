@@ -64,7 +64,6 @@ tABC_CC ABC_LoginCacheObject(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
 
     // Clear the cache if it has the wrong object:
     ABC_LoginCacheClearOther(szUserName);
@@ -72,6 +71,7 @@ tABC_CC ABC_LoginCacheObject(const char *szUserName,
     // Load the right object, if necessary:
     if (!gLoginCache)
     {
+        ABC_CHECK_ASSERT(szPassword, ABC_CC_NULLPtr, "Not logged in");
         ABC_CHECK_RET(ABC_LoginObjectFromPassword(szUserName, szPassword,
             &gLoginCache, pError));
     }
@@ -107,7 +107,6 @@ tABC_CC ABC_LoginSignIn(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
 
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
@@ -132,7 +131,6 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
 
     ABC_LoginCacheClear();
@@ -166,7 +164,6 @@ tABC_CC ABC_LoginSetRecovery(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
 
     // Load the account into the cache:
@@ -319,8 +316,6 @@ tABC_CC ABC_LoginGetSyncKeys(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(ppKeys);
 
     // Load the account into the cache:
@@ -357,8 +352,6 @@ tABC_CC ABC_LoginGetServerKeys(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(pL1);
     ABC_CHECK_NULL(pLP1);
 
@@ -388,7 +381,6 @@ tABC_CC ABC_LoginUpdateLoginPackageFromServer(const char *szUserName,
     char *szLoginPackage = NULL;
 
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPassword);
 
     ABC_CHECK_RET(ABC_LoginGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
 
