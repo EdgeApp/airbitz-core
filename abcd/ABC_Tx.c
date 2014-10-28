@@ -348,6 +348,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
     tABC_Tx *pReceiveTx = NULL;
     bool bFound = false;
     tABC_WalletInfo *pWallet = NULL;
+    tABC_WalletInfo *pDestWallet = NULL;
     double Currency;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
@@ -383,6 +384,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
                                         + pInfo->pDetails->amountFeesAirbitzSatoshi
                                         + pInfo->pDetails->amountFeesMinersSatoshi;
     }
+
     ABC_CHECK_RET(ABC_WalletGetInfo(pInfo->wallet, &pWallet, pError));
     ABC_CHECK_RET(ABC_TxSatoshiToCurrency(
                     pInfo->wallet.pKeys,
@@ -419,6 +421,15 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
         //
         pReceiveTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
+        tABC_WalletID recvWallet =
+            ABC_WalletID(pInfo->wallet.pKeys, pInfo->szDestWalletUUID);
+
+        ABC_CHECK_RET(ABC_WalletGetInfo(recvWallet, &pDestWallet, pError));
+        ABC_CHECK_RET(ABC_TxSatoshiToCurrency(recvWallet.pKeys,
+                        pTx->pDetails->amountSatoshi, &Currency,
+                        pDestWallet->currencyNum, pError));
+        pReceiveTx->pDetails->amountCurrency = Currency;
+
         if (pReceiveTx->pDetails->amountSatoshi < 0)
             pReceiveTx->pDetails->amountSatoshi *= -1;
         if (pReceiveTx->pDetails->amountCurrency < 0)
@@ -431,7 +442,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
         ABC_CHECK_RET(ABC_TxTransferPopulate(pInfo, pTx, pReceiveTx, pError));
 
         // save the transaction
-        ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->wallet, pReceiveTx, pError));
+        ABC_CHECK_RET(ABC_TxSaveTransaction(recvWallet, pReceiveTx, pError));
     }
 
     // save the transaction
@@ -441,6 +452,8 @@ exit:
     ABC_TxFreeTx(pTx);
     ABC_TxFreeTx(pReceiveTx);
     ABC_TxMutexUnlock(NULL);
+    ABC_WalletFreeInfo(pWallet);
+    ABC_WalletFreeInfo(pDestWallet);
     return cc;
 }
 
