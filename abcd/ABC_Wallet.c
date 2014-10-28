@@ -42,7 +42,6 @@
 #include "ABC_Tx.h"
 #include "ABC_Account.h"
 #include "ABC_Bridge.h"
-#include "ABC_Login.h"
 #include "ABC_LoginServer.h"
 #include "ABC_ServerDefs.h"
 #include "util/ABC_Crypto.h"

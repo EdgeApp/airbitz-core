@@ -1,7 +1,7 @@
 #include "common.h"
 #include <stdio.h>
 
-#include "ABC_Login.h"
+#include "ABC_LoginShim.h"
 #include "util/ABC_Crypto.h"
 
 int main(int argc, char *argv[])
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, seed, sizeof(seed), &error));
 
-    MAIN_CHECK(ABC_LoginGetSyncKeys(argv[2], argv[3], &pKeys, &error));
+    MAIN_CHECK(ABC_LoginShimGetSyncKeys(argv[2], argv[3], &pKeys, &error));
     sprintf(szFilename, "%s/%s", pKeys->szSyncDir, argv[4]);
 
     MAIN_CHECK(ABC_CryptoDecryptJSONFile(szFilename, pKeys->MK, &data, &error));
