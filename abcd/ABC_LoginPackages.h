@@ -19,6 +19,7 @@ extern "C" {
      */
     typedef struct sABC_CarePackage
     {
+        tABC_CryptoSNRP *pSNRP1;
         tABC_CryptoSNRP *pSNRP2;
         tABC_CryptoSNRP *pSNRP3;
         tABC_CryptoSNRP *pSNRP4;
@@ -26,6 +27,9 @@ extern "C" {
     } tABC_CarePackage;
 
     void ABC_CarePackageFree(tABC_CarePackage *pSelf);
+
+    tABC_CC ABC_CarePackageNew(tABC_CarePackage **ppSelf,
+                               tABC_Error *pError);
 
     tABC_CC ABC_CarePackageDecode(tABC_CarePackage **ppSelf,
                                   char *szCarePackage,
@@ -56,6 +60,11 @@ extern "C" {
          * The ELP1 is useful by itself for things like uploading error logs.
          * If we ever associate public keys with logins (like for wallet
          * sharing), those can replace the ELP1.
+         *
+         * Since LP1 is always available, there is never a time where
+         * changing the password or recovery would need to pass the old
+         * recovery answers. The client-side routines no longer take an
+         * oldLRA1 parameter, but the server API still does.
          */
     } tABC_LoginPackage;
 
@@ -68,6 +77,11 @@ extern "C" {
     tABC_CC ABC_LoginPackageEncode(tABC_LoginPackage *pSelf,
                                    char **pszLoginPackage,
                                    tABC_Error *pError);
+
+    tABC_CC ABC_LoginPackageGetSyncKey(tABC_LoginPackage *pSelf,
+                                       const tABC_U08Buf MK,
+                                       char **pszSyncKey,
+                                       tABC_Error *pError);
 
 #ifdef __cplusplus
 }

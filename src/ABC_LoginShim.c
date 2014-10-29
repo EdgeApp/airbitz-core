@@ -8,6 +8,8 @@
 
 #include "ABC_LoginShim.h"
 #include "ABC_Login.h"
+#include "ABC_LoginPassword.h"
+#include "ABC_LoginRecovery.h"
 #include "ABC_LoginServer.h"
 #include "ABC_General.h"
 #include "ABC_Wallet.h"
@@ -72,8 +74,7 @@ tABC_CC ABC_LoginCacheObject(const char *szUserName,
     if (!gLoginCache)
     {
         ABC_CHECK_ASSERT(szPassword, ABC_CC_NULLPtr, "Not logged in");
-        ABC_CHECK_RET(ABC_LoginFromPassword(szUserName, szPassword,
-            &gLoginCache, pError));
+        ABC_CHECK_RET(ABC_LoginPassword(&gLoginCache, szUserName, szPassword, pError));
     }
 
 exit:
@@ -170,7 +171,7 @@ tABC_CC ABC_LoginShimSetRecovery(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
     // Do the change:
-    ABC_CHECK_RET(ABC_LoginSetRecovery(gLoginCache,
+    ABC_CHECK_RET(ABC_LoginRecoverySet(gLoginCache,
         szRecoveryQuestions, szRecoveryAnswers, pError));
 
 exit:
@@ -208,18 +209,16 @@ tABC_CC ABC_LoginShimSetPassword(const char *szUserName,
     {
         if (szPassword)
         {
-            ABC_CHECK_RET(ABC_LoginFromPassword(szUserName, szPassword,
-                &gLoginCache, pError));
+            ABC_CHECK_RET(ABC_LoginPassword(&gLoginCache, szUserName, szPassword, pError));
         }
         else
         {
-            ABC_CHECK_RET(ABC_LoginFromRecovery(szUserName, szRecoveryAnswers,
-                &gLoginCache, pError));
+            ABC_CHECK_RET(ABC_LoginRecovery(&gLoginCache, szUserName, szRecoveryAnswers, pError));
         }
     }
 
     // Do the change:
-    ABC_CHECK_RET(ABC_LoginSetPassword(gLoginCache, szNewPassword, pError));
+    ABC_CHECK_RET(ABC_LoginPasswordSet(gLoginCache, szNewPassword, pError));
 
     // Clear wallet cache
     ABC_CHECK_RET(ABC_WalletClearCache(pError));
@@ -246,8 +245,7 @@ tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
 
     tABC_Login *pObject = NULL;
-    cc = ABC_LoginFromRecovery(szUserName, szRecoveryAnswers,
-        &pObject, pError);
+    cc = ABC_LoginRecovery(&pObject, szUserName, szRecoveryAnswers, pError);
 
     if (ABC_CC_Ok == cc)
     {
@@ -378,18 +376,18 @@ tABC_CC ABC_LoginShimCheckPasswordChange(const char *szUserName,
     tABC_U08Buf L1       = ABC_BUF_NULL;
     tABC_U08Buf LP1      = ABC_BUF_NULL;
     tABC_U08Buf LRA1     = ABC_BUF_NULL;
-    char *szLoginPackage = NULL;
+    tABC_LoginPackage *pLoginPackage = NULL;
 
     ABC_CHECK_NULL(szUserName);
 
     ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
 
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &pLoginPackage, pError));
 
 exit:
     ABC_BUF_FREE(L1);
     ABC_BUF_FREE(LP1);
-    ABC_FREE_STR(szLoginPackage);
+    ABC_LoginPackageFree(pLoginPackage);
 
     return cc;
 }
