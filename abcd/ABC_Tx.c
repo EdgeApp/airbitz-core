@@ -426,7 +426,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
 
         ABC_CHECK_RET(ABC_WalletGetInfo(recvWallet, &pDestWallet, pError));
         ABC_CHECK_RET(ABC_TxSatoshiToCurrency(recvWallet.pKeys,
-                        pTx->pDetails->amountSatoshi, &Currency,
+                        pReceiveTx->pDetails->amountSatoshi, &Currency,
                         pDestWallet->currencyNum, pError));
         pReceiveTx->pDetails->amountCurrency = Currency;
 
