@@ -7,6 +7,7 @@
 #define ABC_LoginDir_h
 
 #include "ABC.h"
+#include "ABC_LoginPackages.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +43,16 @@ extern "C" {
                                    unsigned AccountNum,
                                    const char *szFile,
                                    tABC_Error *pError);
+
+    tABC_CC ABC_LoginDirLoadPackages(int AccountNum,
+                                     tABC_CarePackage **ppCarePackage,
+                                     tABC_LoginPackage **ppLoginPackage,
+                                     tABC_Error *pError);
+
+    tABC_CC ABC_LoginDirSavePackages(int AccountNum,
+                                     tABC_CarePackage *pCarePackage,
+                                     tABC_LoginPackage *pLoginPackage,
+                                     tABC_Error *pError);
 
 #ifdef __cplusplus
 }

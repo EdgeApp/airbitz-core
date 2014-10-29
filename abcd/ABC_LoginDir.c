@@ -459,3 +459,57 @@ tABC_CC ABC_LoginMakeFilename(char **pszOut, unsigned AccountNum, const char *sz
 exit:
     return cc;
 }
+
+/**
+ * Loads the login and care packages from disk.
+ */
+tABC_CC ABC_LoginDirLoadPackages(int AccountNum,
+                                 tABC_CarePackage **ppCarePackage,
+                                 tABC_LoginPackage **ppLoginPackage,
+                                 tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szCarePackage = NULL;
+    char *szLoginPackage = NULL;
+
+    ABC_CHECK_RET(ABC_LoginDirFileLoad(&szCarePackage, AccountNum,
+        ACCOUNT_CARE_PACKAGE_FILENAME, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileLoad(&szLoginPackage, AccountNum,
+        ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
+
+    ABC_CHECK_RET(ABC_CarePackageDecode(ppCarePackage, szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginPackageDecode(ppLoginPackage, szLoginPackage, pError));
+
+exit:
+    if (szCarePackage)  ABC_FREE_STR(szCarePackage);
+    if (szLoginPackage) ABC_FREE_STR(szLoginPackage);
+    return cc;
+}
+
+/**
+ * Writes the login and care packages to disk.
+ */
+tABC_CC ABC_LoginDirSavePackages(int AccountNum,
+                                 tABC_CarePackage *pCarePackage,
+                                 tABC_LoginPackage *pLoginPackage,
+                                 tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szCarePackage = NULL;
+    char *szLoginPackage = NULL;
+
+    ABC_CHECK_RET(ABC_CarePackageEncode(pCarePackage, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginPackageEncode(pLoginPackage, &szLoginPackage, pError));
+
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szCarePackage, AccountNum,
+        ACCOUNT_CARE_PACKAGE_FILENAME, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szLoginPackage, AccountNum,
+        ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
+
+exit:
+    if (szCarePackage)  ABC_FREE_STR(szCarePackage);
+    if (szLoginPackage) ABC_FREE_STR(szLoginPackage);
+    return cc;
+}
