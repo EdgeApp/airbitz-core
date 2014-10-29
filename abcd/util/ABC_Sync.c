@@ -216,6 +216,9 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     {
         e = git_config_set_string(cfg, "http.sslcainfo", gszCaCertPath);
         ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "http.sslcainfo failed");
+
+        e = git_config_set_bool(cfg, "http.sslverify", 1);
+        ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "http.sslverify failed");
     }
 
     e = sync_fetch(repo, szServer);
