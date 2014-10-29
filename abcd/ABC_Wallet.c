@@ -1038,7 +1038,7 @@ exit:
     ABC_CLEAR_FREE(pInfo, sizeof(tABC_WalletInfo));
     if (nTxCount > 0) ABC_FreeTransactions(aTransactions, nTxCount);
 
-    ABC_CHECK_RET(ABC_WalletMutexUnlock(pError));
+    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
@@ -1117,7 +1117,7 @@ exit:
     ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
     ABC_WalletFreeInfoArray(aWalletInfo, nUUIDs);
 
-    ABC_CHECK_RET(ABC_WalletMutexUnlock(pError));
+    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
