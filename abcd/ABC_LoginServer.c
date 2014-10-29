@@ -16,6 +16,9 @@
 // Server strings:
 #define JSON_ACCT_CARE_PACKAGE                  "care_package"
 #define JSON_ACCT_LOGIN_PACKAGE                 "login_package"
+#define JSON_ACCT_PIN_PACKAGE                   "pin_package"
+
+#define DATETIME_LENGTH 20
 
 static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, char *szURL, char *szField, char **szResponse, tABC_Error *pError);
 
@@ -340,7 +343,7 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LR
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
     ABC_DebugLog("Server results: %.50s", szResults);
 
-    // Check the result, and store json if successful
+    // Check the results, and store json if successful
     ABC_CHECK_RET(ABC_URLCheckResults(szResults, &pJSON_Root, pError));
 
     // get the care package
@@ -359,6 +362,149 @@ exit:
 
     return cc;
 }
+
+tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
+                                     tABC_U08Buf LPIN1,
+                                     char **szPinPackage,
+                                     tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    json_t  *pJSON_Value    = NULL;
+    json_t  *pJSON_Root     = NULL;
+    char    *szURL          = NULL;
+
+    char    *szPost         = NULL;
+    char    *szDid_Base64   = NULL;
+    char    *szLPIN1_Base64 = NULL;
+    char    *szResults      = NULL;
+
+    ABC_CHECK_NULL_BUF(DID);
+    ABC_CHECK_NULL_BUF(LPIN1);
+
+    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_PIN_PACK_GET_PATH);
+
+    // create base64 versions
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(DID, &szDid_Base64, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(LPIN1, &szLPIN1_Base64, pError));
+
+    pJSON_Root = json_pack("{ss, ss}",
+                    ABC_SERVER_JSON_DID_FIELD, szDid_Base64,
+                    ABC_SERVER_JSON_LPIN1_FIELD, szLPIN1_Base64);
+
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
+    json_decref(pJSON_Root);
+    pJSON_Root = NULL;
+    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %s", szResults);
+
+    // Check the result
+    ABC_CHECK_RET(ABC_URLCheckResults(szResults, &pJSON_Root, pError));
+
+    // get the results field
+    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_object(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON pin package results");
+
+    // get the pin_package field
+    pJSON_Value = json_object_get(pJSON_Value, JSON_ACCT_PIN_PACKAGE);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error pin package JSON results");
+
+    // copy the value
+    ABC_STRDUP(*szPinPackage, json_string_value(pJSON_Value));
+exit:
+    if (pJSON_Root)     json_decref(pJSON_Root);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szDid_Base64);
+    ABC_FREE_STR(szLPIN1_Base64);
+    ABC_FREE_STR(szResults);
+
+    return cc;
+}
+
+/**
+ * Uploads the pin package.
+ *
+ * @param L1            Login hash for the account
+ * @param LP1           Login + Password hash
+ * @param DID           Device Id
+ * @param LPIN1         Hashed pin
+ * @param szPinPackage  Pin package
+ * @param szAli         auto-logout interval
+ */
+tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
+                                        tABC_U08Buf LP1,
+                                        tABC_U08Buf DID,
+                                        tABC_U08Buf LPIN1,
+                                        char *szPinPackage,
+                                        time_t ali,
+                                        tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szURL          = NULL;
+    char *szResults      = NULL;
+    char *szPost         = NULL;
+    char *szBase64_L1    = NULL;
+    char *szBase64_LP1   = NULL;
+    char *szBase64_LPIN1 = NULL;
+    char *szBase64_DID   = NULL;
+    json_t *pJSON_Root   = NULL;
+    char szALI[DATETIME_LENGTH];
+
+    ABC_CHECK_NULL_BUF(L1);
+    ABC_CHECK_NULL_BUF(LP1);
+    ABC_CHECK_NULL_BUF(DID);
+    ABC_CHECK_NULL_BUF(LPIN1);
+
+    // create the URL
+    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_PIN_PACK_UPDATE_PATH);
+
+    // create base64 versions
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1,  &szBase64_L1,  pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szBase64_LP1, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(DID, &szBase64_DID, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(LPIN1, &szBase64_LPIN1, pError));
+
+    // format the ali
+    strftime(szALI, DATETIME_LENGTH, "%Y-%m-%dT%H:%M:%S", gmtime(&ali));
+
+    // Encode those:
+    pJSON_Root = json_pack("{ss, ss, ss, ss, ss, ss}",
+                           ABC_SERVER_JSON_L1_FIELD, szBase64_L1,
+                           ABC_SERVER_JSON_LP1_FIELD, szBase64_LP1,
+                           ABC_SERVER_JSON_DID_FIELD, szBase64_DID,
+                           ABC_SERVER_JSON_LPIN1_FIELD, szBase64_LPIN1,
+                           JSON_ACCT_PIN_PACKAGE, szPinPackage,
+                           ABC_SERVER_JSON_ALI_FIELD, szALI);
+    ABC_CHECK_NULL(pJSON_Root);
+
+    // create the post data
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
+    ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %.50s", szResults);
+
+    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
+exit:
+    ABC_FREE_STR(szURL);
+    ABC_FREE_STR(szResults);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szBase64_L1);
+    ABC_FREE_STR(szBase64_LP1);
+    ABC_FREE_STR(szBase64_DID);
+    ABC_FREE_STR(szBase64_LPIN1);
+    if (pJSON_Root)     json_decref(pJSON_Root);
+
+    return cc;
+}
+
 
 /**
  * Creates an git repo on the server.
