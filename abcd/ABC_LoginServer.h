@@ -7,6 +7,7 @@
 #define ABC_LoginServer_h
 
 #include "ABC.h"
+#include "ABC_LoginPackages.h"
 #include "util/ABC_Sync.h"
 
 #ifdef __cplusplus
@@ -15,8 +16,8 @@ extern "C" {
 
     tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
                                   tABC_U08Buf LP1,
-                                  const char *szCarePackage_JSON,
-                                  const char *szLoginPackage_JSON,
+                                  tABC_CarePackage *pCarePackage,
+                                  tABC_LoginPackage *pLoginPackage,
                                   char *szRepoAcctKey,
                                   tABC_Error *pError);
 
@@ -26,21 +27,20 @@ extern "C" {
 
     tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
                                           tABC_U08Buf oldLP1,
-                                          tABC_U08Buf oldLRA1,
                                           tABC_U08Buf newLP1,
                                           tABC_U08Buf newLRA1,
-                                          const char *szCarePackage,
-                                          const char *szLoginPackage,
+                                          tABC_CarePackage *pCarePackage,
+                                          tABC_LoginPackage *pLoginPackage,
                                           tABC_Error *pError);
 
     tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
-                                          char **szResponse,
+                                          tABC_CarePackage **ppCarePackage,
                                           tABC_Error *pError);
 
     tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
                                            tABC_U08Buf LP1,
                                            tABC_U08Buf LRA1,
-                                           char **szLoginPackage,
+                                           tABC_LoginPackage **ppLoginPackage,
                                            tABC_Error *pError);
 
     tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,

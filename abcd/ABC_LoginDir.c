@@ -13,6 +13,8 @@
 #define ACCOUNT_DIR                             "Accounts"
 #define ACCOUNT_FOLDER_PREFIX                   "Account"
 #define ACCOUNT_NAME_FILENAME                   "UserName.json"
+#define ACCOUNT_CARE_PACKAGE_FILENAME           "CarePackage.json"
+#define ACCOUNT_LOGIN_PACKAGE_FILENAME          "LoginPackage.json"
 #define ACCOUNT_SYNC_DIR                        "sync"
 
 // UserName.json:
@@ -26,9 +28,8 @@ static tABC_CC ABC_LoginGetDirName(const char *szUserName, char **pszDirName, tA
 static tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginMakeFilename(char **pszOut, unsigned AccountNum, const char *szFile, tABC_Error *pError);
 
-/*
- * returns the account number associated with the given user name
- * -1 is returned if the account does not exist
+/**
+ * Locates the account directory for a given username.
  */
 tABC_CC ABC_LoginDirGetNumber(const char *szUserName,
                               int *pAccountNum,
@@ -87,7 +88,6 @@ tABC_CC ABC_LoginDirGetNumber(const char *szUserName,
         }
     }
 
-
 exit:
     ABC_FREE_STR(szCurUserName);
     ABC_FREE_STR(szAccountRoot);
@@ -98,45 +98,37 @@ exit:
 
 
 /**
- * The account does not exist, so create and populate a directory.
+ * If the login directory does not exist, create it.
+ * This is meant to be called after `ABC_LoginDirGetNumber`,
+ * and will do nothing if the account number is already set up.
  */
-tABC_CC ABC_LoginDirCreate(const char *szUserName,
-                           const char *szCarePackageJSON,
-                           const char *szLoginPackageJSON,
+tABC_CC ABC_LoginDirCreate(int *pAccountNum,
+                           const char *szUserName,
                            tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    int     AccountNum = 0;
     char    szAccountDir[ABC_FILEIO_MAX_PATH_LENGTH] = "";
-    char    szSyncDir[ABC_FILEIO_MAX_PATH_LENGTH] = "";
     char    *szNameJSON = NULL;
 
+    // We don't need to do anything if the directory already exists:
+    if (0 <= *pAccountNum)
+    {
+        goto exit;
+    }
+
     // Find next available account number:
-    ABC_CHECK_RET(ABC_LoginDirNewNumber(&AccountNum, pError));
+    ABC_CHECK_RET(ABC_LoginDirNewNumber(pAccountNum, pError));
 
     // Create main account directory:
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, AccountNum, pError));
+    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szAccountDir, *pAccountNum, pError));
     ABC_CHECK_RET(ABC_FileIOCreateDir(szAccountDir, pError));
 
     // Write user name:
     ABC_CHECK_RET(ABC_UtilCreateValueJSONString(szUserName, JSON_ACCT_USERNAME_FIELD, &szNameJSON, pError));
-    ABC_CHECK_RET(ABC_LoginDirFileSave(szNameJSON, AccountNum, ACCOUNT_NAME_FILENAME, pError));
-
-    // Save packages:
-    ABC_CHECK_RET(ABC_LoginDirFileSave(szCarePackageJSON, AccountNum, ACCOUNT_CARE_PACKAGE_FILENAME, pError));
-    ABC_CHECK_RET(ABC_LoginDirFileSave(szLoginPackageJSON, AccountNum, ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
-
-    // Create sync dir, and sync:
-    snprintf(szSyncDir, sizeof(szSyncDir), "%s/%s", szAccountDir, ACCOUNT_SYNC_DIR);
-    ABC_CHECK_RET(ABC_FileIOCreateDir(szSyncDir, pError));
-    ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDir, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szNameJSON, *pAccountNum, ACCOUNT_NAME_FILENAME, pError));
 
 exit:
-    if (cc != ABC_CC_Ok && szAccountDir[0])
-    {
-        ABC_FileIODeleteRecursive(szAccountDir, NULL);
-    }
     ABC_FREE_STR(szNameJSON);
     return cc;
 }
@@ -442,6 +434,8 @@ tABC_CC ABC_LoginMakeFilename(char **pszOut, unsigned AccountNum, const char *sz
 
     char szAccountRoot[ABC_FILEIO_MAX_PATH_LENGTH];
     char szFilename[ABC_FILEIO_MAX_PATH_LENGTH];
+
+    ABC_CHECK_ASSERT(0 <= AccountNum, ABC_CC_FileDoesNotExist, "No account directory");
 
     // make sure the accounts directory is in place
     ABC_CHECK_RET(ABC_LoginCreateRootDir(pError));

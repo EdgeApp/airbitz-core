@@ -26,10 +26,40 @@
  */
 void ABC_CarePackageFree(tABC_CarePackage *pSelf)
 {
-    ABC_CryptoFreeSNRP(&pSelf->pSNRP2);
-    ABC_CryptoFreeSNRP(&pSelf->pSNRP3);
-    ABC_CryptoFreeSNRP(&pSelf->pSNRP4);
-    if (pSelf->ERQ)     json_decref(pSelf->ERQ);
+    if (pSelf)
+    {
+        ABC_CryptoFreeSNRP(&pSelf->pSNRP1);
+        ABC_CryptoFreeSNRP(&pSelf->pSNRP2);
+        ABC_CryptoFreeSNRP(&pSelf->pSNRP3);
+        ABC_CryptoFreeSNRP(&pSelf->pSNRP4);
+        if (pSelf->ERQ)     json_decref(pSelf->ERQ);
+
+        ABC_CLEAR_FREE(pSelf, sizeof(tABC_CarePackage));
+    }
+}
+
+/**
+ * Constructs a fresh CarePackage object with default values for all fields.
+ */
+tABC_CC ABC_CarePackageNew(tABC_CarePackage **ppSelf,
+                           tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_CarePackage *pSelf = NULL;
+
+    // Generate SNRP's:
+    ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSelf->pSNRP1, pError));
+    ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pSelf->pSNRP2, pError));
+    ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pSelf->pSNRP3, pError));
+    ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pSelf->pSNRP4, pError));
+
+    *ppSelf = pSelf;
+    pSelf = NULL;
+
+exit:
+    if (pSelf)          ABC_CarePackageFree(pSelf);
+
+    return cc;
 }
 
 /**
@@ -65,6 +95,7 @@ tABC_CC ABC_CarePackageDecode(tABC_CarePackage **ppSelf,
     ABC_CHECK_SYS(!e, "Error parsing CarePackage JSON");
 
     // Decode SNRP's:
+    ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSelf->pSNRP1, pError));
     ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP2, &pSelf->pSNRP2, pError));
     ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP3, &pSelf->pSNRP3, pError));
     ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP4, &pSelf->pSNRP4, pError));
@@ -231,6 +262,26 @@ tABC_CC ABC_LoginPackageEncode(tABC_LoginPackage *pSelf,
 
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
+
+    return cc;
+}
+
+/**
+ * Decrypts and hex-encodes the SyncKey stored in the login package.
+ */
+tABC_CC ABC_LoginPackageGetSyncKey(tABC_LoginPackage *pSelf,
+                                   const tABC_U08Buf MK,
+                                   char **pszSyncKey,
+                                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_U08Buf SyncKey = ABC_BUF_NULL;
+
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pSelf->ESyncKey, MK, &SyncKey, pError));
+    ABC_CHECK_RET(ABC_CryptoHexEncode(SyncKey, pszSyncKey, pError));
+
+exit:
+    ABC_BUF_FREE(SyncKey);
 
     return cc;
 }

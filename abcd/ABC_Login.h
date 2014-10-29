@@ -7,42 +7,37 @@
 #define ABC_Login_h
 
 #include "ABC.h"
+#include "util/ABC_Crypto.h"
 #include "util/ABC_Sync.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-    typedef struct sABC_Login tABC_Login;
+    typedef struct sABC_Login
+    {
+        // Identity:
+        char            *szUserName;
+        int             AccountNum;
+        tABC_U08Buf     L1;
+
+        // Account access:
+        tABC_U08Buf     MK;
+        char            *szSyncKey; // Hex-encoded
+    } tABC_Login;
 
     // Destructor:
     void ABC_LoginFree(tABC_Login *pSelf);
+
+    tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
+                         const char *szUserName,
+                         tABC_Error *pError);
 
     // Constructors:
     tABC_CC ABC_LoginCreate(const char *szUserName,
                             const char *szPassword,
                             tABC_Login **ppSelf,
                             tABC_Error *pError);
-
-    tABC_CC ABC_LoginFromPassword(const char *szUserName,
-                                  const char *szPassword,
-                                  tABC_Login **ppSelf,
-                                  tABC_Error *pError);
-
-    tABC_CC ABC_LoginFromRecovery(const char *szUserName,
-                                  const char *szRecoveryAnswers,
-                                  tABC_Login **ppSelf,
-                                  tABC_Error *pError);
-
-    // Write accessors:
-    tABC_CC ABC_LoginSetPassword(tABC_Login *pSelf,
-                                 const char *szPassword,
-                                 tABC_Error *pError);
-
-    tABC_CC ABC_LoginSetRecovery(tABC_Login *pSelf,
-                                 const char *szRecoveryQuestions,
-                                 const char *szRecoveryAnswers,
-                                 tABC_Error *pError);
 
     // Read accessors:
     tABC_CC ABC_LoginCheckUserName(tABC_Login *pSelf,
@@ -58,11 +53,6 @@ extern "C" {
                                    tABC_U08Buf *pL1,
                                    tABC_U08Buf *pLP1,
                                    tABC_Error *pError);
-
-    // Helper:
-    tABC_CC ABC_LoginGetRQ(const char *szUserName,
-                           char **pszRecoveryQuestions,
-                           tABC_Error *pError);
 
 #ifdef __cplusplus
 }

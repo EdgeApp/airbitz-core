@@ -13,16 +13,12 @@
 extern "C" {
 #endif
 
-    #define ACCOUNT_CARE_PACKAGE_FILENAME           "CarePackage.json"
-    #define ACCOUNT_LOGIN_PACKAGE_FILENAME          "LoginPackage.json"
-
     tABC_CC ABC_LoginDirGetNumber(const char *szUserName,
                                   int *pAccountNum,
                                   tABC_Error *pError);
 
-    tABC_CC ABC_LoginDirCreate(const char *szUserName,
-                               const char *szCarePackageJSON,
-                               const char *szLoginPackageJSON,
+    tABC_CC ABC_LoginDirCreate(int *pAccountNum,
+                               const char *szUserName,
                                tABC_Error *pError);
 
     tABC_CC ABC_LoginGetSyncDirName(const char *szUserName,
