@@ -55,22 +55,6 @@ static tABC_CC ABC_AccountMutexLock(tABC_Error *pError);
 static tABC_CC ABC_AccountMutexUnlock(tABC_Error *pError);
 
 /**
- * Populates a fresh account sync dir with an initial set of files.
- */
-tABC_CC ABC_AccountCreate(tABC_SyncKeys *pKeys,
-                          tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    // Create initial categories file with no entries:
-    char *aszCategories[] = {""};
-    ABC_CHECK_RET(ABC_AccountCategoriesSave(pKeys, aszCategories, 0, pError));
-
-exit:
-    return cc;
-}
-
-/**
  * This function gets the categories for an account.
  * An array of allocated strings is allocated so the user is responsible for
  * free'ing all the elements as well as the array itself.
@@ -83,20 +67,23 @@ tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
 
     char *szFilename = NULL;
-    tABC_U08Buf data;
+    tABC_U08Buf data = ABC_BUF_NULL;
 
-    ABC_CHECK_NULL(paszCategories);
     *paszCategories = NULL;
-    ABC_CHECK_NULL(pCount);
     *pCount = 0;
+    bool bExists = false;
 
-    // load the categories
+    // Find the file:
     ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_CATEGORIES_FILENAME);
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pKeys->MK, &data, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
 
-    // load the strings of values
-    ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)data.p, JSON_ACCT_CATEGORIES_FIELD, paszCategories, pCount, pError));
+    // Load the entries (if any):
+    if (bExists)
+    {
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pKeys->MK, &data, pError));
+        ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)data.p, JSON_ACCT_CATEGORIES_FIELD, paszCategories, pCount, pError));
+    }
 
 exit:
     ABC_BUF_FREE(data);
