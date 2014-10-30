@@ -50,6 +50,10 @@ extern "C" {
                                    char **pszDirName,
                                    tABC_Error *pError);
 
+    tABC_CC ABC_LoginDirMakeSyncDir(int AccountNum,
+                                    char *szSyncKey,
+                                    tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif
