@@ -15,7 +15,7 @@
     { \
         if (!(assert)) \
         { \
-            ok = 1; \
+            ok = 0; \
             ABC_LOG_ERROR(err, desc); \
             goto exit; \
         } \
