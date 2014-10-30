@@ -179,7 +179,7 @@ tABC_CC ABC_LoginGetSyncKeys(tABC_Login *pSelf,
     tABC_SyncKeys *pKeys = NULL;
 
     ABC_ALLOC(pKeys, sizeof(tABC_SyncKeys));
-    ABC_CHECK_RET(ABC_LoginGetSyncDirName(pSelf->szUserName, &pKeys->szSyncDir, pError));
+    ABC_CHECK_RET(ABC_LoginDirGetSyncDir(pSelf->AccountNum, &pKeys->szSyncDir, pError));
     ABC_BUF_DUP(pKeys->MK, pSelf->MK);
     ABC_STRDUP(pKeys->szSyncKey, pSelf->szSyncKey);
 

@@ -24,7 +24,6 @@ static tABC_CC ABC_LoginDirNewNumber(int *pAccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginUserForNum(unsigned int AccountNum, char **pszUserName, tABC_Error *pError);
 static tABC_CC ABC_LoginCreateRootDir(tABC_Error *pError);
 static tABC_CC ABC_LoginCopyRootDirName(char *szRootDir, tABC_Error *pError);
-static tABC_CC ABC_LoginGetDirName(const char *szUserName, char **pszDirName, tABC_Error *pError);
 static tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Error *pError);
 static tABC_CC ABC_LoginMakeFilename(char **pszOut, unsigned AccountNum, const char *szFile, tABC_Error *pError);
 
@@ -278,70 +277,6 @@ exit:
     return cc;
 }
 
-/**
- * Gets the account directory for a given username
- *
- * @param pszDirName Location to store allocated pointer (must be free'd by caller)
- */
-static
-tABC_CC ABC_LoginGetDirName(const char *szUserName, char **pszDirName, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szDirName = NULL;
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(pszDirName);
-
-    int accountNum = -1;
-
-    // check locally for the account
-    ABC_CHECK_RET(ABC_LoginDirGetNumber(szUserName, &accountNum, pError));
-    if (accountNum < 0)
-    {
-        ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "No account by that name");
-    }
-
-    // get the account root directory string
-    ABC_ALLOC(szDirName, ABC_FILEIO_MAX_PATH_LENGTH);
-    ABC_CHECK_RET(ABC_LoginCopyAccountDirName(szDirName, accountNum, pError));
-    *pszDirName = szDirName;
-    szDirName = NULL; // so we don't free it
-
-
-exit:
-    ABC_FREE_STR(szDirName);
-
-    return cc;
-}
-
-/**
- * Gets the account sync directory for a given username
- *
- * @param pszDirName Location to store allocated pointer (must be free'd by caller)
- */
-tABC_CC ABC_LoginGetSyncDirName(const char *szUserName,
-                                  char **pszDirName,
-                                  tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szDirName = NULL;
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(pszDirName);
-
-    ABC_CHECK_RET(ABC_LoginGetDirName(szUserName, &szDirName, pError));
-
-    ABC_ALLOC(*pszDirName, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszDirName, "%s/%s", szDirName, ACCOUNT_SYNC_DIR);
-
-exit:
-    ABC_FREE_STR(szDirName);
-
-    return cc;
-}
-
 /*
  * Copies the account directory name into the string given
  */
@@ -506,4 +441,14 @@ exit:
     if (szCarePackage)  ABC_FREE_STR(szCarePackage);
     if (szLoginPackage) ABC_FREE_STR(szLoginPackage);
     return cc;
+}
+
+/**
+ * Gets the account sync directory for a given user.
+ */
+tABC_CC ABC_LoginDirGetSyncDir(int AccountNum,
+                               char **pszDirName,
+                               tABC_Error *pError)
+{
+    return ABC_LoginMakeFilename(pszDirName, AccountNum, ACCOUNT_SYNC_DIR, pError);
 }
