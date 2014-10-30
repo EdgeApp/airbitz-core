@@ -21,10 +21,6 @@ extern "C" {
                                const char *szUserName,
                                tABC_Error *pError);
 
-    tABC_CC ABC_LoginGetSyncDirName(const char *szUserName,
-                                    char **pszDirName,
-                                    tABC_Error *pError);
-
     tABC_CC ABC_LoginDirFileLoad(char **pszData,
                                  unsigned AccountNum,
                                  const char *szFile,
@@ -49,6 +45,10 @@ extern "C" {
                                      tABC_CarePackage *pCarePackage,
                                      tABC_LoginPackage *pLoginPackage,
                                      tABC_Error *pError);
+
+    tABC_CC ABC_LoginDirGetSyncDir(int AccountNum,
+                                   char **pszDirName,
+                                   tABC_Error *pError);
 
 #ifdef __cplusplus
 }
