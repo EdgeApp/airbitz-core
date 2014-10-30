@@ -452,3 +452,37 @@ tABC_CC ABC_LoginDirGetSyncDir(int AccountNum,
 {
     return ABC_LoginMakeFilename(pszDirName, AccountNum, ACCOUNT_SYNC_DIR, pError);
 }
+
+/**
+ * If the sync dir doesn't exist, create it, initialize it, and sync it.
+ */
+tABC_CC ABC_LoginDirMakeSyncDir(int AccountNum,
+                                char *szSyncKey,
+                                tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szSyncName = NULL;
+    char *szTempName = NULL;
+    bool bExists = false;
+
+    // Locate the sync dir:
+    ABC_CHECK_RET(ABC_LoginDirGetSyncDir(AccountNum, &szSyncName, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(szSyncName, &bExists, pError));
+
+    // If it doesn't exist, create it:
+    if (!bExists)
+    {
+        int dirty = 0;
+        ABC_CHECK_RET(ABC_LoginMakeFilename(&szTempName, AccountNum, "tmp", pError));
+        ABC_CHECK_RET(ABC_FileIOCreateDir(szTempName, pError));
+        ABC_CHECK_RET(ABC_SyncMakeRepo(szTempName, pError));
+        ABC_CHECK_RET(ABC_SyncRepo(szTempName, szSyncKey, &dirty, pError));
+        ABC_CHECK_SYS(!rename(szTempName, szSyncName), "rename");
+    }
+
+exit:
+    ABC_FREE_STR(szSyncName);
+    ABC_FREE_STR(szTempName);
+
+    return cc;
+}
