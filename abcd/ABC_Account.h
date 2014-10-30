@@ -67,9 +67,6 @@ extern "C" {
         bool archived;
     } tABC_AccountWalletInfo;
 
-    tABC_CC ABC_AccountCreate(tABC_SyncKeys *pKeys,
-                              tABC_Error *pError);
-
     tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
                                       char ***paszCategories,
                                       unsigned int *pCount,
