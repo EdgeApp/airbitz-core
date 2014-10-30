@@ -2,7 +2,7 @@
 #include <iostream>
 #include <stdio.h>
 
-#include "ABC_Login.h"
+#include "ABC_LoginShim.h"
 #include "ABC_Wallet.h"
 #include "util/ABC_Util.h"
 #include <wallet/wallet.hpp>
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     }
 
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, rngseed, sizeof(rngseed), &error));
-    MAIN_CHECK(ABC_LoginGetSyncKeys(argv[2], argv[3], &pKeys, &error));
+    MAIN_CHECK(ABC_LoginShimGetSyncKeys(argv[2], argv[3], &pKeys, &error));
     MAIN_CHECK(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[4]), &data, &error));
 
     libbitcoin::data_chunk seed(data.p, data.end);

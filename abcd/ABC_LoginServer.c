@@ -4,7 +4,6 @@
  */
 
 #include "ABC_LoginServer.h"
-#include "ABC_Login.h"
 #include "ABC_ServerDefs.h"
 #include "util/ABC_URL.h"
 #include "util/ABC_Util.h"
@@ -32,8 +31,8 @@ static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U0
  */
 tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
                               tABC_U08Buf LP1,
-                              const char *szCarePackage_JSON,
-                              const char *szLoginPackage_JSON,
+                              tABC_CarePackage *pCarePackage,
+                              tABC_LoginPackage *pLoginPackage,
                               char *szRepoAcctKey,
                               tABC_Error *pError)
 {
@@ -44,6 +43,8 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
     char *szPost    = NULL;
     char *szL1_Base64 = NULL;
     char *szLP1_Base64 = NULL;
+    char *szCarePackage     = NULL;
+    char *szLoginPackage    = NULL;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
@@ -57,12 +58,15 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
     ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
     ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
 
+    ABC_CHECK_RET(ABC_CarePackageEncode(pCarePackage, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginPackageEncode(pLoginPackage, &szLoginPackage, pError));
+
     // create the post data
     pJSON_Root = json_pack("{ssssssssss}",
                         ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
                         ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
-                        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage_JSON,
-                        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage_JSON,
+                        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage,
+                        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage,
                         ABC_SERVER_JSON_REPO_FIELD, szRepoAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
@@ -79,6 +83,8 @@ exit:
     ABC_FREE_STR(szPost);
     ABC_FREE_STR(szL1_Base64);
     ABC_FREE_STR(szLP1_Base64);
+    ABC_FREE_STR(szCarePackage);
+    ABC_FREE_STR(szLoginPackage);
     if (pJSON_Root)     json_decref(pJSON_Root);
 
     return cc;
@@ -153,11 +159,10 @@ exit:
  */
 tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
                                       tABC_U08Buf oldLP1,
-                                      tABC_U08Buf oldLRA1,
                                       tABC_U08Buf newLP1,
                                       tABC_U08Buf newLRA1,
-                                      const char *szCarePackage,
-                                      const char *szLoginPackage,
+                                      tABC_CarePackage *pCarePackage,
+                                      tABC_LoginPackage *pLoginPackage,
                                       tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -168,8 +173,9 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     char *szBase64_L1       = NULL;
     char *szBase64_OldLP1   = NULL;
     char *szBase64_NewLP1   = NULL;
-    char *szBase64_OldLRA1  = NULL;
     char *szBase64_NewLRA1  = NULL;
+    char *szCarePackage     = NULL;
+    char *szLoginPackage    = NULL;
     json_t *pJSON_OldLRA1   = NULL;
     json_t *pJSON_NewLRA1   = NULL;
     json_t *pJSON_Root = NULL;
@@ -187,6 +193,9 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     ABC_CHECK_RET(ABC_CryptoBase64Encode(oldLP1, &szBase64_OldLP1, pError));
     ABC_CHECK_RET(ABC_CryptoBase64Encode(newLP1, &szBase64_NewLP1, pError));
 
+    ABC_CHECK_RET(ABC_CarePackageEncode(pCarePackage, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginPackageEncode(pLoginPackage, &szLoginPackage, pError));
+
     // Encode those:
     pJSON_Root = json_pack("{ss, ss, ss, ss, ss}",
                            ABC_SERVER_JSON_L1_FIELD,      szBase64_L1,
@@ -197,12 +206,6 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     ABC_CHECK_NULL(pJSON_Root);
 
     // set up the recovery, if any:
-    if (ABC_BUF_PTR(oldLRA1))
-    {
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(oldLRA1, &szBase64_OldLRA1, pError));
-        pJSON_OldLRA1 = json_string(szBase64_OldLRA1);
-        json_object_set(pJSON_Root, ABC_SERVER_JSON_LRA1_FIELD, pJSON_OldLRA1);
-    }
     if (ABC_BUF_PTR(newLRA1))
     {
         ABC_CHECK_RET(ABC_CryptoBase64Encode(newLRA1, &szBase64_NewLRA1, pError));
@@ -226,8 +229,9 @@ exit:
     ABC_FREE_STR(szBase64_L1);
     ABC_FREE_STR(szBase64_OldLP1);
     ABC_FREE_STR(szBase64_NewLP1);
-    ABC_FREE_STR(szBase64_OldLRA1);
     ABC_FREE_STR(szBase64_NewLRA1);
+    ABC_FREE_STR(szCarePackage);
+    ABC_FREE_STR(szLoginPackage);
     if (pJSON_OldLRA1)  json_decref(pJSON_OldLRA1);
     if (pJSON_NewLRA1)  json_decref(pJSON_NewLRA1);
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -236,13 +240,14 @@ exit:
 }
 
 tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
-                                      char **szCarePackage,
+                                      tABC_CarePackage **ppCarePackage,
                                       tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szURL = NULL;
     tABC_U08Buf LP1_NULL = ABC_BUF_NULL;
     tABC_U08Buf LRA1 = ABC_BUF_NULL;
+    char *szCarePackage = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
 
@@ -250,10 +255,12 @@ tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_CARE_PACKAGE_PATH);
 
-    ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1_NULL, LRA1, szURL, JSON_ACCT_CARE_PACKAGE, szCarePackage, pError));
-exit:
+    ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1_NULL, LRA1, szURL, JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_CarePackageDecode(ppCarePackage, szCarePackage, pError));
 
+exit:
     ABC_FREE_STR(szURL);
+    ABC_FREE_STR(szCarePackage);
 
     return cc;
 }
@@ -261,21 +268,24 @@ exit:
 tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
                                        tABC_U08Buf LP1,
                                        tABC_U08Buf LRA1,
-                                       char **szLoginPackage,
+                                       tABC_LoginPackage **ppLoginPackage,
                                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szURL = NULL;
+    char *szLoginPackage = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
 
     ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_LOGIN_PACK_GET_PATH);
 
-    ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1, LRA1, szURL, JSON_ACCT_LOGIN_PACKAGE, szLoginPackage, pError));
-exit:
+    ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1, LRA1, szURL, JSON_ACCT_LOGIN_PACKAGE, &szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginPackageDecode(ppLoginPackage, szLoginPackage, pError));
 
+exit:
     ABC_FREE_STR(szURL);
+    ABC_FREE_STR(szLoginPackage);
 
     return cc;
 }

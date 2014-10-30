@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "ABC_Account.h"
-#include "ABC_Login.h"
+#include "ABC_LoginShim.h"
 #include "ABC_Wallet.h"
 #include "util/ABC_Crypto.h"
 #include "util/ABC_FileIO.h"
@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 
     // Setup:
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, seed, sizeof(seed), &error));
-    MAIN_CHECK(ABC_LoginGetSyncKeys(argv[2], argv[3], &pKeys, &error));
+    MAIN_CHECK(ABC_LoginShimGetSyncKeys(argv[2], argv[3], &pKeys, &error));
     MAIN_CHECK(ABC_DataSyncAll(argv[2], argv[3], NULL, NULL, &error));
 
     // Iterate over wallets:

@@ -4,7 +4,7 @@
  */
 
 #include "ABC_LoginRequest.h"
-#include "ABC_Login.h"
+#include "ABC_LoginShim.h"
 
 /**
  * Allocates and fills in an account request structure with the info given.
@@ -130,7 +130,7 @@ void *ABC_LoginRequestThreaded(void *pData)
         if (ABC_RequestType_CreateAccount == pInfo->requestType)
         {
             // create the account
-            CC = ABC_LoginCreate(pInfo->szUserName, pInfo->szPassword, &(results.errorInfo));
+            CC = ABC_LoginShimNewAccount(pInfo->szUserName, pInfo->szPassword, &(results.errorInfo));
 
             // hack to set pin:
             tABC_Error error;
@@ -139,19 +139,19 @@ void *ABC_LoginRequestThreaded(void *pData)
         else if (ABC_RequestType_AccountSignIn == pInfo->requestType)
         {
             // sign-in
-            CC = ABC_LoginSignIn(pInfo->szUserName, pInfo->szPassword, &(results.errorInfo));
+            CC = ABC_LoginShimLogin(pInfo->szUserName, pInfo->szPassword, &(results.errorInfo));
         }
         else if (ABC_RequestType_SetAccountRecoveryQuestions == pInfo->requestType)
         {
             // set the recovery information
-            CC = ABC_LoginSetRecovery(pInfo->szUserName, pInfo->szPassword,
+            CC = ABC_LoginShimSetRecovery(pInfo->szUserName, pInfo->szPassword,
                 pInfo->szRecoveryQuestions, pInfo->szRecoveryAnswers,
                 &(results.errorInfo));
         }
         else if (ABC_RequestType_ChangePassword == pInfo->requestType)
         {
             // change the password
-            CC = ABC_LoginChangePassword(pInfo->szUserName, pInfo->szPassword,
+            CC = ABC_LoginShimSetPassword(pInfo->szUserName, pInfo->szPassword,
                 pInfo->szRecoveryAnswers, pInfo->szNewPassword, &(results.errorInfo));
         }
 
