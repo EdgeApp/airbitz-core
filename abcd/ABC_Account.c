@@ -39,6 +39,10 @@
 #define JSON_ACCT_LABEL_TYPE                    "labeltype"
 #define JSON_ACCT_SATOSHI_FIELD                 "satoshi"
 #define JSON_ACCT_ADVANCED_FEATURES_FIELD       "advancedFeatures"
+#define JSON_ACCT_DAILY_SPEND_LIMIT_ENABLED     "dailySpendLimitEnabled"
+#define JSON_ACCT_DAILY_SPEND_LIMIT_SATOSHIS    "dailySpendLimitSatoshis"
+#define JSON_ACCT_SPEND_REQUIRE_PIN_ENABLED     "spendRequirePinEnabled"
+#define JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS    "spendRequirePinSatoshis"
 
 // Wallet JSON fields:
 #define JSON_ACCT_WALLET_MK_FIELD               "MK"
@@ -394,6 +398,51 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
         ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON boolean value");
         pSettings->bAdvancedFeatures = json_is_true(pJSON_Value) ? true : false;
 
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_DAILY_SPEND_LIMIT_ENABLED);
+        if (pJSON_Value)
+        {
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON boolean value");
+            pSettings->bDailySpendLimit = json_is_true(pJSON_Value) ? true : false;
+        }
+        else
+        {
+            pSettings->bDailySpendLimit = false;
+        }
+
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_DAILY_SPEND_LIMIT_SATOSHIS);
+        if (pJSON_Value)
+        {
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON daily spend satoshi value");
+            pSettings->dailySpendLimitSatoshis = (int64_t) json_integer_value(pJSON_Value);
+        }
+        else
+        {
+            pSettings->dailySpendLimitSatoshis = 0;
+        }
+
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_SPEND_REQUIRE_PIN_ENABLED);
+        if (pJSON_Value)
+        {
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON boolean value");
+            pSettings->bSpendRequirePin = json_is_true(pJSON_Value) ? true : false;
+        }
+        else
+        {
+            pSettings->bSpendRequirePin = false;
+        }
+
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS);
+        if (pJSON_Value)
+        {
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON daily spend satoshi value");
+            pSettings->spendRequirePinSatoshis = (int64_t) json_integer_value(pJSON_Value);
+        }
+        else
+        {
+            pSettings->spendRequirePinSatoshis = 0;
+        }
+
+
         // get the denomination object
         json_t *pJSON_Denom = json_object_get(pJSON_Root, JSON_ACCT_BITCOIN_DENOMINATION_FIELD);
         ABC_CHECK_ASSERT((pJSON_Denom && json_is_object(pJSON_Denom)), ABC_CC_JSONError, "Error parsing JSON object value");
@@ -597,6 +646,18 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
 
     // set advanced features
     retVal = json_object_set_new(pJSON_Root, JSON_ACCT_ADVANCED_FEATURES_FIELD, json_boolean(pSettings->bAdvancedFeatures));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_DAILY_SPEND_LIMIT_ENABLED, json_boolean(pSettings->bDailySpendLimit));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_DAILY_SPEND_LIMIT_SATOSHIS, json_integer(pSettings->dailySpendLimitSatoshis));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_SPEND_REQUIRE_PIN_ENABLED, json_boolean(pSettings->bSpendRequirePin));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS, json_integer(pSettings->spendRequirePinSatoshis));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // create the denomination section
