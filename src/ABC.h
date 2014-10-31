@@ -694,6 +694,18 @@ extern "C" {
                                      bool *pbValid,
                                      tABC_Error *pError);
 
+    tABC_CC ABC_PinLoginExists(const char *szUserName,
+                               bool *pbExists,
+                               tABC_Error *pError);
+
+    tABC_CC ABC_PinLogin(const char *szUserName,
+                         const char *szPIN,
+                         tABC_Error *pError);
+
+    tABC_CC ABC_PinSetup(const char *szUserName,
+                         const char *szPassword,
+                         tABC_Error *pError);
+
     /* === Login data: === */
     tABC_CC ABC_ChangePassword(const char *szUserName,
                                const char *szPassword,
