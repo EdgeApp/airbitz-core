@@ -708,7 +708,6 @@ tABC_CC ABC_SignIn(const char *szUserName,
 
 tABC_CC ABC_CreateAccount(const char *szUserName,
                           const char *szPassword,
-                          const char *szPin,
                           tABC_Request_Callback fRequestCallback,
                           void *pData,
                           tABC_Error *pError);
@@ -744,7 +743,6 @@ tABC_CC ABC_ListAccounts(char **pszUserNames,
 tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,
                            const char *szNewPassword,
-                           const char *szDeprecated,
                            tABC_Request_Callback fRequestCallback,
                            void *pData,
                            tABC_Error *pError);
@@ -752,7 +750,6 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
 tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
                                               const char *szRecoveryAnswers,
                                               const char *szNewPassword,
-                                              const char *szDeprecated,
                                               tABC_Request_Callback fRequestCallback,
                                               void *pData,
                                               tABC_Error *pError);
@@ -789,7 +786,6 @@ tABC_CC ABC_OtpKeyGet(const char *szUserName,
 tABC_CC ABC_OtpKeySet(const char *szUserName,
                       char *szKey,
                       tABC_Error *pError);
-
 
 /**
  * Removes the OTP key associated with the given username.

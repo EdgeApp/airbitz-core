@@ -112,9 +112,9 @@ Status changePassword(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... change-password <pw|ra> <user> <pass|ra> <new-pass>");
 
     if (strncmp(argv[0], "pw", 2) == 0)
-        ABC_CHECK_OLD(ABC_ChangePassword(argv[1], argv[2], argv[3], NULL, NULL, NULL, &error));
+        ABC_CHECK_OLD(ABC_ChangePassword(argv[1], argv[2], argv[3], NULL, NULL, &error));
     else
-        ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(argv[1], argv[2], argv[3], NULL, NULL, NULL, &error));
+        ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(argv[1], argv[2], argv[3], NULL, NULL, &error));
 
     return Status();
 }
@@ -160,7 +160,8 @@ Status createAccount(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... create-account <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_CreateAccount(argv[0], argv[1], "1234", NULL, NULL, &error));
+    ABC_CHECK_OLD(ABC_CreateAccount(argv[0], argv[1], NULL, NULL, &error));
+    ABC_CHECK_OLD(ABC_SetPIN(argv[2], argv[3], "1234", &error));
 
     return Status();
 }
