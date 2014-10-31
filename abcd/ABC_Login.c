@@ -46,7 +46,7 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
 
     // Set up identity:
     ABC_CHECK_RET(ABC_LoginFixUserName(szUserName, &pSelf->szUserName, pError));
-    ABC_CHECK_RET(ABC_LoginDirGetNumber(szUserName, &pSelf->AccountNum, pError));
+    ABC_CHECK_RET(ABC_LoginDirGetNumber(pSelf->szUserName, &pSelf->AccountNum, pError));
 
     // Create L1:
     tABC_U08Buf L = ABC_BUF_NULL;
