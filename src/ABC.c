@@ -528,7 +528,8 @@ exit:
  *
  * @param szUserName             UserName for the account
  * @param szPassword             Password for the account
- * @param pszPIN                 Pointer where to store allocated PIN string
+ * @param pszPIN                 Pointer where to store allocated PIN string.
+ *                               This will be set to NULL if there is no PIN.
  * @param pError                 A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_GetPIN(const char *szUserName,
@@ -551,7 +552,11 @@ tABC_CC ABC_GetPIN(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
 
-    ABC_STRDUP(*pszPIN, pSettings->szPIN);
+    *pszPIN = NULL;
+    if (pSettings->szPIN)
+    {
+        ABC_STRDUP(*pszPIN, pSettings->szPIN);
+    }
 
 exit:
     if (pKeys)          ABC_SyncFreeKeys(pKeys);
