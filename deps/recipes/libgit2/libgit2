@@ -19,8 +19,10 @@ build() {
     cd build
     cmake .. $cmakeflags \
         -DCMAKE_INSTALL_PREFIX=$install_dir \
-        -DBUILD_SHARED_LIBS:BOOL=FALSE
-    cmake --build . --target install
+        -DBUILD_SHARED_LIBS:BOOL=FALSE \
+        -DBUILD_CLAR:BOOL=FALSE
+    make
+    make install
 }
 
 include="include/git2.h include/git/*"
