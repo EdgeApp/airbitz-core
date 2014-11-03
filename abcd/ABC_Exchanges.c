@@ -320,6 +320,14 @@ tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
     ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_mxn", CURRENCY_NUM_MXN, pError);
     // CNY
     ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_cny", CURRENCY_NUM_CNY, pError);
+    // AUD
+    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_aud", CURRENCY_NUM_AUD, pError);
+    // PHP
+    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_php", CURRENCY_NUM_PHP, pError);
+    // HKD
+    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_hkd", CURRENCY_NUM_HKD, pError);
+    // NZD
+    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_nzd", CURRENCY_NUM_NZD, pError);
 exit:
     ABC_FREE_STR(szResponse);
     if (pJSON_Root) json_decref(pJSON_Root);
@@ -522,6 +530,10 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
             case CURRENCY_NUM_EUR:
             case CURRENCY_NUM_GBP:
             case CURRENCY_NUM_MXN:
+            case CURRENCY_NUM_AUD:
+            case CURRENCY_NUM_PHP:
+            case CURRENCY_NUM_HKD:
+            case CURRENCY_NUM_NZD:
                 ABC_STRDUP(*szSource, ABC_COINBASE);
                 break;
             default:

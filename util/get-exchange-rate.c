@@ -18,5 +18,18 @@ int main(int argc, char *argv[])
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, seed, sizeof(seed), &error));
     MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3],
                                 CURRENCY_NUM_USD, NULL, NULL, &error));
+
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3], CURRENCY_NUM_AUD, NULL, NULL, &error));
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3], CURRENCY_NUM_CAD, NULL, NULL, &error));
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3], CURRENCY_NUM_CNY, NULL, NULL, &error));
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3], CURRENCY_NUM_CUP, NULL, NULL, &error));
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3], CURRENCY_NUM_HKD, NULL, NULL, &error));
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3], CURRENCY_NUM_MXN, NULL, NULL, &error));
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3], CURRENCY_NUM_NZD, NULL, NULL, &error));
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3], CURRENCY_NUM_PHP, NULL, NULL, &error));
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3], CURRENCY_NUM_GBP, NULL, NULL, &error));
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3], CURRENCY_NUM_USD, NULL, NULL, &error));
+    MAIN_CHECK(ABC_RequestExchangeRateUpdate(argv[2], argv[3], CURRENCY_NUM_EUR, NULL, NULL, &error));
+
     return 0;
 }

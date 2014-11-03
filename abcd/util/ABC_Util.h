@@ -45,10 +45,14 @@
 #include "ABC.h"
 #include "ABC_Debug.h"
 
+#define CURRENCY_NUM_AUD                 36
 #define CURRENCY_NUM_CAD                124
 #define CURRENCY_NUM_CNY                156
 #define CURRENCY_NUM_CUP                192
+#define CURRENCY_NUM_HKD                344
 #define CURRENCY_NUM_MXN                484
+#define CURRENCY_NUM_NZD                554
+#define CURRENCY_NUM_PHP                608
 #define CURRENCY_NUM_GBP                826
 #define CURRENCY_NUM_USD                840
 #define CURRENCY_NUM_EUR                978
