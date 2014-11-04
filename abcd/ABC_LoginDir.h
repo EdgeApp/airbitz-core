@@ -36,6 +36,10 @@ extern "C" {
                                    const char *szFile,
                                    tABC_Error *pError);
 
+    tABC_CC ABC_LoginDirFileDelete(unsigned AccountNum,
+                                   const char *szFile,
+                                   tABC_Error *pError);
+
     tABC_CC ABC_LoginDirLoadPackages(int AccountNum,
                                      tABC_CarePackage **ppCarePackage,
                                      tABC_LoginPackage **ppLoginPackage,
