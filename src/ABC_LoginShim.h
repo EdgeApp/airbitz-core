@@ -49,6 +49,16 @@ extern "C" {
                                      char **pszQuestions,
                                      tABC_Error *pError);
 
+    tABC_CC ABC_LoginShimPinLogin(const char *szUserName,
+                                  const char *szPIN,
+                                  tABC_Error *pError);
+
+    tABC_CC ABC_LoginShimPinSetup(const char *szUserName,
+                                  const char *szPassword,
+                                  const char *szPIN,
+                                  time_t expires,
+                                  tABC_Error *pError);
+
     tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
                                      const char *szPassword,
                                      tABC_SyncKeys **ppKeys,

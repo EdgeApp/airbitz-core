@@ -10,6 +10,8 @@
 #include "ABC_LoginPackages.h"
 #include "util/ABC_Sync.h"
 
+#include <time.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -42,6 +44,19 @@ extern "C" {
                                            tABC_U08Buf LRA1,
                                            tABC_LoginPackage **ppLoginPackage,
                                            tABC_Error *pError);
+
+    tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
+                                         tABC_U08Buf LPIN1,
+                                         char **szPinPackage,
+                                         tABC_Error *pError);
+
+    tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
+                                            tABC_U08Buf LP1,
+                                            tABC_U08Buf DID,
+                                            tABC_U08Buf LPIN1,
+                                            char *szPinPackage,
+                                            time_t ali,
+                                            tABC_Error *pError);
 
     tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
                                      tABC_U08Buf LP1,

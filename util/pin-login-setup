@@ -1,0 +1,5 @@
+#!/bin/sh
+util=build/pin-login-setup.bin
+
+export LD_LIBRARY_PATH="../build/:$LD_LIBRARY_PATH"
+make $util && ./$util "$@"

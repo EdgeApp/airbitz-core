@@ -10,6 +10,7 @@
 #include "ABC_Login.h"
 #include "ABC_LoginDir.h"
 #include "ABC_LoginPassword.h"
+#include "ABC_LoginPIN.h"
 #include "ABC_LoginRecovery.h"
 #include "ABC_LoginServer.h"
 #include "ABC_General.h"
@@ -300,6 +301,61 @@ tABC_CC ABC_LoginShimGetRecovery(const char *szUserName,
 exit:
     return cc;
 }
+
+/**
+ * Logs in using the PIN-based mechanism.
+ */
+tABC_CC ABC_LoginShimPinLogin(const char *szUserName,
+                              const char *szPIN,
+                              tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPIN);
+    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
+
+    tABC_Login *pObject = NULL;
+    ABC_CHECK_RET(ABC_LoginPin(&pObject, szUserName, szPIN, pError));
+    ABC_LoginCacheClear();
+    gLoginCache = pObject;
+
+    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+
+exit:
+    ABC_LoginShimMutexUnlock(NULL);
+
+    return cc;
+}
+
+/**
+ * Sets up a PIN login package, both on-disk and on the server.
+ */
+tABC_CC ABC_LoginShimPinSetup(const char *szUserName,
+                              const char *szPassword,
+                              const char *szPIN,
+                              time_t expires,
+                              tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+
+    // Load the account into the cache:
+    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+
+    // Grab the keys:
+    ABC_CHECK_RET(ABC_LoginPinSetup(gLoginCache, szPIN, expires, pError));
+
+exit:
+    ABC_LoginShimMutexUnlock(NULL);
+
+    return cc;
+}
+
 
 /**
  * Obtains the information needed to access the sync dir for a given account.

@@ -46,6 +46,8 @@
 #define ABC_SERVER_CHANGE_PASSWORD_PATH     "account/password/update"
 #define ABC_SERVER_GET_CARE_PACKAGE_PATH    "account/carepackage/get"
 #define ABC_SERVER_LOGIN_PACK_GET_PATH      "account/loginpackage/get"
+#define ABC_SERVER_PIN_PACK_GET_PATH        "account/pinpackage/get"
+#define ABC_SERVER_PIN_PACK_UPDATE_PATH     "account/pinpackage/update"
 #define ABC_SERVER_DEBUG_PATH               "account/debug"
 #define ABC_SERVER_WALLET_CREATE_PATH       "wallet/create"
 #define ABC_SERVER_WALLET_ACTIVATE_PATH     "wallet/activate"
@@ -63,6 +65,9 @@
 #define ABC_SERVER_JSON_CATEGORY_FIELD      "category"
 #define ABC_SERVER_JSON_MIN_LENGTH_FIELD    "min_length"
 #define ABC_SERVER_JSON_QUESTION_FIELD      "question"
+#define ABC_SERVER_JSON_DID_FIELD           "did"
+#define ABC_SERVER_JSON_LPIN1_FIELD         "lpin1"
+#define ABC_SERVER_JSON_ALI_FIELD           "ali"
 
 #define ABC_SERVER_JSON_MESSAGE_FIELD       "message"
 #define ABC_SERVER_JSON_STATUS_CODE_FIELD   "status_code"

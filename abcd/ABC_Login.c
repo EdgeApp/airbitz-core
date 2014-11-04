@@ -12,8 +12,6 @@
 
 #define ACCOUNT_MK_LENGTH 32
 
-static tABC_CC ABC_LoginFixUserName(const char *szUserName, char **pszOut, tABC_Error *pError);
-
 /**
  * Deletes a login object and all its contents.
  */
@@ -221,7 +219,6 @@ exit:
  * Re-formats a username to all-lowercase, checking for disallowed
  * characters and collapsing spaces.
  */
-static
 tABC_CC ABC_LoginFixUserName(const char *szUserName,
                              char **pszOut,
                              tABC_Error *pError)

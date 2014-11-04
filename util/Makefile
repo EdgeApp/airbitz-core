@@ -19,12 +19,14 @@ default: build/account-decrypt.bin \
          build/get-categories.bin \
          build/get-question-choices.bin \
          build/get-exchange-rate.bin \
+         build/get-wallet-info.bin \
          build/get-settings.bin \
          build/list-wallets.bin \
          build/recovery-reminder-inc.bin \
          build/remove-category.bin \
          build/set-nickname.bin \
          build/set-pin.bin \
+         build/set-pin-package.bin \
          build/set-question-choices.bin \
          build/search-bitcoin-seed.bin \
          build/sign-in.bin \

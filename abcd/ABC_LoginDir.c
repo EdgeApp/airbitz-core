@@ -360,6 +360,24 @@ exit:
 }
 
 /**
+ * Determines whether or not a file exists in the account directory.
+ */
+tABC_CC ABC_LoginDirFileDelete(unsigned AccountNum,
+                               const char *szFile,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szFilename = NULL;
+
+    ABC_CHECK_RET(ABC_LoginMakeFilename(&szFilename, AccountNum, szFile, pError));
+    ABC_CHECK_RET(ABC_FileIODeleteFile(szFilename, pError));
+
+exit:
+    ABC_FREE_STR(szFilename);
+    return cc;
+}
+
+/**
  * Assembles a filename from its component parts.
  */
 static

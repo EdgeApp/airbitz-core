@@ -54,6 +54,11 @@ extern "C" {
                                    tABC_U08Buf *pLP1,
                                    tABC_Error *pError);
 
+    // Utility:
+    tABC_CC ABC_LoginFixUserName(const char *szUserName,
+                                 char **pszOut,
+                                 tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif
