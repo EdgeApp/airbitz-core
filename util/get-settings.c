@@ -30,6 +30,8 @@ int main(int argc, char *argv[])
     printf("Denomination id: %d\n", pSettings->bitcoinDenomination.denominationType);
     printf("Daily Spend Enabled: %d\n", pSettings->bDailySpendLimit);
     printf("Daily Spend Limit: %ld\n", (long) pSettings->dailySpendLimitSatoshis);
+    printf("PIN Spend Enabled: %d\n", pSettings->bSpendRequirePin);
+    printf("PIN Spend Limit: %ld\n", (long) pSettings->spendRequirePinSatoshis);
     printf("Exchange rate sources:\n");
     for (unsigned i = 0; i < pSettings->exchangeRateSources.numSources; i++)
     {
