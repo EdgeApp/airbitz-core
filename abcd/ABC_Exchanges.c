@@ -39,6 +39,7 @@
 #include "ABC_Account.h"
 #include "util/ABC_FileIO.h"
 #include "util/ABC_URL.h"
+#include "util/ABC_Util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <curl/curl.h>
@@ -48,6 +49,24 @@
 
 #define BITSTAMP_RATE_URL "https://www.bitstamp.net/api/ticker/"
 #define COINBASE_RATE_URL "https://coinbase.com/api/v1/currencies/exchange_rates"
+
+const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[] =
+{
+    {CURRENCY_NUM_AUD, ABC_COINBASE},
+    {CURRENCY_NUM_CAD, ABC_COINBASE},
+    {CURRENCY_NUM_CNY, ABC_COINBASE},
+    {CURRENCY_NUM_CUP, ABC_COINBASE},
+    {CURRENCY_NUM_HKD, ABC_COINBASE},
+    {CURRENCY_NUM_MXN, ABC_COINBASE},
+    {CURRENCY_NUM_NZD, ABC_COINBASE},
+    {CURRENCY_NUM_PHP, ABC_COINBASE},
+    {CURRENCY_NUM_GBP, ABC_COINBASE},
+    {CURRENCY_NUM_USD, ABC_BITSTAMP},
+    {CURRENCY_NUM_EUR, ABC_COINBASE},
+};
+
+const size_t EXCHANGE_DEFAULTS_SIZE = sizeof(EXCHANGE_DEFAULTS)
+                                    / sizeof(tABC_ExchangeDefaults);
 
 typedef struct sABC_ExchangeCacheEntry
 {

@@ -61,6 +61,18 @@ extern "C" {
         void                  *pData;
     } tABC_ExchangeInfo;
 
+    /**
+     * AirBitz default exchange info
+     */
+    typedef struct sABC_ExchangeDefaults {
+        int currencyNum;
+        char *szDefaultExchange;
+    } tABC_ExchangeDefaults;
+
+    // Default Exchange array
+    extern const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[];
+    extern const size_t EXCHANGE_DEFAULTS_SIZE;
+
     tABC_CC ABC_ExchangeInitialize(tABC_Error                   *pError);
 
     tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,

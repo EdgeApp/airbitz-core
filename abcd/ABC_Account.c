@@ -11,6 +11,7 @@
  */
 
 #include "ABC_Account.h"
+#include "ABC_Exchanges.h"
 #include "util/ABC_Crypto.h"
 #include "util/ABC_FileIO.h"
 #include "util/ABC_Mutex.h"
@@ -245,40 +246,18 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     ABC_STRDUP(pSettings->szLanguage, "en");
     pSettings->currencyNum = CURRENCY_NUM_USD;
 
-    pSettings->exchangeRateSources.numSources = 5;
+    pSettings->exchangeRateSources.numSources = EXCHANGE_DEFAULTS_SIZE;
     ABC_ALLOC(pSettings->exchangeRateSources.aSources,
               pSettings->exchangeRateSources.numSources * sizeof(tABC_ExchangeRateSource *));
 
     tABC_ExchangeRateSource **aSources = pSettings->exchangeRateSources.aSources;
 
-    // USD defaults to bitstamp
-    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
-    aSources[i]->currencyNum = CURRENCY_NUM_USD;
-    ABC_STRDUP(aSources[i]->szSource, ABC_BITSTAMP);
-    i++;
-
-    // CAD defaults to coinbase
-    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
-    aSources[i]->currencyNum = CURRENCY_NUM_CAD;
-    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
-    i++;
-
-    // EUR defaults to coinbase
-    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
-    aSources[i]->currencyNum = CURRENCY_NUM_EUR;
-    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
-    i++;
-
-    // MXN defaults to coinbase
-    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
-    aSources[i]->currencyNum = CURRENCY_NUM_MXN;
-    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
-    i++;
-
-    // CNY defaults to coinbase
-    ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
-    aSources[i]->currencyNum = CURRENCY_NUM_CNY;
-    ABC_STRDUP(aSources[i]->szSource, ABC_COINBASE);
+    for (i = 0; i < EXCHANGE_DEFAULTS_SIZE; ++i)
+    {
+        ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
+        aSources[i]->currencyNum = EXCHANGE_DEFAULTS[i].currencyNum;
+        ABC_STRDUP(aSources[i]->szSource, EXCHANGE_DEFAULTS[i].szDefaultExchange);
+    }
 
     pSettings->bitcoinDenomination.denominationType = ABC_DENOMINATION_MBTC;
     pSettings->bitcoinDenomination.satoshi = 100000;
@@ -490,6 +469,38 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
 
             // assign this source to the array
             pSettings->exchangeRateSources.aSources[i] = pSource;
+        }
+        // If the user doesn't have defaults for all the exchange rates
+        if (pSettings->exchangeRateSources.numSources != EXCHANGE_DEFAULTS_SIZE)
+        {
+            size_t curExchanges = pSettings->exchangeRateSources.numSources;
+            // resize exchange rate array
+            ABC_REALLOC(pSettings->exchangeRateSources.aSources,
+                            sizeof(tABC_ExchangeRateSource *) * EXCHANGE_DEFAULTS_SIZE);
+            for (int i = 0; i < EXCHANGE_DEFAULTS_SIZE; ++i)
+            {
+                bool found = false;
+                for (int j = 0; j < pSettings->exchangeRateSources.numSources; ++j)
+                {
+                    if (pSettings->exchangeRateSources.aSources[j]->currencyNum
+                            == EXCHANGE_DEFAULTS[i].currencyNum)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    tABC_ExchangeRateSource *pSource = NULL;
+                    ABC_ALLOC(pSource, sizeof(tABC_ExchangeRateSource));
+                    pSource->currencyNum = EXCHANGE_DEFAULTS[i].currencyNum;
+                    ABC_STRDUP(pSource->szSource, EXCHANGE_DEFAULTS[i].szDefaultExchange);
+
+                    pSettings->exchangeRateSources.aSources[curExchanges] = pSource;
+                    curExchanges++;
+                }
+            }
+            pSettings->exchangeRateSources.numSources = curExchanges;
         }
 
         //
