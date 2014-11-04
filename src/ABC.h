@@ -153,7 +153,9 @@ extern "C" {
         /** Problem with the PIN */
         ABC_CC_NonNumericPin = 34,
         /** Unable to find an address */
-        ABC_CC_NoAvailableAddress = 35
+        ABC_CC_NoAvailableAddress = 35,
+        /** Login PIN has expired */
+        ABC_CC_PinExpired = 36
     } tABC_CC;
 
     /**

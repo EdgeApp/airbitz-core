@@ -388,6 +388,10 @@ tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_
         {
             ABC_RET_ERROR(ABC_CC_BadPassword, "Invalid password on server");
         }
+        else if (ABC_CC_PinExpired == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_PinExpired, "Invalid password on server");
+        }
         else
         {
             // get the message

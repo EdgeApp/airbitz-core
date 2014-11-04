@@ -87,7 +87,9 @@ extern "C" {
         ABC_Server_Code_AccountExists = 2,
         ABC_Server_Code_NoAccount = 3,
         ABC_Server_Code_InvalidPassword = 4,
-        ABC_Server_Code_InvalidAnswers = 5
+        ABC_Server_Code_InvalidAnswers = 5,
+        ABC_Server_Code_InvalidApiKey = 6,
+        ABC_Server_Code_PinExpired = 7
     } tABC_Server_Code;
 
 #ifdef __cplusplus
