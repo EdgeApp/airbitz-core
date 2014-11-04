@@ -52,6 +52,8 @@
 #define JSON_ACCT_WALLET_ARCHIVE_FIELD          "Archived"
 #define JSON_ACCT_WALLET_SORT_FIELD             "SortIndex"
 
+#define DEF_REQUIRE_PIN_SATOSHIS 5000000
+
 static tABC_CC ABC_AccountCategoriesSave(tABC_SyncKeys *pKeys, char **aszCategories, unsigned int Count, tABC_Error *pError);
 static tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings, tABC_Error *pError);
 static tABC_CC ABC_AccountWalletGetDir(tABC_SyncKeys *pKeys, char **pszWalletDir, tABC_Error *pError);
@@ -243,6 +245,11 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     pSettings->bNameOnPayments = false;
     pSettings->minutesAutoLogout = 60;
     pSettings->recoveryReminderCount = 0;
+
+    pSettings->bDailySpendLimit = false;
+    pSettings->bSpendRequirePin = true;
+    pSettings->spendRequirePinSatoshis = DEF_REQUIRE_PIN_SATOSHIS;
+
     ABC_STRDUP(pSettings->szLanguage, "en");
     pSettings->currencyNum = CURRENCY_NUM_USD;
 
@@ -407,7 +414,8 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
         }
         else
         {
-            pSettings->bSpendRequirePin = false;
+            // Default to PIN required
+            pSettings->bSpendRequirePin = true;
         }
 
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS);
@@ -418,7 +426,8 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
         }
         else
         {
-            pSettings->spendRequirePinSatoshis = 0;
+            // Default PIN requirement to 50mb
+            pSettings->spendRequirePinSatoshis = DEF_REQUIRE_PIN_SATOSHIS;
         }
 
 
