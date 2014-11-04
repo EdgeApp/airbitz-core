@@ -12,6 +12,8 @@
 #include "ABC.h"
 #include "util/ABC_Sync.h"
 
+#include <time.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
