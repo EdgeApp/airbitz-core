@@ -702,6 +702,9 @@ extern "C" {
                                bool *pbExists,
                                tABC_Error *pError);
 
+    tABC_CC ABC_PinLoginDelete(const char *szUserName,
+                               tABC_Error *pError);
+
     tABC_CC ABC_PinLogin(const char *szUserName,
                          const char *szPIN,
                          tABC_Error *pError);

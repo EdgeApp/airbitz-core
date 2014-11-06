@@ -845,6 +845,25 @@ exit:
 }
 
 /**
+ * Deletes the PIN login package from the disk.
+ */
+tABC_CC ABC_PinLoginDelete(const char *szUserName,
+                           tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_LoginPinDelete(szUserName, pError));
+
+exit:
+    return cc;
+}
+
+/**
  * Performs a PIN-based login for the given user.
  */
 tABC_CC ABC_PinLogin(const char *szUserName,
