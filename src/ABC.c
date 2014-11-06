@@ -478,7 +478,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     {
         tABC_RequestResults *results = pData;
         char * output = NULL;
-        ABC_ALLOC(output, 100*sizeof(char));
+        ABC_STR_NEW(output, 100);
         results->pRetData = output;
         ABC_CHECK_RET(ABC_WalletCreate(pKeys, L1, LP1, szUserName, szWalletName,
             currencyNum, attributes, (char**) &(results->pRetData), pError));
@@ -2284,31 +2284,31 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     ABC_CHECK_NULL(pCountRules);
 
     // we know there will be 4 rules (lots of magic numbers in this function...sorry)
-    ABC_ALLOC(aRules, sizeof(tABC_PasswordRule *) * 4);
+    ABC_ARRAY_NEW(aRules, 4, tABC_PasswordRule*);
 
     // must have upper case letter
-    ABC_ALLOC(pRuleUC, sizeof(tABC_PasswordRule));
+    ABC_NEW(pRuleUC, tABC_PasswordRule);
     ABC_STRDUP(pRuleUC->szDescription, "Must have at least one upper case letter");
     pRuleUC->bPassed = false;
     aRules[count] = pRuleUC;
     count++;
 
     // must have lower case letter
-    ABC_ALLOC(pRuleLC, sizeof(tABC_PasswordRule));
+    ABC_NEW(pRuleLC, tABC_PasswordRule);
     ABC_STRDUP(pRuleLC->szDescription, "Must have at least one lower case letter");
     pRuleLC->bPassed = false;
     aRules[count] = pRuleLC;
     count++;
 
     // must have number
-    ABC_ALLOC(pRuleNum, sizeof(tABC_PasswordRule));
+    ABC_NEW(pRuleNum, tABC_PasswordRule);
     ABC_STRDUP(pRuleNum->szDescription, "Must have at least one number");
     pRuleNum->bPassed = false;
     aRules[count] = pRuleNum;
     count++;
 
     // must have 10 characters
-    ABC_ALLOC(pRuleCount, sizeof(tABC_PasswordRule));
+    ABC_NEW(pRuleCount, tABC_PasswordRule);
     char aPassRDesc[64];
     snprintf(aPassRDesc, sizeof(aPassRDesc), "Must have at least %d characters", ABC_MIN_PASS_LENGTH);
     ABC_STRDUP(pRuleCount->szDescription, aPassRDesc);

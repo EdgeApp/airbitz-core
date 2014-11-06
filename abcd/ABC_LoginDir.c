@@ -50,7 +50,7 @@ tABC_CC ABC_LoginDirGetNumber(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginCreateRootDir(pError));
 
     // get the account root directory string
-    ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
 
     // get all the files in this root
@@ -150,11 +150,11 @@ tABC_CC ABC_LoginDirNewNumber(int *pAccountNum,
     ABC_CHECK_RET(ABC_LoginCreateRootDir(pError));
 
     // get the account root directory string
-    ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
 
     // run through all the account names
-    ABC_ALLOC(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szAccountDir, ABC_FILEIO_MAX_PATH_LENGTH);
     int AccountNum;
     for (AccountNum = 0; AccountNum < ACCOUNT_MAX; AccountNum++)
     {
@@ -228,7 +228,7 @@ tABC_CC ABC_LoginCreateRootDir(tABC_Error *pError)
     char *szAccountRoot = NULL;
 
     // create the account directory string
-    ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
 
     // if it doesn't exist
@@ -290,7 +290,7 @@ tABC_CC ABC_LoginCopyAccountDirName(char *szAccountDir, int AccountNum, tABC_Err
     ABC_CHECK_NULL(szAccountDir);
 
     // get the account root directory string
-    ABC_ALLOC(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
 
     // create the account directory string
