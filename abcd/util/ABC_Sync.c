@@ -83,7 +83,7 @@ tABC_CC ABC_SyncKeysCopy(tABC_SyncKeys **ppOut,
     tABC_CC cc = ABC_CC_Ok;
     tABC_SyncKeys *pKeys = NULL;
 
-    ABC_ALLOC(pKeys, sizeof(tABC_SyncKeys));
+    ABC_NEW(pKeys, tABC_SyncKeys);
     ABC_STRDUP(pKeys->szSyncDir, pIn->szSyncDir);
     ABC_STRDUP(pKeys->szSyncKey, pIn->szSyncKey);
     ABC_BUF_DUP(pKeys->MK, pIn->MK);

@@ -489,7 +489,7 @@ tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC_Error 
     *pszFilename = NULL;
 
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRoot, pError));
-    ABC_ALLOC(szRateRoot, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szRateRoot, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szRateRoot, "%s/%s", szRoot, EXCHANGE_RATE_DIRECTORY);
     ABC_CHECK_RET(ABC_FileIOFileExists(szRateRoot, &bExists, pError));
     if (true != bExists)
@@ -497,7 +497,7 @@ tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC_Error 
         ABC_CHECK_RET(ABC_FileIOCreateDir(szRateRoot, pError));
     }
 
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%d.txt", szRateRoot, currencyNum);
     *pszFilename = szFilename;
 exit:
@@ -664,13 +664,12 @@ tABC_CC ABC_ExchangeAddToCache(tABC_ExchangeCacheEntry *pData, tABC_Error *pErro
         {
             // create a new one
             gExchangesCacheCount = 0;
-            ABC_ALLOC(gaExchangeCacheArray, sizeof(tABC_ExchangeCacheEntry *));
+            ABC_ARRAY_NEW(gaExchangeCacheArray, 1, tABC_ExchangeCacheEntry*);
         }
         else
         {
             // extend the current one
-            gaExchangeCacheArray = realloc(gaExchangeCacheArray, sizeof(tABC_ExchangeCacheEntry *) * (gExchangesCacheCount + 1));
-
+            ABC_ARRAY_RESIZE(gaExchangeCacheArray, gExchangesCacheCount + 1, tABC_ExchangeCacheEntry*)
         }
         gaExchangeCacheArray[gExchangesCacheCount] = pData;
         gExchangesCacheCount++;
@@ -696,7 +695,7 @@ tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
     tABC_ExchangeInfo *pInfo;
 
-    ABC_ALLOC(pInfo, sizeof(tABC_ExchangeInfo));
+    ABC_NEW(pInfo, tABC_ExchangeInfo);
     ABC_CHECK_RET(ABC_SyncKeysCopy(&pInfo->pKeys, pKeys, pError));
     pInfo->fRequestCallback = fRequestCallback;
     pInfo->pData = pData;
@@ -724,7 +723,7 @@ tABC_CC ABC_ExchangeAllocCacheEntry(tABC_ExchangeCacheEntry **ppCache,
     tABC_CC cc = ABC_CC_Ok;
     tABC_ExchangeCacheEntry *pCache;
 
-    ABC_ALLOC(pCache, sizeof(tABC_ExchangeCacheEntry));
+    ABC_NEW(pCache, tABC_ExchangeCacheEntry);
     pCache->currencyNum = currencyNum;
     pCache->last_updated = last_updated;
     pCache->exchange_rate = exchange_rate;

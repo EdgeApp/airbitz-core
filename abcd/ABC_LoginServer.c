@@ -54,7 +54,7 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(LP1);
 
     // create the URL
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_ACCOUNT_CREATE_PATH);
 
     // create base64 versions of L1 and LP1
@@ -117,7 +117,7 @@ tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(LP1);
 
     // create the URL
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_ACCOUNT_ACTIVATE);
 
     // create base64 versions of L1 and LP1
@@ -188,7 +188,7 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(newLP1);
 
     // create the URL
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_CHANGE_PASSWORD_PATH);
 
     // create base64 versions of L1, oldLP1, and newLP1:
@@ -255,7 +255,7 @@ tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(L1);
 
     // create the URL
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_CARE_PACKAGE_PATH);
 
     ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1_NULL, LRA1, szURL, JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
@@ -280,7 +280,7 @@ tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
 
     ABC_CHECK_NULL_BUF(L1);
 
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_LOGIN_PACK_GET_PATH);
 
     ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1, LRA1, szURL, JSON_ACCT_LOGIN_PACKAGE, &szLoginPackage, pError));
@@ -382,7 +382,7 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     ABC_CHECK_NULL_BUF(DID);
     ABC_CHECK_NULL_BUF(LPIN1);
 
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_PIN_PACK_GET_PATH);
 
     // create base64 versions
@@ -461,7 +461,7 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(LPIN1);
 
     // create the URL
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_PIN_PACK_UPDATE_PATH);
 
     // create base64 versions
@@ -531,7 +531,7 @@ tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(LP1);
 
     // create the URL
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, szPath);
 
     // create base64 versions of L1 and LP1
@@ -601,7 +601,7 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     json_t *pJSON_array = NULL;
 
     // create the URL
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_DEBUG_PATH);
 
     ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));

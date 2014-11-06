@@ -146,7 +146,7 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
     ABC_CHECK_NULL(szDir);
 
     tABC_FileIOList *pFileList = NULL;
-    ABC_ALLOC(pFileList, sizeof(tABC_FileIOList));
+    ABC_NEW(pFileList, tABC_FileIOList);
 
     DIR *dir;
     struct dirent *ent;
@@ -156,15 +156,15 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
         {
             if (pFileList->nCount)
             {
-                pFileList->apFiles = (tABC_FileIOFileInfo **)realloc(pFileList->apFiles, sizeof(tABC_FileIOFileInfo *) * (pFileList->nCount + 1));
+                ABC_ARRAY_RESIZE(pFileList->apFiles, pFileList->nCount + 1, tABC_FileIOFileInfo*);
             }
             else
             {
-                ABC_ALLOC(pFileList->apFiles, sizeof(tABC_FileIOFileInfo *));
+                ABC_ARRAY_NEW(pFileList->apFiles, 1, tABC_FileIOFileInfo*);
             }
 
             pFileList->apFiles[pFileList->nCount] = NULL;
-            ABC_ALLOC(pFileList->apFiles[pFileList->nCount], sizeof(tABC_FileIOFileInfo));
+            ABC_NEW(pFileList->apFiles[pFileList->nCount], tABC_FileIOFileInfo);
 
             ABC_STRDUP(pFileList->apFiles[pFileList->nCount]->szName, ent->d_name);
             if (ent->d_type == DT_UNKNOWN)
@@ -379,7 +379,7 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
     fseek(fp, 0, SEEK_SET);
 
     // create the memory
-    ABC_ALLOC(*pszData, size + 1); // +1 for the '\0'
+    ABC_STR_NEW(*pszData, size + 1); // +1 for the '\0'
 
     // write the data
     if (fread(*pszData, 1, size, fp) != size)
@@ -424,7 +424,7 @@ tABC_CC ABC_FileIOReadFile(const char  *szFilename,
     fseek(fp, 0, SEEK_SET);
 
     // create the memory
-    ABC_ALLOC(*pszData, *nSize);
+    ABC_STR_NEW(*pszData, *nSize);
 
     // write the data
     if (fread(*pszData, 1, *nSize, fp) != *nSize)
@@ -548,7 +548,7 @@ tABC_CC ABC_FileIODeleteRecursive(const char *szFilename, tABC_Error *pError)
                 {
                     // Delete the entry:
                     pathSize = baseSize + strlen(pEntry->d_name) + 2;
-                    ABC_ALLOC_ARRAY(szPath, pathSize, char);
+                    ABC_STR_NEW(szPath, pathSize);
                     snprintf(szPath, pathSize, "%s/%s", szFilename, pEntry->d_name);
 
                     ABC_CHECK_RET(ABC_FileIODeleteRecursive(szPath, pError));

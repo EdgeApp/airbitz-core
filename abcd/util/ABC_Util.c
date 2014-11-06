@@ -333,7 +333,7 @@ tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
 
     if (*pCount > 0)
     {
-        ABC_ALLOC(pArrayStrings, sizeof(char *) * *pCount);
+        ABC_ARRAY_NEW(pArrayStrings, *pCount, char*);
 
         for (int i = 0; i < *pCount; i++)
         {

@@ -59,7 +59,7 @@ tABC_CC ABC_LoginPinLocalLoad(tABC_PinLocal **ppSelf,
     char *              szDID           = NULL;
     json_int_t          expires         = 0;
 
-    ABC_ALLOC(pSelf, sizeof(tABC_PinLocal));
+    ABC_NEW(pSelf, tABC_PinLocal);
 
     // Load the local file:
     ABC_CHECK_RET(ABC_LoginDirFileLoad(&szLocal, AccountNum, PIN_FILENAME, pError));
