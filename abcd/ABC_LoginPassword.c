@@ -187,3 +187,50 @@ exit:
 
     return cc;
 }
+
+/**
+ * Validates that the provided password is correct.
+ * This is used in the GUI to guard access to certain actions.
+ *
+ * @param pSelf         An already-loaded login object.
+ * @param szPassword    The password to check.
+ * @param pOk           Set to true if the password is good, or false otherwise.
+ */
+tABC_CC ABC_LoginPasswordOk(tABC_Login *pSelf,
+                            const char *szPassword,
+                            bool *pOk,
+                            tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_CarePackage *pCarePackage = NULL;
+    tABC_LoginPackage *pLoginPackage = NULL;
+    tABC_U08Buf         LP              = ABC_BUF_NULL;
+    tABC_U08Buf         LP2             = ABC_BUF_NULL;
+    tABC_U08Buf         MK              = ABC_BUF_NULL;
+
+    *pOk = false;
+
+    // Load the packages:
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->AccountNum, &pCarePackage, &pLoginPackage, pError));
+
+    // LP = L + P:
+    ABC_BUF_STRCAT(LP, pSelf->szUserName, szPassword);
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
+
+    // Try to decrypt MK:
+    tABC_Error error;
+    if (ABC_CC_Ok == ABC_CryptoDecryptJSONObject(pLoginPackage->EMK_LP2, LP2, &MK, &error))
+    {
+        *pOk = true;
+    }
+
+exit:
+    ABC_CarePackageFree(pCarePackage);
+    ABC_LoginPackageFree(pLoginPackage);
+    ABC_BUF_FREE(LP);
+    ABC_BUF_FREE(LP2);
+    ABC_BUF_FREE(MK);
+
+    return cc;
+}

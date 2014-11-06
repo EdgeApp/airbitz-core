@@ -72,6 +72,11 @@ extern "C" {
                                        tABC_U08Buf *pLP1,
                                        tABC_Error *pError);
 
+    tABC_CC ABC_LoginShimPasswordOk(const char *szUserName,
+                                    const char *szPassword,
+                                    bool *pOk,
+                                    tABC_Error *pError);
+
     tABC_CC ABC_LoginShimCheckPasswordChange(const char *szUserName,
                                              const char *szPassword,
                                              tABC_Error *pError);

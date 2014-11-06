@@ -22,6 +22,11 @@ extern "C" {
                                  const char *szPassword,
                                  tABC_Error *pError);
 
+    tABC_CC ABC_LoginPasswordOk(tABC_Login *pSelf,
+                                const char *szPassword,
+                                bool *pOk,
+                                tABC_Error *pError);
+
 #ifdef __cplusplus
 }
 #endif

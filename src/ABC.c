@@ -383,6 +383,33 @@ exit:
     return cc;
 }
 
+/**
+ * Validates that the provided password is correct.
+ * This is used in the GUI to guard access to certain actions.
+ */
+tABC_CC ABC_PasswordOk(const char *szUserName,
+                       const char *szPassword,
+                       bool *pOk,
+                       tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szPassword);
+    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(pOk);
+
+    ABC_CHECK_RET(ABC_LoginShimPasswordOk(szUserName, szPassword, pOk, pError));
+
+exit:
+
+    return cc;
+}
 
 /**
  * Create a new wallet.

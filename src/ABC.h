@@ -738,6 +738,11 @@ extern "C" {
                                             void *pData,
                                             tABC_Error *pError);
 
+    tABC_CC ABC_PasswordOk(const char *szUserName,
+                           const char *szPassword,
+                           bool *pOk,
+                           tABC_Error *pError);
+
     tABC_CC ABC_LoadAccountSettings(const char *szUserName,
                                     const char *szPassword,
                                     tABC_AccountSettings **ppSettings,

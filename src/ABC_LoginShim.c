@@ -427,6 +427,33 @@ exit:
 }
 
 /**
+ * Validates that the provided password is correct.
+ * This is used in the GUI to guard access to certain actions.
+ */
+tABC_CC ABC_LoginShimPasswordOk(const char *szUserName,
+                                const char *szPassword,
+                                bool *pOk,
+                                tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+
+    // Load the account into the cache:
+    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+
+    // Grab the keys:
+    ABC_CHECK_RET(ABC_LoginPasswordOk(gLoginCache, szPassword, pOk, pError));
+
+exit:
+    ABC_LoginShimMutexUnlock(NULL);
+    return cc;
+}
+
+/**
  * Downloads and saves a new LoginPackage from the server.
  */
 tABC_CC ABC_LoginShimCheckPasswordChange(const char *szUserName,
