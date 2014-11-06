@@ -66,17 +66,17 @@ static bool gbInitialized = false;
 bool gbIsTestNet = false;
 
 static tABC_Currency gaCurrencies[] = {
+    { "AUD", 36, "Australian Dollar", " Australia, Christmas Island (CX), Cocos (Keeling) Islands (CC), Heard and McDonald Islands (HM), Kiribati (KI), Nauru (NR), Norfolk Island (NF), Tuvalu (TV), and Australian Antarctic Territory" },
     { "CAD", 124, "Canadian dollar", "Canada, Saint Pierre and Miquelon" },
     { "CNY", 156, "Chinese yuan", "China" },
     { "CUP", 192, "Cuban peso", "Cuba" },
     { "EUR", 978, "Euro", "Andorra, Austria, Belgium, Cyprus, Estonia, Finland, France, Germany, Greece, Ireland, Italy, Kosovo, Latvia, Luxembourg, Malta, Monaco, Montenegro, Netherlands, Portugal, San Marino, Slovakia, Slovenia, Spain, Vatican City; see eurozone" },
     { "GBP", 826, "Pound sterling", "United Kingdom, British Crown dependencies" },
-    { "MXN", 484, "Mexican peso", "Mexico" },
-    { "USD", 840, "United States dollar", "American Samoa, Barbados (as well as Barbados Dollar), Bermuda (as well as Bermudian Dollar), British Indian Ocean Territory, British Virgin Islands, Caribbean Netherlands, Ecuador, El Salvador, Guam, Haiti, Marshall Islands, Federated States of Micronesia, Northern Mariana Islands, Palau, Panama, Puerto Rico, Timor-Leste, Turks and Caicos Islands, United States, U.S. Virgin Islands, Zimbabwe" },
-    { "AUD", 36, "Australian Dollar", " Australia, Christmas Island (CX), Cocos (Keeling) Islands (CC), Heard and McDonald Islands (HM), Kiribati (KI), Nauru (NR), Norfolk Island (NF), Tuvalu (TV), and Australian Antarctic Territory" },
     { "HKD", 344, "Hong Kong Dollar", "Hong Kong, Macao (MO)" },
+    { "MXN", 484, "Mexican peso", "Mexico" },
     { "NZD", 554, "New Zealand Dollar", "New Zealand, Cook Islands (CK), Niue (NU), Pitcairn (PN; see also Pitcairn Islands dollar), Tokelau (TK), Ross Dependency" },
     { "PHP", 608, "Philippine peso", "Philippines" },
+    { "USD", 840, "United States dollar", "American Samoa, Barbados (as well as Barbados Dollar), Bermuda (as well as Bermudian Dollar), British Indian Ocean Territory, British Virgin Islands, Caribbean Netherlands, Ecuador, El Salvador, Guam, Haiti, Marshall Islands, Federated States of Micronesia, Northern Mariana Islands, Palau, Panama, Puerto Rico, Timor-Leste, Turks and Caicos Islands, United States, U.S. Virgin Islands, Zimbabwe" },
 };
 
 #define CURRENCY_ARRAY_COUNT ((int) (sizeof(gaCurrencies) / sizeof(gaCurrencies[0])))
