@@ -380,7 +380,7 @@ tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_
         {
             ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists on server");
         }
-		else if (ABC_Server_Code_NoAccount == statusCode)
+        else if (ABC_Server_Code_NoAccount == statusCode)
         {
             ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "Account does not exist on server");
         }
@@ -388,7 +388,7 @@ tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_
         {
             ABC_RET_ERROR(ABC_CC_BadPassword, "Invalid password on server");
         }
-        else if (ABC_CC_PinExpired == statusCode)
+        else if (ABC_Server_Code_PinExpired == statusCode)
         {
             ABC_RET_ERROR(ABC_CC_PinExpired, "Invalid password on server");
         }

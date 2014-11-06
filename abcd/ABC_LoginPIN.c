@@ -136,6 +136,12 @@ exit:
     ABC_FREE_STR(szEPINK);
     ABC_FREE_STR(szLocal);
 
+    if (ABC_CC_PinExpired == cc)
+    {
+        tABC_Error error;
+        ABC_LoginPinDelete(szUserName, &error);
+    }
+
     return cc;
 }
 

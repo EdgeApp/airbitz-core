@@ -22,11 +22,12 @@ default: build/account-decrypt.bin \
          build/get-wallet-info.bin \
          build/get-settings.bin \
          build/list-wallets.bin \
+         build/pin-login.bin \
+         build/pin-login-setup.bin \
          build/recovery-reminder-inc.bin \
          build/remove-category.bin \
          build/set-nickname.bin \
          build/set-pin.bin \
-         build/set-pin-package.bin \
          build/set-question-choices.bin \
          build/search-bitcoin-seed.bin \
          build/sign-in.bin \
