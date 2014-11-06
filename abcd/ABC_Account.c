@@ -44,6 +44,7 @@
 #define JSON_ACCT_DAILY_SPEND_LIMIT_SATOSHIS    "dailySpendLimitSatoshis"
 #define JSON_ACCT_SPEND_REQUIRE_PIN_ENABLED     "spendRequirePinEnabled"
 #define JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS    "spendRequirePinSatoshis"
+#define JSON_ACCT_DISABLE_PIN_LOGIN             "disablePINLogin"
 
 // Wallet JSON fields:
 #define JSON_ACCT_WALLET_MK_FIELD               "MK"
@@ -249,6 +250,7 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     pSettings->bDailySpendLimit = false;
     pSettings->bSpendRequirePin = true;
     pSettings->spendRequirePinSatoshis = DEF_REQUIRE_PIN_SATOSHIS;
+    pSettings->bDisablePINLogin = false;
 
     ABC_STRDUP(pSettings->szLanguage, "en");
     pSettings->currencyNum = CURRENCY_NUM_USD;
@@ -416,6 +418,18 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
         {
             // Default to PIN required
             pSettings->bSpendRequirePin = true;
+        }
+
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_DISABLE_PIN_LOGIN);
+        if (pJSON_Value)
+        {
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON boolean value");
+            pSettings->bDisablePINLogin = json_is_true(pJSON_Value) ? true : false;
+        }
+        else
+        {
+            // Default to PIN login allowed
+            pSettings->bDisablePINLogin = false;
         }
 
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS);
@@ -678,6 +692,9 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     retVal = json_object_set_new(pJSON_Root, JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS, json_integer(pSettings->spendRequirePinSatoshis));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_DISABLE_PIN_LOGIN, json_integer(pSettings->bDisablePINLogin));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // create the denomination section

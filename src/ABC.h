@@ -591,6 +591,8 @@ extern "C" {
         bool                        bSpendRequirePin;
         /** daily spend limit */
         int64_t                     spendRequirePinSatoshis;
+        /** should PIN re-login be disabled */
+        bool                        bDisablePINLogin;
     } tABC_AccountSettings;
 
     /**
