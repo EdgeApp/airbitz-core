@@ -13,6 +13,8 @@ int main(int argc, char *argv[])
     tABC_Error error;
     unsigned char seed[] = {1, 2, 3};
 
+    bool bExists;
+
     if (argc != 4)
     {
         fprintf(stderr, "usage: %s <dir> <user> <pin>\n", argv[0]);
@@ -20,7 +22,15 @@ int main(int argc, char *argv[])
     }
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, seed, sizeof(seed), &error));
 
-    MAIN_CHECK(ABC_PinLogin(argv[2], argv[3], &error));
+    MAIN_CHECK(ABC_PinLoginExists(argv[2], &bExists, &error));
+    if (bExists)
+    {
+        MAIN_CHECK(ABC_PinLogin(argv[2], argv[3], &error));
+    }
+    else
+    {
+        printf("Login expired\n");
+    }
 
     return 0;
 }
