@@ -279,13 +279,13 @@ extern "C" {
     typedef struct sABC_Currency
     {
         /** currency ISO 4217 code */
-        char    *szCode;
+        const char    *szCode;
         /** currency ISO 4217 num */
         int     num;
         /** currency description */
-        char    *szDescription;
+        const char    *szDescription;
         /** currency countries */
-        char    *szCountries;
+        const char    *szCountries;
     } tABC_Currency;
 
     /**

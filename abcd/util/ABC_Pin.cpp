@@ -85,7 +85,7 @@ int ABC_PinCertCallback(int pok, X509_STORE_CTX *ctx)
 
     BIO_get_mem_ptr(b64, &bptr);
 
-    PIN_ASSERT(NULL != (szCert = malloc(bptr->length + 1)),
+    PIN_ASSERT(NULL != (szCert = (char*)malloc(bptr->length + 1)),
         ABC_CC_Error, "Unable to malloc");
     PIN_ASSERT(0 < BIO_read(b64, szCert, bptr->length),
         ABC_CC_Error, "Unable to read into bio to char *");

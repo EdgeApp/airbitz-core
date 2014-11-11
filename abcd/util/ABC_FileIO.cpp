@@ -141,11 +141,12 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    tABC_FileIOList *pFileList = NULL;
+
     ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(ppFileList);
     ABC_CHECK_NULL(szDir);
 
-    tABC_FileIOList *pFileList = NULL;
     ABC_NEW(pFileList, tABC_FileIOList);
 
     DIR *dir;
@@ -253,15 +254,17 @@ tABC_CC ABC_FileIOCreateDir(const char *szDir,
                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    int e = 0;
+    mode_t process_mask;
 
     ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(szDir);
 
-    mode_t process_mask = umask(0);
-    int result_code = mkdir(szDir, S_IRWXU | S_IRWXG | S_IRWXO);
+    process_mask = umask(0);
+    e = mkdir(szDir, S_IRWXU | S_IRWXG | S_IRWXO);
     umask(process_mask);
 
-    if (0 != result_code)
+    if (0 != e)
     {
         ABC_RET_ERROR(ABC_CC_DirReadError, "Could not create directory");
     }
@@ -361,6 +364,7 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
     tABC_CC cc = ABC_CC_Ok;
 
     FILE *fp = NULL;
+    size_t size = 0;
 
     ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(szFilename);
@@ -375,7 +379,7 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
 
     // get the length
     fseek(fp, 0, SEEK_END);
-    long int size = ftell(fp);
+    size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
     // create the memory
@@ -406,6 +410,7 @@ tABC_CC ABC_FileIOReadFile(const char  *szFilename,
     tABC_CC cc = ABC_CC_Ok;
 
     FILE *fp = NULL;
+    char *szData = NULL;
 
     ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(szFilename);
@@ -424,16 +429,19 @@ tABC_CC ABC_FileIOReadFile(const char  *szFilename,
     fseek(fp, 0, SEEK_SET);
 
     // create the memory
-    ABC_STR_NEW(*pszData, *nSize);
+    ABC_STR_NEW(szData, *nSize);
 
     // write the data
-    if (fread(*pszData, 1, *nSize, fp) != *nSize)
+    if (fread(szData, 1, *nSize, fp) != *nSize)
     {
-        ABC_FREE_STR(*pszData);
         ABC_RET_ERROR(ABC_CC_FileReadError, "Could not read from file");
     }
 
+    *pszData = szData;
+    szData = NULL;
+
 exit:
+    ABC_FREE_STR(szData);
     if (fp) fclose(fp);
 
     ABC_FileIOMutexUnlock(NULL);
@@ -454,13 +462,13 @@ tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
 
     char *szData_JSON = NULL;
     json_t *pJSON_Root = NULL;
+    bool bExists = false;
 
     ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(ppJSON_Data);
 
     // if the file exists
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     if (true == bExists)
     {

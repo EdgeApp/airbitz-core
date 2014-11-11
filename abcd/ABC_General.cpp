@@ -48,7 +48,7 @@ void ABC_GeneralFreeInfo(tABC_GeneralInfo *pInfo)
     {
         if ((pInfo->aMinersFees != NULL) && (pInfo->countMinersFees > 0))
         {
-            for (int i = 0; i < pInfo->countMinersFees; i++)
+            for (unsigned i = 0; i < pInfo->countMinersFees; i++)
             {
                 ABC_CLEAR_FREE(pInfo->aMinersFees[i], sizeof(tABC_GeneralMinerFee));
             }
@@ -63,7 +63,7 @@ void ABC_GeneralFreeInfo(tABC_GeneralInfo *pInfo)
 
         if ((pInfo->aszObeliskServers != NULL) && (pInfo->countObeliskServers > 0))
         {
-            for (int i = 0; i < pInfo->countObeliskServers; i++)
+            for (unsigned i = 0; i < pInfo->countObeliskServers; i++)
             {
                 ABC_FREE_STR(pInfo->aszObeliskServers[i]);
             }
@@ -72,7 +72,7 @@ void ABC_GeneralFreeInfo(tABC_GeneralInfo *pInfo)
 
         if ((pInfo->aszSyncServers != NULL) && (pInfo->countSyncServers > 0))
         {
-            for (int i = 0; i < pInfo->countSyncServers; i++)
+            for (unsigned i = 0; i < pInfo->countSyncServers; i++)
             {
                 ABC_FREE_STR(pInfo->aszSyncServers[i]);
             }
@@ -98,6 +98,11 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     json_t  *pJSON_Value            = NULL;
     char    *szInfoFilename         = NULL;
     tABC_GeneralInfo *pInfo         = NULL;
+    json_t  *pJSON_MinersFeesArray  = NULL;
+    json_t  *pJSON_AirBitzFees      = NULL;
+    json_t  *pJSON_ObeliskArray     = NULL;
+    json_t  *pJSON_SyncArray        = NULL;
+    bool bExists = false;
 
     ABC_CHECK_NULL(ppInfo);
 
@@ -105,7 +110,6 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     ABC_CHECK_RET(ABC_GeneralGetInfoFilename(&szInfoFilename, pError));
 
     // check to see if we have the file
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szInfoFilename, &bExists, pError));
     if (false == bExists)
     {
@@ -120,7 +124,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     ABC_NEW(pInfo, tABC_GeneralInfo);
 
     // get the miners fees array
-    json_t *pJSON_MinersFeesArray = json_object_get(pJSON_Root, JSON_INFO_MINERS_FEES_FIELD);
+    pJSON_MinersFeesArray = json_object_get(pJSON_Root, JSON_INFO_MINERS_FEES_FIELD);
     ABC_CHECK_ASSERT((pJSON_MinersFeesArray && json_is_array(pJSON_MinersFeesArray)), ABC_CC_JSONError, "Error parsing JSON array value");
 
     // get the number of elements in the array
@@ -131,7 +135,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     }
 
     // run through all the miners fees
-    for (int i = 0; i < pInfo->countMinersFees; i++)
+    for (unsigned i = 0; i < pInfo->countMinersFees; i++)
     {
         tABC_GeneralMinerFee *pFee = NULL;
         ABC_NEW(pFee, tABC_GeneralMinerFee);
@@ -158,7 +162,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     ABC_NEW(pInfo->pAirBitzFee, tABC_GeneralAirBitzFee);
 
     // get the air bitz fees object
-    json_t *pJSON_AirBitzFees = json_object_get(pJSON_Root, JSON_INFO_AIRBITZ_FEES_FIELD);
+    pJSON_AirBitzFees = json_object_get(pJSON_Root, JSON_INFO_AIRBITZ_FEES_FIELD);
     ABC_CHECK_ASSERT((pJSON_AirBitzFees && json_is_object(pJSON_AirBitzFees)), ABC_CC_JSONError, "Error parsing JSON object value");
 
     // get the air bitz fees percentage
@@ -183,7 +187,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
 
 
     // get the obelisk array
-    json_t *pJSON_ObeliskArray = json_object_get(pJSON_Root, JSON_INFO_OBELISK_SERVERS_FIELD);
+    pJSON_ObeliskArray = json_object_get(pJSON_Root, JSON_INFO_OBELISK_SERVERS_FIELD);
     ABC_CHECK_ASSERT((pJSON_ObeliskArray && json_is_array(pJSON_ObeliskArray)), ABC_CC_JSONError, "Error parsing JSON array value");
 
     // get the number of elements in the array
@@ -194,7 +198,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     }
 
     // run through all the obelisk servers
-    for (int i = 0; i < pInfo->countObeliskServers; i++)
+    for (unsigned i = 0; i < pInfo->countObeliskServers; i++)
     {
         // get the obelisk server
         pJSON_Value = json_array_get(pJSON_ObeliskArray, i);
@@ -203,7 +207,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     }
 
     // get the sync array
-    json_t *pJSON_SyncArray = json_object_get(pJSON_Root, JSON_INFO_SYNC_SERVERS_FIELD);
+    pJSON_SyncArray = json_object_get(pJSON_Root, JSON_INFO_SYNC_SERVERS_FIELD);
     if (pJSON_SyncArray)
     {
         ABC_CHECK_ASSERT((pJSON_SyncArray && json_is_array(pJSON_SyncArray)), ABC_CC_JSONError, "Error parsing JSON array value");
@@ -216,7 +220,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
         }
 
         // run through all the sync servers
-        for (int i = 0; i < pInfo->countSyncServers; i++)
+        for (unsigned i = 0; i < pInfo->countSyncServers; i++)
         {
             // get the sync server
             pJSON_Value = json_array_get(pJSON_SyncArray, i);
@@ -261,12 +265,12 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     char    *szInfoFilename = NULL;
     char    *szJSON         = NULL;
     bool    bUpdateRequired = true;
+    bool bExists = false;
 
     // get the info filename
     ABC_CHECK_RET(ABC_GeneralGetInfoFilename(&szInfoFilename, pError));
 
     // check to see if we have the file
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szInfoFilename, &bExists, pError));
     if (true == bExists)
     {
@@ -379,7 +383,7 @@ void ABC_GeneralFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices)
     {
         if ((pQuestionChoices->aChoices != NULL) && (pQuestionChoices->numChoices > 0))
         {
-            for (int i = 0; i < pQuestionChoices->numChoices; i++)
+            for (unsigned i = 0; i < pQuestionChoices->numChoices; i++)
             {
                 tABC_QuestionChoice *pChoice = pQuestionChoices->aChoices[i];
 
@@ -412,6 +416,8 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
     tABC_QuestionChoices *pQuestionChoices = NULL;
+    bool bExists = false;
+    unsigned int count = 0;
 
     ABC_CHECK_NULL(ppQuestionChoices);
 
@@ -421,7 +427,6 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     sprintf(szFilename, "%s/%s", szRootDir, GENERAL_QUESTIONS_FILENAME);
 
     // if the file doesn't exist
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     if (true != bExists)
     {
@@ -437,7 +442,7 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     ABC_CHECK_ASSERT((pJSON_Value && json_is_array(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON array value for recovery questions");
 
     // get the number of elements in the array
-    unsigned int count = (unsigned int) json_array_size(pJSON_Value);
+    count = (unsigned int) json_array_size(pJSON_Value);
     if (count <= 0)
     {
         ABC_RET_ERROR(ABC_CC_JSONError, "No questions in the recovery question choices file")
@@ -448,7 +453,7 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     pQuestionChoices->numChoices = count;
     ABC_ARRAY_NEW(pQuestionChoices->aChoices, count, tABC_QuestionChoice*);
 
-    for (int i = 0; i < count; i++)
+    for (unsigned i = 0; i < count; i++)
     {
         json_t *pJSON_Elem = json_array_get(pJSON_Value, i);
         ABC_CHECK_ASSERT((pJSON_Elem && json_is_object(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON element value for recovery questions");
@@ -550,6 +555,9 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
     json_t  *pJSON_Root     = NULL;
     char    *szURL          = NULL;
     char    *szResults      = NULL;
+    json_t  *pJSON_Value    = NULL;
+    json_error_t error;
+    int statusCode = 0;
 
     ABC_CHECK_NULL(ppJSON_Q);
     // create the URL
@@ -561,8 +569,6 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
     ABC_DebugLog("Server results: %s", szResults);
 
     // decode the result
-    json_t *pJSON_Value = NULL;
-    json_error_t error;
     pJSON_Root = json_loads(szResults, 0, &error);
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
@@ -570,7 +576,7 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
     // get the status code
     pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
-    int statusCode = (int) json_integer_value(pJSON_Value);
+    statusCode = (int) json_integer_value(pJSON_Value);
 
     // if there was a failure
     if (ABC_Server_Code_Success != statusCode)

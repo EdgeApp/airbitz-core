@@ -246,11 +246,12 @@ tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    tABC_Login *pObject = NULL;
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szRecoveryAnswers);
     ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
 
-    tABC_Login *pObject = NULL;
     cc = ABC_LoginRecovery(&pObject, szUserName, szRecoveryAnswers, pError);
 
     if (ABC_CC_Ok == cc)
@@ -311,11 +312,12 @@ tABC_CC ABC_LoginShimPinLogin(const char *szUserName,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    tABC_Login *pObject = NULL;
+
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPIN);
     ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
 
-    tABC_Login *pObject = NULL;
     ABC_CHECK_RET(ABC_LoginPin(&pObject, szUserName, szPIN, pError));
     ABC_LoginCacheClear();
     gLoginCache = pObject;

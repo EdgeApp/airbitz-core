@@ -809,7 +809,7 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_TxSendInfo SendInfo = {0};
+    tABC_TxSendInfo SendInfo = {{0}};
     tABC_TxDetails Details;
     tABC_GeneralInfo *ppInfo = NULL;
     tABC_UnsignedTx utx;

@@ -122,6 +122,7 @@ tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    CURLcode curlCode = CURLE_OK;
     tABC_U08Buf Data = ABC_BUF_NULL;
     CURL *pCurlHandle = NULL;
 
@@ -131,8 +132,6 @@ tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError
 
     // start with no data
     ABC_BUF_CLEAR(*pData);
-
-    CURLcode curlCode = 0;
 
     ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_CAINFO, gszCaCertPath)) == 0,
@@ -215,7 +214,7 @@ CURLcode ABC_URLSSLCallback(CURL *curl, void *ssl_ctx, void *userptr)
 {
     SSL_CTX_set_verify((SSL_CTX *)ssl_ctx,
         SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE, ABC_PinCertCallback);
-    return 0;
+    return CURLE_OK;
 }
 
 /**
@@ -236,6 +235,7 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
     tABC_U08Buf Data = ABC_BUF_NULL;
     CURL *pCurlHandle = NULL;
     struct curl_slist *slist = NULL;
+    CURLcode curlCode = CURLE_OK;
 
     ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
@@ -245,7 +245,6 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
     // start with no data
     ABC_BUF_CLEAR(*pData);
 
-    CURLcode curlCode = 0;
     ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
 
     // Set the ca certificate
@@ -360,6 +359,7 @@ exit:
 tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    int statusCode = 0;
     json_error_t error;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
@@ -371,7 +371,7 @@ tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_
     // get the status code
     pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
-    int statusCode = (int) json_integer_value(pJSON_Value);
+    statusCode = (int) json_integer_value(pJSON_Value);
 
     // if there was a failure
     if (ABC_Server_Code_Success != statusCode)
