@@ -190,25 +190,25 @@ exit:
 static tABC_CC ABC_LoginUserForNum(unsigned int AccountNum, char **pszUserName, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    json_error_t je;
 
     json_t *root = NULL;
     char *szJSON = NULL;
+    json_t *jsonVal = NULL;
 
     ABC_CHECK_NULL(pszUserName);
 
     ABC_CHECK_RET(ABC_LoginDirFileLoad(&szJSON, AccountNum, ACCOUNT_NAME_FILENAME, pError));
 
     // parse out the user name
-    json_error_t error;
-    root = json_loads(szJSON, 0, &error);
+    root = json_loads(szJSON, 0, &je);
     ABC_CHECK_ASSERT(root != NULL, ABC_CC_JSONError, "Error parsing JSON account name");
     ABC_CHECK_ASSERT(json_is_object(root), ABC_CC_JSONError, "Error parsing JSON account name");
 
-    json_t *jsonVal = json_object_get(root, JSON_ACCT_USERNAME_FIELD);
+    jsonVal = json_object_get(root, JSON_ACCT_USERNAME_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON account name");
-    const char *szUserName = json_string_value(jsonVal);
 
-    ABC_STRDUP(*pszUserName, szUserName);
+    ABC_STRDUP(*pszUserName, json_string_value(jsonVal));
 
 exit:
     if (root)               json_decref(root);
@@ -226,13 +226,13 @@ tABC_CC ABC_LoginCreateRootDir(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     char *szAccountRoot = NULL;
+    bool bExists = false;
 
     // create the account directory string
     ABC_STR_NEW(szAccountRoot, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_RET(ABC_LoginCopyRootDirName(szAccountRoot, pError));
 
     // if it doesn't exist
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szAccountRoot, &bExists, pError));
     if (true != bExists)
     {

@@ -476,8 +476,8 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     }
     else
     {
-        tABC_RequestResults *results = pData;
-        char * output = NULL;
+        tABC_RequestResults *results = (tABC_RequestResults*)pData;
+        char *output = NULL;
         ABC_STR_NEW(output, 100);
         results->pRetData = output;
         ABC_CHECK_RET(ABC_WalletCreate(pKeys, L1, LP1, szUserName, szWalletName,
@@ -922,6 +922,7 @@ tABC_CC ABC_PinSetup(const char *szUserName,
 
     tABC_SyncKeys *pKeys = NULL;
     tABC_AccountSettings *pSettings = NULL;
+    time_t expires;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
@@ -930,7 +931,7 @@ tABC_CC ABC_PinSetup(const char *szUserName,
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
     ABC_CHECK_NULL(pSettings->szPIN);
 
-    time_t expires = time(NULL);
+    expires = time(NULL);
     expires += 60 * pSettings->minutesAutoLogout;
     ABC_CHECK_RET(ABC_LoginShimPinSetup(szUserName, szPassword, pSettings->szPIN, expires, pError));
 
@@ -2276,6 +2277,7 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     // We don't require a special character, but we still include it in our
     // time to crack calculations
     bool bSpecChar = false;
+    size_t L = 0;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szPassword);
@@ -2323,7 +2325,7 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     }
 
     // check the other rules
-    for (int i = 0; i < strlen(szPassword); i++)
+    for (unsigned i = 0; i < strlen(szPassword); i++)
     {
         char c = szPassword[i];
         if (isdigit(c))
@@ -2363,7 +2365,7 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     // Note: (a) the following calculation of is just based upon one method
     //       (b) the guesses per second is arbitrary
     //       (c) it does not take dictionary attacks into account
-    int L = (int) strlen(szPassword);
+    L = strlen(szPassword);
     if (L > 0)
     {
         int N = 0;
@@ -2422,7 +2424,7 @@ void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
 
     if ((aRules != NULL) && (nCount > 0))
     {
-        for (int i = 0; i < nCount; i++)
+        for (unsigned i = 0; i < nCount; i++)
         {
             ABC_FREE_STR(aRules[i]->szDescription);
             // note we aren't free'ing the string because it uses heap strings
@@ -2555,12 +2557,13 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
+    tABC_CC fetchCC = ABC_CC_Ok;
     int accountDirty = 0;
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    tABC_CC fetchCC = ABC_LoginShimCheckPasswordChange(szUserName, szPassword, pError);
+    fetchCC = ABC_LoginShimCheckPasswordChange(szUserName, szPassword, pError);
 
     // Try fetch login package, if it fails, notify password change
     if (fetchCC == ABC_CC_BadPassword)
@@ -2933,7 +2936,7 @@ ABC_IsTestNet(bool *pResult, tABC_Error *pError)
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    *pResult = ABC_BridgeIsTestNet(*pResult, pError);
+    *pResult = ABC_BridgeIsTestNet();
 exit:
     return cc;
 }

@@ -70,19 +70,19 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
     char **out = szCsvRec;
 
     /* header */
-    char *szDateCreation = "DATE";
-    char *szTimeCreation = "TIME";
-    char *szName = "PAYEE_PAYER_NAME"; /* payee or payer */
-    char *szAmtBTC = "AMT_BTC";
-    char *szCurrency = "USD";
-    char *szCategory = "CATEGORY";
-    char *szNotes = "NOTES";
-    char *szAmtAirbitzBTC = "AMT_BTC_FEES_AB";
-    char *szAmtFeesMinersBTC = "AMT_BTC_FEES_MINERS";
-    char *szInputAddresses = "IN_ADDRESSES";
-    char *szOutputAddresses = "OUT_ADDRESSES";
-    char *szCsvTxid = "TXID";
-    char *szCsvNtxid = "NTXID";
+    const char *szDateCreation = "DATE";
+    const char *szTimeCreation = "TIME";
+    const char *szName = "PAYEE_PAYER_NAME"; /* payee or payer */
+    const char *szAmtBTC = "AMT_BTC";
+    const char *szCurrency = "USD";
+    const char *szCategory = "CATEGORY";
+    const char *szNotes = "NOTES";
+    const char *szAmtAirbitzBTC = "AMT_BTC_FEES_AB";
+    const char *szAmtFeesMinersBTC = "AMT_BTC_FEES_MINERS";
+    const char *szInputAddresses = "IN_ADDRESSES";
+    const char *szOutputAddresses = "OUT_ADDRESSES";
+    const char *szCsvTxid = "TXID";
+    const char *szCsvNtxid = "NTXID";
 
     ABC_CHECK_NULL(szCsvRec);
 
@@ -117,7 +117,7 @@ tABC_CC ABC_ExportGetAddresses(tABC_TxInfo *pData,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    int i;
+    unsigned i;
     int numAddr = 0;
     char *szAmount = NULL;
 

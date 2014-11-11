@@ -40,7 +40,7 @@
 
 #include <stdio.h>
 #include <pthread.h>
-#include "ABC.h"
+#include "ABC_Mutex.h"
 #include "ABC_Util.h"
 
 static bool             gbInitialized = false;

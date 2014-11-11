@@ -38,6 +38,7 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    tABC_U08Buf L = ABC_BUF_NULL;
     tABC_CryptoSNRP *pSNRP0 = NULL;
     tABC_Login *pSelf = NULL;
     ABC_NEW(pSelf, tABC_Login);
@@ -47,7 +48,6 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
     ABC_CHECK_RET(ABC_LoginDirGetNumber(pSelf->szUserName, &pSelf->AccountNum, pError));
 
     // Create L1:
-    tABC_U08Buf L = ABC_BUF_NULL;
     ABC_BUF_SET_PTR(L, (unsigned char *)pSelf->szUserName, strlen(pSelf->szUserName));
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP0, pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP0, &pSelf->L1, pError));

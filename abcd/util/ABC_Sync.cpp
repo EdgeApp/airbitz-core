@@ -294,7 +294,7 @@ tABC_CC ABC_SyncServerRot(tABC_Error *pError)
     {
         serverIdx++;
     }
-    if (serverIdx >= pInfo->countSyncServers)
+    if (serverIdx >= (int)pInfo->countSyncServers)
     {
         serverIdx = 0;
     }

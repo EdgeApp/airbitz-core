@@ -162,7 +162,7 @@ tABC_CC ABC_AccountCategoriesRemove(tABC_SyncKeys *pKeys,
     ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &aszCategories, &categoryCount, pError));
 
     // got through all the categories and only add ones that are not this one
-    for (int i = 0; i < categoryCount; i++)
+    for (unsigned i = 0; i < categoryCount; i++)
     {
         // if this is not the string we are looking to remove then add it to our new arrary
         if (0 != strcmp(aszCategories[i], szCategory))
@@ -234,7 +234,8 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     tABC_AccountSettings *pSettings = NULL;
-    int i = 0;
+    tABC_ExchangeRateSource **aSources = NULL;
+    unsigned i = 0;
 
     ABC_CHECK_NULL(ppSettings);
 
@@ -259,7 +260,7 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     ABC_ARRAY_NEW(pSettings->exchangeRateSources.aSources,
                     pSettings->exchangeRateSources.numSources, tABC_ExchangeRateSource*);
 
-    tABC_ExchangeRateSource **aSources = pSettings->exchangeRateSources.aSources;
+    aSources = pSettings->exchangeRateSources.aSources;
 
     for (i = 0; i < EXCHANGE_DEFAULTS_SIZE; ++i)
     {
@@ -300,6 +301,7 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
+    bool bExists = false;
 
     ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(ppSettings);
@@ -308,7 +310,6 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
     ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_SETTINGS_FILENAME);
 
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     if (true == bExists)
     {
@@ -472,7 +473,7 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
         }
 
         // run through all the sources
-        for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)
+        for (unsigned i = 0; i < pSettings->exchangeRateSources.numSources; i++)
         {
             tABC_ExchangeRateSource *pSource = NULL;
             ABC_NEW(pSource, tABC_ExchangeRateSource);
@@ -501,10 +502,10 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
             // resize exchange rate array
             ABC_ARRAY_RESIZE(pSettings->exchangeRateSources.aSources,
                              EXCHANGE_DEFAULTS_SIZE, tABC_ExchangeRateSource*);
-            for (int i = 0; i < EXCHANGE_DEFAULTS_SIZE; ++i)
+            for (unsigned i = 0; i < EXCHANGE_DEFAULTS_SIZE; ++i)
             {
                 bool found = false;
-                for (int j = 0; j < pSettings->exchangeRateSources.numSources; ++j)
+                for (unsigned j = 0; j < pSettings->exchangeRateSources.numSources; ++j)
                 {
                     if (pSettings->exchangeRateSources.aSources[j]->currencyNum
                             == EXCHANGE_DEFAULTS[i].currencyNum)
@@ -719,7 +720,7 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     ABC_CHECK_ASSERT(pJSON_SourcesArray != NULL, ABC_CC_Error, "Could not create settings JSON object");
 
     // add the exchange sources
-    for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)
+    for (unsigned i = 0; i < pSettings->exchangeRateSources.numSources; i++)
     {
         tABC_ExchangeRateSource *pSource = pSettings->exchangeRateSources.aSources[i];
 
@@ -782,7 +783,7 @@ void ABC_AccountSettingsFree(tABC_AccountSettings *pSettings)
         ABC_FREE_STR(pSettings->szPIN);
         if (pSettings->exchangeRateSources.aSources)
         {
-            for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)
+            for (unsigned i = 0; i < pSettings->exchangeRateSources.numSources; i++)
             {
                 ABC_FREE_STR(pSettings->exchangeRateSources.aSources[i]->szSource);
                 ABC_CLEAR_FREE(pSettings->exchangeRateSources.aSources[i], sizeof(tABC_ExchangeRateSource));
@@ -838,13 +839,13 @@ tABC_CC ABC_AccountWalletGetDir(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
 
     char *szWalletDir = NULL;
+    bool bExists = false;
 
     // Get the name:
     ABC_STR_NEW(szWalletDir, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szWalletDir, "%s/%s", pKeys->szSyncDir, ACCOUNT_WALLET_DIRNAME);
 
     // Create if neccessary:
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szWalletDir, &bExists, pError));
     if (!bExists)
     {
@@ -869,8 +870,8 @@ exit:
  */
 static int ABC_AccountWalletCompare(const void *a, const void *b)
 {
-    const tABC_AccountWalletInfo *pA = a;
-    const tABC_AccountWalletInfo *pB = b;
+    const tABC_AccountWalletInfo *pA = (const tABC_AccountWalletInfo*)a;
+    const tABC_AccountWalletInfo *pB = (const tABC_AccountWalletInfo*)b;
 
     return pA->sortIndex - pB->sortIndex;
 }
@@ -948,7 +949,7 @@ tABC_CC ABC_AccountWalletsLoad(tABC_SyncKeys *pKeys,
 
     // Load the wallets into the array:
     ABC_ARRAY_NEW(aInfo, entries, tABC_AccountWalletInfo);
-    for (unsigned i = 0; i < pFileList->nCount; ++i)
+    for (int i = 0; i < pFileList->nCount; ++i)
     {
         size_t len = strlen(pFileList->apFiles[i]->szName);
         if (5 <= len &&

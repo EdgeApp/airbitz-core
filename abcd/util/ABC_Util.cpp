@@ -58,7 +58,7 @@ void ABC_UtilHexDump(const char *szDescription,
                      const unsigned char *pData,
                      unsigned int dataLength)
 {
-    int i;
+    unsigned i;
     unsigned char buff[17];
     unsigned char *pc = (unsigned char *) pData;
 
@@ -177,7 +177,7 @@ tABC_CC ABC_UtilCreateArrayJSONObject(char   **aszValues,
     // if there are values
     if ((count > 0) && (aszValues != NULL))
     {
-        for (int i = 0; i < count; i++)
+        for (unsigned i = 0; i < count; i++)
         {
             json_array_append_new(jsonItemArray, json_string(aszValues[i]));
         }
@@ -335,7 +335,7 @@ tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
     {
         ABC_ARRAY_NEW(pArrayStrings, *pCount, char*);
 
-        for (int i = 0; i < *pCount; i++)
+        for (unsigned i = 0; i < *pCount; i++)
         {
             json_t *pJSON_Elem = json_array_get(pJSON_Value, i);
             ABC_CHECK_ASSERT((pJSON_Elem && json_is_string(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON string value");
@@ -367,7 +367,7 @@ void ABC_UtilFreeStringArray(char **aszStrings,
 {
     if ((aszStrings != NULL) && (count > 0))
     {
-        for (int i = 0; i < count; i++)
+        for (unsigned i = 0; i < count; i++)
         {
             ABC_FREE_STR(aszStrings[i]);
         }
@@ -384,7 +384,7 @@ void *ABC_UtilGuaranteedMemset(void *v, int c, size_t n)
 {
     if (v)
     {
-        volatile char *p = v;
+        volatile char *p = (char *)v;
         while (n--)
         {
             *p++ = c;
@@ -402,7 +402,7 @@ void *ABC_UtilGuaranteedMemset(void *v, int c, size_t n)
 void *ABC_UtilJanssonSecureMalloc(size_t size)
 {
     /* Store the memory area size in the beginning of the block */
-    void *ptr = malloc(size + 8);
+    char *ptr = (char*)malloc(size + 8);
     *((size_t *)ptr) = size;
     return ptr + 8;
 }
@@ -418,7 +418,7 @@ void ABC_UtilJanssonSecureFree(void *ptr)
     {
         size_t size;
 
-        ptr -= 8;
+        ptr = (char*)ptr - 8;
         size = *((size_t *)ptr);
 
         ABC_UtilGuaranteedMemset(ptr, 0, size + 8);

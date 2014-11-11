@@ -20,7 +20,7 @@
 
 #define DATETIME_LENGTH 20
 
-static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, char *szURL, char *szField, char **szResponse, tABC_Error *pError);
+static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, const char *szURL, const char *szField, char **szResponse, tABC_Error *pError);
 
 /**
  * Creates an account on the server.
@@ -298,7 +298,7 @@ exit:
  */
 static
 tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1,
-                                 char *szURL, char *szField, char **szResponse, tABC_Error *pError)
+                                 const char *szURL, const char *szField, char **szResponse, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -590,7 +590,7 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     char *szLogData       = NULL;
     char *szLogData_Hex   = NULL;
     char *szWatchFilename = NULL;
-    void *szWatchData     = NULL;
+    void *aWatchData      = NULL;
     char *szWatchData_Hex = NULL;
     json_t *pJSON_Root    = NULL;
     tABC_U08Buf LogData   = ABC_BUF_NULL;
@@ -614,19 +614,19 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
 
     ABC_CHECK_RET(ABC_WalletGetWallets(pKeys, &paWalletInfo, &nCount, pError));
     pJSON_array = json_array();
-    for (int i = 0; i < nCount; ++i)
+    for (unsigned i = 0; i < nCount; ++i)
     {
         ABC_CHECK_RET(ABC_BridgeWatchPath(paWalletInfo[i]->szUUID,
                                           &szWatchFilename, pError));
-        ABC_CHECK_RET(ABC_FileIOReadFile(szWatchFilename, &szWatchData, &watcherSize, pError));
-        ABC_BUF_SET_PTR(WatchData, szWatchData, watcherSize);
+        ABC_CHECK_RET(ABC_FileIOReadFile(szWatchFilename, &aWatchData, &watcherSize, pError));
+        ABC_BUF_SET_PTR(WatchData, (unsigned char*)aWatchData, watcherSize);
         ABC_CHECK_RET(ABC_CryptoBase64Encode(WatchData, &szWatchData_Hex, pError));
 
         json_t *element = json_pack("s", szWatchData_Hex);
         json_array_append_new(pJSON_array, element);
 
         ABC_FREE_STR(szWatchFilename);
-        ABC_FREE(szWatchData);
+        ABC_FREE(aWatchData);
         ABC_BUF_CLEAR(WatchData);
     }
 
@@ -653,7 +653,7 @@ exit:
     ABC_BUF_CLEAR(LogData);
 
     ABC_FREE_STR(szWatchFilename);
-    ABC_FREE(szWatchData);
+    ABC_FREE(aWatchData);
     ABC_FREE_STR(szWatchData_Hex);
     ABC_BUF_CLEAR(WatchData);
 
