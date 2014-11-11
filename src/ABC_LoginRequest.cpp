@@ -35,11 +35,12 @@ tABC_CC ABC_LoginRequestInfoAlloc(tABC_LoginRequestInfo **ppAccountRequestInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
+
     ABC_CHECK_NULL(ppAccountRequestInfo);
     ABC_CHECK_NULL(szUserName);
 
-    tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-    ABC_ALLOC(pAccountRequestInfo, sizeof(tABC_LoginRequestInfo));
+    ABC_NEW(pAccountRequestInfo, tABC_LoginRequestInfo);
 
     pAccountRequestInfo->requestType = requestType;
 

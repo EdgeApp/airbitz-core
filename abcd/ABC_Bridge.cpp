@@ -144,7 +144,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
     *ppInfo = NULL;
 
     // allocate initial struct
-    ABC_ALLOC_ARRAY(pInfo, 1, tABC_BitcoinURIInfo);
+    ABC_NEW(pInfo, tABC_BitcoinURIInfo);
 
     // XX semi-hack warning. Might not be BIP friendly. Convert "bitcoin://1zf7ef..." URIs to
     // "bitcoin:1zf7ef..." so that libwallet parser doesn't choke. "bitcoin://" URLs are the
@@ -257,7 +257,7 @@ tABC_CC ABC_BridgeFormatAmount(int64_t amount,
     {
         amount = llabs(amount);
         out = libwallet::format_amount(amount, decimalPlaces);
-        ABC_ALLOC_ARRAY(szBuff, MAX_BTC_STRING_SIZE, char);
+        ABC_STR_NEW(szBuff, MAX_BTC_STRING_SIZE);
         snprintf(szBuff, MAX_BTC_STRING_SIZE, "-%s", out.c_str());
         *pszAmountOut = szBuff;
 
@@ -809,7 +809,7 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_TxSendInfo SendInfo = {0};
+    tABC_TxSendInfo SendInfo = {{0}};
     tABC_TxDetails Details;
     tABC_GeneralInfo *ppInfo = NULL;
     tABC_UnsignedTx utx;

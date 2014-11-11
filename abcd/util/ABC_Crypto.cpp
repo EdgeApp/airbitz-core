@@ -216,6 +216,10 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     char *szFileIORootDir = NULL;
+    unsigned long timeVal;
+    time_t timeResult;
+    clock_t clockVal;
+    pid_t pid;
 
     tABC_U08Buf NewSeed = ABC_BUF_NULL;
 
@@ -246,20 +250,20 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     // add some time
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    unsigned long timeVal = tv.tv_sec * tv.tv_usec;
+    timeVal = tv.tv_sec * tv.tv_usec;
     ABC_BUF_APPEND_PTR(NewSeed, &timeVal, sizeof(unsigned long));
 
-    time_t timeResult = time(NULL);
+    timeResult = time(NULL);
     ABC_BUF_APPEND_PTR(NewSeed, &timeResult, sizeof(time_t));
 
-    clock_t clockVal = clock();
+    clockVal = clock();
     ABC_BUF_APPEND_PTR(NewSeed, &clockVal, sizeof(clock_t));
 
     timeVal = CLOCKS_PER_SEC ;
     ABC_BUF_APPEND_PTR(NewSeed, &timeVal, sizeof(unsigned long));
 
     // add process id's
-    pid_t pid = getpid();
+    pid = getpid();
     ABC_BUF_APPEND_PTR(NewSeed, &pid, sizeof(pid_t));
 
     pid = getppid();
@@ -524,16 +528,22 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     tABC_U08Buf     Salt    = ABC_BUF_NULL;
     tABC_CryptoSNRP *pSNRP  = NULL;
 
+    int type;
+    json_t *jsonVal = NULL;
+    const tABC_U08Buf *pFinalKey = NULL;
+    const char *szIV = NULL;
+    const char *szDataBase64 = NULL;
+
     ABC_CHECK_NULL(pJSON_Enc);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(pData);
 
-    json_t *jsonVal = json_object_get(pJSON_Enc, JSON_ENC_TYPE_FIELD);
+    jsonVal = json_object_get(pJSON_Enc, JSON_ENC_TYPE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing type");
-    int type = (int) json_integer_value(jsonVal);
+    type = (int) json_integer_value(jsonVal);
     ABC_CHECK_ASSERT((ABC_CryptoType_AES256 == type || ABC_CryptoType_AES256_Scrypt == type), ABC_CC_UnknownCryptoType, "Invalid encryption type");
 
-    const tABC_U08Buf *pFinalKey = &Key;
+    pFinalKey = &Key;
 
     // check if we need to gen a new key
     if (ABC_CryptoType_AES256_Scrypt == type)
@@ -551,13 +561,13 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     // get the IV
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_IV_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing iv");
-    const char *szIV = json_string_value(jsonVal);
+    szIV = json_string_value(jsonVal);
     ABC_CHECK_RET(ABC_CryptoHexDecode(szIV, &IV, pError));
 
     // get the encrypted data
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_DATA_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing data");
-    const char *szDataBase64 = json_string_value(jsonVal);
+    szDataBase64 = json_string_value(jsonVal);
     ABC_CHECK_RET(ABC_CryptoBase64Decode(szDataBase64, &EncData, pError));
 
     // decrypted the data
@@ -616,8 +626,10 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    json_error_t error;
     tABC_U08Buf Data = ABC_BUF_NULL;
     json_t *pJSON_Root = NULL;
+    char *szData_JSON = NULL;
 
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL_BUF(Key);
@@ -629,10 +641,9 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
 
     // get the string form
     ABC_BUF_APPEND_PTR(Data, "", 1); // make sure it is null terminated so we can get the string
-    char *szData_JSON = (char *) ABC_BUF_PTR(Data);
+    szData_JSON = (char *) ABC_BUF_PTR(Data);
 
     // decode the json
-    json_error_t error;
     pJSON_Root = json_loads(szData_JSON, 0, &error);
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
@@ -673,6 +684,12 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     tABC_U08Buf RandHeaderBytes = ABC_BUF_NULL;
     tABC_U08Buf RandFooterBytes = ABC_BUF_NULL;
     tABC_U08Buf UnencryptedData = ABC_BUF_NULL;
+    unsigned char nRandomHeaderBytes;
+    unsigned char nRandomFooterBytes;
+    unsigned long totalSizeUnencrypted = 0;
+    unsigned char *pCurUnencryptedData = NULL;
+    unsigned char nSizeByte = 0;
+    unsigned char sha256Output[SHA_256_LENGTH];
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Key);
@@ -684,7 +701,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
 
     // create a random number of header bytes 0-255
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(1, &RandCount, pError));
-    unsigned char nRandomHeaderBytes = *(RandCount.p);
+    nRandomHeaderBytes = *(RandCount.p);
     ABC_BUF_FREE(RandCount);
     //printf("rand header count: %d\n", nRandomHeaderBytes);
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(nRandomHeaderBytes, &RandHeaderBytes, pError));
@@ -692,14 +709,13 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
 
     // create a random number of footer bytes 0-255
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(1, &RandCount, pError));
-    unsigned char nRandomFooterBytes = *(RandCount.p);
+    nRandomFooterBytes = *(RandCount.p);
     ABC_BUF_FREE(RandCount);
     //printf("rand footer count: %d\n", nRandomFooterBytes);
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(nRandomFooterBytes, &RandFooterBytes, pError));
     //ABC_UtilHexDumpBuf("Rand Footer Bytes", RandFooterBytes);
 
     // calculate the size of our unencrypted buffer
-    unsigned long totalSizeUnencrypted = 0;
     totalSizeUnencrypted += 1; // header count
     totalSizeUnencrypted += nRandomHeaderBytes; // header
     totalSizeUnencrypted += 4; // space to hold data size
@@ -711,7 +727,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
 
     // allocate the unencrypted buffer
     ABC_BUF_NEW(UnencryptedData, totalSizeUnencrypted);
-    unsigned char *pCurUnencryptedData = ABC_BUF_PTR(UnencryptedData);
+    pCurUnencryptedData = ABC_BUF_PTR(UnencryptedData);
 
     // add the random header count and bytes
     memcpy(pCurUnencryptedData, &nRandomHeaderBytes, 1);
@@ -720,7 +736,6 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     pCurUnencryptedData += nRandomHeaderBytes;
 
     // add the size of the data
-    unsigned char nSizeByte = 0;
     nSizeByte = (ABC_BUF_SIZE(Data) >> 24) & 0xff;
     memcpy(pCurUnencryptedData, &nSizeByte, 1);
     pCurUnencryptedData += 1;
@@ -746,7 +761,6 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
 
     // add the sha256
     SHA256_CTX sha256Context;
-    unsigned char sha256Output[SHA_256_LENGTH];
     sc_SHA256_Init(&sha256Context);
     sc_SHA256_Update(&sha256Context, ABC_BUF_PTR(UnencryptedData), totalSizeUnencrypted - SHA_256_LENGTH);
     sc_SHA256_Final(sha256Output, &sha256Context);
@@ -798,6 +812,16 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf Data = ABC_BUF_NULL;
+    unsigned char headerLength;
+    unsigned int minSize;
+    unsigned char *pDataLengthPos;
+    unsigned int dataSecLength;
+    unsigned char footerLength;
+    unsigned int shaCheckLength;
+    unsigned char *pSHALoc;
+    SHA256_CTX sha256Context;
+    unsigned char sha256Output[SHA_256_LENGTH];
+    unsigned char *pFinalDataPos;
 
     ABC_CHECK_NULL_BUF(EncData);
     ABC_CHECK_NULL_BUF(Key);
@@ -816,15 +840,15 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     }
 
     // get the size of the random header section
-    unsigned char headerLength = *ABC_BUF_PTR(Data);
+    headerLength = *ABC_BUF_PTR(Data);
 
     // check that we have enough data based upon this info
-    unsigned int minSize = 1 + headerLength + 4 + 1 + 1 + SHA_256_LENGTH; // decrypted package must be at least this big
+    minSize = 1 + headerLength + 4 + 1 + 1 + SHA_256_LENGTH; // decrypted package must be at least this big
     ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
 
     // get the size of the data section
-    unsigned char *pDataLengthPos = ABC_BUF_PTR(Data) + (1 + headerLength);
-    unsigned int dataSecLength = ((unsigned int) *pDataLengthPos) << 24;
+    pDataLengthPos = ABC_BUF_PTR(Data) + (1 + headerLength);
+    dataSecLength = ((unsigned int) *pDataLengthPos) << 24;
     pDataLengthPos++;
     dataSecLength += ((unsigned int) *pDataLengthPos) << 16;
     pDataLengthPos++;
@@ -837,19 +861,17 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
 
     // get the size of the random footer section
-    unsigned char footerLength = *(ABC_BUF_PTR(Data) + 1 + headerLength + 4 + dataSecLength);
+    footerLength = *(ABC_BUF_PTR(Data) + 1 + headerLength + 4 + dataSecLength);
 
     // check that we have enough data based upon this info
     minSize = 1 + headerLength + 4 + dataSecLength + 1 + footerLength + SHA_256_LENGTH; // decrypted package must be at least this big
     ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
 
     // set up for the SHA check
-    unsigned int shaCheckLength = 1 + headerLength + 4 + dataSecLength + 1 + footerLength; // all but the sha
-    unsigned char *pSHALoc = ABC_BUF_PTR(Data) + shaCheckLength;
+    shaCheckLength = 1 + headerLength + 4 + dataSecLength + 1 + footerLength; // all but the sha
+    pSHALoc = ABC_BUF_PTR(Data) + shaCheckLength;
 
     // calc the sha256
-    SHA256_CTX sha256Context;
-    unsigned char sha256Output[SHA_256_LENGTH];
     sc_SHA256_Init(&sha256Context);
     sc_SHA256_Update(&sha256Context, ABC_BUF_PTR(Data), shaCheckLength);
     sc_SHA256_Final(sha256Output, &sha256Context);
@@ -862,7 +884,7 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     }
 
     // all is good, so create the final data
-    unsigned char *pFinalDataPos = ABC_BUF_PTR(Data) + 1 + headerLength + 4;
+    pFinalDataPos = ABC_BUF_PTR(Data) + 1 + headerLength + 4;
     ABC_BUF_NEW(*pData, dataSecLength);
     memcpy(ABC_BUF_PTR(*pData), pFinalDataPos, dataSecLength);
 
@@ -885,15 +907,21 @@ tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    unsigned char aKey[AES_256_KEY_LENGTH];
+    unsigned int keyLength = ABC_BUF_SIZE(Key);
+    unsigned char aIV[AES_256_IV_LENGTH];
+    unsigned int IVLength;
+    int c_len;
+    int f_len = 0;
+    unsigned char *pTmpEncData = NULL;
+
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL_BUF(IV);
     ABC_CHECK_NULL(pEncData);
 
     // create the final key
-    unsigned char aKey[AES_256_KEY_LENGTH];
     memset(aKey, 0, AES_256_KEY_LENGTH);
-    unsigned int keyLength = ABC_BUF_SIZE(Key);
     if (keyLength > AES_256_KEY_LENGTH)
     {
         keyLength = AES_256_KEY_LENGTH;
@@ -901,9 +929,8 @@ tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
     memcpy(aKey, ABC_BUF_PTR(Key), keyLength);
 
     // create the IV
-    unsigned char aIV[AES_256_IV_LENGTH];
     memset(aIV, 0, AES_256_IV_LENGTH);
-    unsigned int IVLength = ABC_BUF_SIZE(IV);
+    IVLength = ABC_BUF_SIZE(IV);
     if (IVLength > AES_256_IV_LENGTH)
     {
         IVLength = AES_256_IV_LENGTH;
@@ -919,10 +946,8 @@ tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
     EVP_EncryptInit_ex(&e_ctx, EVP_aes_256_cbc(), NULL, aKey, aIV);
 
     // max ciphertext len for a n bytes of plaintext is n + AES_256_BLOCK_LENGTH -1 bytes
-    int c_len = ABC_BUF_SIZE(Data) + AES_256_BLOCK_LENGTH;
-    int f_len = 0;
-    unsigned char *pTmpEncData = NULL;
-    ABC_ALLOC(pTmpEncData, c_len);
+    c_len = ABC_BUF_SIZE(Data) + AES_256_BLOCK_LENGTH;
+    ABC_ARRAY_NEW(pTmpEncData, c_len, unsigned char);
 
     // allows reusing of 'e' for multiple encryption cycles
     EVP_EncryptInit_ex(&e_ctx, NULL, NULL, NULL, NULL);
@@ -954,6 +979,11 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    unsigned char *pTmpData = NULL;
+    int p_len, f_len;
+    unsigned int IVLength;
+    unsigned int keyLength;
+
     ABC_CHECK_NULL_BUF(EncData);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL_BUF(IV);
@@ -962,7 +992,7 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
     // create the final key
     unsigned char aKey[AES_256_KEY_LENGTH];
     memset(aKey, 0, AES_256_KEY_LENGTH);
-    unsigned int keyLength = ABC_BUF_SIZE(Key);
+    keyLength = ABC_BUF_SIZE(Key);
     if (keyLength > AES_256_KEY_LENGTH)
     {
         keyLength = AES_256_KEY_LENGTH;
@@ -972,7 +1002,7 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
     // create the IV
     unsigned char aIV[AES_256_IV_LENGTH];
     memset(aIV, 0, AES_256_IV_LENGTH);
-    unsigned int IVLength = ABC_BUF_SIZE(IV);
+    IVLength = ABC_BUF_SIZE(IV);
     if (IVLength > AES_256_IV_LENGTH)
     {
         IVLength = AES_256_IV_LENGTH;
@@ -985,10 +1015,9 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
     EVP_DecryptInit_ex(&d_ctx, EVP_aes_256_cbc(), NULL, aKey, aIV);
 
     /* because we have padding ON, we must allocate an extra cipher block size of memory */
-    int p_len = ABC_BUF_SIZE(EncData);
-    int f_len = 0;
-    unsigned char *pTmpData = NULL;
-    ABC_ALLOC(pTmpData, p_len + AES_256_BLOCK_LENGTH);
+    p_len = ABC_BUF_SIZE(EncData);
+    f_len = 0;
+    ABC_ARRAY_NEW(pTmpData, p_len + AES_256_BLOCK_LENGTH, unsigned char);
 
     // decrypt
     EVP_DecryptInit_ex(&d_ctx, NULL, NULL, NULL, NULL);
@@ -1013,11 +1042,13 @@ tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    int rc;
+
     ABC_CHECK_NULL(pData);
 
     ABC_BUF_NEW(*pData, length);
 
-    int rc = RAND_bytes(ABC_BUF_PTR(*pData), length);
+    rc = RAND_bytes(ABC_BUF_PTR(*pData), length);
     //unsigned long err = ERR_get_error();
 
     if (rc != 1)
@@ -1043,14 +1074,16 @@ tABC_CC ABC_CryptoHexEncode(const tABC_U08Buf Data,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    unsigned int dataLength;
+
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL(pszDataHex);
 
     char *szDataHex;
-    unsigned int dataLength = ABC_BUF_SIZE(Data);
-    ABC_ALLOC(szDataHex, (dataLength * 2) + 1);
+    dataLength = ABC_BUF_SIZE(Data);
+    ABC_STR_NEW(szDataHex, (dataLength * 2) + 1);
 
-    for (int i = 0; i < dataLength; i++)
+    for (unsigned i = 0; i < dataLength; i++)
     {
         unsigned char *pCurByte = (unsigned char *) (ABC_BUF_PTR(Data) + i);
         sprintf(&(szDataHex[i * 2]), "%02x", *pCurByte);
@@ -1072,14 +1105,16 @@ tABC_CC ABC_CryptoHexDecode(const char  *szDataHex,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    unsigned int dataLength;
+
     ABC_CHECK_NULL(szDataHex);
     ABC_CHECK_NULL(pData);
 
-    unsigned int dataLength = (unsigned int) (strlen(szDataHex) / 2);
+    dataLength = (unsigned int) (strlen(szDataHex) / 2);
 
     ABC_BUF_NEW(*pData, dataLength);
 
-    for (int i = 0; i < dataLength; i++)
+    for (unsigned i = 0; i < dataLength; i++)
     {
         unsigned int val;
         sscanf(&(szDataHex[i * 2]), "%02x", &val);
@@ -1105,6 +1140,9 @@ tABC_CC ABC_CryptoBase64Encode(const tABC_U08Buf Data,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     BIO *bio = NULL;
+    BIO *mem = NULL;
+    BIO *b64 = NULL;
+    unsigned len;
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL(pszDataBase64);
@@ -1112,24 +1150,24 @@ tABC_CC ABC_CryptoBase64Encode(const tABC_U08Buf Data,
     // Set up the pipleline:
     bio = BIO_new(BIO_s_mem());
     ABC_CHECK_SYS(bio, "BIO_new_mem_buf");
-    BIO *mem = bio;
-    BIO *b64 = BIO_new(BIO_f_base64());
+    mem = bio;
+    b64 = BIO_new(BIO_f_base64());
     ABC_CHECK_SYS(b64, "BIO_f_base64");
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // Do not use newlines to flush buffer
     bio = BIO_push(b64, bio);
 
     // Push the data through:
-    int len = BIO_write(bio, ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data));
+    len = BIO_write(bio, ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data));
     if (len != ABC_BUF_SIZE(Data))
     {
         ABC_RET_ERROR(ABC_CC_SysError, "Base64 encode has failed");
     }
-    BIO_flush(bio);
+    (void)BIO_flush(bio);
 
     // Move the data to the output:
     BUF_MEM *bptr;
     BIO_get_mem_ptr(mem, &bptr);
-    ABC_ALLOC(*pszDataBase64, bptr->length + 1);
+    ABC_STR_NEW(*pszDataBase64, bptr->length + 1);
     memcpy(*pszDataBase64, bptr->data, bptr->length);
 
 exit:
@@ -1150,6 +1188,10 @@ tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     BIO *bio = NULL;
+    BIO *b64 = NULL;
+    unsigned char *pTmpData = NULL;
+    int len;
+    int decodeLen;
 
     ABC_CHECK_NULL(szDataBase64);
     ABC_CHECK_NULL(pData);
@@ -1157,16 +1199,15 @@ tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
     // Set up the pipeline:
     bio = BIO_new_mem_buf((void *)szDataBase64, (int)strlen(szDataBase64));
     ABC_CHECK_SYS(bio, "BIO_new_mem_buf");
-    BIO *b64 = BIO_new(BIO_f_base64());
+    b64 = BIO_new(BIO_f_base64());
     ABC_CHECK_SYS(b64, "BIO_f_base64");
     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // Do not use newlines to flush buffer
     bio = BIO_push(b64, bio);
 
     // Push the data through:
-    int decodeLen = ABC_CryptoCalcBase64DecodeLength(szDataBase64);
-    unsigned char *pTmpData = NULL;
-    ABC_ALLOC(pTmpData, decodeLen + 1);
-    int len = BIO_read(bio, pTmpData, (int)strlen(szDataBase64));
+    decodeLen = ABC_CryptoCalcBase64DecodeLength(szDataBase64);
+    ABC_ARRAY_NEW(pTmpData, decodeLen + 1, unsigned char);
+    len = BIO_read(bio, pTmpData, (int)strlen(szDataBase64));
     if (len != decodeLen)
     {
         ABC_RET_ERROR(ABC_CC_SysError, "Base64 decode is incorrect");
@@ -1255,11 +1296,11 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     unsigned char *pData = NULL;
+    char *szUUID = NULL;
 
     ABC_CHECK_NULL(pszUUID);
 
-    char *szUUID = NULL;
-    ABC_ALLOC(szUUID, UUID_STR_LENGTH + 1);
+    ABC_STR_NEW(szUUID, UUID_STR_LENGTH + 1);
 
     tABC_U08Buf Data;
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(UUID_BYTE_COUNT, &Data, pError));
@@ -1460,10 +1501,11 @@ tABC_CC ABC_CryptoCreateSNRP(const tABC_U08Buf Salt,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    tABC_CryptoSNRP *pSNRP = NULL;
+
     ABC_CHECK_NULL_BUF(Salt);
 
-    tABC_CryptoSNRP *pSNRP = NULL;
-    ABC_ALLOC(pSNRP, sizeof(tABC_CryptoSNRP));
+    ABC_NEW(pSNRP, tABC_CryptoSNRP);
 
     // create a copy of the salt
     ABC_BUF_DUP(pSNRP->Salt, Salt);
@@ -1520,6 +1562,9 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_U08Buf Salt = ABC_BUF_NULL;
+    tABC_CryptoSNRP *pSNRP = NULL;
+    const char *szSaltHex = NULL;
+    unsigned long N, r, p;
 
     ABC_CHECK_NULL(pJSON_SNRP);
     ABC_CHECK_NULL(ppSNRP);
@@ -1529,7 +1574,7 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
     // get the salt
     jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_SALT_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON SNRP - missing salt");
-    const char *szSaltHex = json_string_value(jsonVal);
+    szSaltHex = json_string_value(jsonVal);
 
     // decrypt the salt
     ABC_CHECK_RET(ABC_CryptoHexDecode(szSaltHex, &Salt, pError));
@@ -1537,21 +1582,20 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
     // get n
     jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_N_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON SNRP - missing N");
-    int N = (int) json_integer_value(jsonVal);
+    N = (unsigned long) json_integer_value(jsonVal);
 
     // get r
     jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_R_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON SNRP - missing r");
-    int r = (int) json_integer_value(jsonVal);
+    r = (unsigned long) json_integer_value(jsonVal);
 
     // get p
     jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_P_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON SNRP - missing p");
-    int p = (int) json_integer_value(jsonVal);
+    p = (unsigned long) json_integer_value(jsonVal);
 
     // store final values
-    tABC_CryptoSNRP *pSNRP = NULL;
-    ABC_ALLOC(pSNRP, sizeof(tABC_CryptoSNRP));
+    ABC_NEW(pSNRP, tABC_CryptoSNRP);
     pSNRP->Salt = Salt;
     ABC_BUF_CLEAR(Salt); // so we don't free it when we leave
     pSNRP->N = N;

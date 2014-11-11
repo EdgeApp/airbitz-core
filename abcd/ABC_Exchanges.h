@@ -66,7 +66,7 @@ extern "C" {
      */
     typedef struct sABC_ExchangeDefaults {
         int currencyNum;
-        char *szDefaultExchange;
+        const char *szDefaultExchange;
     } tABC_ExchangeDefaults;
 
     // Default Exchange array

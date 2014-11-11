@@ -38,16 +38,16 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    tABC_U08Buf L = ABC_BUF_NULL;
     tABC_CryptoSNRP *pSNRP0 = NULL;
     tABC_Login *pSelf = NULL;
-    ABC_ALLOC(pSelf, sizeof(tABC_Login));
+    ABC_NEW(pSelf, tABC_Login);
 
     // Set up identity:
     ABC_CHECK_RET(ABC_LoginFixUserName(szUserName, &pSelf->szUserName, pError));
     ABC_CHECK_RET(ABC_LoginDirGetNumber(pSelf->szUserName, &pSelf->AccountNum, pError));
 
     // Create L1:
-    tABC_U08Buf L = ABC_BUF_NULL;
     ABC_BUF_SET_PTR(L, (unsigned char *)pSelf->szUserName, strlen(pSelf->szUserName));
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP0, pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP0, &pSelf->L1, pError));
@@ -89,7 +89,7 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
 
     // Set up packages:
     ABC_CHECK_RET(ABC_CarePackageNew(&pCarePackage, pError));
-    ABC_ALLOC(pLoginPackage, sizeof(tABC_LoginPackage));
+    ABC_NEW(pLoginPackage, tABC_LoginPackage);
 
     // Generate MK:
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(ACCOUNT_MK_LENGTH, &pSelf->MK, pError));
@@ -176,7 +176,7 @@ tABC_CC ABC_LoginGetSyncKeys(tABC_Login *pSelf,
     tABC_CC cc = ABC_CC_Ok;
     tABC_SyncKeys *pKeys = NULL;
 
-    ABC_ALLOC(pKeys, sizeof(tABC_SyncKeys));
+    ABC_NEW(pKeys, tABC_SyncKeys);
     ABC_CHECK_RET(ABC_LoginDirGetSyncDir(pSelf->AccountNum, &pKeys->szSyncDir, pError));
     ABC_BUF_DUP(pKeys->MK, pSelf->MK);
     ABC_STRDUP(pKeys->szSyncKey, pSelf->szSyncKey);
@@ -224,13 +224,15 @@ tABC_CC ABC_LoginFixUserName(const char *szUserName,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    char *szOut = malloc(strlen(szUserName) + 1);
-    ABC_CHECK_NULL(szOut);
+    char *szOut = NULL;
+    const char *si;
+    char *di;
 
-    const char *si = szUserName;
-    char *di = szOut;
+    ABC_STR_NEW(szOut, strlen(szUserName) + 1);
 
     // Collapse leading & internal spaces:
+    si = szUserName;
+    di = szOut;
     do
     {
         while (isspace(*si))

@@ -57,7 +57,7 @@
                                   size_t _sz = 0; \
                                   _sz = csv_write(v.qv, sizeof(v.qv), v.ov, v.os); \
                                   v.qs = _sz; \
-                                  ABC_ALLOC(d, v.qs+1+1); \
+                                  ABC_STR_NEW(d, v.qs+1+1); \
                                   snprintf(d, v.qs+1+1,"%s%s", v.qv, ABC_CSV_ALT1_DELIMITER); \
                                 }
 
@@ -70,24 +70,24 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
     char **out = szCsvRec;
 
     /* header */
-    char *szDateCreation = "DATE";
-    char *szTimeCreation = "TIME";
-    char *szName = "PAYEE_PAYER_NAME"; /* payee or payer */
-    char *szAmtBTC = "AMT_BTC";
-    char *szCurrency = "USD";
-    char *szCategory = "CATEGORY";
-    char *szNotes = "NOTES";
-    char *szAmtAirbitzBTC = "AMT_BTC_FEES_AB";
-    char *szAmtFeesMinersBTC = "AMT_BTC_FEES_MINERS";
-    char *szInputAddresses = "IN_ADDRESSES";
-    char *szOutputAddresses = "OUT_ADDRESSES";
-    char *szCsvTxid = "TXID";
-    char *szCsvNtxid = "NTXID";
+    const char *szDateCreation = "DATE";
+    const char *szTimeCreation = "TIME";
+    const char *szName = "PAYEE_PAYER_NAME"; /* payee or payer */
+    const char *szAmtBTC = "AMT_BTC";
+    const char *szCurrency = "USD";
+    const char *szCategory = "CATEGORY";
+    const char *szNotes = "NOTES";
+    const char *szAmtAirbitzBTC = "AMT_BTC_FEES_AB";
+    const char *szAmtFeesMinersBTC = "AMT_BTC_FEES_MINERS";
+    const char *szInputAddresses = "IN_ADDRESSES";
+    const char *szOutputAddresses = "OUT_ADDRESSES";
+    const char *szCsvTxid = "TXID";
+    const char *szCsvNtxid = "NTXID";
 
     ABC_CHECK_NULL(szCsvRec);
 
     /* Allocated enough space for the header descriptions */
-    ABC_ALLOC(*szCsvRec, ABC_CSV_MAX_REC_SZ);
+    ABC_STR_NEW(*szCsvRec, ABC_CSV_MAX_REC_SZ);
 
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
@@ -117,7 +117,7 @@ tABC_CC ABC_ExportGetAddresses(tABC_TxInfo *pData,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    int i;
+    unsigned i;
     int numAddr = 0;
     char *szAmount = NULL;
 
@@ -148,7 +148,7 @@ tABC_CC ABC_ExportGetAddresses(tABC_TxInfo *pData,
         {
             int lengthNeeded;
 
-            ABC_ALLOC(szAmount, MAX_AMOUNT_STRING_SIZE)
+            ABC_STR_NEW(szAmount, MAX_AMOUNT_STRING_SIZE)
 
             ABC_CHECK_RET(ABC_FormatAmount(pData->aOutputs[i]->value, &szAmount, ABC_BITCOIN_DECIMAL_PLACES, false, pError));
 
@@ -156,7 +156,7 @@ tABC_CC ABC_ExportGetAddresses(tABC_TxInfo *pData,
 
             if (lengthNeeded > ABC_CSV_MAX_FLD_SZ) break;
 
-            ABC_REALLOC(*szAddresses, lengthNeeded);
+            ABC_ARRAY_RESIZE(*szAddresses, lengthNeeded, char);
 
             if (numAddr == 0)
             {
@@ -262,7 +262,7 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     ABC_CSV_FMT(tmpCsvVar, szCsvNtxid);
 
     /* Allocated enough space for one CSV REC - Determined by adding all field when quoted */
-    ABC_ALLOC(*szCsvRec, ABC_CSV_MAX_REC_SZ+1);
+    ABC_STR_NEW(*szCsvRec, ABC_CSV_MAX_REC_SZ+1);
 
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
@@ -338,7 +338,7 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
     }
 
     /* Allocate enough to hold the entire CSV content and copy from the buffer */
-    ABC_ALLOC(szFinalRec, ulCsvDataLen+1);
+    ABC_STR_NEW(szFinalRec, ulCsvDataLen+1);
     strncpy(szFinalRec, (char *) buff.p, (size_t)ulCsvDataLen);
 
     *szCsvData = szFinalRec;

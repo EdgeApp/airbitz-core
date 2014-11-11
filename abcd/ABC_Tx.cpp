@@ -192,7 +192,7 @@ static tABC_CC  ABC_TxTransactionExists(tABC_WalletID self, const char *szID, tA
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
 static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError);
-static int      ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo, tABC_Tx *pTx, tABC_Tx *pReceiveTx, tABC_Error *pError);
+static tABC_CC  ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo, tABC_Tx *pTx, tABC_Tx *pReceiveTx, tABC_Error *pError);
 static tABC_CC  ABC_TxWalletOwnsAddress(tABC_WalletID self, const char *szAddress, bool *bFound, tABC_Error *pError);
 static tABC_CC  ABC_TxGetPrivAddresses(tABC_WalletID self, tABC_U08Buf seed, char ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxTrashAddresses(tABC_WalletID self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
@@ -224,7 +224,7 @@ tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
     ABC_CHECK_NULL(szDestAddress);
     ABC_CHECK_NULL(pDetails);
 
-    ABC_ALLOC(pTxSendInfo, sizeof(tABC_TxSendInfo));
+    ABC_NEW(pTxSendInfo, tABC_TxSendInfo);
 
     ABC_CHECK_RET(ABC_WalletIDCopy(&pTxSendInfo->wallet, self, pError));
     ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
@@ -291,7 +291,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // take this non-blocking opportunity to update the info from the server if needed
     ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
 
-    ABC_ALLOC(pUtx, sizeof(tABC_UnsignedTx));
+    ABC_NEW(pUtx, tABC_UnsignedTx);
 
     // find/create a change address
     ABC_CHECK_RET(ABC_TxCreateNewAddress(
@@ -357,8 +357,8 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
     ABC_CHECK_RET(ABC_TxWatchAddresses(pInfo->wallet, pError));
 
     // sucessfully sent, now create a transaction
-    ABC_ALLOC(pTx, sizeof(tABC_Tx));
-    ABC_ALLOC(pTx->pStateInfo, sizeof(tTxStateInfo));
+    ABC_NEW(pTx, tABC_Tx);
+    ABC_NEW(pTx->pStateInfo, tTxStateInfo);
 
     // set the state
     pTx->pStateInfo->timeCreation = time(NULL);
@@ -398,8 +398,8 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
     ABC_STRDUP(pTx->szID, pUtx->szTxId);
     if (pInfo->bTransfer)
     {
-        ABC_ALLOC(pReceiveTx, sizeof(tABC_Tx));
-        ABC_ALLOC(pReceiveTx->pStateInfo, sizeof(tTxStateInfo));
+        ABC_NEW(pReceiveTx, tABC_Tx);
+        ABC_NEW(pReceiveTx->pStateInfo, tTxStateInfo);
 
         // set the state
         pReceiveTx->pStateInfo->timeCreation = time(NULL);
@@ -504,7 +504,7 @@ tABC_CC ABC_TxWalletOwnsAddress(tABC_WalletID self,
 
     ABC_CHECK_RET(
         ABC_TxGetPubAddresses(self, &paAddresses, &countAddresses, pError));
-    for (int i = 0; i < countAddresses; ++i)
+    for (unsigned i = 0; i < countAddresses; ++i)
     {
         if (strncmp(szAddress, paAddresses[i], strlen(szAddress)) == 0)
         {
@@ -535,8 +535,8 @@ tABC_CC ABC_TxGetPubAddresses(tABC_WalletID self,
     unsigned int countAddresses = 0;
     ABC_CHECK_RET(
         ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
-    ABC_ALLOC(sAddresses, sizeof(char *) * countAddresses);
-    for (int i = 0; i < countAddresses; i++)
+    ABC_ARRAY_NEW(sAddresses, countAddresses, char*);
+    for (unsigned i = 0; i < countAddresses; i++)
     {
         const char *s = aAddresses[i]->szPubAddress;
         ABC_STRDUP(sAddresses[i], s);
@@ -568,8 +568,8 @@ tABC_CC ABC_TxGetPrivAddresses(tABC_WalletID self,
     unsigned int countAddresses = 0;
     ABC_CHECK_RET(
         ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
-    ABC_ALLOC(sAddresses, sizeof(char *) * countAddresses);
-    for (int i = 0; i < countAddresses; i++)
+    ABC_ARRAY_NEW(sAddresses, countAddresses, char*);
+    for (unsigned i = 0; i < countAddresses; i++)
     {
         ABC_CHECK_RET(
             ABC_BridgeGetBitcoinPrivAddress(&sAddresses[i],
@@ -595,7 +595,7 @@ tABC_CC ABC_TxWatchAddresses(tABC_WalletID self,
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_RET(
         ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
-    for (int i = 0; i < countAddresses; i++)
+    for (unsigned i = 0; i < countAddresses; i++)
     {
         const tABC_TxAddress *a = aAddresses[i];
         ABC_CHECK_RET(
@@ -623,7 +623,7 @@ tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pO
     ABC_CHECK_NULL(ppNewDetails);
     ABC_CHECK_NULL(pOldDetails);
 
-    ABC_ALLOC(pNewDetails, sizeof(tABC_TxDetails));
+    ABC_NEW(pNewDetails, tABC_TxDetails);
 
     pNewDetails->amountSatoshi  = pOldDetails->amountSatoshi;
     pNewDetails->amountFeesAirbitzSatoshi = pOldDetails->amountFeesAirbitzSatoshi;
@@ -777,7 +777,6 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    int i = 0;
     tABC_U08Buf TxID = ABC_BUF_NULL;
     tABC_Tx *pTx = NULL;
     tABC_U08Buf IncomingAddress = ABC_BUF_NULL;
@@ -792,9 +791,9 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
     if (pTx == NULL)
     {
         // create a transaction
-        ABC_ALLOC(pTx, sizeof(tABC_Tx));
-        ABC_ALLOC(pTx->pStateInfo, sizeof(tTxStateInfo));
-        ABC_ALLOC(pTx->pDetails, sizeof(tABC_TxDetails));
+        ABC_NEW(pTx, tABC_Tx);
+        ABC_NEW(pTx->pStateInfo, tTxStateInfo);
+        ABC_NEW(pTx->pDetails, tABC_TxDetails);
 
         ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, szMalTxId);
         pTx->pStateInfo->timeCreation = time(NULL);
@@ -814,22 +813,22 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
         ABC_STRDUP(pTx->szID, szTxId);
         // store the input addresses
         pTx->countOutputs = inAddressCount + outAddressCount;
-        ABC_ALLOC(pTx->aOutputs, sizeof(tABC_TxOutput *) * pTx->countOutputs);
-        for (i = 0; i < inAddressCount; ++i)
+        ABC_ARRAY_NEW(pTx->aOutputs, pTx->countOutputs, tABC_TxOutput*);
+        for (unsigned i = 0; i < inAddressCount; ++i)
         {
             ABC_DebugLog("Saving Input address: %s\n", paInAddresses[i]->szAddress);
 
-            ABC_ALLOC(pTx->aOutputs[i], sizeof(tABC_TxOutput));
+            ABC_NEW(pTx->aOutputs[i], tABC_TxOutput);
             ABC_STRDUP(pTx->aOutputs[i]->szAddress, paInAddresses[i]->szAddress);
             ABC_STRDUP(pTx->aOutputs[i]->szTxId, paInAddresses[i]->szTxId);
             pTx->aOutputs[i]->input = paInAddresses[i]->input;
             pTx->aOutputs[i]->value = paInAddresses[i]->value;
         }
-        for (i = 0; i < outAddressCount; ++i)
+        for (unsigned i = 0; i < outAddressCount; ++i)
         {
             ABC_DebugLog("Saving Output address: %s\n", paOutAddresses[i]->szAddress);
             int newi = i + inAddressCount;
-            ABC_ALLOC(pTx->aOutputs[newi], sizeof(tABC_TxOutput));
+            ABC_NEW(pTx->aOutputs[newi], tABC_TxOutput);
             ABC_STRDUP(pTx->aOutputs[newi]->szAddress, paOutAddresses[i]->szAddress);
             ABC_STRDUP(pTx->aOutputs[newi]->szTxId, paOutAddresses[i]->szTxId);
             pTx->aOutputs[newi]->input = paOutAddresses[i]->input;
@@ -910,7 +909,7 @@ tABC_CC ABC_TxTrashAddresses(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     tABC_TxAddress *pAddress = NULL;
 
-    for (int i = 0; i < addressCount; ++i)
+    for (unsigned i = 0; i < addressCount; ++i)
     {
         ABC_CHECK_RET(ABC_TxFindRequest(self,
                         paAddresses[i]->szAddress, &pAddress, pError));
@@ -1035,7 +1034,7 @@ tABC_CC ABC_TxCreateInitialAddresses(tABC_WalletID self,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_TxDetails *pDetails = NULL;
-    ABC_ALLOC(pDetails, sizeof(tABC_TxDetails));
+    ABC_NEW(pDetails, tABC_TxDetails);
     ABC_STRDUP(pDetails->szName, "");
     ABC_STRDUP(pDetails->szCategory, "");
     ABC_STRDUP(pDetails->szNotes, "");
@@ -1074,7 +1073,7 @@ tABC_CC ABC_TxCreateNewAddress(tABC_WalletID self,
     unsigned int countAddresses = 0;
     tABC_TxAddress *pAddress = NULL;
     int64_t N = -1;
-    int recyclable = 0;
+    unsigned recyclable = 0;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
@@ -1084,7 +1083,7 @@ tABC_CC ABC_TxCreateNewAddress(tABC_WalletID self,
     ABC_CHECK_RET(ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
 
     // search through all of the addresses, get the highest N and check for one with the recycleable bit set
-    for (int i = 0; i < countAddresses; i++)
+    for (unsigned i = 0; i < countAddresses; i++)
     {
         // if this is the highest seq number
         if (aAddresses[i]->seq > N)
@@ -1130,7 +1129,7 @@ tABC_CC ABC_TxCreateNewAddress(tABC_WalletID self,
     // Create a new address at N
     if (recyclable <= MIN_RECYCLABLE)
     {
-        for (int i = 0; i < MIN_RECYCLABLE - recyclable; ++i)
+        for (unsigned i = 0; i < MIN_RECYCLABLE - recyclable; ++i)
         {
             ABC_CHECK_RET(ABC_TxCreateNewAddressForN(self, N + i, pError));
         }
@@ -1152,7 +1151,7 @@ tABC_CC ABC_TxCreateNewAddress(tABC_WalletID self,
         ABC_CHECK_RET(ABC_DuplicateTxDetails(&(pAddress->pDetails), pDetails, pError));
 
         // create the state info
-        ABC_ALLOC(pAddress->pStateInfo, sizeof(tTxAddressStateInfo));
+        ABC_NEW(pAddress->pStateInfo, tTxAddressStateInfo);
         pAddress->pStateInfo->bRecycleable = true;
         pAddress->pStateInfo->countActivities = 0;
         pAddress->pStateInfo->aActivities = NULL;
@@ -1176,12 +1175,12 @@ tABC_CC ABC_TxCreateNewAddressForN(tABC_WalletID self, int32_t N, tABC_Error *pE
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     tABC_TxAddress *pAddress = NULL;
+    tABC_U08Buf Seed = ABC_BUF_NULL;
 
     // Now we know the latest N, create a new address
-    ABC_ALLOC(pAddress, sizeof(tABC_TxAddress));
+    ABC_NEW(pAddress, tABC_TxAddress);
 
     // get the private seed so we can generate the public address
-    tABC_U08Buf Seed = ABC_BUF_NULL;
     ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeedDisk(self, &Seed, pError));
 
     // generate the public address
@@ -1197,16 +1196,16 @@ tABC_CC ABC_TxCreateNewAddressForN(tABC_WalletID self, int32_t N, tABC_Error *pE
     } while (pAddress->szPubAddress == NULL);
 
     // set the final ID
-    ABC_ALLOC(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
+    ABC_STR_NEW(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
     sprintf(pAddress->szID, "%u", pAddress->seq);
 
-    ABC_ALLOC(pAddress->pStateInfo, sizeof(tTxAddressStateInfo));
+    ABC_NEW(pAddress->pStateInfo, tTxAddressStateInfo);
     pAddress->pStateInfo->bRecycleable = true;
     pAddress->pStateInfo->countActivities = 0;
     pAddress->pStateInfo->aActivities = NULL;
     pAddress->pStateInfo->timeCreation = time(NULL);
 
-    ABC_ALLOC(pAddress->pDetails, sizeof(tABC_TxDetails));
+    ABC_NEW(pAddress->pDetails, tABC_TxDetails);
     ABC_STRDUP(pAddress->pDetails->szName, "");
     ABC_STRDUP(pAddress->pDetails->szCategory, "");
     ABC_STRDUP(pAddress->pDetails->szNotes, "");
@@ -1258,7 +1257,7 @@ tABC_CC ABC_TxModifyReceiveRequest(tABC_WalletID self,
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, self.szUUID, pError));
 
     // create the full filename
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
     sprintf(szFilename, "%s/%s", szAddrDir, szFile);
 
     // load the request address
@@ -1307,7 +1306,7 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
 
     char *szAddrDir = NULL;
     tABC_FileIOList *pFileList = NULL;
-
+    bool bExists = false;
     char *szID = NULL;
 
     ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
@@ -1322,7 +1321,6 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
 
     // Make sure there is an addresses directory
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szAddrDir, &bExists, pError));
     ABC_CHECK_ASSERT(bExists == true, ABC_CC_Error, "No existing requests/addresses");
 
@@ -1385,7 +1383,7 @@ tABC_CC ABC_TxParseAddrFilename(const char *szFilename,
             int nPosSeparator = 0;
 
             // go through all the characters up to the separator
-            for (int i = 0; i < strlen(szFilename); i++)
+            for (size_t i = 0; i < strlen(szFilename); i++)
             {
                 // check for id separator
                 if (szFilename[i] == ADDRESS_FILENAME_SEPARATOR)
@@ -1408,7 +1406,7 @@ tABC_CC ABC_TxParseAddrFilename(const char *szFilename,
             {
                 if (pszID != NULL)
                 {
-                    ABC_ALLOC(*pszID, nPosSeparator + 1);
+                    ABC_STR_NEW(*pszID, nPosSeparator + 1);
                     strncpy(*pszID, szFilename, nPosSeparator);
                 }
 
@@ -1500,7 +1498,7 @@ tABC_CC ABC_TxSetAddressRecycle(tABC_WalletID self,
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, self.szUUID, pError));
 
     // create the full filename
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
     sprintf(szFilename, "%s/%s", szAddrDir, szFile);
 
     // load the request address
@@ -1584,8 +1582,8 @@ tABC_CC ABC_TxGenerateRequestQRCode(tABC_WalletID self,
     qr = QRcode_encodeString(szURI, 0, QR_ECLEVEL_L, QR_MODE_8, 1);
     ABC_CHECK_ASSERT(qr != NULL, ABC_CC_Error, "Unable to create QR code");
     length = qr->width * qr->width;
-    ABC_ALLOC(aData, length);
-    for (int i = 0; i < length; i++)
+    ABC_ARRAY_NEW(aData, length, unsigned char);
+    for (unsigned i = 0; i < length; i++)
     {
         aData[i] = qr->data[i] & 0x1;
     }
@@ -1595,8 +1593,6 @@ tABC_CC ABC_TxGenerateRequestQRCode(tABC_WalletID self,
 
     if (pszURI != NULL)
     {
-        length = ABC_STRLEN(szURI);
-        ABC_ALLOC(*pszURI, length);
         ABC_STRDUP(*pszURI, szURI);
     }
 
@@ -1629,6 +1625,7 @@ tABC_CC ABC_TxGetTransaction(tABC_WalletID self,
     char *szFilename = NULL;
     tABC_Tx *pTx = NULL;
     tABC_TxInfo *pTransaction = NULL;
+    bool bExists = false;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     *ppTransaction = NULL;
@@ -1637,7 +1634,6 @@ tABC_CC ABC_TxGetTransaction(tABC_WalletID self,
 
     // first try the internal
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, true, pError));
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
 
     // if the internal doesn't exist
@@ -1691,6 +1687,7 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
     char *szFilename = NULL;
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
+    bool bExists = false;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
@@ -1701,12 +1698,11 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
     ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, self.szUUID, pError));
 
     // if there is a transaction directory
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szTxDir, &bExists, pError));
 
     if (bExists == true)
     {
-        ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+        ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
 
         // get all the files in the transaction directory
         ABC_FileIOCreateFileList(&pFileList, szTxDir, NULL);
@@ -1807,7 +1803,7 @@ tABC_CC ABC_TxSearchTransactions(tABC_WalletID self,
 
     ABC_TxGetTransactions(self, ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
                           &aTransactions, &count, pError);
-    ABC_ALLOC(aSearchTransactions, sizeof(tABC_TxInfo*) * count);
+    ABC_ARRAY_NEW(aSearchTransactions, count, tABC_TxInfo*);
     for (i = 0; i < count; i++) {
         memset(satoshi, '\0', 15);
         memset(currency, '\0', 15);
@@ -1850,7 +1846,7 @@ tABC_CC ABC_TxSearchTransactions(tABC_WalletID self,
     }
     if (matchCount > 0)
     {
-        ABC_REALLOC(aSearchTransactions, sizeof(tABC_TxInfo *) * matchCount);
+        ABC_ARRAY_RESIZE(aSearchTransactions, matchCount, tABC_TxInfo*);
     }
 
     *paTransactions = aSearchTransactions;
@@ -1892,7 +1888,7 @@ tABC_CC ABC_TxCheckForInternalEquivalent(const char *szFilename,
     if (type == TxType_External)
     {
         // create the internal version of the filename
-        ABC_ALLOC(szFilenameInt, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+        ABC_STR_NEW(szFilenameInt, ABC_FILEIO_MAX_PATH_LENGTH + 1);
         sprintf(szFilenameInt, "%s%s", szBasename, TX_INTERNAL_SUFFIX);
 
         // check if this internal version of the file exists
@@ -1936,6 +1932,7 @@ tABC_CC ABC_TxGetTxTypeAndBasename(const char *szFilename,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     char *szBasename = NULL;
+    unsigned sizeSuffix = 0;
 
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(pType);
@@ -1948,7 +1945,7 @@ tABC_CC ABC_TxGetTxTypeAndBasename(const char *szFilename,
     }
 
     // look for external the suffix
-    int sizeSuffix = strlen(TX_EXTERNAL_SUFFIX);
+    sizeSuffix = strlen(TX_EXTERNAL_SUFFIX);
     if (strlen(szFilename) > sizeSuffix)
     {
         char *szSuffix = (char *) szFilename + (strlen(szFilename) - sizeSuffix);
@@ -2032,7 +2029,7 @@ tABC_CC ABC_TxLoadTransactionInfo(tABC_WalletID self,
     ABC_CHECK_NULL(pTx->pStateInfo);
 
     // steal the data and assign it to our new struct
-    ABC_ALLOC(pTransaction, sizeof(tABC_TxInfo));
+    ABC_NEW(pTransaction, tABC_TxInfo);
     pTransaction->szID = pTx->szID;
     pTx->szID = NULL;
     pTransaction->szMalleableTxId = pTx->pStateInfo->szMalleableTxId;
@@ -2095,13 +2092,13 @@ tABC_CC ABC_TxLoadTxAndAppendToArray(tABC_WalletID self,
         // create space for new entry
         if (aTransactions == NULL)
         {
-            ABC_ALLOC(aTransactions, sizeof(tABC_TxInfo *));
+            ABC_ARRAY_NEW(aTransactions, 1, tABC_TxInfo*);
             count = 1;
         }
         else
         {
             count++;
-            ABC_REALLOC(aTransactions, sizeof(tABC_TxInfo *) * count);
+            ABC_ARRAY_RESIZE(aTransactions, count, tABC_TxInfo*);
         }
 
         // add it to the array
@@ -2147,7 +2144,7 @@ void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
 {
     if (aTransactions && count > 0)
     {
-        for (int i = 0; i < count; i++)
+        for (unsigned i = 0; i < count; i++)
         {
             ABC_TxFreeTransaction(aTransactions[i]);
         }
@@ -2173,6 +2170,7 @@ tABC_CC ABC_TxSetTransactionDetails(tABC_WalletID self,
 
     char *szFilename = NULL;
     tABC_Tx *pTx = NULL;
+    bool bExists = false;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
@@ -2180,7 +2178,6 @@ tABC_CC ABC_TxSetTransactionDetails(tABC_WalletID self,
 
     // first try the internal
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, true, pError));
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
 
     // if the internal doesn't exist
@@ -2243,6 +2240,7 @@ tABC_CC ABC_TxGetTransactionDetails(tABC_WalletID self,
     char *szFilename = NULL;
     tABC_Tx *pTx = NULL;
     tABC_TxDetails *pDetails = NULL;
+    bool bExists = false;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
@@ -2250,7 +2248,6 @@ tABC_CC ABC_TxGetTransactionDetails(tABC_WalletID self,
 
     // first try the internal
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, true, pError));
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
 
     // if the internal doesn't exist
@@ -2349,7 +2346,7 @@ tABC_CC ABC_TxGetPendingRequests(tABC_WalletID self,
         //ABC_TxPrintAddresses(aAddresses, count);
 
         // walk through all the addresses looking for those with outstanding balances
-        for (int i = 0; i < count; i++)
+        for (unsigned i = 0; i < count; i++)
         {
             tABC_TxAddress *pAddr = aAddresses[i];
             ABC_CHECK_NULL(pAddr);
@@ -2376,7 +2373,7 @@ tABC_CC ABC_TxGetPendingRequests(tABC_WalletID self,
                         if (owedSatoshi > 0)
                         {
                             // create this request
-                            ABC_ALLOC(pRequest, sizeof(tABC_RequestInfo));
+                            ABC_NEW(pRequest, tABC_RequestInfo);
                             ABC_STRDUP(pRequest->szID, pAddr->szID);
                             pRequest->timeCreation = pState->timeCreation;
                             pRequest->owedSatoshi = owedSatoshi;
@@ -2389,11 +2386,11 @@ tABC_CC ABC_TxGetPendingRequests(tABC_WalletID self,
                             if (countPending > 0)
                             {
                                 countPending++;
-                                ABC_REALLOC(aRequests, countPending * sizeof(tABC_RequestInfo *));
+                                ABC_ARRAY_RESIZE(aRequests, countPending, tABC_RequestInfo*);
                             }
                             else
                             {
-                                ABC_ALLOC(aRequests, sizeof(tABC_RequestInfo *));
+                                ABC_ARRAY_NEW(aRequests, 1, tABC_RequestInfo*);
                                 countPending = 1;
                             }
 
@@ -2443,21 +2440,25 @@ tABC_CC ABC_TxGetAddressOwed(tABC_TxAddress *pAddr,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    int64_t satoshiOwed = 0;
+    tTxAddressStateInfo *pState = NULL;
+    tABC_TxDetails  *pDetails = NULL;
+
     ABC_CHECK_NULL(pSatoshiOwed);
     *pSatoshiOwed = 0;
     ABC_CHECK_NULL(pAddr);
-    tABC_TxDetails  *pDetails = pAddr->pDetails;
+    pDetails = pAddr->pDetails;
     ABC_CHECK_NULL(pDetails);
-    tTxAddressStateInfo *pState = pAddr->pStateInfo;
+    pState = pAddr->pStateInfo;
     ABC_CHECK_NULL(pState);
 
     // start with the amount requested
-    int64_t satoshiOwed = pDetails->amountSatoshi;
+    satoshiOwed = pDetails->amountSatoshi;
 
     // if any activities have occured on this address
     if ((pState->aActivities != NULL) && (pState->countActivities > 0))
     {
-        for (int i = 0; i < pState->countActivities; i++)
+        for (unsigned i = 0; i < pState->countActivities; i++)
         {
             // if this activity is money paid on the address
             // note: here is where negative activity is ignored
@@ -2549,7 +2550,7 @@ void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
 {
     if (aRequests && count > 0)
     {
-        for (int i = 0; i < count; i++)
+        for (unsigned i = 0; i < count; i++)
         {
             ABC_TxFreeRequest(aRequests[i]);
         }
@@ -2573,6 +2574,7 @@ tABC_CC ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const cha
     tABC_U08Buf MK = ABC_BUF_NULL;
     tABC_U08Buf DataHMAC = ABC_BUF_NULL;
     char *szDataBase58 = NULL;
+    tABC_U08Buf TxID = ABC_BUF_NULL;
 
     *pszFilename = NULL;
 
@@ -2583,14 +2585,13 @@ tABC_CC ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const cha
     ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, self.szUUID, pError));
 
     // create an hmac-256 of the TxID
-    tABC_U08Buf TxID = ABC_BUF_NULL;
     ABC_BUF_SET_PTR(TxID, (unsigned char *)szTxID, strlen(szTxID));
     ABC_CHECK_RET(ABC_CryptoHMAC256(TxID, MK, &DataHMAC, pError));
 
     // create a base58 of the hmac-256 TxID
     ABC_CHECK_RET(ABC_CryptoBase58Encode(DataHMAC, &szDataBase58, pError));
 
-    ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(*pszFilename, "%s/%s%s", szTxDir, szDataBase58, (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX));
 
 exit:
@@ -2619,6 +2620,8 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
     tABC_U08Buf MK = ABC_BUF_NULL;
     json_t *pJSON_Root = NULL;
     tABC_Tx *pTx = NULL;
+    bool bExists = false;
+    json_t *jsonVal = NULL;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     *ppTx = NULL;
@@ -2628,7 +2631,6 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
     ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
 
     // make sure the transaction exists
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     ABC_CHECK_ASSERT(bExists == true, ABC_CC_NoTransaction, "Transaction does not exist");
 
@@ -2637,10 +2639,10 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
 
     // start decoding
 
-    ABC_ALLOC(pTx, sizeof(tABC_Tx));
+    ABC_NEW(pTx, tABC_Tx);
 
     // get the id
-    json_t *jsonVal = json_object_get(pJSON_Root, JSON_TX_ID_FIELD);
+    jsonVal = json_object_get(pJSON_Root, JSON_TX_ID_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing id");
     ABC_STRDUP(pTx->szID, json_string_value(jsonVal));
 
@@ -2690,7 +2692,7 @@ static tABC_CC ABC_TxFindRequest(tABC_WalletID self,
 
     ABC_CHECK_RET(
         ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
-    for (int i = 0; i < countAddresses; i++)
+    for (unsigned i = 0; i < countAddresses; i++)
     {
         if (strncmp(aAddresses[i]->szPubAddress, szMatchAddress,
                     strlen(aAddresses[i]->szPubAddress)) == 0) {
@@ -2718,20 +2720,22 @@ tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tTxStateInfo *pInfo = NULL;
+    json_t *jsonState = NULL;
+    json_t *jsonVal = NULL;
 
     ABC_CHECK_NULL(pJSON_Obj);
     ABC_CHECK_NULL(ppInfo);
     *ppInfo = NULL;
 
     // allocate the struct
-    ABC_ALLOC(pInfo, sizeof(tTxStateInfo));
+    ABC_NEW(pInfo, tTxStateInfo);
 
     // get the state object
-    json_t *jsonState = json_object_get(pJSON_Obj, JSON_TX_STATE_FIELD);
+    jsonState = json_object_get(pJSON_Obj, JSON_TX_STATE_FIELD);
     ABC_CHECK_ASSERT((jsonState && json_is_object(jsonState)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing state");
 
     // get the creation date
-    json_t *jsonVal = json_object_get(jsonState, JSON_CREATION_DATE_FIELD);
+    jsonVal = json_object_get(jsonState, JSON_CREATION_DATE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing creation date");
     pInfo->timeCreation = json_integer_value(jsonVal);
 
@@ -2770,20 +2774,22 @@ tABC_CC ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tAB
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_TxDetails *pDetails = NULL;
+    json_t *jsonDetails = NULL;
+    json_t *jsonVal = NULL;
 
     ABC_CHECK_NULL(pJSON_Obj);
     ABC_CHECK_NULL(ppDetails);
     *ppDetails = NULL;
 
     // allocated the struct
-    ABC_ALLOC(pDetails, sizeof(tABC_TxDetails));
+    ABC_NEW(pDetails, tABC_TxDetails);
 
     // get the details object
-    json_t *jsonDetails = json_object_get(pJSON_Obj, JSON_DETAILS_FIELD);
+    jsonDetails = json_object_get(pJSON_Obj, JSON_DETAILS_FIELD);
     ABC_CHECK_ASSERT((jsonDetails && json_is_object(jsonDetails)), ABC_CC_JSONError, "Error parsing JSON details package - missing meta data (details)");
 
     // get the satoshi field
-    json_t *jsonVal = json_object_get(jsonDetails, JSON_AMOUNT_SATOSHI_FIELD);
+    jsonVal = json_object_get(jsonDetails, JSON_AMOUNT_SATOSHI_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing satoshi amount");
     pDetails->amountSatoshi = json_integer_value(jsonVal);
 
@@ -2871,12 +2877,12 @@ tABC_CC ABC_TxCreateTxDir(const char *szWalletUUID, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     char *szTxDir = NULL;
+    bool bExists = false;
 
     // get the transaction directory
     ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
 
     // if transaction dir doesn't exist, create it
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szTxDir, &bExists, pError));
     if (true != bExists)
     {
@@ -2901,6 +2907,7 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    int e;
 
     tABC_U08Buf MK = ABC_BUF_NULL;
     char *szFilename = NULL;
@@ -2937,8 +2944,8 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
     // if there are any addresses
     if ((pTx->countOutputs > 0) && (pTx->aOutputs != NULL))
     {
-        ABC_ALLOC(ppJSON_Output, sizeof(json_t *) * pTx->countOutputs);
-        for (int i = 0; i < pTx->countOutputs; i++)
+        ABC_ARRAY_NEW(ppJSON_Output, pTx->countOutputs, json_t*);
+        for (unsigned i = 0; i < pTx->countOutputs; i++)
         {
             ppJSON_Output[i] = json_object();
 
@@ -2964,8 +2971,8 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
     }
 
     // add the address array to the  object
-    int retVal = json_object_set(pJSON_Root, JSON_TX_OUTPUTS_FIELD, pJSON_OutputArray);
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+    e = json_object_set(pJSON_Root, JSON_TX_OUTPUTS_FIELD, pJSON_OutputArray);
+    ABC_CHECK_ASSERT(e == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // create the transaction directory if needed
     ABC_CHECK_RET(ABC_TxCreateTxDir(self.szUUID, pError));
@@ -3157,7 +3164,7 @@ tABC_CC ABC_TxLoadAddress(tABC_WalletID self,
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, self.szUUID, pError));
 
     // create the full filename
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
     sprintf(szFilename, "%s/%s", szAddrDir, szFile);
 
     // load the request address
@@ -3190,6 +3197,8 @@ tABC_CC ABC_TxLoadAddressFile(tABC_WalletID self,
     tABC_U08Buf MK = ABC_BUF_NULL;
     json_t *pJSON_Root = NULL;
     tABC_TxAddress *pAddress = NULL;
+    bool bExists = false;
+    json_t *jsonVal = NULL;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     *ppAddress = NULL;
@@ -3199,7 +3208,6 @@ tABC_CC ABC_TxLoadAddressFile(tABC_WalletID self,
     ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
 
     // make sure the addresss exists
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     ABC_CHECK_ASSERT(bExists == true, ABC_CC_NoRequest, "Request address does not exist");
 
@@ -3208,13 +3216,13 @@ tABC_CC ABC_TxLoadAddressFile(tABC_WalletID self,
 
     // start decoding
 
-    ABC_ALLOC(pAddress, sizeof(tABC_TxAddress));
+    ABC_NEW(pAddress, tABC_TxAddress);
 
     // get the seq and id
-    json_t *jsonVal = json_object_get(pJSON_Root, JSON_ADDR_SEQ_FIELD);
+    jsonVal = json_object_get(pJSON_Root, JSON_ADDR_SEQ_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing seq");
     pAddress->seq = (uint32_t)json_integer_value(jsonVal);
-    ABC_ALLOC(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
+    ABC_STR_NEW(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
     sprintf(pAddress->szID, "%u", pAddress->seq);
 
     // get the public address field
@@ -3253,20 +3261,23 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tTxAddressStateInfo *pState = NULL;
+    json_t *jsonState = NULL;
+    json_t *jsonVal = NULL;
+    json_t *jsonActivity = NULL;
 
     ABC_CHECK_NULL(pJSON_Obj);
     ABC_CHECK_NULL(ppState);
     *ppState = NULL;
 
     // allocated the struct
-    ABC_ALLOC(pState, sizeof(tTxAddressStateInfo));
+    ABC_NEW(pState, tTxAddressStateInfo);
 
     // get the state object
-    json_t *jsonState = json_object_get(pJSON_Obj, JSON_ADDR_STATE_FIELD);
+    jsonState = json_object_get(pJSON_Obj, JSON_ADDR_STATE_FIELD);
     ABC_CHECK_ASSERT((jsonState && json_is_object(jsonState)), ABC_CC_JSONError, "Error parsing JSON address package - missing state info");
 
     // get the creation date
-    json_t *jsonVal = json_object_get(jsonState, JSON_CREATION_DATE_FIELD);
+    jsonVal = json_object_get(jsonState, JSON_CREATION_DATE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing creation date");
     pState->timeCreation = json_integer_value(jsonVal);
 
@@ -3276,7 +3287,7 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
     pState->bRecycleable = json_is_true(jsonVal) ? true : false;
 
     // get the activity array (if it exists)
-    json_t *jsonActivity = json_object_get(jsonState, JSON_ADDR_ACTIVITY_FIELD);
+    jsonActivity = json_object_get(jsonState, JSON_ADDR_ACTIVITY_FIELD);
     if (jsonActivity)
     {
         ABC_CHECK_ASSERT(json_is_array(jsonActivity), ABC_CC_JSONError, "Error parsing JSON address package - missing activity array");
@@ -3286,9 +3297,9 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
 
         if (pState->countActivities > 0)
         {
-            ABC_ALLOC(pState->aActivities, sizeof(tTxAddressActivity) * pState->countActivities);
+            ABC_ARRAY_NEW(pState->aActivities, pState->countActivities, tTxAddressActivity);
 
-            for (int i = 0; i < pState->countActivities; i++)
+            for (unsigned i = 0; i < pState->countActivities; i++)
             {
                 json_t *pJSON_Elem = json_array_get(jsonActivity, i);
                 ABC_CHECK_ASSERT((pJSON_Elem && json_is_object(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON address package - missing activity array element");
@@ -3422,7 +3433,7 @@ tABC_CC ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pIn
     // if there are any activities
     if ((pInfo->countActivities > 0) && (pInfo->aActivities != NULL))
     {
-        for (int i = 0; i < pInfo->countActivities; i++)
+        for (unsigned i = 0; i < pInfo->countActivities; i++)
         {
             // create the array object
             pJSON_Activity = json_object();
@@ -3478,6 +3489,7 @@ tABC_CC ABC_TxCreateAddressFilename(tABC_WalletID self, char **pszFilename, cons
     tABC_U08Buf MK = ABC_BUF_NULL;
     tABC_U08Buf DataHMAC = ABC_BUF_NULL;
     char *szDataBase58 = NULL;
+    tABC_U08Buf PubAddress = ABC_BUF_NULL;
 
     *pszFilename = NULL;
 
@@ -3488,7 +3500,6 @@ tABC_CC ABC_TxCreateAddressFilename(tABC_WalletID self, char **pszFilename, cons
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, self.szUUID, pError));
 
     // create an hmac-256 of the public address
-    tABC_U08Buf PubAddress = ABC_BUF_NULL;
     ABC_BUF_SET_PTR(PubAddress, (unsigned char *)pAddress->szPubAddress, strlen(pAddress->szPubAddress));
     ABC_CHECK_RET(ABC_CryptoHMAC256(PubAddress, MK, &DataHMAC, pError));
 
@@ -3496,7 +3507,7 @@ tABC_CC ABC_TxCreateAddressFilename(tABC_WalletID self, char **pszFilename, cons
     ABC_CHECK_RET(ABC_CryptoBase58Encode(DataHMAC, &szDataBase58, pError));
 
     // create the filename
-    ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(*pszFilename, "%s/%u-%s.json", szAddrDir, pAddress->seq, szDataBase58);
 
 exit:
@@ -3516,12 +3527,12 @@ tABC_CC ABC_TxCreateAddressDir(const char *szWalletUUID, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     char *szAddrDir = NULL;
+    bool bExists = false;
 
     // get the address directory
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
 
     // if transaction dir doesn't exist, create it
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szAddrDir, &bExists, pError));
     if (true != bExists)
     {
@@ -3561,7 +3572,7 @@ void ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo)
     {
         if ((pInfo->aActivities != NULL) && (pInfo->countActivities > 0))
         {
-            for (int i = 0; i < pInfo->countActivities; i++)
+            for (unsigned i = 0; i < pInfo->countActivities; i++)
             {
                 ABC_FREE_STR(pInfo->aActivities[i].szTxID);
             }
@@ -3579,7 +3590,7 @@ void ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count)
 {
     if ((aAddresses != NULL) && (count > 0))
     {
-        for (int i = 0; i < count; i++)
+        for (unsigned i = 0; i < count; i++)
         {
             ABC_TxFreeAddress(aAddresses[i]);
         }
@@ -3602,7 +3613,7 @@ void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count)
 {
     if ((aOutputs != NULL) && (count > 0))
     {
-        for (int i = 0; i < count; i++)
+        for (unsigned i = 0; i < count; i++)
         {
             ABC_TxFreeOutput(aOutputs[i]);
         }
@@ -3631,6 +3642,7 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
     char *szFilename = NULL;
     tABC_TxAddress **aAddresses = NULL;
     unsigned int count = 0;
+    bool bExists = false;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
@@ -3641,12 +3653,11 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, self.szUUID, pError));
 
     // if there is a address directory
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szAddrDir, &bExists, pError));
 
     if (bExists == true)
     {
-        ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
+        ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
 
         // get all the files in the address directory
         ABC_FileIOCreateFileList(&pFileList, szAddrDir, NULL);
@@ -3751,13 +3762,13 @@ tABC_CC ABC_TxLoadAddressAndAppendToArray(tABC_WalletID self,
     // create space for new entry
     if (aAddresses == NULL)
     {
-        ABC_ALLOC(aAddresses, sizeof(tABC_TxAddress *));
+        ABC_ARRAY_NEW(aAddresses, 1, tABC_TxAddress*);
         count = 1;
     }
     else
     {
         count++;
-        ABC_REALLOC(aAddresses, sizeof(tABC_TxAddress *) * count);
+        ABC_ARRAY_RESIZE(aAddresses, count, tABC_TxAddress*);
     }
 
     // add it to the array
@@ -3898,7 +3909,7 @@ tABC_CC ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *p
     // grow the array:
     countActivities = pAddress->pStateInfo->countActivities;
     aActivities = pAddress->pStateInfo->aActivities;
-    ABC_REALLOC(aActivities, sizeof(tTxAddressActivity)*(countActivities + 1));
+    ABC_ARRAY_RESIZE(aActivities, countActivities + 1, tTxAddressActivity);
 
     // fill in the new entry:
     ABC_STRDUP(aActivities[countActivities].szTxID, pTx->szID);
@@ -3966,7 +3977,7 @@ exit:
 static
 void ABC_TxStrTable(const char *needle, int *table)
 {
-    int pos = 2, cnd = 0;
+    size_t pos = 2, cnd = 0;
     table[0] = -1;
     table[1] = 0;
     size_t needle_size = strlen(needle);
@@ -4007,9 +4018,10 @@ int ABC_TxStrStr(const char *haystack, const char *needle,
     if (haystack == NULL || needle == NULL) {
         return 0;
     }
-    int m = 0, i = 0, result = -1;
+    int result = -1;
     size_t haystack_size;
     size_t needle_size;
+    size_t m = 0, i = 0;
     int *table;
 
     haystack_size = strlen(haystack);
@@ -4019,7 +4031,7 @@ int ABC_TxStrStr(const char *haystack, const char *needle,
         return 0;
     }
 
-    ABC_ALLOC(table, needle_size * sizeof(int));
+    ABC_ARRAY_NEW(table, needle_size, int);
     ABC_TxStrTable(needle, table);
 
     while (m + i < haystack_size)
@@ -4064,11 +4076,11 @@ ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_
     pTx->countOutputs = countOutputs;
     if (pTx->countOutputs > 0)
     {
-        ABC_ALLOC(pTx->aOutputs, sizeof(tABC_TxOutput *) * pTx->countOutputs);
+        ABC_ARRAY_NEW(pTx->aOutputs, pTx->countOutputs, tABC_TxOutput*);
         for (i = 0; i < countOutputs; ++i)
         {
             ABC_DebugLog("Saving Outputs: %s\n", aOutputs[i]->szAddress);
-            ABC_ALLOC(pTx->aOutputs[i], sizeof(tABC_TxOutput));
+            ABC_NEW(pTx->aOutputs[i], tABC_TxOutput);
             ABC_STRDUP(pTx->aOutputs[i]->szAddress, aOutputs[i]->szAddress);
             ABC_STRDUP(pTx->aOutputs[i]->szTxId, aOutputs[i]->szTxId);
             pTx->aOutputs[i]->input = aOutputs[i]->input;
@@ -4079,10 +4091,10 @@ exit:
     return cc;
 }
 
-static int
-ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo,
-                       tABC_Tx *pTx, tABC_Tx *pReceiveTx,
-                       tABC_Error *pError)
+static
+tABC_CC ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo,
+                               tABC_Tx *pTx, tABC_Tx *pReceiveTx,
+                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     // Populate Send Tx
