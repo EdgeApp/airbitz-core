@@ -196,6 +196,7 @@ static int      ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo, tABC_Tx *pTx, tAB
 static tABC_CC  ABC_TxWalletOwnsAddress(tABC_WalletID self, const char *szAddress, bool *bFound, tABC_Error *pError);
 static tABC_CC  ABC_TxGetPrivAddresses(tABC_WalletID self, tABC_U08Buf seed, char ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxTrashAddresses(tABC_WalletID self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
+static tABC_CC  ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
 
 /**
  * Initializes the
@@ -384,11 +385,8 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
                                         + pInfo->pDetails->amountFeesMinersSatoshi;
     }
 
-    ABC_CHECK_RET(ABC_WalletGetInfo(pInfo->wallet, &pWallet, pError));
-    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(
-                    pInfo->wallet.pKeys,
-                    pTx->pDetails->amountSatoshi, &Currency,
-                    pWallet->currencyNum, pError));
+    ABC_CHECK_RET(ABC_TxCalcCurrency(
+        pInfo->wallet, pTx->pDetails->amountSatoshi, &Currency, pError));
     pTx->pDetails->amountCurrency = Currency;
 
     if (pTx->pDetails->amountSatoshi > 0)
@@ -783,8 +781,11 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
     tABC_U08Buf TxID = ABC_BUF_NULL;
     tABC_Tx *pTx = NULL;
     tABC_U08Buf IncomingAddress = ABC_BUF_NULL;
+    double Currency = 0.0;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
+
+    ABC_CHECK_RET(ABC_TxCalcCurrency(self, amountSatoshi, &Currency, pError));
 
     // Does the transaction already exist?
     ABC_TxTransactionExists(self, szTxId, &pTx, pError);
@@ -798,7 +799,9 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
         ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, szMalTxId);
         pTx->pStateInfo->timeCreation = time(NULL);
         pTx->pDetails->amountSatoshi = amountSatoshi;
+        pTx->pDetails->amountCurrency = Currency;
         pTx->pDetails->amountFeesMinersSatoshi = feeSatoshi;
+
         ABC_STRDUP(pTx->pDetails->szName, "");
         ABC_STRDUP(pTx->pDetails->szCategory, "");
         ABC_STRDUP(pTx->pDetails->szNotes, "");
@@ -957,6 +960,32 @@ exit:
     return cc;
 }
 
+/**
+ * Calculates the amount of currency based off of Wallet's currency code
+ *
+ * @param tABC_WalletID
+ * @param amountSatoshi
+ * @param pCurrency     Point to double
+ * @param pError        A pointer to the location to store the error if there is one
+ */
+static
+tABC_CC ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi,
+                           double *pCurrency, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    double Currency = 0.0;
+    tABC_WalletInfo *pWallet = NULL;
+
+    tABC_WalletID wallet =
+        ABC_WalletID(self.pKeys, self.szUUID);
+    ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWallet, pError));
+    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(
+        wallet.pKeys, amountSatoshi, &Currency, pWallet->currencyNum, pError));
+exit:
+    ABC_WalletFreeInfo(pWallet);
+
+    return cc;
+}
 
 /**
  * Creates a receive request.
