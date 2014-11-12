@@ -48,7 +48,7 @@ tABC_CC ABC_CarePackageNew(tABC_CarePackage **ppSelf,
     tABC_CarePackage *pSelf = NULL;
 
     // Allocate self:
-    ABC_ALLOC(pSelf, sizeof(tABC_CarePackage));
+    ABC_NEW(pSelf, tABC_CarePackage);
 
     // Generate SNRP's:
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSelf->pSNRP1, pError));
@@ -81,7 +81,7 @@ tABC_CC ABC_CarePackageDecode(tABC_CarePackage **ppSelf,
     int     e;
 
     // Allocate self:
-    ABC_ALLOC(pSelf, sizeof(tABC_CarePackage));
+    ABC_NEW(pSelf, tABC_CarePackage);
 
     // Parse the JSON:
     json_error_t error;
@@ -189,7 +189,7 @@ tABC_CC ABC_LoginPackageDecode(tABC_LoginPackage **ppSelf,
     int     e;
 
     // Allocate self:
-    ABC_ALLOC(pSelf, sizeof(tABC_LoginPackage));
+    ABC_NEW(pSelf, tABC_LoginPackage);
 
     // Parse the JSON:
     json_error_t error;

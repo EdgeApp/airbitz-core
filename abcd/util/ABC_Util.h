@@ -150,22 +150,28 @@ extern "C" {
         ABC_PRINT_ERR(pError); \
     }
 
-#define ABC_ALLOC(ptr, size) \
+#define ABC_NEW(ptr, type) \
     { \
-        ptr = calloc(1, (size)); \
+        ptr = (type*)calloc(1, sizeof(type)); \
         ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "calloc failed (returned NULL)"); \
     }
 
-#define ABC_REALLOC(ptr, newsize) \
+#define ABC_STR_NEW(ptr, count) \
     { \
-        ptr = realloc(ptr, newsize); \
-        ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "realloc failed (returned NULL)"); \
+        ptr = (char*)calloc(count, sizeof(char)); \
+        ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "calloc failed (returned NULL)"); \
     }
 
-#define ABC_ALLOC_ARRAY(ptr, count, type) \
+#define ABC_ARRAY_NEW(ptr, count, type) \
     { \
         ptr = (type*)calloc(count, sizeof(type)); \
         ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "calloc failed (returned NULL)"); \
+    }
+
+#define ABC_ARRAY_RESIZE(ptr, count, type) \
+    { \
+        ptr = (type*)realloc(ptr, (count)*sizeof(type)); \
+        ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "realloc failed (returned NULL)"); \
     }
 
 #define ABC_STRLEN(string) (string == NULL ? 0 : strlen(string))
@@ -236,30 +242,30 @@ extern "C" {
                                             }
 #define ABC_BUF_NULL                        { NULL, NULL }
 #define ABC_BUF_NEW(buf, count)             { \
-                                                (buf).p = calloc(count, sizeof(*((buf).p))); \
+                                                (buf).p = (unsigned char*)calloc(count, sizeof(*((buf).p))); \
                                                 (buf).end = (buf).p + (sizeof(*((buf).p)) * count); \
                                             }
 #define ABC_BUF_PTR(x)                      ((x).p)
 #define ABC_BUF_REALLOC(buf, count)         { \
                                                 unsigned long __abc_buf_realloc_count__ = (sizeof(*((buf).p)) * count); \
-                                                (buf).p = realloc((buf).p, __abc_buf_realloc_count__); \
+                                                (buf).p = (unsigned char*)realloc((buf).p, __abc_buf_realloc_count__); \
                                                 (buf).end = (buf).p +      __abc_buf_realloc_count__; \
                                             }
 #define ABC_BUF_EXPAND(buf, count)          { \
                                                 unsigned long __abc_buf_expand_count__ = (((buf).end)-((buf).p)) + (sizeof(*((buf).p)) * count); \
-                                                (buf).p = realloc((buf).p, __abc_buf_expand_count__); \
+                                                (buf).p = (unsigned char*)realloc((buf).p, __abc_buf_expand_count__); \
                                                 (buf).end = (buf).p +      __abc_buf_expand_count__; \
                                             }
 #define ABC_BUF_APPEND_PTR(buf, ptr, count) { \
                                                 unsigned long __abc_buf_append_resize__ = (unsigned long) (((buf).end)-((buf).p)) + (sizeof(*((buf).p)) * count); \
-                                                (buf).p = realloc((buf).p, __abc_buf_append_resize__); \
+                                                (buf).p = (unsigned char*)realloc((buf).p, __abc_buf_append_resize__); \
                                                 (buf).end = (buf).p +      __abc_buf_append_resize__; \
                                                 memcpy((buf).end - count, ptr, count); \
                                             }
 #define ABC_BUF_APPEND(dst, src)            { \
                                                 unsigned long __abc_buf_append_size__ = (unsigned long) (((src).end)-((src).p)); \
                                                 unsigned long __abc_buf_append_resize__ = (unsigned long) (((dst).end)-((dst).p)) + __abc_buf_append_size__ ; \
-                                                (dst).p = realloc((dst).p, __abc_buf_append_resize__); \
+                                                (dst).p = (unsigned char*)realloc((dst).p, __abc_buf_append_resize__); \
                                                 (dst).end = (dst).p +      __abc_buf_append_resize__; \
                                                 memcpy((dst).end - __abc_buf_append_size__, (src).p,  __abc_buf_append_size__); \
                                             }
@@ -267,7 +273,7 @@ extern "C" {
                                                 unsigned long __abc_buf_dup_size__ = (int) (((src).end)-((src).p)); \
                                                 if (__abc_buf_dup_size__ > 0) \
                                                 { \
-                                                    (dst).p = malloc(__abc_buf_dup_size__); \
+                                                    (dst).p = (unsigned char*)malloc(__abc_buf_dup_size__); \
                                                     (dst).end = (dst).p + __abc_buf_dup_size__; \
                                                     memcpy((dst).p, (src).p, __abc_buf_dup_size__); \
                                                 } \
@@ -275,14 +281,14 @@ extern "C" {
 #define ABC_BUF_STRCAT(dst, a, b)           { \
                                                 unsigned long __abc_buf_a_size__ = strlen(a); \
                                                 unsigned long __abc_buf_b_size__ = strlen(b); \
-                                                (dst).p = malloc(__abc_buf_a_size__ + __abc_buf_b_size__); \
+                                                (dst).p = (unsigned char*)malloc(__abc_buf_a_size__ + __abc_buf_b_size__); \
                                                 (dst).end = (dst).p + __abc_buf_a_size__ + __abc_buf_b_size__; \
                                                 memcpy((dst).p, (a), __abc_buf_a_size__); \
                                                 memcpy((dst).p + __abc_buf_a_size__, (b), __abc_buf_b_size__); \
                                             }
 #define ABC_BUF_DUP_PTR(buf, ptr, size)     { \
                                                 unsigned long __abc_buf_dup_size__ = (int) size; \
-                                                (buf).p = malloc(__abc_buf_dup_size__); \
+                                                (buf).p = (unsigned char*)malloc(__abc_buf_dup_size__); \
                                                 (buf).end = (buf).p + __abc_buf_dup_size__; \
                                                 memcpy((buf).p, ptr, __abc_buf_dup_size__); \
                                             }

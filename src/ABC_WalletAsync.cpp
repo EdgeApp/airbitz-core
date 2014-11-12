@@ -61,7 +61,7 @@ tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_WalletCreateInfo *pWalletCreateInfo;
-    ABC_ALLOC(pWalletCreateInfo, sizeof(tABC_WalletCreateInfo));
+    ABC_NEW(pWalletCreateInfo, tABC_WalletCreateInfo);
 
     ABC_CHECK_RET(ABC_SyncKeysCopy(&pWalletCreateInfo->pKeys, pKeys, pError));
     ABC_BUF_DUP(pWalletCreateInfo->L1, L1);

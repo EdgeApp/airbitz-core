@@ -48,7 +48,7 @@ void ABC_GeneralFreeInfo(tABC_GeneralInfo *pInfo)
     {
         if ((pInfo->aMinersFees != NULL) && (pInfo->countMinersFees > 0))
         {
-            for (int i = 0; i < pInfo->countMinersFees; i++)
+            for (unsigned i = 0; i < pInfo->countMinersFees; i++)
             {
                 ABC_CLEAR_FREE(pInfo->aMinersFees[i], sizeof(tABC_GeneralMinerFee));
             }
@@ -63,7 +63,7 @@ void ABC_GeneralFreeInfo(tABC_GeneralInfo *pInfo)
 
         if ((pInfo->aszObeliskServers != NULL) && (pInfo->countObeliskServers > 0))
         {
-            for (int i = 0; i < pInfo->countObeliskServers; i++)
+            for (unsigned i = 0; i < pInfo->countObeliskServers; i++)
             {
                 ABC_FREE_STR(pInfo->aszObeliskServers[i]);
             }
@@ -72,7 +72,7 @@ void ABC_GeneralFreeInfo(tABC_GeneralInfo *pInfo)
 
         if ((pInfo->aszSyncServers != NULL) && (pInfo->countSyncServers > 0))
         {
-            for (int i = 0; i < pInfo->countSyncServers; i++)
+            for (unsigned i = 0; i < pInfo->countSyncServers; i++)
             {
                 ABC_FREE_STR(pInfo->aszSyncServers[i]);
             }
@@ -98,6 +98,11 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     json_t  *pJSON_Value            = NULL;
     char    *szInfoFilename         = NULL;
     tABC_GeneralInfo *pInfo         = NULL;
+    json_t  *pJSON_MinersFeesArray  = NULL;
+    json_t  *pJSON_AirBitzFees      = NULL;
+    json_t  *pJSON_ObeliskArray     = NULL;
+    json_t  *pJSON_SyncArray        = NULL;
+    bool bExists = false;
 
     ABC_CHECK_NULL(ppInfo);
 
@@ -105,7 +110,6 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     ABC_CHECK_RET(ABC_GeneralGetInfoFilename(&szInfoFilename, pError));
 
     // check to see if we have the file
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szInfoFilename, &bExists, pError));
     if (false == bExists)
     {
@@ -117,24 +121,24 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     ABC_CHECK_RET(ABC_FileIOReadFileObject(szInfoFilename, &pJSON_Root, true, pError));
 
     // allocate the struct
-    ABC_ALLOC(pInfo, sizeof(tABC_GeneralInfo));
+    ABC_NEW(pInfo, tABC_GeneralInfo);
 
     // get the miners fees array
-    json_t *pJSON_MinersFeesArray = json_object_get(pJSON_Root, JSON_INFO_MINERS_FEES_FIELD);
+    pJSON_MinersFeesArray = json_object_get(pJSON_Root, JSON_INFO_MINERS_FEES_FIELD);
     ABC_CHECK_ASSERT((pJSON_MinersFeesArray && json_is_array(pJSON_MinersFeesArray)), ABC_CC_JSONError, "Error parsing JSON array value");
 
     // get the number of elements in the array
     pInfo->countMinersFees = (unsigned int) json_array_size(pJSON_MinersFeesArray);
     if (pInfo->countMinersFees > 0)
     {
-        ABC_ALLOC(pInfo->aMinersFees, pInfo->countMinersFees * sizeof(tABC_GeneralMinerFee *));
+        ABC_ARRAY_NEW(pInfo->aMinersFees, pInfo->countMinersFees, tABC_GeneralMinerFee*);
     }
 
     // run through all the miners fees
-    for (int i = 0; i < pInfo->countMinersFees; i++)
+    for (unsigned i = 0; i < pInfo->countMinersFees; i++)
     {
         tABC_GeneralMinerFee *pFee = NULL;
-        ABC_ALLOC(pFee, sizeof(tABC_GeneralMinerFee));
+        ABC_NEW(pFee, tABC_GeneralMinerFee);
 
         // get the source object
         json_t *pJSON_Fee = json_array_get(pJSON_MinersFeesArray, i);
@@ -155,10 +159,10 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     }
 
     // allocate the air bitz fees
-    ABC_ALLOC(pInfo->pAirBitzFee, sizeof(tABC_GeneralAirBitzFee));
+    ABC_NEW(pInfo->pAirBitzFee, tABC_GeneralAirBitzFee);
 
     // get the air bitz fees object
-    json_t *pJSON_AirBitzFees = json_object_get(pJSON_Root, JSON_INFO_AIRBITZ_FEES_FIELD);
+    pJSON_AirBitzFees = json_object_get(pJSON_Root, JSON_INFO_AIRBITZ_FEES_FIELD);
     ABC_CHECK_ASSERT((pJSON_AirBitzFees && json_is_object(pJSON_AirBitzFees)), ABC_CC_JSONError, "Error parsing JSON object value");
 
     // get the air bitz fees percentage
@@ -183,18 +187,18 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
 
 
     // get the obelisk array
-    json_t *pJSON_ObeliskArray = json_object_get(pJSON_Root, JSON_INFO_OBELISK_SERVERS_FIELD);
+    pJSON_ObeliskArray = json_object_get(pJSON_Root, JSON_INFO_OBELISK_SERVERS_FIELD);
     ABC_CHECK_ASSERT((pJSON_ObeliskArray && json_is_array(pJSON_ObeliskArray)), ABC_CC_JSONError, "Error parsing JSON array value");
 
     // get the number of elements in the array
     pInfo->countObeliskServers = (unsigned int) json_array_size(pJSON_ObeliskArray);
     if (pInfo->countObeliskServers > 0)
     {
-        ABC_ALLOC(pInfo->aszObeliskServers, pInfo->countObeliskServers * sizeof(char *));
+        ABC_ARRAY_NEW(pInfo->aszObeliskServers, pInfo->countObeliskServers, char*);
     }
 
     // run through all the obelisk servers
-    for (int i = 0; i < pInfo->countObeliskServers; i++)
+    for (unsigned i = 0; i < pInfo->countObeliskServers; i++)
     {
         // get the obelisk server
         pJSON_Value = json_array_get(pJSON_ObeliskArray, i);
@@ -203,7 +207,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     }
 
     // get the sync array
-    json_t *pJSON_SyncArray = json_object_get(pJSON_Root, JSON_INFO_SYNC_SERVERS_FIELD);
+    pJSON_SyncArray = json_object_get(pJSON_Root, JSON_INFO_SYNC_SERVERS_FIELD);
     if (pJSON_SyncArray)
     {
         ABC_CHECK_ASSERT((pJSON_SyncArray && json_is_array(pJSON_SyncArray)), ABC_CC_JSONError, "Error parsing JSON array value");
@@ -212,11 +216,11 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
         pInfo->countSyncServers = (unsigned int) json_array_size(pJSON_SyncArray);
         if (pInfo->countSyncServers > 0)
         {
-            ABC_ALLOC(pInfo->aszSyncServers, pInfo->countSyncServers * sizeof(char *));
+            ABC_ARRAY_NEW(pInfo->aszSyncServers, pInfo->countSyncServers, char*);
         }
 
         // run through all the sync servers
-        for (int i = 0; i < pInfo->countSyncServers; i++)
+        for (unsigned i = 0; i < pInfo->countSyncServers; i++)
         {
             // get the sync server
             pJSON_Value = json_array_get(pJSON_SyncArray, i);
@@ -261,12 +265,12 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     char    *szInfoFilename = NULL;
     char    *szJSON         = NULL;
     bool    bUpdateRequired = true;
+    bool bExists = false;
 
     // get the info filename
     ABC_CHECK_RET(ABC_GeneralGetInfoFilename(&szInfoFilename, pError));
 
     // check to see if we have the file
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szInfoFilename, &bExists, pError));
     if (true == bExists)
     {
@@ -290,7 +294,7 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     if (bUpdateRequired)
     {
         // create the URL
-        ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+        ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
         sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_INFO_PATH);
 
         // send the command
@@ -357,7 +361,7 @@ tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename,
     *pszFilename = NULL;
 
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRootDir, pError));
-    ABC_ALLOC(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(*pszFilename, "%s/%s", szRootDir, GENERAL_INFO_FILENAME);
 
 exit:
@@ -379,7 +383,7 @@ void ABC_GeneralFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices)
     {
         if ((pQuestionChoices->aChoices != NULL) && (pQuestionChoices->numChoices > 0))
         {
-            for (int i = 0; i < pQuestionChoices->numChoices; i++)
+            for (unsigned i = 0; i < pQuestionChoices->numChoices; i++)
             {
                 tABC_QuestionChoice *pChoice = pQuestionChoices->aChoices[i];
 
@@ -412,16 +416,17 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
     tABC_QuestionChoices *pQuestionChoices = NULL;
+    bool bExists = false;
+    unsigned int count = 0;
 
     ABC_CHECK_NULL(ppQuestionChoices);
 
     // create the filename for the question json
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRootDir, pError));
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szRootDir, GENERAL_QUESTIONS_FILENAME);
 
     // if the file doesn't exist
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     if (true != bExists)
     {
@@ -437,24 +442,24 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     ABC_CHECK_ASSERT((pJSON_Value && json_is_array(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON array value for recovery questions");
 
     // get the number of elements in the array
-    unsigned int count = (unsigned int) json_array_size(pJSON_Value);
+    count = (unsigned int) json_array_size(pJSON_Value);
     if (count <= 0)
     {
         ABC_RET_ERROR(ABC_CC_JSONError, "No questions in the recovery question choices file")
     }
 
     // allocate the data
-    ABC_ALLOC(pQuestionChoices, sizeof(tABC_QuestionChoices));
+    ABC_NEW(pQuestionChoices, tABC_QuestionChoices);
     pQuestionChoices->numChoices = count;
-    ABC_ALLOC(pQuestionChoices->aChoices, sizeof(tABC_QuestionChoice *) * count);
+    ABC_ARRAY_NEW(pQuestionChoices->aChoices, count, tABC_QuestionChoice*);
 
-    for (int i = 0; i < count; i++)
+    for (unsigned i = 0; i < count; i++)
     {
         json_t *pJSON_Elem = json_array_get(pJSON_Value, i);
         ABC_CHECK_ASSERT((pJSON_Elem && json_is_object(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON element value for recovery questions");
 
         // allocate this element
-        ABC_ALLOC(pQuestionChoices->aChoices[i], sizeof(tABC_QuestionChoice));
+        ABC_NEW(pQuestionChoices->aChoices[i], tABC_QuestionChoice);
 
         // get the category
         json_t *pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_CATEGORY_FIELD);
@@ -512,7 +517,7 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
 
     // create the filename for the question json
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRootDir, pError));
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", szRootDir, GENERAL_QUESTIONS_FILENAME);
 
     // get the JSON for the file
@@ -550,10 +555,13 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
     json_t  *pJSON_Root     = NULL;
     char    *szURL          = NULL;
     char    *szResults      = NULL;
+    json_t  *pJSON_Value    = NULL;
+    json_error_t error;
+    int statusCode = 0;
 
     ABC_CHECK_NULL(ppJSON_Q);
     // create the URL
-    ABC_ALLOC(szURL, ABC_URL_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_QUESTIONS_PATH);
 
     // send the command
@@ -561,8 +569,6 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
     ABC_DebugLog("Server results: %s", szResults);
 
     // decode the result
-    json_t *pJSON_Value = NULL;
-    json_error_t error;
     pJSON_Root = json_loads(szResults, 0, &error);
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
@@ -570,7 +576,7 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
     // get the status code
     pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
-    int statusCode = (int) json_integer_value(pJSON_Value);
+    statusCode = (int) json_integer_value(pJSON_Value);
 
     // if there was a failure
     if (ABC_Server_Code_Success != statusCode)

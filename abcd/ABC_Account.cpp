@@ -82,7 +82,7 @@ tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
     bool bExists = false;
 
     // Find the file:
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_CATEGORIES_FILENAME);
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
 
@@ -121,11 +121,11 @@ tABC_CC ABC_AccountCategoriesAdd(tABC_SyncKeys *pKeys,
     // if there are categories
     if ((aszCategories != NULL) && (categoryCount > 0))
     {
-        aszCategories = realloc(aszCategories, sizeof(char *) * (categoryCount + 1));
+        ABC_ARRAY_RESIZE(aszCategories, categoryCount + 1, char*);
     }
     else
     {
-        ABC_ALLOC(aszCategories, sizeof(char *));
+        ABC_ARRAY_NEW(aszCategories, 1, char*);
         categoryCount = 0;
     }
     ABC_STRDUP(aszCategories[categoryCount], szCategory);
@@ -162,7 +162,7 @@ tABC_CC ABC_AccountCategoriesRemove(tABC_SyncKeys *pKeys,
     ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &aszCategories, &categoryCount, pError));
 
     // got through all the categories and only add ones that are not this one
-    for (int i = 0; i < categoryCount; i++)
+    for (unsigned i = 0; i < categoryCount; i++)
     {
         // if this is not the string we are looking to remove then add it to our new arrary
         if (0 != strcmp(aszCategories[i], szCategory))
@@ -170,11 +170,11 @@ tABC_CC ABC_AccountCategoriesRemove(tABC_SyncKeys *pKeys,
             // if there are categories
             if ((aszNewCategories != NULL) && (newCategoryCount > 0))
             {
-                aszNewCategories = realloc(aszNewCategories, sizeof(char *) * (newCategoryCount + 1));
+                ABC_ARRAY_NEW(aszNewCategories, newCategoryCount + 1, char*);
             }
             else
             {
-                ABC_ALLOC(aszNewCategories, sizeof(char *));
+                ABC_ARRAY_NEW(aszNewCategories, 1, char*);
                 newCategoryCount = 0;
             }
             ABC_STRDUP(aszNewCategories[newCategoryCount], aszCategories[i]);
@@ -210,7 +210,7 @@ tABC_CC ABC_AccountCategoriesSave(tABC_SyncKeys *pKeys,
     ABC_CHECK_RET(ABC_UtilCreateArrayJSONObject(aszCategories, count, JSON_ACCT_CATEGORIES_FIELD, &dataJSON, pError));
 
     // write them out
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_CATEGORIES_FILENAME);
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(dataJSON, pKeys->MK, ABC_CryptoType_AES256, szFilename, pError));
 
@@ -234,11 +234,12 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     tABC_AccountSettings *pSettings = NULL;
-    int i = 0;
+    tABC_ExchangeRateSource **aSources = NULL;
+    unsigned i = 0;
 
     ABC_CHECK_NULL(ppSettings);
 
-    ABC_ALLOC(pSettings, sizeof(tABC_AccountSettings));
+    ABC_NEW(pSettings, tABC_AccountSettings);
 
     pSettings->szFirstName = NULL;
     pSettings->szLastName = NULL;
@@ -256,14 +257,14 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     pSettings->currencyNum = CURRENCY_NUM_USD;
 
     pSettings->exchangeRateSources.numSources = EXCHANGE_DEFAULTS_SIZE;
-    ABC_ALLOC(pSettings->exchangeRateSources.aSources,
-              pSettings->exchangeRateSources.numSources * sizeof(tABC_ExchangeRateSource *));
+    ABC_ARRAY_NEW(pSettings->exchangeRateSources.aSources,
+                    pSettings->exchangeRateSources.numSources, tABC_ExchangeRateSource*);
 
-    tABC_ExchangeRateSource **aSources = pSettings->exchangeRateSources.aSources;
+    aSources = pSettings->exchangeRateSources.aSources;
 
     for (i = 0; i < EXCHANGE_DEFAULTS_SIZE; ++i)
     {
-        ABC_ALLOC(aSources[i], sizeof(tABC_ExchangeRateSource));
+        ABC_NEW(aSources[i], tABC_ExchangeRateSource);
         aSources[i]->currencyNum = EXCHANGE_DEFAULTS[i].currencyNum;
         ABC_STRDUP(aSources[i]->szSource, EXCHANGE_DEFAULTS[i].szDefaultExchange);
     }
@@ -300,15 +301,15 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
+    bool bExists = false;
 
     ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(ppSettings);
 
     // get the settings filename
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_SETTINGS_FILENAME);
 
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     if (true == bExists)
     {
@@ -317,7 +318,7 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
         //ABC_DebugLog("Loaded settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
 
         // allocate the new settings object
-        ABC_ALLOC(pSettings, sizeof(tABC_AccountSettings));
+        ABC_NEW(pSettings, tABC_AccountSettings);
         pSettings->szFirstName = NULL;
         pSettings->szLastName = NULL;
         pSettings->szNickname = NULL;
@@ -467,14 +468,15 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
         pSettings->exchangeRateSources.numSources = (int) json_array_size(pJSON_Sources);
         if (pSettings->exchangeRateSources.numSources > 0)
         {
-            ABC_ALLOC(pSettings->exchangeRateSources.aSources, pSettings->exchangeRateSources.numSources * sizeof(tABC_ExchangeRateSource *));
+            ABC_ARRAY_NEW(pSettings->exchangeRateSources.aSources,
+                          pSettings->exchangeRateSources.numSources, tABC_ExchangeRateSource*);
         }
 
         // run through all the sources
-        for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)
+        for (unsigned i = 0; i < pSettings->exchangeRateSources.numSources; i++)
         {
             tABC_ExchangeRateSource *pSource = NULL;
-            ABC_ALLOC(pSource, sizeof(tABC_ExchangeRateSource));
+            ABC_NEW(pSource, tABC_ExchangeRateSource);
 
             // get the source object
             json_t *pJSON_Source = json_array_get(pJSON_Sources, i);
@@ -498,12 +500,12 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
         {
             size_t curExchanges = pSettings->exchangeRateSources.numSources;
             // resize exchange rate array
-            ABC_REALLOC(pSettings->exchangeRateSources.aSources,
-                            sizeof(tABC_ExchangeRateSource *) * EXCHANGE_DEFAULTS_SIZE);
-            for (int i = 0; i < EXCHANGE_DEFAULTS_SIZE; ++i)
+            ABC_ARRAY_RESIZE(pSettings->exchangeRateSources.aSources,
+                             EXCHANGE_DEFAULTS_SIZE, tABC_ExchangeRateSource*);
+            for (unsigned i = 0; i < EXCHANGE_DEFAULTS_SIZE; ++i)
             {
                 bool found = false;
-                for (int j = 0; j < pSettings->exchangeRateSources.numSources; ++j)
+                for (unsigned j = 0; j < pSettings->exchangeRateSources.numSources; ++j)
                 {
                     if (pSettings->exchangeRateSources.aSources[j]->currencyNum
                             == EXCHANGE_DEFAULTS[i].currencyNum)
@@ -515,7 +517,7 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
                 if (!found)
                 {
                     tABC_ExchangeRateSource *pSource = NULL;
-                    ABC_ALLOC(pSource, sizeof(tABC_ExchangeRateSource));
+                    ABC_NEW(pSource, tABC_ExchangeRateSource);
                     pSource->currencyNum = EXCHANGE_DEFAULTS[i].currencyNum;
                     ABC_STRDUP(pSource->szSource, EXCHANGE_DEFAULTS[i].szDefaultExchange);
 
@@ -549,7 +551,7 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
 
                 if (ABC_STRLEN(pSettings->szFullName) < bufLength)
                 {
-                    ABC_REALLOC(pSettings->szFullName, bufLength);
+                    ABC_ARRAY_RESIZE(pSettings->szFullName, bufLength, char);
                 }
                 fullName = pSettings->szFullName;
 
@@ -718,7 +720,7 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     ABC_CHECK_ASSERT(pJSON_SourcesArray != NULL, ABC_CC_Error, "Could not create settings JSON object");
 
     // add the exchange sources
-    for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)
+    for (unsigned i = 0; i < pSettings->exchangeRateSources.numSources; i++)
     {
         tABC_ExchangeRateSource *pSource = pSettings->exchangeRateSources.aSources[i];
 
@@ -748,7 +750,7 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // get the settings filename
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_SETTINGS_FILENAME);
 
     // encrypt and save json
@@ -781,7 +783,7 @@ void ABC_AccountSettingsFree(tABC_AccountSettings *pSettings)
         ABC_FREE_STR(pSettings->szPIN);
         if (pSettings->exchangeRateSources.aSources)
         {
-            for (int i = 0; i < pSettings->exchangeRateSources.numSources; i++)
+            for (unsigned i = 0; i < pSettings->exchangeRateSources.numSources; i++)
             {
                 ABC_FREE_STR(pSettings->exchangeRateSources.aSources[i]->szSource);
                 ABC_CLEAR_FREE(pSettings->exchangeRateSources.aSources[i], sizeof(tABC_ExchangeRateSource));
@@ -837,13 +839,13 @@ tABC_CC ABC_AccountWalletGetDir(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
 
     char *szWalletDir = NULL;
+    bool bExists = false;
 
     // Get the name:
-    ABC_ALLOC(szWalletDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szWalletDir, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szWalletDir, "%s/%s", pKeys->szSyncDir, ACCOUNT_WALLET_DIRNAME);
 
     // Create if neccessary:
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szWalletDir, &bExists, pError));
     if (!bExists)
     {
@@ -868,8 +870,8 @@ exit:
  */
 static int ABC_AccountWalletCompare(const void *a, const void *b)
 {
-    const tABC_AccountWalletInfo *pA = a;
-    const tABC_AccountWalletInfo *pB = b;
+    const tABC_AccountWalletInfo *pA = (const tABC_AccountWalletInfo*)a;
+    const tABC_AccountWalletInfo *pB = (const tABC_AccountWalletInfo*)b;
 
     return pA->sortIndex - pB->sortIndex;
 }
@@ -897,7 +899,7 @@ tABC_CC ABC_AccountWalletList(tABC_SyncKeys *pKeys,
     if (paszUUID)
     {
         char **aszUUID;
-        ABC_ALLOC_ARRAY(aszUUID, count, char*);
+        ABC_ARRAY_NEW(aszUUID, count, char*);
         for (unsigned i = 0; i < count; ++i)
         {
             aszUUID[i] = aInfo[i].szUUID;
@@ -946,8 +948,8 @@ tABC_CC ABC_AccountWalletsLoad(tABC_SyncKeys *pKeys,
     }
 
     // Load the wallets into the array:
-    ABC_ALLOC_ARRAY(aInfo, entries, tABC_AccountWalletInfo);
-    for (unsigned i = 0; i < pFileList->nCount; ++i)
+    ABC_ARRAY_NEW(aInfo, entries, tABC_AccountWalletInfo);
+    for (int i = 0; i < pFileList->nCount; ++i)
     {
         size_t len = strlen(pFileList->apFiles[i]->szName);
         if (5 <= len &&
@@ -1003,7 +1005,7 @@ tABC_CC ABC_AccountWalletLoad(tABC_SyncKeys *pKeys,
     const char *szBPS = NULL;
 
     // Load and decrypt:
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, ACCOUNT_WALLET_FILENAME, pKeys->szSyncDir, szUUID);
     ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, pKeys->MK, &pJSON, pError));
 
@@ -1070,7 +1072,7 @@ tABC_CC ABC_AccountWalletSave(tABC_SyncKeys *pKeys,
     ABC_CHECK_RET(ABC_AccountWalletGetDir(pKeys, NULL, pError));
 
     // Write out:
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, ACCOUNT_WALLET_FILENAME, pKeys->szSyncDir, pInfo->szUUID);
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON, pKeys->MK, ABC_CryptoType_AES256, szFilename, pError));
 

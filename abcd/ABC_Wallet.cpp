@@ -179,7 +179,7 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
     ABC_CHECK_NULL(pszUUID);
 
     // create a new wallet data struct
-    ABC_ALLOC(pData, sizeof(tWalletData));
+    ABC_NEW(pData, tWalletData);
     pData->archived = 0;
 
     // create wallet guid
@@ -391,7 +391,7 @@ tABC_CC ABC_WalletSetName(tABC_WalletID self, const char *szName, tABC_Error *pE
     //printf("name:\n%s\n", szJSON);
 
     // write the name out to the file
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_NAME_FILENAME);
     tABC_U08Buf Data;
     ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
@@ -427,7 +427,7 @@ tABC_CC ABC_WalletSetCurrencyNum(tABC_WalletID self, int currencyNum, tABC_Error
     //printf("currency num:\n%s\n", szJSON);
 
     // write the name out to the file
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_CURRENCY_FILENAME);
     tABC_U08Buf Data;
     ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
@@ -458,12 +458,12 @@ tABC_CC ABC_WalletAddAccount(tABC_WalletID self, const char *szAccount, tABC_Err
     // if there are already accounts in the list
     if ((pData->aszAccounts) && (pData->numAccounts > 0))
     {
-        pData->aszAccounts = realloc(pData->aszAccounts, sizeof(char *) * (pData->numAccounts + 1));
+        ABC_ARRAY_RESIZE(pData->aszAccounts, pData->numAccounts + 1, char*);
     }
     else
     {
         pData->numAccounts = 0;
-        ABC_ALLOC(pData->aszAccounts, sizeof(char *));
+        ABC_ARRAY_NEW(pData->aszAccounts, 1, char*);
     }
     ABC_STRDUP(pData->aszAccounts[pData->numAccounts], szAccount);
     pData->numAccounts++;
@@ -472,7 +472,7 @@ tABC_CC ABC_WalletAddAccount(tABC_WalletID self, const char *szAccount, tABC_Err
     ABC_CHECK_RET(ABC_UtilCreateArrayJSONObject(pData->aszAccounts, pData->numAccounts, JSON_WALLET_ACCOUNTS_FIELD, &dataJSON, pError));
 
     // write the name out to the file
-    ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_ACCOUNTS_FILENAME);
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(dataJSON, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
 
@@ -492,12 +492,12 @@ tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     char *szWalletRoot = NULL;
+    bool bExists = false;
 
     // create the account directory string
     ABC_CHECK_RET(ABC_WalletGetRootDirName(&szWalletRoot, pError));
 
     // if it doesn't exist
-    bool bExists = false;
     ABC_CHECK_RET(ABC_FileIOFileExists(szWalletRoot, &bExists, pError));
     if (true != bExists)
     {
@@ -526,7 +526,7 @@ tABC_CC ABC_WalletGetRootDirName(char **pszRootDir, tABC_Error *pError)
     ABC_CHECK_RET(ABC_FileIOGetRootDir(&szFileIORootDir, pError));
 
     // create the wallet directory string
-    ABC_ALLOC(*pszRootDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(*pszRootDir, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(*pszRootDir, "%s/%s", szFileIORootDir, WALLET_DIR);
 
 exit:
@@ -550,7 +550,7 @@ tABC_CC ABC_WalletGetDirName(char **pszDir, const char *szWalletUUID, tABC_Error
     ABC_CHECK_RET(ABC_WalletGetRootDirName(&szWalletRootDir, pError));
 
     // create the account directory string
-    ABC_ALLOC(*pszDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(*pszDir, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_NULL(*pszDir);
     sprintf(*pszDir, "%s/%s", szWalletRootDir, szWalletUUID);
 
@@ -577,7 +577,7 @@ tABC_CC ABC_WalletGetSyncDirName(char **pszDir, const char *szWalletUUID, tABC_E
 
     ABC_CHECK_RET(ABC_WalletGetDirName(&szWalletDir, szWalletUUID, pError));
 
-    ABC_ALLOC(*pszDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(*pszDir, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_NULL(*pszDir);
     sprintf(*pszDir, "%s/%s", szWalletDir, WALLET_SYNC_DIR);
 
@@ -603,7 +603,7 @@ tABC_CC ABC_WalletGetTxDirName(char **pszDir, const char *szWalletUUID, tABC_Err
 
     ABC_CHECK_RET(ABC_WalletGetSyncDirName(&szWalletSyncDir, szWalletUUID, pError));
 
-    ABC_ALLOC(*pszDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(*pszDir, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_NULL(*pszDir);
     sprintf(*pszDir, "%s/%s", szWalletSyncDir, WALLET_TX_DIR);
 
@@ -629,7 +629,7 @@ tABC_CC ABC_WalletGetAddressDirName(char **pszDir, const char *szWalletUUID, tAB
 
     ABC_CHECK_RET(ABC_WalletGetSyncDirName(&szWalletSyncDir, szWalletUUID, pError));
 
-    ABC_ALLOC(*pszDir, ABC_FILEIO_MAX_PATH_LENGTH);
+    ABC_STR_NEW(*pszDir, ABC_FILEIO_MAX_PATH_LENGTH);
     ABC_CHECK_NULL(*pszDir);
     sprintf(*pszDir, "%s/%s", szWalletSyncDir, WALLET_ADDR_DIR);
 
@@ -673,7 +673,7 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
         // we need to add it
 
         // create a new wallet data struct
-        ABC_ALLOC(pData, sizeof(tWalletData));
+        ABC_NEW(pData, tWalletData);
         ABC_STRDUP(pData->szUUID, self.szUUID);
         ABC_CHECK_RET(ABC_WalletGetDirName(&(pData->szWalletDir), self.szUUID, pError));
         ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), self.szUUID, pError));
@@ -706,7 +706,7 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
         else
         {
             // get the name
-            ABC_ALLOC(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
+            ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
             sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_NAME_FILENAME);
             bExists = false;
             ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
@@ -791,7 +791,7 @@ tABC_CC ABC_WalletClearCache(tABC_Error *pError)
 
     if ((gWalletsCacheCount > 0) && (NULL != gaWalletsCacheArray))
     {
-        for (int i = 0; i < gWalletsCacheCount; i++)
+        for (unsigned i = 0; i < gWalletsCacheCount; i++)
         {
             tWalletData *pData = gaWalletsCacheArray[i];
             ABC_WalletFreeData(pData);
@@ -815,11 +815,12 @@ tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    tWalletData *pExistingWalletData = NULL;
+
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
     ABC_CHECK_NULL(pData);
 
     // see if it exists first
-    tWalletData *pExistingWalletData = NULL;
     ABC_CHECK_RET(ABC_WalletGetFromCacheByUUID(pData->szUUID, &pExistingWalletData, pError));
 
     // if it doesn't currently exist in the array
@@ -830,13 +831,12 @@ tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError)
         {
             // create a new one
             gWalletsCacheCount = 0;
-            ABC_ALLOC(gaWalletsCacheArray, sizeof(tWalletData *));
+            ABC_ARRAY_NEW(gaWalletsCacheArray, 1, tWalletData*);
         }
         else
         {
             // extend the current one
-            gaWalletsCacheArray = realloc(gaWalletsCacheArray, sizeof(tWalletData *) * (gWalletsCacheCount + 1));
-
+            ABC_ARRAY_RESIZE(gaWalletsCacheArray, gWalletsCacheCount + 1, tWalletData*);
         }
         gaWalletsCacheArray[gWalletsCacheCount] = pData;
         gWalletsCacheCount++;
@@ -858,12 +858,12 @@ exit:
 tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    int i;
+    bool bExists = false;
+    unsigned i;
 
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
     ABC_CHECK_NULL(szUUID);
 
-    bool bExists = false;
     for (i = 0; i < gWalletsCacheCount; ++i)
     {
         tWalletData *pWalletInfo = gaWalletsCacheArray[i];
@@ -885,7 +885,7 @@ tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError)
         // Reduce the count of cache
         gWalletsCacheCount--;
         // and resize
-        gaWalletsCacheArray = realloc(gaWalletsCacheArray, sizeof(tWalletData *) * gWalletsCacheCount);
+        ABC_ARRAY_RESIZE(gaWalletsCacheArray, gWalletsCacheCount, tWalletData*);
     }
 
 exit:
@@ -911,7 +911,7 @@ tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, t
 
     if ((gWalletsCacheCount > 0) && (NULL != gaWalletsCacheArray))
     {
-        for (int i = 0; i < gWalletsCacheCount; i++)
+        for (unsigned i = 0; i < gWalletsCacheCount; i++)
         {
             tWalletData *pData = gaWalletsCacheArray[i];
             if (0 == strcmp(szUUID, pData->szUUID))
@@ -1000,7 +1000,7 @@ tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
     ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
 
     // create the wallet info struct
-    ABC_ALLOC(pInfo, sizeof(tABC_WalletInfo));
+    ABC_NEW(pInfo, tABC_WalletInfo);
 
     // copy data from what was cachqed
     ABC_STRDUP(pInfo->szUUID, self.szUUID);
@@ -1019,7 +1019,7 @@ tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
                                   &aTransactions, &nTxCount, pError));
         ABC_CHECK_RET(ABC_BridgeFilterTransactions(self.szUUID, aTransactions, &nTxCount, pError));
         pData->balance = 0;
-        for (int i = 0; i < nTxCount; i++)
+        for (unsigned i = 0; i < nTxCount; i++)
         {
             tABC_TxInfo *pTxInfo = aTransactions[i];
             pData->balance += pTxInfo->pDetails->amountSatoshi;
@@ -1095,9 +1095,9 @@ tABC_CC ABC_WalletGetWallets(tABC_SyncKeys *pKeys,
     // if we got anything
     if (nUUIDs > 0)
     {
-        ABC_ALLOC(aWalletInfo, sizeof(tABC_WalletInfo *) * nUUIDs);
+        ABC_ARRAY_NEW(aWalletInfo, nUUIDs, tABC_WalletInfo*);
 
-        for (int i = 0; i < nUUIDs; i++)
+        for (unsigned i = 0; i < nUUIDs; i++)
         {
             tABC_WalletInfo *pInfo = NULL;
             ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(pKeys, aszUUIDs[i]), &pInfo, pError));
@@ -1134,7 +1134,7 @@ void ABC_WalletFreeInfoArray(tABC_WalletInfo **aWalletInfo,
     if ((aWalletInfo != NULL) && (nCount > 0))
     {
         // go through all the elements
-        for (int i = 0; i < nCount; i++)
+        for (unsigned i = 0; i < nCount; i++)
         {
             ABC_WalletFreeInfo(aWalletInfo[i]);
         }

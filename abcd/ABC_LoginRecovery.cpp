@@ -21,6 +21,7 @@ tABC_CC ABC_LoginGetRQ(const char *szUserName,
 
     tABC_Login *pSelf = NULL;
     tABC_CarePackage *pCarePackage = NULL;
+    tABC_U08Buf L  = ABC_BUF_NULL;
     tABC_U08Buf L1 = ABC_BUF_NULL;
     tABC_U08Buf L4 = ABC_BUF_NULL;
     tABC_U08Buf RQ = ABC_BUF_NULL;
@@ -35,7 +36,6 @@ tABC_CC ABC_LoginGetRQ(const char *szUserName,
     ABC_CHECK_ASSERT(pCarePackage->ERQ, ABC_CC_NoRecoveryQuestions, "No recovery questions");
 
     // Create L4:
-    tABC_U08Buf L = ABC_BUF_NULL;
     ABC_BUF_SET_PTR(L, (unsigned char *)szUserName, strlen(szUserName));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pCarePackage->pSNRP4, &L4, pError));
 
@@ -126,6 +126,7 @@ tABC_CC ABC_LoginRecoverySet(tABC_Login *pSelf,
 
     tABC_CarePackage *pCarePackage = NULL;
     tABC_LoginPackage *pLoginPackage = NULL;
+    tABC_U08Buf L           = ABC_BUF_NULL;
     tABC_U08Buf oldL1       = ABC_BUF_NULL;
     tABC_U08Buf oldLP1      = ABC_BUF_NULL;
     tABC_U08Buf L4          = ABC_BUF_NULL;
@@ -147,7 +148,6 @@ tABC_CC ABC_LoginRecoverySet(tABC_Login *pSelf,
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pCarePackage->pSNRP4, pError));
 
     // L4  = Scrypt(L, SNRP4):
-    tABC_U08Buf L = ABC_BUF_NULL;
     ABC_BUF_SET_PTR(L, (unsigned char *)pSelf->szUserName, strlen(pSelf->szUserName));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pCarePackage->pSNRP4, &L4, pError));
 
