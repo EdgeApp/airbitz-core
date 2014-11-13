@@ -51,6 +51,8 @@
 #include "ABC_URL.h"
 #include "ABC_ServerDefs.h"
 
+#define URL_CONN_TIMEOUT 5
+
 static char *gszCaCertPath = NULL;
 static bool gbInitialized = false;
 static pthread_mutex_t  gMutex; // to block multiple threads from accessing curl at the same time
@@ -423,6 +425,12 @@ tABC_CC ABC_URLCurlHandleInit(CURL **ppCurlHandle, tABC_Error *pError)
         ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_CAINFO, gszCaCertPath)) == 0,
             ABC_CC_Error, "Curl failed to set ca-certificates.crt");
     }
+    curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_NOSIGNAL, 1);
+    ABC_CHECK_ASSERT(curlCode == 0, ABC_CC_Error, "Unable to ignore signals");
+
+    curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_CONNECTTIMEOUT, URL_CONN_TIMEOUT);
+    ABC_CHECK_ASSERT(curlCode == 0, ABC_CC_Error, "Unable to set connection timeout");
+
     *ppCurlHandle = pCurlHandle;
 exit:
     return cc;
