@@ -77,7 +77,7 @@ BC_API bool make_tx(
     return true;
 }
 
-BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& keys, watcher& watcher, bc::ec_secret nonce)
+BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& keys, watcher& watcher)
 {
     utx.code = ok;
 
@@ -132,7 +132,8 @@ BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& ke
             utx.code = invalid_sig;
             return false;
         }
-        data_chunk signature = sign(secret, sig_hash, nonce);
+        data_chunk signature = sign(secret, sig_hash,
+            create_nonce(secret, sig_hash));
         signature.push_back(0x01);
 
         // Create out scriptsig:
@@ -140,12 +141,6 @@ BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& ke
         scriptsig.push_operation(create_data_operation(signature));
         scriptsig.push_operation(create_data_operation(pubkey));
         utx.tx.inputs[i].script = scriptsig;
-
-        // This is a horrible hack!
-        // It exists because a spend from multiple instances of the same
-        // address would otherwise use the same nonce, thus revealing the
-        // private seed.
-        nonce = bitcoin_hash(to_data_chunk(nonce));
     }
     return true;
 }

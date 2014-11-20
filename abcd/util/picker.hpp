@@ -54,8 +54,7 @@ BC_API bool make_tx(
 
 BC_API bool sign_tx(unsigned_transaction_type& utx,
                     std::vector<std::string>& keys,
-                    libwallet::watcher& watcher,
-                    bc::ec_secret nonce);
+                    libwallet::watcher& watcher);
 
 }
 

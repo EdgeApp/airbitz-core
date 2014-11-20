@@ -750,7 +750,6 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     picker::unsigned_transaction_type *utx;
     std::vector<std::string> keys;
     std::string txid, malleableId;
-    tABC_U08Buf Nonce = ABC_BUF_NULL;
 
     utx = (picker::unsigned_transaction_type *) pUtx->data;
     auto row = watchers_.find(pSendInfo->wallet.szUUID);
@@ -762,12 +761,9 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     {
         keys.push_back(std::string(paPrivKey[i]));
     }
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(32, &Nonce, pError));
-    bc::ec_secret nonce;
-    std::copy(Nonce.p, Nonce.end, nonce.begin());
 
     // Sign the transaction
-    if (!picker::sign_tx(*utx, keys, *watcherInfo->watcher, nonce))
+    if (!picker::sign_tx(*utx, keys, *watcherInfo->watcher))
     {
         ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
     }
@@ -797,8 +793,8 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
 
     ABC_BridgeWatcherSerializeAsync(watcherInfo);
     ABC_BridgeExtractOutputs(watcherInfo->watcher, utx, malleableId, pUtx,pError);
+
 exit:
-    ABC_BUF_FREE(Nonce);
     return cc;
 }
 
