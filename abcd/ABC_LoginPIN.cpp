@@ -110,15 +110,7 @@ tABC_CC ABC_LoginPinExists(const char *szUserName,
     *pbExists = false;
     if (ABC_CC_Ok == ABC_LoginPinLocalLoad(&pLocal, AccountNum, &error))
     {
-        time_t now = time(NULL);
-        if (pLocal->expires < now)
-        {
-            ABC_CHECK_RET(ABC_LoginDirFileDelete(AccountNum, PIN_FILENAME, pError));
-        }
-        else
-        {
-            *pbExists = true;
-        }
+        *pbExists = true;
     }
 
 exit:
