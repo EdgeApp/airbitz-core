@@ -2385,7 +2385,7 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
         {
             N += 35; // number of non-alphanumeric characters on keyboard (iOS)
         }
-        const double guessesPerSecond = 1000.0; // this can be changed based upon the speed of the computer
+        const double guessesPerSecond = 1000000.0; // this can be changed based upon the speed of the computer
         // log2(x) = ln(x)/ln(2) = ln(x)*1.442695041
         double entropy = (double) L * log(N) * 1.442695041;
         double vars = pow(2, entropy);
