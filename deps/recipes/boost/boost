@@ -17,6 +17,7 @@ build() {
     echo Patching boost...
     patch -p1 < $download_dir/boost-1_55_0.patch
     patch -p1 < $recipe_dir/fix-atomic.patch
+    patch -p1 < $recipe_dir/libbitcoin-fixes.patch
     cp $recipe_dir/user-config.jam tools/build/v2/user-config.jam
 
     echo Building boost...
