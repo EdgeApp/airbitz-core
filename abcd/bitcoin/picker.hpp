@@ -7,7 +7,7 @@
 
 #include <bitcoin/bitcoin.hpp>
 #include <bitcoin/transaction.hpp>
-#include <bitcoin/watcher/watcher.hpp>
+#include "watcher.hpp"
 
 namespace abcd {
 
@@ -30,7 +30,7 @@ struct fee_schedule
 };
 
 BC_API bool make_tx(
-             libwallet::watcher& watcher,
+             abcd::watcher& watcher,
              const std::vector<bc::payment_address>& addresses,
              const bc::payment_address& changeAddr,
              int64_t amountSatoshi,
@@ -40,7 +40,7 @@ BC_API bool make_tx(
 
 BC_API bool sign_tx(unsigned_transaction_type& utx,
                     std::vector<std::string>& keys,
-                    libwallet::watcher& watcher);
+                    abcd::watcher& watcher);
 
 }
 

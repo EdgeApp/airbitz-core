@@ -67,7 +67,7 @@
 
 struct WatcherInfo
 {
-    libwallet::watcher *watcher;
+    abcd::watcher *watcher;
     std::set<std::string> addresses;
     tABC_BitCoin_Event_Callback fAsyncCallback;
     void *pData;
@@ -83,7 +83,7 @@ static std::map<WalletUUID, WatcherInfo*> watchers_;
 static unsigned gLastObelisk = 0;
 
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
-static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, abcd::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeExtractOutputs(abcd::watcher *watcher, abcd::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr);
 static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash);
@@ -416,7 +416,7 @@ tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
     }
 
     watcherInfo = new WatcherInfo();
-    watcherInfo->watcher = new libwallet::watcher();
+    watcherInfo->watcher = new abcd::watcher();
 
     ABC_CHECK_RET(ABC_WalletIDCopy(&watcherInfo->wallet, self, pError));
 
@@ -433,10 +433,10 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
 {
     tABC_CC cc = ABC_CC_Ok;
     WatcherInfo *watcherInfo = NULL;
-    libwallet::watcher::block_height_callback heightCallback;
-    libwallet::watcher::callback txCallback;
-    libwallet::watcher::tx_sent_callback sendCallback;
-    libwallet::watcher::fail_callback failCallback;
+    abcd::watcher::block_height_callback heightCallback;
+    abcd::watcher::callback txCallback;
+    abcd::watcher::tx_sent_callback sendCallback;
+    abcd::watcher::fail_callback failCallback;
 
     auto row = watchers_.find(szWalletUUID);
     if (row == watchers_.end())
@@ -1211,7 +1211,7 @@ exit:
 }
 
 static tABC_CC
-ABC_BridgeExtractOutputs(libwallet::watcher *watcher, abcd::unsigned_transaction_type *utx,
+ABC_BridgeExtractOutputs(abcd::watcher *watcher, abcd::unsigned_transaction_type *utx,
                          std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
