@@ -42,6 +42,8 @@ BC_API bool sign_tx(unsigned_transaction_type& utx,
                     std::vector<std::string>& keys,
                     abcd::watcher& watcher);
 
+bc::script_type build_pubkey_hash_script(const bc::short_hash& pubkey_hash);
+
 }
 
 #endif

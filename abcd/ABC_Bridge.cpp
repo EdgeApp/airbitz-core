@@ -85,6 +85,8 @@ static std::map<WalletUUID, WatcherInfo*> watchers_;
 // The last obelisk server we connected to:
 static unsigned gLastObelisk = 0;
 
+static void        ABC_BridgeDoSweep(WatcherInfo *watcherInfo, const bc::payment_address& address, const bc::ec_secret& key);
+static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
 static tABC_CC     ABC_BridgeExtractOutputs(abcd::watcher *watcher, abcd::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
@@ -463,8 +465,9 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     tABC_CC cc = ABC_CC_Ok;
     WatcherInfo *watcherInfo = NULL;
     abcd::watcher::block_height_callback heightCallback;
-    abcd::watcher::callback txCallback;
+    abcd::watcher::tx_callback txCallback;
     abcd::watcher::tx_sent_callback sendCallback;
+    abcd::watcher::quiet_callback on_quiet;
     abcd::watcher::fail_callback failCallback;
 
     auto row = watchers_.find(szWalletUUID);
@@ -482,7 +485,7 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     {
         ABC_BridgeTxCallback(watcherInfo, tx, fAsyncCallback, pData);
     };
-    watcherInfo->watcher->set_callback(std::move(txCallback));
+    watcherInfo->watcher->set_tx_callback(txCallback);
 
     heightCallback = [watcherInfo, fAsyncCallback, pData](const size_t height)
     {
@@ -490,14 +493,20 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
         ABC_TxBlockHeightUpdate(height, fAsyncCallback, pData, &error);
         ABC_BridgeWatcherSerializeAsync(watcherInfo);
     };
-    watcherInfo->watcher->set_height_callback(std::move(heightCallback));
+    watcherInfo->watcher->set_height_callback(heightCallback);
+
+    on_quiet = [watcherInfo]()
+    {
+        ABC_BridgeQuietCallback(watcherInfo);
+    };
+    watcherInfo->watcher->set_quiet_callback(on_quiet);
 
     failCallback = [watcherInfo]()
     {
         tABC_Error error;
         ABC_BridgeWatcherConnect(watcherInfo->wallet.szUUID, &error);
     };
-    watcherInfo->watcher->set_fail_callback(std::move(failCallback));
+    watcherInfo->watcher->set_fail_callback(failCallback);
 
     row->second->watcher->loop();
 exit:
@@ -1133,6 +1142,87 @@ ABC_BridgeIsTestNet()
     bc::payment_address foo;
     bc::set_public_key_hash(foo, bc::null_short_hash);
     return foo.version() != 0;
+}
+
+static
+void ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
+                       const bc::payment_address& address,
+                       const bc::ec_secret& key)
+{
+    tABC_Error error;
+
+    // Find utxos for this address:
+    auto utxos = watcherInfo->watcher->get_utxos(address);
+
+    // TODO: If there aren't any, maybe we should tell the GUI?
+    if (!utxos.size())
+        return;
+
+    // There are some utxos, so send them to ourselves:
+    tABC_TxDetails details;
+    memset(&details, 0, sizeof(tABC_TxDetails));
+    details.amountSatoshi = 0;
+    details.amountCurrency = 0;
+    details.amountFeesAirbitzSatoshi = 0;
+    details.amountFeesMinersSatoshi = 0;
+    details.szName = const_cast<char*>("");
+    details.szCategory = const_cast<char*>("Transfer:Paper wallet");
+    details.szNotes = const_cast<char*>("");
+    details.attributes = 0x2;
+
+    // Create a new receive address:
+    char *szID = NULL;
+    if (ABC_TxCreateReceiveRequest(watcherInfo->wallet,
+        &details, &szID, false, &error) != ABC_CC_Ok)
+        return;
+    char *szAddress = NULL;
+    if (ABC_TxGetRequestAddress(watcherInfo->wallet, szID,
+        &szAddress, &error) != ABC_CC_Ok)
+        return;
+    bc::payment_address to_address(szAddress);
+    ABC_FREE_STR(szAddress);
+
+    // Build a transaction:
+    uint64_t funds = 0;
+    abcd::unsigned_transaction_type utx;
+    utx.code = abcd::ok;
+    utx.tx.version = 1;
+    utx.tx.locktime = 0;
+    for (auto &utxo : utxos)
+    {
+        bc::transaction_input_type input;
+        input.sequence = 4294967295;
+        input.previous_output = utxo.point;
+        funds += utxo.value;
+        utx.tx.inputs.push_back(input);
+    }
+    if (funds < 10500) // This hard-coded mining fee is maybe not a good idea...
+        return; // And maybe we could tell the UI that there aren't enough funds...
+    bc::transaction_output_type output;
+    output.value = funds - 10000;
+    output.script = abcd::build_pubkey_hash_script(to_address.hash());
+    utx.tx.outputs.push_back(output);
+
+    // Now sign that:
+    std::vector<std::string> keys{ bc::encode_hex(key) };
+    if (!abcd::sign_tx(utx, keys, *watcherInfo->watcher))
+        return;
+
+    // Send:
+    watcherInfo->watcher->send_tx(utx.tx);
+    ABC_BridgeChainPostTx(&utx, &error);
+    if (!ABC_BridgeIsTestNet())
+    {
+        ABC_BridgeBlockhainPostTx(&utx, &error);
+    }
+}
+
+static
+void ABC_BridgeQuietCallback(WatcherInfo *watcherInfo)
+{
+    // If we are sweeping any keys, do that now:
+    for (auto i: watcherInfo->sweeping)
+        ABC_BridgeDoSweep(watcherInfo, i.first, i.second);
 }
 
 static

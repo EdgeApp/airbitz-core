@@ -15,7 +15,6 @@ using namespace libbitcoin;
 using namespace libwallet;
 
 static std::map<data_chunk, std::string> address_map;
-static script_type build_pubkey_hash_script(const short_hash& pubkey_hash);
 static operation create_data_operation(data_chunk& data);
 
 BC_API bool make_tx(
@@ -131,7 +130,7 @@ BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& ke
     return true;
 }
 
-static script_type build_pubkey_hash_script(const short_hash& pubkey_hash)
+script_type build_pubkey_hash_script(const short_hash& pubkey_hash)
 {
     script_type result;
     result.push_operation({opcode::dup, data_chunk()});
