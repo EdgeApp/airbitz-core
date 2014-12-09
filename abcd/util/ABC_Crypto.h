@@ -138,14 +138,6 @@ extern "C" {
                                    tABC_U08Buf  *pData,
                                    tABC_Error   *pError);
 
-    tABC_CC ABC_CryptoBase58Encode(const tABC_U08Buf Data,
-                                   char              **pszDataBase58,
-                                   tABC_Error        *pError);
-
-    tABC_CC ABC_CryptoBase58Decode(const char   *szDataBase58,
-                                   tABC_U08Buf  *pData,
-                                   tABC_Error   *pError);
-
     tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
                                     tABC_Error *pError);
 

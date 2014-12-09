@@ -2589,7 +2589,7 @@ tABC_CC ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const cha
     ABC_CHECK_RET(ABC_CryptoHMAC256(TxID, MK, &DataHMAC, pError));
 
     // create a base58 of the hmac-256 TxID
-    ABC_CHECK_RET(ABC_CryptoBase58Encode(DataHMAC, &szDataBase58, pError));
+    ABC_CHECK_RET(ABC_BridgeBase58Encode(DataHMAC, &szDataBase58, pError));
 
     ABC_STR_NEW(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(*pszFilename, "%s/%s%s", szTxDir, szDataBase58, (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX));
@@ -3504,7 +3504,7 @@ tABC_CC ABC_TxCreateAddressFilename(tABC_WalletID self, char **pszFilename, cons
     ABC_CHECK_RET(ABC_CryptoHMAC256(PubAddress, MK, &DataHMAC, pError));
 
     // create a base58 of the hmac-256 public address
-    ABC_CHECK_RET(ABC_CryptoBase58Encode(DataHMAC, &szDataBase58, pError));
+    ABC_CHECK_RET(ABC_BridgeBase58Encode(DataHMAC, &szDataBase58, pError));
 
     // create the filename
     ABC_STR_NEW(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);

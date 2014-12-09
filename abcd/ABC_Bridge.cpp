@@ -318,32 +318,6 @@ exit:
 }
 
 /**
- * Converts a Base58-encoded string to a block of data.
- *
- * @param szBase58 The string to convert.
- * @param pData A buffer structure that will be pointed at the newly-allocated output data.
- */
-tABC_CC ABC_BridgeBase58Decode(const char *szBase58, tABC_U08Buf *pData, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    libbitcoin::data_chunk out;
-
-    std::string in = szBase58;
-    if (!libbitcoin::is_base58(in))
-        ABC_RET_ERROR(ABC_CC_ParseError, "Not Base58 data");
-
-    out = libbitcoin::decode_base58(in);
-
-    pData->p = static_cast<unsigned char*>(malloc(out.size()));
-    ABC_CHECK_ASSERT(pData->p != NULL, ABC_CC_NULLPtr, "malloc failed (returned NULL)");
-    pData->end = pData->p + out.size();
-    memcpy(pData->p, out.data(), out.size());
-
-exit:
-    return cc;
-}
-
-/**
  * Calculates a public address for the HD wallet main external chain.
  * @param pszPubAddress set to the newly-generated address, or set to NULL if
  * there is a math error. If that happens, add 1 to N and try again.
