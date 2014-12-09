@@ -16,7 +16,7 @@ download() {
         # Download:
         if [ $path != ${path%.git} ]; then
             if [ -e "$path" ]; then
-                git --git-dir="$path" fetch -f "$url" master:master
+                git --git-dir="$path" fetch -f "$url" +refs/heads/*:refs/heads/*
             else
                 git clone --bare "$url" "$path"
             fi
