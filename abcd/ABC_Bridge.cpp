@@ -69,6 +69,9 @@ struct WatcherInfo
 {
     abcd::watcher *watcher;
     std::set<std::string> addresses;
+    std::unordered_map<bc::payment_address, bc::ec_secret> sweeping;
+
+    // Callback:
     tABC_BitCoin_Event_Callback fAsyncCallback;
     void *pData;
     tABC_WalletID wallet;
@@ -393,6 +396,36 @@ tABC_CC ABC_BridgeGetBitcoinPrivAddress(char **pszPrivAddress,
     {
         *pszPrivAddress = nullptr;
     }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
+                           tABC_U08Buf key,
+                           bool compressed,
+                           tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    bc::ec_secret ec_key;
+    bc::ec_point ec_addr;
+    bc::payment_address address;
+    WatcherInfo *watcherInfo = NULL;
+
+    auto row = watchers_.find(self.szUUID);
+    ABC_CHECK_ASSERT(row != watchers_.end(), ABC_CC_Error, "Unable find watcher");
+    watcherInfo = row->second;
+
+    // Decode key and address:
+    ABC_CHECK_ASSERT(ABC_BUF_SIZE(key) == ec_key.size(),
+        ABC_CC_Error, "Bad key size");
+    std::copy(key.p, key.end, ec_key.data());
+    ec_addr = bc::secret_to_public_key(ec_key, compressed);
+    address.set(pubkey_version, bc::bitcoin_short_hash(ec_addr));
+
+    // Start the sweep:
+    watcherInfo->sweeping[address] = ec_key;
+    watcherInfo->watcher->watch_address(address);
 
 exit:
     return cc;

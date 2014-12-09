@@ -969,6 +969,12 @@ extern "C" {
                              uint64_t *pMaxSatoshi,
                              tABC_Error *pError);
 
+    tABC_CC ABC_SweepKey(const char *szUsername,
+                         const char *szPassword,
+                         const char *szWalletUUID,
+                         const char *szKey,
+                         tABC_Error *pError);
+
     /* === Transactions: === */
     tABC_CC ABC_GetTransaction(const char *szUserName,
                                const char *szPassword,

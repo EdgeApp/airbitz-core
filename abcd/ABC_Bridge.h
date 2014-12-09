@@ -87,6 +87,11 @@ extern "C" {
                                             int32_t N,
                                             tABC_Error *pError);
 
+    tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
+                               tABC_U08Buf key,
+                               bool compressed,
+                               tABC_Error *pError);
+
     tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
                                    tABC_Error *pError);
 
