@@ -2584,6 +2584,9 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         ABC_CHECK_RET(ABC_LoginShimSync(szUserName, szPassword, &accountDirty, pError));
         if (accountDirty && fAsyncBitCoinEventCallback)
         {
+            // Try to clear the wallet cache in case the Wallets list changed
+            ABC_CHECK_RET(ABC_WalletClearCache(pError));
+
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
             info.pData = pData;
