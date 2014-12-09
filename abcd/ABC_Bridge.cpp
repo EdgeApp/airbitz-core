@@ -117,6 +117,28 @@ tABC_CC ABC_BridgeInitialize(tABC_Error *pError)
 }
 
 /**
+ * Converts a Bitcoin private key in WIF format into a 256-bit value.
+ */
+tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
+                            tABC_U08Buf *pOut,
+                            bool *pbCompressed,
+                            tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    bc::ec_secret out;
+
+    out = libwallet::wif_to_secret(szWIF);
+    if (out == bc::null_hash)
+        ABC_RET_ERROR(ABC_CC_ParseError, "Malformed WIF");
+
+    ABC_BUF_DUP_PTR(*pOut, out.data(), out.size());
+    *pbCompressed = libwallet::is_wif_compressed(szWIF);
+
+exit:
+    return cc;
+}
+
+/**
  * Parses a Bitcoin URI and creates an info struct with the data found in the URI.
  *
  * @param szURI     URI to parse
