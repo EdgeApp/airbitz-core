@@ -1,3 +1,4 @@
+
 depends="curl jansson libbitcoin-watcher libcsv libgit2 libqrencode openssl scrypt"
 inherit lib
 
@@ -8,6 +9,11 @@ build() {
     ios-*)  output=libabc.a ;;
     *)      output=libabc.so ;;
     esac
+
+    if [ -n ${DEBUG+x} ]; then
+        export CFLAGS="$CFLAGS -O0"
+        export CXXFLAGS="$CXXFLAGS -O0"
+    fi
 
     # Build:
     export WORK_DIR=$work_dir
