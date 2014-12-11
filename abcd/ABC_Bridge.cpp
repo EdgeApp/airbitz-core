@@ -101,8 +101,8 @@ static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
 static void        *ABC_BridgeWatcherSerialize(void *pData);
 static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx);
 
-static tABC_CC     ABC_BridgeChainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
-static tABC_CC     ABC_BridgeBlockhainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeChainPostTx(const bc::transaction_type& tx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeBlockhainPostTx(const bc::transaction_type& tx, tABC_Error *pError);
 static size_t      ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 
 /**
@@ -807,14 +807,14 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     }
 
     // Send to chain
-    cc = ABC_BridgeChainPostTx(utx, pError);
+    cc = ABC_BridgeChainPostTx(utx->tx, pError);
     // If we are not on testnet and chain failed try block chain as well
     if (!ABC_BridgeIsTestNet())
     {
         if (cc == ABC_CC_Ok)
-            ABC_BridgeBlockhainPostTx(utx, pError);
+            ABC_BridgeBlockhainPostTx(utx->tx, pError);
         else
-            cc = ABC_BridgeBlockhainPostTx(utx, pError);
+            cc = ABC_BridgeBlockhainPostTx(utx->tx, pError);
     }
 
     // Make sure the send was successful
@@ -1210,10 +1210,10 @@ void ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
 
     // Send:
     watcherInfo->watcher->send_tx(utx.tx);
-    ABC_BridgeChainPostTx(&utx, &error);
+    ABC_BridgeChainPostTx(utx.tx, &error);
     if (!ABC_BridgeIsTestNet())
     {
-        ABC_BridgeBlockhainPostTx(&utx, &error);
+        ABC_BridgeBlockhainPostTx(utx.tx, &error);
     }
 }
 
@@ -1555,7 +1555,7 @@ static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
 }
 
 static
-tABC_CC ABC_BridgeChainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError)
+tABC_CC ABC_BridgeChainPostTx(const bc::transaction_type& tx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     CURL *pCurlHandle = NULL;
@@ -1565,10 +1565,10 @@ tABC_CC ABC_BridgeChainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *
     json_t *pJSON_Root = NULL;
     char *szPut = NULL;
 
-    bc::data_chunk raw_tx(satoshi_raw_size(utx->tx));
-    bc::satoshi_save(utx->tx, raw_tx.begin());
+    bc::data_chunk raw_tx(satoshi_raw_size(tx));
+    bc::satoshi_save(tx, raw_tx.begin());
     std::string encoded(bc::encode_hex(raw_tx));
-    std::string pretty(bc::pretty(utx->tx));
+    std::string pretty(bc::pretty(tx));
 
     if (ABC_BridgeIsTestNet())
     {
@@ -1622,7 +1622,7 @@ exit:
 }
 
 static
-tABC_CC ABC_BridgeBlockhainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError)
+tABC_CC ABC_BridgeBlockhainPostTx(const bc::transaction_type& tx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     CURL *pCurlHandle = NULL;
@@ -1630,10 +1630,10 @@ tABC_CC ABC_BridgeBlockhainPostTx(abcd::unsigned_transaction_type *utx, tABC_Err
     long resCode;
     std::string url, body, resBuffer;
 
-    bc::data_chunk raw_tx(satoshi_raw_size(utx->tx));
-    bc::satoshi_save(utx->tx, raw_tx.begin());
+    bc::data_chunk raw_tx(satoshi_raw_size(tx));
+    bc::satoshi_save(tx, raw_tx.begin());
     std::string encoded(bc::encode_hex(raw_tx));
-    std::string pretty(bc::pretty(utx->tx));
+    std::string pretty(bc::pretty(tx));
 
     url.append("https://blockchain.info/pushtx");
     body.append("tx=");
