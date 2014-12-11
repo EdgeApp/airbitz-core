@@ -69,7 +69,7 @@ struct WatcherInfo
 {
     abcd::watcher *watcher;
     std::set<std::string> addresses;
-    std::unordered_map<bc::payment_address, bc::ec_secret> sweeping;
+    std::unordered_map<bc::payment_address, abcd::wif_key> sweeping;
 
     // Callback:
     tABC_BitCoin_Event_Callback fAsyncCallback;
@@ -85,7 +85,7 @@ static std::map<WalletUUID, WatcherInfo*> watchers_;
 // The last obelisk server we connected to:
 static unsigned gLastObelisk = 0;
 
-static void        ABC_BridgeDoSweep(WatcherInfo *watcherInfo, const bc::payment_address& address, const bc::ec_secret& key);
+static void        ABC_BridgeDoSweep(WatcherInfo *watcherInfo, const bc::payment_address& address, const abcd::wif_key& key);
 static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
 static tABC_CC     ABC_BridgeExtractOutputs(abcd::watcher *watcher, abcd::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
@@ -426,7 +426,7 @@ tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
     address.set(pubkey_version, bc::bitcoin_short_hash(ec_addr));
 
     // Start the sweep:
-    watcherInfo->sweeping[address] = ec_key;
+    watcherInfo->sweeping[address] = abcd::wif_key{ec_key, compressed};
     watcherInfo->watcher->watch_address(address);
 
 exit:
@@ -1147,7 +1147,7 @@ ABC_BridgeIsTestNet()
 static
 void ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
                        const bc::payment_address& address,
-                       const bc::ec_secret& key)
+                       const abcd::wif_key& key)
 {
     tABC_Error error;
 
@@ -1184,14 +1184,13 @@ void ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
 
     // Build a transaction:
     uint64_t funds = 0;
-    abcd::unsigned_transaction_type utx;
-    utx.code = abcd::ok;
+    abcd::unsigned_transaction utx;
     utx.tx.version = 1;
     utx.tx.locktime = 0;
     for (auto &utxo : utxos)
     {
         bc::transaction_input_type input;
-        input.sequence = 4294967295;
+        input.sequence = 0xffffffff;
         input.previous_output = utxo.point;
         funds += utxo.value;
         utx.tx.inputs.push_back(input);
@@ -1204,17 +1203,20 @@ void ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     utx.tx.outputs.push_back(output);
 
     // Now sign that:
-    std::vector<std::string> keys{ bc::encode_hex(key) };
-    if (!abcd::sign_tx(utx, keys, *watcherInfo->watcher))
+    abcd::key_table keys;
+    keys[address] = key;
+    if (!abcd::gather_challenges(utx, *watcherInfo->watcher))
+        return;
+    if (!abcd::sign_tx(utx, keys))
         return;
 
     // Send:
-    watcherInfo->watcher->send_tx(utx.tx);
     ABC_BridgeChainPostTx(utx.tx, &error);
     if (!ABC_BridgeIsTestNet())
     {
         ABC_BridgeBlockhainPostTx(utx.tx, &error);
     }
+    watcherInfo->watcher->send_tx(utx.tx);
 }
 
 static

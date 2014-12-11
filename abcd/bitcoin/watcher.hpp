@@ -83,6 +83,12 @@ public:
     // Debugging code:
     BC_API void dump(std::ostream& out=std::cout);
 
+    /**
+     * Accesses the real database.
+     * This should be const, but the db is not const-safe due to mutexes.
+     */
+    libwallet::tx_db& db() { return db_; }
+
 private:
     libwallet::tx_db db_;
     zmq::context_t ctx_;

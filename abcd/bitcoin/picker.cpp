@@ -158,5 +158,76 @@ static operation create_data_operation(data_chunk& data)
     return op;
 }
 
+bool gather_challenges(unsigned_transaction& utx, abcd::watcher& watcher)
+{
+    utx.challenges.resize(utx.tx.inputs.size());
+
+    for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
+    {
+        bc::input_point& point = utx.tx.inputs[i].previous_output;
+        if (!watcher.db().has_tx(point.hash))
+            return false;
+        bc::transaction_type tx = watcher.find_tx(point.hash);
+        utx.challenges[i] = tx.outputs[point.index].script;
+    }
+
+    return true;
+}
+
+bool sign_tx(unsigned_transaction& utx, const key_table& keys)
+{
+    bool all_done = true;
+
+    for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
+    {
+        auto& input = utx.tx.inputs[i];
+        auto& challenge = utx.challenges[i];
+
+        // Already signed?
+        if (input.script.operations().size())
+            continue;
+
+        // Extract the address:
+        bc::payment_address from_address;
+        if (!bc::extract(from_address, challenge))
+        {
+            all_done = false;
+            continue;
+        }
+
+        // Find a matching key:
+        auto key = keys.find(from_address);
+        if (key == keys.end())
+        {
+            all_done = false;
+            continue;
+        }
+        auto& secret = key->second.secret;
+        auto pubkey = bc::secret_to_public_key(secret, key->second.compressed);
+
+        // Create the sighash for this input:
+        hash_digest sighash =
+            script_type::generate_signature_hash(utx.tx, i, challenge, 1);
+        if (sighash == null_hash)
+        {
+            all_done = false;
+            continue;
+        }
+
+        // Sign:
+        data_chunk signature = sign(secret, sighash,
+            create_nonce(secret, sighash));
+        signature.push_back(0x01);
+
+        // Save:
+        script_type scriptsig;
+        scriptsig.push_operation(create_data_operation(signature));
+        scriptsig.push_operation(create_data_operation(pubkey));
+        utx.tx.inputs[i].script = scriptsig;
+    }
+
+    return all_done;
+}
+
 }
 

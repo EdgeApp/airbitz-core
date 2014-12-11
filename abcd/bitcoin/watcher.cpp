@@ -167,8 +167,7 @@ BC_API output_info_list watcher::get_utxos(const payment_address& address)
 
         bc::payment_address to_address;
         if (bc::extract(to_address, output.script))
-            if (address == to_address &&
-                (db_.get_tx_height(utxo.point.hash) || is_spend(tx)))
+            if (address == to_address)
                 out.push_back(utxo);
     }
 
