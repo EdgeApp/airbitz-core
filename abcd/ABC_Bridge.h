@@ -51,6 +51,7 @@ extern "C" {
     tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
                                 tABC_U08Buf *pOut,
                                 bool *pbCompressed,
+                                char **pszAddress,
                                 tABC_Error *pError);
 
     tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,

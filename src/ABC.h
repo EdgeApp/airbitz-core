@@ -973,6 +973,7 @@ extern "C" {
                          const char *szPassword,
                          const char *szWalletUUID,
                          const char *szKey,
+                         char **pszAddress,
                          tABC_Error *pError);
 
     /* === Transactions: === */

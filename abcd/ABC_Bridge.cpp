@@ -127,19 +127,38 @@ tABC_CC ABC_BridgeInitialize(tABC_Error *pError)
 tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
                             tABC_U08Buf *pOut,
                             bool *pbCompressed,
+                            char **pszAddress,
                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    bc::ec_secret out;
 
-    out = libwallet::wif_to_secret(szWIF);
-    if (out == bc::null_hash)
+    bc::ec_secret secret;
+    bc::data_chunk ec_addr;
+    bc::payment_address address;
+
+    bool bCompressed = true;
+    char *szAddress = NULL;
+
+    // Parse as WIF:
+    secret = libwallet::wif_to_secret(szWIF);
+    if (secret == bc::null_hash)
         ABC_RET_ERROR(ABC_CC_ParseError, "Malformed WIF");
+    bCompressed = libwallet::is_wif_compressed(szWIF);
 
-    ABC_BUF_DUP_PTR(*pOut, out.data(), out.size());
-    *pbCompressed = libwallet::is_wif_compressed(szWIF);
+    // Get address:
+    ec_addr = bc::secret_to_public_key(secret, bCompressed);
+    address.set(pubkey_version, bc::bitcoin_short_hash(ec_addr));
+    ABC_STRDUP(szAddress, address.encoded().c_str());
+
+    // Write out:
+    ABC_BUF_DUP_PTR(*pOut, secret.data(), secret.size());
+    *pbCompressed = bCompressed;
+    *pszAddress = szAddress;
+    szAddress = NULL;
 
 exit:
+    ABC_FREE_STR(szAddress);
+
     return cc;
 }
 
