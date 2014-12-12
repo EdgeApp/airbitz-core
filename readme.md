@@ -12,7 +12,7 @@ host system:
 
     git wget autoconf automake libtool pkgconfig cmake
 
-To install these on the Mac, please use Homebrew. The 'wget' and 'cmake' that
+To install these on the Mac, please use [Homebrew](http://brew.sh/). The 'wget' and 'cmake' that
 come from MacPorts are known to be broken.
 
 If you are building for iOS or Mac native, you also need a working installation
