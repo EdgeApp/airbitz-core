@@ -132,6 +132,35 @@ tABC_CC ABC_BridgeInitialize(tABC_Error *pError)
     return cc;
 }
 
+bool check_minikey(const std::string& minikey)
+{
+    // Legacy minikeys are 22 chars long
+    if (minikey.size() != 22 && minikey.size() != 30)
+        return false;
+    return bc::sha256_hash(bc::to_data_chunk(minikey + "?"))[0] == 0x00;
+}
+
+bool check_hiddenbitz(const std::string& minikey)
+{
+    // Legacy minikeys are 22 chars long
+    if (minikey.size() != 22 && minikey.size() != 30)
+        return false;
+    return bc::sha256_hash(bc::to_data_chunk(minikey + "!"))[0] == 0x00;
+}
+
+bc::ec_secret hiddenbitz_to_secret(const std::string& minikey)
+{
+    if (!check_hiddenbitz(minikey))
+        return bc::ec_secret();
+    auto secret = bc::sha256_hash(bc::to_data_chunk(minikey));
+    auto mix = bc::decode_hex(HIDDENBITZ_KEY);
+
+    for (size_t i = 0; i < mix.size() && i < secret.size(); ++i)
+        secret[i] ^= mix[i];
+
+    return secret;
+}
+
 /**
  * Converts a Bitcoin private key in WIF format into a 256-bit value.
  */
@@ -152,9 +181,24 @@ tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
 
     // Parse as WIF:
     secret = libwallet::wif_to_secret(szWIF);
-    if (secret == bc::null_hash)
+    if (secret != bc::null_hash)
+    {
+        bCompressed = libwallet::is_wif_compressed(szWIF);
+    }
+    else if (check_minikey(szWIF))
+    {
+        secret = libwallet::minikey_to_secret(szWIF);
+        bCompressed = false;
+    }
+    else if (check_hiddenbitz(szWIF))
+    {
+        secret = hiddenbitz_to_secret(szWIF);
+        bCompressed = true;
+    }
+    else
+    {
         ABC_RET_ERROR(ABC_CC_ParseError, "Malformed WIF");
-    bCompressed = libwallet::is_wif_compressed(szWIF);
+    }
 
     // Get address:
     ec_addr = bc::secret_to_public_key(secret, bCompressed);
