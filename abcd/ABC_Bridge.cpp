@@ -46,6 +46,7 @@
 #include "bitcoin/picker.hpp"
 #include <curl/curl.h>
 #include <wallet/wallet.hpp>
+#include <list>
 #include <unordered_map>
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
 
@@ -65,11 +66,21 @@
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
+struct PendingSweep
+{
+    bc::payment_address address;
+    abcd::wif_key key;
+    bool done;
+
+    tABC_Sweep_Done_Callback fCallback;
+    void *pData;
+};
+
 struct WatcherInfo
 {
     abcd::watcher *watcher;
     std::set<std::string> addresses;
-    std::unordered_map<bc::payment_address, abcd::wif_key> sweeping;
+    std::list<PendingSweep> sweeping;
 
     // Callback:
     tABC_BitCoin_Event_Callback fAsyncCallback;
@@ -85,7 +96,7 @@ static std::map<WalletUUID, WatcherInfo*> watchers_;
 // The last obelisk server we connected to:
 static unsigned gLastObelisk = 0;
 
-static void        ABC_BridgeDoSweep(WatcherInfo *watcherInfo, const bc::payment_address& address, const abcd::wif_key& key);
+static tABC_CC     ABC_BridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep& sweep, tABC_Error *pError);
 static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
 static tABC_CC     ABC_BridgeExtractOutputs(abcd::watcher *watcher, abcd::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
@@ -425,6 +436,8 @@ exit:
 tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
                            tABC_U08Buf key,
                            bool compressed,
+                           tABC_Sweep_Done_Callback fCallback,
+                           void *pData,
                            tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -432,6 +445,7 @@ tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
     bc::ec_point ec_addr;
     bc::payment_address address;
     WatcherInfo *watcherInfo = NULL;
+    PendingSweep sweep;
 
     auto row = watchers_.find(self.szUUID);
     ABC_CHECK_ASSERT(row != watchers_.end(), ABC_CC_Error, "Unable find watcher");
@@ -445,7 +459,12 @@ tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
     address.set(pubkey_version, bc::bitcoin_short_hash(ec_addr));
 
     // Start the sweep:
-    watcherInfo->sweeping[address] = abcd::wif_key{ec_key, compressed};
+    sweep.address = address;
+    sweep.key = abcd::wif_key{ec_key, compressed};
+    sweep.done = false;
+    sweep.fCallback = fCallback;
+    sweep.pData = pData;
+    watcherInfo->sweeping.push_back(sweep);
     watcherInfo->watcher->watch_address(address);
 
 exit:
@@ -1164,18 +1183,25 @@ ABC_BridgeIsTestNet()
 }
 
 static
-void ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
-                       const bc::payment_address& address,
-                       const abcd::wif_key& key)
+tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
+                          PendingSweep& sweep,
+                          tABC_Error *pError)
 {
-    tABC_Error error;
+    tABC_CC cc = ABC_CC_Ok;
+    char *szID = NULL;
+    char *szAddress = NULL;
+    bc::payment_address to_address;
+    uint64_t funds = 0;
+    abcd::unsigned_transaction utx;
+    bc::transaction_output_type output;
+    abcd::key_table keys;
 
     // Find utxos for this address:
-    auto utxos = watcherInfo->watcher->get_utxos(address);
+    auto utxos = watcherInfo->watcher->get_utxos(sweep.address);
 
     // TODO: If there aren't any, maybe we should tell the GUI?
     if (!utxos.size())
-        return;
+        return ABC_CC_Ok;
 
     // There are some utxos, so send them to ourselves:
     tABC_TxDetails details;
@@ -1189,21 +1215,14 @@ void ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     details.szNotes = const_cast<char*>("");
     details.attributes = 0x2;
 
-    // Create a new receive address:
-    char *szID = NULL;
-    if (ABC_TxCreateReceiveRequest(watcherInfo->wallet,
-        &details, &szID, false, &error) != ABC_CC_Ok)
-        return;
-    char *szAddress = NULL;
-    if (ABC_TxGetRequestAddress(watcherInfo->wallet, szID,
-        &szAddress, &error) != ABC_CC_Ok)
-        return;
-    bc::payment_address to_address(szAddress);
-    ABC_FREE_STR(szAddress);
+    // Create a new receive request:
+    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(watcherInfo->wallet,
+        &details, &szID, false, pError));
+    ABC_CHECK_RET(ABC_TxGetRequestAddress(watcherInfo->wallet, szID,
+        &szAddress, pError));
+    to_address.set_encoded(szAddress);
 
     // Build a transaction:
-    uint64_t funds = 0;
-    abcd::unsigned_transaction utx;
     utx.tx.version = 1;
     utx.tx.locktime = 0;
     for (auto &utxo : utxos)
@@ -1214,36 +1233,61 @@ void ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
         funds += utxo.value;
         utx.tx.inputs.push_back(input);
     }
-    if (funds < 10500) // This hard-coded mining fee is maybe not a good idea...
-        return; // And maybe we could tell the UI that there aren't enough funds...
-    bc::transaction_output_type output;
+    ABC_CHECK_ASSERT(10500 <= funds, ABC_CC_InsufficientFunds, "Not enough funds");
     output.value = funds - 10000;
     output.script = abcd::build_pubkey_hash_script(to_address.hash());
     utx.tx.outputs.push_back(output);
 
     // Now sign that:
-    abcd::key_table keys;
-    keys[address] = key;
-    if (!abcd::gather_challenges(utx, *watcherInfo->watcher))
-        return;
-    if (!abcd::sign_tx(utx, keys))
-        return;
+    keys[sweep.address] = sweep.key;
+    ABC_CHECK_SYS(abcd::gather_challenges(utx, *watcherInfo->watcher), "gather_challenges");
+    ABC_CHECK_SYS(abcd::sign_tx(utx, keys), "sign_tx");
 
     // Send:
-    ABC_BridgeChainPostTx(utx.tx, &error);
+    cc = ABC_BridgeChainPostTx(utx.tx, pError);
     if (!ABC_BridgeIsTestNet())
     {
-        ABC_BridgeBlockhainPostTx(utx.tx, &error);
+        if (cc == ABC_CC_Ok)
+            ABC_BridgeBlockhainPostTx(utx.tx, pError);
+        else
+            cc = ABC_BridgeBlockhainPostTx(utx.tx, pError);
     }
+    ABC_CHECK_ASSERT(ABC_CC_Ok == cc, cc, "Unable to send transaction");
+
+    // Done:
+    if (sweep.fCallback)
+        sweep.fCallback(ABC_CC_Ok, szID, output.value);
+    sweep.done = true;
     watcherInfo->watcher->send_tx(utx.tx);
+
+exit:
+    ABC_FREE_STR(szID);
+    ABC_FREE_STR(szAddress);
+
+    return cc;
 }
 
 static
 void ABC_BridgeQuietCallback(WatcherInfo *watcherInfo)
 {
     // If we are sweeping any keys, do that now:
-    for (auto i: watcherInfo->sweeping)
-        ABC_BridgeDoSweep(watcherInfo, i.first, i.second);
+    for (auto sweep: watcherInfo->sweeping)
+    {
+        tABC_CC cc;
+        tABC_Error error;
+
+        cc = ABC_BridgeDoSweep(watcherInfo, sweep, &error);
+        if (cc != ABC_CC_Ok)
+        {
+            if (sweep.fCallback)
+                sweep.fCallback(cc, NULL, 0);
+            sweep.done = true;
+        }
+    }
+
+    // Remove completed ones:
+    std::remove_if(watcherInfo->sweeping.begin(), watcherInfo->sweeping.end(),
+        [](const PendingSweep& sweep) { return sweep.done; });
 }
 
 static
