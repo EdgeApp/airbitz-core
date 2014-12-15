@@ -43,7 +43,7 @@
 #include "ABC_Wallet.h"
 #include "util/ABC_Crypto.h"
 #include "util/ABC_URL.h"
-#include "util/picker.hpp"
+#include "bitcoin/picker.hpp"
 #include <curl/curl.h>
 #include <wallet/wallet.hpp>
 #include <unordered_map>
@@ -67,7 +67,7 @@
 
 struct WatcherInfo
 {
-    libwallet::watcher *watcher;
+    abcd::watcher *watcher;
     std::set<std::string> addresses;
     tABC_BitCoin_Event_Callback fAsyncCallback;
     void *pData;
@@ -83,8 +83,8 @@ static std::map<WalletUUID, WatcherInfo*> watchers_;
 static unsigned gLastObelisk = 0;
 
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
-static tABC_CC     ABC_BridgeExtractOutputs(libwallet::watcher *watcher, picker::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
-static tABC_CC     ABC_BridgeTxErrorHandler(picker::unsigned_transaction_type *utx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeExtractOutputs(abcd::watcher *watcher, abcd::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeTxErrorHandler(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr);
 static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash);
 static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
@@ -96,8 +96,8 @@ static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
 static void        *ABC_BridgeWatcherSerialize(void *pData);
 static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx);
 
-static tABC_CC     ABC_BridgeChainPostTx(picker::unsigned_transaction_type *utx, tABC_Error *pError);
-static tABC_CC     ABC_BridgeBlockhainPostTx(picker::unsigned_transaction_type *utx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeChainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeBlockhainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
 static size_t      ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 
 /**
@@ -318,32 +318,6 @@ exit:
 }
 
 /**
- * Converts a Base58-encoded string to a block of data.
- *
- * @param szBase58 The string to convert.
- * @param pData A buffer structure that will be pointed at the newly-allocated output data.
- */
-tABC_CC ABC_BridgeBase58Decode(const char *szBase58, tABC_U08Buf *pData, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    libbitcoin::data_chunk out;
-
-    std::string in = szBase58;
-    if (!libbitcoin::is_base58(in))
-        ABC_RET_ERROR(ABC_CC_ParseError, "Not Base58 data");
-
-    out = libbitcoin::decode_base58(in);
-
-    pData->p = static_cast<unsigned char*>(malloc(out.size()));
-    ABC_CHECK_ASSERT(pData->p != NULL, ABC_CC_NULLPtr, "malloc failed (returned NULL)");
-    pData->end = pData->p + out.size();
-    memcpy(pData->p, out.data(), out.size());
-
-exit:
-    return cc;
-}
-
-/**
  * Calculates a public address for the HD wallet main external chain.
  * @param pszPubAddress set to the newly-generated address, or set to NULL if
  * there is a math error. If that happens, add 1 to N and try again.
@@ -416,7 +390,7 @@ tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
     }
 
     watcherInfo = new WatcherInfo();
-    watcherInfo->watcher = new libwallet::watcher();
+    watcherInfo->watcher = new abcd::watcher();
 
     ABC_CHECK_RET(ABC_WalletIDCopy(&watcherInfo->wallet, self, pError));
 
@@ -433,10 +407,10 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
 {
     tABC_CC cc = ABC_CC_Ok;
     WatcherInfo *watcherInfo = NULL;
-    libwallet::watcher::block_height_callback heightCallback;
-    libwallet::watcher::callback txCallback;
-    libwallet::watcher::tx_sent_callback sendCallback;
-    libwallet::watcher::fail_callback failCallback;
+    abcd::watcher::block_height_callback heightCallback;
+    abcd::watcher::callback txCallback;
+    abcd::watcher::tx_sent_callback sendCallback;
+    abcd::watcher::fail_callback failCallback;
 
     auto row = watchers_.find(szWalletUUID);
     if (row == watchers_.end())
@@ -654,8 +628,8 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
     tABC_CC cc = ABC_CC_Ok;
     tABC_GeneralInfo *ppInfo = NULL;
     bc::payment_address change, ab, dest;
-    picker::fee_schedule schedule;
-    picker::unsigned_transaction_type *utx;
+    abcd::fee_schedule schedule;
+    abcd::unsigned_transaction_type *utx;
     bc::transaction_output_list outputs;
     uint64_t totalAmountSatoshi = 0, abFees = 0, minerFees = 0;
     std::vector<bc::payment_address> addresses_;
@@ -666,7 +640,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
         ABC_CC_Error, "Unable find watcher");
 
     // Alloc a new utx
-    utx = new picker::unsigned_transaction_type();
+    utx = new abcd::unsigned_transaction_type();
     ABC_CHECK_ASSERT(utx != NULL,
         ABC_CC_NULLPtr, "Unable alloc unsigned_transaction_type");
 
@@ -726,7 +700,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
                     change.encoded().c_str(),
                     pSendInfo->pDetails->amountSatoshi,
                     totalAmountSatoshi);
-    if (!picker::make_tx(*(row->second->watcher), addresses_, change,
+    if (!abcd::make_tx(*(row->second->watcher), addresses_, change,
                             totalAmountSatoshi, schedule, outputs, *utx))
     {
         ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
@@ -747,11 +721,11 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     tABC_CC cc = ABC_CC_Ok;
 
     WatcherInfo *watcherInfo = NULL;
-    picker::unsigned_transaction_type *utx;
+    abcd::unsigned_transaction_type *utx;
     std::vector<std::string> keys;
     std::string txid, malleableId;
 
-    utx = (picker::unsigned_transaction_type *) pUtx->data;
+    utx = (abcd::unsigned_transaction_type *) pUtx->data;
     auto row = watchers_.find(pSendInfo->wallet.szUUID);
     ABC_CHECK_ASSERT(row != watchers_.end(), ABC_CC_Error, "Unable find watcher");
 
@@ -763,7 +737,7 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     }
 
     // Sign the transaction
-    if (!picker::sign_tx(*utx, keys, *watcherInfo->watcher))
+    if (!abcd::sign_tx(*utx, keys, *watcherInfo->watcher))
     {
         ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
     }
@@ -1211,7 +1185,7 @@ exit:
 }
 
 static tABC_CC
-ABC_BridgeExtractOutputs(libwallet::watcher *watcher, picker::unsigned_transaction_type *utx,
+ABC_BridgeExtractOutputs(abcd::watcher *watcher, abcd::unsigned_transaction_type *utx,
                          std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1256,16 +1230,16 @@ exit:
 }
 
 static
-tABC_CC ABC_BridgeTxErrorHandler(picker::unsigned_transaction_type *utx, tABC_Error *pError)
+tABC_CC ABC_BridgeTxErrorHandler(abcd::unsigned_transaction_type *utx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     switch (utx->code)
     {
-        case picker::insufficent_funds:
+        case abcd::insufficent_funds:
             ABC_RET_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds.");
-        case picker::invalid_key:
+        case abcd::invalid_key:
             ABC_RET_ERROR(ABC_CC_Error, "Invalid address.");
-        case picker::invalid_sig:
+        case abcd::invalid_sig:
             ABC_RET_ERROR(ABC_CC_Error, "Unable to sign.");
         default:
             break;
@@ -1436,7 +1410,7 @@ static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
 }
 
 static
-tABC_CC ABC_BridgeChainPostTx(picker::unsigned_transaction_type *utx, tABC_Error *pError)
+tABC_CC ABC_BridgeChainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     CURL *pCurlHandle = NULL;
@@ -1503,7 +1477,7 @@ exit:
 }
 
 static
-tABC_CC ABC_BridgeBlockhainPostTx(picker::unsigned_transaction_type *utx, tABC_Error *pError)
+tABC_CC ABC_BridgeBlockhainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     CURL *pCurlHandle = NULL;

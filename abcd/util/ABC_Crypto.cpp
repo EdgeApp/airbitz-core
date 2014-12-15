@@ -1237,50 +1237,6 @@ int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64)
 }
 
 /**
- * Converts a buffer of binary data to a base-58 string.
- * @param Data The passed-in data. The caller owns this.
- * @param pszDataBase58 The returned string, which the caller must free().
- */
-tABC_CC ABC_CryptoBase58Encode(const tABC_U08Buf Data,
-                               char              **pszDataBase58,
-                               tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL_BUF(Data);
-    ABC_CHECK_NULL(pszDataBase58);
-
-    ABC_CHECK_RET(ABC_BridgeBase58Encode(Data, pszDataBase58, pError));
-
-exit:
-
-    return cc;
-}
-
-/**
- * Converts a string of base-58 encoded data to a buffer of binary data.
- * @param pData An un-allocated data buffer. This function will allocate
- * memory and assign it to the buffer. The data should then be freed.
- */
-tABC_CC ABC_CryptoBase58Decode(const char   *szDataBase58,
-                               tABC_U08Buf  *pData,
-                               tABC_Error   *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(szDataBase58);
-    ABC_CHECK_NULL(pData);
-
-    ABC_CHECK_RET(ABC_BridgeBase58Decode(szDataBase58, pData, pError));
-
-exit:
-
-    return cc;
-}
-
-/**
  * generates a randome UUID (version 4)
 
  * Version 4 UUIDs use a scheme relying only on random numbers.
