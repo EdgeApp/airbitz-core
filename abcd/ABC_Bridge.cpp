@@ -1239,6 +1239,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     abcd::unsigned_transaction utx;
     bc::transaction_output_type output;
     abcd::key_table keys;
+    std::string malTxId, txId;
 
     // Find utxos for this address:
     auto utxos = watcherInfo->watcher->get_utxos(sweep.address);
@@ -1278,7 +1279,8 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
         utx.tx.inputs.push_back(input);
     }
     ABC_CHECK_ASSERT(10500 <= funds, ABC_CC_InsufficientFunds, "Not enough funds");
-    output.value = funds - 10000;
+    funds -= 10000;
+    output.value = funds;
     output.script = abcd::build_pubkey_hash_script(to_address.hash());
     utx.tx.outputs.push_back(output);
 
@@ -1303,6 +1305,12 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
         sweep.fCallback(ABC_CC_Ok, szID, output.value);
     sweep.done = true;
     watcherInfo->watcher->send_tx(utx.tx);
+
+    malTxId = bc::encode_hex(bc::hash_transaction(utx.tx));
+    txId = ABC_BridgeNonMalleableTxId(utx.tx);
+
+    ABC_CHECK_RET(ABC_TxSweepSaveTransaction(
+        watcherInfo->wallet, txId.c_str(), malTxId.c_str(), funds, &details, pError));
 
 exit:
     ABC_FREE_STR(szID);

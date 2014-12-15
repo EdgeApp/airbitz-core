@@ -198,6 +198,13 @@ extern "C" {
     void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
                             unsigned int count);
 
+    tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
+                                       const char *txId,
+                                       const char *malTxId,
+                                       uint64_t funds,
+                                       tABC_TxDetails *pDetails,
+                                       tABC_Error *pError);
+
     // Blocking functions:
     tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo,
                         char **pszUUID,
