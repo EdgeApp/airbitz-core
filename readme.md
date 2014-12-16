@@ -10,7 +10,13 @@ It manages accounts, syncing, and Bitcoin transactions.
 The build process requires several pieces of software to be installed on the
 host system:
 
-    git wget autoconf automake libtool pkgconfig cmake
+* autoconf
+* automake
+* cmake
+* git
+* libtool
+* pkgconfig
+* wget
 
 To install these on the Mac, please use [Homebrew](http://brew.sh/). The 'wget' and 'cmake' that
 come from MacPorts are known to be broken.
