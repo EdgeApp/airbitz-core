@@ -1920,6 +1920,48 @@ exit:
 }
 
 /**
+ * Sweeps a private key into the wallet.
+ *
+ * @param szUserName        UserName for the account associated with the transactions
+ * @param szPassword        Password for the account associated with the transactions
+ * @param szWalletUUID      UUID of the wallet associated with the transactions
+ * @param szKey             Private key in WIF format
+ * @param pszAddress        Resulting bitcoin address out
+ * @param fCallback         Called when the sweep is done.
+ * @param pData             Closure parameter for the callback.
+ */
+tABC_CC ABC_SweepKey(const char *szUsername,
+                     const char *szPassword,
+                     const char *szWalletUUID,
+                     const char *szKey,
+                     char **pszAddress,
+                     tABC_Sweep_Done_Callback fCallback,
+                     void *pData,
+                     tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_SyncKeys *pKeys = NULL;
+    tABC_U08Buf key = ABC_BUF_NULL;
+    bool bCompressed;
+
+    ABC_CHECK_RET(ABC_BridgeDecodeWIF(szKey, &key, &bCompressed, pszAddress, pError));
+
+    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUsername, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_BridgeSweepKey(ABC_WalletID(pKeys, szWalletUUID),
+        key, bCompressed, fCallback, pData, pError));
+
+exit:
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
+    ABC_BUF_FREE(key);
+
+    return cc;
+}
+
+/**
  * Gets the transaction specified
  *
  * @param szUserName        UserName for the account associated with the transactions

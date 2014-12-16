@@ -47,17 +47,20 @@ public:
     BC_API size_t get_last_block_height();
 
     // - Callbacks: --------------------
-    typedef std::function<void (const bc::transaction_type&)> callback;
-    BC_API void set_callback(callback&& cb);
+    typedef std::function<void (const bc::transaction_type&)> tx_callback;
+    BC_API void set_tx_callback(tx_callback cb);
 
     typedef std::function<void (std::error_code, const bc::transaction_type&)> tx_sent_callback;
-    BC_API void set_tx_sent_callback(tx_sent_callback&& cb);
+    BC_API void set_tx_sent_callback(tx_sent_callback cb);
 
     typedef std::function<void (const size_t)> block_height_callback;
-    BC_API void set_height_callback(block_height_callback&& cb);
+    BC_API void set_height_callback(block_height_callback cb);
+
+    typedef std::function<void ()> quiet_callback;
+    BC_API void set_quiet_callback(quiet_callback cb);
 
     typedef std::function<void ()> fail_callback;
-    BC_API void set_fail_callback(fail_callback&& cb);
+    BC_API void set_fail_callback(fail_callback cb);
 
     // - Thread implementation: --------
 
@@ -79,6 +82,12 @@ public:
 
     // Debugging code:
     BC_API void dump(std::ostream& out=std::cout);
+
+    /**
+     * Accesses the real database.
+     * This should be const, but the db is not const-safe due to mutexes.
+     */
+    libwallet::tx_db& db() { return db_; }
 
 private:
     libwallet::tx_db db_;
@@ -104,9 +113,10 @@ private:
 
     // The thread uses these callbacks, so put them in a mutex:
     std::mutex cb_mutex_;
-    callback cb_;
+    tx_callback cb_;
     block_height_callback height_cb_;
     tx_sent_callback tx_send_cb_;
+    quiet_callback quiet_cb_;
     fail_callback fail_cb_;
 
     // Everything below this point is only touched by the thread:
@@ -126,10 +136,11 @@ private:
     bool command(uint8_t* data, size_t size);
 
     // tx_callbacks interface:
-    virtual void on_add(const bc::transaction_type& tx);
-    virtual void on_height(size_t height);
-    virtual void on_send(const std::error_code& error, const bc::transaction_type& tx);
-    virtual void on_fail();
+    virtual void on_add(const bc::transaction_type& tx) override;
+    virtual void on_height(size_t height) override;
+    virtual void on_send(const std::error_code& error, const bc::transaction_type& tx) override;
+    virtual void on_quiet() override;
+    virtual void on_fail() override;
 };
 
 } // namespace abcd

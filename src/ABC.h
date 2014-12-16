@@ -605,6 +605,19 @@ extern "C" {
     typedef void (*tABC_BitCoin_Event_Callback)(const tABC_AsyncBitCoinInfo *pInfo);
 
     /**
+     * Called when the sweep process completes.
+     *
+     * @param cc Ok if the sweep completed successfully,
+     * or some error code if something went wrong.
+     * @param szID The transaction id of the incoming funds,
+     * if the sweep succeeded.
+     * @param amount The number of satoshis swept into the wallet.
+     */
+    typedef void (*tABC_Sweep_Done_Callback)(tABC_CC cc,
+                                             const char *szID,
+                                             uint64_t amount);
+
+    /**
      * AirBitz Request callback
      *
      * This is the form of the callback that will be called when a request
@@ -968,6 +981,15 @@ extern "C" {
                              bool bTransfer,
                              uint64_t *pMaxSatoshi,
                              tABC_Error *pError);
+
+    tABC_CC ABC_SweepKey(const char *szUsername,
+                         const char *szPassword,
+                         const char *szWalletUUID,
+                         const char *szKey,
+                         char **pszAddress,
+                         tABC_Sweep_Done_Callback fCallback,
+                         void *pData,
+                         tABC_Error *pError);
 
     /* === Transactions: === */
     tABC_CC ABC_GetTransaction(const char *szUserName,

@@ -2560,6 +2560,56 @@ void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
 }
 
 /**
+ * Creates a transaction as a result of a sweep.
+ *
+ * @param wallet    Wallet ID struct
+ * @param txId      Non-Malleable Tx ID
+ * @param malTxId   Malleable Tx ID
+ * @param funds     Amount of funds swept
+ * @param pDetails  Tx Details
+ */
+tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
+                                   const char *txId,
+                                   const char *malTxId,
+                                   uint64_t funds,
+                                   tABC_TxDetails *pDetails,
+                                   tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_Tx *pTx = NULL;
+    tABC_WalletInfo *pWalletInfo = NULL;
+    double currency;
+
+    ABC_NEW(pTx, tABC_Tx);
+    ABC_NEW(pTx->pStateInfo, tTxStateInfo);
+
+    // set the state
+    pTx->pStateInfo->timeCreation = time(NULL);
+    pTx->pStateInfo->bInternal = true;
+    ABC_STRDUP(pTx->szID, txId);
+    ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, malTxId);
+
+    // Copy the details
+    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pDetails, pError));
+    pTx->pDetails->amountSatoshi = funds;
+    pTx->pDetails->amountFeesAirbitzSatoshi = 0;
+
+    ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWalletInfo, pError));
+    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(wallet.pKeys,
+                    pTx->pDetails->amountSatoshi, &currency,
+                    pWalletInfo->currencyNum, pError));
+    pTx->pDetails->amountCurrency = currency;
+
+    // save the transaction
+    ABC_CHECK_RET(ABC_TxSaveTransaction(wallet, pTx, pError));
+exit:
+    ABC_TxFreeTx(pTx);
+    ABC_WalletFreeInfo(pWalletInfo);
+    return cc;
+}
+
+
+/**
  * Gets the filename for a given transaction
  * format is: N-Base58(HMAC256(TxID,MK)).json
  *

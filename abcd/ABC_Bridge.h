@@ -48,6 +48,12 @@ extern "C" {
 
     tABC_CC ABC_BridgeInitialize(tABC_Error *pError);
 
+    tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
+                                tABC_U08Buf *pOut,
+                                bool *pbCompressed,
+                                char **pszAddress,
+                                tABC_Error *pError);
+
     tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
                                 tABC_BitcoinURIInfo **ppInfo,
                                 tABC_Error *pError);
@@ -81,6 +87,13 @@ extern "C" {
                                             tABC_U08Buf PrivateSeed,
                                             int32_t N,
                                             tABC_Error *pError);
+
+    tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
+                               tABC_U08Buf key,
+                               bool compressed,
+                               tABC_Sweep_Done_Callback fCallback,
+                               void *pData,
+                               tABC_Error *pError);
 
     tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
                                    tABC_Error *pError);

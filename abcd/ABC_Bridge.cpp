@@ -46,6 +46,7 @@
 #include "bitcoin/picker.hpp"
 #include <curl/curl.h>
 #include <wallet/wallet.hpp>
+#include <list>
 #include <unordered_map>
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
 
@@ -65,10 +66,23 @@
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
+struct PendingSweep
+{
+    bc::payment_address address;
+    abcd::wif_key key;
+    bool done;
+
+    tABC_Sweep_Done_Callback fCallback;
+    void *pData;
+};
+
 struct WatcherInfo
 {
     abcd::watcher *watcher;
     std::set<std::string> addresses;
+    std::list<PendingSweep> sweeping;
+
+    // Callback:
     tABC_BitCoin_Event_Callback fAsyncCallback;
     void *pData;
     tABC_WalletID wallet;
@@ -82,6 +96,8 @@ static std::map<WalletUUID, WatcherInfo*> watchers_;
 // The last obelisk server we connected to:
 static unsigned gLastObelisk = 0;
 
+static tABC_CC     ABC_BridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep& sweep, tABC_Error *pError);
+static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
 static tABC_CC     ABC_BridgeExtractOutputs(abcd::watcher *watcher, abcd::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
@@ -96,8 +112,8 @@ static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
 static void        *ABC_BridgeWatcherSerialize(void *pData);
 static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx);
 
-static tABC_CC     ABC_BridgeChainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
-static tABC_CC     ABC_BridgeBlockhainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeChainPostTx(const bc::transaction_type& tx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeBlockhainPostTx(const bc::transaction_type& tx, tABC_Error *pError);
 static size_t      ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 
 /**
@@ -112,6 +128,91 @@ tABC_CC ABC_BridgeInitialize(tABC_Error *pError)
         pubkey_version = 0x6f;
         script_version = 0xc4;
     }
+
+    return cc;
+}
+
+bool check_minikey(const std::string& minikey)
+{
+    // Legacy minikeys are 22 chars long
+    if (minikey.size() != 22 && minikey.size() != 30)
+        return false;
+    return bc::sha256_hash(bc::to_data_chunk(minikey + "?"))[0] == 0x00;
+}
+
+bool check_hiddenbitz(const std::string& minikey)
+{
+    // Legacy minikeys are 22 chars long
+    if (minikey.size() != 22 && minikey.size() != 30)
+        return false;
+    return bc::sha256_hash(bc::to_data_chunk(minikey + "!"))[0] == 0x00;
+}
+
+bc::ec_secret hiddenbitz_to_secret(const std::string& minikey)
+{
+    if (!check_hiddenbitz(minikey))
+        return bc::ec_secret();
+    auto secret = bc::sha256_hash(bc::to_data_chunk(minikey));
+    auto mix = bc::decode_hex(HIDDENBITZ_KEY);
+
+    for (size_t i = 0; i < mix.size() && i < secret.size(); ++i)
+        secret[i] ^= mix[i];
+
+    return secret;
+}
+
+/**
+ * Converts a Bitcoin private key in WIF format into a 256-bit value.
+ */
+tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
+                            tABC_U08Buf *pOut,
+                            bool *pbCompressed,
+                            char **pszAddress,
+                            tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    bc::ec_secret secret;
+    bc::data_chunk ec_addr;
+    bc::payment_address address;
+
+    bool bCompressed = true;
+    char *szAddress = NULL;
+
+    // Parse as WIF:
+    secret = libwallet::wif_to_secret(szWIF);
+    if (secret != bc::null_hash)
+    {
+        bCompressed = libwallet::is_wif_compressed(szWIF);
+    }
+    else if (check_minikey(szWIF))
+    {
+        secret = libwallet::minikey_to_secret(szWIF);
+        bCompressed = false;
+    }
+    else if (check_hiddenbitz(szWIF))
+    {
+        secret = hiddenbitz_to_secret(szWIF);
+        bCompressed = true;
+    }
+    else
+    {
+        ABC_RET_ERROR(ABC_CC_ParseError, "Malformed WIF");
+    }
+
+    // Get address:
+    ec_addr = bc::secret_to_public_key(secret, bCompressed);
+    address.set(pubkey_version, bc::bitcoin_short_hash(ec_addr));
+    ABC_STRDUP(szAddress, address.encoded().c_str());
+
+    // Write out:
+    ABC_BUF_DUP_PTR(*pOut, secret.data(), secret.size());
+    *pbCompressed = bCompressed;
+    *pszAddress = szAddress;
+    szAddress = NULL;
+
+exit:
+    ABC_FREE_STR(szAddress);
 
     return cc;
 }
@@ -376,6 +477,44 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
+                           tABC_U08Buf key,
+                           bool compressed,
+                           tABC_Sweep_Done_Callback fCallback,
+                           void *pData,
+                           tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    bc::ec_secret ec_key;
+    bc::ec_point ec_addr;
+    bc::payment_address address;
+    WatcherInfo *watcherInfo = NULL;
+    PendingSweep sweep;
+
+    auto row = watchers_.find(self.szUUID);
+    ABC_CHECK_ASSERT(row != watchers_.end(), ABC_CC_Error, "Unable find watcher");
+    watcherInfo = row->second;
+
+    // Decode key and address:
+    ABC_CHECK_ASSERT(ABC_BUF_SIZE(key) == ec_key.size(),
+        ABC_CC_Error, "Bad key size");
+    std::copy(key.p, key.end, ec_key.data());
+    ec_addr = bc::secret_to_public_key(ec_key, compressed);
+    address.set(pubkey_version, bc::bitcoin_short_hash(ec_addr));
+
+    // Start the sweep:
+    sweep.address = address;
+    sweep.key = abcd::wif_key{ec_key, compressed};
+    sweep.done = false;
+    sweep.fCallback = fCallback;
+    sweep.pData = pData;
+    watcherInfo->sweeping.push_back(sweep);
+    watcherInfo->watcher->watch_address(address);
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
                                tABC_Error *pError)
 {
@@ -408,8 +547,9 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     tABC_CC cc = ABC_CC_Ok;
     WatcherInfo *watcherInfo = NULL;
     abcd::watcher::block_height_callback heightCallback;
-    abcd::watcher::callback txCallback;
+    abcd::watcher::tx_callback txCallback;
     abcd::watcher::tx_sent_callback sendCallback;
+    abcd::watcher::quiet_callback on_quiet;
     abcd::watcher::fail_callback failCallback;
 
     auto row = watchers_.find(szWalletUUID);
@@ -427,7 +567,7 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
     {
         ABC_BridgeTxCallback(watcherInfo, tx, fAsyncCallback, pData);
     };
-    watcherInfo->watcher->set_callback(std::move(txCallback));
+    watcherInfo->watcher->set_tx_callback(txCallback);
 
     heightCallback = [watcherInfo, fAsyncCallback, pData](const size_t height)
     {
@@ -435,14 +575,20 @@ tABC_CC ABC_BridgeWatcherLoop(const char *szWalletUUID,
         ABC_TxBlockHeightUpdate(height, fAsyncCallback, pData, &error);
         ABC_BridgeWatcherSerializeAsync(watcherInfo);
     };
-    watcherInfo->watcher->set_height_callback(std::move(heightCallback));
+    watcherInfo->watcher->set_height_callback(heightCallback);
+
+    on_quiet = [watcherInfo]()
+    {
+        ABC_BridgeQuietCallback(watcherInfo);
+    };
+    watcherInfo->watcher->set_quiet_callback(on_quiet);
 
     failCallback = [watcherInfo]()
     {
         tABC_Error error;
         ABC_BridgeWatcherConnect(watcherInfo->wallet.szUUID, &error);
     };
-    watcherInfo->watcher->set_fail_callback(std::move(failCallback));
+    watcherInfo->watcher->set_fail_callback(failCallback);
 
     row->second->watcher->loop();
 exit:
@@ -743,14 +889,14 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     }
 
     // Send to chain
-    cc = ABC_BridgeChainPostTx(utx, pError);
+    cc = ABC_BridgeChainPostTx(utx->tx, pError);
     // If we are not on testnet and chain failed try block chain as well
     if (!ABC_BridgeIsTestNet())
     {
         if (cc == ABC_CC_Ok)
-            ABC_BridgeBlockhainPostTx(utx, pError);
+            ABC_BridgeBlockhainPostTx(utx->tx, pError);
         else
-            cc = ABC_BridgeBlockhainPostTx(utx, pError);
+            cc = ABC_BridgeBlockhainPostTx(utx->tx, pError);
     }
 
     // Make sure the send was successful
@@ -1078,6 +1224,122 @@ ABC_BridgeIsTestNet()
     bc::payment_address foo;
     bc::set_public_key_hash(foo, bc::null_short_hash);
     return foo.version() != 0;
+}
+
+static
+tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
+                          PendingSweep& sweep,
+                          tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    char *szID = NULL;
+    char *szAddress = NULL;
+    bc::payment_address to_address;
+    uint64_t funds = 0;
+    abcd::unsigned_transaction utx;
+    bc::transaction_output_type output;
+    abcd::key_table keys;
+    std::string malTxId, txId;
+
+    // Find utxos for this address:
+    auto utxos = watcherInfo->watcher->get_utxos(sweep.address);
+
+    // TODO: If there aren't any, maybe we should tell the GUI?
+    if (!utxos.size())
+        return ABC_CC_Ok;
+
+    // There are some utxos, so send them to ourselves:
+    tABC_TxDetails details;
+    memset(&details, 0, sizeof(tABC_TxDetails));
+    details.amountSatoshi = 0;
+    details.amountCurrency = 0;
+    details.amountFeesAirbitzSatoshi = 0;
+    details.amountFeesMinersSatoshi = 0;
+    details.szName = const_cast<char*>("");
+    details.szCategory = const_cast<char*>("Transfer:Paper wallet");
+    details.szNotes = const_cast<char*>("");
+    details.attributes = 0x2;
+
+    // Create a new receive request:
+    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(watcherInfo->wallet,
+        &details, &szID, false, pError));
+    ABC_CHECK_RET(ABC_TxGetRequestAddress(watcherInfo->wallet, szID,
+        &szAddress, pError));
+    to_address.set_encoded(szAddress);
+
+    // Build a transaction:
+    utx.tx.version = 1;
+    utx.tx.locktime = 0;
+    for (auto &utxo : utxos)
+    {
+        bc::transaction_input_type input;
+        input.sequence = 0xffffffff;
+        input.previous_output = utxo.point;
+        funds += utxo.value;
+        utx.tx.inputs.push_back(input);
+    }
+    ABC_CHECK_ASSERT(10500 <= funds, ABC_CC_InsufficientFunds, "Not enough funds");
+    funds -= 10000;
+    output.value = funds;
+    output.script = abcd::build_pubkey_hash_script(to_address.hash());
+    utx.tx.outputs.push_back(output);
+
+    // Now sign that:
+    keys[sweep.address] = sweep.key;
+    ABC_CHECK_SYS(abcd::gather_challenges(utx, *watcherInfo->watcher), "gather_challenges");
+    ABC_CHECK_SYS(abcd::sign_tx(utx, keys), "sign_tx");
+
+    // Send:
+    cc = ABC_BridgeChainPostTx(utx.tx, pError);
+    if (!ABC_BridgeIsTestNet())
+    {
+        if (cc == ABC_CC_Ok)
+            ABC_BridgeBlockhainPostTx(utx.tx, pError);
+        else
+            cc = ABC_BridgeBlockhainPostTx(utx.tx, pError);
+    }
+    ABC_CHECK_ASSERT(ABC_CC_Ok == cc, cc, "Unable to send transaction");
+
+    // Done:
+    if (sweep.fCallback)
+        sweep.fCallback(ABC_CC_Ok, szID, output.value);
+    sweep.done = true;
+    watcherInfo->watcher->send_tx(utx.tx);
+
+    malTxId = bc::encode_hex(bc::hash_transaction(utx.tx));
+    txId = ABC_BridgeNonMalleableTxId(utx.tx);
+
+    ABC_CHECK_RET(ABC_TxSweepSaveTransaction(
+        watcherInfo->wallet, txId.c_str(), malTxId.c_str(), funds, &details, pError));
+
+exit:
+    ABC_FREE_STR(szID);
+    ABC_FREE_STR(szAddress);
+
+    return cc;
+}
+
+static
+void ABC_BridgeQuietCallback(WatcherInfo *watcherInfo)
+{
+    // If we are sweeping any keys, do that now:
+    for (auto sweep: watcherInfo->sweeping)
+    {
+        tABC_CC cc;
+        tABC_Error error;
+
+        cc = ABC_BridgeDoSweep(watcherInfo, sweep, &error);
+        if (cc != ABC_CC_Ok)
+        {
+            if (sweep.fCallback)
+                sweep.fCallback(cc, NULL, 0);
+            sweep.done = true;
+        }
+    }
+
+    // Remove completed ones:
+    std::remove_if(watcherInfo->sweeping.begin(), watcherInfo->sweeping.end(),
+        [](const PendingSweep& sweep) { return sweep.done; });
 }
 
 static
@@ -1410,7 +1672,7 @@ static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
 }
 
 static
-tABC_CC ABC_BridgeChainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError)
+tABC_CC ABC_BridgeChainPostTx(const bc::transaction_type& tx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     CURL *pCurlHandle = NULL;
@@ -1420,10 +1682,10 @@ tABC_CC ABC_BridgeChainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *
     json_t *pJSON_Root = NULL;
     char *szPut = NULL;
 
-    bc::data_chunk raw_tx(satoshi_raw_size(utx->tx));
-    bc::satoshi_save(utx->tx, raw_tx.begin());
+    bc::data_chunk raw_tx(satoshi_raw_size(tx));
+    bc::satoshi_save(tx, raw_tx.begin());
     std::string encoded(bc::encode_hex(raw_tx));
-    std::string pretty(bc::pretty(utx->tx));
+    std::string pretty(bc::pretty(tx));
 
     if (ABC_BridgeIsTestNet())
     {
@@ -1477,7 +1739,7 @@ exit:
 }
 
 static
-tABC_CC ABC_BridgeBlockhainPostTx(abcd::unsigned_transaction_type *utx, tABC_Error *pError)
+tABC_CC ABC_BridgeBlockhainPostTx(const bc::transaction_type& tx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     CURL *pCurlHandle = NULL;
@@ -1485,10 +1747,10 @@ tABC_CC ABC_BridgeBlockhainPostTx(abcd::unsigned_transaction_type *utx, tABC_Err
     long resCode;
     std::string url, body, resBuffer;
 
-    bc::data_chunk raw_tx(satoshi_raw_size(utx->tx));
-    bc::satoshi_save(utx->tx, raw_tx.begin());
+    bc::data_chunk raw_tx(satoshi_raw_size(tx));
+    bc::satoshi_save(tx, raw_tx.begin());
     std::string encoded(bc::encode_hex(raw_tx));
-    std::string pretty(bc::pretty(utx->tx));
+    std::string pretty(bc::pretty(tx));
 
     url.append("https://blockchain.info/pushtx");
     body.append("tx=");
