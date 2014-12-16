@@ -1,9 +1,23 @@
+![AirBitz Core Library](http://airbitz.co/static/img/bitcoin-wallet/section-bitcoin-wallet-platform-bg.jpg)
 # AirBitz Wallet Core
+[https://airbitz.co/bitcoin-wallet-library](https://airbitz.co/bitcoin-wallet-library)
 
 This library implements the core Bitcoin functionality for the AirBitz wallet.
 It manages accounts, syncing, and Bitcoin transactions.
 
 ## Building
+
+The build process requires several pieces of software to be installed on the
+host system:
+
+    git wget autoconf automake libtool pkgconfig cmake
+
+To install these on the Mac, please use [Homebrew](http://brew.sh/). The 'wget' and 'cmake' that
+come from MacPorts are known to be broken.
+
+If you are building for iOS or Mac native, you also need a working installation
+of the XCode command-line tools. For Linux native builds, you need the clang
+compiler.
 
 Assuming your system has the necessary command-line tools installed, it should
 be possible to build an Android or iOS-compatible version of ABC by doing
@@ -19,18 +33,6 @@ like to build for a specific platform, use one of the following inside the
     make abc.build-android-arm
     make abc.build-ios-universal (only works on a Mac)
     make abc.build-native
-
-The build process requires several pieces of software to be installed on the
-host system:
-
-    git wget autoconf automake libtool pkgconfig cmake
-
-To install these on the Mac, please use Homebrew. The 'wget' and 'cmake' that
-come from MacPorts are known to be broken.
-
-If you are building for iOS or Mac native, you also need a working installation
-of the XCode command-line tools. For Linux native builds, you need the clang
-compiler.
 
 The 'deps' system automatically downloads and builds the various open-source
 libraries that the AirBitz core depends on. If you want to bypass the deps
