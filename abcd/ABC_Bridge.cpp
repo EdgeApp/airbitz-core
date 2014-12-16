@@ -1302,7 +1302,21 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
 
     // Done:
     if (sweep.fCallback)
+    {
         sweep.fCallback(ABC_CC_Ok, szID, output.value);
+    }
+    else
+    {
+        if (watcherInfo->fAsyncCallback)
+        {
+            tABC_AsyncBitCoinInfo info;
+            info.eventType = ABC_AsyncEventType_IncomingSweep;
+            info.sweepSatoshi = output.value;
+            ABC_STRDUP(info.szWalletUUID, szID);
+            watcherInfo->fAsyncCallback(&info);
+            ABC_FREE_STR(info.szWalletUUID);
+        }
+    }
     sweep.done = true;
     watcherInfo->watcher->send_tx(utx.tx);
 

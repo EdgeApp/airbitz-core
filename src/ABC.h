@@ -217,6 +217,7 @@ extern "C" {
         ABC_AsyncEventType_ExchangeRateUpdate,
         ABC_AsyncEventType_DataSyncUpdate,
         ABC_AsyncEventType_RemotePasswordChange,
+        ABC_AsyncEventType_IncomingSweep
     } tABC_AsyncEventType;
 
     /**
@@ -245,6 +246,9 @@ extern "C" {
 
         /** String containing a description of the event */
         char *szDescription;
+        
+        /** amount swept */
+        int64_t sweepSatoshi;
     } tABC_AsyncBitCoinInfo;
 
     /**
