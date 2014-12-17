@@ -1,7 +1,7 @@
 depends="libbitcoin libwallet libbitcoin-client"
 inherit lib
 
-source="https://github.com/Airbitz/libbitcoin-watcher.git#a7b19b6"
+source="https://github.com/Airbitz/libbitcoin-watcher.git#be27161"
 
 build() {
     autoreconf -i

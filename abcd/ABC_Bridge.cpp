@@ -1244,9 +1244,14 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     // Find utxos for this address:
     auto utxos = watcherInfo->watcher->get_utxos(sweep.address);
 
-    // TODO: If there aren't any, maybe we should tell the GUI?
-    if (!utxos.size())
+    // Tell the GUI if the address has already been swept:
+    if (!utxos.size() && watcherInfo->watcher->db().has_history(sweep.address))
+    {
+        if (sweep.fCallback)
+            sweep.fCallback(ABC_CC_Ok, NULL, 0);
+        sweep.done = true;
         return ABC_CC_Ok;
+    }
 
     // There are some utxos, so send them to ourselves:
     tABC_TxDetails details;
