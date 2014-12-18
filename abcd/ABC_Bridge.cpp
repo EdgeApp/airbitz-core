@@ -1305,10 +1305,16 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     }
     ABC_CHECK_ASSERT(ABC_CC_Ok == cc, cc, "Unable to send transaction");
 
+    // Save the transaction in the database:
+    malTxId = bc::encode_hex(bc::hash_transaction(utx.tx));
+    txId = ABC_BridgeNonMalleableTxId(utx.tx);
+    ABC_CHECK_RET(ABC_TxSweepSaveTransaction(watcherInfo->wallet,
+        txId.c_str(), malTxId.c_str(), funds, &details, pError));
+
     // Done:
     if (sweep.fCallback)
     {
-        sweep.fCallback(ABC_CC_Ok, szID, output.value);
+        sweep.fCallback(ABC_CC_Ok, txId.c_str(), output.value);
     }
     else
     {
@@ -1324,12 +1330,6 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     }
     sweep.done = true;
     watcherInfo->watcher->send_tx(utx.tx);
-
-    malTxId = bc::encode_hex(bc::hash_transaction(utx.tx));
-    txId = ABC_BridgeNonMalleableTxId(utx.tx);
-
-    ABC_CHECK_RET(ABC_TxSweepSaveTransaction(
-        watcherInfo->wallet, txId.c_str(), malTxId.c_str(), funds, &details, pError));
 
 exit:
     ABC_FREE_STR(szID);
