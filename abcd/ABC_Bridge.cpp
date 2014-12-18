@@ -1342,7 +1342,7 @@ static
 void ABC_BridgeQuietCallback(WatcherInfo *watcherInfo)
 {
     // If we are sweeping any keys, do that now:
-    for (auto sweep: watcherInfo->sweeping)
+    for (auto& sweep: watcherInfo->sweeping)
     {
         tABC_CC cc;
         tABC_Error error;
@@ -1357,8 +1357,8 @@ void ABC_BridgeQuietCallback(WatcherInfo *watcherInfo)
     }
 
     // Remove completed ones:
-    std::remove_if(watcherInfo->sweeping.begin(), watcherInfo->sweeping.end(),
-        [](const PendingSweep& sweep) { return sweep.done; });
+    watcherInfo->sweeping.remove_if([](const PendingSweep& sweep) {
+        return sweep.done; });
 }
 
 static
