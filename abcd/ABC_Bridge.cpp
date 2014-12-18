@@ -1244,12 +1244,16 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     // Find utxos for this address:
     auto utxos = watcherInfo->watcher->get_utxos(sweep.address);
 
-    // Tell the GUI if the address has already been swept:
-    if (!utxos.size() && watcherInfo->watcher->db().has_history(sweep.address))
+    // Bail out if there are no funds to sweep:
+    if (!utxos.size())
     {
-        if (sweep.fCallback)
-            sweep.fCallback(ABC_CC_Ok, NULL, 0);
-        sweep.done = true;
+        // Tell the GUI if there were funds in the past:
+        if (watcherInfo->watcher->db().has_history(sweep.address))
+        {
+            if (sweep.fCallback)
+                sweep.fCallback(ABC_CC_Ok, NULL, 0);
+            sweep.done = true;
+        }
         return ABC_CC_Ok;
     }
 
