@@ -1251,7 +1251,20 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
         if (watcherInfo->watcher->db().has_history(sweep.address))
         {
             if (sweep.fCallback)
+            {
                 sweep.fCallback(ABC_CC_Ok, NULL, 0);
+            }
+            else
+            {
+                if (watcherInfo->fAsyncCallback)
+                {
+                    tABC_AsyncBitCoinInfo info;
+                    info.eventType = ABC_AsyncEventType_IncomingSweep;
+                    info.sweepSatoshi = 0;
+                    info.szTxID = NULL;
+                    watcherInfo->fAsyncCallback(&info);
+                }
+            }
             sweep.done = true;
         }
         return ABC_CC_Ok;
@@ -1327,9 +1340,9 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_IncomingSweep;
             info.sweepSatoshi = output.value;
-            ABC_STRDUP(info.szWalletUUID, szID);
+            ABC_STRDUP(info.szTxID, txId.c_str());
             watcherInfo->fAsyncCallback(&info);
-            ABC_FREE_STR(info.szWalletUUID);
+            ABC_FREE_STR(info.szTxID);
         }
     }
     sweep.done = true;
