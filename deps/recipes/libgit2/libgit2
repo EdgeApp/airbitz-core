@@ -1,9 +1,12 @@
 depends="openssl"
 inherit lib
 
-source="https://github.com/Airbitz/libgit2.git#fb058ce6"
+version="0.21.3"
+source="https://github.com/libgit2/libgit2/archive/v$version.tar.gz"
 
 build() {
+    cd "libgit2-$version"
+
     case $target in
     ios-*)      cmakeflags="-DCMAKE_TOOLCHAIN_FILE=$recipe_dir/../../classes/ios.toolchain.cmake" ;;
     android-*)  cmakeflags="-DCMAKE_TOOLCHAIN_FILE=$recipe_dir/../../classes/android.toolchain.cmake -DANDROID=1" ;;
@@ -11,7 +14,7 @@ build() {
     esac
 
     echo Patching...
-    patch -p1 < $recipe_dir/getaddrinfo.patch
+    patch -p1 < $recipe_dir/ssl-cert-locations.patch # Coming in v0.22
     patch -p1 < $recipe_dir/timeout.patch
     patch -p1 < $recipe_dir/pinning.patch
 
