@@ -22,7 +22,6 @@ static pthread_mutex_t gMutex;
 
 static tABC_CC ABC_SyncMutexLock(tABC_Error *pError);
 static tABC_CC ABC_SyncMutexUnlock(tABC_Error *pError);
-static char *gszCaCertPath = NULL;
 
 static char *gszCurrSyncServer = NULL;
 static int serverIdx = -1;
@@ -133,8 +132,10 @@ tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError)
 
     if (szCaCertPath)
     {
-        ABC_STRDUP(gszCaCertPath, szCaCertPath);
+        e = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, szCaCertPath, NULL);
+        ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_libgit2_opts failed");
     }
+
 exit:
     if (e < 0) SyncLogGitError(e);
     return cc;
@@ -154,7 +155,6 @@ void ABC_SyncTerminate()
 
         gbInitialized = false;
     }
-    ABC_FREE_STR(gszCaCertPath);
     ABC_FREE_STR(gszCurrSyncServer);
 }
 
@@ -211,15 +211,6 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
 
     e = git_repository_config(&cfg, repo);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_config failed");
-
-    if (gszCaCertPath)
-    {
-        e = git_config_set_string(cfg, "http.sslcainfo", gszCaCertPath);
-        ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "http.sslcainfo failed");
-
-        e = git_config_set_bool(cfg, "http.sslverify", 1);
-        ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "http.sslverify failed");
-    }
 
     e = sync_fetch(repo, szServer);
     ABC_SYNC_ROT(sync_fetch(repo, szServer), "sync_fetch failed");
