@@ -132,7 +132,7 @@ tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError)
 
     if (szCaCertPath)
     {
-        e = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, NULL, szCaCertPath);
+        e = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, szCaCertPath, NULL);
         ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_libgit2_opts failed");
     }
 
