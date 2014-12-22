@@ -178,8 +178,10 @@ extern "C" {
 
 #define ABC_STRDUP(ptr, string) \
     { \
-        ptr = strdup(string); \
-        ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "strdup failed (returned NULL)"); \
+        if (string) {\
+            ptr = strdup(string); \
+            ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "strdup failed (returned NULL)"); \
+        }\
     }
 
 #define ABC_FREE(ptr) \
