@@ -38,6 +38,9 @@
  *  @version 1.0
  */
 
+#include <unordered_map>
+#include <string>
+
 #include "ABC_Tx.h"
 #include "ABC_Account.h"
 #include "ABC_Exchanges.h"
@@ -909,10 +912,25 @@ tABC_CC ABC_TxTrashAddresses(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     tABC_TxAddress *pAddress = NULL;
 
+    unsigned int localCount = 0;
+    tABC_TxAddress **pInternalAddress = NULL;
+    std::unordered_map<std::string, sABC_TxAddress*> addrMap;
+
+    // Create a more efficient structure to query
+    ABC_CHECK_RET(ABC_TxGetAddresses(self, &pInternalAddress, &localCount, pError));
+    for (unsigned i = 0; i < localCount; ++i)
+    {
+        std::string addr(pInternalAddress[i]->szPubAddress);
+        addrMap[addr] = pInternalAddress[i];
+    }
+
     for (unsigned i = 0; i < addressCount; ++i)
     {
-        ABC_CHECK_RET(ABC_TxFindRequest(self,
-                        paAddresses[i]->szAddress, &pAddress, pError));
+        std::string addr(paAddresses[i]->szAddress);
+        if (addrMap.find(addr) == addrMap.end())
+            continue;
+
+        pAddress = addrMap[addr];
         if (pAddress)
         {
             pAddress->pStateInfo->bRecycleable = false;
@@ -946,15 +964,12 @@ tABC_CC ABC_TxTrashAddresses(tABC_WalletID self,
                 ABC_CHECK_RET(
                     ABC_TxSaveTransaction(self, pTx, pError));
             }
-
-            ABC_TxFreeAddress(pAddress);
-
         }
         pAddress = NULL;
     }
 
 exit:
-    ABC_TxFreeAddress(pAddress);
+    ABC_TxFreeAddresses(pInternalAddress, localCount);
 
     return cc;
 }
