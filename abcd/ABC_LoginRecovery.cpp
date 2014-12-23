@@ -40,8 +40,15 @@ tABC_CC ABC_LoginGetRQ(const char *szUserName,
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pCarePackage->pSNRP4, &L4, pError));
 
     // Decrypt:
-    ABC_CryptoDecryptJSONObject(pCarePackage->ERQ, L4, &RQ, pError);
-    ABC_STRDUP(*pszRecoveryQuestions, (char *)ABC_BUF_PTR(RQ));
+    cc = ABC_CryptoDecryptJSONObject(pCarePackage->ERQ, L4, &RQ, pError);
+    if (ABC_CC_Ok == cc)
+    {
+        ABC_STRDUP(*pszRecoveryQuestions, (char *)ABC_BUF_PTR(RQ));
+    }
+    else
+    {
+        *pszRecoveryQuestions = NULL;
+    }
 
 exit:
     ABC_LoginFree(pSelf);
