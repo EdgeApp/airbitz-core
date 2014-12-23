@@ -787,12 +787,12 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
-    ABC_CHECK_RET(ABC_TxCalcCurrency(self, amountSatoshi, &Currency, pError));
-
     // Does the transaction already exist?
     ABC_TxTransactionExists(self, szTxId, &pTx, pError);
     if (pTx == NULL)
     {
+        ABC_CHECK_RET(ABC_TxCalcCurrency(self, amountSatoshi, &Currency, pError));
+
         // create a transaction
         ABC_NEW(pTx, tABC_Tx);
         ABC_NEW(pTx->pStateInfo, tTxStateInfo);
