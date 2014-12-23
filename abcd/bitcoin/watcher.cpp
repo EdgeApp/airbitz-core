@@ -83,6 +83,9 @@ BC_API bool watcher::load(const data_chunk& data)
 
 BC_API void watcher::watch_address(const payment_address& address, unsigned poll_ms)
 {
+    auto a = addresses_.find(address);
+    if (a != addresses_.end() && a->second == poll_ms)
+        return;
     addresses_[address] = poll_ms;
     send_watch_addr(address, poll_ms);
 }
