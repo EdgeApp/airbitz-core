@@ -160,21 +160,11 @@ BC_API void watcher::set_fail_callback(fail_callback cb)
  */
 BC_API output_info_list watcher::get_utxos(const payment_address& address)
 {
-    auto utxos = db_.get_utxos();
-    output_info_list out;
+    libwallet::address_set watching;
+    for (auto& row: addresses_)
+        watching.insert(row.first);
 
-    for (auto& utxo: utxos)
-    {
-        const auto& tx = db_.get_tx(utxo.point.hash);
-        auto& output = tx.outputs[utxo.point.index];
-
-        bc::payment_address to_address;
-        if (bc::extract(to_address, output.script))
-            if (address == to_address)
-                out.push_back(utxo);
-    }
-
-    return out;
+    return db_.get_utxos(watching);
 }
 
 /**
