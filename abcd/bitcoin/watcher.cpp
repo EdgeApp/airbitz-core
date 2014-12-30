@@ -161,8 +161,7 @@ BC_API void watcher::set_fail_callback(fail_callback cb)
 BC_API output_info_list watcher::get_utxos(const payment_address& address)
 {
     libwallet::address_set watching;
-    for (auto& row: addresses_)
-        watching.insert(row.first);
+    watching.insert(address);
 
     return db_.get_utxos(watching);
 }
@@ -173,22 +172,26 @@ BC_API output_info_list watcher::get_utxos(const payment_address& address)
  */
 BC_API output_info_list watcher::get_utxos(bool filter)
 {
-    auto utxos = db_.get_utxos();
-    output_info_list out;
+    libwallet::address_set addresses;
+    for (auto& row: addresses_)
+        addresses.insert(row.first);
 
-    for (auto& utxo: utxos)
+    auto utxos = db_.get_utxos(addresses);
+
+    // Filter out unconfirmed ones:
+    if (filter)
     {
-        const auto& tx = db_.get_tx(utxo.point.hash);
-        auto& output = tx.outputs[utxo.point.index];
-
-        bc::payment_address to_address;
-        if (bc::extract(to_address, output.script))
-            if (addresses_.find(to_address) != addresses_.end())
-                if (!filter || db_.get_tx_height(utxo.point.hash) || is_spend(tx))
-                    out.push_back(utxo);
+        output_info_list out;
+        for (auto& utxo: utxos)
+        {
+            if (db_.get_tx_height(utxo.point.hash) ||
+                db_.is_spend(utxo.point.hash, addresses))
+                out.push_back(utxo);
+        }
+        utxos = std::move(out);
     }
 
-    return out;
+    return utxos;
 }
 
 BC_API size_t watcher::get_last_block_height()
@@ -200,22 +203,6 @@ BC_API bool watcher::get_tx_height(hash_digest txid, int& height)
 {
     height = db_.get_tx_height(txid);
     return db_.has_tx(txid);
-}
-
-/**
- * Returns true if all inputs are addresses we control.
- */
-bool watcher::is_spend(const bc::transaction_type& tx)
-{
-    for (auto& input: tx.inputs)
-    {
-        bc::payment_address address;
-        if (!bc::extract(address, input.script))
-            return false;
-        if (addresses_.find(address) == addresses_.end())
-            return false;
-    }
-    return true;
 }
 
 void watcher::dump(std::ostream& out)

@@ -93,9 +93,6 @@ private:
     libwallet::tx_db db_;
     zmq::context_t ctx_;
 
-    // Helper stuff:
-    bool is_spend(const bc::transaction_type& tx);
-
     // Cached addresses, for when we are disconnected:
     std::unordered_map<bc::payment_address, unsigned> addresses_;
     bc::payment_address priority_address_;
