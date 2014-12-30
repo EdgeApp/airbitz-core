@@ -315,18 +315,13 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
     unsigned long ulCsvDataLen = 0;
     tABC_U08Buf buff = ABC_BUF_NULL;
 
-    ABC_CHECK_NULL(pTransactions);
-
     ABC_BUF_NEW(buff, ABC_CSV_MAX_REC_SZ);
 
-    if (iListSize)
-    {
-        ABC_CHECK_RET(ABC_ExportGenerateHeader(&szCurrRec, pError));
-        ABC_BUF_SET_PTR(buff, (unsigned char *) szCurrRec, strlen(szCurrRec));
-        ulCsvDataLen += strlen(szCurrRec);
-        ABC_BUF_APPEND_PTR(buff, "\n", 1);
-        ulCsvDataLen++;
-    }
+    ABC_CHECK_RET(ABC_ExportGenerateHeader(&szCurrRec, pError));
+    ABC_BUF_SET_PTR(buff, (unsigned char *) szCurrRec, strlen(szCurrRec));
+    ulCsvDataLen += strlen(szCurrRec);
+    ABC_BUF_APPEND_PTR(buff, "\n", 1);
+    ulCsvDataLen++;
 
     for (int i=0; i < iListSize; i++)
     {
