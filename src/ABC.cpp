@@ -3030,27 +3030,20 @@ tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
 
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    tABC_TxInfo **pTransactions;
+    unsigned int iCount;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-
-    {
-        tABC_TxInfo **pTransactions;
-        unsigned int iCount;
-
-        ABC_CHECK_RET(ABC_GetTransactions(szUserName,
-                                          szPassword,
-                                          szUUID,
-                                          startTime, endTime,
-                                          &pTransactions, &iCount, pError));
-
-
-        ABC_CHECK_RET(ABC_ExportFormatCsv(pTransactions,
-                                          iCount,
-                                          szCsvData,
-                                          pError));
-    }
-
+    ABC_CHECK_RET(ABC_GetTransactions(szUserName,
+                                      szPassword,
+                                      szUUID,
+                                      startTime, endTime,
+                                      &pTransactions, &iCount, pError));
+    ABC_CHECK_ASSERT(iCount > 0,
+        ABC_CC_NoTransaction, "Unable to find any transactions with that date range");
+    ABC_CHECK_RET(ABC_ExportFormatCsv(pTransactions, iCount, szCsvData, pError));
 exit:
+    ABC_FreeTransactions(pTransactions, iCount);
     return cc;
 }
 
