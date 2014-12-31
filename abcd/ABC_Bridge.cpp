@@ -1317,7 +1317,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     details.amountFeesAirbitzSatoshi = 0;
     details.amountFeesMinersSatoshi = 0;
     details.szName = const_cast<char*>("");
-    details.szCategory = const_cast<char*>("Transfer:Paper wallet");
+    details.szCategory = const_cast<char*>("");
     details.szNotes = const_cast<char*>("");
     details.attributes = 0x2;
 
