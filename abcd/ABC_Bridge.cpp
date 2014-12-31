@@ -218,6 +218,38 @@ exit:
 }
 
 /**
+ * Attempts to find the bitcoin address for a private key.
+ * @return false for failure.
+ */
+static
+bool ABC_BridgeDecodeWIFAddress(bc::payment_address& address, std::string wif)
+{
+    tABC_Error error;
+    tABC_U08Buf secret = ABC_BUF_NULL;
+    bool bCompressed;
+    char *szAddress = NULL;
+
+    // If the text starts with "hbitz://", get rid of that:
+    if (0 == wif.find("hbits://"))
+        wif.erase(0, 8);
+
+    // Try to parse this as a key:
+    if (ABC_CC_Ok != ABC_BridgeDecodeWIF(wif.c_str(),
+        &secret, &bCompressed, &szAddress, &error))
+        return false;
+    ABC_BUF_FREE(secret);
+
+    // Output:
+    if (!address.set_encoded(szAddress))
+    {
+        ABC_FREE_STR(szAddress);
+        return false;
+    }
+    ABC_FREE_STR(szAddress);
+    return true;
+}
+
+/**
  * Parses a Bitcoin URI and creates an info struct with the data found in the URI.
  *
  * @param szURI     URI to parse
@@ -231,7 +263,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
                             tABC_Error *pError)
 {
     libwallet::uri_parse_result result;
-    libbitcoin::payment_address address;
+    bc::payment_address address;
     char *uriString = NULL;
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -262,11 +294,18 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
         uriString[length] = '\0';
     }
 
-    // parse and extract contents
+    // Try to parse as a URI:
     if (!libwallet::uri_parse(uriString, result))
     {
+        // Try to parse as a raw address:
         if (!address.set_encoded(uriString))
-            ABC_RET_ERROR(ABC_CC_ParseError, "Malformed bitcoin URI");
+        {
+            // Try to parse as a private key:
+            if (!ABC_BridgeDecodeWIFAddress(address, uriString))
+            {
+                ABC_RET_ERROR(ABC_CC_ParseError, "Malformed bitcoin URI");
+            }
+        }
         result.address = address;
     }
     if (result.address)
