@@ -341,9 +341,19 @@ bool watcher::command(uint8_t* data, size_t size)
     case msg_connect:
         {
             std::string server(data + 1, data + size);
+            std::string key;
+
+            // Parse out the key part:
+            size_t key_start = server.find(' ');
+            if (key_start != std::string::npos)
+            {
+                key = server.substr(key_start + 1);
+                server.erase(key_start);
+            }
+
             delete connection_;
             connection_ = new connection(db_, ctx_, *this);
-            if (!connection_->socket.connect(server))
+            if (!connection_->socket.connect(server, key))
             {
                 delete connection_;
                 connection_ = nullptr;
