@@ -1,5 +1,11 @@
-#include "common.h"
-#include "ABC.h"
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
+ */
+
+#include "commands.hpp"
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -7,6 +13,9 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <signal.h>
+#include <iostream>
+
+using namespace abcd;
 
 typedef struct sThread
 {
@@ -112,7 +121,8 @@ void send_tx(tABC_WalletInfo *wallet)
             tABC_CC cc = ABC_InitiateSendRequest(gszUserName, gszPassword,
                                     wallet->szUUID, szAddress,
                                     &details, &szTxId, &error);
-            PrintError(cc, &error);
+            if (cc != ABC_CC_Ok)
+                std::cerr << Status::fromError(error) << std::endl;
             free(szTxId);
         }
     }
@@ -134,43 +144,30 @@ void main_loop()
     }
 }
 
-int main(int argc, char *argv[])
+Status washer(int argc, char *argv[])
 {
-    tABC_CC cc;
-    tABC_Error error;
-    unsigned char seed[] = {1, 2, 3};
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... washer <user> <pass>");
+    gszUserName = argv[0];
+    gszPassword = argv[1];
 
-    if (argc != 4)
-    {
-        fprintf(stderr, "usage: %s <dir> <user> <pass>\n", argv[0]);
-        return 1;
-    }
+    char **szUUIDs = NULL;
+    unsigned int count = 0;
+    ABC_CHECK_OLD(ABC_GetWalletUUIDs(gszUserName, gszPassword, &szUUIDs, &count, &error));
 
     signal(SIGINT, sig_handler);
 
-    char *szDir = argv[1];
-    gszUserName = argv[2];
-    gszPassword = argv[3];
-
     pthread_t data_thread;
-    char **szUUIDs = NULL;
-    tThread **threads = NULL;
-    unsigned int count = 0;
-
-    MAIN_CHECK(ABC_Initialize(szDir, CA_CERT, seed, sizeof(seed), &error));
-    MAIN_CHECK(ABC_SignIn(gszUserName, gszPassword, NULL, NULL, &error));
-    MAIN_CHECK(ABC_GetWalletUUIDs(gszUserName, gszPassword, &szUUIDs, &count, &error));
-
-    threads = (tThread**)malloc(sizeof(tThread *) * count);
-
     if (!pthread_create(&data_thread, NULL, data_loop, NULL))
     {
         pthread_detach(data_thread);
     }
 
+    tThread **threads = NULL;
+    threads = (tThread**)malloc(sizeof(tThread *) * count);
     for (unsigned i = 0; i < count; ++i) {
         char *szUUID = szUUIDs[i];
-        MAIN_CHECK(ABC_WatcherStart(gszUserName, gszPassword, szUUID, &error));
+        ABC_CHECK_OLD(ABC_WatcherStart(gszUserName, gszPassword, szUUID, &error));
 
         tThread *thread = (tThread*)malloc(sizeof(tThread));
         thread->szUUID = strdup(szUUID);
@@ -180,13 +177,13 @@ int main(int argc, char *argv[])
             pthread_detach(thread->watcher_thread);
         }
 
-        MAIN_CHECK(ABC_WatchAddresses(gszUserName, gszPassword, szUUID, &error));
-        MAIN_CHECK(ABC_WatcherConnect(szUUID, &error));
+        ABC_CHECK_OLD(ABC_WatchAddresses(gszUserName, gszPassword, szUUID, &error));
+        ABC_CHECK_OLD(ABC_WatcherConnect(szUUID, &error));
     }
     main_loop();
     for (unsigned i = 0; i < count; ++i) {
         tThread *thread = threads[i];
-        MAIN_CHECK(ABC_WatcherStop(thread->szUUID, &error));
+        ABC_CHECK_OLD(ABC_WatcherStop(thread->szUUID, &error));
         pthread_join(thread->watcher_thread, NULL);
         free(thread->szUUID);
         free(thread);
@@ -196,6 +193,5 @@ int main(int argc, char *argv[])
 
     pthread_join(data_thread, NULL);
 
-    MAIN_CHECK(ABC_ClearKeyCache(&error));
-    return 0;
+    return Status();
 }

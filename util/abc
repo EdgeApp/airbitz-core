@@ -1,5 +1,5 @@
 #!/bin/sh
-util=build/get-settings.bin
+util=build/abc
 
 export LD_LIBRARY_PATH="../build/:$LD_LIBRARY_PATH"
 make $util && ./$util "$@"

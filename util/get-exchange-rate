@@ -1,5 +1,0 @@
-#!/bin/sh
-util=build/get-exchange-rate.bin
-
-export LD_LIBRARY_PATH="../build/:$LD_LIBRARY_PATH"
-make $util && ./$util "$@"
