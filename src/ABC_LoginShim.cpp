@@ -107,6 +107,7 @@ tABC_CC ABC_LoginShimLogin(const char *szUserName,
                            const char *szPassword,
                            tABC_Error *pError)
 {
+    tABC_Error error;
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
@@ -116,7 +117,7 @@ tABC_CC ABC_LoginShimLogin(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
     // Take this non-blocking opportunity to update the general info:
-    ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
+    ABC_GeneralUpdateInfo(&error);
 
 exit:
     ABC_LoginShimMutexUnlock(NULL);
