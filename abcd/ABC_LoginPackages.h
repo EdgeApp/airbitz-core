@@ -10,9 +10,7 @@
 #include "util/ABC_Crypto.h"
 #include <jansson.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     /**
      * A round-trippable representation of the AirBitz CarePackage file.
@@ -83,8 +81,6 @@ extern "C" {
                                        char **pszSyncKey,
                                        tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

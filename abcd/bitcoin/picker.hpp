@@ -82,7 +82,7 @@ bool gather_challenges(unsigned_transaction& utx, abcd::watcher& watcher);
  */
 bool sign_tx(unsigned_transaction& utx, const key_table& keys);
 
-}
+} // namespace abcd
 
 #endif
 

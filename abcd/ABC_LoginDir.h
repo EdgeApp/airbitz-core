@@ -9,9 +9,7 @@
 #include "ABC.h"
 #include "ABC_LoginPackages.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     tABC_CC ABC_LoginDirGetNumber(const char *szUserName,
                                   int *pAccountNum,
@@ -58,8 +56,6 @@ extern "C" {
                                     char *szSyncKey,
                                     tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

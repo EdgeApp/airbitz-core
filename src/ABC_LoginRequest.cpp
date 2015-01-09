@@ -6,6 +6,8 @@
 #include "ABC_LoginRequest.h"
 #include "ABC_LoginShim.h"
 
+namespace abcd {
+
 /**
  * Allocates and fills in an account request structure with the info given.
  *
@@ -170,3 +172,5 @@ void *ABC_LoginRequestThreaded(void *pData)
 
     return NULL;
 }
+
+} // namespace abcd

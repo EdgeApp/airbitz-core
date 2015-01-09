@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+namespace abcd {
+
 static bool gbInitialized = false;
 static pthread_mutex_t gMutex;
 
@@ -339,3 +341,5 @@ exit:
 
     return cc;
 }
+
+} // namespace abcd

@@ -9,6 +9,8 @@
 #include "util/ABC_Util.h"
 #include <jansson.h>
 
+namespace abcd {
+
 #define ACCOUNT_MAX                             1024  // maximum number of accounts
 #define ACCOUNT_DIR                             "Accounts"
 #define ACCOUNT_FOLDER_PREFIX                   "Account"
@@ -504,3 +506,5 @@ exit:
 
     return cc;
 }
+
+} // namespace abcd

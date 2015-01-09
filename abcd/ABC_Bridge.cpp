@@ -52,6 +52,8 @@
 
 #include "config.h"
 
+namespace abcd {
+
 #define FALLBACK_OBELISK "tcp://obelisk.airbitz.co:9091"
 #define TESTNET_OBELISK "tcp://obelisk-testnet.airbitz.co:9091"
 #define NO_AB_FEES
@@ -1874,3 +1876,5 @@ size_t ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembe
 
     return amountWritten;
 }
+
+} // namespace abcd

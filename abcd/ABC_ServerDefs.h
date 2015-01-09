@@ -40,6 +40,8 @@
 
 #include "config.h"
 
+namespace abcd {
+
 #define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api/v1"
 #define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
 #define ABC_SERVER_ACCOUNT_ACTIVATE         "account/activate"
@@ -76,10 +78,6 @@
 #define ABC_SERVER_JSON_REPO_WALLET_FIELD       "repo_wallet_key"
 #define ABC_SERVER_JSON_EREPO_WALLET_FIELD      "erepo_wallet_key"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
     typedef enum eABC_Server_Code
     {
         ABC_Server_Code_Success = 0,
@@ -92,8 +90,6 @@ extern "C" {
         ABC_Server_Code_PinExpired = 7
     } tABC_Server_Code;
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

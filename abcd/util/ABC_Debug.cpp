@@ -35,27 +35,24 @@
  *  @author See AUTHORS
  *  @version 1.0
  */
-
 #include "ABC_Debug.h"
 
-#ifdef DEBUG
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
 #include <stdarg.h>
 #include <pthread.h>
-
 #include "ABC_Util.h"
-
-#define BUF_SIZE 16384
-#define MAX_LOG_SIZE 102400 // Max size 100 KB
-
 #ifdef ANDROID
 #include <android/log.h>
 #endif
-/**
- * Logs the given string
- */
+
+namespace abcd {
+
+#ifdef DEBUG
+
+#define BUF_SIZE 16384
+#define MAX_LOG_SIZE 102400 // Max size 100 KB
 
 #define ABC_LOG_FILE "abc.log"
 
@@ -216,3 +213,5 @@ void ABC_DebugLog(const char * format, ...)
 }
 
 #endif
+
+} // namespace abcd

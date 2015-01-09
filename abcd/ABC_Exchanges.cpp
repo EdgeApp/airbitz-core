@@ -44,8 +44,9 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 #include <pthread.h>
+#include <string>
 
-#include <iostream>
+namespace abcd {
 
 #define EXCHANGE_RATE_DIRECTORY "Exchanges"
 
@@ -847,3 +848,5 @@ void ABC_ExchangeFreeCacheEntry(tABC_ExchangeCacheEntry *pCache)
         ABC_CLEAR_FREE(pCache, sizeof(tABC_ExchangeCacheEntry));
     }
 }
+
+} // namespace abcd

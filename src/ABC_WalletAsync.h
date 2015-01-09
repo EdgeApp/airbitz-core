@@ -42,9 +42,7 @@
 #include "util/ABC_Sync.h"
 #include "util/ABC_Util.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     /**
      * AirBitz Core Create Wallet Structure
@@ -85,8 +83,6 @@ extern "C" {
 
     void *ABC_WalletCreateThreaded(void *pData);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

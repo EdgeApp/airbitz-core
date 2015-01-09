@@ -16,9 +16,7 @@
 
 #define SYNC_KEY_LENGTH 20
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     /**
      * Contains everything needed to access a sync repo.
@@ -51,8 +49,6 @@ extern "C" {
                          int *pDirty,
                          tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

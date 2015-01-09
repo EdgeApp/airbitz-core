@@ -10,9 +10,7 @@
 #include "ABC_Login.h"
 #include <time.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     tABC_CC ABC_LoginPinExists(const char *szUserName,
                                bool *pbExists,
@@ -31,8 +29,6 @@ extern "C" {
                               time_t expires,
                               tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

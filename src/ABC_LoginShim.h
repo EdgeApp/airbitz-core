@@ -14,9 +14,7 @@
 
 #include <time.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     tABC_CC ABC_LoginShimLogout(tABC_Error *pError);
 
@@ -86,8 +84,6 @@ extern "C" {
                               int *pDirty,
                               tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

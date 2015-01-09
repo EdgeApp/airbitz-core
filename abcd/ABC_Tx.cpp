@@ -57,6 +57,8 @@
 #include <string.h>
 #include <qrencode.h>
 
+namespace abcd {
+
 #define SATOSHI_PER_BITCOIN                     100000000
 
 #define MIN_RECYCLABLE 5
@@ -4189,3 +4191,5 @@ tABC_CC ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo,
 exit:
     return cc;
 }
+
+} // namespace abcd

@@ -42,9 +42,7 @@
 #include "ABC_Tx.h"
 #include "util/ABC_Util.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     tABC_CC ABC_BridgeInitialize(tABC_Error *pError);
 
@@ -160,8 +158,6 @@ extern "C" {
 
     bool ABC_BridgeIsTestNet();
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

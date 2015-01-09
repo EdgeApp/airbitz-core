@@ -41,9 +41,7 @@
 #include "ABC.h"
 #include "util/ABC_Sync.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     /**
      * Account-level wallet structure.
@@ -118,8 +116,6 @@ extern "C" {
                                      unsigned count,
                                      tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

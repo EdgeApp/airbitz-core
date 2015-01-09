@@ -51,6 +51,8 @@
 #include "ABC_URL.h"
 #include "ABC_ServerDefs.h"
 
+namespace abcd {
+
 #define URL_CONN_TIMEOUT 5
 
 static char *gszCaCertPath = NULL;
@@ -499,3 +501,5 @@ exit:
 
     return cc;
 }
+
+} // namespace abcd

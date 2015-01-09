@@ -40,9 +40,7 @@
 
 #include "ABC.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     tABC_CC ABC_MutexInitialize(tABC_Error *pError);
 
@@ -53,8 +51,6 @@ extern "C" {
     tABC_CC ABC_MutexUnlock(tABC_Error *pError);
 
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

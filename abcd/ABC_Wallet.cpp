@@ -54,6 +54,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+namespace abcd {
+
 #define WALLET_KEY_LENGTH                       AES_256_KEY_LENGTH
 
 #define WALLET_BITCOIN_PRIVATE_SEED_LENGTH      32
@@ -1237,3 +1239,5 @@ tABC_CC ABC_WalletMutexUnlock(tABC_Error *pError)
 {
     return ABC_MutexUnlock(pError);
 }
+
+} // namespace abcds

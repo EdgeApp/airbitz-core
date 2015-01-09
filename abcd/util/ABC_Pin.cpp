@@ -6,6 +6,8 @@
 #include "ABC.h"
 #include "ABC_Util.h"
 
+namespace abcd {
+
 /* Certificate Pinning
  * Code based off the openssl example at:
  * https://www.owasp.org/index.php/Certificate_and_Public_Key_Pinning
@@ -100,3 +102,4 @@ exit:
     return ok;
 }
 
+} // namespace abcd

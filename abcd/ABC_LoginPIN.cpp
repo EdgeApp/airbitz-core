@@ -9,6 +9,8 @@
 #include "ABC_LoginServer.h"
 #include <jansson.h>
 
+namespace abcd {
+
 #define KEY_LENGTH 32
 
 #define PIN_FILENAME                            "PinPackage.json"
@@ -292,3 +294,5 @@ exit:
 
     return cc;
 }
+
+} // namespace abcd

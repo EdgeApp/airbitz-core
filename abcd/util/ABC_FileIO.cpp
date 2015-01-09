@@ -50,6 +50,8 @@
 #include "ABC_FileIO.h"
 #include "ABC_Util.h"
 
+namespace abcd {
+
 static char             gszRootDir[ABC_MAX_STRING_LENGTH + 1] = ".";
 
 static bool             gbInitialized = false;
@@ -646,3 +648,6 @@ exit:
 
     return cc;
 }
+
+} // namespace abcd
+

@@ -17,6 +17,8 @@
 #include "util/ABC_Mutex.h"
 #include "util/ABC_Util.h"
 
+namespace abcd {
+
 #define ACCOUNT_CATEGORIES_FILENAME             "Categories.json"
 #define ACCOUNT_SETTINGS_FILENAME               "Settings.json"
 #define ACCOUNT_WALLET_DIRNAME                  "Wallets"
@@ -1139,3 +1141,5 @@ tABC_CC ABC_AccountMutexUnlock(tABC_Error *pError)
 {
     return ABC_MutexUnlock(pError);
 }
+
+} // namespace abcd

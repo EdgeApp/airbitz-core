@@ -6,6 +6,8 @@
 #include "ABC_LoginPackages.h"
 #include "util/ABC_Util.h"
 
+namespace abcd {
+
 // CarePackage.json:
 #define JSON_ACCT_SNRP2_FIELD                   "SNRP2"
 #define JSON_ACCT_SNRP3_FIELD                   "SNRP3"
@@ -288,3 +290,5 @@ exit:
 
     return cc;
 }
+
+} // namespace abcd

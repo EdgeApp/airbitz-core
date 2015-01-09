@@ -8,9 +8,7 @@
 
 #include "ABC.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     /**
      * Contains info on bitcoin miner fee
@@ -60,8 +58,6 @@ extern "C" {
 
     tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

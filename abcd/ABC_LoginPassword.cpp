@@ -8,6 +8,8 @@
 #include "ABC_LoginDir.h"
 #include "ABC_LoginServer.h"
 
+namespace abcd {
+
 static
 tABC_CC ABC_LoginPasswordDisk(tABC_Login *pSelf,
                               tABC_U08Buf LP,
@@ -234,3 +236,5 @@ exit:
 
     return cc;
 }
+
+} // namespace abcd

@@ -42,6 +42,8 @@
 #include "ABC_Wallet.h"
 #include "util/ABC_Util.h"
 
+namespace abcd {
+
 /**
  * Allocates the wallet create info structure and
  * populates it with the data given
@@ -140,3 +142,5 @@ void *ABC_WalletCreateThreaded(void *pData)
 
     return NULL;
 }
+
+} // namespace abcd

@@ -8,6 +8,8 @@
 #include "ABC_LoginDir.h"
 #include "ABC_LoginServer.h"
 
+namespace abcd {
+
 /**
  * Obtains the recovery questions for a user.
  *
@@ -200,3 +202,5 @@ exit:
 
     return cc;
 }
+
+} // namespace abcd

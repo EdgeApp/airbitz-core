@@ -42,6 +42,8 @@
 #include "ABC_Util.h"
 #include "ABC_Crypto.h"
 
+namespace abcd {
+
 /**
  * Dumps the given buffer to stdio in od -c format
  */
@@ -460,3 +462,5 @@ exit:
 
     return strJSON;
 }
+
+} // namespace abcd

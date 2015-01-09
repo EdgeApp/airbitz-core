@@ -43,11 +43,9 @@
 #include "ABC.h"
 #include "ABC_Util.h"
 
-#define ABC_FILEIO_MAX_PATH_LENGTH 2048
+namespace abcd {
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define ABC_FILEIO_MAX_PATH_LENGTH 2048
 
     typedef enum eABC_FileIOFileType
     {
@@ -128,8 +126,6 @@ extern "C" {
     tABC_CC ABC_FileIOMutexUnlock(tABC_Error *pError);
 
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

@@ -18,6 +18,8 @@
 #include "util/ABC_Mutex.h"
 #include "util/ABC_Util.h"
 
+namespace abcd {
+
 // We cache a single login object, which is fine for the UI's needs:
 tABC_Login *gLoginCache = NULL;
 
@@ -533,3 +535,5 @@ tABC_CC ABC_LoginShimMutexUnlock(tABC_Error *pError)
 {
     return ABC_MutexUnlock(pError);
 }
+
+} // namespace abcd

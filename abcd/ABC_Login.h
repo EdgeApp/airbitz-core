@@ -10,9 +10,7 @@
 #include "util/ABC_Crypto.h"
 #include "util/ABC_Sync.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     typedef struct sABC_Login
     {
@@ -59,8 +57,6 @@ extern "C" {
                                  char **pszOut,
                                  tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

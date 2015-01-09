@@ -43,6 +43,8 @@
 #include "ABC_Mutex.h"
 #include "ABC_Util.h"
 
+namespace abcd {
+
 static bool             gbInitialized = false;
 static pthread_mutex_t  gMutex; // to block multiple threads from accessing resources at the same time
 
@@ -114,3 +116,5 @@ exit:
 
     return cc;
 }
+
+} // namespace abcd

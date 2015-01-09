@@ -43,9 +43,7 @@
 #include "util/ABC_Sync.h"
 #include "util/ABC_Util.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     /**
      * AirBitz Core Send Tx Structure
@@ -226,8 +224,6 @@ extern "C" {
     tABC_CC ABC_TxWatchAddresses(tABC_WalletID self,
                                  tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

@@ -229,5 +229,4 @@ bool sign_tx(unsigned_transaction& utx, const key_table& keys)
     return all_done;
 }
 
-}
-
+} // namespace abcd

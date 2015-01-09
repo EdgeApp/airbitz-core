@@ -45,6 +45,8 @@
 #include "ABC.h"
 #include "ABC_Debug.h"
 
+namespace abcd {
+
 #define CURRENCY_NUM_AUD                 36
 #define CURRENCY_NUM_CAD                124
 #define CURRENCY_NUM_CNY                156
@@ -60,10 +62,6 @@
 #define ABC_BITSTAMP "Bitstamp"
 #define ABC_COINBASE "Coinbase"
 #define ABC_BNC      "BraveNewCoin"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #ifdef DEBUG
 #define ABC_LOG_ERROR(code, err_string) \
@@ -373,8 +371,6 @@ extern "C" {
 
     char *ABC_UtilStringFromJSONObject(const json_t *pJSON_Data, size_t flags);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

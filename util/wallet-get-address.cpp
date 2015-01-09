@@ -4,6 +4,8 @@
 #include <ABC_Account.h>
 #include <ABC_Wallet.h>
 
+using namespace abcd;
+
 int main(int argc, char *argv[])
 {
     tABC_CC cc;

@@ -10,6 +10,8 @@
 #include "util/ABC_Crypto.h"
 #include <ctype.h>
 
+namespace abcd {
+
 #define ACCOUNT_MK_LENGTH 32
 
 /**
@@ -265,3 +267,5 @@ exit:
     ABC_FREE_STR(szOut);
     return cc;
 }
+
+} // namespace abcd

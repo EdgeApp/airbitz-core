@@ -13,6 +13,8 @@
 #include "util/ABC_Crypto.h"
 #include "util/ABC_FileIO.h"
 
+namespace abcd {
+
 // Server strings:
 #define JSON_ACCT_CARE_PACKAGE                  "care_package"
 #define JSON_ACCT_LOGIN_PACKAGE                 "login_package"
@@ -661,3 +663,5 @@ exit:
 
     return cc;
 }
+
+} // namespace abcd

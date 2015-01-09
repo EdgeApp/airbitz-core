@@ -14,9 +14,7 @@
 #include "ABC.h"
 #include "util/ABC_Util.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
                                 unsigned int iTransactionCount,
@@ -24,8 +22,6 @@ extern "C" {
                                 tABC_Error *pError);
 
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

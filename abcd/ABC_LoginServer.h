@@ -12,9 +12,7 @@
 
 #include <time.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
                                   tABC_U08Buf LP1,
@@ -69,8 +67,6 @@ extern "C" {
                                       tABC_SyncKeys *pKeys,
                                       tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

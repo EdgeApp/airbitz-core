@@ -42,9 +42,7 @@
 #include "util/ABC_Sync.h"
 #include "util/ABC_Util.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     /**
      * AirBitz Exchange Info Structure
@@ -90,8 +88,6 @@ extern "C" {
                               tABC_ExchangeInfo **ppInfo, tABC_Error *pError);
     void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

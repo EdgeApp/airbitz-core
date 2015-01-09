@@ -4,6 +4,8 @@
 #include "ABC_LoginShim.h"
 #include "util/ABC_Crypto.h"
 
+using namespace abcd;
+
 int main(int argc, char *argv[])
 {
     tABC_CC cc;

@@ -39,9 +39,7 @@
 #include <strings.h>
 #include "ABC.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
 #ifdef DEBUG
 #define ABC_DEBUG(cmd)      cmd
@@ -57,8 +55,6 @@ tABC_CC ABC_DebugLogFilename(char **szFilename, tABC_Error *pError);
 
 void ABC_DebugLog(const char * format, ...);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

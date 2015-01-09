@@ -9,9 +9,7 @@
 #include "ABC.h"
 #include "ABC_Login.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     tABC_CC ABC_LoginGetRQ(const char *szUserName,
                            char **pszRecoveryQuestions,
@@ -27,8 +25,6 @@ extern "C" {
                                  const char *szRecoveryAnswers,
                                  tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

@@ -431,5 +431,4 @@ watcher::connection::connection(tx_db& db, void *ctx, tx_callbacks& cb)
 {
 }
 
-} // abcd
-
+} // namespace abcd

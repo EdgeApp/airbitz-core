@@ -64,6 +64,8 @@
 #include "ABC_FileIO.h"
 #include "ABC_Bridge.h"
 
+namespace abcd {
+
 #define JSON_ENC_TYPE_FIELD     "encryptionType"
 #define JSON_ENC_SALT_FIELD     "salt_hex"
 #define JSON_ENC_N_FIELD        "n"
@@ -1632,3 +1634,5 @@ exit:
 
     return cc;
 }
+
+} // namespace abcd

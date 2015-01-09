@@ -62,6 +62,8 @@
 #include <jansson.h>
 #include <math.h>
 
+using namespace abcd;
+
 static bool gbInitialized = false;
 bool gbIsTestNet = false;
 

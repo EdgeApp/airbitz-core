@@ -19,6 +19,8 @@
 #include <inttypes.h>
 #include <time.h>
 
+namespace abcd {
+
 #define MAX_DATE_TIME_SIZE 20
 #define MAX_AMOUNT_STRING_SIZE 20 // 21 million + 8 decimals + padding. ~20 digits
 
@@ -343,3 +345,5 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
 exit:
     return cc;
 }
+
+} // namespace abcd

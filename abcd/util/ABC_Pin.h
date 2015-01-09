@@ -40,16 +40,12 @@
 
 #include <openssl/x509.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
 int ABC_PinCertCallback(int pok, X509_STORE_CTX *ctx);
 
 int ABC_PinPubkeyCallback(int pok, X509_STORE_CTX *ctx);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

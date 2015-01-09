@@ -43,9 +43,7 @@
 #include "util/ABC_Sync.h"
 #include "util/ABC_Util.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     /* Temporary struct to bundle wallet identification. This will become
      * an opaque pointer to the wallet itself at some point. */
@@ -132,8 +130,6 @@ extern "C" {
                                int *pDirty,
                                tABC_Error *pError);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif

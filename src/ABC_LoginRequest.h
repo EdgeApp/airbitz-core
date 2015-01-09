@@ -8,9 +8,7 @@
 
 #include "ABC.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace abcd {
 
     /**
      * AirBitz Core Account Request Structure
@@ -65,8 +63,6 @@ extern "C" {
 
     void *ABC_LoginRequestThreaded(void *pData);
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace abcd
 
 #endif
