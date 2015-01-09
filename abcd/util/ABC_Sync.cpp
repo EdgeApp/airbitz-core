@@ -200,7 +200,6 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     char *szServer = NULL;
 
     git_repository *repo = NULL;
-    git_config *cfg = NULL;
     int dirty, need_push;
 
     ABC_CHECK_RET(ABC_SyncMutexLock(pError));
@@ -208,9 +207,6 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
 
     e = git_repository_open(&repo, szRepoPath);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_open failed");
-
-    e = git_repository_config(&cfg, repo);
-    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_config failed");
 
     e = sync_fetch(repo, szServer);
     ABC_SYNC_ROT(sync_fetch(repo, szServer), "sync_fetch failed");

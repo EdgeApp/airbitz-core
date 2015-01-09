@@ -50,7 +50,7 @@ static int sync_commit_master(git_repository *repo,
                               size_t parent_count,
                               const git_oid *parents[])
 {
-    int e;
+    int e = 0;
     git_signature *sig = NULL;
     git_oid commit_id;
 
@@ -104,7 +104,7 @@ static int sync_get_tree(git_oid *out,
                          git_repository *repo,
                          const git_oid *commit_id)
 {
-    int e;
+    int e = 0;
     git_treebuilder *tb = NULL;
     git_commit *commit = NULL;
 
@@ -185,7 +185,7 @@ static int sync_merge_trees(git_oid *out,
                             const git_oid *id1,
                             const git_oid *id2)
 {
-    int e;
+    int e = 0;
     git_tree *base_tree = NULL;
     git_tree *tree1 = NULL;
     git_tree *tree2 = NULL;
@@ -287,7 +287,7 @@ exit:
 static int sync_workdir_tree(git_oid *out,
                              git_repository *repo)
 {
-    int e;
+    int e = 0;
     git_index *index = NULL;
 
     git_check(git_repository_index(&index, repo));
@@ -307,7 +307,7 @@ exit:
 int sync_fetch(git_repository *repo,
                const char *server)
 {
-    int e;
+    int e = 0;
     git_signature *sig = NULL;
     git_remote *remote = NULL;
 
@@ -442,7 +442,7 @@ static int sync_push_cb(const char *ref, const char *msg, void *data)
 int sync_push(git_repository *repo,
               const char *server)
 {
-    int e;
+    int e = 0;
     git_remote *remote = NULL;
     git_push *push = NULL;
 
