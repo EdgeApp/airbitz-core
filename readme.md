@@ -67,9 +67,3 @@ copying the data to the other servers as well.
 
 The "minilibs" directory contains small support libraries that don't have
 a standalone distribution.
-
-The "tests" directory contains some random test code. This is largely
-unmaintained, and doesn't even compile. We will scrap this once the command-
-line utilites in "util" are more complete, since those will allow us to do
-all the testing we need with some simple shell-script wrappers. We should
-also think about doing proper unit tests at some point in the future.
