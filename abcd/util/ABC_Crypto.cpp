@@ -55,8 +55,8 @@
 #include <openssl/err.h>
 #include <openssl/hmac.h>
 #include <jansson.h>
-#include <scrypt/crypto_scrypt.h>
-#include <scrypt/sha256.h>
+#include "../../minilibs/scrypt/crypto_scrypt.h"
+#include "../../minilibs/scrypt/sha256.h"
 #include "ABC_Debug.h"
 #include "ABC.h"
 #include "ABC_Crypto.h"

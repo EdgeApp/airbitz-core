@@ -5,7 +5,7 @@ libscrypt.a: crypto_scrypt.o sha256.o
 	$(AR) rcs libscrypt.a $^
 
 %.o: %.c
-	$(CC) -c $(CFLAGS) $<
+	$(CC) -c $(CFLAGS) -o $@ $<
 
 install: libscrypt.a
 	mkdir -p $(PREFIX)/lib
