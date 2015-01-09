@@ -1,13 +1,11 @@
-#include <util/sync.h>
+#include "sync.h"
 #include <stdio.h>
 
 static void print_error()
 {
     const git_error *error = giterr_last();
     if (error && error->message)
-    {
         fprintf(stderr, "libgit2 error: %s\n", error->message);
-    }
 }
 
 int main(int argc, char *argv[])

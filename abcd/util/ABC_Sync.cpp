@@ -12,7 +12,7 @@
 #include "ABC_Util.h"
 #include "ABC_Mutex.h"
 #include "ABC_General.h"
-#include "sync.h"
+#include "../../minilibs/git-sync/sync.h"
 
 #include <stdlib.h>
 #include <pthread.h>
