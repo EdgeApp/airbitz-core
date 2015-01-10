@@ -1,8 +1,8 @@
 #include "common.h"
 #include <stdio.h>
 
-#include "ABC_LoginShim.h"
-#include "util/ABC_Crypto.h"
+#include "LoginShim.hpp"
+#include "util/Crypto.hpp"
 
 using namespace abcd;
 

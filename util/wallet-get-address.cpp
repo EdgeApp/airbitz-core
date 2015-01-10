@@ -1,8 +1,8 @@
 #include "common.h"
 #include <stdio.h>
 
-#include <ABC_Account.h>
-#include <ABC_Wallet.h>
+#include <Account.hpp>
+#include <Wallet.hpp>
 
 using namespace abcd;
 

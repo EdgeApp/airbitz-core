@@ -2,9 +2,9 @@
 #include <iostream>
 #include <stdio.h>
 
-#include "ABC_LoginShim.h"
-#include "ABC_Wallet.h"
-#include "util/ABC_Util.h"
+#include "LoginShim.hpp"
+#include "Wallet.hpp"
+#include "util/Util.hpp"
 #include <wallet/wallet.hpp>
 
 using namespace abcd;

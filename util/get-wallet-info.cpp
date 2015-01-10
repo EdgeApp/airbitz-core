@@ -1,10 +1,10 @@
 #include "common.h"
 #include <stdio.h>
 
-#include "ABC_Login.h"
-#include "ABC_Wallet.h"
-#include "util/ABC_Crypto.h"
-#include "util/ABC_Util.h"
+#include "Login.hpp"
+#include "Wallet.hpp"
+#include "util/Crypto.hpp"
+#include "util/Util.hpp"
 
 using namespace abcd;
 

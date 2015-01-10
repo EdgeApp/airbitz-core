@@ -1,6 +1,6 @@
 #include "common.h"
-#include "ABC_LoginPassword.h"
-#include "ABC_LoginServer.h"
+#include "LoginPassword.hpp"
+#include "LoginServer.hpp"
 #include <stdio.h>
 #include <time.h>
 
