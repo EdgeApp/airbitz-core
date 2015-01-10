@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     // Iterate over wallets:
     MAIN_CHECK(ABC_GetWalletUUIDs(argv[2], argv[3],
         &aszUUIDs, &count, &error));
-    for (int i = 0; i < count; ++i)
+    for (unsigned i = 0; i < count; ++i)
     {
         // Print the UUID:
         printf("%s: ", aszUUIDs[i]);

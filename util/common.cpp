@@ -28,7 +28,7 @@ char *Slurp(const char *szFilename)
     l = ftell(f);
     rewind(f);
 
-    buffer = malloc(l + 1);
+    buffer = (char*)malloc(l + 1);
     if (!buffer) {
         return NULL;
     }

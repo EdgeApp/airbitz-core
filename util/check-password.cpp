@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 
     MAIN_CHECK(ABC_Initialize(argv[1], CA_CERT, seed, sizeof(seed), &error));
     MAIN_CHECK(ABC_CheckPassword(argv[2], &secondsToCrack, &aRules, &count, &error));
-    for (int i = 0; i < count; ++i)
+    for (unsigned i = 0; i < count; ++i)
     {
         printf("%s: %d\n", aRules[i]->szDescription, aRules[i]->bPassed);
     }

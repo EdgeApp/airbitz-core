@@ -75,9 +75,9 @@ void send_tx(tABC_WalletInfo *wallet)
     details.amountCurrency = 0;
     details.amountFeesAirbitzSatoshi = 0;
     details.amountFeesMinersSatoshi = 0;
-    details.szName = "";
-    details.szCategory = "";
-    details.szNotes = "";
+    details.szName = const_cast<char*>("");
+    details.szCategory = const_cast<char*>("");
+    details.szNotes = const_cast<char*>("");
     details.attributes = 0x2;
 
     // Create new receive request
@@ -125,7 +125,7 @@ void main_loop()
         tABC_WalletInfo **paWalletInfo = NULL;
         unsigned int count = 0;
         ABC_GetWallets(gszUserName, gszPassword, &paWalletInfo, &count, &error);
-        for (int i = 0; i < count; ++i) {
+        for (unsigned i = 0; i < count; ++i) {
             send_tx(paWalletInfo[i]);
         }
         ABC_FreeWalletInfoArray(paWalletInfo, count);
@@ -161,18 +161,18 @@ int main(int argc, char *argv[])
     MAIN_CHECK(ABC_SignIn(gszUserName, gszPassword, NULL, NULL, &error));
     MAIN_CHECK(ABC_GetWalletUUIDs(gszUserName, gszPassword, &szUUIDs, &count, &error));
 
-    threads = malloc(sizeof(tThread *) * count);
+    threads = (tThread**)malloc(sizeof(tThread *) * count);
 
     if (!pthread_create(&data_thread, NULL, data_loop, NULL))
     {
         pthread_detach(data_thread);
     }
 
-    for (int i = 0; i < count; ++i) {
+    for (unsigned i = 0; i < count; ++i) {
         char *szUUID = szUUIDs[i];
         MAIN_CHECK(ABC_WatcherStart(gszUserName, gszPassword, szUUID, &error));
 
-        tThread *thread = malloc(sizeof(tThread));
+        tThread *thread = (tThread*)malloc(sizeof(tThread));
         thread->szUUID = strdup(szUUID);
         threads[i] = thread;
         if (!pthread_create(&(thread->watcher_thread), NULL, watcher_loop, szUUID))
@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
         MAIN_CHECK(ABC_WatcherConnect(szUUID, &error));
     }
     main_loop();
-    for (int i = 0; i < count; ++i) {
+    for (unsigned i = 0; i < count; ++i) {
         tThread *thread = threads[i];
         MAIN_CHECK(ABC_WatcherStop(thread->szUUID, &error));
         pthread_join(thread->watcher_thread, NULL);

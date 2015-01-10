@@ -24,9 +24,9 @@ int main(int argc, char *argv[])
     MAIN_CHECK(ABC_SignIn(szUserName, szPassword, NULL, NULL, &error));
 
     tABC_TxDetails details;
-    details.szName = "";
-    details.szCategory = "";
-    details.szNotes = "";
+    details.szName = const_cast<char*>("");
+    details.szCategory = const_cast<char*>("");
+    details.szNotes = const_cast<char*>("");
     details.attributes = 0x0;
     details.bizId = 0x0;
     details.attributes = 0x0;
