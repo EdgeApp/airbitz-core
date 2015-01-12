@@ -59,6 +59,7 @@
 
 #define ABC_BITSTAMP "Bitstamp"
 #define ABC_COINBASE "Coinbase"
+#define ABC_BNC      "BraveNewCoin"
 
 #ifdef __cplusplus
 extern "C" {

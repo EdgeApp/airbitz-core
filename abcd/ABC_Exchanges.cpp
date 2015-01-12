@@ -45,24 +45,27 @@
 #include <curl/curl.h>
 #include <pthread.h>
 
+#include <iostream>
+
 #define EXCHANGE_RATE_DIRECTORY "Exchanges"
 
 #define BITSTAMP_RATE_URL "https://www.bitstamp.net/api/ticker/"
 #define COINBASE_RATE_URL "https://coinbase.com/api/v1/currencies/exchange_rates"
+#define BNC_RATE_URL      "http://api.bravenewcoin.com/ticker/"
 
 const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[] =
 {
-    {CURRENCY_NUM_AUD, ABC_COINBASE},
-    {CURRENCY_NUM_CAD, ABC_COINBASE},
-    {CURRENCY_NUM_CNY, ABC_COINBASE},
+    {CURRENCY_NUM_AUD, ABC_BNC},
+    {CURRENCY_NUM_CAD, ABC_BNC},
+    {CURRENCY_NUM_CNY, ABC_BNC},
     {CURRENCY_NUM_CUP, ABC_COINBASE},
-    {CURRENCY_NUM_HKD, ABC_COINBASE},
-    {CURRENCY_NUM_MXN, ABC_COINBASE},
-    {CURRENCY_NUM_NZD, ABC_COINBASE},
+    {CURRENCY_NUM_HKD, ABC_BNC},
+    {CURRENCY_NUM_MXN, ABC_BNC},
+    {CURRENCY_NUM_NZD, ABC_BNC},
     {CURRENCY_NUM_PHP, ABC_COINBASE},
-    {CURRENCY_NUM_GBP, ABC_COINBASE},
+    {CURRENCY_NUM_GBP, ABC_BNC},
     {CURRENCY_NUM_USD, ABC_BITSTAMP},
-    {CURRENCY_NUM_EUR, ABC_COINBASE},
+    {CURRENCY_NUM_EUR, ABC_BNC},
 };
 
 const size_t EXCHANGE_DEFAULTS_SIZE = sizeof(EXCHANGE_DEFAULTS)
@@ -85,6 +88,9 @@ static tABC_CC ABC_ExchangeGetRate(tABC_ExchangeInfo *pInfo, double *szRate, tAB
 static tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired, double *szRate, tABC_Error *pError);
 static tABC_CC ABC_ExchangeBitStampRate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
 static tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
+static tABC_CC ABC_ExchangeCoinBaseMap(int currencyNum, std::string& field, tABC_Error *pError);
+static tABC_CC ABC_ExchangeBncRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
+static tABC_CC ABC_ExchangeBncMap(int currencyNum, std::string& url, tABC_Error *pError);
 static tABC_CC ABC_ExchangeExtractAndSave(json_t *pJSON_Root, const char *szField, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_ExchangeGet(const char *szUrl, tABC_U08Buf *pData, tABC_Error *pError);
 static tABC_CC ABC_ExchangeGetString(const char *szURL, char **pszResults, tABC_Error *pError);
@@ -182,6 +188,10 @@ tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
             else if (strcmp(ABC_COINBASE, szSource) == 0)
             {
                 ABC_CHECK_RET(ABC_ExchangeCoinBaseRates(pInfo, pError));
+            }
+            else if (strcmp(ABC_BNC, szSource) == 0)
+            {
+                ABC_CHECK_RET(ABC_ExchangeBncRates(pInfo,  pError));
             }
         }
     }
@@ -316,6 +326,7 @@ tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
     json_error_t error;
     json_t *pJSON_Root = NULL;
     char *szResponse = NULL;
+    std::string field;
 
     // Fetch exchanges from coinbase
     ABC_CHECK_RET(ABC_ExchangeGetString(COINBASE_RATE_URL, &szResponse, pError));
@@ -325,32 +336,124 @@ tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
 
-    // USD
+    ABC_CHECK_RET(ABC_ExchangeCoinBaseMap(pInfo->currencyNum, field, pError));
     ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_usd", CURRENCY_NUM_USD, pError);
-    // CAD
-    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_cad", CURRENCY_NUM_CAD, pError);
-    // EUR
-    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_eur", CURRENCY_NUM_EUR, pError);
-    // CUP
-    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_cup", CURRENCY_NUM_CUP, pError);
-    // GBP
-    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_gbp", CURRENCY_NUM_GBP, pError);
-    // MXN
-    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_mxn", CURRENCY_NUM_MXN, pError);
-    // CNY
-    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_cny", CURRENCY_NUM_CNY, pError);
-    // AUD
-    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_aud", CURRENCY_NUM_AUD, pError);
-    // PHP
-    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_php", CURRENCY_NUM_PHP, pError);
-    // HKD
-    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_hkd", CURRENCY_NUM_HKD, pError);
-    // NZD
-    ABC_ExchangeExtractAndSave(pJSON_Root, "btc_to_nzd", CURRENCY_NUM_NZD, pError);
 exit:
     ABC_FREE_STR(szResponse);
     if (pJSON_Root) json_decref(pJSON_Root);
 
+    return cc;
+}
+
+static
+tABC_CC ABC_ExchangeCoinBaseMap(int currencyNum, std::string& field, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    switch (currencyNum)
+    {
+        case CURRENCY_NUM_USD:
+            field = "btc_to_usd";
+            break;
+        case CURRENCY_NUM_CAD:
+            field = "btc_to_cad";
+            break;
+        case CURRENCY_NUM_EUR:
+            field = "btc_to_eur";
+            break;
+        case CURRENCY_NUM_CUP:
+            field = "btc_to_cup";
+            break;
+        case CURRENCY_NUM_GBP:
+            field = "btc_to_gbp";
+            break;
+        case CURRENCY_NUM_MXN:
+            field = "btc_to_mxn";
+            break;
+        case CURRENCY_NUM_CNY:
+            field = "btc_to_cny";
+            break;
+        case CURRENCY_NUM_AUD:
+            field = "btc_to_aud";
+            break;
+        case CURRENCY_NUM_PHP:
+            field = "btc_to_php";
+            break;
+        case CURRENCY_NUM_HKD:
+            field = "btc_to_hkd";
+            break;
+        case CURRENCY_NUM_NZD:
+            field = "btc_to_nzd";
+            break;
+        default:
+            ABC_CHECK_ASSERT(false, ABC_CC_Error, "Unsupported currency");
+    }
+exit:
+    return cc;
+}
+
+static
+tABC_CC ABC_ExchangeBncRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    json_error_t error;
+    json_t *pJSON_Root = NULL;
+    char *szResponse = NULL;
+
+    std::string url;
+    ABC_CHECK_RET(ABC_ExchangeBncMap(pInfo->currencyNum, url, pError));
+    ABC_CHECK_RET(ABC_ExchangeGetString(url.c_str(), &szResponse, pError));
+
+    // Parse the json
+    pJSON_Root = json_loads(szResponse, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    ABC_ExchangeExtractAndSave(pJSON_Root, "last_price", pInfo->currencyNum, pError);
+exit:
+    ABC_FREE_STR(szResponse);
+    if (pJSON_Root) json_decref(pJSON_Root);
+
+    return cc;
+}
+
+static
+tABC_CC ABC_ExchangeBncMap(int currencyNum, std::string& url, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    url += BNC_RATE_URL;
+    switch (currencyNum) {
+        case CURRENCY_NUM_USD:
+            url += "bnc_ticker_btc_usd.json";
+            break;
+        case CURRENCY_NUM_AUD:
+            url += "bnc_ticker_btc_aud.json";
+            break;
+        case CURRENCY_NUM_CAD:
+            url += "bnc_ticker_btc_cad.json";
+            break;
+        case CURRENCY_NUM_CNY:
+            url += "bnc_ticker_btc_cny.json";
+            break;
+        case CURRENCY_NUM_HKD:
+            url += "bnc_ticker_btc_hkd.json";
+            break;
+        case CURRENCY_NUM_MXN:
+            url += "bnc_ticker_btc_mxn.json";
+            break;
+        case CURRENCY_NUM_NZD:
+            url += "bnc_ticker_btc_nzd.json";
+            break;
+        case CURRENCY_NUM_GBP:
+            url += "bnc_ticker_btc_gbp.json";
+            break;
+        case CURRENCY_NUM_EUR:
+            url += "bnc_ticker_btc_eur.json";
+            break;
+        default:
+            ABC_CHECK_ASSERT(false, ABC_CC_Error, "Unsupported currency");
+    }
+exit:
     return cc;
 }
 
@@ -544,15 +647,17 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
                 ABC_STRDUP(*szSource, ABC_BITSTAMP);
                 break;
             case CURRENCY_NUM_CAD:
-            case CURRENCY_NUM_CUP:
             case CURRENCY_NUM_CNY:
             case CURRENCY_NUM_EUR:
             case CURRENCY_NUM_GBP:
             case CURRENCY_NUM_MXN:
             case CURRENCY_NUM_AUD:
-            case CURRENCY_NUM_PHP:
             case CURRENCY_NUM_HKD:
             case CURRENCY_NUM_NZD:
+                ABC_STRDUP(*szSource, ABC_BNC);
+                break;
+            case CURRENCY_NUM_CUP:
+            case CURRENCY_NUM_PHP:
                 ABC_STRDUP(*szSource, ABC_COINBASE);
                 break;
             default:
