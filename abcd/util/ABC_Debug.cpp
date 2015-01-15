@@ -87,6 +87,7 @@ tABC_CC ABC_DebugInitialize(const char *szRootDir, tABC_Error *pError)
     gbInitialized = true;
 
     gfLog = fopen(gszLogFile, "a");
+    ABC_CHECK_SYS(gfLog, "fopen(log file)");
     fseek(gfLog, 0L, SEEK_END);
 exit:
     return cc;
