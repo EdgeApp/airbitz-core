@@ -170,7 +170,7 @@ tABC_CC ABC_AccountCategoriesRemove(tABC_SyncKeys *pKeys,
             // if there are categories
             if ((aszNewCategories != NULL) && (newCategoryCount > 0))
             {
-                ABC_ARRAY_NEW(aszNewCategories, newCategoryCount + 1, char*);
+                ABC_ARRAY_RESIZE(aszNewCategories, newCategoryCount + 1, char*);
             }
             else
             {
