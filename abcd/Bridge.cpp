@@ -1,10 +1,4 @@
-/**
- * @file
- * AirBitz C++ wrappers.
- *
- * This file contains a bridge between the plain C code in the core, and
- * the C++ code in libbitcoin and friends.
- *
+/*
  *  Copyright (c) 2014, Airbitz
  *  All rights reserved.
  *
@@ -33,9 +27,6 @@
  *  The views and conclusions contained in the software and documentation are those
  *  of the authors and should not be interpreted as representing official policies,
  *  either expressed or implied, of the Airbitz Project.
- *
- *  @author See AUTHORS
- *  @version 1.0
  */
 
 #include "Bridge.hpp"

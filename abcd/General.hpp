@@ -1,6 +1,16 @@
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
+ */
 /**
  * @file
  * AirBitz general, non-account-specific server-supplied data.
+ *
+ * The data handled in this file is basically just a local cache of various
+ * settings that AirBitz would like to adjust from time-to-time without
+ * upgrading the entire app.
  */
 
 #ifndef ABC_General_h

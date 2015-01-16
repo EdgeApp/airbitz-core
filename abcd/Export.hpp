@@ -1,11 +1,12 @@
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
+ */
 /**
  * @file
- * AirBitz Export Data function prototypes.
- *
- * See LICENSE for copy, modification, and use permissions
- *
- * @author See AUTHORS
- * @version 1.0
+ * Functions for exporting wallet meta-data.
  */
 
 #ifndef ABC_Export_h

@@ -1,13 +1,8 @@
-/**
- * @file
- * Functions for dealing with the contents of the account sync directory.
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
  *
- * This file contains all of the functions associated with account creation,
- * viewing and modification.
- *
- * See LICENSE for copy, modification, and use permissions
- *
- * @author See AUTHORS
+ * See the LICENSE file for more information.
  */
 
 #include "Account.hpp"

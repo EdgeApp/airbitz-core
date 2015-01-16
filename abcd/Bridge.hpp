@@ -1,7 +1,4 @@
-/**
- * @file
- * AirBitz C++ bridge function prototypes
- *
+/*
  *  Copyright (c) 2014, Airbitz
  *  All rights reserved.
  *
@@ -30,9 +27,14 @@
  *  The views and conclusions contained in the software and documentation are those
  *  of the authors and should not be interpreted as representing official policies,
  *  either expressed or implied, of the Airbitz Project.
+ */
+/**
+ * @file
+ * AirBitz C++ bridge function prototypes.
  *
- *  @author See AUTHORS
- *  @version 1.0
+ * These were originally used to bridge between C and C++,
+ * but now that the entire codebase is C++,
+ * this layer should eventually go away.
  */
 
 #ifndef ABC_Bridge_h

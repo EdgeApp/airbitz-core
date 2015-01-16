@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
+ */
+
 #include "Pin.hpp"
 #include "Util.hpp"
 #include <openssl/ssl.h>

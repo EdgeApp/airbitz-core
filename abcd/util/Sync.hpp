@@ -1,11 +1,12 @@
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
+ */
 /**
  * @file
- * AirBitz file-sync functions prototypes.
- *
- * See LICENSE for copy, modification, and use permissions
- *
- * @author See AUTHORS
- * @version 1.0
+ * Wrappers around the AirBitz git-sync library.
  */
 
 #ifndef ABC_Sync_h

@@ -1,7 +1,4 @@
-/**
- * @file
- * AirBitz Core API function prototypes
- *
+/*
  *  Copyright (c) 2014, Airbitz
  *  All rights reserved.
  *
@@ -30,9 +27,10 @@
  *  The views and conclusions contained in the software and documentation are those
  *  of the authors and should not be interpreted as representing official policies,
  *  either expressed or implied, of the Airbitz Project.
- *
- *  @author See AUTHORS
- *  @version 1.0
+ */
+/**
+ * @file
+ * AirBitz public API. The wallet only calls functions found in this file.
  */
 
 #ifndef ABC_h
@@ -246,7 +244,7 @@ extern "C" {
 
         /** String containing a description of the event */
         char *szDescription;
-        
+
         /** amount swept */
         int64_t sweepSatoshi;
     } tABC_AsyncBitCoinInfo;

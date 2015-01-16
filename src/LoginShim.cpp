@@ -1,9 +1,8 @@
-/**
- * @file
- * AirBitz Login functions.
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
  *
- * This file wrapps the methods of `LoginObject.hpp` with a caching layer
- * for backwards-compatibility with the old API.
+ * See the LICENSE file for more information.
  */
 
 #include "LoginShim.hpp"

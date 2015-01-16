@@ -1,11 +1,8 @@
-/**
- * @file
- * AirBitz file-sync functions
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
  *
- * See LICENSE for copy, modification, and use permissions
- *
- * @author See AUTHORS
- * @version 1.0
+ * See the LICENSE file for more information.
  */
 
 #include "Sync.hpp"

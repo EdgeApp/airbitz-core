@@ -1,6 +1,12 @@
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
+ */
 /**
  * @file
- * AirBitz SQL server API.
+ * Functions for communicating with the AirBitz login servers.
  */
 
 #ifndef ABC_LoginServer_h

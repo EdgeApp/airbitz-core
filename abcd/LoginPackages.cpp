@@ -1,6 +1,8 @@
-/**
- * @file
- * Helper functions for dealing with login and care packages.
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
  */
 
 #include "LoginPackages.hpp"

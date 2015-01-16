@@ -1,6 +1,8 @@
-/**
- * @file
- * Storage backend for login data.
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
  */
 
 #include "LoginDir.hpp"
