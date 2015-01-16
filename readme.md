@@ -65,8 +65,5 @@ The "server" directory contains the source code for our git replication
 utility. We run this on our sync servers each time a wallet pushes new data,
 copying the data to the other servers as well.
 
-The "tests" directory contains some random test code. This is largely
-unmaintained, and doesn't even compile. We will scrap this once the command-
-line utilites in "util" are more complete, since those will allow us to do
-all the testing we need with some simple shell-script wrappers. We should
-also think about doing proper unit tests at some point in the future.
+The "minilibs" directory contains small support libraries that don't have
+a standalone distribution.

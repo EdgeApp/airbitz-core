@@ -1,7 +1,4 @@
-/**
- * @file
- * AirBitz Core API functions.
- *
+/*
  *  Copyright (c) 2014, Airbitz
  *  All rights reserved.
  *
@@ -30,37 +27,36 @@
  *  The views and conclusions contained in the software and documentation are those
  *  of the authors and should not be interpreted as representing official policies,
  *  either expressed or implied, of the Airbitz Project.
- *
- *  @author See AUTHORS
- *  @version 1.0
  */
 
 #include "ABC.h"
-#include "ABC_LoginPIN.h"
-#include "ABC_LoginShim.h"
-#include "ABC_LoginRequest.h"
-#include "ABC_LoginServer.h"
-#include "ABC_Account.h"
-#include "ABC_General.h"
-#include "ABC_Bridge.h"
-#include "ABC_Export.h"
-#include "ABC_Wallet.h"
-#include "ABC_WalletAsync.h"
-#include "ABC_Tx.h"
-#include "ABC_Exchanges.h"
-#include "util/ABC_Crypto.h"
-#include "util/ABC_Debug.h"
-#include "util/ABC_FileIO.h"
-#include "util/ABC_Mutex.h"
-#include "util/ABC_Sync.h"
-#include "util/ABC_URL.h"
-#include "util/ABC_Util.h"
+#include "LoginRequest.hpp"
+#include "LoginShim.hpp"
+#include "WalletAsync.hpp"
+#include "../abcd/LoginPIN.hpp"
+#include "../abcd/LoginServer.hpp"
+#include "../abcd/Account.hpp"
+#include "../abcd/General.hpp"
+#include "../abcd/Bridge.hpp"
+#include "../abcd/Export.hpp"
+#include "../abcd/Wallet.hpp"
+#include "../abcd/Tx.hpp"
+#include "../abcd/Exchanges.hpp"
+#include "../abcd/util/Crypto.hpp"
+#include "../abcd/util/Debug.hpp"
+#include "../abcd/util/FileIO.hpp"
+#include "../abcd/util/Mutex.hpp"
+#include "../abcd/util/Sync.hpp"
+#include "../abcd/util/URL.hpp"
+#include "../abcd/util/Util.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <pthread.h>
 #include <jansson.h>
 #include <math.h>
+
+using namespace abcd;
 
 static bool gbInitialized = false;
 bool gbIsTestNet = false;

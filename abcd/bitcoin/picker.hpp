@@ -1,13 +1,16 @@
 /*
- *  Copyright (c) 2014, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
  */
+
 #ifndef ABCD_BITCOIN_PICKER_HPP
 #define ABCD_BITCOIN_PICKER_HPP
 
+#include "watcher.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <bitcoin/transaction.hpp>
-#include "watcher.hpp"
 
 namespace abcd {
 
@@ -82,7 +85,7 @@ bool gather_challenges(unsigned_transaction& utx, abcd::watcher& watcher);
  */
 bool sign_tx(unsigned_transaction& utx, const key_table& keys);
 
-}
+} // namespace abcd
 
 #endif
 

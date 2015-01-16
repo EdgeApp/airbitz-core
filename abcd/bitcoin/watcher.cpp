@@ -1,9 +1,11 @@
 /*
- *  Copyright (c) 2014, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
  */
-#include "watcher.hpp"
 
+#include "watcher.hpp"
 #include <sstream>
 
 using namespace libbitcoin;
@@ -431,5 +433,4 @@ watcher::connection::connection(tx_db& db, void *ctx, tx_callbacks& cb)
 {
 }
 
-} // abcd
-
+} // namespace abcd

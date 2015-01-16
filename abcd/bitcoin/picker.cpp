@@ -1,9 +1,11 @@
 /*
- *  Copyright (c) 2014, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
  */
-#include "picker.hpp"
 
+#include "picker.hpp"
 #include <unistd.h>
 #include <iostream>
 #include <bitcoin/bitcoin.hpp>
@@ -229,5 +231,4 @@ bool sign_tx(unsigned_transaction& utx, const key_table& keys)
     return all_done;
 }
 
-}
-
+} // namespace abcd
