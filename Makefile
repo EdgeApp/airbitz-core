@@ -3,8 +3,8 @@ WORK_DIR ?= build
 INSTALL_DIR ?= /usr/local
 
 # Compiler options:
-CFLAGS   += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -Isrc -Iabcd -std=c99
-CXXFLAGS += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -Isrc -Iabcd -std=c++11
+CFLAGS   += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c99
+CXXFLAGS += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c++11
 deps = jansson libbitcoin-watcher libgit2 libqrencode libsecp256k1 libssl libwallet zlib
 LIBS := $(shell pkg-config --libs --static $(deps)) \
 	-lsodium \

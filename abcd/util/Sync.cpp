@@ -11,9 +11,8 @@
 #include "Sync.hpp"
 #include "Util.hpp"
 #include "Mutex.hpp"
-#include "General.hpp"
+#include "../General.hpp"
 #include "../../minilibs/git-sync/sync.h"
-
 #include <stdlib.h>
 #include <pthread.h>
 

@@ -38,7 +38,7 @@
 #ifndef ABC_Account_h
 #define ABC_Account_h
 
-#include "ABC.h"
+#include "../src/ABC.h"
 #include "util/Sync.hpp"
 
 namespace abcd {

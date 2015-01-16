@@ -37,6 +37,11 @@
  *  @version 1.0
  */
 
+#include "Crypto.hpp"
+#include "Debug.hpp"
+#include "FileIO.hpp"
+#include "Util.hpp"
+#include "../Bridge.hpp"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -57,12 +62,6 @@
 #include <jansson.h>
 #include "../../minilibs/scrypt/crypto_scrypt.h"
 #include "../../minilibs/scrypt/sha256.h"
-#include "Debug.hpp"
-#include "ABC.h"
-#include "Crypto.hpp"
-#include "Util.hpp"
-#include "FileIO.hpp"
-#include "Bridge.hpp"
 
 namespace abcd {
 

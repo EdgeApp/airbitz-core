@@ -38,7 +38,7 @@
 #ifndef ABC_Mutex_h
 #define ABC_Mutex_h
 
-#include "ABC.h"
+#include "../../src/ABC.h"
 
 namespace abcd {
 

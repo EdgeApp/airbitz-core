@@ -11,7 +11,7 @@
 #ifndef ABC_Sync_h
 #define ABC_Sync_h
 
-#include "ABC.h"
+#include "../../src/ABC.h"
 #include "Util.hpp"
 
 #define SYNC_KEY_LENGTH 20

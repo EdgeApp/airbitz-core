@@ -10,8 +10,7 @@
 #define ABC_LoginShim_h
 
 #include "ABC.h"
-#include "util/Sync.hpp"
-
+#include "../abcd/util/Sync.hpp"
 #include <time.h>
 
 namespace abcd {

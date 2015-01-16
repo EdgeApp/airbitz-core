@@ -38,7 +38,7 @@
 #ifndef ABC_URL_h
 #define ABC_URL_h
 
-#include "ABC.h"
+#include "../../src/ABC.h"
 #include "Util.hpp"
 #include <curl/curl.h>
 

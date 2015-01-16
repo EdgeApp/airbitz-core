@@ -38,9 +38,8 @@
 #ifndef ABC_Exchanges_h
 #define ABC_Exchanges_h
 
-#include "ABC.h"
+#include "../src/ABC.h"
 #include "util/Sync.hpp"
-#include "util/Util.hpp"
 
 namespace abcd {
 

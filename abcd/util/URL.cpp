@@ -38,18 +38,17 @@
  *  @version 1.0
  */
 
+#include "URL.hpp"
+#include "Debug.hpp"
+#include "FileIO.hpp"
+#include "Pin.hpp"
+#include "Util.hpp"
+#include "../ServerDefs.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <curl/curl.h>
 #include <pthread.h>
 #include <openssl/ssl.h>
-#include "ABC.h"
-#include "FileIO.hpp"
-#include "Util.hpp"
-#include "Pin.hpp"
-#include "Debug.hpp"
-#include "URL.hpp"
-#include "ServerDefs.hpp"
 
 namespace abcd {
 

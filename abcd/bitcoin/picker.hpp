@@ -2,12 +2,13 @@
  *  Copyright (c) 2014, AirBitz, Inc.
  *  All rights reserved.
  */
+
 #ifndef ABCD_BITCOIN_PICKER_HPP
 #define ABCD_BITCOIN_PICKER_HPP
 
+#include "watcher.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <bitcoin/transaction.hpp>
-#include "watcher.hpp"
 
 namespace abcd {
 

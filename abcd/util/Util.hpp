@@ -38,12 +38,12 @@
 #ifndef ABC_Util_h
 #define ABC_Util_h
 
+#include "../../src/ABC.h"
+#include "Debug.hpp"
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
 #include <jansson.h>
-#include "ABC.h"
-#include "Debug.hpp"
 
 namespace abcd {
 

@@ -6,8 +6,7 @@
 #ifndef ABC_Login_h
 #define ABC_Login_h
 
-#include "ABC.h"
-#include "util/Crypto.hpp"
+#include "../src/ABC.h"
 #include "util/Sync.hpp"
 
 namespace abcd {

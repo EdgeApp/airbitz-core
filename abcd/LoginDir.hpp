@@ -6,7 +6,7 @@
 #ifndef ABC_LoginDir_h
 #define ABC_LoginDir_h
 
-#include "ABC.h"
+#include "../src/ABC.h"
 #include "LoginPackages.hpp"
 
 namespace abcd {

@@ -38,9 +38,9 @@
 #ifndef ABC_Crypto_h
 #define ABC_Crypto_h
 
-#include <jansson.h>
-#include "ABC.h"
+#include "../../src/ABC.h"
 #include "Util.hpp"
+#include <jansson.h>
 
 namespace abcd {
 

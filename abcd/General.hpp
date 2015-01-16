@@ -6,7 +6,7 @@
 #ifndef ABC_General_h
 #define ABC_General_h
 
-#include "ABC.h"
+#include "../src/ABC.h"
 
 namespace abcd {
 

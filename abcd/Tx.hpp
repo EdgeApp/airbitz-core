@@ -38,7 +38,7 @@
 #ifndef ABC_Tx_h
 #define ABC_Tx_h
 
-#include "ABC.h"
+#include "../src/ABC.h"
 #include "Wallet.hpp"
 #include "util/Sync.hpp"
 #include "util/Util.hpp"

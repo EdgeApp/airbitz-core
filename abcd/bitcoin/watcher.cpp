@@ -2,8 +2,8 @@
  *  Copyright (c) 2014, AirBitz, Inc.
  *  All rights reserved.
  */
-#include "watcher.hpp"
 
+#include "watcher.hpp"
 #include <sstream>
 
 using namespace libbitcoin;

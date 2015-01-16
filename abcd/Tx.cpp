@@ -38,9 +38,6 @@
  *  @version 1.0
  */
 
-#include <unordered_map>
-#include <string>
-
 #include "Tx.hpp"
 #include "Account.hpp"
 #include "Exchanges.hpp"
@@ -56,6 +53,8 @@
 #include <time.h>
 #include <string.h>
 #include <qrencode.h>
+#include <unordered_map>
+#include <string>
 
 namespace abcd {
 

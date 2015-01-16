@@ -2,8 +2,8 @@
  *  Copyright (c) 2014, AirBitz, Inc.
  *  All rights reserved.
  */
-#include "picker.hpp"
 
+#include "picker.hpp"
 #include <unistd.h>
 #include <iostream>
 #include <bitcoin/bitcoin.hpp>

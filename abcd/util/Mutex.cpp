@@ -38,10 +38,10 @@
  *  @version 1.0
  */
 
-#include <stdio.h>
-#include <pthread.h>
 #include "Mutex.hpp"
 #include "Util.hpp"
+#include <stdio.h>
+#include <pthread.h>
 
 namespace abcd {
 

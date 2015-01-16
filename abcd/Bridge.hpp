@@ -38,7 +38,7 @@
 #ifndef ABC_Bridge_h
 #define ABC_Bridge_h
 
-#include "ABC.h"
+#include "../src/ABC.h"
 #include "Tx.hpp"
 #include "util/Util.hpp"
 

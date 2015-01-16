@@ -39,8 +39,8 @@
 #define ABC_WalletAsync_h
 
 #include "ABC.h"
-#include "util/Sync.hpp"
-#include "util/Util.hpp"
+#include "../abcd/util/Sync.hpp"
+#include "../abcd/util/Util.hpp"
 
 namespace abcd {
 

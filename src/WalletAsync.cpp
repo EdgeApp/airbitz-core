@@ -39,8 +39,8 @@
  */
 
 #include "WalletAsync.hpp"
-#include "Wallet.hpp"
-#include "util/Util.hpp"
+#include "../abcd/Wallet.hpp"
+#include "../abcd/util/Util.hpp"
 
 namespace abcd {
 

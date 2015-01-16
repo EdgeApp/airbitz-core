@@ -35,8 +35,8 @@
  *  @author See AUTHORS
  *  @version 1.0
  */
-#include "Debug.hpp"
 
+#include "Debug.hpp"
 #include <stdio.h>
 #include <time.h>
 #include <string.h>

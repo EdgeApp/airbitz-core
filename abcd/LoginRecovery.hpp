@@ -6,7 +6,7 @@
 #ifndef ABC_LoginRecovery_h
 #define ABC_LoginRecovery_h
 
-#include "ABC.h"
+#include "../src/ABC.h"
 #include "Login.hpp"
 
 namespace abcd {

@@ -34,10 +34,12 @@
  *  @author See AUTHORS
  *  @version 1.0
  */
+
 #ifndef ABC_Debug_h
 #define ABC_Debug_h
+
+#include "../../src/ABC.h"
 #include <strings.h>
-#include "ABC.h"
 
 namespace abcd {
 

@@ -6,10 +6,9 @@
 #ifndef ABC_LoginServer_h
 #define ABC_LoginServer_h
 
-#include "ABC.h"
+#include "../src/ABC.h"
 #include "LoginPackages.hpp"
 #include "util/Sync.hpp"
-
 #include <time.h>
 
 namespace abcd {

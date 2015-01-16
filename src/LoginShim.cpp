@@ -7,16 +7,16 @@
  */
 
 #include "LoginShim.hpp"
-#include "Login.hpp"
-#include "LoginDir.hpp"
-#include "LoginPassword.hpp"
-#include "LoginPIN.hpp"
-#include "LoginRecovery.hpp"
-#include "LoginServer.hpp"
-#include "General.hpp"
-#include "Wallet.hpp"
-#include "util/Mutex.hpp"
-#include "util/Util.hpp"
+#include "../abcd/Login.hpp"
+#include "../abcd/LoginDir.hpp"
+#include "../abcd/LoginPassword.hpp"
+#include "../abcd/LoginPIN.hpp"
+#include "../abcd/LoginRecovery.hpp"
+#include "../abcd/LoginServer.hpp"
+#include "../abcd/General.hpp"
+#include "../abcd/Wallet.hpp"
+#include "../abcd/util/Mutex.hpp"
+#include "../abcd/util/Util.hpp"
 
 namespace abcd {
 

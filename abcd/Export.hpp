@@ -11,8 +11,7 @@
 #ifndef ABC_Export_h
 #define ABC_Export_h
 
-#include "ABC.h"
-#include "util/Util.hpp"
+#include "../src/ABC.h"
 
 namespace abcd {
 

@@ -2,6 +2,7 @@
  *  Copyright (c) 2014, AirBitz, Inc.
  *  All rights reserved.
  */
+
 #ifndef ABCD_BITCOIN_WATCHER_HPP
 #define ABCD_BITCOIN_WATCHER_HPP
 
