@@ -43,6 +43,8 @@ namespace abcd {
 #define JSON_ACCT_SPEND_REQUIRE_PIN_ENABLED     "spendRequirePinEnabled"
 #define JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS    "spendRequirePinSatoshis"
 #define JSON_ACCT_DISABLE_PIN_LOGIN             "disablePINLogin"
+#define JSON_ACCT_TWO_FACTOR_ENABLED            "twoFactorEnabled"
+#define JSON_ACCT_TWO_FACTOR_RESET_SECONDS      "twoFactorResetSeconds"
 
 // Wallet JSON fields:
 #define JSON_ACCT_WALLET_MK_FIELD               "MK"
@@ -52,6 +54,7 @@ namespace abcd {
 #define JSON_ACCT_WALLET_SORT_FIELD             "SortIndex"
 
 #define DEF_REQUIRE_PIN_SATOSHIS 5000000
+#define DEF_TWO_FACTOR_RESET     86400
 
 static tABC_CC ABC_AccountCategoriesSave(tABC_SyncKeys *pKeys, char **aszCategories, unsigned int Count, tABC_Error *pError);
 static tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings, tABC_Error *pError);
@@ -231,6 +234,8 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     pSettings->bSpendRequirePin = true;
     pSettings->spendRequirePinSatoshis = DEF_REQUIRE_PIN_SATOSHIS;
     pSettings->bDisablePINLogin = false;
+    pSettings->bTwoFactorEnabled = false;
+    pSettings->twoFactorResetSeconds = DEF_TWO_FACTOR_RESET;
 
     ABC_STRDUP(pSettings->szLanguage, "en");
     pSettings->currencyNum = CURRENCY_NUM_USD;
@@ -409,6 +414,30 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
         {
             // Default to PIN login allowed
             pSettings->bDisablePINLogin = false;
+        }
+
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_TWO_FACTOR_ENABLED);
+        if (pJSON_Value)
+        {
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON boolean value");
+            pSettings->bDisablePINLogin = json_is_true(pJSON_Value) ? true : false;
+        }
+        else
+        {
+            // Default to PIN login allowed
+            pSettings->bTwoFactorEnabled = false;
+        }
+
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_TWO_FACTOR_RESET_SECONDS);
+        if (pJSON_Value)
+        {
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
+            pSettings->twoFactorResetSeconds = (long) json_integer_value(pJSON_Value);
+        }
+        else
+        {
+            // Default to PIN login allowed
+            pSettings->twoFactorResetSeconds = DEF_TWO_FACTOR_RESET;
         }
 
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS);
@@ -678,6 +707,12 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     retVal = json_object_set_new(pJSON_Root, JSON_ACCT_DISABLE_PIN_LOGIN, json_boolean(pSettings->bDisablePINLogin));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_TWO_FACTOR_ENABLED, json_boolean(pSettings->bTwoFactorEnabled));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_TWO_FACTOR_RESET_SECONDS, json_integer(pSettings->twoFactorResetSeconds));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // create the denomination section

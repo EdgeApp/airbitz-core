@@ -66,6 +66,11 @@ namespace abcd {
 #define ABC_SERVER_JSON_DID_FIELD           "did"
 #define ABC_SERVER_JSON_LPIN1_FIELD         "lpin1"
 #define ABC_SERVER_JSON_ALI_FIELD           "ali"
+#define ABC_SERVER_JSON_OTP_FIELD           "otp"
+#define ABC_SERVER_JSON_OTP_SECRET_FIELD    "otp_secret"
+#define ABC_SERVER_JSON_OTP_TIMEOUT         "otp_timeout"
+#define ABC_SERVER_JSON_OTP_PENDING         "pending"
+#define ABC_SERVER_JSON_OTP_ON              "on"
 
 #define ABC_SERVER_JSON_MESSAGE_FIELD       "message"
 #define ABC_SERVER_JSON_STATUS_CODE_FIELD   "status_code"
@@ -83,7 +88,8 @@ typedef enum eABC_Server_Code
     ABC_Server_Code_InvalidPassword = 4,
     ABC_Server_Code_InvalidAnswers = 5,
     ABC_Server_Code_InvalidApiKey = 6,
-    ABC_Server_Code_PinExpired = 7
+    ABC_Server_Code_PinExpired = 7,
+    ABC_Server_Code_InvalidOTP = 8
 } tABC_Server_Code;
 
 } // namespace abcd

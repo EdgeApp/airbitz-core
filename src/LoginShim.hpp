@@ -60,6 +60,36 @@ tABC_CC ABC_LoginShimPinSetup(const char *szUserName,
                               time_t expires,
                               tABC_Error *pError);
 
+tABC_CC ABC_LoginShim2FAEnable(const char *szUserName,
+                               const char *szPassword,
+                               long timeout,
+                               tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FADisable(const char *szUserName,
+                                const char *szPassword,
+                                tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FAStatus(const char *szUserName, const char *szPassword,
+        bool *on, long *timeout, tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FAGetSecret(const char *szUserName,
+                                  const char *szPassword,
+                                  char **pszSecret,
+                                  tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FAQrCode(const char *szUserName, const char *szPassword,
+    unsigned char **paData, unsigned int *pWidth, tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FASetSecret(const char *szUserName,
+                                  const char *szPassword,
+                                  const char *szSecret,
+                                  bool loggedIn,
+                                  tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FARequestReset(const char *szUserName,
+                                     const char *szPassword,
+                                     tABC_Error *pError);
+
 tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
                                  const char *szPassword,
                                  tABC_SyncKeys **ppKeys,
