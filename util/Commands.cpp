@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "commands.hpp"
+#include "Commands.hpp"
 #include "../src/LoginShim.hpp"
 #include "../abcd/Account.hpp"
 #include "../abcd/Bridge.hpp"

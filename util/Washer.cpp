@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "commands.hpp"
+#include "Commands.hpp"
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
