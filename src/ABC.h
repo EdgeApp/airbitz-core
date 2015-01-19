@@ -153,7 +153,9 @@ typedef enum eABC_CC
     /** Unable to find an address */
     ABC_CC_NoAvailableAddress = 35,
     /** Login PIN has expired */
-    ABC_CC_PinExpired = 36
+    ABC_CC_PinExpired = 36,
+    /** Two Factor required */
+    ABC_CC_InvalidOTP = 37,
 } tABC_CC;
 
 /**
@@ -215,6 +217,7 @@ typedef enum eABC_AsyncEventType
     ABC_AsyncEventType_ExchangeRateUpdate,
     ABC_AsyncEventType_DataSyncUpdate,
     ABC_AsyncEventType_RemotePasswordChange,
+    ABC_AsyncEventType_OtpRequired,
     ABC_AsyncEventType_IncomingSweep
 } tABC_AsyncEventType;
 
@@ -595,6 +598,10 @@ typedef struct sABC_AccountSettings
     int64_t                     spendRequirePinSatoshis;
     /** should PIN re-login be disabled */
     bool                        bDisablePINLogin;
+    /** Enable 2 Factor */
+    bool                        bTwoFactorEnabled;
+    /** Enable 2 Factor reset period in seconds */
+    long                        twoFactorResetSeconds;
 } tABC_AccountSettings;
 
 /**
@@ -730,6 +737,58 @@ tABC_CC ABC_PinSetup(const char *szUserName,
 
 tABC_CC ABC_ListAccounts(char **pszUserNames,
                          tABC_Error *pError);
+
+/* === Two-factor authentication: === */
+tABC_CC ABC_EnableTwoFactor(const char *szUserName,
+                            const char *szPassword,
+                            tABC_Error *pError);
+
+tABC_CC ABC_DisableTwoFactor(const char *szUserName,
+                             const char *szPassword,
+                             tABC_Error *pError);
+
+tABC_CC ABC_StatusTwoFactor(const char *szUserName,
+                            const char *szPassword,
+                            bool *on,
+                            long *timeout,
+                            tABC_Error *pError);
+
+tABC_CC ABC_TwoFactorSignIn(const char *szUserName,
+                            const char *szPassword,
+                            const char *szSecret,
+                            tABC_Request_Callback fRequestCallback,
+                            void *pData,
+                            tABC_Error *pError);
+
+tABC_CC ABC_GetTwoFactorSecret(const char *szUserName,
+                               const char *szPassword,
+                               char **pszSecret,
+                               tABC_Error *pError);
+
+tABC_CC ABC_GetTwoFactorQrCode(const char *szUserName,
+                               const char *szPassword,
+                               unsigned char **paData,
+                               unsigned int *pWidth,
+                               tABC_Error *pError);
+
+tABC_CC ABC_SetTwoFactorSecret(const char *szUserName,
+                               const char *szPassword,
+                               const char *szSecret,
+                               bool persist,
+                               tABC_Error *pError);
+
+tABC_CC ABC_RequestTwoFactorReset(const char *szUserName,
+                                  const char *szPassword,
+                                  tABC_Error *pError);
+
+tABC_CC ABC_IsTwoFactorResetPending(const char **usernames,
+                                    const int size,
+                                    bool **pending,
+                                    tABC_Error *pError);
+
+tABC_CC ABC_CancelTwoFactorReset(const char *szUserName,
+                                 const char *szPassword,
+                                 tABC_Error *pError);
 
 /* === Login data: === */
 tABC_CC ABC_ChangePassword(const char *szUserName,

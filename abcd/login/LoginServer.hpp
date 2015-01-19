@@ -18,6 +18,7 @@
 #include "../util/U08Buf.hpp"
 #include "../../src/ABC.h"
 #include <time.h>
+#include <vector>
 
 namespace abcd {
 
@@ -73,6 +74,13 @@ LoginServerWalletCreate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey);
  */
 Status
 LoginServerWalletActivate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey);
+
+tABC_CC ABC_LoginServerOtpEnable(tABC_U08Buf L1, tABC_U08Buf LP1, const char *szOtpToken, const long timeout, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpRequest(const char *szUrl, tABC_U08Buf L1, tABC_U08Buf LP1, json_t **pJSON_Results, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpDisable(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpReset(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpPending(std::vector<tABC_U08Buf> users, std::vector<bool>& isPending, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpResetCancelPending(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError);
 
 tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
                                   tABC_U08Buf LP1,

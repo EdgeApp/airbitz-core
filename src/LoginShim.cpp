@@ -14,6 +14,7 @@
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
+#include "../abcd/login/TwoFactor.hpp"
 #include "../abcd/util/Util.hpp"
 #include <mutex>
 
@@ -279,6 +280,148 @@ tABC_CC ABC_LoginShimPinSetup(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginPinSetup(gLoginCache, szPin, expires, pError));
 
 exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FAEnable(const char *szUserName,
+                               const char *szPassword,
+                               long timeout,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_U08Buf L1       = ABC_BUF_NULL;
+    tABC_U08Buf LP1      = ABC_BUF_NULL;
+
+    ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_RET(ABC_TwoFactorEnable(gLoginCache, L1, LP1, timeout, pError));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FADisable(const char *szUserName,
+                                const char *szPassword,
+                                tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_U08Buf L1       = ABC_BUF_NULL;
+    tABC_U08Buf LP1      = ABC_BUF_NULL;
+
+    ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_RET(ABC_TwoFactorDisable(gLoginCache, L1, LP1, pError));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FAStatus(const char *szUserName, const char *szPassword,
+        bool *on, long *timeout, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_U08Buf L1       = ABC_BUF_NULL;
+    tABC_U08Buf LP1      = ABC_BUF_NULL;
+
+    ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginServerOtpStatus(L1, LP1, on, timeout, pError));
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FAGetSecret(const char *szUserName,
+                                  const char *szPassword,
+                                  char **pszSecret,
+                                  tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+
+    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_TwoFactorGetSecret(gLoginCache, pszSecret, pError));
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FAQrCode(const char *szUserName, const char *szPassword,
+    unsigned char **paData, unsigned int *pWidth, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+
+    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_TwoFactorGetQrCode(gLoginCache, paData, pWidth, pError));
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FASetSecret(const char *szUserName,
+                                  const char *szPassword,
+                                  const char *szSecret,
+                                  bool loggedIn,
+                                  tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+
+    if (loggedIn)
+    {
+        ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+        ABC_CHECK_RET(ABC_TwoFactorSetSecret(gLoginCache, szSecret, pError));
+    }
+    else
+    {
+        ABC_CHECK_RET(ABC_TwoFactorSetSecret(NULL, szSecret, pError));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FARequestReset(const char *szUserName,
+                                     const char *szPassword,
+                                     tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_CC loggedIn;
+    AutoU08Buf L1;
+    AutoU08Buf LP;
+    AutoU08Buf LP1;
+    tABC_Login *pSelfTemp          = NULL;
+    tABC_CarePackage *pCarePackage = NULL;
+
+    loggedIn = ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError);
+    if (loggedIn == ABC_CC_Ok)
+    {
+        ABC_CHECK_RET(ABC_TwoFactorReset(L1, LP1, pError));
+    }
+    else
+    {
+        // User is not logged in, so we have to manually build LP1
+        ABC_CHECK_RET(ABC_LoginNew(&pSelfTemp, szUserName, pError));
+        ABC_CHECK_RET(ABC_CarePackageNew(&pCarePackage, pError));
+
+        ABC_BUF_STRCAT(LP, pSelfTemp->szUserName, szPassword);
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP1, &LP1, pError));
+
+        ABC_CHECK_RET(ABC_TwoFactorReset(pSelfTemp->L1, LP1, pError));
+    }
+
+exit:
+    ABC_LoginFree(pSelfTemp);
+    ABC_CarePackageFree(pCarePackage);
+
     return cc;
 }
 

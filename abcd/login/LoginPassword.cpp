@@ -8,6 +8,7 @@
 #include "LoginPassword.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
+#include "TwoFactor.hpp"
 #include "../util/Util.hpp"
 
 namespace abcd {
@@ -108,6 +109,9 @@ tABC_CC ABC_LoginPassword(tABC_Login **ppSelf,
     {
         ABC_CHECK_RET(ABC_LoginPasswordServer(pSelf, LP, pError));
     }
+
+    // Populate 2 factor cache if file exists
+    ABC_TwoFactorCacheSecret(pSelf, NULL);
 
     // Assign the final output:
     *ppSelf = pSelf;
