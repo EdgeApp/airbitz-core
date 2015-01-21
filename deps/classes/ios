@@ -30,7 +30,12 @@ build_ios() {
     export CPP="clang -E"
     export CXX="clang++"
 
-    sdk_flags="-arch $1 -isysroot $platform_dir/SDKs/${2}7.1.sdk -miphoneos-version-min=7.0 -O2"
+    # Use 8.1 sdk if available
+    platform_sdk="$platform_dir/SDKs/${2}8.1.sdk"
+    if [[ ! -e "$platform_sdk" ]]; then
+        platform_sdk="$platform_dir/SDKs/${2}7.1.sdk"
+    fi
+    sdk_flags="-arch $1 -isysroot $platform_sdk -miphoneos-version-min=7.0 -O2"
     export CFLAGS="$sdk_flags -isystem${install_dir}/include"
     export CXXFLAGS="$sdk_flags -isystem${install_dir}/include"
     export LDFLAGS="$sdk_flags -L${install_dir}/lib"
