@@ -132,12 +132,6 @@ namespace abcd {
         printf("\n"); \
     }
 
-#define ABC_PRINT_ERR_CODE(err) \
-    { \
-        printf("ABC Error Code: %d, ", err); \
-        ABC_PRINT_ERR(pError); \
-    }
-
 #define ABC_NEW(ptr, type) \
     { \
         ptr = (type*)calloc(1, sizeof(type)); \
@@ -305,13 +299,6 @@ namespace abcd {
 
     typedef ABC_BUF(unsigned char) tABC_U08Buf;
 
-    void ABC_UtilHexDump(const char *szDescription,
-                         const unsigned char *pData,
-                         unsigned int dataLength);
-
-    void ABC_UtilHexDumpBuf(const char *szDescription,
-                            tABC_U08Buf Buf);
-
     tABC_CC ABC_UtilCreateValueJSONString(const char *szValue,
                                           const char *szFieldName,
                                           char       **pszJSON,
@@ -327,11 +314,6 @@ namespace abcd {
                                           const char   *szFieldName,
                                           json_t       **ppJSON_Data,
                                           tABC_Error   *pError);
-
-    tABC_CC ABC_UtilCreateHexDataJSONString(const tABC_U08Buf Data,
-                                            const char        *szFieldName,
-                                            char              **pszJSON,
-                                            tABC_Error        *pError);
 
     tABC_CC ABC_UtilGetStringValueFromJSONString(const char *szJSON,
                                                  const char *szFieldName,
