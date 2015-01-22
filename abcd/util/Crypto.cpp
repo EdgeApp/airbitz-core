@@ -32,6 +32,7 @@
 #include "Crypto.hpp"
 #include "Debug.hpp"
 #include "FileIO.hpp"
+#include "Json.hpp"
 #include "Util.hpp"
 #include "../Bridge.hpp"
 #include <stdio.h>

@@ -7,6 +7,7 @@
 
 #include "LoginServer.hpp"
 #include "ServerDefs.hpp"
+#include "util/Json.hpp"
 #include "util/URL.hpp"
 #include "util/Util.hpp"
 

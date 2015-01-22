@@ -45,6 +45,7 @@
 #include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
+#include "../abcd/util/Json.hpp"
 #include "../abcd/util/Mutex.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/URL.hpp"

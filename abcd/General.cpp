@@ -17,6 +17,7 @@
 #include "ServerDefs.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"
+#include "util/Json.hpp"
 #include "util/URL.hpp"
 #include "util/Util.hpp"
 #include <stdio.h>

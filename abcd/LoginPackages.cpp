@@ -6,6 +6,7 @@
  */
 
 #include "LoginPackages.hpp"
+#include "util/Json.hpp"
 #include "util/Util.hpp"
 
 namespace abcd {
