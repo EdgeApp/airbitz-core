@@ -623,7 +623,12 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(pSettings);
 
-    ABC_CHECK_NUMERIC(pSettings->szPIN, ABC_CC_NonNumericPin, "The pin must be numeric.");
+    if (pSettings->szPIN)
+    {
+        char *endstr = NULL;
+        strtol(pSettings->szPIN, &endstr, 10);
+        ABC_CHECK_ASSERT(*endstr == '\0', ABC_CC_NonNumericPin, "The pin must be numeric.");
+    }
 
     // create the json for the settings
     pJSON_Root = json_object();
