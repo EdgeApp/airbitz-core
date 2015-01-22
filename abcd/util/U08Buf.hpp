@@ -16,20 +16,21 @@
 
 namespace abcd {
 
-#define ABC_BUF(type)                       struct {  \
-                                                    type *p;  \
-                                                    type *end;  \
-                                            }
+/**
+ * A slice of raw data.
+ */
+struct U08Buf
+{
+    unsigned char *p;
+    unsigned char *end;
+};
+
+/**
+ * Frees the buffer contents and sets the pointers to null.
+ */
+void U08BufFree(U08Buf &self);
+
 #define ABC_BUF_SIZE(x)                     ((unsigned int) (((x).end)-((x).p)))
-#define ABC_BUF_FREE(x)                     {  \
-                                                if ((x).p != NULL) \
-                                                { \
-                                                    ABC_UtilGuaranteedMemset((x).p, 0, (((x).end)-((x).p))); \
-                                                    free((x).p);  \
-                                                } \
-                                                (x).p = NULL;  \
-                                                (x).end = NULL;  \
-                                            }
 #define ABC_BUF_CLEAR(x)                    {  \
                                                 (x).p = NULL;  \
                                                 (x).end = NULL;  \
@@ -82,7 +83,9 @@ namespace abcd {
 }
 */
 
-typedef ABC_BUF(unsigned char) tABC_U08Buf;
+// Compatibility wrappers:
+typedef U08Buf tABC_U08Buf;
+#define ABC_BUF_FREE(x) U08BufFree(x);
 
 } // namespace abcd
 
