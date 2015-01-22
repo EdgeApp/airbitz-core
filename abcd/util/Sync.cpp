@@ -328,11 +328,11 @@ tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *p
 
     *pszServer = (char *)ABC_BUF_PTR(URL);
     ABC_BUF_CLEAR(URL);
-    ABC_BUF_FREE(URL);
 
     ABC_DebugLog("Syncing to: %s\n", *pszServer);
 
 exit:
+    ABC_BUF_FREE(URL);
     ABC_SyncMutexUnlock(NULL);
 
     return cc;

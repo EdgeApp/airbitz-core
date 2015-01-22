@@ -631,7 +631,6 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
 
         ABC_FREE_STR(szWatchFilename);
         ABC_FREE(aWatchData);
-        ABC_BUF_CLEAR(WatchData);
     }
 
     pJSON_Root = json_pack("{ss, ss, ss}",
@@ -659,7 +658,6 @@ exit:
     ABC_FREE_STR(szWatchFilename);
     ABC_FREE(aWatchData);
     ABC_FREE_STR(szWatchData_Hex);
-    ABC_BUF_CLEAR(WatchData);
 
     ABC_FreeWalletInfoArray(paWalletInfo, nCount);
 
