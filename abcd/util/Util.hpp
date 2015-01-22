@@ -196,14 +196,6 @@ namespace abcd {
         } \
     }
 
-#define ABC_SWAP(a, b) \
-    { \
-        unsigned char temp[sizeof(a) == sizeof(b) ? (signed)sizeof(a) : -1]; \
-        memcpy(temp, &b, sizeof(a)); \
-        memcpy(&b,   &a, sizeof(a)); \
-        memcpy(&a, temp, sizeof(a)); \
-    }
-
 #define ABC_BUF(type)                       struct {  \
                                                     type *p;  \
                                                     type *end;  \
@@ -228,28 +220,11 @@ namespace abcd {
                                                 (buf).end = (buf).p + (sizeof(*((buf).p)) * count); \
                                             }
 #define ABC_BUF_PTR(x)                      ((x).p)
-#define ABC_BUF_REALLOC(buf, count)         { \
-                                                unsigned long __abc_buf_realloc_count__ = (sizeof(*((buf).p)) * count); \
-                                                (buf).p = (unsigned char*)realloc((buf).p, __abc_buf_realloc_count__); \
-                                                (buf).end = (buf).p +      __abc_buf_realloc_count__; \
-                                            }
-#define ABC_BUF_EXPAND(buf, count)          { \
-                                                unsigned long __abc_buf_expand_count__ = (((buf).end)-((buf).p)) + (sizeof(*((buf).p)) * count); \
-                                                (buf).p = (unsigned char*)realloc((buf).p, __abc_buf_expand_count__); \
-                                                (buf).end = (buf).p +      __abc_buf_expand_count__; \
-                                            }
 #define ABC_BUF_APPEND_PTR(buf, ptr, count) { \
                                                 unsigned long __abc_buf_append_resize__ = (unsigned long) (((buf).end)-((buf).p)) + (sizeof(*((buf).p)) * count); \
                                                 (buf).p = (unsigned char*)realloc((buf).p, __abc_buf_append_resize__); \
                                                 (buf).end = (buf).p +      __abc_buf_append_resize__; \
                                                 memcpy((buf).end - count, ptr, count); \
-                                            }
-#define ABC_BUF_APPEND(dst, src)            { \
-                                                unsigned long __abc_buf_append_size__ = (unsigned long) (((src).end)-((src).p)); \
-                                                unsigned long __abc_buf_append_resize__ = (unsigned long) (((dst).end)-((dst).p)) + __abc_buf_append_size__ ; \
-                                                (dst).p = (unsigned char*)realloc((dst).p, __abc_buf_append_resize__); \
-                                                (dst).end = (dst).p +      __abc_buf_append_resize__; \
-                                                memcpy((dst).end - __abc_buf_append_size__, (src).p,  __abc_buf_append_size__); \
                                             }
 #define ABC_BUF_DUP(dst, src)               { \
                                                 unsigned long __abc_buf_dup_size__ = (int) (((src).end)-((src).p)); \
@@ -276,18 +251,8 @@ namespace abcd {
                                             }
 #define ABC_BUF_SET(dst, src)               { (dst).p = (src).p; (dst).end = (src).end; }
 #define ABC_BUF_SET_PTR(buf, ptr, size)     { (buf).p = ptr; (buf).end = ptr + size; }
-#define ABC_BUF_ZERO(buf)                   { \
-                                                if ((buf).p != NULL) \
-                                                { \
-                                                    ABC_UtilGuaranteedMemset ((buf).p, 0, (((buf).end)-((buf).p))); \
-                                                } \
-                                            }
 #define ABC_CHECK_NULL_BUF(arg)             { ABC_CHECK_ASSERT(ABC_BUF_PTR(arg) != NULL, ABC_CC_NULLPtr, "NULL ABC_Buf pointer"); }
 
-#define ABC_BUF_SWAP(a, b)                  { \
-                                                ABC_SWAP((a).p,   (b).p); \
-                                                ABC_SWAP((a).end, (b).end); \
-                                            }
 /* example usage
 {
     tABC_U08Buf mybuf = ABC_BUF_NULL; // declares buf and inits pointers to NULL
