@@ -33,6 +33,15 @@
 
 namespace abcd {
 
+void StringFree(char *string)
+{
+    if (string)
+    {
+        ABC_UtilGuaranteedMemset(string, 0, strlen(string));
+        free(string);
+    }
+}
+
 /**
  * Free's array of strings
  * note: the strings are first zero'ed out before being freed

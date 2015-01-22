@@ -44,6 +44,11 @@
 
 namespace abcd {
 
+/**
+ * Frees a C-style string and sets the pointer to NULL.
+ */
+void StringFree(char *string);
+
 #ifdef DEBUG
 #define ABC_LOG_ERROR(code, err_string) \
     { \
@@ -158,12 +163,8 @@ namespace abcd {
 
 #define ABC_FREE_STR(str) \
     { \
-        if (str != NULL) \
-        { \
-            ABC_UtilGuaranteedMemset(str, 0, strlen(str)); \
-            free(str); \
-            str = NULL; \
-        } \
+        StringFree(str); \
+        str = nullptr; \
     }
 
 #define ABC_CLEAR_FREE(ptr, len) \
