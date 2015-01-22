@@ -10,6 +10,7 @@
 #include "LoginServer.hpp"
 #include "Account.hpp"
 #include "util/Crypto.hpp"
+#include "util/Util.hpp"
 #include <ctype.h>
 
 namespace abcd {

@@ -34,6 +34,7 @@
 #include "Wallet.hpp"
 #include "util/Crypto.hpp"
 #include "util/URL.hpp"
+#include "util/Util.hpp"
 #include "bitcoin/picker.hpp"
 #include <curl/curl.h>
 #include <wallet/wallet.hpp>

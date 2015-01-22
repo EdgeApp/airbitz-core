@@ -38,7 +38,7 @@
 
 #include "ABC.h"
 #include "../abcd/util/Sync.hpp"
-#include "../abcd/util/Util.hpp"
+#include "../abcd/util/U08Buf.hpp"
 
 namespace abcd {
 

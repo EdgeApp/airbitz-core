@@ -39,7 +39,6 @@
 #include "../src/ABC.h"
 #include "Wallet.hpp"
 #include "util/Sync.hpp"
-#include "util/Util.hpp"
 
 namespace abcd {
 

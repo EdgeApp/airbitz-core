@@ -37,8 +37,9 @@
 #define ABC_URL_h
 
 #include "../../src/ABC.h"
-#include "Util.hpp"
+#include "U08Buf.hpp"
 #include <curl/curl.h>
+#include <jansson.h>
 
 namespace abcd {
 

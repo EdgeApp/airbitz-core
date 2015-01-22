@@ -15,6 +15,7 @@
 #include "../src/ABC.h"
 #include "LoginPackages.hpp"
 #include "util/Sync.hpp"
+#include "util/U08Buf.hpp"
 #include <time.h>
 
 namespace abcd {

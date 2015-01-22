@@ -39,7 +39,6 @@
 #include "../src/ABC.h"
 #include "General.hpp"
 #include "util/Sync.hpp"
-#include "util/Util.hpp"
 
 namespace abcd {
 

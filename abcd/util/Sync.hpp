@@ -13,7 +13,7 @@
 #define ABC_Sync_h
 
 #include "../../src/ABC.h"
-#include "Util.hpp"
+#include "U08Buf.hpp"
 
 #define SYNC_KEY_LENGTH 20
 
