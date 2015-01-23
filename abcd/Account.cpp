@@ -107,33 +107,26 @@ tABC_CC ABC_AccountCategoriesAdd(tABC_SyncKeys *pKeys,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char **aszCategories = NULL;
-    unsigned int categoryCount = 0;
-
-    ABC_CHECK_NULL(szCategory);
+    AutoStringArray categories;
 
     // load the current categories
-    ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &aszCategories, &categoryCount, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &categories.data, &categories.size, pError));
 
     // if there are categories
-    if ((aszCategories != NULL) && (categoryCount > 0))
+    if (categories.data)
     {
-        ABC_ARRAY_RESIZE(aszCategories, categoryCount + 1, char*);
+        ABC_ARRAY_RESIZE(categories.data, categories.size + 1, char*);
     }
     else
     {
-        ABC_ARRAY_NEW(aszCategories, 1, char*);
-        categoryCount = 0;
+        ABC_ARRAY_NEW(categories.data, 1, char*);
     }
-    ABC_STRDUP(aszCategories[categoryCount], szCategory);
-    categoryCount++;
+    ABC_STRDUP(categories.data[categories.size++], szCategory);
 
     // save out the categories
-    ABC_CHECK_RET(ABC_AccountCategoriesSave(pKeys, aszCategories, categoryCount, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesSave(pKeys, categories.data, categories.size, pError));
 
 exit:
-    ABC_UtilFreeStringArray(aszCategories, categoryCount);
-
     return cc;
 }
 
@@ -148,44 +141,35 @@ tABC_CC ABC_AccountCategoriesRemove(tABC_SyncKeys *pKeys,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char **aszCategories = NULL;
-    unsigned int categoryCount = 0;
-    char **aszNewCategories = NULL;
-    unsigned int newCategoryCount = 0;
-
-    ABC_CHECK_NULL(szCategory);
+    AutoStringArray oldCat;
+    AutoStringArray newCat;
 
     // load the current categories
-    ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &aszCategories, &categoryCount, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &oldCat.data, &oldCat.size, pError));
 
     // got through all the categories and only add ones that are not this one
-    for (unsigned i = 0; i < categoryCount; i++)
+    for (unsigned i = 0; i < oldCat.size; i++)
     {
         // if this is not the string we are looking to remove then add it to our new arrary
-        if (0 != strcmp(aszCategories[i], szCategory))
+        if (0 != strcmp(oldCat.data[i], szCategory))
         {
             // if there are categories
-            if ((aszNewCategories != NULL) && (newCategoryCount > 0))
+            if (newCat.data)
             {
-                ABC_ARRAY_RESIZE(aszNewCategories, newCategoryCount + 1, char*);
+                ABC_ARRAY_RESIZE(newCat.data, newCat.size + 1, char*);
             }
             else
             {
-                ABC_ARRAY_NEW(aszNewCategories, 1, char*);
-                newCategoryCount = 0;
+                ABC_ARRAY_NEW(newCat.data, 1, char*);
             }
-            ABC_STRDUP(aszNewCategories[newCategoryCount], aszCategories[i]);
-            newCategoryCount++;
+            ABC_STRDUP(newCat.data[newCat.size++], oldCat.data[i]);
         }
     }
 
     // save out the new categories
-    ABC_CHECK_RET(ABC_AccountCategoriesSave(pKeys, aszNewCategories, newCategoryCount, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesSave(pKeys, newCat.data, newCat.size, pError));
 
 exit:
-    ABC_UtilFreeStringArray(aszCategories, categoryCount);
-    ABC_UtilFreeStringArray(aszNewCategories, newCategoryCount);
-
     return cc;
 }
 

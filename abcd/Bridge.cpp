@@ -965,8 +965,7 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
     tABC_CC txResp;
 
     char *changeAddr = NULL;
-    char **paAddresses = NULL;
-    unsigned int countAddresses = 0;
+    AutoStringArray addresses;
 
     auto row = watchers_.find(self.szUUID);
     uint64_t total = 0;
@@ -981,15 +980,15 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
     ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
     // Fetch all the payment addresses for this wallet
     ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(self, &paAddresses, &countAddresses, pError));
-    if (countAddresses > 0)
+        ABC_TxGetPubAddresses(self, &addresses.data, &addresses.size, pError));
+    if (addresses.size > 0)
     {
         // This is needed to pass to the ABC_BridgeTxMake
         // It should never be used
-        changeAddr = paAddresses[0];
+        changeAddr = addresses.data[0];
 
         // Calculate total of utxos for these addresses
-        ABC_DebugLog("Get UTOXs for %d\n", countAddresses);
+        ABC_DebugLog("Get UTOXs for %d\n", addresses.size);
         auto utxos = row->second->watcher->get_utxos(true);
         for (const auto& utxo: utxos)
         {
@@ -1009,13 +1008,13 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
 
         // Ewwwwww, fix this to have minimal iterations
         txResp = ABC_BridgeTxMake(&SendInfo,
-                                  paAddresses, countAddresses,
+                                  addresses.data, addresses.size,
                                   changeAddr, &utx, pError);
         while (txResp == ABC_CC_InsufficientFunds && Details.amountSatoshi > 0)
         {
             Details.amountSatoshi -= 1;
             txResp = ABC_BridgeTxMake(&SendInfo,
-                                      paAddresses, countAddresses,
+                                      addresses.data, addresses.size,
                                       changeAddr, &utx, pError);
         }
         *pMaxSatoshi = AB_MAX(Details.amountSatoshi, 0);
@@ -1027,7 +1026,6 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
 exit:
     ABC_FREE_STR(SendInfo.szDestAddress);
     ABC_GeneralFreeInfo(ppInfo);
-    ABC_UtilFreeStringArray(paAddresses, countAddresses);
     return cc;
 }
 

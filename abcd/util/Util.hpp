@@ -185,6 +185,24 @@ void ABC_UtilFreeStringArray(char **aszStrings,
 
 void *ABC_UtilGuaranteedMemset(void *v, int c, size_t n);
 
+/**
+ * An array of strings that knows how to automatically free itself.
+ */
+struct AutoStringArray
+{
+    ~AutoStringArray()
+    {
+        ABC_UtilFreeStringArray(data, size);
+    }
+
+    AutoStringArray():
+        data(nullptr), size(0)
+    {}
+
+    char **data;   // String pointer array
+    unsigned size; // Number of leaf strings actually allocated
+};
+
 } // namespace abcd
 
 #endif

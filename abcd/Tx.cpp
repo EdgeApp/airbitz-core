@@ -269,16 +269,12 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
                    tABC_Error       *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    char *szPrivSeed = NULL;
     tABC_U08Buf privSeed = ABC_BUF_NULL; // Do not free
     tABC_UnsignedTx *pUtx = NULL;
-
-    // Change address variables
+    AutoStringArray addresses;
+    AutoStringArray keys;
     tABC_TxAddress *pChangeAddr = NULL;
-
-    char *szPrivSeed = NULL;
-    char **paAddresses = NULL;
-    char **paPrivAddresses = NULL;
-    unsigned int countAddresses = 0, privCountAddresses = 0;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
@@ -297,10 +293,10 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 
     // Fetch addresses for this wallet
     ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(pInfo->wallet, &paAddresses, &countAddresses, pError));
+        ABC_TxGetPubAddresses(pInfo->wallet, &addresses.data, &addresses.size, pError));
     // Make an unsigned transaction
     ABC_CHECK_RET(
-        ABC_BridgeTxMake(pInfo, paAddresses, countAddresses,
+        ABC_BridgeTxMake(pInfo, addresses.data, addresses.size,
                          pChangeAddr->szPubAddress, pUtx, pError));
 
     // Fetch Private Seed
@@ -309,11 +305,11 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     // Fetch the private addresses
     ABC_CHECK_RET(
         ABC_TxGetPrivAddresses(pInfo->wallet, privSeed,
-                               &paPrivAddresses, &privCountAddresses,
+                               &keys.data, &keys.size,
                                pError));
     // Sign and send transaction
     ABC_CHECK_RET(
-        ABC_BridgeTxSignSend(pInfo, paPrivAddresses, privCountAddresses,
+        ABC_BridgeTxSignSend(pInfo, keys.data, keys.size,
                              pUtx, pError));
 
     // Update the ABC db
@@ -324,7 +320,6 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 exit:
     ABC_FREE(szPrivSeed);
     ABC_TxFreeAddress(pChangeAddr);
-    ABC_UtilFreeStringArray(paAddresses, countAddresses);
     ABC_TxSendInfoFree(pInfo);
     ABC_TxFreeOutputs(pUtx->aOutputs, pUtx->countOutputs);
     ABC_FREE(pUtx->data);
@@ -454,9 +449,7 @@ tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo, int64_t *pTotalFees, tABC_Er
     tABC_CC cc = ABC_CC_Ok;
     tABC_UnsignedTx utx;
     tABC_TxAddress *pChangeAddr = NULL;
-
-    char **paAddresses = NULL;
-    unsigned int countAddresses = 0;
+    AutoStringArray addresses;
 
     ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
@@ -473,14 +466,13 @@ tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo, int64_t *pTotalFees, tABC_Er
 
     // Fetch addresses for this wallet
     ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(pInfo->wallet, &paAddresses, &countAddresses, pError));
-    cc = ABC_BridgeTxMake(pInfo, paAddresses, countAddresses,
+        ABC_TxGetPubAddresses(pInfo->wallet, &addresses.data, &addresses.size, pError));
+    cc = ABC_BridgeTxMake(pInfo, addresses.data, addresses.size,
                             pChangeAddr->szPubAddress, &utx, pError);
     *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
                 + pInfo->pDetails->amountFeesMinersSatoshi;
     ABC_CHECK_RET(cc);
 exit:
-    ABC_UtilFreeStringArray(paAddresses, countAddresses);
     ABC_TxFreeAddress(pChangeAddr);
     ABC_TxMutexUnlock(NULL);
     return cc;
@@ -492,23 +484,20 @@ tABC_CC ABC_TxWalletOwnsAddress(tABC_WalletID self,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-
-    char **paAddresses = NULL;
-    unsigned int countAddresses = 0;
-    *bFound = false;
+    AutoStringArray addresses;
 
     ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(self, &paAddresses, &countAddresses, pError));
-    for (unsigned i = 0; i < countAddresses; ++i)
+        ABC_TxGetPubAddresses(self, &addresses.data, &addresses.size, pError));
+    *bFound = false;
+    for (unsigned i = 0; i < addresses.size; ++i)
     {
-        if (strncmp(szAddress, paAddresses[i], strlen(szAddress)) == 0)
+        if (strncmp(szAddress, addresses.data[i], strlen(szAddress)) == 0)
         {
             *bFound = true;
             break;
         }
     }
 exit:
-    ABC_UtilFreeStringArray(paAddresses, countAddresses);
     return cc;
 }
 

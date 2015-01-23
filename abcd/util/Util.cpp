@@ -49,7 +49,7 @@ void StringFree(char *string)
 void ABC_UtilFreeStringArray(char **aszStrings,
                              unsigned int count)
 {
-    if ((aszStrings != NULL) && (count > 0))
+    if (aszStrings)
     {
         for (unsigned i = 0; i < count; i++)
         {

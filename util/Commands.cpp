@@ -248,17 +248,14 @@ Status getCategories(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-categories <user> <pass>");
 
-    char **aszCategories;
-    unsigned count;
-    ABC_CHECK_OLD(ABC_GetCategories(argv[0], argv[1], &aszCategories, &count, &error));
+    AutoStringArray categories;
+    ABC_CHECK_OLD(ABC_GetCategories(argv[0], argv[1], &categories.data, &categories.size, &error));
 
     printf("Categories:\n");
-    for (unsigned i = 0; i < count; ++i)
+    for (unsigned i = 0; i < categories.size; ++i)
     {
-        printf("\t%s\n", aszCategories[i]);
+        printf("\t%s\n", categories.data[i]);
     }
-
-    ABC_UtilFreeStringArray(aszCategories, count);
 
     return Status();
 }
@@ -365,28 +362,27 @@ Status listWallets(int argc, char *argv[])
     ABC_CHECK_OLD(ABC_DataSyncAll(argv[0], argv[1], NULL, NULL, &error));
 
     // Iterate over wallets:
-    char **aszUUIDs;
-    unsigned int count = 0;
+    AutoStringArray uuids;
     ABC_CHECK_OLD(ABC_GetWalletUUIDs(argv[0], argv[1],
-        &aszUUIDs, &count, &error));
-    for (unsigned i = 0; i < count; ++i)
+        &uuids.data, &uuids.size, &error));
+    for (unsigned i = 0; i < uuids.size; ++i)
     {
         tABC_Error error;
 
         // Print the UUID:
-        printf("%s: ", aszUUIDs[i]);
+        printf("%s: ", uuids.data[i]);
 
         // Get wallet name filename:
         char *szDir;
         char szFilename[ABC_FILEIO_MAX_PATH_LENGTH];
-        ABC_CHECK_OLD(ABC_WalletGetDirName(&szDir, aszUUIDs[i], &error));
+        ABC_CHECK_OLD(ABC_WalletGetDirName(&szDir, uuids.data[i], &error));
         snprintf(szFilename, sizeof(szFilename),
             "%s/sync/WalletName.json", szDir);
 
         // Print wallet name:
         AutoU08Buf data;
         AutoAccountWalletInfo info;
-        ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, aszUUIDs[i], &info, &error));
+        ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, uuids.data[i], &info, &error));
         if (ABC_CC_Ok == ABC_CryptoDecryptJSONFile(szFilename, info.MK, &data, &error))
         {
             fwrite(data.p, data.end - data.p, 1, stdout);
@@ -397,7 +393,6 @@ Status listWallets(int argc, char *argv[])
 
     // Clean up:
     ABC_SyncFreeKeys(pKeys);
-    ABC_UtilFreeStringArray(aszUUIDs, count);
 
     return Status();
 }

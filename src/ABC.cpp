@@ -688,6 +688,7 @@ tABC_CC ABC_AddCategory(const char *szUserName,
     tABC_SyncKeys *pKeys = NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szCategory);
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_AccountCategoriesAdd(pKeys, szCategory, pError));
@@ -723,6 +724,7 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
     tABC_SyncKeys *pKeys = NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szCategory);
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_AccountCategoriesRemove(pKeys, szCategory, pError));

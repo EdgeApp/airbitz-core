@@ -277,19 +277,18 @@ tABC_CC ABC_WalletSyncAll(tABC_SyncKeys *pKeys, int *pDirty, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char **aszUUIDs                = NULL;
-    unsigned int i      = 0;
-    unsigned int nUUIDs = 0;
+    AutoStringArray uuids;
+    unsigned int i = 0;
 
     // Its not dirty...yet
     *pDirty = 0;
 
     // Get the wallet list
-    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &aszUUIDs, &nUUIDs, pError));
+    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &uuids.data, &uuids.size, pError));
 
-    for (i = 0; i < nUUIDs; ++i)
+    for (i = 0; i < uuids.size; ++i)
     {
-        char *szUUID = aszUUIDs[i];
+        char *szUUID = uuids.data[i];
         int dirty = 0;
         ABC_CHECK_RET(ABC_WalletSyncData(ABC_WalletID(pKeys, szUUID), &dirty, pError));
         if (dirty)
@@ -298,8 +297,6 @@ tABC_CC ABC_WalletSyncAll(tABC_SyncKeys *pKeys, int *pDirty, tABC_Error *pError)
         }
     }
 exit:
-    ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
-
     return cc;
 }
 
@@ -1069,8 +1066,7 @@ tABC_CC ABC_WalletGetWallets(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char **aszUUIDs = NULL;
-    unsigned int nUUIDs = 0;
+    AutoStringArray uuids;
     tABC_WalletInfo **aWalletInfo = NULL;
 
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
@@ -1081,32 +1077,28 @@ tABC_CC ABC_WalletGetWallets(tABC_SyncKeys *pKeys,
     *pCount = 0;
 
     // get the array of wallet UUIDs for this account
-    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &aszUUIDs, &nUUIDs, pError));
+    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &uuids.data, &uuids.size, pError));
 
     // if we got anything
-    if (nUUIDs > 0)
+    if (uuids.size > 0)
     {
-        ABC_ARRAY_NEW(aWalletInfo, nUUIDs, tABC_WalletInfo*);
+        ABC_ARRAY_NEW(aWalletInfo, uuids.size, tABC_WalletInfo*);
 
-        for (unsigned i = 0; i < nUUIDs; i++)
+        for (unsigned i = 0; i < uuids.size; i++)
         {
             tABC_WalletInfo *pInfo = NULL;
-            ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(pKeys, aszUUIDs[i]), &pInfo, pError));
+            ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(pKeys, uuids.data[i]), &pInfo, pError));
 
             aWalletInfo[i] = pInfo;
         }
     }
 
     // assign them
-    *pCount = nUUIDs;
+    *pCount = uuids.size;
     *paWalletInfo = aWalletInfo;
     aWalletInfo = NULL;
 
-
 exit:
-    ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
-    ABC_WalletFreeInfoArray(aWalletInfo, nUUIDs);
-
     ABC_WalletMutexUnlock(NULL);
     return cc;
 }
