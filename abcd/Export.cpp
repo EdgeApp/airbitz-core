@@ -88,7 +88,7 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
 
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
-             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
              szDateCreation,
              szTimeCreation,
              szName,
@@ -263,7 +263,7 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
 
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
-             "%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
+             "%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
              szDateCreation,
              szTimeCreation,
              szName,
@@ -304,40 +304,27 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_TxInfo **list = pTransactions;
-    int iListSize = iTransactionCount;
-
     char *szCurrRec;
-    char *szFinalRec;
-    unsigned long ulCsvDataLen = 0;
     tABC_U08Buf buff = ABC_BUF_NULL;
 
     ABC_BUF_NEW(buff, ABC_CSV_MAX_REC_SZ);
 
     ABC_CHECK_RET(ABC_ExportGenerateHeader(&szCurrRec, pError));
     ABC_BUF_SET_PTR(buff, (unsigned char *) szCurrRec, strlen(szCurrRec));
-    ulCsvDataLen += strlen(szCurrRec);
-    ABC_BUF_APPEND_PTR(buff, "\n", 1);
-    ulCsvDataLen++;
 
-    for (int i=0; i < iListSize; i++)
+    for (unsigned i=0; i < iTransactionCount; i++)
     {
-        ABC_CHECK_RET(ABC_ExportGenerateRecord(list[i], &szCurrRec, pError));
+        ABC_CHECK_RET(ABC_ExportGenerateRecord(pTransactions[i], &szCurrRec, pError));
         ABC_BUF_APPEND_PTR(buff, szCurrRec, strlen(szCurrRec));
-        ulCsvDataLen += strlen(szCurrRec);
-        ABC_BUF_APPEND_PTR(buff, "\n", 1);
-        ulCsvDataLen++;
     }
 
-    /* Allocate enough to hold the entire CSV content and copy from the buffer */
-    ABC_STR_NEW(szFinalRec, ulCsvDataLen+1);
-    strncpy(szFinalRec, (char *) buff.p, (size_t)ulCsvDataLen);
+    ABC_BUF_APPEND_PTR(buff, "\0", 1);
 
-    *szCsvData = szFinalRec;
-
+    *szCsvData = reinterpret_cast<char*>(buff.p);
     ABC_BUF_CLEAR(buff);
 
 exit:
+    ABC_BUF_FREE(buff);
     return cc;
 }
 
