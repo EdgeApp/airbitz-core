@@ -18,3 +18,4 @@ build/%.o: %.cpp
 
 include $(shell find build -name *.d)
 %.h: ;
+%.hpp: ;

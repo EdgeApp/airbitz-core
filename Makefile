@@ -20,9 +20,8 @@ endif
 
 # Source files:
 sources = \
-	$(wildcard abcd/*.c   abcd/bitcoin/*.c   abcd/util/*.c   src/*.c) \
-	$(wildcard abcd/*.cpp abcd/bitcoin/*.cpp abcd/util/*.cpp src/*.cpp) \
-	minilibs/scrypt/crypto_scrypt.c minilibs/scrypt/sha256.c\
+	$(wildcard abcd/*.cpp abcd/*/*.cpp src/*.cpp) \
+	minilibs/scrypt/crypto_scrypt.c minilibs/scrypt/sha256.c \
 	minilibs/git-sync/sync.c
 
 objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(sources))))
@@ -54,3 +53,4 @@ $(WORK_DIR)/%.o: %.cpp
 
 include $(shell find $(WORK_DIR) -name *.d)
 %.h: ;
+%.hpp: ;
