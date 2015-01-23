@@ -157,7 +157,6 @@ static tABC_CC  ABC_TxBuildFromLabel(tABC_WalletID self, char **pszLabel, tABC_E
 static void     ABC_TxFreeRequest(tABC_RequestInfo *pRequest);
 static tABC_CC  ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const char *szTxID, bool bInternal, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransaction(tABC_WalletID self, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
-static tABC_CC  ABC_TxFindRequest(tABC_WalletID self, const char *szMatchAddress, tABC_TxAddress **ppMatched, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError);
 static void     ABC_TxFreeTx(tABC_Tx *pTx);
@@ -2725,42 +2724,6 @@ exit:
     ABC_TxFreeTx(pTx);
 
     ABC_TxMutexUnlock(NULL);
-    return cc;
-}
-
-/**
- * Retrieve an Address by the public address
- *
- * @param szMatchAddress    The public address to find a match against
- * @param ppMatched         A pointer to store the matched address to (caller must free)
- * @param pError            A pointer to the location to store the error if there is one
- */
-static tABC_CC ABC_TxFindRequest(tABC_WalletID self,
-                                 const char *szMatchAddress,
-                                 tABC_TxAddress **ppMatched,
-                                 tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_TxAddress **aAddresses = NULL;
-    tABC_TxAddress *pMatched = NULL;
-    unsigned int countAddresses = 0;
-
-    ABC_CHECK_NULL(ppMatched);
-
-    ABC_CHECK_RET(
-        ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
-    for (unsigned i = 0; i < countAddresses; i++)
-    {
-        if (strncmp(aAddresses[i]->szPubAddress, szMatchAddress,
-                    strlen(aAddresses[i]->szPubAddress)) == 0) {
-            ABC_CHECK_RET(ABC_TxLoadAddress(self, aAddresses[i]->szID,
-                                            &pMatched, pError));
-            break;
-        }
-    }
-    *ppMatched = pMatched;
-exit:
-    ABC_TxFreeAddresses(aAddresses, countAddresses);
     return cc;
 }
 
