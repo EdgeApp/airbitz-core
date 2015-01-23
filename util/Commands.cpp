@@ -81,20 +81,17 @@ Status accountEncrypt(int argc, char *argv[])
     file += "/";
     file += argv[2];
 
-    char *szContents = Slurp(file.c_str());
-    char *szEncrypted = NULL;
+    AutoString szContents = Slurp(file.c_str());
+    AutoString szEncrypted;
     if (szContents)
     {
         tABC_U08Buf data; // Do not free
-        ABC_BUF_SET_PTR(data, (unsigned char *) szContents, strlen(szContents));
+        ABC_BUF_SET_PTR(data, (unsigned char *) szContents.get(), strlen(szContents));
 
         ABC_CHECK_OLD(ABC_CryptoEncryptJSONString(data, pKeys->MK,
-            ABC_CryptoType_AES256, &szEncrypted, &error));
-        printf("%s\n", szEncrypted);
+            ABC_CryptoType_AES256, &szEncrypted.get(), &error));
+        printf("%s\n", szEncrypted.get());
     }
-
-    ABC_FREE_STR(szEncrypted);
-    ABC_FREE_STR(szContents);
 
     return Status();
 }
@@ -147,15 +144,14 @@ Status checkRecoveryAnswers(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... check-recovery-answers <user> <ras>");
 
-    char *szQuestions = NULL;
-    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(argv[0], &szQuestions, &error));
-    printf("%s\n", szQuestions);
+    AutoString szQuestions;
+    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(argv[0], &szQuestions.get(), &error));
+    printf("%s\n", szQuestions.get());
 
     bool bValid = false;
     ABC_CHECK_OLD(ABC_CheckRecoveryAnswers(argv[0], argv[1], &bValid, &error));
     printf("%s\n", bValid ? "Valid!" : "Invalid!");
 
-    free(szQuestions);
     return Status();
 }
 
@@ -228,11 +224,9 @@ Status getBitcoinSeed(int argc, char *argv[])
     tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
 
-    char *szSeed;
-    ABC_CHECK_OLD(ABC_CryptoHexEncode(data, &szSeed, &error));
-    printf("%s\n", szSeed);
-
-    ABC_FREE_STR(szSeed);
+    AutoString szSeed;
+    ABC_CHECK_OLD(ABC_CryptoHexEncode(data, &szSeed.get(), &error));
+    printf("%s\n", szSeed.get());
 
     return Status();
 }
@@ -280,8 +274,8 @@ Status getQuestionChoices(int argc, char *argv[])
     if (argc != 0)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-question-choices");
 
-    tABC_QuestionChoices *pChoices = NULL;
-    ABC_CHECK_OLD(ABC_GetQuestionChoices(&pChoices, &error));
+    AutoFree<tABC_QuestionChoices, ABC_FreeQuestionChoices> pChoices;
+    ABC_CHECK_OLD(ABC_GetQuestionChoices(&pChoices.get(), &error));
 
     printf("Choices:\n");
     for (unsigned i = 0; i < pChoices->numChoices; ++i)
@@ -291,8 +285,6 @@ Status getQuestionChoices(int argc, char *argv[])
                                   pChoices->aChoices[i]->minAnswerLength);
     }
 
-    ABC_FreeQuestionChoices(pChoices);
-
     return Status();
 }
 
@@ -301,8 +293,8 @@ Status getSettings(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-settings <user> <pass>");
 
-    tABC_AccountSettings *pSettings = NULL;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(argv[0], argv[1], &pSettings, &error));
+    AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
+    ABC_CHECK_OLD(ABC_LoadAccountSettings(argv[0], argv[1], &pSettings.get(), &error));
 
     printf("First name: %s\n", pSettings->szFirstName ? pSettings->szFirstName : "(none)");
     printf("Last name: %s\n", pSettings->szLastName ? pSettings->szLastName : "(none)");
@@ -327,8 +319,6 @@ Status getSettings(int argc, char *argv[])
             pSettings->exchangeRateSources.aSources[i]->szSource);
     }
 
-    ABC_FreeAccountSettings(pSettings);
-
     return Status();
 }
 
@@ -338,9 +328,8 @@ Status getWalletInfo(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-wallet-info <user> <pass> <wallet-name>");
 
     // TODO: This no longer works without a running watcher!
-    tABC_WalletInfo *pInfo = NULL;
-    ABC_CHECK_OLD(ABC_GetWalletInfo(argv[0], argv[1], argv[2], &pInfo, &error));
-    ABC_WalletFreeInfo(pInfo);
+    AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pInfo;
+    ABC_CHECK_OLD(ABC_GetWalletInfo(argv[0], argv[1], argv[2], &pInfo.get(), &error));
 
     return Status();
 }
@@ -423,14 +412,12 @@ Status recoveryReminderSet(int argc, char *argv[])
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... recovery-reminder-set <user> <pass> <n>");
 
-    tABC_AccountSettings *pSettings = NULL;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(argv[0], argv[1], &pSettings, &error));
+    AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
+    ABC_CHECK_OLD(ABC_LoadAccountSettings(argv[0], argv[1], &pSettings.get(), &error));
     printf("Old Reminder Count: %d\n", pSettings->recoveryReminderCount);
 
     pSettings->recoveryReminderCount = strtol(argv[2], 0, 10);
     ABC_CHECK_OLD(ABC_UpdateAccountSettings(argv[0], argv[1], pSettings, &error));
-
-    ABC_FreeAccountSettings(pSettings);
 
     return Status();
 }
@@ -462,15 +449,13 @@ Status searchBitcoinSeed(int argc, char *argv[])
 
     for (long i = start, c = 0; i <= end; i++, ++c)
     {
-        char *szPubAddress = NULL;
-        ABC_BridgeGetBitcoinPubAddress(&szPubAddress, data, (int32_t) i, NULL);
-        if (strncmp(szPubAddress, szMatchAddr, strlen(szMatchAddr)) == 0)
+        AutoString szPubAddress;
+        ABC_BridgeGetBitcoinPubAddress(&szPubAddress.get(), data, (int32_t) i, NULL);
+        if (strncmp(szPubAddress.get(), szMatchAddr, strlen(szMatchAddr)) == 0)
         {
             printf("Found %s at %ld\n", szMatchAddr, i);
-            ABC_FREE(szPubAddress);
             break;
         }
-        ABC_FREE(szPubAddress);
         if (c == 100000)
         {
             printf("%ld\n", i);
@@ -486,13 +471,11 @@ Status setNickname(int argc, char *argv[])
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... set-nickname <user> <pass> <name>");
 
-    tABC_AccountSettings *pSettings = NULL;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(argv[0], argv[1], &pSettings, &error));
+    AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
+    ABC_CHECK_OLD(ABC_LoadAccountSettings(argv[0], argv[1], &pSettings.get(), &error));
     free(pSettings->szNickname);
     pSettings->szNickname = strdup(argv[2]);
     ABC_CHECK_OLD(ABC_UpdateAccountSettings(argv[0], argv[1], pSettings, &error));
-
-    ABC_FreeAccountSettings(pSettings);
 
     return Status();
 }
@@ -548,20 +531,17 @@ Status walletEncrypt(int argc, char *argv[])
     AutoAccountWalletInfo info;
     ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, argv[2], &info, &error));
 
-    char *szContents = Slurp(argv[3]);
+    AutoString szContents = Slurp(argv[3]);
     if (szContents)
     {
         tABC_U08Buf data; // Do not free
-        ABC_BUF_SET_PTR(data, (unsigned char *) szContents, strlen(szContents));
+        ABC_BUF_SET_PTR(data, (unsigned char *) szContents.get(), strlen(szContents));
 
-        char *szEncrypted = NULL;
+        AutoString szEncrypted;
         ABC_CHECK_OLD(ABC_CryptoEncryptJSONString(data, info.MK,
-            ABC_CryptoType_AES256, &szEncrypted, &error));
-        printf("%s\n", szEncrypted);
-        ABC_FREE_STR(szEncrypted);
+            ABC_CryptoType_AES256, &szEncrypted.get(), &error));
+        printf("%s\n", szEncrypted.get());
     }
-
-    ABC_FREE_STR(szContents);
 
     return Status();
 }
@@ -584,27 +564,23 @@ Status walletGetAddress(int argc, char *argv[])
     details.amountFeesAirbitzSatoshi = 0;
     details.amountFeesMinersSatoshi = 0;
 
-    char *szRequestID = NULL;
-    char *szAddress = NULL;
-    char *szURI = NULL;
+    AutoString szRequestID;
+    AutoString szAddress;
+    AutoString szURI;
     unsigned char *szData = NULL;
     unsigned int width = 0;
     printf("starting...");
     ABC_CHECK_OLD(ABC_CreateReceiveRequest(argv[0], argv[1], argv[2],
-        &details, &szRequestID, &error));
+        &details, &szRequestID.get(), &error));
 
     ABC_CHECK_OLD(ABC_GenerateRequestQRCode(argv[0], argv[1], argv[2],
-        szRequestID, &szURI, &szData, &width, &error));
+        szRequestID, &szURI.get(), &szData, &width, &error));
 
     ABC_CHECK_OLD(ABC_GetRequestAddress(argv[0], argv[1], argv[2],
-        szRequestID, &szAddress, &error));
+        szRequestID, &szAddress.get(), &error));
 
-    printf("URI: %s\n", szURI);
-    printf("Address: %s\n", szAddress);
-
-    ABC_FREE_STR(szRequestID);
-    ABC_FREE_STR(szAddress);
-    ABC_FREE_STR(szURI);
+    printf("URI: %s\n", szURI.get());
+    printf("Address: %s\n", szAddress.get());
 
     return Status();
 }

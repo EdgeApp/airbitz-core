@@ -37,6 +37,7 @@
 #define ABC_Util_h
 
 #include "../../src/ABC.h"
+#include "AutoFree.hpp"
 #include "Debug.hpp"
 #include <string.h>
 #include <strings.h>
@@ -48,6 +49,8 @@ namespace abcd {
  * Frees a C-style string and sets the pointer to NULL.
  */
 void StringFree(char *string);
+
+typedef AutoFree<char, StringFree> AutoString;
 
 #ifdef DEBUG
 #define ABC_LOG_ERROR(code, err_string) \
