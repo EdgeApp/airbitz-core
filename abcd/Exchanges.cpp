@@ -332,7 +332,7 @@ tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
 
     ABC_CHECK_RET(ABC_ExchangeCoinBaseMap(pInfo->currencyNum, field, pError));
-    ABC_ExchangeExtractAndSave(pJSON_Root, field.c_str(), CURRENCY_NUM_USD, pError);
+    ABC_ExchangeExtractAndSave(pJSON_Root, field.c_str(), pInfo->currencyNum, pError);
 exit:
     ABC_FREE_STR(szResponse);
     if (pJSON_Root) json_decref(pJSON_Root);
