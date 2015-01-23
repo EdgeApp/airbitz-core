@@ -21,7 +21,7 @@
 
 namespace abcd {
 
-tABC_CC ABC_LoginShimLogout(tABC_Error *pError);
+void ABC_LoginShimLogout();
 
 // Blocking functions (see ABC_LoginRequest):
 tABC_CC ABC_LoginShimLogin(const char *szUserName,
