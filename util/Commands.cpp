@@ -385,14 +385,13 @@ Status listWallets(int argc, char *argv[])
 
         // Print wallet name:
         AutoU08Buf data;
-        tABC_AccountWalletInfo info = {0};
+        AutoAccountWalletInfo info;
         ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, aszUUIDs[i], &info, &error));
         if (ABC_CC_Ok == ABC_CryptoDecryptJSONFile(szFilename, info.MK, &data, &error))
         {
             fwrite(data.p, data.end - data.p, 1, stdout);
             printf("\n");
         }
-        ABC_AccountWalletInfoFree(&info);
     }
     printf("\n");
 
@@ -543,7 +542,7 @@ Status walletDecrypt(int argc, char *argv[])
     tABC_SyncKeys *pKeys = NULL;
     ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
 
-    tABC_AccountWalletInfo info;
+    AutoAccountWalletInfo info;
     ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, argv[2], &info, &error));
 
     AutoU08Buf data;
@@ -552,7 +551,6 @@ Status walletDecrypt(int argc, char *argv[])
     printf("\n");
 
     ABC_SyncFreeKeys(pKeys);
-    ABC_AccountWalletInfoFree(&info);
 
     return Status();
 }
@@ -565,7 +563,7 @@ Status walletEncrypt(int argc, char *argv[])
     tABC_SyncKeys *pKeys = NULL;
     ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
 
-    tABC_AccountWalletInfo info;
+    AutoAccountWalletInfo info;
     ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, argv[2], &info, &error));
 
     char *szContents = Slurp(argv[3]);
@@ -583,7 +581,6 @@ Status walletEncrypt(int argc, char *argv[])
 
     ABC_FREE_STR(szContents);
     ABC_SyncFreeKeys(pKeys);
-    ABC_AccountWalletInfoFree(&info);
 
     return Status();
 }

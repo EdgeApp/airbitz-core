@@ -1103,23 +1103,18 @@ tABC_CC ABC_AccountWalletReorder(tABC_SyncKeys *pKeys,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_RET(ABC_AccountMutexLock(pError));
 
-    tABC_AccountWalletInfo info;
-    memset(&info, 0, sizeof(tABC_AccountWalletInfo));
-
     for (unsigned i = 0; i < count; ++i)
     {
+        AutoAccountWalletInfo info;
         ABC_CHECK_RET(ABC_AccountWalletLoad(pKeys, aszUUID[i], &info, pError));
         if (info.sortIndex != i)
         {
             info.sortIndex = i;
             ABC_CHECK_RET(ABC_AccountWalletSave(pKeys, &info, pError));
         }
-        ABC_AccountWalletInfoFree(&info);
     }
 
 exit:
-    ABC_AccountWalletInfoFree(&info);
-
     ABC_AccountMutexUnlock(NULL);
     return cc;
 }

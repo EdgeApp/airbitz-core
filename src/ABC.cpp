@@ -791,7 +791,7 @@ tABC_CC ABC_SetWalletArchived(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_SyncKeys *pKeys = NULL;
-    tABC_AccountWalletInfo info;
+    AutoAccountWalletInfo info;
     memset(&info, 0, sizeof(tABC_AccountWalletInfo));
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
@@ -803,7 +803,6 @@ tABC_CC ABC_SetWalletArchived(const char *szUserName,
     ABC_CHECK_RET(ABC_WalletRemoveFromCache(szUUID, pError));
 exit:
     if (pKeys)          ABC_SyncFreeKeys(pKeys);
-    ABC_AccountWalletInfoFree(&info);
 
     return cc;
 }

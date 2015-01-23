@@ -644,7 +644,7 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
 
     tWalletData *pData = NULL;
     char *szFilename = NULL;
-    tABC_AccountWalletInfo info;
+    AutoAccountWalletInfo info;
     memset(&info, 0, sizeof(tABC_AccountWalletInfo));
 
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
@@ -766,7 +766,6 @@ exit:
         ABC_CLEAR_FREE(pData, sizeof(tWalletData));
     }
     ABC_FREE_STR(szFilename);
-    ABC_AccountWalletInfoFree(&info);
 
     ABC_WalletMutexUnlock(NULL);
     return cc;
@@ -1191,7 +1190,7 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self, tABC_U08Buf *pSe
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_AccountWalletInfo info;
+    AutoAccountWalletInfo info;
 
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
@@ -1201,7 +1200,6 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self, tABC_U08Buf *pSe
     ABC_BUF_DUP(*pSeed, info.BitcoinSeed);
 
 exit:
-    ABC_AccountWalletInfoFree(&info);
     ABC_WalletMutexUnlock(NULL);
     return cc;
 }
