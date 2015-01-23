@@ -43,7 +43,7 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_U08Buf L = ABC_BUF_NULL;
+    tABC_U08Buf L = ABC_BUF_NULL; // Do not free
     tABC_CryptoSNRP *pSNRP0 = NULL;
     tABC_Login *pSelf = NULL;
     ABC_NEW(pSelf, tABC_Login);
@@ -82,12 +82,12 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_Login          *pSelf          = NULL;
-    tABC_U08Buf         SyncKey         = ABC_BUF_NULL;
-    tABC_U08Buf         LP              = ABC_BUF_NULL;
-    tABC_U08Buf         LP1             = ABC_BUF_NULL;
-    tABC_U08Buf         LP2             = ABC_BUF_NULL;
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
+    AutoU08Buf           SyncKey;
+    AutoU08Buf           LP;
+    AutoU08Buf           LP1;
+    AutoU08Buf           LP2;
 
     // Allocate self:
     ABC_CHECK_RET(ABC_LoginNew(&pSelf, szUserName, pError));
@@ -137,10 +137,6 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
 
 exit:
     ABC_LoginFree(pSelf);
-    ABC_BUF_FREE(SyncKey);
-    ABC_BUF_FREE(LP);
-    ABC_BUF_FREE(LP1);
-    ABC_BUF_FREE(LP2);
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
     return cc;

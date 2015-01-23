@@ -220,7 +220,7 @@ static
 bool ABC_BridgeDecodeWIFAddress(bc::payment_address& address, std::string wif)
 {
     tABC_Error error;
-    tABC_U08Buf secret = ABC_BUF_NULL;
+    AutoU08Buf secret;
     bool bCompressed;
     char *szAddress = NULL;
 
@@ -232,7 +232,6 @@ bool ABC_BridgeDecodeWIFAddress(bc::payment_address& address, std::string wif)
     if (ABC_CC_Ok != ABC_BridgeDecodeWIF(wif.c_str(),
         &secret, &bCompressed, &szAddress, &error))
         return false;
-    ABC_BUF_FREE(secret);
 
     // Output:
     if (!address.set_encoded(szAddress))

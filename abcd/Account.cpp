@@ -73,7 +73,7 @@ tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
 
     char *szFilename = NULL;
-    tABC_U08Buf data = ABC_BUF_NULL;
+    AutoU08Buf data;
 
     *paszCategories = NULL;
     *pCount = 0;
@@ -92,7 +92,6 @@ tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
     }
 
 exit:
-    ABC_BUF_FREE(data);
     ABC_FREE_STR(szFilename);
 
     return cc;

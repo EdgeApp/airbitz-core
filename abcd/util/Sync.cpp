@@ -303,7 +303,7 @@ static
 tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_U08Buf URL = ABC_BUF_NULL;
+    AutoU08Buf URL;
 
     ABC_CHECK_RET(ABC_SyncMutexLock(pError));
 
@@ -332,7 +332,6 @@ tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *p
     ABC_DebugLog("Syncing to: %s\n", *pszServer);
 
 exit:
-    ABC_BUF_FREE(URL);
     ABC_SyncMutexUnlock(NULL);
 
     return cc;

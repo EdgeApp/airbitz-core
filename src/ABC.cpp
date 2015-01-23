@@ -102,7 +102,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf Seed = ABC_BUF_NULL;
+    AutoU08Buf Seed;
 
     ABC_CHECK_NULL(szRootDir);
     ABC_CHECK_NULL(pSeedData);
@@ -151,8 +151,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     gbIsTestNet = ABC_BridgeIsTestNet();
 
 exit:
-    ABC_BUF_FREE(Seed);
-
     return cc;
 }
 
@@ -436,8 +434,8 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_SyncKeys *pKeys = NULL;
-    tABC_U08Buf L1       = ABC_BUF_NULL;
-    tABC_U08Buf LP1      = ABC_BUF_NULL;
+    AutoU08Buf L1;
+    AutoU08Buf LP1;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
@@ -482,8 +480,6 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
 
 exit:
     if (pKeys)          ABC_SyncFreeKeys(pKeys);
-    ABC_BUF_FREE(L1);
-    ABC_BUF_FREE(LP1);
 
     return cc;
 }
@@ -1004,7 +1000,7 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf pSeedBuf = ABC_BUF_NULL;
+    tABC_U08Buf pSeedBuf = ABC_BUF_NULL; // Do not free
     tABC_SyncKeys *pKeys = NULL;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
@@ -1020,12 +1016,6 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
 
 exit:
     if (pKeys)          ABC_SyncFreeKeys(pKeys);
-
-    //
-    // Do not free the pSeedBuf
-    // This points to an internal struct in the wallet cache
-    //
-//    ABC_BUF_FREE(pSeedBuf);
 
     return cc;
 }
@@ -1940,7 +1930,7 @@ tABC_CC ABC_SweepKey(const char *szUsername,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_SyncKeys *pKeys = NULL;
-    tABC_U08Buf key = ABC_BUF_NULL;
+    AutoU08Buf key;
     bool bCompressed;
 
     ABC_CHECK_RET(ABC_BridgeDecodeWIF(szKey, &key, &bCompressed, pszAddress, pError));
@@ -1951,7 +1941,6 @@ tABC_CC ABC_SweepKey(const char *szUsername,
 
 exit:
     if (pKeys)          ABC_SyncFreeKeys(pKeys);
-    ABC_BUF_FREE(key);
 
     return cc;
 }
@@ -2988,7 +2977,7 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf Version = ABC_BUF_NULL;
+    AutoU08Buf Version;
     bool bTestnet = false;
 
     ABC_IsTestNet(&bTestnet, pError);
@@ -3007,8 +2996,6 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
 
     *szVersion = (char *)ABC_BUF_PTR(Version);
     ABC_BUF_CLEAR(Version);
-
-    ABC_BUF_FREE(Version);
 
     return cc;
 }
@@ -3052,8 +3039,8 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_SyncKeys *pKeys = NULL;
-    tABC_U08Buf L1       = ABC_BUF_NULL;
-    tABC_U08Buf LP1      = ABC_BUF_NULL;
+    AutoU08Buf L1;
+    AutoU08Buf LP1;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
@@ -3064,8 +3051,6 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
 
 exit:
     if (pKeys)          ABC_SyncFreeKeys(pKeys);
-    ABC_BUF_FREE(L1);
-    ABC_BUF_FREE(LP1);
 
     return cc;
 }

@@ -59,13 +59,12 @@ Status accountDecrypt(int argc, char *argv[])
     file += "/";
     file += argv[2];
 
-    tABC_U08Buf data;
+    AutoU08Buf data;
     ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(file.c_str(), pKeys->MK, &data, &error));
     fwrite(data.p, data.end - data.p, 1, stdout);
     printf("\n");
 
     ABC_SyncFreeKeys(pKeys);
-    ABC_BUF_FREE(data);
 
     return Status();
 }
@@ -86,9 +85,9 @@ Status accountEncrypt(int argc, char *argv[])
 
     char *szContents = Slurp(file.c_str());
     char *szEncrypted = NULL;
-    tABC_U08Buf data;
     if (szContents)
     {
+        tABC_U08Buf data; // Do not free
         ABC_BUF_SET_PTR(data, (unsigned char *) szContents, strlen(szContents));
 
         ABC_CHECK_OLD(ABC_CryptoEncryptJSONString(data, pKeys->MK,
@@ -204,7 +203,7 @@ Status generateAddresses(int argc, char *argv[])
     tABC_SyncKeys *pKeys = NULL;
     ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
 
-    tABC_U08Buf data;
+    tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
 
     libbitcoin::data_chunk seed(data.p, data.end);
@@ -231,7 +230,7 @@ Status getBitcoinSeed(int argc, char *argv[])
     tABC_SyncKeys *pKeys = NULL;
     ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
 
-    tABC_U08Buf data;
+    tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
 
     char *szSeed;
@@ -385,14 +384,13 @@ Status listWallets(int argc, char *argv[])
             "%s/sync/WalletName.json", szDir);
 
         // Print wallet name:
-        tABC_U08Buf data;
+        AutoU08Buf data;
         tABC_AccountWalletInfo info = {0};
         ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, aszUUIDs[i], &info, &error));
         if (ABC_CC_Ok == ABC_CryptoDecryptJSONFile(szFilename, info.MK, &data, &error))
         {
             fwrite(data.p, data.end - data.p, 1, stdout);
             printf("\n");
-            ABC_BUF_FREE(data);
         }
         ABC_AccountWalletInfoFree(&info);
     }
@@ -474,7 +472,7 @@ Status searchBitcoinSeed(int argc, char *argv[])
     tABC_SyncKeys *pKeys = NULL;
     ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
 
-    tABC_U08Buf data;
+    tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
 
     for (long i = start, c = 0; i <= end; i++, ++c)
@@ -548,14 +546,13 @@ Status walletDecrypt(int argc, char *argv[])
     tABC_AccountWalletInfo info;
     ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, argv[2], &info, &error));
 
-    tABC_U08Buf data;
+    AutoU08Buf data;
     ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(argv[3], info.MK, &data, &error));
     fwrite(data.p, data.end - data.p, 1, stdout);
     printf("\n");
 
     ABC_SyncFreeKeys(pKeys);
     ABC_AccountWalletInfoFree(&info);
-    ABC_BUF_FREE(data);
 
     return Status();
 }
@@ -574,7 +571,7 @@ Status walletEncrypt(int argc, char *argv[])
     char *szContents = Slurp(argv[3]);
     if (szContents)
     {
-        tABC_U08Buf data = ABC_BUF_NULL;
+        tABC_U08Buf data; // Do not free
         ABC_BUF_SET_PTR(data, (unsigned char *) szContents, strlen(szContents));
 
         char *szEncrypted = NULL;

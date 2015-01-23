@@ -26,10 +26,10 @@ tABC_CC ABC_LoginGetRQ(const char *szUserName,
 
     tABC_Login *pSelf = NULL;
     tABC_CarePackage *pCarePackage = NULL;
-    tABC_U08Buf L  = ABC_BUF_NULL;
-    tABC_U08Buf L1 = ABC_BUF_NULL;
-    tABC_U08Buf L4 = ABC_BUF_NULL;
-    tABC_U08Buf RQ = ABC_BUF_NULL;
+    tABC_U08Buf L = ABC_BUF_NULL; // Do not free
+    AutoU08Buf L1;
+    AutoU08Buf L4;
+    AutoU08Buf RQ;
 
     // This is the easiest way to get L1:
     ABC_CHECK_RET(ABC_LoginNew(&pSelf, szUserName, pError));
@@ -58,9 +58,6 @@ tABC_CC ABC_LoginGetRQ(const char *szUserName,
 exit:
     ABC_LoginFree(pSelf);
     ABC_CarePackageFree(pCarePackage);
-    ABC_BUF_FREE(L1);
-    ABC_BUF_FREE(L4);
-    ABC_BUF_FREE(RQ);
 
     return cc;
 }
@@ -81,10 +78,10 @@ tABC_CC ABC_LoginRecovery(tABC_Login **ppSelf,
     tABC_Login          *pSelf          = NULL;
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
-    tABC_U08Buf         LRA             = ABC_BUF_NULL;
-    tABC_U08Buf         LP1             = ABC_BUF_NULL;
-    tABC_U08Buf         LRA1            = ABC_BUF_NULL;
-    tABC_U08Buf         LRA3            = ABC_BUF_NULL;
+    tABC_U08Buf         LP1             = ABC_BUF_NULL; // Do not free
+    AutoU08Buf          LRA;
+    AutoU08Buf          LRA1;
+    AutoU08Buf          LRA3;
 
     // Allocate self:
     ABC_CHECK_RET(ABC_LoginNew(&pSelf, szUserName, pError));
@@ -118,9 +115,6 @@ exit:
     ABC_LoginFree(pSelf);
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
-    ABC_BUF_FREE(LRA);
-    ABC_BUF_FREE(LRA1);
-    ABC_BUF_FREE(LRA3);
 
     return cc;
 }
@@ -138,14 +132,14 @@ tABC_CC ABC_LoginRecoverySet(tABC_Login *pSelf,
 
     tABC_CarePackage *pCarePackage = NULL;
     tABC_LoginPackage *pLoginPackage = NULL;
-    tABC_U08Buf L           = ABC_BUF_NULL;
-    tABC_U08Buf oldL1       = ABC_BUF_NULL;
-    tABC_U08Buf oldLP1      = ABC_BUF_NULL;
-    tABC_U08Buf L4          = ABC_BUF_NULL;
-    tABC_U08Buf RQ          = ABC_BUF_NULL;
-    tABC_U08Buf LRA         = ABC_BUF_NULL;
-    tABC_U08Buf LRA1        = ABC_BUF_NULL;
-    tABC_U08Buf LRA3        = ABC_BUF_NULL;
+    tABC_U08Buf L = ABC_BUF_NULL; // Do not free
+    AutoU08Buf oldL1;
+    AutoU08Buf oldLP1;
+    AutoU08Buf L4;
+    AutoU08Buf RQ;
+    AutoU08Buf LRA;
+    AutoU08Buf LRA1;
+    AutoU08Buf LRA3;
 
     // Load the packages:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->AccountNum, &pCarePackage, &pLoginPackage, pError));
@@ -195,13 +189,6 @@ tABC_CC ABC_LoginRecoverySet(tABC_Login *pSelf,
 exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
-    ABC_BUF_FREE(oldL1);
-    ABC_BUF_FREE(oldLP1);
-    ABC_BUF_FREE(L4);
-    ABC_BUF_FREE(RQ);
-    ABC_BUF_FREE(LRA);
-    ABC_BUF_FREE(LRA1);
-    ABC_BUF_FREE(LRA3);
 
     return cc;
 }

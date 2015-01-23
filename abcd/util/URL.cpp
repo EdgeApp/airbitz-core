@@ -117,7 +117,7 @@ tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     CURLcode curlCode = CURLE_OK;
-    tABC_U08Buf Data = ABC_BUF_NULL;
+    AutoU08Buf Data;
     CURL *pCurlHandle = NULL;
 
     ABC_CHECK_RET(ABC_URLMutexLock(pError));
@@ -143,7 +143,7 @@ tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
-    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &Data)) != 0)
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, static_cast<U08Buf*>(&Data))) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
@@ -160,7 +160,6 @@ tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError
     ABC_BUF_CLEAR(Data);
 
 exit:
-    ABC_BUF_FREE(Data);
     curl_easy_cleanup(pCurlHandle);
 
     ABC_URLMutexUnlock(NULL);
@@ -180,7 +179,7 @@ tABC_CC ABC_URLRequestString(const char *szURL,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf Data;
+    AutoU08Buf Data;
 
     ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
@@ -197,8 +196,6 @@ tABC_CC ABC_URLRequestString(const char *szURL,
     ABC_BUF_CLEAR(Data);
 
 exit:
-    ABC_BUF_FREE(Data);
-
     ABC_URLMutexUnlock(NULL);
     return cc;
 }
@@ -226,7 +223,7 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf Data = ABC_BUF_NULL;
+    AutoU08Buf Data;
     CURL *pCurlHandle = NULL;
     struct curl_slist *slist = NULL;
     CURLcode curlCode = CURLE_OK;
@@ -262,7 +259,7 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
     }
 
     // set the user data pointer that will be in the callback function
-    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &Data)) != 0)
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, static_cast<U08Buf*>(&Data))) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
@@ -296,7 +293,6 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
     ABC_BUF_CLEAR(Data);
 
 exit:
-    ABC_BUF_FREE(Data);
     curl_easy_cleanup(pCurlHandle);
     curl_slist_free_all(slist);
 
@@ -319,7 +315,7 @@ tABC_CC ABC_URLPostString(const char *szURL,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf Data = ABC_BUF_NULL;
+    AutoU08Buf Data;
 
     ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
@@ -337,8 +333,6 @@ tABC_CC ABC_URLPostString(const char *szURL,
     ABC_BUF_CLEAR(Data);
 
 exit:
-    ABC_BUF_FREE(Data);
-
     ABC_URLMutexUnlock(NULL);
     return cc;
 }

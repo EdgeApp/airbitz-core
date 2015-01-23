@@ -30,6 +30,24 @@ struct U08Buf
  */
 void U08BufFree(U08Buf &self);
 
+/**
+ * A data slice that can automatically free itself.
+ */
+struct AutoU08Buf:
+    public U08Buf
+{
+    ~AutoU08Buf()
+    {
+        U08BufFree(*this);
+    }
+
+    AutoU08Buf()
+    {
+        p = nullptr;
+        end = nullptr;
+    }
+};
+
 #define ABC_BUF_SIZE(x)                     ((unsigned int) (((x).end)-((x).p)))
 #define ABC_BUF_CLEAR(x)                    {  \
                                                 (x).p = NULL;  \
@@ -76,10 +94,9 @@ void U08BufFree(U08Buf &self);
 
 /* example usage
 {
-    tABC_U08Buf mybuf = ABC_BUF_NULL; // declares buf and inits pointers to NULL
+    AutoU08Buf mybuf;                 // declares buf and inits pointers to NULL
     ABC_BUF_NEW(mybuf, 10);           // allocates buffer with 10 elements
     int count = ABC_BUF_SIZE(myBuf);  // returns the count of elements in the buffer
-    ABC_BUF_FREE(myBuf);              // frees the data in the buffer
 }
 */
 

@@ -527,7 +527,7 @@ tABC_CC ABC_ExchangeGetString(const char *szURL, char **pszResults, tABC_Error *
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf Data = ABC_BUF_NULL;
+    AutoU08Buf Data;
 
     ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
@@ -544,7 +544,6 @@ tABC_CC ABC_ExchangeGetString(const char *szURL, char **pszResults, tABC_Error *
     ABC_BUF_CLEAR(Data);
 
 exit:
-    ABC_BUF_FREE(Data);
 
     ABC_CHECK_RET(ABC_URLMutexUnlock(pError));
     return cc;
