@@ -500,7 +500,7 @@ tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginShimLogout(pError));
+    ABC_LoginShimLogout();
 
     ABC_CHECK_RET(ABC_WalletClearCache(pError));
 
