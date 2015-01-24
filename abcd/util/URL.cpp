@@ -43,7 +43,7 @@
 
 namespace abcd {
 
-#define URL_CONN_TIMEOUT 5
+#define URL_CONN_TIMEOUT 10
 
 static char *gszCaCertPath = NULL;
 static bool gbInitialized = false;
