@@ -58,49 +58,49 @@ namespace abcd {
 #define ABC_COINBASE "Coinbase"
 #define ABC_BNC      "BraveNewCoin"
 
-    /**
-     * AirBitz Exchange Info Structure
-     */
-    typedef struct sABC_ExchangeInfo
-    {
-        /** Access to the account settings */
-        tABC_SyncKeys         *pKeys;
-        /** The currency to request or update **/
-        int                   currencyNum;
-        /** Callback fired after a update **/
-        tABC_Request_Callback fRequestCallback;
-        /** Data to return with the callback **/
-        void                  *pData;
-    } tABC_ExchangeInfo;
+/**
+ * AirBitz Exchange Info Structure
+ */
+typedef struct sABC_ExchangeInfo
+{
+    /** Access to the account settings */
+    tABC_SyncKeys         *pKeys;
+    /** The currency to request or update **/
+    int                   currencyNum;
+    /** Callback fired after a update **/
+    tABC_Request_Callback fRequestCallback;
+    /** Data to return with the callback **/
+    void                  *pData;
+} tABC_ExchangeInfo;
 
-    /**
-     * AirBitz default exchange info
-     */
-    typedef struct sABC_ExchangeDefaults {
-        int currencyNum;
-        const char *szDefaultExchange;
-    } tABC_ExchangeDefaults;
+/**
+ * AirBitz default exchange info
+ */
+typedef struct sABC_ExchangeDefaults {
+    int currencyNum;
+    const char *szDefaultExchange;
+} tABC_ExchangeDefaults;
 
-    // Default Exchange array
-    extern const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[];
-    extern const size_t EXCHANGE_DEFAULTS_SIZE;
+// Default Exchange array
+extern const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[];
+extern const size_t EXCHANGE_DEFAULTS_SIZE;
 
-    tABC_CC ABC_ExchangeInitialize(tABC_Error                   *pError);
+tABC_CC ABC_ExchangeInitialize(tABC_Error                   *pError);
 
-    tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
-                                    int currencyNum, double *pRate, tABC_Error *pError);
+tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
+                                int currencyNum, double *pRate, tABC_Error *pError);
 
-    tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
+tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
 
-    void *ABC_ExchangeUpdateThreaded(void *pData);
+void *ABC_ExchangeUpdateThreaded(void *pData);
 
-    void ABC_ExchangeTerminate();
+void ABC_ExchangeTerminate();
 
-    tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
-                              int currencyNum,
-                              tABC_Request_Callback fRequestCallback, void *pData,
-                              tABC_ExchangeInfo **ppInfo, tABC_Error *pError);
-    void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo);
+tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
+                          int currencyNum,
+                          tABC_Request_Callback fRequestCallback, void *pData,
+                          tABC_ExchangeInfo **ppInfo, tABC_Error *pError);
+void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo);
 
 } // namespace abcd
 

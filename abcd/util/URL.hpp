@@ -45,34 +45,34 @@ namespace abcd {
 
 #define ABC_URL_MAX_PATH_LENGTH 2048
 
-    tABC_CC ABC_URLInitialize(const char *szCaCertPath, tABC_Error *pError);
+tABC_CC ABC_URLInitialize(const char *szCaCertPath, tABC_Error *pError);
 
-    void ABC_URLTerminate();
+void ABC_URLTerminate();
 
-    tABC_CC ABC_URLRequest(const char *szURL,
-                           tABC_U08Buf *pData,
-                           tABC_Error *pError);
+tABC_CC ABC_URLRequest(const char *szURL,
+                       tABC_U08Buf *pData,
+                       tABC_Error *pError);
 
-    tABC_CC ABC_URLRequestString(const char *szURL,
-                                 char **pszResults,
-                                 tABC_Error *pError);
+tABC_CC ABC_URLRequestString(const char *szURL,
+                             char **pszResults,
+                             tABC_Error *pError);
 
-    tABC_CC ABC_URLPost(const char *szURL,
-                        const char *szPostData,
-                        tABC_U08Buf *pData,
-                        tABC_Error *pError);
+tABC_CC ABC_URLPost(const char *szURL,
+                    const char *szPostData,
+                    tABC_U08Buf *pData,
+                    tABC_Error *pError);
 
-    tABC_CC ABC_URLPostString(const char *szURL,
-                              const char *szPostData,
-                              char **pszResults,
-                              tABC_Error *pError);
+tABC_CC ABC_URLPostString(const char *szURL,
+                          const char *szPostData,
+                          char **pszResults,
+                          tABC_Error *pError);
 
-    tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError);
+tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError);
 
-    tABC_CC ABC_URLCurlHandleInit(CURL **ppCurlHandle, tABC_Error *pError);
+tABC_CC ABC_URLCurlHandleInit(CURL **ppCurlHandle, tABC_Error *pError);
 
-    tABC_CC ABC_URLMutexLock(tABC_Error *pError);
-    tABC_CC ABC_URLMutexUnlock(tABC_Error *pError);
+tABC_CC ABC_URLMutexLock(tABC_Error *pError);
+tABC_CC ABC_URLMutexUnlock(tABC_Error *pError);
 
 } // namespace abcd
 

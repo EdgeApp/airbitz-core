@@ -76,17 +76,17 @@ namespace abcd {
 #define ABC_SERVER_JSON_REPO_WALLET_FIELD       "repo_wallet_key"
 #define ABC_SERVER_JSON_EREPO_WALLET_FIELD      "erepo_wallet_key"
 
-    typedef enum eABC_Server_Code
-    {
-        ABC_Server_Code_Success = 0,
-        ABC_Server_Code_Error = 1,
-        ABC_Server_Code_AccountExists = 2,
-        ABC_Server_Code_NoAccount = 3,
-        ABC_Server_Code_InvalidPassword = 4,
-        ABC_Server_Code_InvalidAnswers = 5,
-        ABC_Server_Code_InvalidApiKey = 6,
-        ABC_Server_Code_PinExpired = 7
-    } tABC_Server_Code;
+typedef enum eABC_Server_Code
+{
+    ABC_Server_Code_Success = 0,
+    ABC_Server_Code_Error = 1,
+    ABC_Server_Code_AccountExists = 2,
+    ABC_Server_Code_NoAccount = 3,
+    ABC_Server_Code_InvalidPassword = 4,
+    ABC_Server_Code_InvalidAnswers = 5,
+    ABC_Server_Code_InvalidApiKey = 6,
+    ABC_Server_Code_PinExpired = 7
+} tABC_Server_Code;
 
 } // namespace abcd
 

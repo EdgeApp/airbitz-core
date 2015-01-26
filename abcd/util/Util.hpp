@@ -179,10 +179,10 @@ namespace abcd {
         } \
     }
 
-    void ABC_UtilFreeStringArray(char **aszStrings,
-                                 unsigned int count);
+void ABC_UtilFreeStringArray(char **aszStrings,
+                             unsigned int count);
 
-    void *ABC_UtilGuaranteedMemset(void *v, int c, size_t n);
+void *ABC_UtilGuaranteedMemset(void *v, int c, size_t n);
 
 } // namespace abcd
 
