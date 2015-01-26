@@ -37,6 +37,7 @@
 #include "ServerDefs.hpp"
 #include "util/Crypto.hpp"
 #include "util/FileIO.hpp"
+#include "util/Json.hpp"
 #include "util/Mutex.hpp"
 #include "util/Sync.hpp"
 #include "util/Util.hpp"

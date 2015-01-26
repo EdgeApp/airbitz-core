@@ -6,6 +6,7 @@
  */
 
 #include "Export.hpp"
+#include "util/U08Buf.hpp"
 #include "util/Util.hpp"
 #include "csv.h"
 #include <stdio.h>

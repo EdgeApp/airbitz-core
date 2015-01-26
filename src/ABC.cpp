@@ -45,6 +45,7 @@
 #include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
+#include "../abcd/util/Json.hpp"
 #include "../abcd/util/Mutex.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/URL.hpp"
@@ -275,7 +276,6 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(szPIN);
     ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "PIN is too short");
-    ABC_CHECK_NUMERIC(szPIN, ABC_CC_NonNumericPin, "The pin must be numeric.");
 
     if (fRequestCallback)
     {
@@ -619,7 +619,6 @@ tABC_CC ABC_SetPIN(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPIN);
     ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "Pin is too short");
-    ABC_CHECK_NUMERIC(szPIN, ABC_CC_NonNumericPin, "The pin must be numeric.");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys, pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));

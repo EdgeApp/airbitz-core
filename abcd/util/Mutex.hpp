@@ -40,14 +40,13 @@
 
 namespace abcd {
 
-    tABC_CC ABC_MutexInitialize(tABC_Error *pError);
+tABC_CC ABC_MutexInitialize(tABC_Error *pError);
 
-    void ABC_MutexTerminate();
+void ABC_MutexTerminate();
 
-    tABC_CC ABC_MutexLock(tABC_Error *pError);
+tABC_CC ABC_MutexLock(tABC_Error *pError);
 
-    tABC_CC ABC_MutexUnlock(tABC_Error *pError);
-
+tABC_CC ABC_MutexUnlock(tABC_Error *pError);
 
 } // namespace abcd
 

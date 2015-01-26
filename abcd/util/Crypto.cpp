@@ -32,6 +32,7 @@
 #include "Crypto.hpp"
 #include "Debug.hpp"
 #include "FileIO.hpp"
+#include "Json.hpp"
 #include "Util.hpp"
 #include "../Bridge.hpp"
 #include <stdio.h>
@@ -221,8 +222,6 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     // create our own copy so we can add to it
     ABC_BUF_DUP(NewSeed, Seed);
 
-    //ABC_DEBUG(ABC_UtilHexDumpBuf("ABC Starting Random Seed", NewSeed));
-
     // mix in some info on our file system
 #ifndef __ANDROID__
 
@@ -263,8 +262,6 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     ABC_BUF_APPEND_PTR(NewSeed, &pid, sizeof(pid_t));
 
     // TODO: add more random seed data here
-
-    //ABC_DEBUG(ABC_UtilHexDumpBuf("ABC Final Random Seed", NewSeed));
 
     // seed it
     RAND_seed(ABC_BUF_PTR(NewSeed), ABC_BUF_SIZE(NewSeed));
@@ -698,7 +695,6 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     ABC_BUF_FREE(RandCount);
     //printf("rand header count: %d\n", nRandomHeaderBytes);
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(nRandomHeaderBytes, &RandHeaderBytes, pError));
-    //ABC_UtilHexDumpBuf("Rand Header Bytes", RandHeaderBytes);
 
     // create a random number of footer bytes 0-255
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(1, &RandCount, pError));
@@ -706,7 +702,6 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     ABC_BUF_FREE(RandCount);
     //printf("rand footer count: %d\n", nRandomFooterBytes);
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(nRandomFooterBytes, &RandFooterBytes, pError));
-    //ABC_UtilHexDumpBuf("Rand Footer Bytes", RandFooterBytes);
 
     // calculate the size of our unencrypted buffer
     totalSizeUnencrypted += 1; // header count
@@ -759,18 +754,9 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     sc_SHA256_Final(sha256Output, &sha256Context);
     memcpy(pCurUnencryptedData, sha256Output, SHA_256_LENGTH);
     pCurUnencryptedData += SHA_256_LENGTH;
-    //ABC_UtilHexDump("SHA_256", sha256Output,  SHA_256_LENGTH);
-
-    //ABC_UtilHexDumpBuf("Unencrypted data", UnencryptedData);
-
-    //ABC_UtilHexDumpBuf("IV", *pIV);
-
-    //ABC_UtilHexDumpBuf("Key", Key);
 
     // encrypted our new unencrypted package
     ABC_CHECK_RET(ABC_CryptoEncryptAES256(UnencryptedData, Key, *pIV, pEncData, pError));
-
-    //ABC_UtilHexDumpBuf("Encrypted data", *pEncData);
 
 exit:
     ABC_BUF_FREE(RandCount);
@@ -929,9 +915,6 @@ tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
         IVLength = AES_256_IV_LENGTH;
     }
     memcpy(aIV, ABC_BUF_PTR(IV), IVLength);
-
-    //ABC_UtilHexDump("Key", aKey, AES_256_KEY_LENGTH);
-    //ABC_UtilHexDump("IV", aIV, AES_256_IV_LENGTH);
 
     // init our cipher text struct
     EVP_CIPHER_CTX e_ctx;
@@ -1423,7 +1406,6 @@ tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
     {
         ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
     }
-    //ABC_UtilHexDumpBuf("Salt", Salt);
 
     ABC_CHECK_RET(ABC_CryptoCreateSNRP(Salt,
                                        SCRYPT_DEFAULT_SERVER_N,
