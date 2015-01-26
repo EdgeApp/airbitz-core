@@ -175,18 +175,17 @@ tABC_CC ABC_LoginGetSyncKeys(tABC_Login *pSelf,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_SyncKeys *pKeys = NULL;
+    AutoSyncKeys pKeys;
 
-    ABC_NEW(pKeys, tABC_SyncKeys);
+    ABC_NEW(pKeys.get(), tABC_SyncKeys);
     ABC_CHECK_RET(ABC_LoginDirGetSyncDir(pSelf->AccountNum, &pKeys->szSyncDir, pError));
     ABC_BUF_DUP(pKeys->MK, pSelf->MK);
     ABC_STRDUP(pKeys->szSyncKey, pSelf->szSyncKey);
 
     *ppKeys = pKeys;
-    pKeys = NULL;
+    pKeys.get() = NULL;
 
 exit:
-    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 

@@ -13,6 +13,7 @@
 #define ABC_Sync_h
 
 #include "../../src/ABC.h"
+#include "AutoFree.hpp"
 #include "U08Buf.hpp"
 
 #define SYNC_KEY_LENGTH 20
@@ -37,6 +38,8 @@ tABC_CC ABC_SyncKeysCopy(tABC_SyncKeys **ppOut,
                          tABC_Error *pError);
 
 void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys);
+
+typedef AutoFree<tABC_SyncKeys, ABC_SyncFreeKeys> AutoSyncKeys;
 
 tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError);
 

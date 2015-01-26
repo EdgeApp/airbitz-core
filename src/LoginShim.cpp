@@ -484,33 +484,6 @@ exit:
 }
 
 /**
- * Sync the account data
- *
- * @param szUserName    UserName for the account associated with the settings
- * @param szPassword    Password for the account associated with the settings
- * @param pError        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_LoginShimSync(const char *szUserName,
-                          const char *szPassword,
-                          int *pDirty,
-                          tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    tABC_SyncKeys *pKeys = NULL;
-
-    // Get the sync keys:
-    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys, pError));
-
-    // Do the sync:
-    ABC_CHECK_RET(ABC_SyncRepo(pKeys->szSyncDir, pKeys->szSyncKey, pDirty, pError));
-
-exit:
-    if (pKeys)          ABC_SyncFreeKeys(pKeys);
-    return cc;
-}
-
-/**
  * Locks the mutex
  *
  * ABC_Wallet uses the same mutex as ABC_Login so that there will be no situation in

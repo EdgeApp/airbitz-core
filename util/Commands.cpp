@@ -52,8 +52,8 @@ Status accountDecrypt(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... account-decrypt <user> <pass> <filename>\n"
             "note: The filename is account-relative.");
 
-    tABC_SyncKeys *pKeys = NULL;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
+    AutoSyncKeys pKeys;
+    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
 
     std::string file = pKeys->szSyncDir;
     file += "/";
@@ -63,8 +63,6 @@ Status accountDecrypt(int argc, char *argv[])
     ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(file.c_str(), pKeys->MK, &data, &error));
     fwrite(data.p, data.end - data.p, 1, stdout);
     printf("\n");
-
-    ABC_SyncFreeKeys(pKeys);
 
     return Status();
 }
@@ -76,8 +74,8 @@ Status accountEncrypt(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... account-encrypt <user> <pass> <filename>\n"
             "note: The filename is account-relative.");
 
-    tABC_SyncKeys *pKeys = NULL;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
+    AutoSyncKeys pKeys;
+    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
 
     std::string file = pKeys->szSyncDir;
     file += "/";
@@ -95,7 +93,6 @@ Status accountEncrypt(int argc, char *argv[])
         printf("%s\n", szEncrypted);
     }
 
-    ABC_SyncFreeKeys(pKeys);
     ABC_FREE_STR(szEncrypted);
     ABC_FREE_STR(szContents);
 
@@ -200,8 +197,8 @@ Status generateAddresses(int argc, char *argv[])
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... generate-addresses <user> <pass> <wallet-name> <count>");
 
-    tABC_SyncKeys *pKeys = NULL;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
+    AutoSyncKeys pKeys;
+    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
 
     tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
@@ -217,8 +214,6 @@ Status generateAddresses(int argc, char *argv[])
         std::cout << "watch " << m00n.address().encoded() << std::endl;
     }
 
-    ABC_SyncFreeKeys(pKeys);
-
     return Status();
 }
 
@@ -227,8 +222,8 @@ Status getBitcoinSeed(int argc, char *argv[])
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-bitcoin-seed <user> <pass> <wallet-name>");
 
-    tABC_SyncKeys *pKeys = NULL;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
+    AutoSyncKeys pKeys;
+    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
 
     tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
@@ -237,7 +232,6 @@ Status getBitcoinSeed(int argc, char *argv[])
     ABC_CHECK_OLD(ABC_CryptoHexEncode(data, &szSeed, &error));
     printf("%s\n", szSeed);
 
-    ABC_SyncFreeKeys(pKeys);
     ABC_FREE_STR(szSeed);
 
     return Status();
@@ -357,8 +351,8 @@ Status listWallets(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... list-wallets <user> <pass>");
 
     // Setup:
-    tABC_SyncKeys *pKeys = NULL;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
+    AutoSyncKeys pKeys;
+    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
     ABC_CHECK_OLD(ABC_DataSyncAll(argv[0], argv[1], NULL, NULL, &error));
 
     // Iterate over wallets:
@@ -390,9 +384,6 @@ Status listWallets(int argc, char *argv[])
         }
     }
     printf("\n");
-
-    // Clean up:
-    ABC_SyncFreeKeys(pKeys);
 
     return Status();
 }
@@ -463,8 +454,8 @@ Status searchBitcoinSeed(int argc, char *argv[])
     long end = strtol(argv[5], 0, 10);
     char *szMatchAddr = argv[3];
 
-    tABC_SyncKeys *pKeys = NULL;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
+    AutoSyncKeys pKeys;
+    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
 
     tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
@@ -486,8 +477,6 @@ Status searchBitcoinSeed(int argc, char *argv[])
             c = 0;
         }
     }
-
-    ABC_SyncFreeKeys(pKeys);
 
     return Status();
 }
@@ -534,8 +523,8 @@ Status walletDecrypt(int argc, char *argv[])
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-decrypt <user> <pass> <wallet-name> <file>");
 
-    tABC_SyncKeys *pKeys = NULL;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
+    AutoSyncKeys pKeys;
+    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
 
     AutoAccountWalletInfo info;
     ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, argv[2], &info, &error));
@@ -545,8 +534,6 @@ Status walletDecrypt(int argc, char *argv[])
     fwrite(data.p, data.end - data.p, 1, stdout);
     printf("\n");
 
-    ABC_SyncFreeKeys(pKeys);
-
     return Status();
 }
 
@@ -555,8 +542,8 @@ Status walletEncrypt(int argc, char *argv[])
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-encrypt <user> <pass> <wallet-name> <file>");
 
-    tABC_SyncKeys *pKeys = NULL;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys, &error));
+    AutoSyncKeys pKeys;
+    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
 
     AutoAccountWalletInfo info;
     ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, argv[2], &info, &error));
@@ -575,7 +562,6 @@ Status walletEncrypt(int argc, char *argv[])
     }
 
     ABC_FREE_STR(szContents);
-    ABC_SyncFreeKeys(pKeys);
 
     return Status();
 }

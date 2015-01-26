@@ -78,18 +78,17 @@ tABC_CC ABC_SyncKeysCopy(tABC_SyncKeys **ppOut,
                          tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_SyncKeys *pKeys = NULL;
+    AutoSyncKeys pKeys;
 
-    ABC_NEW(pKeys, tABC_SyncKeys);
+    ABC_NEW(pKeys.get(), tABC_SyncKeys);
     ABC_STRDUP(pKeys->szSyncDir, pIn->szSyncDir);
     ABC_STRDUP(pKeys->szSyncKey, pIn->szSyncKey);
     ABC_BUF_DUP(pKeys->MK, pIn->MK);
 
     *ppOut = pKeys;
-    pKeys = NULL;
+    pKeys.get() = NULL;
 
 exit:
-    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 
