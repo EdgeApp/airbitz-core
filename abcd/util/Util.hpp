@@ -37,12 +37,20 @@
 #define ABC_Util_h
 
 #include "../../src/ABC.h"
+#include "AutoFree.hpp"
 #include "Debug.hpp"
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
 
 namespace abcd {
+
+/**
+ * Frees a C-style string and sets the pointer to NULL.
+ */
+void StringFree(char *string);
+
+typedef AutoFree<char, StringFree> AutoString;
 
 #ifdef DEBUG
 #define ABC_LOG_ERROR(code, err_string) \
@@ -158,12 +166,8 @@ namespace abcd {
 
 #define ABC_FREE_STR(str) \
     { \
-        if (str != NULL) \
-        { \
-            ABC_UtilGuaranteedMemset(str, 0, strlen(str)); \
-            free(str); \
-            str = NULL; \
-        } \
+        StringFree(str); \
+        str = nullptr; \
     }
 
 #define ABC_CLEAR_FREE(ptr, len) \
@@ -183,6 +187,24 @@ void ABC_UtilFreeStringArray(char **aszStrings,
                              unsigned int count);
 
 void *ABC_UtilGuaranteedMemset(void *v, int c, size_t n);
+
+/**
+ * An array of strings that knows how to automatically free itself.
+ */
+struct AutoStringArray
+{
+    ~AutoStringArray()
+    {
+        ABC_UtilFreeStringArray(data, size);
+    }
+
+    AutoStringArray():
+        data(nullptr), size(0)
+    {}
+
+    char **data;   // String pointer array
+    unsigned size; // Number of leaf strings actually allocated
+};
 
 } // namespace abcd
 

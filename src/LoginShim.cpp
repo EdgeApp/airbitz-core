@@ -466,10 +466,10 @@ tABC_CC ABC_LoginShimCheckPasswordChange(const char *szUserName,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_U08Buf L1       = ABC_BUF_NULL;
-    tABC_U08Buf LP1      = ABC_BUF_NULL;
-    tABC_U08Buf LRA1     = ABC_BUF_NULL;
     tABC_LoginPackage *pLoginPackage = NULL;
+    tABC_U08Buf LRA1 = ABC_BUF_NULL; // Do not free
+    AutoU08Buf L1;
+    AutoU08Buf LP1;
 
     ABC_CHECK_NULL(szUserName);
 
@@ -478,37 +478,8 @@ tABC_CC ABC_LoginShimCheckPasswordChange(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &pLoginPackage, pError));
 
 exit:
-    ABC_BUF_FREE(L1);
-    ABC_BUF_FREE(LP1);
     ABC_LoginPackageFree(pLoginPackage);
 
-    return cc;
-}
-
-/**
- * Sync the account data
- *
- * @param szUserName    UserName for the account associated with the settings
- * @param szPassword    Password for the account associated with the settings
- * @param pError        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_LoginShimSync(const char *szUserName,
-                          const char *szPassword,
-                          int *pDirty,
-                          tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    tABC_SyncKeys *pKeys = NULL;
-
-    // Get the sync keys:
-    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys, pError));
-
-    // Do the sync:
-    ABC_CHECK_RET(ABC_SyncRepo(pKeys->szSyncDir, pKeys->szSyncKey, pDirty, pError));
-
-exit:
-    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 

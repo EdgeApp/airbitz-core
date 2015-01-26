@@ -166,7 +166,7 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
     char *szWalletDir      = NULL;
     json_t *pJSON_Data     = NULL;
     json_t *pJSON_Wallets  = NULL;
-    tABC_U08Buf WalletAcctKey = ABC_BUF_NULL;
+    AutoU08Buf WalletAcctKey;
 
     tWalletData *pData = NULL;
 
@@ -277,19 +277,18 @@ tABC_CC ABC_WalletSyncAll(tABC_SyncKeys *pKeys, int *pDirty, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char **aszUUIDs                = NULL;
-    unsigned int i      = 0;
-    unsigned int nUUIDs = 0;
+    AutoStringArray uuids;
+    unsigned int i = 0;
 
     // Its not dirty...yet
     *pDirty = 0;
 
     // Get the wallet list
-    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &aszUUIDs, &nUUIDs, pError));
+    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &uuids.data, &uuids.size, pError));
 
-    for (i = 0; i < nUUIDs; ++i)
+    for (i = 0; i < uuids.size; ++i)
     {
-        char *szUUID = aszUUIDs[i];
+        char *szUUID = uuids.data[i];
         int dirty = 0;
         ABC_CHECK_RET(ABC_WalletSyncData(ABC_WalletID(pKeys, szUUID), &dirty, pError));
         if (dirty)
@@ -298,8 +297,6 @@ tABC_CC ABC_WalletSyncAll(tABC_SyncKeys *pKeys, int *pDirty, tABC_Error *pError)
         }
     }
 exit:
-    ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
-
     return cc;
 }
 
@@ -387,7 +384,7 @@ tABC_CC ABC_WalletSetName(tABC_WalletID self, const char *szName, tABC_Error *pE
     // write the name out to the file
     ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_NAME_FILENAME);
-    tABC_U08Buf Data;
+    tABC_U08Buf Data; // Do not free
     ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(Data, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
 
@@ -423,7 +420,7 @@ tABC_CC ABC_WalletSetCurrencyNum(tABC_WalletID self, int currencyNum, tABC_Error
     // write the name out to the file
     ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_CURRENCY_FILENAME);
-    tABC_U08Buf Data;
+    tABC_U08Buf Data; // Do not free
     ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(Data, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
 
@@ -644,8 +641,7 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
 
     tWalletData *pData = NULL;
     char *szFilename = NULL;
-    tABC_U08Buf Data = ABC_BUF_NULL;
-    tABC_AccountWalletInfo info;
+    AutoAccountWalletInfo info;
     memset(&info, 0, sizeof(tABC_AccountWalletInfo));
 
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
@@ -706,9 +702,9 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
             ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
             if (true == bExists)
             {
+                AutoU08Buf Data;
                 ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
                 ABC_CHECK_RET(ABC_UtilGetStringValueFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_NAME_FIELD, &(pData->szName), pError));
-                ABC_BUF_FREE(Data);
             }
             else
             {
@@ -721,9 +717,9 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
             ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
             if (true == bExists)
             {
+                AutoU08Buf Data;
                 ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
                 ABC_CHECK_RET(ABC_UtilGetIntValueFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_CURRENCY_NUM_FIELD, (int *) &(pData->currencyNum), pError));
-                ABC_BUF_FREE(Data);
             }
             else
             {
@@ -736,9 +732,9 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
             ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
             if (true == bExists)
             {
+                AutoU08Buf Data;
                 ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pData->MK, &Data, pError));
                 ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)ABC_BUF_PTR(Data), JSON_WALLET_ACCOUNTS_FIELD, &(pData->aszAccounts), &(pData->numAccounts), pError));
-                ABC_BUF_FREE(Data);
             }
             else
             {
@@ -767,8 +763,6 @@ exit:
         ABC_CLEAR_FREE(pData, sizeof(tWalletData));
     }
     ABC_FREE_STR(szFilename);
-    ABC_BUF_FREE(Data);
-    ABC_AccountWalletInfoFree(&info);
 
     ABC_WalletMutexUnlock(NULL);
     return cc;
@@ -1072,8 +1066,7 @@ tABC_CC ABC_WalletGetWallets(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char **aszUUIDs = NULL;
-    unsigned int nUUIDs = 0;
+    AutoStringArray uuids;
     tABC_WalletInfo **aWalletInfo = NULL;
 
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
@@ -1084,32 +1077,28 @@ tABC_CC ABC_WalletGetWallets(tABC_SyncKeys *pKeys,
     *pCount = 0;
 
     // get the array of wallet UUIDs for this account
-    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &aszUUIDs, &nUUIDs, pError));
+    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &uuids.data, &uuids.size, pError));
 
     // if we got anything
-    if (nUUIDs > 0)
+    if (uuids.size > 0)
     {
-        ABC_ARRAY_NEW(aWalletInfo, nUUIDs, tABC_WalletInfo*);
+        ABC_ARRAY_NEW(aWalletInfo, uuids.size, tABC_WalletInfo*);
 
-        for (unsigned i = 0; i < nUUIDs; i++)
+        for (unsigned i = 0; i < uuids.size; i++)
         {
             tABC_WalletInfo *pInfo = NULL;
-            ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(pKeys, aszUUIDs[i]), &pInfo, pError));
+            ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(pKeys, uuids.data[i]), &pInfo, pError));
 
             aWalletInfo[i] = pInfo;
         }
     }
 
     // assign them
-    *pCount = nUUIDs;
+    *pCount = uuids.size;
     *paWalletInfo = aWalletInfo;
     aWalletInfo = NULL;
 
-
 exit:
-    ABC_UtilFreeStringArray(aszUUIDs, nUUIDs);
-    ABC_WalletFreeInfoArray(aWalletInfo, nUUIDs);
-
     ABC_WalletMutexUnlock(NULL);
     return cc;
 }
@@ -1193,7 +1182,7 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self, tABC_U08Buf *pSe
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_AccountWalletInfo info;
+    AutoAccountWalletInfo info;
 
     ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
@@ -1203,7 +1192,6 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self, tABC_U08Buf *pSe
     ABC_BUF_DUP(*pSeed, info.BitcoinSeed);
 
 exit:
-    ABC_AccountWalletInfoFree(&info);
     ABC_WalletMutexUnlock(NULL);
     return cc;
 }

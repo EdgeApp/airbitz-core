@@ -283,14 +283,12 @@ tABC_CC ABC_LoginPackageGetSyncKey(tABC_LoginPackage *pSelf,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_U08Buf SyncKey = ABC_BUF_NULL;
+    AutoU08Buf SyncKey;
 
     ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pSelf->ESyncKey, MK, &SyncKey, pError));
     ABC_CHECK_RET(ABC_CryptoHexEncode(SyncKey, pszSyncKey, pError));
 
 exit:
-    ABC_BUF_FREE(SyncKey);
-
     return cc;
 }
 

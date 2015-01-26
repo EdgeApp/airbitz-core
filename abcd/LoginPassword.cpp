@@ -22,7 +22,7 @@ tABC_CC ABC_LoginPasswordDisk(tABC_Login *pSelf,
 
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
-    tABC_U08Buf         LP2             = ABC_BUF_NULL;
+    AutoU08Buf          LP2;
 
     // Load the packages:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->AccountNum, &pCarePackage, &pLoginPackage, pError));
@@ -37,7 +37,6 @@ tABC_CC ABC_LoginPasswordDisk(tABC_Login *pSelf,
 exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
-    ABC_BUF_FREE(LP2);
 
     return cc;
 }
@@ -51,9 +50,9 @@ tABC_CC ABC_LoginPasswordServer(tABC_Login *pSelf,
 
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
-    tABC_U08Buf         LP1             = ABC_BUF_NULL;
-    tABC_U08Buf         LRA1            = ABC_BUF_NULL;
-    tABC_U08Buf         LP2             = ABC_BUF_NULL;
+    tABC_U08Buf         LRA1            = ABC_BUF_NULL; // Do not free
+    AutoU08Buf          LP1;
+    AutoU08Buf          LP2;
 
     // Get the CarePackage:
     ABC_CHECK_RET(ABC_LoginServerGetCarePackage(pSelf->L1, &pCarePackage, pError));
@@ -76,8 +75,6 @@ tABC_CC ABC_LoginPasswordServer(tABC_Login *pSelf,
 exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
-    ABC_BUF_FREE(LP1);
-    ABC_BUF_FREE(LP2);
 
     return cc;
 }
@@ -98,7 +95,7 @@ tABC_CC ABC_LoginPassword(tABC_Login **ppSelf,
     tABC_Error error;
 
     tABC_Login          *pSelf          = NULL;
-    tABC_U08Buf         LP              = ABC_BUF_NULL;
+    AutoU08Buf          LP;
 
     // Allocate self:
     ABC_CHECK_RET(ABC_LoginNew(&pSelf, szUserName, pError));
@@ -119,7 +116,6 @@ tABC_CC ABC_LoginPassword(tABC_Login **ppSelf,
 
 exit:
     ABC_LoginFree(pSelf);
-    ABC_BUF_FREE(LP);
 
     return cc;
 }
@@ -137,12 +133,12 @@ tABC_CC ABC_LoginPasswordSet(tABC_Login *pSelf,
 
     tABC_CarePackage *pCarePackage = NULL;
     tABC_LoginPackage *pLoginPackage = NULL;
-    tABC_U08Buf oldL1       = ABC_BUF_NULL;
-    tABC_U08Buf oldLP1      = ABC_BUF_NULL;
-    tABC_U08Buf oldLRA1     = ABC_BUF_NULL;
-    tABC_U08Buf LP          = ABC_BUF_NULL;
-    tABC_U08Buf LP1         = ABC_BUF_NULL;
-    tABC_U08Buf LP2         = ABC_BUF_NULL;
+    AutoU08Buf oldL1;
+    AutoU08Buf oldLP1;
+    AutoU08Buf oldLRA1;
+    AutoU08Buf LP;
+    AutoU08Buf LP1;
+    AutoU08Buf LP2;
 
     // Load the packages:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->AccountNum, &pCarePackage, &pLoginPackage, pError));
@@ -183,12 +179,6 @@ tABC_CC ABC_LoginPasswordSet(tABC_Login *pSelf,
 exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
-    ABC_BUF_FREE(oldL1);
-    ABC_BUF_FREE(oldLP1);
-    ABC_BUF_FREE(oldLRA1);
-    ABC_BUF_FREE(LP);
-    ABC_BUF_FREE(LP1);
-    ABC_BUF_FREE(LP2);
 
     return cc;
 }
@@ -210,9 +200,9 @@ tABC_CC ABC_LoginPasswordOk(tABC_Login *pSelf,
 
     tABC_CarePackage *pCarePackage = NULL;
     tABC_LoginPackage *pLoginPackage = NULL;
-    tABC_U08Buf         LP              = ABC_BUF_NULL;
-    tABC_U08Buf         LP2             = ABC_BUF_NULL;
-    tABC_U08Buf         MK              = ABC_BUF_NULL;
+    AutoU08Buf LP;
+    AutoU08Buf LP2;
+    AutoU08Buf MK;
 
     *pOk = false;
 
@@ -233,9 +223,6 @@ tABC_CC ABC_LoginPasswordOk(tABC_Login *pSelf,
 exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
-    ABC_BUF_FREE(LP);
-    ABC_BUF_FREE(LP2);
-    ABC_BUF_FREE(MK);
 
     return cc;
 }

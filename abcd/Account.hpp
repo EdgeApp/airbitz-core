@@ -114,6 +114,20 @@ tABC_CC ABC_AccountWalletReorder(tABC_SyncKeys *pKeys,
                                  unsigned count,
                                  tABC_Error *pError);
 
+struct AutoAccountWalletInfo:
+    public tABC_AccountWalletInfo
+{
+    ~AutoAccountWalletInfo()
+    {
+        ABC_AccountWalletInfoFree(this);
+    }
+
+    AutoAccountWalletInfo()
+    {
+        memset(this, 0, sizeof(*this));
+    }
+};
+
 } // namespace abcd
 
 #endif

@@ -84,11 +84,6 @@ tABC_CC ABC_LoginShimCheckPasswordChange(const char *szUserName,
                                          const char *szPassword,
                                          tABC_Error *pError);
 
-tABC_CC ABC_LoginShimSync(const char *szUserName,
-                          const char *szPassword,
-                          int *pDirty,
-                          tABC_Error *pError);
-
 } // namespace abcd
 
 #endif
