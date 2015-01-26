@@ -61,7 +61,7 @@ void ABC_WalletIDFree(tABC_WalletID in);
 
 tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
 
-tABC_CC ABC_WalletClearCache(tABC_Error *pError);
+void ABC_WalletClearCache();
 
 tABC_CC ABC_WalletSetName(tABC_WalletID self,
                           const char *szName,

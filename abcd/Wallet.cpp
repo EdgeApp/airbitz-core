@@ -98,8 +98,6 @@ static tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tAB
 static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
 static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError);
 static void    ABC_WalletFreeData(tWalletData *pData);
-static tABC_CC ABC_WalletMutexLock(tABC_Error *pError);
-static tABC_CC ABC_WalletMutexUnlock(tABC_Error *pError);
 
 /**
  * Initializes the members of a tABC_WalletID structure.
@@ -350,7 +348,7 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, int *pDirty, tABC_Error *pError)
     if (*pDirty || bNew)
     {
         *pDirty = 1;
-        ABC_CHECK_RET(ABC_WalletClearCache(pError));
+        ABC_WalletClearCache();
     }
 exit:
     ABC_FREE_STR(szSyncDirectory);
@@ -638,13 +636,12 @@ static
 tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
 
     tWalletData *pData = NULL;
     char *szFilename = NULL;
     AutoAccountWalletInfo info;
     memset(&info, 0, sizeof(tABC_AccountWalletInfo));
-
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
     // see if it is already in the cache
     ABC_CHECK_RET(ABC_WalletGetFromCacheByUUID(self.szUUID, &pData, pError));
@@ -764,18 +761,15 @@ exit:
     }
     ABC_FREE_STR(szFilename);
 
-    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
 /**
  * Clears all the data from the cache
  */
-tABC_CC ABC_WalletClearCache(tABC_Error *pError)
+void ABC_WalletClearCache()
 {
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
+    AutoCoreLock lock(gCoreMutex);
 
     if ((gWalletsCacheCount > 0) && (NULL != gaWalletsCacheArray))
     {
@@ -788,11 +782,6 @@ tABC_CC ABC_WalletClearCache(tABC_Error *pError)
         ABC_FREE(gaWalletsCacheArray);
         gWalletsCacheCount = 0;
     }
-
-exit:
-
-    ABC_WalletMutexUnlock(NULL);
-    return cc;
 }
 
 /**
@@ -802,10 +791,10 @@ static
 tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
 
     tWalletData *pExistingWalletData = NULL;
 
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
     ABC_CHECK_NULL(pData);
 
     // see if it exists first
@@ -835,8 +824,6 @@ tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError)
     }
 
 exit:
-
-    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
@@ -846,10 +833,10 @@ exit:
 tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
     bool bExists = false;
     unsigned i;
 
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
     ABC_CHECK_NULL(szUUID);
 
     for (i = 0; i < gWalletsCacheCount; ++i)
@@ -877,8 +864,6 @@ tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError)
     }
 
 exit:
-
-    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
@@ -948,16 +933,13 @@ tABC_CC ABC_WalletDirtyCache(tABC_WalletID self,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     tWalletData     *pData = NULL;
-
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
     ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
     pData->balanceDirty = true;
 exit:
-    ABC_CHECK_RET(ABC_WalletMutexUnlock(pError));
     return cc;
 }
 
@@ -975,14 +957,12 @@ tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     tWalletData     *pData = NULL;
     tABC_WalletInfo *pInfo = NULL;
     tABC_TxInfo     **aTransactions = NULL;
     unsigned int    nTxCount = 0;
-
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
     // load the wallet data into the cache
     ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
@@ -1025,7 +1005,6 @@ exit:
     ABC_CLEAR_FREE(pInfo, sizeof(tABC_WalletInfo));
     if (nTxCount > 0) ABC_FreeTransactions(aTransactions, nTxCount);
 
-    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
@@ -1064,12 +1043,10 @@ tABC_CC ABC_WalletGetWallets(tABC_SyncKeys *pKeys,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     AutoStringArray uuids;
     tABC_WalletInfo **aWalletInfo = NULL;
-
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
     ABC_CHECK_NULL(paWalletInfo);
     *paWalletInfo = NULL;
@@ -1099,7 +1076,6 @@ tABC_CC ABC_WalletGetWallets(tABC_SyncKeys *pKeys,
     aWalletInfo = NULL;
 
 exit:
-    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
@@ -1135,10 +1111,9 @@ void ABC_WalletFreeInfoArray(tABC_WalletInfo **aWalletInfo,
 tABC_CC ABC_WalletGetMK(tABC_WalletID self, tABC_U08Buf *pMK, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
 
     tWalletData *pData = NULL;
-
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
     // load the wallet data into the cache
     ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
@@ -1147,8 +1122,6 @@ tABC_CC ABC_WalletGetMK(tABC_WalletID self, tABC_U08Buf *pMK, tABC_Error *pError
     ABC_BUF_SET(*pMK, pData->MK);
 
 exit:
-
-    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
@@ -1161,10 +1134,9 @@ exit:
 tABC_CC ABC_WalletGetBitcoinPrivateSeed(tABC_WalletID self, tABC_U08Buf *pSeed, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
 
     tWalletData *pData = NULL;
-
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
     // load the wallet data into the cache
     ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
@@ -1173,18 +1145,15 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeed(tABC_WalletID self, tABC_U08Buf *pSeed, 
     ABC_BUF_SET(*pSeed, pData->BitcoinPrivateSeed);
 
 exit:
-
-    ABC_WalletMutexUnlock(NULL);
     return cc;
 }
 
 tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self, tABC_U08Buf *pSeed, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
 
     AutoAccountWalletInfo info;
-
-    ABC_CHECK_RET(ABC_WalletMutexLock(pError));
 
     ABC_CHECK_RET(ABC_AccountWalletLoad(self.pKeys, self.szUUID, &info, pError));
 
@@ -1192,32 +1161,7 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self, tABC_U08Buf *pSe
     ABC_BUF_DUP(*pSeed, info.BitcoinSeed);
 
 exit:
-    ABC_WalletMutexUnlock(NULL);
     return cc;
-}
-
-/**
- * Locks the mutex
- *
- * ABC_Wallet uses the same mutex as ABC_Login so that there will be no situation in
- * which one thread is in ABC_Wallet locked on a mutex and calling a thread safe ABC_Login call
- * that is locked from another thread calling a thread safe ABC_Wallet call.
- * In other words, since they call each other, they need to share a recursive mutex.
- */
-static
-tABC_CC ABC_WalletMutexLock(tABC_Error *pError)
-{
-    return ABC_MutexLock(pError);
-}
-
-/**
- * Unlocks the mutex
- *
- */
-static
-tABC_CC ABC_WalletMutexUnlock(tABC_Error *pError)
-{
-    return ABC_MutexUnlock(pError);
 }
 
 } // namespace abcds

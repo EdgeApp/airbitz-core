@@ -14,7 +14,6 @@
 #include "../abcd/LoginServer.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Wallet.hpp"
-#include "../abcd/util/Mutex.hpp"
 #include "../abcd/util/Util.hpp"
 #include <mutex>
 
@@ -202,7 +201,7 @@ tABC_CC ABC_LoginShimSetPassword(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginPasswordSet(gLoginCache, szNewPassword, pError));
 
     // Clear wallet cache
-    ABC_CHECK_RET(ABC_WalletClearCache(pError));
+    ABC_WalletClearCache();
 
 exit:
     return cc;

@@ -57,8 +57,6 @@ static tABC_CC ABC_AccountCategoriesSave(tABC_SyncKeys *pKeys, char **aszCategor
 static tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings, tABC_Error *pError);
 static tABC_CC ABC_AccountWalletGetDir(tABC_SyncKeys *pKeys, char **pszWalletDir, tABC_Error *pError);
 static int ABC_AccountWalletCompare(const void *a, const void *b);
-static tABC_CC ABC_AccountMutexLock(tABC_Error *pError);
-static tABC_CC ABC_AccountMutexUnlock(tABC_Error *pError);
 
 /**
  * This function gets the categories for an account.
@@ -276,7 +274,7 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     tABC_AccountSettings *pSettings = NULL;
     char *szFilename = NULL;
@@ -284,7 +282,6 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
     json_t *pJSON_Value = NULL;
     bool bExists = false;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(ppSettings);
 
     // get the settings filename
@@ -579,7 +576,6 @@ exit:
     ABC_FREE_STR(szFilename);
     if (pJSON_Root) json_decref(pJSON_Root);
 
-    ABC_AccountMutexUnlock(NULL);
     return cc;
 }
 
@@ -595,7 +591,7 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Denom = NULL;
@@ -604,7 +600,6 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     char *szFilename = NULL;
     int retVal = 0;
 
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(pSettings);
 
     if (pSettings->szPIN)
@@ -751,7 +746,6 @@ exit:
     if (pJSON_Source) json_decref(pJSON_Source);
     ABC_FREE_STR(szFilename);
 
-    ABC_AccountMutexUnlock(NULL);
     return cc;
 }
 
@@ -1031,15 +1025,13 @@ tABC_CC ABC_AccountWalletSave(tABC_SyncKeys *pKeys,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     char *szSyncKey = NULL;
     char *szMK = NULL;
     char *szBPS = NULL;
     json_t *pJSON = NULL;
     char *szFilename = NULL;
-
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
 
     // Hex-encode the keys:
     ABC_CHECK_RET(ABC_CryptoHexEncode(pInfo->SyncKey, &szSyncKey, pError));
@@ -1069,7 +1061,6 @@ exit:
     if (pJSON) json_decref(pJSON);
     ABC_FREE_STR(szFilename);
 
-    ABC_AccountMutexUnlock(NULL);
     return cc;
 }
 
@@ -1084,8 +1075,7 @@ tABC_CC ABC_AccountWalletReorder(tABC_SyncKeys *pKeys,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    ABC_CHECK_RET(ABC_AccountMutexLock(pError));
+    AutoCoreLock lock(gCoreMutex);
 
     for (unsigned i = 0; i < count; ++i)
     {
@@ -1099,26 +1089,7 @@ tABC_CC ABC_AccountWalletReorder(tABC_SyncKeys *pKeys,
     }
 
 exit:
-    ABC_AccountMutexUnlock(NULL);
     return cc;
-}
-
-/**
- * Locks the mutex.
- */
-static
-tABC_CC ABC_AccountMutexLock(tABC_Error *pError)
-{
-    return ABC_MutexLock(pError);
-}
-
-/**
- * Unlocks the mutex
- */
-static
-tABC_CC ABC_AccountMutexUnlock(tABC_Error *pError)
-{
-    return ABC_MutexUnlock(pError);
 }
 
 } // namespace abcd
