@@ -47,7 +47,6 @@
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Json.hpp"
-#include "../abcd/util/Mutex.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/URL.hpp"
 #include "../abcd/util/Util.hpp"
@@ -115,9 +114,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // override the alloc and free of janson so we can have a secure method
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
-    // initialize the mutex system
-    ABC_CHECK_RET(ABC_MutexInitialize(pError));
-
     // initialize bridge
     ABC_CHECK_RET(ABC_BridgeInitialize(pError));
 
@@ -173,8 +169,6 @@ void ABC_Terminate()
         ABC_FileIOTerminate();
 
         ABC_ExchangeTerminate();
-
-        ABC_MutexTerminate();
 
         ABC_SyncTerminate();
 
@@ -501,8 +495,7 @@ tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_LoginShimLogout();
-
-    ABC_CHECK_RET(ABC_WalletClearCache(pError));
+    ABC_WalletClearCache();
 
 exit:
 
@@ -2575,7 +2568,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         if (accountDirty && fAsyncBitCoinEventCallback)
         {
             // Try to clear the wallet cache in case the Wallets list changed
-            ABC_CHECK_RET(ABC_WalletClearCache(pError));
+            ABC_WalletClearCache();
 
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;

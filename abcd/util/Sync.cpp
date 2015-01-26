@@ -58,18 +58,6 @@ static void SyncLogGitError(int e)
     }
 }
 
-static int SyncMaster(git_repository *repo, int *dirty, int *need_push)
-{
-    int e = 0;
-    tABC_CC cc;
-
-    ABC_CHECK_RET(ABC_MutexLock(NULL));
-    e = sync_master(repo, dirty, need_push);
-exit:
-    ABC_MutexUnlock(NULL);
-    return e;
-}
-
 /**
  * Copies a tABC_SyncKeys structure and all its contents.
  */
@@ -208,7 +196,10 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     e = sync_fetch(repo, szServer);
     ABC_SYNC_ROT(sync_fetch(repo, szServer), "sync_fetch failed");
 
-    e = SyncMaster(repo, &dirty, &need_push);
+    {
+        AutoCoreLock lock(gCoreMutex);
+        e = sync_master(repo, &dirty, &need_push);
+    }
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_master failed");
 
     if (need_push)
