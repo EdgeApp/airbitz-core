@@ -126,12 +126,8 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // initialize Bitcoin transaction system
     ABC_CHECK_RET(ABC_TxInitialize(pError));
 
-    // initialize Bitcoin exchange system
-    ABC_CHECK_RET(ABC_ExchangeInitialize(pError));
-
     // initialize Crypto perf checks to determine hashing power
     ABC_CHECK_RET(ABC_InitializeCrypto(pError));
-
 
     // initialize sync
     ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
@@ -168,7 +164,7 @@ void ABC_Terminate()
 
         ABC_FileIOTerminate();
 
-        ABC_ExchangeTerminate();
+        ABC_ExchangeClearCache();
 
         ABC_SyncTerminate();
 

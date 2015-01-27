@@ -37,7 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <curl/curl.h>
-#include <pthread.h>
+#include <mutex>
 #include <string>
 
 namespace abcd {
@@ -75,9 +75,8 @@ typedef struct sABC_ExchangeCacheEntry
 
 static unsigned int gExchangesCacheCount = 0;
 static tABC_ExchangeCacheEntry **gaExchangeCacheArray = NULL;
-
-static bool gbInitialized = false;
-static pthread_mutex_t gMutex;
+std::recursive_mutex gExchangeMutex;
+typedef std::lock_guard<std::recursive_mutex> AutoExchangeLock;
 
 static tABC_CC ABC_ExchangeGetRate(tABC_ExchangeInfo *pInfo, double *szRate, tABC_Error *pError);
 static tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired, double *szRate, tABC_Error *pError);
@@ -92,39 +91,11 @@ static tABC_CC ABC_ExchangeGetString(const char *szURL, char **pszResults, tABC_
 static size_t  ABC_ExchangeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 static tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo, char **szSource, tABC_Error *pError);
-static tABC_CC ABC_ExchangeMutexLock(tABC_Error *pError);
-static tABC_CC ABC_ExchangeMutexUnlock(tABC_Error *pError);
 
 static tABC_CC ABC_ExchangeGetFromCache(int currencyNum, tABC_ExchangeCacheEntry **ppData, tABC_Error *pError);
-static tABC_CC ABC_ExchangeClearCache(tABC_Error *pError);
 static tABC_CC ABC_ExchangeAddToCache(tABC_ExchangeCacheEntry *pData, tABC_Error *pError);
 static tABC_CC ABC_ExchangeAllocCacheEntry(tABC_ExchangeCacheEntry **ppCache, int currencyNum, time_t last_updated, double exchange_rate, tABC_Error *pError);
 static void ABC_ExchangeFreeCacheEntry(tABC_ExchangeCacheEntry *pCache);
-
-
-/**
- * Initialize the AirBitz Exchanges.
- *
- * @param pData                         Pointer to data to be returned back in callback
- * @param pError                        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_ExchangeInitialize(tABC_Error                  *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "ABC_Exchanges has already been initalized");
-
-    pthread_mutexattr_t mutexAttrib;
-    ABC_CHECK_ASSERT(0 == pthread_mutexattr_init(&mutexAttrib), ABC_CC_MutexError, "ABC_Exchanges could not create mutex attribute");
-    ABC_CHECK_ASSERT(0 == pthread_mutexattr_settype(&mutexAttrib, PTHREAD_MUTEX_RECURSIVE), ABC_CC_MutexError, "ABC_Exchanges could not set mutex attributes");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_init(&gMutex, &mutexAttrib), ABC_CC_MutexError, "ABC_Exchanges could not create mutex");
-    pthread_mutexattr_destroy(&mutexAttrib);
-
-    gbInitialized = true;
-exit:
-    return cc;
-}
 
 /**
  * Fetches the current rate and requests a new value if the current value is old.
@@ -149,18 +120,6 @@ tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
     }
 exit:
     return cc;
-}
-
-void ABC_ExchangeTerminate()
-{
-    if (gbInitialized == true)
-    {
-        ABC_ExchangeClearCache(NULL);
-
-        pthread_mutex_destroy(&gMutex);
-
-        gbInitialized = false;
-    }
 }
 
 tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
@@ -241,8 +200,8 @@ tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired,
     tABC_ExchangeCacheEntry *pCache = NULL;
     time_t timeNow = time(NULL);
     bool bExists = false;
+    AutoExchangeLock lock(gExchangeMutex);
 
-    ABC_CHECK_RET(ABC_ExchangeMutexLock(pError));
     ABC_CHECK_RET(ABC_ExchangeGetFromCache(pInfo->currencyNum, &pCache, pError));
     if (pCache)
     {
@@ -286,7 +245,6 @@ tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired,
 exit:
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szRate);
-    ABC_CHECK_RET(ABC_ExchangeMutexUnlock(NULL));
     return cc;
 }
 
@@ -462,8 +420,8 @@ tABC_CC ABC_ExchangeExtractAndSave(json_t *pJSON_Root, const char *szField,
     json_t *jsonVal = NULL;
     tABC_ExchangeCacheEntry *pCache = NULL;
     time_t timeNow = time(NULL);
+    AutoExchangeLock lock(gExchangeMutex);
 
-    ABC_CHECK_RET(ABC_ExchangeMutexLock(pError));
     // Extract value from json
     jsonVal = json_object_get(pJSON_Root, szField);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON");
@@ -484,7 +442,6 @@ exit:
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szValue);
 
-    ABC_CHECK_RET(ABC_ExchangeMutexUnlock(NULL));
     return cc;
 }
 
@@ -665,41 +622,12 @@ exit:
     return cc;
 }
 
-static
-tABC_CC ABC_ExchangeMutexLock(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_Exchanges has not been initalized");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_lock(&gMutex), ABC_CC_MutexError, "ABC_Exchanges error locking mutex");
-
-exit:
-
-    return cc;
-}
-
-static
-tABC_CC ABC_ExchangeMutexUnlock(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_Exchanges has not been initalized");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_unlock(&gMutex), ABC_CC_MutexError, "ABC_Exchanges error unlocking mutex");
-
-exit:
-
-    return cc;
-}
-
 /**
  * Clears all the data from the cache
  */
-static
-tABC_CC ABC_ExchangeClearCache(tABC_Error *pError)
+void ABC_ExchangeClearCache()
 {
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_RET(ABC_ExchangeMutexLock(pError));
+    AutoExchangeLock lock(gExchangeMutex);
 
     if ((gExchangesCacheCount > 0) && (NULL != gaExchangeCacheArray))
     {
@@ -712,11 +640,6 @@ tABC_CC ABC_ExchangeClearCache(tABC_Error *pError)
         ABC_FREE(gaExchangeCacheArray);
         gExchangesCacheCount = 0;
     }
-
-exit:
-
-    ABC_ExchangeMutexUnlock(NULL);
-    return cc;
 }
 
 static
@@ -747,10 +670,10 @@ static
 tABC_CC ABC_ExchangeAddToCache(tABC_ExchangeCacheEntry *pData, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoExchangeLock lock(gExchangeMutex);
 
     tABC_ExchangeCacheEntry *pExistingExchangeData = NULL;
 
-    ABC_CHECK_RET(ABC_ExchangeMutexLock(pError));
     ABC_CHECK_NULL(pData);
 
     // see if it exists first
@@ -782,8 +705,6 @@ tABC_CC ABC_ExchangeAddToCache(tABC_ExchangeCacheEntry *pData, tABC_Error *pErro
     }
 
 exit:
-
-    ABC_ExchangeMutexUnlock(NULL);
     return cc;
 }
 
