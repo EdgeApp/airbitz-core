@@ -1276,14 +1276,13 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoFileLock lock(gFileMutex); // We are iterating over the filesystem
 
     char *szAddrDir = NULL;
     tABC_FileIOList *pFileList = NULL;
     bool bExists = false;
     char *szID = NULL;
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
     ABC_CHECK_NULL(szAddressID);
@@ -1324,7 +1323,6 @@ exit:
     ABC_FREE_STR(szID);
     ABC_FileIOFreeFileList(pFileList);
 
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -1646,6 +1644,7 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
     AutoCoreLock lock(gCoreMutex);
 
     char *szTxDir = NULL;
@@ -1655,7 +1654,6 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
     unsigned int count = 0;
     bool bExists = false;
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
     *paTransactions = NULL;
     *pCount = 0;
 
@@ -1732,7 +1730,6 @@ exit:
     ABC_FileIOFreeFileList(pFileList);
     ABC_TxFreeTransactions(aTransactions, count);
 
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -3586,6 +3583,7 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
                            tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
     AutoCoreLock lock(gCoreMutex);
 
     char *szAddrDir = NULL;
@@ -3595,7 +3593,6 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
     unsigned int count = 0;
     bool bExists = false;
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
     *paAddresses = NULL;
     *pCount = 0;
 
@@ -3644,7 +3641,6 @@ exit:
     ABC_FileIOFreeFileList(pFileList);
     ABC_TxFreeAddresses(aAddresses, count);
 
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 

@@ -120,9 +120,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // initialize URL system
     ABC_CHECK_RET(ABC_URLInitialize(szCaCertPath, pError));
 
-    // initialize the FileIO system
-    ABC_CHECK_RET(ABC_FileIOInitialize(pError));
-
     // initialize Bitcoin transaction system
     ABC_CHECK_RET(ABC_TxInitialize(pError));
 
@@ -161,8 +158,6 @@ void ABC_Terminate()
         ABC_ClearKeyCache(NULL);
 
         ABC_URLTerminate();
-
-        ABC_FileIOTerminate();
 
         ABC_ExchangeClearCache();
 
