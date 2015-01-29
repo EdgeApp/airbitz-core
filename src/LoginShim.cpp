@@ -244,14 +244,14 @@ exit:
  * Logs in using the PIN-based mechanism.
  */
 tABC_CC ABC_LoginShimPinLogin(const char *szUserName,
-                              const char *szPIN,
+                              const char *szPin,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     std::lock_guard<std::mutex> lock(gLoginMutex);
     tABC_Login *pObject = NULL;
 
-    ABC_CHECK_RET(ABC_LoginPin(&pObject, szUserName, szPIN, pError));
+    ABC_CHECK_RET(ABC_LoginPin(&pObject, szUserName, szPin, pError));
     ABC_LoginCacheClear();
     gLoginCache = pObject;
 
@@ -266,7 +266,7 @@ exit:
  */
 tABC_CC ABC_LoginShimPinSetup(const char *szUserName,
                               const char *szPassword,
-                              const char *szPIN,
+                              const char *szPin,
                               time_t expires,
                               tABC_Error *pError)
 {
@@ -276,7 +276,7 @@ tABC_CC ABC_LoginShimPinSetup(const char *szUserName,
     // Load the account into the cache:
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
-    ABC_CHECK_RET(ABC_LoginPinSetup(gLoginCache, szPIN, expires, pError));
+    ABC_CHECK_RET(ABC_LoginPinSetup(gLoginCache, szPin, expires, pError));
 
 exit:
     return cc;

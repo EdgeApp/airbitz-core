@@ -20,7 +20,7 @@ namespace abcd {
  * @param szPassword                Password for the account (can be NULL for some requests)
  * @param szRecoveryQuestions       Recovery questions seperated by newlines (can be NULL for some requests)
  * @param szRecoveryAnswers         Recovery answers seperated by newlines (can be NULL for some requests)
- * @param szPIN                     PIN number for the account (can be NULL for some requests)
+ * @param szPin                     PIN number for the account (can be NULL for some requests)
  * @param szNewPassword             New password for the account (for change password requests)
  * @param fRequestCallback          The function that will be called when the account create process has finished.
  * @param pData                     Pointer to data to be returned back in callback
@@ -32,7 +32,7 @@ tABC_CC ABC_LoginRequestInfoAlloc(tABC_LoginRequestInfo **ppAccountRequestInfo,
                                     const char *szPassword,
                                     const char *szRecoveryQuestions,
                                     const char *szRecoveryAnswers,
-                                    const char *szPIN,
+                                    const char *szPin,
                                     const char *szNewPassword,
                                     tABC_Request_Callback fRequestCallback,
                                     void *pData,
@@ -66,9 +66,9 @@ tABC_CC ABC_LoginRequestInfoAlloc(tABC_LoginRequestInfo **ppAccountRequestInfo,
         ABC_STRDUP(pAccountRequestInfo->szRecoveryAnswers, szRecoveryAnswers);
     }
 
-    if (NULL != szPIN)
+    if (NULL != szPin)
     {
-        ABC_STRDUP(pAccountRequestInfo->szPIN, szPIN);
+        ABC_STRDUP(pAccountRequestInfo->szPin, szPin);
     }
 
     if (NULL != szNewPassword)
@@ -102,7 +102,7 @@ void ABC_LoginRequestInfoFree(tABC_LoginRequestInfo *pAccountRequestInfo)
 
         ABC_FREE_STR(pAccountRequestInfo->szRecoveryAnswers);
 
-        ABC_FREE_STR(pAccountRequestInfo->szPIN);
+        ABC_FREE_STR(pAccountRequestInfo->szPin);
 
         ABC_FREE_STR(pAccountRequestInfo->szNewPassword);
 
@@ -140,7 +140,7 @@ void *ABC_LoginRequestThreaded(void *pData)
 
             // hack to set pin:
             tABC_Error error;
-            ABC_SetPIN(pInfo->szUserName, pInfo->szPassword, pInfo->szPIN, &error);
+            ABC_SetPIN(pInfo->szUserName, pInfo->szPassword, pInfo->szPin, &error);
         }
         else if (ABC_RequestType_AccountSignIn == pInfo->requestType)
         {

@@ -236,14 +236,14 @@ exit:
  *
  * @param szUserName                UserName for the account
  * @param szPassword                Password for the account
- * @param szPIN                     PIN for the account
+ * @param szPin                     PIN for the account
  * @param fRequestCallback          The function that will be called when the account create process has finished.
  * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_CreateAccount(const char *szUserName,
                           const char *szPassword,
-                          const char *szPIN,
+                          const char *szPin,
                           tABC_Request_Callback fRequestCallback,
                           void *pData,
                           tABC_Error *pError)
@@ -258,8 +258,8 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) >= ABC_MIN_USERNAME_LENGTH, ABC_CC_Error, "Username too short");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(szPIN);
-    ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "PIN is too short");
+    ABC_CHECK_NULL(szPin);
+    ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "PIN is too short");
 
     if (fRequestCallback)
     {
@@ -271,7 +271,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
                                                   szPassword,
                                                   NULL, // recovery questions
                                                   NULL, // recovery answers
-                                                  szPIN,
+                                                  szPin,
                                                   NULL, // new password
                                                   fRequestCallback,
                                                   pData,
@@ -285,7 +285,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     else
     {
         ABC_CHECK_RET(ABC_LoginShimNewAccount(szUserName, szPassword, pError));
-        ABC_CHECK_RET(ABC_SetPIN(szUserName, szPassword, szPIN, pError));
+        ABC_CHECK_RET(ABC_SetPIN(szUserName, szPassword, szPin, pError));
     }
 
 exit:
@@ -533,13 +533,13 @@ exit:
  *
  * @param szUserName             UserName for the account
  * @param szPassword             Password for the account
- * @param pszPIN                 Pointer where to store allocated PIN string.
+ * @param pszPin                 Pointer where to store allocated PIN string.
  *                               This will be set to NULL if there is no PIN.
  * @param pError                 A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_GetPIN(const char *szUserName,
                    const char *szPassword,
-                   char **pszPIN,
+                   char **pszPin,
                    tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -552,15 +552,15 @@ tABC_CC ABC_GetPIN(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(pszPIN);
+    ABC_CHECK_NULL(pszPin);
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
 
-    *pszPIN = NULL;
+    *pszPin = NULL;
     if (pSettings->szPIN)
     {
-        ABC_STRDUP(*pszPIN, pSettings->szPIN);
+        ABC_STRDUP(*pszPin, pSettings->szPIN);
     }
 
 exit:
@@ -577,12 +577,12 @@ exit:
  *
  * @param szUserName            UserName for the account
  * @param szPassword            Password for the account
- * @param szPIN                 PIN string
+ * @param szPin                 PIN string
  * @param pError                A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_SetPIN(const char *szUserName,
                    const char *szPassword,
-                   const char *szPIN,
+                   const char *szPin,
                    tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -595,13 +595,13 @@ tABC_CC ABC_SetPIN(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPIN);
-    ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "Pin is too short");
+    ABC_CHECK_NULL(szPin);
+    ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "Pin is too short");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
     ABC_FREE_STR(pSettings->szPIN);
-    ABC_STRDUP(pSettings->szPIN, szPIN);
+    ABC_STRDUP(pSettings->szPIN, szPin);
     ABC_CHECK_RET(ABC_AccountSettingsSave(pKeys, pSettings, pError));
 
 exit:
@@ -857,7 +857,7 @@ exit:
  * Performs a PIN-based login for the given user.
  */
 tABC_CC ABC_PinLogin(const char *szUserName,
-                     const char *szPIN,
+                     const char *szPin,
                      tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -867,9 +867,9 @@ tABC_CC ABC_PinLogin(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPIN);
+    ABC_CHECK_NULL(szPin);
 
-    ABC_CHECK_RET(ABC_LoginShimPinLogin(szUserName, szPIN, pError));
+    ABC_CHECK_RET(ABC_LoginShimPinLogin(szUserName, szPin, pError));
 
 exit:
     return cc;

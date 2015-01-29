@@ -27,11 +27,11 @@ tABC_CC ABC_LoginPinDelete(const char *szUserName,
 
 tABC_CC ABC_LoginPin(tABC_Login **ppSelf,
                      const char *szUserName,
-                     const char *szPIN,
+                     const char *szPin,
                      tABC_Error *pError);
 
 tABC_CC ABC_LoginPinSetup(tABC_Login *pSelf,
-                          const char *szPIN,
+                          const char *szPin,
                           time_t expires,
                           tABC_Error *pError);
 

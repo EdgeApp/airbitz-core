@@ -41,7 +41,7 @@ typedef struct sABC_LoginRequestInfo
     char        *szRecoveryAnswers;
 
     /** account PIN for create account requests */
-    char        *szPIN;
+    char        *szPin;
 
     /** new password for password change request */
     char        *szNewPassword;
@@ -59,7 +59,7 @@ tABC_CC ABC_LoginRequestInfoAlloc(tABC_LoginRequestInfo **ppAccountRequestInfo,
                                     const char *szPassword,
                                     const char *szRecoveryQuestions,
                                     const char *szRecoveryAnswers,
-                                    const char *szPIN,
+                                    const char *szPin,
                                     const char *szNewPassword,
                                     tABC_Request_Callback fRequestCallback,
                                     void *pData,

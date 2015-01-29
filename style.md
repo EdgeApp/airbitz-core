@@ -17,6 +17,8 @@ The code should generally avoid `using` statements,
 so things should be spelled with their full names, such as `std::string`.
 
 Functions and variables should use the camelCase convention.
+Acronyms should be capitalized as normal words, like `getUrl` or `pinLogin`.
+
 Old C variable names tend to include prefixes, such as `paszWalletNames`.
 These prefixes should not appear in C++ code,
 since the type system is much stronger.
