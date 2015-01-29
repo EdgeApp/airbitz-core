@@ -5,6 +5,7 @@ source="https://github.com/Airbitz/libwallet.git#27d3940a"
 
 build() {
     autoreconf -i
+    cp build-aux/install-sh .
     ./configure --enable-static --disable-shared ${ENABLE_TESTNET:+--enable-testnet} --host=$cross --prefix=$install_dir
     make
     make install
