@@ -449,11 +449,10 @@ static
 tABC_CC ABC_ExchangeGet(const char *szUrl, tABC_U08Buf *pData, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCurlLock lock(gCurlMutex);
     CURL *pCurlHandle = NULL;
     CURLcode curlCode;
     long resCode;
-
-    ABC_CHECK_RET(ABC_URLMutexLock(pError));
 
     ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_SSL_VERIFYPEER, 1L)) == 0,
@@ -474,7 +473,6 @@ exit:
     if (pCurlHandle != NULL)
         curl_easy_cleanup(pCurlHandle);
 
-    ABC_CHECK_RET(ABC_URLMutexUnlock(pError));
     return cc;
 }
 
@@ -482,11 +480,10 @@ static
 tABC_CC ABC_ExchangeGetString(const char *szURL, char **pszResults, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCurlLock lock(gCurlMutex);
 
     AutoU08Buf Data;
 
-    ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(pszResults);
 
@@ -501,8 +498,6 @@ tABC_CC ABC_ExchangeGetString(const char *szURL, char **pszResults, tABC_Error *
     ABC_BUF_CLEAR(Data);
 
 exit:
-
-    ABC_CHECK_RET(ABC_URLMutexUnlock(pError));
     return cc;
 }
 
