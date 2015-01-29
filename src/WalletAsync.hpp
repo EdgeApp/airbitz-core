@@ -38,48 +38,48 @@
 
 #include "ABC.h"
 #include "../abcd/util/Sync.hpp"
-#include "../abcd/util/Util.hpp"
+#include "../abcd/util/U08Buf.hpp"
 
 namespace abcd {
 
-    /**
-     * AirBitz Core Create Wallet Structure
-     *
-     * This structure contains the detailed information associated
-     * with creating a new wallet.
-     *
-     */
-    typedef struct sABC_WalletCreateInfo
-    {
-        /** data pointer given by caller at initial create call time */
-        void                    *pData;
+/**
+ * AirBitz Core Create Wallet Structure
+ *
+ * This structure contains the detailed information associated
+ * with creating a new wallet.
+ *
+ */
+typedef struct sABC_WalletCreateInfo
+{
+    /** data pointer given by caller at initial create call time */
+    void                    *pData;
 
-        tABC_SyncKeys           *pKeys;
-        tABC_U08Buf             L1;
-        tABC_U08Buf             LP1;
-        char                    *szUserName;
+    tABC_SyncKeys           *pKeys;
+    tABC_U08Buf             L1;
+    tABC_U08Buf             LP1;
+    char                    *szUserName;
 
-        char                    *szWalletName;
-        int                     currencyNum;
-        unsigned int            attributes;
-        tABC_Request_Callback   fRequestCallback;
-    } tABC_WalletCreateInfo;
+    char                    *szWalletName;
+    int                     currencyNum;
+    unsigned int            attributes;
+    tABC_Request_Callback   fRequestCallback;
+} tABC_WalletCreateInfo;
 
-    tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
-                                      tABC_SyncKeys *pKeys,
-                                      tABC_U08Buf L1,
-                                      tABC_U08Buf LP1,
-                                      const char *szUserName,
-                                      const char *szWalletName,
-                                      int        currencyNum,
-                                      unsigned int  attributes,
-                                      tABC_Request_Callback fRequestCallback,
-                                      void *pData,
-                                      tABC_Error *pError);
+tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
+                                  tABC_SyncKeys *pKeys,
+                                  tABC_U08Buf L1,
+                                  tABC_U08Buf LP1,
+                                  const char *szUserName,
+                                  const char *szWalletName,
+                                  int        currencyNum,
+                                  unsigned int  attributes,
+                                  tABC_Request_Callback fRequestCallback,
+                                  void *pData,
+                                  tABC_Error *pError);
 
-    void ABC_WalletCreateInfoFree(tABC_WalletCreateInfo *pWalletCreateInfo);
+void ABC_WalletCreateInfoFree(tABC_WalletCreateInfo *pWalletCreateInfo);
 
-    void *ABC_WalletCreateThreaded(void *pData);
+void *ABC_WalletCreateThreaded(void *pData);
 
 } // namespace abcd
 

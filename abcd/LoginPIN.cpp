@@ -9,6 +9,8 @@
 #include "Login.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
+#include "util/Json.hpp"
+#include "util/Util.hpp"
 #include <jansson.h>
 
 namespace abcd {
@@ -159,12 +161,12 @@ tABC_CC ABC_LoginPin(tABC_Login **ppSelf,
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
     tABC_PinLocal       *pLocal         = NULL;
-    tABC_U08Buf         LPIN            = ABC_BUF_NULL;
-    tABC_U08Buf         LPIN1           = ABC_BUF_NULL;
-    tABC_U08Buf         LPIN2           = ABC_BUF_NULL;
-    tABC_U08Buf         PINK            = ABC_BUF_NULL;
     json_t              *pEPINK         = NULL;
     char *              szEPINK         = NULL;
+    AutoU08Buf          LPIN;
+    AutoU08Buf          LPIN1;
+    AutoU08Buf          LPIN2;
+    AutoU08Buf          PINK;
 
     // Allocate self:
     ABC_CHECK_RET(ABC_LoginNew(&pSelf, szUserName, pError));
@@ -200,10 +202,6 @@ exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
     ABC_LoginPinLocalFree(pLocal);
-    ABC_BUF_FREE(LPIN);
-    ABC_BUF_FREE(LPIN1);
-    ABC_BUF_FREE(LPIN2);
-    ABC_BUF_FREE(PINK);
     if (pEPINK)         json_decref(pEPINK);
     ABC_FREE_STR(szEPINK);
 
@@ -228,19 +226,19 @@ tABC_CC ABC_LoginPinSetup(tABC_Login *pSelf,
 
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
-    tABC_U08Buf         L1              = ABC_BUF_NULL;
-    tABC_U08Buf         LP1             = ABC_BUF_NULL;
-    tABC_U08Buf         LPIN            = ABC_BUF_NULL;
-    tABC_U08Buf         LPIN1           = ABC_BUF_NULL;
-    tABC_U08Buf         LPIN2           = ABC_BUF_NULL;
-    tABC_U08Buf         PINK            = ABC_BUF_NULL;
-    tABC_U08Buf         DID             = ABC_BUF_NULL;
     json_t              *pEMK_PINK      = NULL;
     json_t              *pEPINK         = NULL;
     json_t              *pLocal         = NULL;
     char *              szDID           = NULL;
     char *              szEPINK         = NULL;
     char *              szLocal         = NULL;
+    AutoU08Buf          L1;
+    AutoU08Buf          LP1;
+    AutoU08Buf          LPIN;
+    AutoU08Buf          LPIN1;
+    AutoU08Buf          LPIN2;
+    AutoU08Buf          PINK;
+    AutoU08Buf          DID;
 
     // Get login stuff:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->AccountNum, &pCarePackage, &pLoginPackage, pError));
@@ -280,13 +278,6 @@ tABC_CC ABC_LoginPinSetup(tABC_Login *pSelf,
 exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
-    ABC_BUF_FREE(L1);
-    ABC_BUF_FREE(LP1);
-    ABC_BUF_FREE(LPIN);
-    ABC_BUF_FREE(LPIN1);
-    ABC_BUF_FREE(LPIN2);
-    ABC_BUF_FREE(PINK);
-    ABC_BUF_FREE(DID);
     if (pEMK_PINK)      json_decref(pEMK_PINK);
     if (pEPINK)         json_decref(pEPINK);
     if (pLocal)         json_decref(pLocal);

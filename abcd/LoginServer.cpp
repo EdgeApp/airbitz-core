@@ -7,6 +7,7 @@
 
 #include "LoginServer.hpp"
 #include "ServerDefs.hpp"
+#include "util/Json.hpp"
 #include "util/URL.hpp"
 #include "util/Util.hpp"
 
@@ -252,8 +253,8 @@ tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szURL = NULL;
-    tABC_U08Buf LP1_NULL = ABC_BUF_NULL;
-    tABC_U08Buf LRA1 = ABC_BUF_NULL;
+    tABC_U08Buf LP1_NULL = ABC_BUF_NULL; // Do not free
+    tABC_U08Buf LRA1 = ABC_BUF_NULL; // Do not free
     char *szCarePackage = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
@@ -597,8 +598,8 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     void *aWatchData      = NULL;
     char *szWatchData_Hex = NULL;
     json_t *pJSON_Root    = NULL;
-    tABC_U08Buf LogData   = ABC_BUF_NULL;
-    tABC_U08Buf WatchData = ABC_BUF_NULL;
+    tABC_U08Buf LogData   = ABC_BUF_NULL; // Do not free
+    tABC_U08Buf WatchData = ABC_BUF_NULL; // Do not free
     size_t watcherSize    = 0;
     unsigned int nCount   = 0;
     tABC_WalletInfo **paWalletInfo = NULL;

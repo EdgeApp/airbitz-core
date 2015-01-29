@@ -38,52 +38,69 @@
 
 #include "../src/ABC.h"
 #include "util/Sync.hpp"
+#include <stddef.h>
 
 namespace abcd {
 
-    /**
-     * AirBitz Exchange Info Structure
-     */
-    typedef struct sABC_ExchangeInfo
-    {
-        /** Access to the account settings */
-        tABC_SyncKeys         *pKeys;
-        /** The currency to request or update **/
-        int                   currencyNum;
-        /** Callback fired after a update **/
-        tABC_Request_Callback fRequestCallback;
-        /** Data to return with the callback **/
-        void                  *pData;
-    } tABC_ExchangeInfo;
+#define CURRENCY_NUM_AUD                 36
+#define CURRENCY_NUM_CAD                124
+#define CURRENCY_NUM_CNY                156
+#define CURRENCY_NUM_CUP                192
+#define CURRENCY_NUM_HKD                344
+#define CURRENCY_NUM_MXN                484
+#define CURRENCY_NUM_NZD                554
+#define CURRENCY_NUM_PHP                608
+#define CURRENCY_NUM_GBP                826
+#define CURRENCY_NUM_USD                840
+#define CURRENCY_NUM_EUR                978
 
-    /**
-     * AirBitz default exchange info
-     */
-    typedef struct sABC_ExchangeDefaults {
-        int currencyNum;
-        const char *szDefaultExchange;
-    } tABC_ExchangeDefaults;
+#define ABC_BITSTAMP "Bitstamp"
+#define ABC_COINBASE "Coinbase"
+#define ABC_BNC      "BraveNewCoin"
 
-    // Default Exchange array
-    extern const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[];
-    extern const size_t EXCHANGE_DEFAULTS_SIZE;
+/**
+ * AirBitz Exchange Info Structure
+ */
+typedef struct sABC_ExchangeInfo
+{
+    /** Access to the account settings */
+    tABC_SyncKeys         *pKeys;
+    /** The currency to request or update **/
+    int                   currencyNum;
+    /** Callback fired after a update **/
+    tABC_Request_Callback fRequestCallback;
+    /** Data to return with the callback **/
+    void                  *pData;
+} tABC_ExchangeInfo;
 
-    tABC_CC ABC_ExchangeInitialize(tABC_Error                   *pError);
+/**
+ * AirBitz default exchange info
+ */
+typedef struct sABC_ExchangeDefaults {
+    int currencyNum;
+    const char *szDefaultExchange;
+} tABC_ExchangeDefaults;
 
-    tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
-                                    int currencyNum, double *pRate, tABC_Error *pError);
+// Default Exchange array
+extern const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[];
+extern const size_t EXCHANGE_DEFAULTS_SIZE;
 
-    tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
+tABC_CC ABC_ExchangeInitialize(tABC_Error                   *pError);
 
-    void *ABC_ExchangeUpdateThreaded(void *pData);
+tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
+                                int currencyNum, double *pRate, tABC_Error *pError);
 
-    void ABC_ExchangeTerminate();
+tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
 
-    tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
-                              int currencyNum,
-                              tABC_Request_Callback fRequestCallback, void *pData,
-                              tABC_ExchangeInfo **ppInfo, tABC_Error *pError);
-    void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo);
+void *ABC_ExchangeUpdateThreaded(void *pData);
+
+void ABC_ExchangeTerminate();
+
+tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
+                          int currencyNum,
+                          tABC_Request_Callback fRequestCallback, void *pData,
+                          tABC_ExchangeInfo **ppInfo, tABC_Error *pError);
+void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo);
 
 } // namespace abcd
 

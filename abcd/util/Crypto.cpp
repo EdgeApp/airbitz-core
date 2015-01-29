@@ -32,6 +32,7 @@
 #include "Crypto.hpp"
 #include "Debug.hpp"
 #include "FileIO.hpp"
+#include "Json.hpp"
 #include "Util.hpp"
 #include "../Bridge.hpp"
 #include <stdio.h>
@@ -134,7 +135,7 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
     struct timeval timerStart;
     struct timeval timerEnd;
     int totalTime;
-    tABC_U08Buf Salt;
+    tABC_U08Buf Salt; // Do not free
 
     ABC_DebugLog("%s called", __FUNCTION__);
 
@@ -214,14 +215,12 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     clock_t clockVal;
     pid_t pid;
 
-    tABC_U08Buf NewSeed = ABC_BUF_NULL;
+    AutoU08Buf NewSeed;
 
     ABC_CHECK_NULL_BUF(Seed);
 
     // create our own copy so we can add to it
     ABC_BUF_DUP(NewSeed, Seed);
-
-    //ABC_DEBUG(ABC_UtilHexDumpBuf("ABC Starting Random Seed", NewSeed));
 
     // mix in some info on our file system
 #ifndef __ANDROID__
@@ -264,14 +263,11 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
 
     // TODO: add more random seed data here
 
-    //ABC_DEBUG(ABC_UtilHexDumpBuf("ABC Final Random Seed", NewSeed));
-
     // seed it
     RAND_seed(ABC_BUF_PTR(NewSeed), ABC_BUF_SIZE(NewSeed));
 
 exit:
     ABC_FREE_STR(szFileIORootDir);
-    ABC_BUF_FREE(NewSeed);
 
     return cc;
 }
@@ -315,10 +311,10 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf     GenKey          = ABC_BUF_NULL;
-    tABC_U08Buf     Salt            = ABC_BUF_NULL;
-    tABC_U08Buf     EncData         = ABC_BUF_NULL;
-    tABC_U08Buf     IV              = ABC_BUF_NULL;
+    AutoU08Buf     GenKey;
+    AutoU08Buf     Salt;
+    AutoU08Buf     EncData;
+    AutoU08Buf     IV;
     char            *szSalt_Hex     = NULL;
     char            *szIV_Hex       = NULL;
     char            *szDataBase64   = NULL;
@@ -398,10 +394,6 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
     }
 
 exit:
-    ABC_BUF_FREE(GenKey);
-    ABC_BUF_FREE(Salt);
-    ABC_BUF_FREE(EncData);
-    ABC_BUF_FREE(IV);
     ABC_FREE_STR(szSalt_Hex);
     ABC_FREE_STR(szIV_Hex);
     ABC_FREE_STR(szDataBase64);
@@ -454,7 +446,7 @@ tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     char *szJSON = NULL;
-    tABC_U08Buf Data = ABC_BUF_NULL;
+    tABC_U08Buf Data = ABC_BUF_NULL; // Do not free
 
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(szFilename);
@@ -515,10 +507,9 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf     EncData = ABC_BUF_NULL;
-    tABC_U08Buf     IV      = ABC_BUF_NULL;
-    tABC_U08Buf     GenKey  = ABC_BUF_NULL;
-    tABC_U08Buf     Salt    = ABC_BUF_NULL;
+    AutoU08Buf     EncData;
+    AutoU08Buf     IV;
+    AutoU08Buf     GenKey;
     tABC_CryptoSNRP *pSNRP  = NULL;
 
     int type;
@@ -567,10 +558,6 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(EncData, *pFinalKey, IV, pData, pError));
 
 exit:
-    ABC_BUF_FREE(IV);
-    ABC_BUF_FREE(EncData);
-    ABC_BUF_FREE(GenKey);
-    ABC_BUF_FREE(Salt);
     ABC_CryptoFreeSNRP(&pSNRP);
 
     return cc;
@@ -620,7 +607,7 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     json_error_t error;
-    tABC_U08Buf Data = ABC_BUF_NULL;
+    AutoU08Buf Data;
     json_t *pJSON_Root = NULL;
     char *szData_JSON = NULL;
 
@@ -646,7 +633,6 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
     pJSON_Root = NULL; // so we don't decref it
 
 exit:
-    ABC_BUF_FREE(Data);
     if (pJSON_Root) json_decref(pJSON_Root);
 
     return cc;
@@ -673,10 +659,9 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf RandCount = ABC_BUF_NULL;
-    tABC_U08Buf RandHeaderBytes = ABC_BUF_NULL;
-    tABC_U08Buf RandFooterBytes = ABC_BUF_NULL;
-    tABC_U08Buf UnencryptedData = ABC_BUF_NULL;
+    AutoU08Buf RandHeaderBytes;
+    AutoU08Buf RandFooterBytes;
+    AutoU08Buf UnencryptedData;
     unsigned char nRandomHeaderBytes;
     unsigned char nRandomFooterBytes;
     unsigned long totalSizeUnencrypted = 0;
@@ -693,20 +678,22 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(AES_256_IV_LENGTH, pIV, pError));
 
     // create a random number of header bytes 0-255
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(1, &RandCount, pError));
-    nRandomHeaderBytes = *(RandCount.p);
-    ABC_BUF_FREE(RandCount);
+    {
+        AutoU08Buf RandCount;
+        ABC_CHECK_RET(ABC_CryptoCreateRandomData(1, &RandCount, pError));
+        nRandomHeaderBytes = *(RandCount.p);
+    }
     //printf("rand header count: %d\n", nRandomHeaderBytes);
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(nRandomHeaderBytes, &RandHeaderBytes, pError));
-    //ABC_UtilHexDumpBuf("Rand Header Bytes", RandHeaderBytes);
 
     // create a random number of footer bytes 0-255
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(1, &RandCount, pError));
-    nRandomFooterBytes = *(RandCount.p);
-    ABC_BUF_FREE(RandCount);
+    {
+        AutoU08Buf RandCount;
+        ABC_CHECK_RET(ABC_CryptoCreateRandomData(1, &RandCount, pError));
+        nRandomFooterBytes = *(RandCount.p);
+    }
     //printf("rand footer count: %d\n", nRandomFooterBytes);
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(nRandomFooterBytes, &RandFooterBytes, pError));
-    //ABC_UtilHexDumpBuf("Rand Footer Bytes", RandFooterBytes);
 
     // calculate the size of our unencrypted buffer
     totalSizeUnencrypted += 1; // header count
@@ -759,25 +746,11 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     sc_SHA256_Final(sha256Output, &sha256Context);
     memcpy(pCurUnencryptedData, sha256Output, SHA_256_LENGTH);
     pCurUnencryptedData += SHA_256_LENGTH;
-    //ABC_UtilHexDump("SHA_256", sha256Output,  SHA_256_LENGTH);
-
-    //ABC_UtilHexDumpBuf("Unencrypted data", UnencryptedData);
-
-    //ABC_UtilHexDumpBuf("IV", *pIV);
-
-    //ABC_UtilHexDumpBuf("Key", Key);
 
     // encrypted our new unencrypted package
     ABC_CHECK_RET(ABC_CryptoEncryptAES256(UnencryptedData, Key, *pIV, pEncData, pError));
 
-    //ABC_UtilHexDumpBuf("Encrypted data", *pEncData);
-
 exit:
-    ABC_BUF_FREE(RandCount);
-    ABC_BUF_FREE(RandHeaderBytes);
-    ABC_BUF_FREE(RandFooterBytes);
-    ABC_BUF_FREE(UnencryptedData);
-
     return cc;
 }
 
@@ -804,7 +777,7 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf Data = ABC_BUF_NULL;
+    AutoU08Buf Data;
     unsigned char headerLength;
     unsigned int minSize;
     unsigned char *pDataLengthPos;
@@ -882,8 +855,6 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     memcpy(ABC_BUF_PTR(*pData), pFinalDataPos, dataSecLength);
 
 exit:
-    ABC_BUF_FREE(Data);
-
     return cc;
 }
 
@@ -929,9 +900,6 @@ tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
         IVLength = AES_256_IV_LENGTH;
     }
     memcpy(aIV, ABC_BUF_PTR(IV), IVLength);
-
-    //ABC_UtilHexDump("Key", aKey, AES_256_KEY_LENGTH);
-    //ABC_UtilHexDump("IV", aIV, AES_256_IV_LENGTH);
 
     // init our cipher text struct
     EVP_CIPHER_CTX e_ctx;
@@ -1246,12 +1214,12 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
 
     unsigned char *pData = NULL;
     char *szUUID = NULL;
+    AutoU08Buf Data;
 
     ABC_CHECK_NULL(pszUUID);
 
     ABC_STR_NEW(szUUID, UUID_STR_LENGTH + 1);
 
-    tABC_U08Buf Data;
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(UUID_BYTE_COUNT, &Data, pError));
     pData = ABC_BUF_PTR(Data);
 
@@ -1269,8 +1237,6 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
     *pszUUID = szUUID;
 
 exit:
-    ABC_BUF_FREE(Data);
-
     return cc;
 }
 
@@ -1287,7 +1253,7 @@ tABC_CC ABC_CryptoScryptS1(const tABC_U08Buf Data,
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL(pScryptData);
 
-    tABC_U08Buf Salt;
+    tABC_U08Buf Salt; // Do not free
     if (gbIsTestNet)
     {
         ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1));
@@ -1381,7 +1347,7 @@ tABC_CC ABC_CryptoCreateSNRPForClient(tABC_CryptoSNRP   **ppSNRP,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf Salt = ABC_BUF_NULL;
+    AutoU08Buf Salt;
 
     ABC_CHECK_NULL(ppSNRP);
 
@@ -1395,8 +1361,6 @@ tABC_CC ABC_CryptoCreateSNRPForClient(tABC_CryptoSNRP   **ppSNRP,
                                        ppSNRP,
                                        pError));
 exit:
-    ABC_BUF_FREE(Salt);
-
     return cc;
 }
 
@@ -1410,7 +1374,7 @@ tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf Salt = ABC_BUF_NULL;
+    tABC_U08Buf Salt = ABC_BUF_NULL; // Do not free
 
     ABC_CHECK_NULL(ppSNRP);
 
@@ -1423,7 +1387,6 @@ tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
     {
         ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
     }
-    //ABC_UtilHexDumpBuf("Salt", Salt);
 
     ABC_CHECK_RET(ABC_CryptoCreateSNRP(Salt,
                                        SCRYPT_DEFAULT_SERVER_N,
@@ -1510,7 +1473,7 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf Salt = ABC_BUF_NULL;
+    AutoU08Buf Salt;
     tABC_CryptoSNRP *pSNRP = NULL;
     const char *szSaltHex = NULL;
     unsigned long N, r, p;
@@ -1553,8 +1516,6 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
     *ppSNRP = pSNRP;
 
 exit:
-    ABC_BUF_FREE(Salt);
-
     return cc;
 }
 

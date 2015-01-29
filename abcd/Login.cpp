@@ -10,6 +10,7 @@
 #include "LoginServer.hpp"
 #include "Account.hpp"
 #include "util/Crypto.hpp"
+#include "util/Util.hpp"
 #include <ctype.h>
 
 namespace abcd {
@@ -42,7 +43,7 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_U08Buf L = ABC_BUF_NULL;
+    tABC_U08Buf L = ABC_BUF_NULL; // Do not free
     tABC_CryptoSNRP *pSNRP0 = NULL;
     tABC_Login *pSelf = NULL;
     ABC_NEW(pSelf, tABC_Login);
@@ -81,12 +82,12 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_Login          *pSelf          = NULL;
-    tABC_U08Buf         SyncKey         = ABC_BUF_NULL;
-    tABC_U08Buf         LP              = ABC_BUF_NULL;
-    tABC_U08Buf         LP1             = ABC_BUF_NULL;
-    tABC_U08Buf         LP2             = ABC_BUF_NULL;
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
+    AutoU08Buf           SyncKey;
+    AutoU08Buf           LP;
+    AutoU08Buf           LP1;
+    AutoU08Buf           LP2;
 
     // Allocate self:
     ABC_CHECK_RET(ABC_LoginNew(&pSelf, szUserName, pError));
@@ -136,10 +137,6 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
 
 exit:
     ABC_LoginFree(pSelf);
-    ABC_BUF_FREE(SyncKey);
-    ABC_BUF_FREE(LP);
-    ABC_BUF_FREE(LP1);
-    ABC_BUF_FREE(LP2);
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
     return cc;
@@ -178,18 +175,17 @@ tABC_CC ABC_LoginGetSyncKeys(tABC_Login *pSelf,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_SyncKeys *pKeys = NULL;
+    AutoSyncKeys pKeys;
 
-    ABC_NEW(pKeys, tABC_SyncKeys);
+    ABC_NEW(pKeys.get(), tABC_SyncKeys);
     ABC_CHECK_RET(ABC_LoginDirGetSyncDir(pSelf->AccountNum, &pKeys->szSyncDir, pError));
     ABC_BUF_DUP(pKeys->MK, pSelf->MK);
     ABC_STRDUP(pKeys->szSyncKey, pSelf->szSyncKey);
 
     *ppKeys = pKeys;
-    pKeys = NULL;
+    pKeys.get() = NULL;
 
 exit:
-    if (pKeys)          ABC_SyncFreeKeys(pKeys);
     return cc;
 }
 

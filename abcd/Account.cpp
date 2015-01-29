@@ -9,6 +9,7 @@
 #include "Exchanges.hpp"
 #include "util/Crypto.hpp"
 #include "util/FileIO.hpp"
+#include "util/Json.hpp"
 #include "util/Mutex.hpp"
 #include "util/Util.hpp"
 
@@ -72,7 +73,7 @@ tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
 
     char *szFilename = NULL;
-    tABC_U08Buf data = ABC_BUF_NULL;
+    AutoU08Buf data;
 
     *paszCategories = NULL;
     *pCount = 0;
@@ -91,7 +92,6 @@ tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
     }
 
 exit:
-    ABC_BUF_FREE(data);
     ABC_FREE_STR(szFilename);
 
     return cc;
@@ -107,33 +107,26 @@ tABC_CC ABC_AccountCategoriesAdd(tABC_SyncKeys *pKeys,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char **aszCategories = NULL;
-    unsigned int categoryCount = 0;
-
-    ABC_CHECK_NULL(szCategory);
+    AutoStringArray categories;
 
     // load the current categories
-    ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &aszCategories, &categoryCount, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &categories.data, &categories.size, pError));
 
     // if there are categories
-    if ((aszCategories != NULL) && (categoryCount > 0))
+    if (categories.data)
     {
-        ABC_ARRAY_RESIZE(aszCategories, categoryCount + 1, char*);
+        ABC_ARRAY_RESIZE(categories.data, categories.size + 1, char*);
     }
     else
     {
-        ABC_ARRAY_NEW(aszCategories, 1, char*);
-        categoryCount = 0;
+        ABC_ARRAY_NEW(categories.data, 1, char*);
     }
-    ABC_STRDUP(aszCategories[categoryCount], szCategory);
-    categoryCount++;
+    ABC_STRDUP(categories.data[categories.size++], szCategory);
 
     // save out the categories
-    ABC_CHECK_RET(ABC_AccountCategoriesSave(pKeys, aszCategories, categoryCount, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesSave(pKeys, categories.data, categories.size, pError));
 
 exit:
-    ABC_UtilFreeStringArray(aszCategories, categoryCount);
-
     return cc;
 }
 
@@ -148,44 +141,35 @@ tABC_CC ABC_AccountCategoriesRemove(tABC_SyncKeys *pKeys,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char **aszCategories = NULL;
-    unsigned int categoryCount = 0;
-    char **aszNewCategories = NULL;
-    unsigned int newCategoryCount = 0;
-
-    ABC_CHECK_NULL(szCategory);
+    AutoStringArray oldCat;
+    AutoStringArray newCat;
 
     // load the current categories
-    ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &aszCategories, &categoryCount, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &oldCat.data, &oldCat.size, pError));
 
     // got through all the categories and only add ones that are not this one
-    for (unsigned i = 0; i < categoryCount; i++)
+    for (unsigned i = 0; i < oldCat.size; i++)
     {
         // if this is not the string we are looking to remove then add it to our new arrary
-        if (0 != strcmp(aszCategories[i], szCategory))
+        if (0 != strcmp(oldCat.data[i], szCategory))
         {
             // if there are categories
-            if ((aszNewCategories != NULL) && (newCategoryCount > 0))
+            if (newCat.data)
             {
-                ABC_ARRAY_RESIZE(aszNewCategories, newCategoryCount + 1, char*);
+                ABC_ARRAY_RESIZE(newCat.data, newCat.size + 1, char*);
             }
             else
             {
-                ABC_ARRAY_NEW(aszNewCategories, 1, char*);
-                newCategoryCount = 0;
+                ABC_ARRAY_NEW(newCat.data, 1, char*);
             }
-            ABC_STRDUP(aszNewCategories[newCategoryCount], aszCategories[i]);
-            newCategoryCount++;
+            ABC_STRDUP(newCat.data[newCat.size++], oldCat.data[i]);
         }
     }
 
     // save out the new categories
-    ABC_CHECK_RET(ABC_AccountCategoriesSave(pKeys, aszNewCategories, newCategoryCount, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesSave(pKeys, newCat.data, newCat.size, pError));
 
 exit:
-    ABC_UtilFreeStringArray(aszCategories, categoryCount);
-    ABC_UtilFreeStringArray(aszNewCategories, newCategoryCount);
-
     return cc;
 }
 
@@ -623,7 +607,12 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     ABC_CHECK_RET(ABC_AccountMutexLock(pError));
     ABC_CHECK_NULL(pSettings);
 
-    ABC_CHECK_NUMERIC(pSettings->szPIN, ABC_CC_NonNumericPin, "The pin must be numeric.");
+    if (pSettings->szPIN)
+    {
+        char *endstr = NULL;
+        strtol(pSettings->szPIN, &endstr, 10);
+        ABC_CHECK_ASSERT(*endstr == '\0', ABC_CC_NonNumericPin, "The pin must be numeric.");
+    }
 
     // create the json for the settings
     pJSON_Root = json_object();
@@ -1098,23 +1087,18 @@ tABC_CC ABC_AccountWalletReorder(tABC_SyncKeys *pKeys,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_RET(ABC_AccountMutexLock(pError));
 
-    tABC_AccountWalletInfo info;
-    memset(&info, 0, sizeof(tABC_AccountWalletInfo));
-
     for (unsigned i = 0; i < count; ++i)
     {
+        AutoAccountWalletInfo info;
         ABC_CHECK_RET(ABC_AccountWalletLoad(pKeys, aszUUID[i], &info, pError));
         if (info.sortIndex != i)
         {
             info.sortIndex = i;
             ABC_CHECK_RET(ABC_AccountWalletSave(pKeys, &info, pError));
         }
-        ABC_AccountWalletInfoFree(&info);
     }
 
 exit:
-    ABC_AccountWalletInfoFree(&info);
-
     ABC_AccountMutexUnlock(NULL);
     return cc;
 }

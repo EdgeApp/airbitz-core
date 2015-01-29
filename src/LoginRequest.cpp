@@ -7,6 +7,7 @@
 
 #include "LoginRequest.hpp"
 #include "LoginShim.hpp"
+#include "../abcd/util/Util.hpp"
 
 namespace abcd {
 

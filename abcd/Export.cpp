@@ -6,6 +6,7 @@
  */
 
 #include "Export.hpp"
+#include "util/U08Buf.hpp"
 #include "util/Util.hpp"
 #include "csv.h"
 #include <stdio.h>
@@ -305,7 +306,7 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
     tABC_CC cc = ABC_CC_Ok;
 
     char *szCurrRec;
-    tABC_U08Buf buff = ABC_BUF_NULL;
+    AutoU08Buf buff;
 
     ABC_BUF_NEW(buff, ABC_CSV_MAX_REC_SZ);
 
@@ -324,7 +325,6 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
     ABC_BUF_CLEAR(buff);
 
 exit:
-    ABC_BUF_FREE(buff);
     return cc;
 }
 
