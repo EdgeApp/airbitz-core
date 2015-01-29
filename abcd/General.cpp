@@ -14,7 +14,7 @@
  */
 
 #include "General.hpp"
-#include "ServerDefs.hpp"
+#include "login/ServerDefs.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"
 #include "util/Json.hpp"

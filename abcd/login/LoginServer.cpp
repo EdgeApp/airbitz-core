@@ -7,14 +7,14 @@
 
 #include "LoginServer.hpp"
 #include "ServerDefs.hpp"
-#include "util/Json.hpp"
-#include "util/URL.hpp"
-#include "util/Util.hpp"
+#include "../util/Json.hpp"
+#include "../util/URL.hpp"
+#include "../util/Util.hpp"
 
 // For debug upload:
-#include "Bridge.hpp"
-#include "util/Crypto.hpp"
-#include "util/FileIO.hpp"
+#include "../Bridge.hpp"
+#include "../util/Crypto.hpp"
+#include "../util/FileIO.hpp"
 
 namespace abcd {
 

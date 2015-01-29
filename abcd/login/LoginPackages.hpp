@@ -12,8 +12,8 @@
 #ifndef ABC_LoginPackage_h
 #define ABC_LoginPackage_h
 
-#include "../src/ABC.h"
-#include "util/Crypto.hpp"
+#include "../util/Crypto.hpp"
+#include "../../src/ABC.h"
 #include <jansson.h>
 
 namespace abcd {

@@ -12,10 +12,10 @@
 #ifndef ABC_LoginServer_h
 #define ABC_LoginServer_h
 
-#include "../src/ABC.h"
 #include "LoginPackages.hpp"
-#include "util/Sync.hpp"
-#include "util/U08Buf.hpp"
+#include "../util/Sync.hpp"
+#include "../util/U08Buf.hpp"
+#include "../../src/ABC.h"
 #include <time.h>
 
 namespace abcd {

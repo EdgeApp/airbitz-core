@@ -6,10 +6,9 @@
  */
 
 #include "LoginRecovery.hpp"
-#include "Login.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "util/Util.hpp"
+#include "../util/Util.hpp"
 
 namespace abcd {
 

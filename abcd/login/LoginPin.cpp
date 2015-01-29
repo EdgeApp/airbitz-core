@@ -5,12 +5,11 @@
  * See the LICENSE file for more information.
  */
 
-#include "LoginPIN.hpp"
-#include "Login.hpp"
+#include "LoginPin.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "util/Json.hpp"
-#include "util/Util.hpp"
+#include "../util/Json.hpp"
+#include "../util/Util.hpp"
 #include <jansson.h>
 
 namespace abcd {

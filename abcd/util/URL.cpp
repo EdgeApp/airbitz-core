@@ -34,7 +34,8 @@
 #include "FileIO.hpp"
 #include "Pin.hpp"
 #include "Util.hpp"
-#include "../ServerDefs.hpp"
+#include "../config.h"
+#include "../login/ServerDefs.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <curl/curl.h>

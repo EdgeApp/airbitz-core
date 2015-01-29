@@ -6,14 +6,14 @@
  */
 
 #include "LoginShim.hpp"
-#include "../abcd/Login.hpp"
-#include "../abcd/LoginDir.hpp"
-#include "../abcd/LoginPassword.hpp"
-#include "../abcd/LoginPIN.hpp"
-#include "../abcd/LoginRecovery.hpp"
-#include "../abcd/LoginServer.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Wallet.hpp"
+#include "../abcd/login/Login.hpp"
+#include "../abcd/login/LoginDir.hpp"
+#include "../abcd/login/LoginPassword.hpp"
+#include "../abcd/login/LoginPin.hpp"
+#include "../abcd/login/LoginRecovery.hpp"
+#include "../abcd/login/LoginServer.hpp"
 #include "../abcd/util/Util.hpp"
 #include <mutex>
 
