@@ -29,6 +29,16 @@ static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U0
 static tABC_CC checkResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError);
 
 /**
+ * Creates an git repo on the server.
+ *
+ * @param L1   Login hash for the account
+ * @param LP1  Password hash for the account
+ */
+static
+tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1, tABC_U08Buf LP1,
+    const char *szWalletAcctKey, const char *szPath, tABC_Error *pError);
+
+/**
  * Creates an account on the server.
  *
  * This function sends information to the server to create an account.
@@ -511,13 +521,23 @@ exit:
     return cc;
 }
 
+Status
+LoginServerWalletCreate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey)
+{
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(L1, LP1, syncKey,
+        ABC_SERVER_WALLET_CREATE_PATH, &error));
+    return Status();
+}
 
-/**
- * Creates an git repo on the server.
- *
- * @param L1   Login hash for the account
- * @param LP1  Password hash for the account
- */
+Status
+LoginServerWalletActivate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey)
+{
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(L1, LP1, syncKey,
+        ABC_SERVER_WALLET_ACTIVATE_PATH, &error));
+    return Status();
+}
+
+static
 tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
                                  tABC_U08Buf LP1,
                                  const char *szWalletAcctKey,

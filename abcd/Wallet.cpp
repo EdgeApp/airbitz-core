@@ -33,7 +33,6 @@
 #include "Tx.hpp"
 #include "Account.hpp"
 #include "Bridge.hpp"
-#include "login/ServerDefs.hpp"
 #include "login/LoginServer.hpp"
 #include "util/Crypto.hpp"
 #include "util/FileIO.hpp"
@@ -212,8 +211,7 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
     ABC_CHECK_RET(ABC_WalletSetCurrencyNum(ABC_WalletID(pKeys, szUUID), currencyNum, pError));
 
     // Request remote wallet repo
-    ABC_CHECK_RET(ABC_WalletServerRepoPost(L1, LP1, pData->szWalletAcctKey,
-                                           ABC_SERVER_WALLET_CREATE_PATH, pError));
+    ABC_CHECK_NEW(LoginServerWalletCreate(L1, LP1, pData->szWalletAcctKey), pError);
 
     // set this account for the wallet's first account
     ABC_CHECK_RET(ABC_WalletAddAccount(ABC_WalletID(pKeys, szUUID), szUserName, pError));
@@ -226,8 +224,7 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
     ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, &dirty, pError));
 
     // Actiate the remote wallet
-    ABC_CHECK_RET(ABC_WalletServerRepoPost(L1, LP1, pData->szWalletAcctKey,
-                                           ABC_SERVER_WALLET_ACTIVATE_PATH, pError));
+    ABC_CHECK_NEW(LoginServerWalletActivate(L1, LP1, pData->szWalletAcctKey), pError);
 
     // If everything worked, add the wallet to the account:
     tABC_AccountWalletInfo info; // No need to free this

@@ -13,6 +13,7 @@
 #define ABC_LoginServer_h
 
 #include "LoginPackages.hpp"
+#include "../util/Status.hpp"
 #include "../util/Sync.hpp"
 #include "../util/U08Buf.hpp"
 #include "../../src/ABC.h"
@@ -61,12 +62,17 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
                                         char *szPinPackage,
                                         time_t ali,
                                         tABC_Error *pError);
+/**
+ * Create a git repository on the server, suitable for holding a wallet.
+ */
+Status
+LoginServerWalletCreate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey);
 
-tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
-                                 tABC_U08Buf LP1,
-                                 const char *szWalletAcctKey,
-                                 const char *szPath,
-                                 tABC_Error *pError);
+/**
+ * Lock the server wallet repository, so it is not automatically deleted.
+ */
+Status
+LoginServerWalletActivate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey);
 
 tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
                                   tABC_U08Buf LP1,
