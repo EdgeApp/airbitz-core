@@ -17,18 +17,16 @@
 
 namespace abcd {
 
-class Lobby;
-
 tABC_CC ABC_LoginGetRQ(Lobby &lobby,
                        char **pszRecoveryQuestions,
                        tABC_Error *pError);
 
-tABC_CC ABC_LoginRecovery(tABC_Login **ppSelf,
-                          const char *szUserName,
+tABC_CC ABC_LoginRecovery(Login *&result,
+                          Lobby *lobby,
                           const char *szRecoveryAnswers,
                           tABC_Error *pError);
 
-tABC_CC ABC_LoginRecoverySet(tABC_Login *pSelf,
+tABC_CC ABC_LoginRecoverySet(Login &login,
                              const char *szRecoveryQuestions,
                              const char *szRecoveryAnswers,
                              tABC_Error *pError);

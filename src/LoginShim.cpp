@@ -73,8 +73,8 @@ cacheLogin(const char *szUserName, const char *szPassword)
         if (!szPassword)
             return ABC_ERROR(ABC_CC_NULLPtr, "Not logged in");
 
-        ABC_CHECK_OLD(ABC_LoginPassword(&gLoginCache, szUserName, szPassword, &error));
-        ABC_CHECK_OLD(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->szSyncKey, &error));
+        ABC_CHECK_OLD(ABC_LoginPassword(gLoginCache, gLobbyCache, szPassword, &error));
+        ABC_CHECK_OLD(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->syncKey().c_str(), &error));
     }
 
     return Status();
@@ -119,8 +119,8 @@ tABC_CC ABC_LoginShimNewAccount(const char *szUserName,
 
     cacheClear();
     ABC_CHECK_NEW(cacheLobby(szUserName), pError);
-    ABC_CHECK_RET(ABC_LoginCreate(szUserName, szPassword, &gLoginCache, pError));
-    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->szSyncKey, pError));
+    ABC_CHECK_RET(ABC_LoginCreate(gLoginCache, gLobbyCache, szPassword, pError));
+    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->syncKey().c_str(), pError));
 
     // Take this non-blocking opportunity to update the general info:
     ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
@@ -151,7 +151,7 @@ tABC_CC ABC_LoginShimSetRecovery(const char *szUserName,
     ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
 
     // Do the change:
-    ABC_CHECK_RET(ABC_LoginRecoverySet(gLoginCache,
+    ABC_CHECK_RET(ABC_LoginRecoverySet(*gLoginCache,
         szRecoveryQuestions, szRecoveryAnswers, pError));
 
 exit:
@@ -183,16 +183,16 @@ tABC_CC ABC_LoginShimSetPassword(const char *szUserName,
     {
         if (szPassword)
         {
-            ABC_CHECK_RET(ABC_LoginPassword(&gLoginCache, szUserName, szPassword, pError));
+            ABC_CHECK_RET(ABC_LoginPassword(gLoginCache, gLobbyCache, szPassword, pError));
         }
         else
         {
-            ABC_CHECK_RET(ABC_LoginRecovery(&gLoginCache, szUserName, szRecoveryAnswers, pError));
+            ABC_CHECK_RET(ABC_LoginRecovery(gLoginCache, gLobbyCache, szRecoveryAnswers, pError));
         }
-        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->szSyncKey, pError));
+        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->syncKey().c_str(), pError));
     }
 
-    ABC_CHECK_RET(ABC_LoginPasswordSet(gLoginCache, szNewPassword, pError));
+    ABC_CHECK_RET(ABC_LoginPasswordSet(*gLoginCache, szNewPassword, pError));
     ABC_WalletClearCache();
 
 exit:
@@ -213,7 +213,7 @@ tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
     Login *login = nullptr;
 
     ABC_CHECK_NEW(cacheLobby(szUserName), pError);
-    cc = ABC_LoginRecovery(&login, szUserName, szRecoveryAnswers, pError);
+    cc = ABC_LoginRecovery(login, gLobbyCache, szRecoveryAnswers, pError);
 
     if (ABC_CC_Ok == cc)
     {
@@ -222,7 +222,7 @@ tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
         {
             gLoginCache = login;
             login = nullptr;
-            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->szSyncKey, pError));
+            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->syncKey().c_str(), pError));
         }
         *pbValid = true;
     }
@@ -233,7 +233,7 @@ tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
     }
 
 exit:
-    ABC_LoginFree(login);
+    delete login;
 
     return cc;
 }
@@ -250,8 +250,8 @@ tABC_CC ABC_LoginShimPinLogin(const char *szUserName,
 
     cacheClear();
     ABC_CHECK_NEW(cacheLobby(szUserName), pError);
-    ABC_CHECK_RET(ABC_LoginPin(&gLoginCache, szUserName, szPin, pError));
-    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->szSyncKey, pError));
+    ABC_CHECK_RET(ABC_LoginPin(gLoginCache, gLobbyCache, szPin, pError));
+    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->syncKey().c_str(), pError));
 
 exit:
     return cc;
@@ -272,7 +272,7 @@ tABC_CC ABC_LoginShimPinSetup(const char *szUserName,
     // Log the user in, if necessary:
     ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
 
-    ABC_CHECK_RET(ABC_LoginPinSetup(gLoginCache, szPin, expires, pError));
+    ABC_CHECK_RET(ABC_LoginPinSetup(*gLoginCache, szPin, expires, pError));
 
 exit:
     return cc;
@@ -301,7 +301,7 @@ tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
     // Log the user in, if necessary:
     ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
 
-    ABC_CHECK_RET(ABC_LoginGetSyncKeys(gLoginCache, ppKeys, pError));
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(*gLoginCache, ppKeys, pError));
 
 exit:
     return cc;
@@ -329,7 +329,7 @@ tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
     // Log the user in, if necessary:
     ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
 
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(gLoginCache, pL1, pLP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKeys(*gLoginCache, pL1, pLP1, pError));
 
 exit:
     return cc;
@@ -350,7 +350,7 @@ tABC_CC ABC_LoginShimPasswordOk(const char *szUserName,
     // Log the user in, if necessary:
     ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
 
-    ABC_CHECK_RET(ABC_LoginPasswordOk(gLoginCache, szPassword, pOk, pError));
+    ABC_CHECK_RET(ABC_LoginPasswordOk(*gLoginCache, szPassword, pOk, pError));
 
 exit:
     return cc;

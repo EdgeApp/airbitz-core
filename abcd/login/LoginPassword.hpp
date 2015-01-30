@@ -17,16 +17,16 @@
 
 namespace abcd {
 
-tABC_CC ABC_LoginPassword(tABC_Login **ppSelf,
-                          const char *szUserName,
+tABC_CC ABC_LoginPassword(Login *&result,
+                          Lobby *lobby,
                           const char *szPassword,
                           tABC_Error *pError);
 
-tABC_CC ABC_LoginPasswordSet(tABC_Login *pSelf,
+tABC_CC ABC_LoginPasswordSet(Login &login,
                              const char *szPassword,
                              tABC_Error *pError);
 
-tABC_CC ABC_LoginPasswordOk(tABC_Login *pSelf,
+tABC_CC ABC_LoginPasswordOk(Login &login,
                             const char *szPassword,
                             bool *pOk,
                             tABC_Error *pError);

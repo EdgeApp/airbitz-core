@@ -70,7 +70,7 @@ tABC_CC ABC_LoginDirGetSyncDir(const std::string &directory,
                                tABC_Error *pError);
 
 tABC_CC ABC_LoginDirMakeSyncDir(const std::string &directory,
-                                char *szSyncKey,
+                                const char *szSyncKey,
                                 tABC_Error *pError);
 
 } // namespace abcd

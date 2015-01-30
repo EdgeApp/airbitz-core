@@ -327,7 +327,7 @@ exit:
  * If the sync dir doesn't exist, create it, initialize it, and sync it.
  */
 tABC_CC ABC_LoginDirMakeSyncDir(const std::string &directory,
-                                char *szSyncKey,
+                                const char *szSyncKey,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
