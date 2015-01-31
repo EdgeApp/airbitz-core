@@ -1,6 +1,6 @@
 ![AirBitz Core Library](http://airbitz.co/static/img/bitcoin-wallet/section-bitcoin-wallet-platform-bg.jpg)
 # AirBitz Wallet Core
-[https://airbitz.co/bitcoin-wallet-library](https://airbitz.co/bitcoin-wallet-library)
+[https://airbitz.co/bitcoin-wallet-api-library/](https://airbitz.co/bitcoin-wallet-api-library/)
 
 This library implements the core Bitcoin functionality for the AirBitz wallet.
 It manages accounts, syncing, and Bitcoin transactions.
@@ -18,12 +18,15 @@ host system:
 * pkgconfig
 * wget
 
-To install these on the Mac, please use [Homebrew](http://brew.sh/). The 'wget' and 'cmake' that
-come from MacPorts are known to be broken.
-
+To install these on the Mac, please use [Homebrew](http://brew.sh/).
+The 'wget' and 'cmake' that come from MacPorts are known to be broken.
 If you are building for iOS or Mac native, you also need a working installation
-of the XCode command-line tools. For Linux native builds, you need the clang
-compiler.
+of the XCode command-line tools.
+
+For Linux native builds, you need the clang compiler.
+The following command will install the necessary dependencies on Ubuntu:
+
+    apt-get install autoconf automake cmake git libtool pkgconfig wget clang
 
 Assuming your system has the necessary command-line tools installed, it should
 be possible to build an Android or iOS-compatible version of ABC by doing
