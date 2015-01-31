@@ -67,9 +67,18 @@ typedef struct sABC_CryptoSNRP
 
 tABC_CC ABC_InitializeCrypto(tABC_Error        *pError);
 
+// Random:
 tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
                                 tABC_Error        *pError);
 
+tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
+                                   tABC_U08Buf   *pData,
+                                   tABC_Error    *pError);
+
+tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
+                                tABC_Error *pError);
+
+// Encryption:
 tABC_CC ABC_CryptoEncryptJSONString(const tABC_U08Buf Data,
                                     const tABC_U08Buf Key,
                                     tABC_CryptoType   cryptoType,
@@ -114,10 +123,7 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
                                         json_t **ppJSON_Data,
                                         tABC_Error  *pError);
 
-tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
-                                   tABC_U08Buf   *pData,
-                                   tABC_Error    *pError);
-
+// Formats:
 tABC_CC ABC_CryptoHexEncode(const tABC_U08Buf Data,
                             char              **pszDataHex,
                             tABC_Error        *pError);
@@ -134,13 +140,7 @@ tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
                                tABC_U08Buf  *pData,
                                tABC_Error   *pError);
 
-tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
-                                tABC_Error *pError);
-
-tABC_CC ABC_CryptoScryptS1(const tABC_U08Buf Data,
-                           tABC_U08Buf       *pScryptData,
-                           tABC_Error        *pError);
-
+// Hashing:
 tABC_CC ABC_CryptoScryptSNRP(const tABC_U08Buf     Data,
                              const tABC_CryptoSNRP *pSNRP,
                              tABC_U08Buf           *pScryptData,
