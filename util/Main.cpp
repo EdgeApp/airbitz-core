@@ -43,6 +43,7 @@ static Status run(int argc, char *argv[])
         command == "get-categories"     ? getCategories(argc-3, argv+3) :
         command == "get-exchange-rate"  ? getExchangeRate(argc-3, argv+3) :
         command == "get-question-choices" ? getQuestionChoices(argc-3, argv+3) :
+        command == "get-questions"      ? getQuestions(argc-3, argv+3) :
         command == "get-settings"       ? getSettings(argc-3, argv+3) :
         command == "get-wallet-info"    ? getWalletInfo(argc-3, argv+3) :
         command == "list-accounts"      ? listAccounts(argc-3, argv+3) :

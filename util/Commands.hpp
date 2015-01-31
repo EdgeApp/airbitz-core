@@ -25,6 +25,7 @@ abcd::Status getBitcoinSeed(int argc, char *argv[]);
 abcd::Status getCategories(int argc, char *argv[]);
 abcd::Status getExchangeRate(int argc, char *argv[]);
 abcd::Status getQuestionChoices(int argc, char *argv[]);
+abcd::Status getQuestions(int argc, char *argv[]);
 abcd::Status getSettings(int argc, char *argv[]);
 abcd::Status getWalletInfo(int argc, char *argv[]);
 abcd::Status listAccounts(int argc, char *argv[]);
