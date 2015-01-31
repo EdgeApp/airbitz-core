@@ -147,8 +147,10 @@ tABC_CC ABC_LoginRecoverySet(tABC_Login *pSelf,
     ABC_CHECK_RET(ABC_LoginGetServerKeys(pSelf, &oldL1, &oldLP1, pError));
 
     // Update scrypt parameters:
-    ABC_CryptoFreeSNRP(&pCarePackage->pSNRP3);
-    ABC_CryptoFreeSNRP(&pCarePackage->pSNRP4);
+    ABC_CryptoFreeSNRP(pCarePackage->pSNRP3);
+    ABC_CryptoFreeSNRP(pCarePackage->pSNRP4);
+    pCarePackage->pSNRP3 = nullptr;
+    pCarePackage->pSNRP4 = nullptr;
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pCarePackage->pSNRP3, pError));
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pCarePackage->pSNRP4, pError));
 

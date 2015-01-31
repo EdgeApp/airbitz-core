@@ -33,10 +33,10 @@ void ABC_CarePackageFree(tABC_CarePackage *pSelf)
 {
     if (pSelf)
     {
-        ABC_CryptoFreeSNRP(&pSelf->pSNRP1);
-        ABC_CryptoFreeSNRP(&pSelf->pSNRP2);
-        ABC_CryptoFreeSNRP(&pSelf->pSNRP3);
-        ABC_CryptoFreeSNRP(&pSelf->pSNRP4);
+        ABC_CryptoFreeSNRP(pSelf->pSNRP1);
+        ABC_CryptoFreeSNRP(pSelf->pSNRP2);
+        ABC_CryptoFreeSNRP(pSelf->pSNRP3);
+        ABC_CryptoFreeSNRP(pSelf->pSNRP4);
         if (pSelf->ERQ)     json_decref(pSelf->ERQ);
 
         ABC_CLEAR_FREE(pSelf, sizeof(tABC_CarePackage));

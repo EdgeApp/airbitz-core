@@ -392,7 +392,7 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
     char            *szDataBase64   = NULL;
     json_t          *jsonRoot       = NULL;
     json_t          *jsonSNRP       = NULL;
-    tABC_CryptoSNRP *pSNRP          = NULL;
+    AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> pSNRP;
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Key);
@@ -450,7 +450,7 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
                                                g_timedScryptN,
                                                g_timedScryptR,
                                                SCRYPT_DEFAULT_CLIENT_P,
-                                               &pSNRP,
+                                               &pSNRP.get(),
                                                pError));
             ABC_CHECK_RET(ABC_CryptoCreateJSONObjectSNRP(pSNRP, &jsonSNRP, pError));
             json_object_set(jsonRoot, JSON_ENC_SNRP_FIELD, jsonSNRP);
@@ -470,7 +470,6 @@ exit:
     ABC_FREE_STR(szIV_Hex);
     ABC_FREE_STR(szDataBase64);
     if (jsonRoot)     json_decref(jsonRoot);
-    if (pSNRP)        ABC_CryptoFreeSNRP(&pSNRP);
 
     return cc;
 }
@@ -582,7 +581,7 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     AutoU08Buf     EncData;
     AutoU08Buf     IV;
     AutoU08Buf     GenKey;
-    tABC_CryptoSNRP *pSNRP  = NULL;
+    AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> pSNRP;
 
     int type;
     json_t *jsonVal = NULL;
@@ -607,7 +606,7 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
         // Decode the SNRP
         json_t *jsonSNRP = json_object_get(pJSON_Enc, JSON_ENC_SNRP_FIELD);
         ABC_CHECK_ASSERT((jsonSNRP && json_is_object(jsonSNRP)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing SNRP");
-        ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(jsonSNRP, &pSNRP, pError));
+        ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(jsonSNRP, &pSNRP.get(), pError));
 
         // generate a key using the salt and scrypt
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(Key, pSNRP, &GenKey, pError));
@@ -630,8 +629,6 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(EncData, *pFinalKey, IV, pData, pError));
 
 exit:
-    ABC_CryptoFreeSNRP(&pSNRP);
-
     return cc;
 }
 
@@ -1485,17 +1482,13 @@ exit:
 /**
  * Deep free's an SNRP object including the Seed data
  */
-void ABC_CryptoFreeSNRP(tABC_CryptoSNRP **ppSNRP)
+void ABC_CryptoFreeSNRP(tABC_CryptoSNRP *pSNRP)
 {
-    tABC_CryptoSNRP *pSNRP = *ppSNRP;
-
     if (pSNRP)
     {
         ABC_BUF_FREE(pSNRP->Salt);
         ABC_CLEAR_FREE(pSNRP, sizeof(tABC_CryptoSNRP));
     }
-
-    *ppSNRP = NULL;
 }
 
 /**

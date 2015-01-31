@@ -176,7 +176,7 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
                                        tABC_CryptoSNRP   **ppSNRP,
                                        tABC_Error        *pError);
 
-void ABC_CryptoFreeSNRP(tABC_CryptoSNRP **ppSNRP);
+void ABC_CryptoFreeSNRP(tABC_CryptoSNRP *pSNRP);
 
 tABC_CC ABC_CryptoHMAC256(tABC_U08Buf Data,
                           tABC_U08Buf Key,
