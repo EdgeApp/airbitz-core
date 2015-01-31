@@ -11,15 +11,13 @@
 #include "../General.hpp"
 #include "../../minilibs/git-sync/sync.h"
 #include <stdlib.h>
-#include <pthread.h>
+#include <mutex>
 
 namespace abcd {
 
 static bool gbInitialized = false;
-static pthread_mutex_t gMutex;
-
-static tABC_CC ABC_SyncMutexLock(tABC_Error *pError);
-static tABC_CC ABC_SyncMutexUnlock(tABC_Error *pError);
+std::recursive_mutex gSyncMutex;
+typedef std::lock_guard<std::recursive_mutex> AutoSyncLock;
 
 static char *gszCurrSyncServer = NULL;
 static int serverIdx = -1;
@@ -56,18 +54,6 @@ static void SyncLogGitError(int e)
     {
         ABC_DebugLog("libgit2 returned %d: <no message>", e);
     }
-}
-
-static int SyncMaster(git_repository *repo, int *dirty, int *need_push)
-{
-    int e = 0;
-    tABC_CC cc;
-
-    ABC_CHECK_RET(ABC_MutexLock(NULL));
-    e = sync_master(repo, dirty, need_push);
-exit:
-    ABC_MutexUnlock(NULL);
-    return e;
 }
 
 /**
@@ -113,19 +99,12 @@ tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     int e = 0;
-    pthread_mutexattr_t mutexAttrib;
 
     ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "ABC_Sync has already been initalized");
 
-    ABC_CHECK_ASSERT(0 == pthread_mutexattr_init(&mutexAttrib), ABC_CC_MutexError, "ABC_Sync could not create mutex attribute");
-    ABC_CHECK_ASSERT(0 == pthread_mutexattr_settype(&mutexAttrib, PTHREAD_MUTEX_RECURSIVE), ABC_CC_MutexError, "ABC_Sync could not set mutex attributes");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_init(&gMutex, &mutexAttrib), ABC_CC_MutexError, "ABC_Sync could not create mutex");
-    pthread_mutexattr_destroy(&mutexAttrib);
-
-    gbInitialized = true;
-
     e = git_threads_init();
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_threads_init failed");
+    gbInitialized = true;
 
     if (szCaCertPath)
     {
@@ -144,12 +123,9 @@ exit:
  */
 void ABC_SyncTerminate()
 {
-    git_threads_shutdown();
-
-    if (gbInitialized == true)
+    if (gbInitialized)
     {
-        pthread_mutex_destroy(&gMutex);
-
+        git_threads_shutdown();
         gbInitialized = false;
     }
     ABC_FREE_STR(gszCurrSyncServer);
@@ -163,11 +139,10 @@ tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
                          tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoSyncLock lock(gSyncMutex);
     int e = 0;
 
     git_repository *repo = NULL;
-
-    ABC_CHECK_RET(ABC_SyncMutexLock(pError));
 
     e = git_repository_init(&repo, szRepoPath, 0);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_init failed");
@@ -176,7 +151,6 @@ exit:
     if (e < 0) SyncLogGitError(e);
     if (repo) git_repository_free(repo);
 
-    ABC_CHECK_RET(ABC_SyncMutexUnlock(pError));
     return cc;
 }
 
@@ -193,13 +167,13 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoSyncLock lock(gSyncMutex);
     int e = 0;
     char *szServer = NULL;
 
     git_repository *repo = NULL;
     int dirty, need_push;
 
-    ABC_CHECK_RET(ABC_SyncMutexLock(pError));
     ABC_CHECK_RET(ABC_SyncGetServer(szRepoKey, &szServer, pError));
 
     e = git_repository_open(&repo, szRepoPath);
@@ -208,7 +182,10 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     e = sync_fetch(repo, szServer);
     ABC_SYNC_ROT(sync_fetch(repo, szServer), "sync_fetch failed");
 
-    e = SyncMaster(repo, &dirty, &need_push);
+    {
+        AutoCoreLock lock(gCoreMutex);
+        e = sync_master(repo, &dirty, &need_push);
+    }
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_master failed");
 
     if (need_push)
@@ -224,33 +201,6 @@ exit:
     if (repo) git_repository_free(repo);
 
     ABC_FREE_STR(szServer);
-    ABC_CHECK_RET(ABC_SyncMutexUnlock(pError));
-
-    return cc;
-}
-
-static
-tABC_CC ABC_SyncMutexLock(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_Sync has not been initalized");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_lock(&gMutex), ABC_CC_MutexError, "ABC_Sync error locking mutex");
-
-exit:
-
-    return cc;
-}
-
-static
-tABC_CC ABC_SyncMutexUnlock(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_Sync has not been initalized");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_unlock(&gMutex), ABC_CC_MutexError, "ABC_Sync error unlocking mutex");
-
-exit:
 
     return cc;
 }
@@ -262,9 +212,8 @@ static
 tABC_CC ABC_SyncServerRot(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoSyncLock lock(gSyncMutex);
     tABC_GeneralInfo *pInfo = NULL;
-
-    ABC_CHECK_RET(ABC_SyncMutexLock(pError));
 
     ABC_CHECK_RET(ABC_GeneralGetInfo(&pInfo, pError));
 
@@ -287,7 +236,6 @@ tABC_CC ABC_SyncServerRot(tABC_Error *pError)
 exit:
     ABC_GeneralFreeInfo(pInfo);
 
-    ABC_SyncMutexUnlock(NULL);
     return cc;
 }
 
@@ -302,9 +250,8 @@ static
 tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoSyncLock lock(gSyncMutex);
     AutoU08Buf URL;
-
-    ABC_CHECK_RET(ABC_SyncMutexLock(pError));
 
     ABC_CHECK_NULL(szRepoKey);
 
@@ -331,8 +278,6 @@ tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *p
     ABC_DebugLog("Syncing to: %s\n", *pszServer);
 
 exit:
-    ABC_SyncMutexUnlock(NULL);
-
     return cc;
 }
 

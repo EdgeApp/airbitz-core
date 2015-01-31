@@ -40,8 +40,12 @@
 #include "U08Buf.hpp"
 #include <jansson.h>
 #include <time.h>
+#include <mutex>
 
 namespace abcd {
+
+extern std::recursive_mutex gFileMutex;
+typedef std::lock_guard<std::recursive_mutex> AutoFileLock;
 
 #define ABC_FILEIO_MAX_PATH_LENGTH 2048
 
@@ -63,10 +67,6 @@ typedef struct sABC_FileIOFileList
     int nCount;
     tABC_FileIOFileInfo **apFiles;
 } tABC_FileIOList;
-
-tABC_CC ABC_FileIOInitialize(tABC_Error *pError);
-
-void ABC_FileIOTerminate();
 
 tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
                              tABC_Error *pError);
@@ -118,10 +118,6 @@ tABC_CC ABC_FileIODeleteRecursive(const char *szFilename,
 tABC_CC ABC_FileIOFileModTime(const char *szFilename,
                               time_t *pTime,
                               tABC_Error *pError);
-
-tABC_CC ABC_FileIOMutexLock(tABC_Error *pError);
-
-tABC_CC ABC_FileIOMutexUnlock(tABC_Error *pError);
 
 } // namespace abcd
 

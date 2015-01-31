@@ -30,15 +30,15 @@
  */
 
 #include "Debug.hpp"
-#include <stdio.h>
-#include <time.h>
-#include <string.h>
-#include <stdarg.h>
-#include <pthread.h>
 #include "Util.hpp"
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 #ifdef ANDROID
 #include <android/log.h>
 #endif
+#include <mutex>
 
 namespace abcd {
 
@@ -49,14 +49,12 @@ namespace abcd {
 
 #define ABC_LOG_FILE "abc.log"
 
-static void ABC_DebugAppendToLog(const char *szOut);
-static tABC_CC ABC_DebugMutexLock(tABC_Error *pError);
-static tABC_CC ABC_DebugMutexUnlock(tABC_Error *pError);
-
 static FILE             *gfLog = NULL;
 static bool             gbInitialized = false;
-static pthread_mutex_t  gMutex;
+std::recursive_mutex gDebugMutex;
 char gszLogFile[ABC_MAX_STRING_LENGTH + 1];
+
+static void ABC_DebugAppendToLog(const char *szOut);
 
 tABC_CC ABC_DebugInitialize(const char *szRootDir, tABC_Error *pError)
 {
@@ -68,17 +66,12 @@ tABC_CC ABC_DebugInitialize(const char *szRootDir, tABC_Error *pError)
     snprintf(gszLogFile, ABC_MAX_STRING_LENGTH, "%s/%s", szRootDir, ABC_LOG_FILE);
     gszLogFile[ABC_MAX_STRING_LENGTH] = '\0';
 
-    pthread_mutexattr_t mutexAttrib;
-    ABC_CHECK_ASSERT(0 == pthread_mutexattr_init(&mutexAttrib), ABC_CC_MutexError, "ABC_Debug could not create mutex attribute");
-    ABC_CHECK_ASSERT(0 == pthread_mutexattr_settype(&mutexAttrib, PTHREAD_MUTEX_RECURSIVE), ABC_CC_MutexError, "ABC_Debug could not set mutex attributes");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_init(&gMutex, &mutexAttrib), ABC_CC_MutexError, "ABC_Debug could not create mutex");
-    pthread_mutexattr_destroy(&mutexAttrib);
-
-    gbInitialized = true;
-
     gfLog = fopen(gszLogFile, "a");
     ABC_CHECK_SYS(gfLog, "fopen(log file)");
     fseek(gfLog, 0L, SEEK_END);
+
+    gbInitialized = true;
+
 exit:
     return cc;
 }
@@ -87,7 +80,6 @@ void ABC_DebugTerminate()
 {
     if (gbInitialized == true)
     {
-        pthread_mutex_destroy(&gMutex);
         if (gfLog)
         {
             fclose(gfLog);
@@ -145,7 +137,7 @@ static void ABC_DebugAppendToLog(const char *szOut)
 {
     if (gbInitialized)
     {
-        ABC_DebugMutexLock(NULL);
+        std::lock_guard<std::recursive_mutex> lock(gDebugMutex);
         if (gfLog)
         {
             size_t size = ftell(gfLog);
@@ -158,34 +150,7 @@ static void ABC_DebugAppendToLog(const char *szOut)
             fwrite(szOut, 1, strlen(szOut), gfLog);
             fflush(gfLog);
         }
-        ABC_DebugMutexUnlock(NULL);
     }
-}
-
-static
-tABC_CC ABC_DebugMutexLock(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_Debug has not been initalized");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_lock(&gMutex), ABC_CC_MutexError, "ABC_Debug error locking mutex");
-
-exit:
-
-    return cc;
-}
-
-static
-tABC_CC ABC_DebugMutexUnlock(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_Debug has not been initalized");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_unlock(&gMutex), ABC_CC_MutexError, "ABC_Debug error unlocking mutex");
-
-exit:
-
-    return cc;
 }
 
 #else
