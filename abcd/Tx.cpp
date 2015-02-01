@@ -180,8 +180,6 @@ static tABC_CC  ABC_TxGetAddresses(tABC_WalletID self, tABC_TxAddress ***paAddre
 static int      ABC_TxAddrPtrCompare(const void * a, const void * b);
 static tABC_CC  ABC_TxLoadAddressAndAppendToArray(tABC_WalletID self, const char *szFilename, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 //static void     ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count);
-static tABC_CC  ABC_TxMutexLock(tABC_Error *pError);
-static tABC_CC  ABC_TxMutexUnlock(tABC_Error *pError);
 static tABC_CC  ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError);
 static tABC_CC  ABC_TxTransactionExists(tABC_WalletID self, const char *szID, tABC_Tx **pTx, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
@@ -269,6 +267,8 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
                    tABC_Error       *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
+
     char *szPrivSeed = NULL;
     tABC_U08Buf privSeed = ABC_BUF_NULL; // Do not free
     tABC_UnsignedTx *pUtx = NULL;
@@ -276,7 +276,6 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     AutoStringArray keys;
     tABC_TxAddress *pChangeAddr = NULL;
 
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
 
     // take this non-blocking opportunity to update the info from the server if needed
@@ -325,7 +324,6 @@ exit:
     ABC_FREE(pUtx->data);
     ABC_FREE(pUtx);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -334,14 +332,13 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
                            tABC_Error       *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
     tABC_Tx *pTx = NULL;
     tABC_Tx *pReceiveTx = NULL;
     bool bFound = false;
     tABC_WalletInfo *pWallet = NULL;
     tABC_WalletInfo *pDestWallet = NULL;
     double Currency;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // Start watching all addresses incuding new change addres
     ABC_CHECK_RET(ABC_TxWatchAddresses(pInfo->wallet, pError));
@@ -438,7 +435,6 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
 exit:
     ABC_TxFreeTx(pTx);
     ABC_TxFreeTx(pReceiveTx);
-    ABC_TxMutexUnlock(NULL);
     ABC_WalletFreeInfo(pWallet);
     ABC_WalletFreeInfo(pDestWallet);
     return cc;
@@ -447,11 +443,11 @@ exit:
 tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo, int64_t *pTotalFees, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
     tABC_UnsignedTx utx;
     tABC_TxAddress *pChangeAddr = NULL;
     AutoStringArray addresses;
 
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_NULL(pInfo);
 
     pInfo->pDetails->amountFeesAirbitzSatoshi = 0;
@@ -474,7 +470,6 @@ tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo, int64_t *pTotalFees, tABC_Er
     ABC_CHECK_RET(cc);
 exit:
     ABC_TxFreeAddress(pChangeAddr);
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -572,11 +567,11 @@ tABC_CC ABC_TxWatchAddresses(tABC_WalletID self,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
     char *szPubAddress          = NULL;
     tABC_TxAddress **aAddresses = NULL;
     unsigned int countAddresses = 0;
 
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     ABC_CHECK_RET(
         ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
     for (unsigned i = 0; i < countAddresses; i++)
@@ -590,7 +585,6 @@ exit:
     ABC_TxFreeAddresses(aAddresses, countAddresses);
     ABC_FREE_STR(szPubAddress);
 
-    ABC_CHECK_RET(ABC_TxMutexUnlock(pError));
     return cc;
 }
 
@@ -761,10 +755,9 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
     tABC_Tx *pTx = NULL;
     double Currency = 0.0;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // Does the transaction already exist?
     ABC_TxTransactionExists(self, szTxId, &pTx, pError);
@@ -864,7 +857,6 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
         }
     }
 exit:
-    ABC_TxMutexUnlock(NULL);
     ABC_TxFreeTx(pTx);
 
     return cc;
@@ -993,11 +985,10 @@ tABC_CC ABC_TxCreateReceiveRequest(tABC_WalletID self,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     tABC_TxAddress *pAddress = NULL;
 
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     *pszRequestID = NULL;
 
     // get a new address (re-using a recycleable if we can)
@@ -1015,7 +1006,6 @@ tABC_CC ABC_TxCreateReceiveRequest(tABC_WalletID self,
 exit:
     ABC_TxFreeAddress(pAddress);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -1059,15 +1049,13 @@ tABC_CC ABC_TxCreateNewAddress(tABC_WalletID self,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     tABC_TxAddress **aAddresses = NULL;
     unsigned int countAddresses = 0;
     tABC_TxAddress *pAddress = NULL;
     int64_t N = -1;
     unsigned recyclable = 0;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // first look for an existing address that we can re-use
 
@@ -1156,7 +1144,6 @@ exit:
     ABC_TxFreeAddresses(aAddresses, countAddresses);
     ABC_TxFreeAddress(pAddress);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -1230,15 +1217,13 @@ tABC_CC ABC_TxModifyReceiveRequest(tABC_WalletID self,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     char *szFile = NULL;
     char *szAddrDir = NULL;
     char *szFilename = NULL;
     tABC_TxAddress *pAddress = NULL;
     tABC_TxDetails *pNewDetails = NULL;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // get the filename for this request (note: interally requests are addresses)
     ABC_CHECK_RET(ABC_GetAddressFilename(self.szUUID, szRequestID, &szFile, pError));
@@ -1273,7 +1258,6 @@ exit:
     ABC_TxFreeAddress(pAddress);
     ABC_TxFreeDetails(pNewDetails);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -1292,14 +1276,13 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoFileLock lock(gFileMutex); // We are iterating over the filesystem
 
     char *szAddrDir = NULL;
     tABC_FileIOList *pFileList = NULL;
     bool bExists = false;
     char *szID = NULL;
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
     ABC_CHECK_NULL(szAddressID);
@@ -1340,7 +1323,6 @@ exit:
     ABC_FREE_STR(szID);
     ABC_FileIOFreeFileList(pFileList);
 
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -1471,15 +1453,13 @@ tABC_CC ABC_TxSetAddressRecycle(tABC_WalletID self,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     char *szFile = NULL;
     char *szAddrDir = NULL;
     char *szFilename = NULL;
     tABC_TxAddress *pAddress = NULL;
     tABC_TxDetails *pNewDetails = NULL;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // get the filename for this address
     ABC_CHECK_RET(ABC_GetAddressFilename(self.szUUID, szAddress, &szFile, pError));
@@ -1513,7 +1493,6 @@ exit:
     ABC_TxFreeAddress(pAddress);
     ABC_TxFreeDetails(pNewDetails);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -1534,15 +1513,13 @@ tABC_CC ABC_TxGenerateRequestQRCode(tABC_WalletID self,
                                     tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     tABC_TxAddress *pAddress = NULL;
     QRcode *qr = NULL;
     unsigned char *aData = NULL;
     unsigned int length = 0;
     char *szURI = NULL;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // load the request/address
     ABC_CHECK_RET(ABC_TxLoadAddress(self, szRequestID, &pAddress, pError));
@@ -1592,7 +1569,6 @@ exit:
     QRcode_free(qr);
     ABC_CLEAR_FREE(aData, length);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -1610,14 +1586,13 @@ tABC_CC ABC_TxGetTransaction(tABC_WalletID self,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     char *szFilename = NULL;
     tABC_Tx *pTx = NULL;
     tABC_TxInfo *pTransaction = NULL;
     bool bExists = false;
 
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     *ppTransaction = NULL;
 
     // find the filename of the existing transaction
@@ -1649,7 +1624,6 @@ exit:
     ABC_TxFreeTx(pTx);
     ABC_TxFreeTransaction(pTransaction);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -1670,7 +1644,8 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
+    AutoCoreLock lock(gCoreMutex);
 
     char *szTxDir = NULL;
     tABC_FileIOList *pFileList = NULL;
@@ -1679,8 +1654,6 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
     unsigned int count = 0;
     bool bExists = false;
 
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
     *paTransactions = NULL;
     *pCount = 0;
 
@@ -1757,8 +1730,6 @@ exit:
     ABC_FileIOFreeFileList(pFileList);
     ABC_TxFreeTransactions(aTransactions, count);
 
-    ABC_FileIOMutexUnlock(NULL);
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -2005,12 +1976,11 @@ tABC_CC ABC_TxLoadTransactionInfo(tABC_WalletID self,
                                   tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     tABC_Tx *pTx = NULL;
     tABC_TxInfo *pTransaction = NULL;
 
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     *ppTransaction = NULL;
 
     // load the transaction
@@ -2040,7 +2010,6 @@ exit:
     ABC_TxFreeTx(pTx);
     ABC_TxFreeTransaction(pTransaction);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -2156,13 +2125,11 @@ tABC_CC ABC_TxSetTransactionDetails(tABC_WalletID self,
                                     tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     char *szFilename = NULL;
     tABC_Tx *pTx = NULL;
     bool bExists = false;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // find the filename of the existing transaction
 
@@ -2207,7 +2174,6 @@ exit:
     ABC_FREE_STR(szFilename);
     ABC_TxFreeTx(pTx);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -2225,14 +2191,12 @@ tABC_CC ABC_TxGetTransactionDetails(tABC_WalletID self,
                                     tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     char *szFilename = NULL;
     tABC_Tx *pTx = NULL;
     tABC_TxDetails *pDetails = NULL;
     bool bExists = false;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // find the filename of the existing transaction
 
@@ -2269,7 +2233,6 @@ exit:
     ABC_TxFreeTx(pTx);
     ABC_TxFreeDetails(pDetails);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -2314,7 +2277,7 @@ tABC_CC ABC_TxGetPendingRequests(tABC_WalletID self,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     tABC_TxAddress **aAddresses = NULL;
     unsigned int count = 0;
@@ -2322,7 +2285,6 @@ tABC_CC ABC_TxGetPendingRequests(tABC_WalletID self,
     unsigned int countPending = 0;
     tABC_RequestInfo *pRequest = NULL;
 
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     *paRequests = NULL;
     *pCount = 0;
 
@@ -2405,7 +2367,6 @@ exit:
     ABC_TxFreeRequests(aRequests, countPending);
     ABC_TxFreeRequest(pRequest);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -2652,7 +2613,7 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
     json_t *pJSON_Root = NULL;
@@ -2660,7 +2621,6 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
     bool bExists = false;
     json_t *jsonVal = NULL;
 
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     *ppTx = NULL;
 
     // Get the master key we will need to decode the transaction data
@@ -2704,7 +2664,6 @@ exit:
     if (pJSON_Root) json_decref(pJSON_Root);
     ABC_TxFreeTx(pTx);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -2907,7 +2866,7 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
     int e;
 
     tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
@@ -2915,8 +2874,6 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
     json_t *pJSON_Root = NULL;
     json_t *pJSON_OutputArray = NULL;
     json_t **ppJSON_Output = NULL;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     ABC_CHECK_NULL(pTx->pStateInfo);
     ABC_CHECK_NULL(pTx->szID);
@@ -2991,7 +2948,6 @@ exit:
     if (pJSON_Root) json_decref(pJSON_Root);
     if (pJSON_OutputArray) json_decref(pJSON_OutputArray);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -3150,13 +3106,11 @@ tABC_CC ABC_TxLoadAddress(tABC_WalletID self,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     char *szFile = NULL;
     char *szAddrDir = NULL;
     char *szFilename = NULL;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // get the filename for this address
     ABC_CHECK_RET(ABC_GetAddressFilename(self.szUUID, szAddressID, &szFile, pError));
@@ -3176,7 +3130,6 @@ exit:
     ABC_FREE_STR(szAddrDir);
     ABC_FREE_STR(szFilename);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -3193,7 +3146,7 @@ tABC_CC ABC_TxLoadAddressFile(tABC_WalletID self,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
     json_t *pJSON_Root = NULL;
@@ -3201,7 +3154,6 @@ tABC_CC ABC_TxLoadAddressFile(tABC_WalletID self,
     bool bExists = false;
     json_t *jsonVal = NULL;
 
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
     *ppAddress = NULL;
 
     // Get the master key we will need to decode the transaction data
@@ -3245,7 +3197,6 @@ exit:
     if (pJSON_Root) json_decref(pJSON_Root);
     ABC_TxFreeAddress(pAddress);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -3348,13 +3299,11 @@ tABC_CC ABC_TxSaveAddress(tABC_WalletID self,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCoreLock lock(gCoreMutex);
 
     tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
-
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     ABC_CHECK_NULL(pAddress->pStateInfo);
     ABC_CHECK_NULL(pAddress->szID);
@@ -3393,7 +3342,6 @@ exit:
     ABC_FREE_STR(szFilename);
     if (pJSON_Root) json_decref(pJSON_Root);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -3635,7 +3583,8 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
                            tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
+    AutoCoreLock lock(gCoreMutex);
 
     char *szAddrDir = NULL;
     tABC_FileIOList *pFileList = NULL;
@@ -3644,8 +3593,6 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
     unsigned int count = 0;
     bool bExists = false;
 
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError)); // we want this as an atomic files system function
     *paAddresses = NULL;
     *pCount = 0;
 
@@ -3694,8 +3641,6 @@ exit:
     ABC_FileIOFreeFileList(pFileList);
     ABC_TxFreeAddresses(aAddresses, count);
 
-    ABC_FileIOMutexUnlock(NULL);
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 
@@ -3871,29 +3816,6 @@ void ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count)
 #endif
 
 /**
- * Locks the mutex
- *
- * ABC_Tx uses the same mutex as ABC_Login/ABC_Wallet so that there will be no situation in
- * which one thread is in ABC_Tx locked on a mutex and calling a thread safe ABC_Login/ABC_Wallet call
- * that is locked from another thread calling a thread safe ABC_Tx call.
- * In other words, since they call each other, they need to share a recursive mutex.
- */
-static
-tABC_CC ABC_TxMutexLock(tABC_Error *pError)
-{
-    return ABC_MutexLock(pError);
-}
-
-/**
- * Unlocks the mutex
- */
-static
-tABC_CC ABC_TxMutexUnlock(tABC_Error *pError)
-{
-    return ABC_MutexUnlock(pError);
-}
-
-/**
  * Adds a transaction to an address's activity log.
  *
  * @param pAddress the address to modify
@@ -3933,11 +3855,9 @@ tABC_CC ABC_TxTransactionExists(tABC_WalletID self,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoCoreLock lock(gCoreMutex);
     char *szFilename = NULL;
     bool bExists = false;
-
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    ABC_CHECK_RET(ABC_TxMutexLock(pError));
 
     // first try the internal
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, true, pError));
@@ -3960,7 +3880,6 @@ tABC_CC ABC_TxTransactionExists(tABC_WalletID self,
 exit:
     ABC_FREE_STR(szFilename);
 
-    ABC_TxMutexUnlock(NULL);
     return cc;
 }
 

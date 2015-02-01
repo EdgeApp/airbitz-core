@@ -34,6 +34,7 @@
 #include "LoginShim.hpp"
 #include "WalletAsync.hpp"
 #include "../abcd/LoginPIN.hpp"
+#include "../abcd/LoginRecovery.hpp"
 #include "../abcd/LoginServer.hpp"
 #include "../abcd/Account.hpp"
 #include "../abcd/General.hpp"
@@ -46,7 +47,6 @@
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Json.hpp"
-#include "../abcd/util/Mutex.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/URL.hpp"
 #include "../abcd/util/Util.hpp"
@@ -114,27 +114,17 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // override the alloc and free of janson so we can have a secure method
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
-    // initialize the mutex system
-    ABC_CHECK_RET(ABC_MutexInitialize(pError));
-
     // initialize bridge
     ABC_CHECK_RET(ABC_BridgeInitialize(pError));
 
     // initialize URL system
     ABC_CHECK_RET(ABC_URLInitialize(szCaCertPath, pError));
 
-    // initialize the FileIO system
-    ABC_CHECK_RET(ABC_FileIOInitialize(pError));
-
     // initialize Bitcoin transaction system
     ABC_CHECK_RET(ABC_TxInitialize(pError));
 
-    // initialize Bitcoin exchange system
-    ABC_CHECK_RET(ABC_ExchangeInitialize(pError));
-
     // initialize Crypto perf checks to determine hashing power
     ABC_CHECK_RET(ABC_InitializeCrypto(pError));
-
 
     // initialize sync
     ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
@@ -169,11 +159,7 @@ void ABC_Terminate()
 
         ABC_URLTerminate();
 
-        ABC_FileIOTerminate();
-
-        ABC_ExchangeTerminate();
-
-        ABC_MutexTerminate();
+        ABC_ExchangeClearCache();
 
         ABC_SyncTerminate();
 
@@ -499,9 +485,8 @@ tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginShimLogout(pError));
-
-    ABC_CHECK_RET(ABC_WalletClearCache(pError));
+    ABC_LoginShimLogout();
+    ABC_WalletClearCache();
 
 exit:
 
@@ -818,6 +803,8 @@ tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szRecoveryAnswers);
 
     ABC_CHECK_RET(ABC_LoginShimCheckRecovery(szUserName, szRecoveryAnswers, pbValid, pError));
 
@@ -879,6 +866,8 @@ tABC_CC ABC_PinLogin(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPIN);
 
     ABC_CHECK_RET(ABC_LoginShimPinLogin(szUserName, szPIN, pError));
 
@@ -904,6 +893,7 @@ tABC_CC ABC_PinSetup(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
@@ -1185,7 +1175,7 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(pszQuestions);
 
-    ABC_CHECK_RET(ABC_LoginShimGetRecovery(szUserName, pszQuestions, pError));
+    ABC_CHECK_RET(ABC_LoginGetRQ(szUserName, pszQuestions, pError));
 
 exit:
 
@@ -2526,27 +2516,39 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
-    tABC_CC fetchCC = ABC_CC_Ok;
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
-    fetchCC = ABC_LoginShimCheckPasswordChange(szUserName, szPassword, pError);
-
-    // Try fetch login package, if it fails, notify password change
-    if (fetchCC == ABC_CC_BadPassword)
+    // Has the password changed?
     {
-        if (fAsyncBitCoinEventCallback)
+        tABC_Error error;
+        AutoFree<tABC_LoginPackage, ABC_LoginPackageFree> pLoginPackage;
+        tABC_U08Buf LRA1 = ABC_BUF_NULL; // Do not free
+        AutoU08Buf L1;
+        AutoU08Buf LP1;
+
+        ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+        cc = ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &pLoginPackage.get(), &error);
+
+        if (cc == ABC_CC_BadPassword)
         {
-            tABC_AsyncBitCoinInfo info;
-            info.eventType = ABC_AsyncEventType_RemotePasswordChange;
-            info.pData = pData;
-            ABC_STRDUP(info.szDescription, "Password changed");
-            fAsyncBitCoinEventCallback(&info);
-            ABC_FREE_STR(info.szDescription);
+            if (fAsyncBitCoinEventCallback)
+            {
+                tABC_AsyncBitCoinInfo info;
+                info.eventType = ABC_AsyncEventType_RemotePasswordChange;
+                info.pData = pData;
+                ABC_STRDUP(info.szDescription, "Password changed");
+                fAsyncBitCoinEventCallback(&info);
+                ABC_FREE_STR(info.szDescription);
+            }
+            goto exit;
         }
     }
-    else
+
+    // Actually do the sync:
     {
         AutoSyncKeys pKeys;
         int accountDirty = 0;
@@ -2557,7 +2559,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         if (accountDirty && fAsyncBitCoinEventCallback)
         {
             // Try to clear the wallet cache in case the Wallets list changed
-            ABC_CHECK_RET(ABC_WalletClearCache(pError));
+            ABC_WalletClearCache();
 
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
@@ -2567,6 +2569,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
             ABC_FREE_STR(info.szDescription);
         }
     }
+
 exit:
     return cc;
 }
@@ -2984,6 +2987,7 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));

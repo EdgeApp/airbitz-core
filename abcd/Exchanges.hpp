@@ -85,8 +85,6 @@ typedef struct sABC_ExchangeDefaults {
 extern const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[];
 extern const size_t EXCHANGE_DEFAULTS_SIZE;
 
-tABC_CC ABC_ExchangeInitialize(tABC_Error                   *pError);
-
 tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
                                 int currencyNum, double *pRate, tABC_Error *pError);
 
@@ -94,7 +92,7 @@ tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
 
 void *ABC_ExchangeUpdateThreaded(void *pData);
 
-void ABC_ExchangeTerminate();
+void ABC_ExchangeClearCache();
 
 tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
                           int currencyNum,
