@@ -8,9 +8,9 @@
 #include "Login.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "Account.hpp"
-#include "util/Crypto.hpp"
-#include "util/Util.hpp"
+#include "../Account.hpp"
+#include "../util/Crypto.hpp"
+#include "../util/Util.hpp"
 #include <ctype.h>
 
 namespace abcd {
@@ -44,7 +44,7 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
     tABC_CC cc = ABC_CC_Ok;
 
     tABC_U08Buf L = ABC_BUF_NULL; // Do not free
-    tABC_CryptoSNRP *pSNRP0 = NULL;
+    AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> pSNRP0;
     tABC_Login *pSelf = NULL;
     ABC_NEW(pSelf, tABC_Login);
 
@@ -54,7 +54,7 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
 
     // Create L1:
     ABC_BUF_SET_PTR(L, (unsigned char *)pSelf->szUserName, strlen(pSelf->szUserName));
-    ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP0, pError));
+    ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP0.get(), pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP0, &pSelf->L1, pError));
 
     *ppSelf = pSelf;
@@ -62,7 +62,6 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
 
 exit:
     if (pSelf)          ABC_LoginFree(pSelf);
-    if (pSNRP0)         ABC_CryptoFreeSNRP(&pSNRP0);
 
     return cc;
 }

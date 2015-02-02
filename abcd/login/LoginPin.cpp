@@ -5,12 +5,11 @@
  * See the LICENSE file for more information.
  */
 
-#include "LoginPIN.hpp"
-#include "Login.hpp"
+#include "LoginPin.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "util/Json.hpp"
-#include "util/Util.hpp"
+#include "../util/Json.hpp"
+#include "../util/Util.hpp"
 #include <jansson.h>
 
 namespace abcd {
@@ -151,7 +150,7 @@ exit:
  */
 tABC_CC ABC_LoginPin(tABC_Login **ppSelf,
                      const char *szUserName,
-                     const char *szPIN,
+                     const char *szPin,
                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -176,7 +175,7 @@ tABC_CC ABC_LoginPin(tABC_Login **ppSelf,
     ABC_CHECK_RET(ABC_LoginPinLocalLoad(&pLocal, pSelf->AccountNum, pError));
 
     // LPIN = L + PIN:
-    ABC_BUF_STRCAT(LPIN, pSelf->szUserName, szPIN);
+    ABC_BUF_STRCAT(LPIN, pSelf->szUserName, szPin);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LPIN, pCarePackage->pSNRP1, &LPIN1, pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LPIN, pCarePackage->pSNRP2, &LPIN2, pError));
 
@@ -218,7 +217,7 @@ exit:
  * Sets up a PIN login package, both on-disk and on the server.
  */
 tABC_CC ABC_LoginPinSetup(tABC_Login *pSelf,
-                          const char *szPIN,
+                          const char *szPin,
                           time_t expires,
                           tABC_Error *pError)
 {
@@ -245,7 +244,7 @@ tABC_CC ABC_LoginPinSetup(tABC_Login *pSelf,
     ABC_CHECK_RET(ABC_LoginGetServerKeys(pSelf, &L1, &LP1, pError));
 
     // LPIN = L + PIN:
-    ABC_BUF_STRCAT(LPIN, pSelf->szUserName, szPIN);
+    ABC_BUF_STRCAT(LPIN, pSelf->szUserName, szPin);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LPIN, pCarePackage->pSNRP1, &LPIN1, pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LPIN, pCarePackage->pSNRP2, &LPIN2, pError));
 

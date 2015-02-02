@@ -6,10 +6,9 @@
  */
 
 #include "LoginPassword.hpp"
-#include "Login.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "util/Util.hpp"
+#include "../util/Util.hpp"
 
 namespace abcd {
 
@@ -151,7 +150,8 @@ tABC_CC ABC_LoginPasswordSet(tABC_Login *pSelf,
     }
 
     // Update SNRP2:
-    ABC_CryptoFreeSNRP(&pCarePackage->pSNRP2);
+    ABC_CryptoFreeSNRP(pCarePackage->pSNRP2);
+    pCarePackage->pSNRP2 = nullptr;
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pCarePackage->pSNRP2, pError));
 
     // LP = L + P:

@@ -36,8 +36,6 @@
 #ifndef ABC_Defs_h
 #define ABC_Defs_h
 
-#include "config.h"
-
 namespace abcd {
 
 #define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api/v1"

@@ -7,14 +7,14 @@
 
 #include "LoginServer.hpp"
 #include "ServerDefs.hpp"
-#include "util/Json.hpp"
-#include "util/URL.hpp"
-#include "util/Util.hpp"
+#include "../util/Json.hpp"
+#include "../util/URL.hpp"
+#include "../util/Util.hpp"
 
 // For debug upload:
-#include "Bridge.hpp"
-#include "util/Crypto.hpp"
-#include "util/FileIO.hpp"
+#include "../Bridge.hpp"
+#include "../util/Crypto.hpp"
+#include "../util/FileIO.hpp"
 
 namespace abcd {
 
@@ -26,6 +26,17 @@ namespace abcd {
 #define DATETIME_LENGTH 20
 
 static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, const char *szURL, const char *szField, char **szResponse, tABC_Error *pError);
+static tABC_CC checkResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError);
+
+/**
+ * Creates an git repo on the server.
+ *
+ * @param L1   Login hash for the account
+ * @param LP1  Password hash for the account
+ */
+static
+tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1, tABC_U08Buf LP1,
+    const char *szWalletAcctKey, const char *szPath, tABC_Error *pError);
 
 /**
  * Creates an account on the server.
@@ -84,7 +95,7 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
     ABC_DebugLog("Server results: %.50s", szResults);
 
     // decode the result
-    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
+    ABC_CHECK_RET(checkResults(szResults, NULL, pError));
 exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
@@ -143,7 +154,7 @@ tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1,
     ABC_DebugLog("Server results: %.50s", szResults);
 
     // decode the result
-    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
+    ABC_CHECK_RET(checkResults(szResults, NULL, pError));
 exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
@@ -229,7 +240,7 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
     ABC_DebugLog("Server results: %.50s", szResults);
 
-    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
+    ABC_CHECK_RET(checkResults(szResults, NULL, pError));
 exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
@@ -349,7 +360,7 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LR
     ABC_DebugLog("Server results: %.50s", szResults);
 
     // Check the results, and store json if successful
-    ABC_CHECK_RET(ABC_URLCheckResults(szResults, &pJSON_Root, pError));
+    ABC_CHECK_RET(checkResults(szResults, &pJSON_Root, pError));
 
     // get the care package
     pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
@@ -408,7 +419,7 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     ABC_DebugLog("Server results: %s", szResults);
 
     // Check the result
-    ABC_CHECK_RET(ABC_URLCheckResults(szResults, &pJSON_Root, pError));
+    ABC_CHECK_RET(checkResults(szResults, &pJSON_Root, pError));
 
     // get the results field
     pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
@@ -496,7 +507,7 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
     ABC_DebugLog("Server results: %.50s", szResults);
 
-    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
+    ABC_CHECK_RET(checkResults(szResults, NULL, pError));
 exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
@@ -510,13 +521,23 @@ exit:
     return cc;
 }
 
+Status
+LoginServerWalletCreate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey)
+{
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(L1, LP1, syncKey,
+        ABC_SERVER_WALLET_CREATE_PATH, &error));
+    return Status();
+}
 
-/**
- * Creates an git repo on the server.
- *
- * @param L1   Login hash for the account
- * @param LP1  Password hash for the account
- */
+Status
+LoginServerWalletActivate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey)
+{
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(L1, LP1, syncKey,
+        ABC_SERVER_WALLET_ACTIVATE_PATH, &error));
+    return Status();
+}
+
+static
 tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
                                  tABC_U08Buf LP1,
                                  const char *szWalletAcctKey,
@@ -557,7 +578,7 @@ tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
     ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
     ABC_DebugLog("Server results: %s", szResults);
 
-    ABC_CHECK_RET(ABC_URLCheckResults(szResults, NULL, pError));
+    ABC_CHECK_RET(checkResults(szResults, NULL, pError));
 exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
@@ -662,6 +683,69 @@ exit:
 
     ABC_FreeWalletInfoArray(paWalletInfo, nCount);
 
+    return cc;
+}
+
+/**
+ * Makes a URL post request and returns results in a string.
+ * @param szURL         The request URL.
+ * @param szPostData    The data to be posted in the request
+ * @param pszResults    The location to store the allocated string with results.
+ *                      The caller is responsible for free'ing this.
+ */
+static
+tABC_CC checkResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    int statusCode = 0;
+    json_error_t error;
+    json_t *pJSON_Root = NULL;
+    json_t *pJSON_Value = NULL;
+
+    pJSON_Root = json_loads(szResults, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    // get the status code
+    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
+    statusCode = (int) json_integer_value(pJSON_Value);
+
+    // if there was a failure
+    if (ABC_Server_Code_Success != statusCode)
+    {
+        if (ABC_Server_Code_AccountExists == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists on server");
+        }
+        else if (ABC_Server_Code_NoAccount == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "Account does not exist on server");
+        }
+        else if (ABC_Server_Code_InvalidPassword == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_BadPassword, "Invalid password on server");
+        }
+        else if (ABC_Server_Code_PinExpired == statusCode)
+        {
+            ABC_RET_ERROR(ABC_CC_PinExpired, "Invalid password on server");
+        }
+        else
+        {
+            // get the message
+            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
+            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
+            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
+        }
+    }
+    if (ppJSON_Result)
+    {
+        *ppJSON_Result = pJSON_Root;
+        pJSON_Root = NULL;
+    }
+exit:
+    if (pJSON_Root) json_decref(pJSON_Root);
     return cc;
 }
 

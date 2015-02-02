@@ -126,7 +126,6 @@ int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64);
 /*
  * Initializes Scrypt paramenters by benchmarking device
  */
-
 tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -199,6 +198,7 @@ exit:
 
     return cc;
 }
+
 /**
  * Sets the seed for the random number generator
  */
@@ -272,6 +272,79 @@ exit:
 }
 
 /**
+ * Creates a buffer of random data
+ */
+tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
+                                   tABC_U08Buf   *pData,
+                                   tABC_Error    *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    int rc;
+
+    ABC_CHECK_NULL(pData);
+
+    ABC_BUF_NEW(*pData, length);
+
+    rc = RAND_bytes(ABC_BUF_PTR(*pData), length);
+    //unsigned long err = ERR_get_error();
+
+    if (rc != 1)
+    {
+        ABC_BUF_FREE(*pData);
+        ABC_RET_ERROR(ABC_CC_Error, "Random data generation failed");
+    }
+
+exit:
+
+    return cc;
+}
+
+/**
+ * generates a randome UUID (version 4)
+ *
+ * Version 4 UUIDs use a scheme relying only on random numbers.
+ * This algorithm sets the version number (4 bits) as well as two reserved bits.
+ * All other bits (the remaining 122 bits) are set using a random or pseudorandom data source.
+ * Version 4 UUIDs have the form xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx where x is any hexadecimal
+ * digit and y is one of 8, 9, A, or B (e.g., F47AC10B-58CC-4372-A567-0E02B2E3D479).
+ */
+tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
+                                tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    unsigned char *pData = NULL;
+    char *szUUID = NULL;
+    AutoU08Buf Data;
+
+    ABC_CHECK_NULL(pszUUID);
+
+    ABC_STR_NEW(szUUID, UUID_STR_LENGTH + 1);
+
+    ABC_CHECK_RET(ABC_CryptoCreateRandomData(UUID_BYTE_COUNT, &Data, pError));
+    pData = ABC_BUF_PTR(Data);
+
+    // put in the version
+    // To put in the version, take the 7th byte and perform an and operation using 0x0f, followed by an or operation with 0x40.
+    pData[6] = (pData[6] & 0xf) | 0x40;
+
+    // 9th byte significant nibble is one of 8, 9, A, or B
+    pData[8] = (pData[8] | 0x80) & 0xbf;
+
+    sprintf(szUUID, "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+            pData[0], pData[1], pData[2], pData[3], pData[4], pData[5], pData[6], pData[7],
+            pData[8], pData[9], pData[10], pData[11], pData[12], pData[13], pData[14], pData[15]);
+
+    *pszUUID = szUUID;
+
+exit:
+    return cc;
+}
+
+/**
  * Encrypted the given data and create a json string
  */
 tABC_CC ABC_CryptoEncryptJSONString(const tABC_U08Buf Data,
@@ -319,7 +392,7 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
     char            *szDataBase64   = NULL;
     json_t          *jsonRoot       = NULL;
     json_t          *jsonSNRP       = NULL;
-    tABC_CryptoSNRP *pSNRP          = NULL;
+    AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> pSNRP;
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Key);
@@ -377,7 +450,7 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
                                                g_timedScryptN,
                                                g_timedScryptR,
                                                SCRYPT_DEFAULT_CLIENT_P,
-                                               &pSNRP,
+                                               &pSNRP.get(),
                                                pError));
             ABC_CHECK_RET(ABC_CryptoCreateJSONObjectSNRP(pSNRP, &jsonSNRP, pError));
             json_object_set(jsonRoot, JSON_ENC_SNRP_FIELD, jsonSNRP);
@@ -397,7 +470,6 @@ exit:
     ABC_FREE_STR(szIV_Hex);
     ABC_FREE_STR(szDataBase64);
     if (jsonRoot)     json_decref(jsonRoot);
-    if (pSNRP)        ABC_CryptoFreeSNRP(&pSNRP);
 
     return cc;
 }
@@ -509,7 +581,7 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     AutoU08Buf     EncData;
     AutoU08Buf     IV;
     AutoU08Buf     GenKey;
-    tABC_CryptoSNRP *pSNRP  = NULL;
+    AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> pSNRP;
 
     int type;
     json_t *jsonVal = NULL;
@@ -534,7 +606,7 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
         // Decode the SNRP
         json_t *jsonSNRP = json_object_get(pJSON_Enc, JSON_ENC_SNRP_FIELD);
         ABC_CHECK_ASSERT((jsonSNRP && json_is_object(jsonSNRP)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing SNRP");
-        ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(jsonSNRP, &pSNRP, pError));
+        ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(jsonSNRP, &pSNRP.get(), pError));
 
         // generate a key using the salt and scrypt
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(Key, pSNRP, &GenKey, pError));
@@ -557,8 +629,6 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(EncData, *pFinalKey, IV, pData, pError));
 
 exit:
-    ABC_CryptoFreeSNRP(&pSNRP);
-
     return cc;
 }
 
@@ -993,36 +1063,6 @@ exit:
 }
 
 /**
- * Creates a buffer of random data
- */
-tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
-                                   tABC_U08Buf   *pData,
-                                   tABC_Error    *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    int rc;
-
-    ABC_CHECK_NULL(pData);
-
-    ABC_BUF_NEW(*pData, length);
-
-    rc = RAND_bytes(ABC_BUF_PTR(*pData), length);
-    //unsigned long err = ERR_get_error();
-
-    if (rc != 1)
-    {
-        ABC_BUF_FREE(*pData);
-        ABC_RET_ERROR(ABC_CC_Error, "Random data generation failed");
-    }
-
-exit:
-
-    return cc;
-}
-
-/**
  * Encodes the data into a hex string
  *
  * @param pszDataHex Location to store allocated string (caller must free)
@@ -1194,85 +1234,6 @@ int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64)
     padding = 1;
 
     return (3*len)/4 - padding;
-}
-
-/**
- * generates a randome UUID (version 4)
-
- * Version 4 UUIDs use a scheme relying only on random numbers.
- * This algorithm sets the version number (4 bits) as well as two reserved bits.
- * All other bits (the remaining 122 bits) are set using a random or pseudorandom data source.
- * Version 4 UUIDs have the form xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx where x is any hexadecimal
- * digit and y is one of 8, 9, A, or B (e.g., F47AC10B-58CC-4372-A567-0E02B2E3D479).
- */
-tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
-                                tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    unsigned char *pData = NULL;
-    char *szUUID = NULL;
-    AutoU08Buf Data;
-
-    ABC_CHECK_NULL(pszUUID);
-
-    ABC_STR_NEW(szUUID, UUID_STR_LENGTH + 1);
-
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(UUID_BYTE_COUNT, &Data, pError));
-    pData = ABC_BUF_PTR(Data);
-
-    // put in the version
-    // To put in the version, take the 7th byte and perform an and operation using 0x0f, followed by an or operation with 0x40.
-    pData[6] = (pData[6] & 0xf) | 0x40;
-
-    // 9th byte significant nibble is one of 8, 9, A, or B
-    pData[8] = (pData[8] | 0x80) & 0xbf;
-
-    sprintf(szUUID, "%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X",
-            pData[0], pData[1], pData[2], pData[3], pData[4], pData[5], pData[6], pData[7],
-            pData[8], pData[9], pData[10], pData[11], pData[12], pData[13], pData[14], pData[15]);
-
-    *pszUUID = szUUID;
-
-exit:
-    return cc;
-}
-
-/**
- * Allocate and generate scrypt data with default vals and salt1
- */
-tABC_CC ABC_CryptoScryptS1(const tABC_U08Buf Data,
-                           tABC_U08Buf       *pScryptData,
-                           tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL_BUF(Data);
-    ABC_CHECK_NULL(pScryptData);
-
-    tABC_U08Buf Salt; // Do not free
-    if (gbIsTestNet)
-    {
-        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1));
-    }
-    else
-    {
-        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
-    }
-    ABC_CHECK_RET(ABC_CryptoScrypt(Data,
-                                   Salt,
-                                   SCRYPT_DEFAULT_SERVER_N,
-                                   SCRYPT_DEFAULT_SERVER_R,
-                                   SCRYPT_DEFAULT_SERVER_P,
-                                   SCRYPT_DEFAULT_LENGTH,
-                                   pScryptData,
-                                   pError));
-
-exit:
-
-    return cc;
 }
 
 /**
@@ -1521,17 +1482,13 @@ exit:
 /**
  * Deep free's an SNRP object including the Seed data
  */
-void ABC_CryptoFreeSNRP(tABC_CryptoSNRP **ppSNRP)
+void ABC_CryptoFreeSNRP(tABC_CryptoSNRP *pSNRP)
 {
-    tABC_CryptoSNRP *pSNRP = *ppSNRP;
-
     if (pSNRP)
     {
         ABC_BUF_FREE(pSNRP->Salt);
         ABC_CLEAR_FREE(pSNRP, sizeof(tABC_CryptoSNRP));
     }
-
-    *ppSNRP = NULL;
 }
 
 /**
