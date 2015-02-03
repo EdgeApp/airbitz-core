@@ -14,6 +14,7 @@
 
 #include "../util/Sync.hpp"
 #include "../../src/ABC.h"
+#include <string>
 
 namespace abcd {
 
@@ -25,7 +26,7 @@ public:
 
     // Identity:
     char            *szUserName;
-    int             AccountNum;
+    std::string     directory;
     tABC_U08Buf     L1;
 
     // Account access:

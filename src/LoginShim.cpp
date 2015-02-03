@@ -75,7 +75,7 @@ tABC_CC ABC_LoginCacheObject(const char *szUserName,
     {
         ABC_CHECK_ASSERT(szPassword, ABC_CC_NULLPtr, "Not logged in");
         ABC_CHECK_RET(ABC_LoginPassword(&gLoginCache, szUserName, szPassword, pError));
-        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
     }
 
 exit:
@@ -124,7 +124,7 @@ tABC_CC ABC_LoginShimNewAccount(const char *szUserName,
 
     ABC_LoginCacheClear();
     ABC_CHECK_RET(ABC_LoginCreate(szUserName, szPassword, &gLoginCache, pError));
-    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
 
     // Take this non-blocking opportunity to update the general info:
     ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
@@ -188,12 +188,12 @@ tABC_CC ABC_LoginShimSetPassword(const char *szUserName,
         if (szPassword)
         {
             ABC_CHECK_RET(ABC_LoginPassword(&gLoginCache, szUserName, szPassword, pError));
-            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
         }
         else
         {
             ABC_CHECK_RET(ABC_LoginRecovery(&gLoginCache, szUserName, szRecoveryAnswers, pError));
-            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
         }
     }
 
@@ -228,7 +228,7 @@ tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
         ABC_LoginCacheClear();
         gLoginCache = pObject;
         *pbValid = true;
-        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
     }
     else if (ABC_CC_DecryptFailure == cc)
     {
@@ -255,7 +255,7 @@ tABC_CC ABC_LoginShimPinLogin(const char *szUserName,
     ABC_LoginCacheClear();
     gLoginCache = pObject;
 
-    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
 
 exit:
     return cc;
