@@ -14,9 +14,16 @@
 
 #include "LoginPackages.hpp"
 #include "../../src/ABC.h"
+#include <list>
 #include <string>
 
 namespace abcd {
+
+/**
+ * List all the accounts currently on the device.
+ */
+std::list<std::string>
+loginDirList();
 
 /**
  * Locates the account directory for a given username.

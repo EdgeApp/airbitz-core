@@ -87,6 +87,34 @@ newDirName(std::string &result)
     return Status();
 }
 
+std::list<std::string>
+loginDirList()
+{
+    std::list<std::string> out;
+
+    std::string accountsDir = accountsDirectory();
+    DIR *dir = opendir(accountsDir.c_str());
+    if (!dir)
+        return out;
+
+    struct dirent *de;
+    while (nullptr != (de = readdir(dir)))
+    {
+        // Skip hidden files:
+        if (de->d_name[0] == '.')
+            continue;
+
+        auto directory = accountsDir + de->d_name + '/';
+
+        std::string username;
+        if (readUsername(directory, username))
+            out.push_back(username);
+    }
+
+    closedir(dir);
+    return out;
+}
+
 std::string
 loginDirFind(const std::string &username)
 {
