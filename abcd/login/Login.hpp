@@ -17,8 +17,12 @@
 
 namespace abcd {
 
-typedef struct sABC_Login
+class Login
 {
+public:
+    ~Login();
+    Login();
+
     // Identity:
     char            *szUserName;
     int             AccountNum;
@@ -27,7 +31,9 @@ typedef struct sABC_Login
     // Account access:
     tABC_U08Buf     MK;
     char            *szSyncKey; // Hex-encoded
-} tABC_Login;
+};
+
+typedef Login tABC_Login;
 
 // Destructor:
 void ABC_LoginFree(tABC_Login *pSelf);

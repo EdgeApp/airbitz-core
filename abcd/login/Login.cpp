@@ -17,21 +17,30 @@ namespace abcd {
 
 #define ACCOUNT_MK_LENGTH 32
 
+Login::~Login()
+{
+    ABC_FREE_STR(szUserName);
+    ABC_BUF_FREE(L1);
+
+    ABC_BUF_FREE(MK);
+    ABC_FREE_STR(szSyncKey);
+}
+
+Login::Login()
+{
+    szUserName = nullptr;
+    ABC_BUF_CLEAR(L1);
+    ABC_BUF_CLEAR(MK);
+    szSyncKey = nullptr;
+}
+
 /**
  * Deletes a login object and all its contents.
  */
 void ABC_LoginFree(tABC_Login *pSelf)
 {
     if (pSelf)
-    {
-        ABC_FREE_STR(pSelf->szUserName);
-        ABC_BUF_FREE(pSelf->L1);
-
-        ABC_BUF_FREE(pSelf->MK);
-        ABC_FREE_STR(pSelf->szSyncKey);
-
-        ABC_CLEAR_FREE(pSelf, sizeof(tABC_Login));
-    }
+        delete pSelf;
 }
 
 /**
@@ -45,8 +54,7 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
 
     tABC_U08Buf L = ABC_BUF_NULL; // Do not free
     AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> pSNRP0;
-    tABC_Login *pSelf = NULL;
-    ABC_NEW(pSelf, tABC_Login);
+    Login *pSelf = new Login;
 
     // Set up identity:
     ABC_CHECK_RET(ABC_LoginFixUserName(szUserName, &pSelf->szUserName, pError));
