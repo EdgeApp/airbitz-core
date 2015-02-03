@@ -13,10 +13,18 @@
 #define ABC_LoginDir_h
 
 #include "LoginPackages.hpp"
+#include "../util/Status.hpp"
 #include "../../src/ABC.h"
+#include <list>
 #include <string>
 
 namespace abcd {
+
+/**
+ * List all the accounts currently on the device.
+ */
+std::list<std::string>
+loginDirListUsers();
 
 tABC_CC ABC_LoginDirGetName(const char *szUserName,
                             std::string &directory,

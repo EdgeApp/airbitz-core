@@ -40,6 +40,7 @@
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
 #include "../abcd/Exchanges.hpp"
+#include "../abcd/login/LoginDir.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
@@ -906,6 +907,32 @@ tABC_CC ABC_PinSetup(const char *szUserName,
 exit:
     if (pSettings)      ABC_AccountSettingsFree(pSettings);
 
+    return cc;
+}
+
+/**
+ * List all the accounts currently present on the device.
+ * @param szUserNames a newline-separated list of usernames.
+ */
+tABC_CC ABC_ListAccounts(char **pszUserNames,
+                         tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    std::string out;
+    auto list = loginDirListUsers();
+
+    ABC_CHECK_NULL(pszUserNames);
+
+    for (const auto &username: list)
+        out += username + '\n';
+
+    ABC_STRDUP(*pszUserNames, out.c_str());
+
+exit:
     return cc;
 }
 

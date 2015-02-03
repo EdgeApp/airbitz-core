@@ -8,9 +8,9 @@
 #include "LoginDir.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Json.hpp"
-#include "../util/Status.hpp"
 #include "../util/Sync.hpp"
 #include "../util/Util.hpp"
+#include <dirent.h>
 #include <jansson.h>
 
 namespace abcd {
@@ -74,6 +74,38 @@ newDirName(std::string &directory)
     directory = out;
 
     return Status();
+}
+
+std::list<std::string>
+loginDirListUsers()
+{
+    std::list<std::string> out;
+
+    std::string accountsDir = accountsDirectory();
+    DIR *dir = opendir(accountsDir.c_str());
+    if (!dir)
+        return out;
+
+    struct dirent *de;
+    while (nullptr != (de = readdir(dir)))
+    {
+        // Skip hidden files:
+        if (de->d_name[0] == '.')
+            continue;
+
+        auto fullDir = accountsDir + '/' + de->d_name;
+
+        tABC_Error error;
+        AutoString username;
+        if (ABC_CC_Ok == ABC_LoginDirGetUsername(fullDir,
+            &username.get(), &error))
+        {
+            out.push_back(username.get());
+        }
+    }
+
+    closedir(dir);
+    return out;
 }
 
 /**

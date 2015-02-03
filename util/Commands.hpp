@@ -27,6 +27,7 @@ abcd::Status getExchangeRate(int argc, char *argv[]);
 abcd::Status getQuestionChoices(int argc, char *argv[]);
 abcd::Status getSettings(int argc, char *argv[]);
 abcd::Status getWalletInfo(int argc, char *argv[]);
+abcd::Status listAccounts(int argc, char *argv[]);
 abcd::Status listWallets(int argc, char *argv[]);
 abcd::Status pinLogin(int argc, char *argv[]);
 abcd::Status pinLoginSetup(int argc, char *argv[]);
