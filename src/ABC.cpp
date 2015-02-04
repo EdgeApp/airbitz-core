@@ -1112,8 +1112,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_IsTwoFactorResetPending(const char **usernames,
-    const int size, bool **pending, tABC_Error *pError)
+tABC_CC ABC_IsTwoFactorResetPending(char **szUsernames, tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
@@ -1121,39 +1120,36 @@ tABC_CC ABC_IsTwoFactorResetPending(const char **usernames,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_CryptoSNRP *pSNRP0 = NULL;
-    bool *pPending = NULL;
-    std::vector<tABC_U08Buf> usersRef;
+    size_t i = 0;
+    std::vector<tABC_U08Buf> L1s;
     std::vector<bool> pendingRef;
+    std::string usernames;
 
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    ABC_CHECK_NULL(usernames);
-
+    auto list = loginDirList();
     // Ewwwwwww
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP0, pError));
-    for (int i = 0; i < size; ++i)
+    for (const auto &username: list)
     {
         tABC_U08Buf L = ABC_BUF_NULL;
         tABC_U08Buf L1 = ABC_BUF_NULL;
-        ABC_BUF_SET_PTR(L, (unsigned char *)usernames[i], strlen(usernames[i]));
+        const char *s = username.c_str();
+        ABC_BUF_SET_PTR(L, (unsigned char *)s, strlen(s));
         ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP0, &L1, pError));
-        usersRef.push_back(L1);
+        L1s.push_back(L1);
     }
 
-    ABC_CHECK_RET(ABC_TwoFactorPending(usersRef, pendingRef, pError));
-    ABC_ARRAY_NEW(pPending, size, bool);
-    for (int i = 0; i < size; ++i)
+    ABC_CHECK_RET(ABC_TwoFactorPending(L1s, pendingRef, pError));
+    for (const auto &username: list)
     {
-        pPending[i] = pendingRef.at(i);
+        if (pendingRef.at(i))
+            usernames += std::string(username) + "\n";
+        ++i;
     }
-    *pending = pPending;
-    pPending = NULL;
+    ABC_STRDUP(*szUsernames, usernames.c_str());
 
 exit:
-    ABC_FREE(pPending);
-    for (tABC_U08Buf &buf : usersRef)
-    {
+    for (tABC_U08Buf &buf : L1s)
         ABC_BUF_FREE(buf);
-    }
 
     return cc;
 }

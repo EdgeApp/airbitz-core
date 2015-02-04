@@ -583,23 +583,12 @@ abcd::Status otpRequestReset(int argc, char *argv[])
 
 abcd::Status otpRequestPending(int argc, char *argv[])
 {
-    bool *pending = NULL;
-    int i = 0;
-    if (argc < 1)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-reset-pending <user-1> <user-2> ...<user-n>");
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-reset-pending");
 
-    ABC_CHECK_OLD(ABC_IsTwoFactorResetPending((const char **)argv, argc, &pending, &error));
-    std::cout << "Pending?" << std::endl;
-    for (i = 0; i < argc; ++i)
-    {
-        std::cout << argv[i] << ": ";
-        if (pending[i])
-            std::cout << "Yes. " << std::endl;
-        else
-            std::cout << "No. " << std::endl;
-    }
-    if (pending)
-        free(pending);
+    AutoString usernames;
+    ABC_CHECK_OLD(ABC_IsTwoFactorResetPending(&usernames.get(), &error));
+    printf("Pending? %s\n", usernames.get());
     return Status();
 }
 

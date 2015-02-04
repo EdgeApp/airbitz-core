@@ -779,10 +779,7 @@ tABC_CC ABC_RequestTwoFactorReset(const char *szUserName,
                                   const char *szPassword,
                                   tABC_Error *pError);
 
-tABC_CC ABC_IsTwoFactorResetPending(const char **usernames,
-                                    const int size,
-                                    bool **pending,
-                                    tABC_Error *pError);
+tABC_CC ABC_IsTwoFactorResetPending(char **szUsernames, tABC_Error *pError);
 
 tABC_CC ABC_CancelTwoFactorReset(const char *szUserName,
                                  const char *szPassword,
