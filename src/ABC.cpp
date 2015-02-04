@@ -1012,8 +1012,6 @@ exit:
 tABC_CC ABC_TwoFactorSignIn(const char *szUserName,
                             const char *szPassword,
                             const char *szSecret,
-                            tABC_Request_Callback fRequestCallback,
-                            void *pData,
                             tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -1025,7 +1023,7 @@ tABC_CC ABC_TwoFactorSignIn(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
 
     ABC_CHECK_RET(ABC_LoginShim2FASetSecret(szUserName, szPassword, szSecret, false, pError));
-    ABC_CHECK_RET(ABC_SignIn(szUserName, szPassword, fRequestCallback, pData, pError));
+    ABC_CHECK_RET(ABC_SignIn(szUserName, szPassword, NULL, NULL, pError));
     ABC_CHECK_RET(ABC_LoginShim2FASetSecret(szUserName, szPassword, szSecret, true, pError));
 
 exit:
