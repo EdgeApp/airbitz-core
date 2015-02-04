@@ -756,8 +756,6 @@ tABC_CC ABC_StatusTwoFactor(const char *szUserName,
 tABC_CC ABC_TwoFactorSignIn(const char *szUserName,
                             const char *szPassword,
                             const char *szSecret,
-                            tABC_Request_Callback fRequestCallback,
-                            void *pData,
                             tABC_Error *pError);
 
 tABC_CC ABC_GetTwoFactorSecret(const char *szUserName,

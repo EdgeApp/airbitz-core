@@ -566,7 +566,7 @@ Status otpSignIn(int argc, char *argv[])
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... otp-get-secret <user> <pass> <secret>");
 
-    ABC_CHECK_OLD(ABC_TwoFactorSignIn(argv[0], argv[1], argv[2], NULL, NULL, &error));
+    ABC_CHECK_OLD(ABC_TwoFactorSignIn(argv[0], argv[1], argv[2], &error));
 
     return Status();
 }
