@@ -11,6 +11,7 @@
 #include "../util/Json.hpp"
 #include "../util/URL.hpp"
 #include "../util/Util.hpp"
+#include <list>
 #include <map>
 
 // For debug upload:
@@ -799,6 +800,7 @@ tABC_CC ABC_LoginServerOtpPending(std::vector<tABC_U08Buf> users, std::vector<bo
     char *szResults = NULL;
     char *szPost = NULL;
     std::map<std::string, bool> userMap;
+    std::list<std::string> usersEncoded;
 
     std::string url(ABC_SERVER_ROOT);
     url += "/otp/pending/check";
@@ -812,6 +814,7 @@ tABC_CC ABC_LoginServerOtpPending(std::vector<tABC_U08Buf> users, std::vector<bo
         std::string username(szL1);
         param += (username + ",");
         userMap[username] = false;
+        usersEncoded.push_back(username);
 
         ABC_FREE_STR(szL1);
     }
@@ -857,8 +860,8 @@ tABC_CC ABC_LoginServerOtpPending(std::vector<tABC_U08Buf> users, std::vector<bo
         }
     }
     isPending.clear();
-    for (auto it = userMap.begin(); it != userMap.end(); ++it) {
-        isPending.push_back(it->second);
+    for (auto &username: usersEncoded) {
+        isPending.push_back(userMap[username]);
     }
 exit:
     ABC_FREE_STR(szToken);

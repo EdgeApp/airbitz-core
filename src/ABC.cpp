@@ -1139,10 +1139,11 @@ tABC_CC ABC_IsTwoFactorResetPending(char **szUsernames, tABC_Error *pError)
     }
 
     ABC_CHECK_RET(ABC_TwoFactorPending(L1s, pendingRef, pError));
+    i = 0;
     for (const auto &username: list)
     {
         if (pendingRef.at(i))
-            usernames += std::string(username) + "\n";
+            usernames += username + "\n";
         ++i;
     }
     ABC_STRDUP(*szUsernames, usernames.c_str());
