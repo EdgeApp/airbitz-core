@@ -728,6 +728,9 @@ tABC_CC ABC_PinSetup(const char *szUserName,
                      const char *szPassword,
                      tABC_Error *pError);
 
+tABC_CC ABC_ListAccounts(char **pszUserNames,
+                         tABC_Error *pError);
+
 /* === Login data: === */
 tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,

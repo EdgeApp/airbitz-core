@@ -45,6 +45,7 @@ static Status run(int argc, char *argv[])
         command == "get-question-choices" ? getQuestionChoices(argc-3, argv+3) :
         command == "get-settings"       ? getSettings(argc-3, argv+3) :
         command == "get-wallet-info"    ? getWalletInfo(argc-3, argv+3) :
+        command == "list-accounts"      ? listAccounts(argc-3, argv+3) :
         command == "list-wallets"       ? listWallets(argc-3, argv+3) :
         command == "pin-login"          ? pinLogin(argc-3, argv+3) :
         command == "pin-login-setup"    ? pinLoginSetup(argc-3, argv+3) :

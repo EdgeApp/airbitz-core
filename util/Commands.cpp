@@ -334,6 +334,18 @@ Status getWalletInfo(int argc, char *argv[])
     return Status();
 }
 
+Status listAccounts(int argc, char *argv[])
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... list-accounts");
+
+    AutoString usernames;
+    ABC_CHECK_OLD(ABC_ListAccounts(&usernames.get(), &error));
+    printf("Usernames:\n%s", usernames.get());
+
+    return Status();
+}
+
 Status listWallets(int argc, char *argv[])
 {
     if (argc != 2)

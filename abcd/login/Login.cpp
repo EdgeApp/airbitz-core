@@ -17,21 +17,30 @@ namespace abcd {
 
 #define ACCOUNT_MK_LENGTH 32
 
+Login::~Login()
+{
+    ABC_FREE_STR(szUserName);
+    ABC_BUF_FREE(L1);
+
+    ABC_BUF_FREE(MK);
+    ABC_FREE_STR(szSyncKey);
+}
+
+Login::Login()
+{
+    szUserName = nullptr;
+    ABC_BUF_CLEAR(L1);
+    ABC_BUF_CLEAR(MK);
+    szSyncKey = nullptr;
+}
+
 /**
  * Deletes a login object and all its contents.
  */
 void ABC_LoginFree(tABC_Login *pSelf)
 {
     if (pSelf)
-    {
-        ABC_FREE_STR(pSelf->szUserName);
-        ABC_BUF_FREE(pSelf->L1);
-
-        ABC_BUF_FREE(pSelf->MK);
-        ABC_FREE_STR(pSelf->szSyncKey);
-
-        ABC_CLEAR_FREE(pSelf, sizeof(tABC_Login));
-    }
+        delete pSelf;
 }
 
 /**
@@ -45,12 +54,11 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
 
     tABC_U08Buf L = ABC_BUF_NULL; // Do not free
     AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> pSNRP0;
-    tABC_Login *pSelf = NULL;
-    ABC_NEW(pSelf, tABC_Login);
+    Login *pSelf = new Login;
 
     // Set up identity:
     ABC_CHECK_RET(ABC_LoginFixUserName(szUserName, &pSelf->szUserName, pError));
-    ABC_CHECK_RET(ABC_LoginDirGetNumber(pSelf->szUserName, &pSelf->AccountNum, pError));
+    pSelf->directory = loginDirFind(pSelf->szUserName);
 
     // Create L1:
     ABC_BUF_SET_PTR(L, (unsigned char *)pSelf->szUserName, strlen(pSelf->szUserName));
@@ -127,8 +135,8 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginServerActivate(pSelf->L1, LP1, pError));
 
     // Set up the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirCreate(&pSelf->AccountNum, pSelf->szUserName, pError));
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(pSelf->AccountNum, pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirCreate(pSelf->directory, pSelf->szUserName, pError));
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(pSelf->directory, pCarePackage, pLoginPackage, pError));
 
     // Assign the final output:
     *ppSelf = pSelf;
@@ -177,7 +185,7 @@ tABC_CC ABC_LoginGetSyncKeys(tABC_Login *pSelf,
     AutoSyncKeys pKeys;
 
     ABC_NEW(pKeys.get(), tABC_SyncKeys);
-    ABC_CHECK_RET(ABC_LoginDirGetSyncDir(pSelf->AccountNum, &pKeys->szSyncDir, pError));
+    ABC_CHECK_RET(ABC_LoginDirGetSyncDir(pSelf->directory, &pKeys->szSyncDir, pError));
     ABC_BUF_DUP(pKeys->MK, pSelf->MK);
     ABC_STRDUP(pKeys->szSyncKey, pSelf->szSyncKey);
 
@@ -204,7 +212,7 @@ tABC_CC ABC_LoginGetServerKeys(tABC_Login *pSelf,
 
     ABC_BUF_DUP(*pL1, pSelf->L1);
 
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->AccountNum, &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->directory, &pCarePackage, &pLoginPackage, pError));
     ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLoginPackage->ELP1, pSelf->MK, pLP1, pError));
 
 exit:

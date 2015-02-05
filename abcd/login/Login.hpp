@@ -14,20 +14,27 @@
 
 #include "../util/Sync.hpp"
 #include "../../src/ABC.h"
+#include <string>
 
 namespace abcd {
 
-typedef struct sABC_Login
+class Login
 {
+public:
+    ~Login();
+    Login();
+
     // Identity:
     char            *szUserName;
-    int             AccountNum;
+    std::string     directory;
     tABC_U08Buf     L1;
 
     // Account access:
     tABC_U08Buf     MK;
     char            *szSyncKey; // Hex-encoded
-} tABC_Login;
+};
+
+typedef Login tABC_Login;
 
 // Destructor:
 void ABC_LoginFree(tABC_Login *pSelf);
