@@ -8,6 +8,7 @@
 #include "LoginShim.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Wallet.hpp"
+#include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/login/LoginDir.hpp"
 #include "../abcd/login/LoginPassword.hpp"
@@ -47,12 +48,12 @@ void ABC_LoginCacheClearOther(const char *szUserName)
 {
     if (gLoginCache)
     {
-        tABC_Error error;
-        int match = 0;
-
-        ABC_LoginCheckUserName(gLoginCache, szUserName, &match, &error);
-        if (!match)
+        std::string fixed;
+        if (!Lobby::fixUsername(fixed, szUserName) ||
+            fixed != gLoginCache->szUserName)
+        {
             ABC_LoginCacheClear();
+        }
     }
 }
 

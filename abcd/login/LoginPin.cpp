@@ -6,6 +6,7 @@
  */
 
 #include "LoginPin.hpp"
+#include "Lobby.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
 #include "../util/Json.hpp"
@@ -106,10 +107,10 @@ tABC_CC ABC_LoginPinExists(const char *szUserName,
     tABC_Error error;
 
     tABC_PinLocal *pLocal = NULL;
-    char *szFixed = NULL;
+    std::string fixed;
     std::string directory;
 
-    ABC_CHECK_RET(ABC_LoginFixUserName(szUserName, &szFixed, pError));
+    ABC_CHECK_NEW(Lobby::fixUsername(fixed, szUserName), pError);
     directory = loginDirFind(szUserName);
 
     *pbExists = false;
@@ -120,7 +121,6 @@ tABC_CC ABC_LoginPinExists(const char *szUserName,
 
 exit:
     ABC_LoginPinLocalFree(pLocal);
-    ABC_FREE_STR(szFixed);
 
     return cc;
 }
@@ -132,16 +132,15 @@ tABC_CC ABC_LoginPinDelete(const char *szUserName,
                            tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    char *szFixed = NULL;
+    std::string fixed;
     std::string directory;
 
-    ABC_CHECK_RET(ABC_LoginFixUserName(szUserName, &szFixed, pError));
+    ABC_CHECK_NEW(Lobby::fixUsername(fixed, szUserName), pError);
     directory = loginDirFind(szUserName);
-    ABC_CHECK_RET(ABC_LoginDirFileDelete(directory, PIN_FILENAME, pError));
+    if (!directory.empty())
+        ABC_CHECK_RET(ABC_LoginDirFileDelete(directory, PIN_FILENAME, pError));
 
 exit:
-    ABC_FREE_STR(szFixed);
-
     return cc;
 }
 

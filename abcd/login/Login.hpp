@@ -50,11 +50,6 @@ tABC_CC ABC_LoginCreate(const char *szUserName,
                         tABC_Error *pError);
 
 // Read accessors:
-tABC_CC ABC_LoginCheckUserName(tABC_Login *pSelf,
-                               const char *szUserName,
-                               int *pMatch,
-                               tABC_Error *pError);
-
 tABC_CC ABC_LoginGetSyncKeys(tABC_Login *pSelf,
                              tABC_SyncKeys **ppKeys,
                              tABC_Error *pError);
@@ -63,11 +58,6 @@ tABC_CC ABC_LoginGetServerKeys(tABC_Login *pSelf,
                                tABC_U08Buf *pL1,
                                tABC_U08Buf *pLP1,
                                tABC_Error *pError);
-
-// Utility:
-tABC_CC ABC_LoginFixUserName(const char *szUserName,
-                             char **pszOut,
-                             tABC_Error *pError);
 
 } // namespace abcd
 

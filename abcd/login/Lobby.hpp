@@ -54,6 +54,13 @@ public:
     DataSlice
     authId() const { return authId_; }
 
+    /**
+     * Re-formats a username to all-lowercase,
+     * checking for disallowed characters and collapsing spaces.
+     */
+    static Status
+    fixUsername(std::string &result, const std::string &username);
+
 private:
     std::string username_;
     std::string directory_;

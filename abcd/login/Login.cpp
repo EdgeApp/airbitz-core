@@ -6,6 +6,7 @@
  */
 
 #include "Login.hpp"
+#include "Lobby.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
 #include "../Account.hpp"
@@ -52,12 +53,14 @@ tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    std::string username;
     tABC_U08Buf L = ABC_BUF_NULL; // Do not free
     AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> pSNRP0;
     Login *pSelf = new Login;
 
     // Set up identity:
-    ABC_CHECK_RET(ABC_LoginFixUserName(szUserName, &pSelf->szUserName, pError));
+    ABC_CHECK_NEW(Lobby::fixUsername(username, szUserName), pError);
+    ABC_STRDUP(pSelf->szUserName, username.c_str());
     pSelf->directory = loginDirFind(pSelf->szUserName);
 
     // Create L1:
@@ -150,30 +153,6 @@ exit:
 }
 
 /**
- * Determines whether or not the given string matches the account's
- * username.
- * @param szUserName    The user name to check.
- * @param pMatch        Set to 1 if the names match.
- */
-tABC_CC ABC_LoginCheckUserName(tABC_Login *pSelf,
-                               const char *szUserName,
-                               int *pMatch,
-                               tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    char *szFixed = NULL;
-    *pMatch = 0;
-
-    ABC_CHECK_RET(ABC_LoginFixUserName(szUserName, &szFixed, pError));
-    if (!strcmp(szFixed, pSelf->szUserName))
-        *pMatch = 1;
-
-exit:
-    ABC_FREE_STR(szFixed);
-    return cc;
-}
-
-/**
  * Obtains the sync keys for accessing an account's repo.
  * @param ppKeys    The returned keys. Call ABC_SyncFreeKeys when done.
  */
@@ -219,57 +198,6 @@ exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
 
-    return cc;
-}
-
-/**
- * Re-formats a username to all-lowercase, checking for disallowed
- * characters and collapsing spaces.
- */
-tABC_CC ABC_LoginFixUserName(const char *szUserName,
-                             char **pszOut,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    char *szOut = NULL;
-    const char *si;
-    char *di;
-
-    ABC_STR_NEW(szOut, strlen(szUserName) + 1);
-
-    // Collapse leading & internal spaces:
-    si = szUserName;
-    di = szOut;
-    do
-    {
-        while (isspace(*si))
-            ++si;
-        while (*si && !isspace(*si))
-            *di++ = *si++;
-        *di++ = ' ';
-    }
-    while (*si);
-    *--di = 0;
-
-    // Stomp trailing space, if any:
-    --di;
-    if (szOut < di && ' ' == *di)
-        *di = 0;
-
-    // Scan for bad characters, and make lowercase:
-    for (di = szOut; *di; ++di)
-    {
-        if (*di < ' ' || '~' < *di)
-            cc = ABC_CC_NotSupported;
-        if ('A' <= *di && *di <= 'Z')
-            *di = *di - 'A' + 'a';
-    }
-
-    *pszOut = szOut;
-    szOut = NULL;
-
-exit:
-    ABC_FREE_STR(szOut);
     return cc;
 }
 
