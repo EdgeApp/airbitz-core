@@ -6,6 +6,7 @@
  */
 
 #include "LoginRecovery.hpp"
+#include "Lobby.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
 #include "../util/Util.hpp"
@@ -17,31 +18,24 @@ namespace abcd {
  *
  * @param pszRecoveryQuestions The returned questions. The caller frees this.
  */
-tABC_CC ABC_LoginGetRQ(const char *szUserName,
+tABC_CC ABC_LoginGetRQ(Lobby &lobby,
                        char **pszRecoveryQuestions,
                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_Login *pSelf = NULL;
     tABC_CarePackage *pCarePackage = NULL;
-    tABC_U08Buf L = ABC_BUF_NULL; // Do not free
-    AutoU08Buf L1;
     AutoU08Buf L4;
     AutoU08Buf RQ;
 
-    // This is the easiest way to get L1:
-    ABC_CHECK_RET(ABC_LoginNew(&pSelf, szUserName, pError));
-
     // Load CarePackage:
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(pSelf->L1, &pCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(toU08Buf(lobby.authId()), &pCarePackage, pError));
 
     // Verify that the questions exist:
     ABC_CHECK_ASSERT(pCarePackage->ERQ, ABC_CC_NoRecoveryQuestions, "No recovery questions");
 
     // Create L4:
-    ABC_BUF_SET_PTR(L, (unsigned char *)szUserName, strlen(szUserName));
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pCarePackage->pSNRP4, &L4, pError));
+    ABC_CHECK_RET(ABC_CryptoScryptSNRP(toU08Buf(lobby.username()), pCarePackage->pSNRP4, &L4, pError));
 
     // Decrypt:
     cc = ABC_CryptoDecryptJSONObject(pCarePackage->ERQ, L4, &RQ, pError);
@@ -55,7 +49,6 @@ tABC_CC ABC_LoginGetRQ(const char *szUserName,
     }
 
 exit:
-    ABC_LoginFree(pSelf);
     ABC_CarePackageFree(pCarePackage);
 
     return cc;

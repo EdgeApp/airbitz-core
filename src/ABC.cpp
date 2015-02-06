@@ -1202,10 +1202,13 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(pszQuestions);
 
-    ABC_CHECK_RET(ABC_LoginGetRQ(szUserName, pszQuestions, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        ABC_CHECK_RET(ABC_LoginGetRQ(*gLobbyCache, pszQuestions, pError));
+    }
 
 exit:
-
     return cc;
 }
 

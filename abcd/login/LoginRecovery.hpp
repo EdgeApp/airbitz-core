@@ -17,7 +17,9 @@
 
 namespace abcd {
 
-tABC_CC ABC_LoginGetRQ(const char *szUserName,
+class Lobby;
+
+tABC_CC ABC_LoginGetRQ(Lobby &lobby,
                        char **pszRecoveryQuestions,
                        tABC_Error *pError);
 
