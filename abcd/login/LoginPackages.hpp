@@ -32,14 +32,16 @@ struct CarePackage:
 /**
  * A round-trippable representation of the AirBitz LoginPackage file.
  */
-typedef struct sABC_LoginPackage
+struct LoginPackage:
+    public JsonObject
 {
-    json_t          *EMK_LP2;
-    json_t          *EMK_LRA3;  // Optional
+    ABC_JSON_VALUE(passwordBox, "EMK_LP2",  JsonBox)
+    ABC_JSON_VALUE(recoveryBox, "EMK_LRA3", JsonBox) // Optional
+
     // These are all encrypted with MK:
-    json_t          *ESyncKey;
-    json_t          *ELP1;
-    json_t          *ELRA1;     // Optional
+    ABC_JSON_VALUE(syncKeyBox,  "ESyncKey", JsonBox)
+    ABC_JSON_VALUE(authKeyBox,  "ELP1",     JsonBox)
+    ABC_JSON_VALUE(ELRA1,       "ELRA1",    JsonBox) // Optional
     /* There was a time when the login and password were not orthogonal.
      * Therefore, any updates to one needed to include the other for
      * atomic consistency. The login refactor solved this problem, but
@@ -56,22 +58,7 @@ typedef struct sABC_LoginPackage
      * recovery answers. The client-side routines no longer take an
      * oldLRA1 parameter, but the server API still does.
      */
-} tABC_LoginPackage;
-
-void ABC_LoginPackageFree(tABC_LoginPackage *pSelf);
-
-tABC_CC ABC_LoginPackageDecode(tABC_LoginPackage **ppSelf,
-                               char *szLoginPackage,
-                               tABC_Error *pError);
-
-tABC_CC ABC_LoginPackageEncode(tABC_LoginPackage *pSelf,
-                               char **pszLoginPackage,
-                               tABC_Error *pError);
-
-tABC_CC ABC_LoginPackageGetSyncKey(tABC_LoginPackage *pSelf,
-                                   const tABC_U08Buf MK,
-                                   char **pszSyncKey,
-                                   tABC_Error *pError);
+};
 
 } // namespace abcd
 

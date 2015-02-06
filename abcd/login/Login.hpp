@@ -15,7 +15,7 @@
 namespace abcd {
 
 class Lobby;
-typedef struct sABC_LoginPackage tABC_LoginPackage;
+struct LoginPackage;
 
 /**
  * Holds the keys for a logged-in account.
@@ -29,7 +29,7 @@ public:
      * Prepares the Login object for use.
      */
     Status
-    init(tABC_LoginPackage *package);
+    init(const LoginPackage &loginPackage);
 
     /**
      * Obtains a reference to the lobby object associated with this account.

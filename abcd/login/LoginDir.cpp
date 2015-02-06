@@ -225,22 +225,15 @@ exit:
  */
 tABC_CC ABC_LoginDirLoadPackages(const std::string &directory,
                                  CarePackage &carePackage,
-                                 tABC_LoginPackage **ppLoginPackage,
+                                 LoginPackage &loginPackage,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szLoginPackage = NULL;
-
     ABC_CHECK_NEW(carePackage.load(directory + ACCOUNT_CARE_PACKAGE_FILENAME), pError);
-
-    ABC_CHECK_RET(ABC_LoginDirFileLoad(&szLoginPackage, directory,
-        ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
-
-    ABC_CHECK_RET(ABC_LoginPackageDecode(ppLoginPackage, szLoginPackage, pError));
+    ABC_CHECK_NEW(loginPackage.load(directory + ACCOUNT_LOGIN_PACKAGE_FILENAME), pError);
 
 exit:
-    if (szLoginPackage) ABC_FREE_STR(szLoginPackage);
     return cc;
 }
 
@@ -249,22 +242,15 @@ exit:
  */
 tABC_CC ABC_LoginDirSavePackages(const std::string &directory,
                                  const CarePackage &carePackage,
-                                 tABC_LoginPackage *pLoginPackage,
+                                 const LoginPackage &loginPackage,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szLoginPackage = NULL;
-
     ABC_CHECK_NEW(carePackage.save(directory + ACCOUNT_CARE_PACKAGE_FILENAME), pError);
-
-    ABC_CHECK_RET(ABC_LoginPackageEncode(pLoginPackage, &szLoginPackage, pError));
-
-    ABC_CHECK_RET(ABC_LoginDirFileSave(szLoginPackage, directory,
-        ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
+    ABC_CHECK_NEW(loginPackage.save(directory + ACCOUNT_LOGIN_PACKAGE_FILENAME), pError);
 
 exit:
-    if (szLoginPackage) ABC_FREE_STR(szLoginPackage);
     return cc;
 }
 

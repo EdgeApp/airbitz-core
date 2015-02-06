@@ -96,7 +96,7 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
 
     std::unique_ptr<Login> login;
     CarePackage carePackage;
-    tABC_LoginPackage   *pLoginPackage  = NULL;
+    LoginPackage loginPackage;
     PinLocal local;
     char *              szEPINK         = NULL;
     DataChunk pinAuthId;
@@ -108,7 +108,7 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     std::string LPIN = lobby->username() + szPin;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), carePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), carePackage, loginPackage, pError));
     ABC_CHECK_NEW(local.load(lobby->dir() + PIN_FILENAME), pError);
     ABC_CHECK_NEW(local.pinAuthIdDecode(pinAuthId), pError);
 
@@ -125,11 +125,10 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
 
     // Create the Login object:
     login.reset(new Login(lobby, dataKey));
-    ABC_CHECK_NEW(login->init(pLoginPackage), pError);
+    ABC_CHECK_NEW(login->init(loginPackage), pError);
     result.reset(login.release());
 
 exit:
-    ABC_LoginPackageFree(pLoginPackage);
     ABC_FREE_STR(szEPINK);
 
     if (ABC_CC_PinExpired == cc)
@@ -152,7 +151,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     tABC_CC cc = ABC_CC_Ok;
 
     CarePackage carePackage;
-    tABC_LoginPackage   *pLoginPackage  = NULL;
+    LoginPackage loginPackage;
     PinLocal local;
     AutoU08Buf          L1;
     AutoU08Buf          LP1;
@@ -166,7 +165,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     std::string str;
 
     // Get login stuff:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, loginPackage, pError));
     ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &L1, &LP1, pError));
 
     // Put dataKey in a box:
@@ -193,7 +192,6 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     ABC_CHECK_NEW(local.save(login.lobby().dir() + PIN_FILENAME), pError);
 
 exit:
-    ABC_LoginPackageFree(pLoginPackage);
 
     return cc;
 }

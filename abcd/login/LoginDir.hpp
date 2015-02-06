@@ -52,12 +52,12 @@ tABC_CC ABC_LoginDirFileDelete(const std::string &directory,
 
 tABC_CC ABC_LoginDirLoadPackages(const std::string &directory,
                                  CarePackage &carePackage,
-                                 tABC_LoginPackage **ppLoginPackage,
+                                 LoginPackage &loginPackage,
                                  tABC_Error *pError);
 
 tABC_CC ABC_LoginDirSavePackages(const std::string &directory,
                                  const CarePackage &carePackage,
-                                 tABC_LoginPackage *pLoginPackage,
+                                 const LoginPackage &loginPackage,
                                  tABC_Error *pError);
 
 } // namespace abcd
