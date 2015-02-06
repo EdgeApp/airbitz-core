@@ -16,11 +16,44 @@
 #define ABC_LoginShim_h
 
 #include "ABC.h"
+#include "../abcd/util/Status.hpp"
 #include "../abcd/util/Sync.hpp"
 #include <time.h>
+#include <mutex>
 
 namespace abcd {
 
+class Lobby;
+class Login;
+
+/**
+ * This mutex guards the cached login objects.
+ */
+extern std::mutex gLoginMutex;
+typedef std::lock_guard<std::mutex> AutoLoginLock;
+
+extern Lobby *gLobbyCache;
+extern Login *gLoginCache;
+
+/**
+ * Loads the lobby for the given user into the cache.
+ * The caller should already be holding the login mutex,
+ * and must continue holding the mutex while accessing the object.
+ */
+Status
+cacheLobby(const char *szUserName);
+
+/**
+ * Loads the account for the given user into the cache.
+ * The caller should already be holding the login mutex,
+ * and must continue holding the mutex while accessing the object.
+ */
+Status
+cacheLogin(const char *szUserName, const char *szPassword);
+
+/**
+ * Clears all cached login objects.
+ */
 void ABC_LoginShimLogout();
 
 // Blocking functions (see ABC_LoginRequest):
