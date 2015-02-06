@@ -314,7 +314,7 @@ tABC_CC ABC_LoginDirGetSyncDir(const std::string &directory,
                                char **pszDirName,
                                tABC_Error *pError)
 {
-    tABC_CC cc;
+    tABC_CC cc = ABC_CC_Ok;
 
     std::string filename = directory + ACCOUNT_SYNC_DIR;
     ABC_STRDUP(*pszDirName, filename.c_str());
