@@ -151,8 +151,7 @@ typedef AutoFree<char, StringFree> AutoString;
 
 #define ABC_STRDUP(ptr, string) \
     { \
-        ptr = strdup(string); \
-        ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "strdup failed (returned NULL)"); \
+        ABC_CHECK_ASSERT((ptr = strdup(string)) != NULL, ABC_CC_NULLPtr, "strdup failed (returned NULL)"); \
     }
 
 #define ABC_FREE(ptr) \
