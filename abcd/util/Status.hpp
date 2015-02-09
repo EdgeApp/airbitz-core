@@ -104,7 +104,7 @@ std::ostream &operator<<(std::ostream &output, const Status &s);
             cc = s.value(); \
             goto exit; \
         } \
-    } while (true)
+    } while (false)
 
 } // namespace abcd
 

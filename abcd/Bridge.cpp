@@ -39,9 +39,10 @@
 #include "bitcoin/picker.hpp"
 #include <curl/curl.h>
 #include <wallet/wallet.hpp>
+#include <bitcoin/watcher.hpp> // Includes the rest of the stack
+#include <algorithm>
 #include <list>
 #include <unordered_map>
-#include <bitcoin/watcher.hpp> // Includes the rest of the stack
 
 #include "config.h"
 
@@ -1636,45 +1637,32 @@ uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo)
 static
 uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64_t amountSatoshi)
 {
-    uint64_t fees = 0;
-    uint64_t feesScaled = 0;
-
+    // Look up the size-based fees from the table:
+    uint64_t sizeFee = 0;
     if (pInfo->countMinersFees > 0)
     {
         for (unsigned i = 0; i < pInfo->countMinersFees; ++i)
         {
             if (tx_size <= pInfo->aMinersFees[i]->sizeTransaction)
             {
-                fees = pInfo->aMinersFees[i]->amountSatoshi;
+                sizeFee = pInfo->aMinersFees[i]->amountSatoshi;
                 break;
             }
         }
     }
+    if (!sizeFee)
+        return 0;
 
-    if (fees > 0)
-    {
+    // The amount-based fee is 0.1% of total funds sent:
+    uint64_t amountFee = amountSatoshi / 1000;
 
-        // Scale the fees to be about 0.1% of total amount sent
-        feesScaled = amountSatoshi / 1000;
+    // Clamp the amount fee between 10% and 100% of the size-based fee:
+    uint64_t minFee = sizeFee / 10;
+    amountFee = std::max(amountFee, minFee);
+    amountFee = std::min(amountFee, sizeFee);
 
-        // Remove all but first digit of mining fee so we don't have multiple digits in UI
-        feesScaled = feesScaled - (feesScaled % (fees / 10));
-
-        // But do not send more that the fees calculated above
-        if (feesScaled > fees)
-        {
-            feesScaled = fees;
-        }
-        // And do not send less that 10% of the fees calculated above
-        else if (feesScaled < (fees / 10))
-        {
-            feesScaled = (fees / 10);
-        }
-
-        fees = feesScaled;
-    }
-
-    return fees;
+    // Make the result an integer multiple of the minimum fee:
+    return amountFee - amountFee % minFee;
 }
 
 static

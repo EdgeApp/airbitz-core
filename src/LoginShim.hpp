@@ -21,7 +21,7 @@
 
 namespace abcd {
 
-tABC_CC ABC_LoginShimLogout(tABC_Error *pError);
+void ABC_LoginShimLogout();
 
 // Blocking functions (see ABC_LoginRequest):
 tABC_CC ABC_LoginShimLogin(const char *szUserName,
@@ -50,19 +50,45 @@ tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
                                    bool *pbValid,
                                    tABC_Error *pError);
 
-tABC_CC ABC_LoginShimGetRecovery(const char *szUserName,
-                                 char **pszQuestions,
-                                 tABC_Error *pError);
-
 tABC_CC ABC_LoginShimPinLogin(const char *szUserName,
-                              const char *szPIN,
+                              const char *szPin,
                               tABC_Error *pError);
 
 tABC_CC ABC_LoginShimPinSetup(const char *szUserName,
                               const char *szPassword,
-                              const char *szPIN,
+                              const char *szPin,
                               time_t expires,
                               tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FAEnable(const char *szUserName,
+                               const char *szPassword,
+                               long timeout,
+                               tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FADisable(const char *szUserName,
+                                const char *szPassword,
+                                tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FAStatus(const char *szUserName, const char *szPassword,
+        bool *on, long *timeout, tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FAGetSecret(const char *szUserName,
+                                  const char *szPassword,
+                                  char **pszSecret,
+                                  tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FAQrCode(const char *szUserName, const char *szPassword,
+    unsigned char **paData, unsigned int *pWidth, tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FASetSecret(const char *szUserName,
+                                  const char *szPassword,
+                                  const char *szSecret,
+                                  bool loggedIn,
+                                  tABC_Error *pError);
+
+tABC_CC ABC_LoginShim2FARequestReset(const char *szUserName,
+                                     const char *szPassword,
+                                     tABC_Error *pError);
 
 tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
                                  const char *szPassword,
@@ -79,10 +105,6 @@ tABC_CC ABC_LoginShimPasswordOk(const char *szUserName,
                                 const char *szPassword,
                                 bool *pOk,
                                 tABC_Error *pError);
-
-tABC_CC ABC_LoginShimCheckPasswordChange(const char *szUserName,
-                                         const char *szPassword,
-                                         tABC_Error *pError);
 
 } // namespace abcd
 

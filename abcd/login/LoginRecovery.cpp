@@ -6,10 +6,9 @@
  */
 
 #include "LoginRecovery.hpp"
-#include "Login.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "util/Util.hpp"
+#include "../util/Util.hpp"
 
 namespace abcd {
 
@@ -104,8 +103,8 @@ tABC_CC ABC_LoginRecovery(tABC_Login **ppSelf,
     ABC_CHECK_RET(ABC_LoginPackageGetSyncKey(pLoginPackage, pSelf->MK, &pSelf->szSyncKey, pError));
 
     // Set up the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirCreate(&pSelf->AccountNum, pSelf->szUserName, pError));
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(pSelf->AccountNum, pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirCreate(pSelf->directory, pSelf->szUserName, pError));
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(pSelf->directory, pCarePackage, pLoginPackage, pError));
 
     // Assign the final output:
     *ppSelf = pSelf;
@@ -142,14 +141,16 @@ tABC_CC ABC_LoginRecoverySet(tABC_Login *pSelf,
     AutoU08Buf LRA3;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->AccountNum, &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->directory, &pCarePackage, &pLoginPackage, pError));
 
     // Load the old keys:
     ABC_CHECK_RET(ABC_LoginGetServerKeys(pSelf, &oldL1, &oldLP1, pError));
 
     // Update scrypt parameters:
-    ABC_CryptoFreeSNRP(&pCarePackage->pSNRP3);
-    ABC_CryptoFreeSNRP(&pCarePackage->pSNRP4);
+    ABC_CryptoFreeSNRP(pCarePackage->pSNRP3);
+    ABC_CryptoFreeSNRP(pCarePackage->pSNRP4);
+    pCarePackage->pSNRP3 = nullptr;
+    pCarePackage->pSNRP4 = nullptr;
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pCarePackage->pSNRP3, pError));
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pCarePackage->pSNRP4, pError));
 
@@ -184,7 +185,7 @@ tABC_CC ABC_LoginRecoverySet(tABC_Login *pSelf,
         oldLP1, LRA1, pCarePackage, pLoginPackage, pError));
 
     // Change the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(pSelf->AccountNum, pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(pSelf->directory, pCarePackage, pLoginPackage, pError));
 
 exit:
     ABC_CarePackageFree(pCarePackage);

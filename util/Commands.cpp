@@ -307,6 +307,7 @@ Status getSettings(int argc, char *argv[])
     printf("Advanced features: %s\n", pSettings->bAdvancedFeatures ? "yes" : "no");
     printf("Denomination satoshi: %ld\n", pSettings->bitcoinDenomination.satoshi);
     printf("Denomination id: %d\n", pSettings->bitcoinDenomination.denominationType);
+    printf("TwoFactor: %d\n", pSettings->bTwoFactorEnabled);
     printf("Daily Spend Enabled: %d\n", pSettings->bDailySpendLimit);
     printf("Daily Spend Limit: %ld\n", (long) pSettings->dailySpendLimitSatoshis);
     printf("PIN Spend Enabled: %d\n", pSettings->bSpendRequirePin);
@@ -330,6 +331,18 @@ Status getWalletInfo(int argc, char *argv[])
     // TODO: This no longer works without a running watcher!
     AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pInfo;
     ABC_CHECK_OLD(ABC_GetWalletInfo(argv[0], argv[1], argv[2], &pInfo.get(), &error));
+
+    return Status();
+}
+
+Status listAccounts(int argc, char *argv[])
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... list-accounts");
+
+    AutoString usernames;
+    ABC_CHECK_OLD(ABC_ListAccounts(&usernames.get(), &error));
+    printf("Usernames:\n%s", usernames.get());
 
     return Status();
 }
@@ -486,6 +499,119 @@ Status signIn(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... sign-in <user> <pass>");
 
     ABC_CHECK_OLD(ABC_SignIn(argv[0], argv[1], NULL, NULL, &error));
+
+    return Status();
+}
+
+Status otpOn(int argc, char *argv[])
+{
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-on <user> <pass>");
+
+    ABC_CHECK_OLD(ABC_EnableTwoFactor(argv[0], argv[1], &error));
+
+    return Status();
+}
+
+Status otpOff(int argc, char *argv[])
+{
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-off <user> <pass>");
+
+    ABC_CHECK_OLD(ABC_DisableTwoFactor(argv[0], argv[1], &error));
+
+    return Status();
+}
+
+Status otpStatus(int argc, char *argv[])
+{
+    bool on = false;;
+    long timeout = 0;
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-status <user> <pass>");
+
+    ABC_CHECK_OLD(ABC_StatusTwoFactor(argv[0], argv[1], &on, &timeout, &error));
+
+    std::cout << "Otp On: " << on << std::endl;
+    std::cout << "Otp Timeout: " << timeout << std::endl;
+
+    return Status();
+}
+
+Status otpGetSecret(int argc, char *argv[])
+{
+    char *szSecret = NULL;
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-get-secret <user> <pass>");
+
+    ABC_CHECK_OLD(ABC_GetTwoFactorSecret(argv[0], argv[1], &szSecret, &error));
+
+    std::cout << "Secret: " << szSecret << std::endl;
+
+    return Status();
+}
+
+Status otpSetSecret(int argc, char *argv[])
+{
+    if (argc != 3)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-get-secret <user> <pass> <new-secret>");
+
+    ABC_CHECK_OLD(ABC_SetTwoFactorSecret(argv[0], argv[1], argv[2], true, &error));
+
+    return Status();
+}
+
+Status otpSignIn(int argc, char *argv[])
+{
+    if (argc != 3)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-get-secret <user> <pass> <secret>");
+
+    ABC_CHECK_OLD(ABC_TwoFactorSignIn(argv[0], argv[1], argv[2], &error));
+
+    return Status();
+}
+
+abcd::Status otpRequestReset(int argc, char *argv[])
+{
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-get-secret <user> <pass> <secret>");
+
+    ABC_CHECK_OLD(ABC_RequestTwoFactorReset(argv[0], argv[1], &error));
+
+    return Status();
+}
+
+abcd::Status otpRequestPending(int argc, char *argv[])
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-reset-pending");
+
+    AutoString usernames;
+    ABC_CHECK_OLD(ABC_IsTwoFactorResetPending(&usernames.get(), &error));
+    printf("Pending? %s\n", usernames.get());
+    return Status();
+}
+
+abcd::Status otpCancelReset(int argc, char *argv[])
+{
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-cancel-pending <user> <pass>");
+
+    ABC_CHECK_OLD(ABC_CancelTwoFactorReset(argv[0], argv[1], &error));
+
+    return Status();
+}
+
+abcd::Status otpQrCode(int argc, char *argv[])
+{
+    unsigned char *aData;
+    unsigned int width;
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-qr-code <user> <pass>");
+
+    ABC_CHECK_OLD(ABC_GetTwoFactorQrCode(argv[0], argv[1], &aData, &width, &error));
+    if (aData)
+        free(aData);
 
     return Status();
 }

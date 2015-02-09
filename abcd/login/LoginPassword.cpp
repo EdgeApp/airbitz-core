@@ -6,10 +6,10 @@
  */
 
 #include "LoginPassword.hpp"
-#include "Login.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "util/Util.hpp"
+#include "TwoFactor.hpp"
+#include "../util/Util.hpp"
 
 namespace abcd {
 
@@ -25,7 +25,7 @@ tABC_CC ABC_LoginPasswordDisk(tABC_Login *pSelf,
     AutoU08Buf          LP2;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->AccountNum, &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->directory, &pCarePackage, &pLoginPackage, pError));
 
     // Decrypt MK:
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
@@ -69,8 +69,8 @@ tABC_CC ABC_LoginPasswordServer(tABC_Login *pSelf,
     ABC_CHECK_RET(ABC_LoginPackageGetSyncKey(pLoginPackage, pSelf->MK, &pSelf->szSyncKey, pError));
 
     // Set up the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirCreate(&pSelf->AccountNum, pSelf->szUserName, pError));
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(pSelf->AccountNum, pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirCreate(pSelf->directory, pSelf->szUserName, pError));
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(pSelf->directory, pCarePackage, pLoginPackage, pError));
 
 exit:
     ABC_CarePackageFree(pCarePackage);
@@ -110,6 +110,9 @@ tABC_CC ABC_LoginPassword(tABC_Login **ppSelf,
         ABC_CHECK_RET(ABC_LoginPasswordServer(pSelf, LP, pError));
     }
 
+    // Populate 2 factor cache if file exists
+    ABC_TwoFactorCacheSecret(pSelf, NULL);
+
     // Assign the final output:
     *ppSelf = pSelf;
     pSelf = NULL;
@@ -141,7 +144,7 @@ tABC_CC ABC_LoginPasswordSet(tABC_Login *pSelf,
     AutoU08Buf LP2;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->AccountNum, &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->directory, &pCarePackage, &pLoginPackage, pError));
 
     // Load the old keys:
     ABC_CHECK_RET(ABC_LoginGetServerKeys(pSelf, &oldL1, &oldLP1, pError));
@@ -151,7 +154,8 @@ tABC_CC ABC_LoginPasswordSet(tABC_Login *pSelf,
     }
 
     // Update SNRP2:
-    ABC_CryptoFreeSNRP(&pCarePackage->pSNRP2);
+    ABC_CryptoFreeSNRP(pCarePackage->pSNRP2);
+    pCarePackage->pSNRP2 = nullptr;
     ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pCarePackage->pSNRP2, pError));
 
     // LP = L + P:
@@ -174,7 +178,7 @@ tABC_CC ABC_LoginPasswordSet(tABC_Login *pSelf,
         LP1, oldLRA1, pCarePackage, pLoginPackage, pError));
 
     // Change the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(pSelf->AccountNum, pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(pSelf->directory, pCarePackage, pLoginPackage, pError));
 
 exit:
     ABC_CarePackageFree(pCarePackage);
@@ -207,7 +211,7 @@ tABC_CC ABC_LoginPasswordOk(tABC_Login *pSelf,
     *pOk = false;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->AccountNum, &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(pSelf->directory, &pCarePackage, &pLoginPackage, pError));
 
     // LP = L + P:
     ABC_BUF_STRCAT(LP, pSelf->szUserName, szPassword);

@@ -33,8 +33,6 @@
 #include "LoginRequest.hpp"
 #include "LoginShim.hpp"
 #include "WalletAsync.hpp"
-#include "../abcd/LoginPIN.hpp"
-#include "../abcd/LoginServer.hpp"
 #include "../abcd/Account.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Bridge.hpp"
@@ -42,11 +40,15 @@
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
 #include "../abcd/Exchanges.hpp"
+#include "../abcd/login/LoginDir.hpp"
+#include "../abcd/login/LoginPin.hpp"
+#include "../abcd/login/LoginRecovery.hpp"
+#include "../abcd/login/LoginServer.hpp"
+#include "../abcd/login/TwoFactor.hpp"
 #include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Json.hpp"
-#include "../abcd/util/Mutex.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/URL.hpp"
 #include "../abcd/util/Util.hpp"
@@ -114,27 +116,19 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // override the alloc and free of janson so we can have a secure method
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
-    // initialize the mutex system
-    ABC_CHECK_RET(ABC_MutexInitialize(pError));
-
     // initialize bridge
     ABC_CHECK_RET(ABC_BridgeInitialize(pError));
 
     // initialize URL system
     ABC_CHECK_RET(ABC_URLInitialize(szCaCertPath, pError));
 
-    // initialize the FileIO system
-    ABC_CHECK_RET(ABC_FileIOInitialize(pError));
-
     // initialize Bitcoin transaction system
     ABC_CHECK_RET(ABC_TxInitialize(pError));
 
-    // initialize Bitcoin exchange system
-    ABC_CHECK_RET(ABC_ExchangeInitialize(pError));
+    ABC_CHECK_RET(ABC_TwoFactorInitialize(pError));
 
     // initialize Crypto perf checks to determine hashing power
     ABC_CHECK_RET(ABC_InitializeCrypto(pError));
-
 
     // initialize sync
     ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
@@ -169,11 +163,9 @@ void ABC_Terminate()
 
         ABC_URLTerminate();
 
-        ABC_FileIOTerminate();
+        ABC_ExchangeClearCache();
 
-        ABC_ExchangeTerminate();
-
-        ABC_MutexTerminate();
+        ABC_TwoFactorTerminate();
 
         ABC_SyncTerminate();
 
@@ -250,14 +242,14 @@ exit:
  *
  * @param szUserName                UserName for the account
  * @param szPassword                Password for the account
- * @param szPIN                     PIN for the account
+ * @param szPin                     PIN for the account
  * @param fRequestCallback          The function that will be called when the account create process has finished.
  * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_CreateAccount(const char *szUserName,
                           const char *szPassword,
-                          const char *szPIN,
+                          const char *szPin,
                           tABC_Request_Callback fRequestCallback,
                           void *pData,
                           tABC_Error *pError)
@@ -272,8 +264,8 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) >= ABC_MIN_USERNAME_LENGTH, ABC_CC_Error, "Username too short");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(szPIN);
-    ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "PIN is too short");
+    ABC_CHECK_NULL(szPin);
+    ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "PIN is too short");
 
     if (fRequestCallback)
     {
@@ -285,7 +277,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
                                                   szPassword,
                                                   NULL, // recovery questions
                                                   NULL, // recovery answers
-                                                  szPIN,
+                                                  szPin,
                                                   NULL, // new password
                                                   fRequestCallback,
                                                   pData,
@@ -299,7 +291,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     else
     {
         ABC_CHECK_RET(ABC_LoginShimNewAccount(szUserName, szPassword, pError));
-        ABC_CHECK_RET(ABC_SetPIN(szUserName, szPassword, szPIN, pError));
+        ABC_CHECK_RET(ABC_SetPIN(szUserName, szPassword, szPin, pError));
     }
 
 exit:
@@ -499,9 +491,8 @@ tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginShimLogout(pError));
-
-    ABC_CHECK_RET(ABC_WalletClearCache(pError));
+    ABC_LoginShimLogout();
+    ABC_WalletClearCache();
 
 exit:
 
@@ -548,13 +539,13 @@ exit:
  *
  * @param szUserName             UserName for the account
  * @param szPassword             Password for the account
- * @param pszPIN                 Pointer where to store allocated PIN string.
+ * @param pszPin                 Pointer where to store allocated PIN string.
  *                               This will be set to NULL if there is no PIN.
  * @param pError                 A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_GetPIN(const char *szUserName,
                    const char *szPassword,
-                   char **pszPIN,
+                   char **pszPin,
                    tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -567,15 +558,15 @@ tABC_CC ABC_GetPIN(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(pszPIN);
+    ABC_CHECK_NULL(pszPin);
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
 
-    *pszPIN = NULL;
+    *pszPin = NULL;
     if (pSettings->szPIN)
     {
-        ABC_STRDUP(*pszPIN, pSettings->szPIN);
+        ABC_STRDUP(*pszPin, pSettings->szPIN);
     }
 
 exit:
@@ -592,12 +583,12 @@ exit:
  *
  * @param szUserName            UserName for the account
  * @param szPassword            Password for the account
- * @param szPIN                 PIN string
+ * @param szPin                 PIN string
  * @param pError                A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_SetPIN(const char *szUserName,
                    const char *szPassword,
-                   const char *szPIN,
+                   const char *szPin,
                    tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -610,13 +601,13 @@ tABC_CC ABC_SetPIN(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPIN);
-    ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "Pin is too short");
+    ABC_CHECK_NULL(szPin);
+    ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "Pin is too short");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
     ABC_FREE_STR(pSettings->szPIN);
-    ABC_STRDUP(pSettings->szPIN, szPIN);
+    ABC_STRDUP(pSettings->szPIN, szPin);
     ABC_CHECK_RET(ABC_AccountSettingsSave(pKeys, pSettings, pError));
 
 exit:
@@ -818,6 +809,8 @@ tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szRecoveryAnswers);
 
     ABC_CHECK_RET(ABC_LoginShimCheckRecovery(szUserName, szRecoveryAnswers, pbValid, pError));
 
@@ -870,7 +863,7 @@ exit:
  * Performs a PIN-based login for the given user.
  */
 tABC_CC ABC_PinLogin(const char *szUserName,
-                     const char *szPIN,
+                     const char *szPin,
                      tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -879,8 +872,10 @@ tABC_CC ABC_PinLogin(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPin);
 
-    ABC_CHECK_RET(ABC_LoginShimPinLogin(szUserName, szPIN, pError));
+    ABC_CHECK_RET(ABC_LoginShimPinLogin(szUserName, szPin, pError));
 
 exit:
     return cc;
@@ -904,6 +899,7 @@ tABC_CC ABC_PinSetup(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
@@ -916,6 +912,268 @@ tABC_CC ABC_PinSetup(const char *szUserName,
 exit:
     if (pSettings)      ABC_AccountSettingsFree(pSettings);
 
+    return cc;
+}
+
+/**
+ * List all the accounts currently present on the device.
+ * @param szUserNames a newline-separated list of usernames.
+ */
+tABC_CC ABC_ListAccounts(char **pszUserNames,
+                         tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    std::string out;
+    auto list = loginDirList();
+
+    ABC_CHECK_NULL(pszUserNames);
+
+    for (const auto &username: list)
+        out += username + '\n';
+
+    ABC_STRDUP(*pszUserNames, out.c_str());
+
+exit:
+    return cc;
+}
+
+/**
+ * Enable 2FA
+ */
+tABC_CC ABC_EnableTwoFactor(const char *szUserName,
+                            const char *szPassword,
+                            tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_AccountSettings *pSettings = NULL;
+    tABC_SyncKeys *pKeys = NULL;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys, pError));
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
+    ABC_CHECK_RET(ABC_LoginShim2FAEnable(szUserName, szPassword, pSettings->twoFactorResetSeconds, pError));
+
+
+exit:
+    if (pSettings)      ABC_AccountSettingsFree(pSettings);
+    if (pKeys)          ABC_SyncFreeKeys(pKeys);
+
+    return cc;
+}
+
+/**
+ * Disables 2FA
+ */
+tABC_CC ABC_DisableTwoFactor(const char *szUserName,
+                             const char *szPassword,
+                             tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShim2FADisable(szUserName, szPassword, pError));
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_StatusTwoFactor(const char *szUserName, const char *szPassword,
+    bool *on, long *timeout, tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShim2FAStatus(szUserName, szPassword, on, timeout, pError));
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_TwoFactorSignIn(const char *szUserName,
+                            const char *szPassword,
+                            const char *szSecret,
+                            tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShim2FASetSecret(szUserName, szPassword, szSecret, false, pError));
+    ABC_CHECK_RET(ABC_SignIn(szUserName, szPassword, NULL, NULL, pError));
+    ABC_CHECK_RET(ABC_LoginShim2FASetSecret(szUserName, szPassword, szSecret, true, pError));
+
+exit:
+    return cc;
+}
+
+/**
+ *  Get the 2FA secret
+ */
+tABC_CC ABC_GetTwoFactorSecret(const char *szUserName,
+                               const char *szPassword,
+                               char **pszSecret,
+                               tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShim2FAGetSecret(szUserName, szPassword, pszSecret, pError));
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_GetTwoFactorQrCode(const char *szUserName, const char *szPassword,
+        unsigned char **paData, unsigned int *pWidth, tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShim2FAQrCode(szUserName, szPassword, paData, pWidth, pError));
+
+exit:
+    return cc;
+}
+
+/**
+ *  Set the 2FA secret
+ */
+tABC_CC ABC_SetTwoFactorSecret(const char *szUserName,
+                               const char *szPassword,
+                               const char *szSecret,
+                               bool persist,
+                               tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShim2FASetSecret(szUserName, szPassword, szSecret, persist, pError));
+
+exit:
+
+    return cc;
+}
+
+tABC_CC ABC_RequestTwoFactorReset(const char *szUserName,
+                                  const char *szPassword,
+                                  tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShim2FARequestReset(szUserName, szPassword, pError));
+
+exit:
+
+    return cc;
+}
+
+tABC_CC ABC_IsTwoFactorResetPending(char **szUsernames, tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    tABC_CryptoSNRP *pSNRP0 = NULL;
+    size_t i = 0;
+    std::vector<tABC_U08Buf> L1s;
+    std::vector<bool> pendingRef;
+    std::string usernames;
+
+    auto list = loginDirList();
+    // Ewwwwwww
+    ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSNRP0, pError));
+    for (const auto &username: list)
+    {
+        tABC_U08Buf L = ABC_BUF_NULL;
+        tABC_U08Buf L1 = ABC_BUF_NULL;
+        const char *s = username.c_str();
+        ABC_BUF_SET_PTR(L, (unsigned char *)s, strlen(s));
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(L, pSNRP0, &L1, pError));
+        L1s.push_back(L1);
+    }
+
+    ABC_CHECK_RET(ABC_TwoFactorPending(L1s, pendingRef, pError));
+    i = 0;
+    for (const auto &username: list)
+    {
+        if (pendingRef.at(i))
+            usernames += username + "\n";
+        ++i;
+    }
+    ABC_STRDUP(*szUsernames, usernames.c_str());
+
+exit:
+    for (tABC_U08Buf &buf : L1s)
+        ABC_BUF_FREE(buf);
+
+    return cc;
+}
+
+tABC_CC ABC_CancelTwoFactorReset(const char *szUserName,
+                                 const char *szPassword,
+                                 tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    AutoU08Buf L1;
+    AutoU08Buf LP1;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+    ABC_CHECK_RET(ABC_TwoFactorCancelPending(L1, LP1, pError));
+
+exit:
     return cc;
 }
 
@@ -1185,7 +1443,7 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(pszQuestions);
 
-    ABC_CHECK_RET(ABC_LoginShimGetRecovery(szUserName, pszQuestions, pError));
+    ABC_CHECK_RET(ABC_LoginGetRQ(szUserName, pszQuestions, pError));
 
 exit:
 
@@ -2526,27 +2784,46 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
-    tABC_CC fetchCC = ABC_CC_Ok;
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
-    fetchCC = ABC_LoginShimCheckPasswordChange(szUserName, szPassword, pError);
-
-    // Try fetch login package, if it fails, notify password change
-    if (fetchCC == ABC_CC_BadPassword)
+    // Has the password changed?
     {
-        if (fAsyncBitCoinEventCallback)
+        tABC_Error error;
+        AutoFree<tABC_LoginPackage, ABC_LoginPackageFree> pLoginPackage;
+        tABC_U08Buf LRA1 = ABC_BUF_NULL; // Do not free
+        AutoU08Buf L1;
+        AutoU08Buf LP1;
+
+        ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+        cc = ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &pLoginPackage.get(), &error);
+
+        if (cc == ABC_CC_BadPassword || cc == ABC_CC_InvalidOTP)
         {
-            tABC_AsyncBitCoinInfo info;
-            info.eventType = ABC_AsyncEventType_RemotePasswordChange;
-            info.pData = pData;
-            ABC_STRDUP(info.szDescription, "Password changed");
-            fAsyncBitCoinEventCallback(&info);
-            ABC_FREE_STR(info.szDescription);
+            if (fAsyncBitCoinEventCallback)
+            {
+                tABC_AsyncBitCoinInfo info;
+                if (cc == ABC_CC_InvalidOTP)
+                {
+                    info.eventType = ABC_AsyncEventType_OtpRequired;
+                }
+                else
+                {
+                    info.eventType = ABC_AsyncEventType_RemotePasswordChange;
+                }
+                info.pData = pData;
+                ABC_STRDUP(info.szDescription, "Password changed");
+                fAsyncBitCoinEventCallback(&info);
+                ABC_FREE_STR(info.szDescription);
+            }
+            goto exit;
         }
     }
-    else
+
+    // Actually do the sync:
     {
         AutoSyncKeys pKeys;
         int accountDirty = 0;
@@ -2557,7 +2834,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         if (accountDirty && fAsyncBitCoinEventCallback)
         {
             // Try to clear the wallet cache in case the Wallets list changed
-            ABC_CHECK_RET(ABC_WalletClearCache(pError));
+            ABC_WalletClearCache();
 
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
@@ -2567,6 +2844,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
             ABC_FREE_STR(info.szDescription);
         }
     }
+
 exit:
     return cc;
 }
@@ -2984,6 +3262,7 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));

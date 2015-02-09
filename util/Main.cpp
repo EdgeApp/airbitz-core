@@ -45,7 +45,18 @@ static Status run(int argc, char *argv[])
         command == "get-question-choices" ? getQuestionChoices(argc-3, argv+3) :
         command == "get-settings"       ? getSettings(argc-3, argv+3) :
         command == "get-wallet-info"    ? getWalletInfo(argc-3, argv+3) :
+        command == "list-accounts"      ? listAccounts(argc-3, argv+3) :
         command == "list-wallets"       ? listWallets(argc-3, argv+3) :
+        command == "otp-off"            ? otpOff(argc-3, argv+3) :
+        command == "otp-on"             ? otpOn(argc-3, argv+3) :
+        command == "otp-status"         ? otpStatus(argc-3, argv+3) :
+        command == "otp-get-secret"     ? otpGetSecret(argc-3, argv+3) :
+        command == "otp-set-secret"     ? otpSetSecret(argc-3, argv+3) :
+        command == "otp-sign-in"        ? otpSignIn(argc-3, argv+3) :
+        command == "otp-request-reset"  ? otpRequestReset(argc-3, argv+3) :
+        command == "otp-reset-pending"  ? otpRequestPending(argc-3, argv+3) :
+        command == "otp-cancel-reset"   ? otpCancelReset(argc-3, argv+3) :
+        command == "otp-qrcode"         ? otpQrCode(argc-3, argv+3) :
         command == "pin-login"          ? pinLogin(argc-3, argv+3) :
         command == "pin-login-setup"    ? pinLoginSetup(argc-3, argv+3) :
         command == "recovery-reminder-set" ? recoveryReminderSet(argc-3, argv+3) :

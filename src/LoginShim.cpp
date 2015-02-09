@@ -6,27 +6,27 @@
  */
 
 #include "LoginShim.hpp"
-#include "../abcd/Login.hpp"
-#include "../abcd/LoginDir.hpp"
-#include "../abcd/LoginPassword.hpp"
-#include "../abcd/LoginPIN.hpp"
-#include "../abcd/LoginRecovery.hpp"
-#include "../abcd/LoginServer.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Wallet.hpp"
-#include "../abcd/util/Mutex.hpp"
+#include "../abcd/login/Login.hpp"
+#include "../abcd/login/LoginDir.hpp"
+#include "../abcd/login/LoginPassword.hpp"
+#include "../abcd/login/LoginPin.hpp"
+#include "../abcd/login/LoginRecovery.hpp"
+#include "../abcd/login/LoginServer.hpp"
+#include "../abcd/login/TwoFactor.hpp"
 #include "../abcd/util/Util.hpp"
+#include <mutex>
 
 namespace abcd {
 
 // We cache a single login object, which is fine for the UI's needs:
 tABC_Login *gLoginCache = NULL;
+std::mutex gLoginMutex;
 
 static void ABC_LoginCacheClear();
 static void ABC_LoginCacheClearOther(const char *szUserName);
 static tABC_CC ABC_LoginCacheObject(const char *szUserName, const char *szPassword, tABC_Error *pError);
-static tABC_CC ABC_LoginShimMutexLock(tABC_Error *pError);
-static tABC_CC ABC_LoginShimMutexUnlock(tABC_Error *pError);
 
 /**
  * Clears the cached login object.
@@ -41,6 +41,7 @@ void ABC_LoginCacheClear()
 
 /**
  * Clears the cache if the current object doesn't match the given username.
+ * The caller should already be holding the login mutex.
  */
 static
 void ABC_LoginCacheClearOther(const char *szUserName)
@@ -66,9 +67,6 @@ tABC_CC ABC_LoginCacheObject(const char *szUserName,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(szUserName);
 
     // Clear the cache if it has the wrong object:
     ABC_LoginCacheClearOther(szUserName);
@@ -78,7 +76,7 @@ tABC_CC ABC_LoginCacheObject(const char *szUserName,
     {
         ABC_CHECK_ASSERT(szPassword, ABC_CC_NULLPtr, "Not logged in");
         ABC_CHECK_RET(ABC_LoginPassword(&gLoginCache, szUserName, szPassword, pError));
-        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
     }
 
 exit:
@@ -88,16 +86,10 @@ exit:
 /**
  * Clears all the keys from the cache.
  */
-tABC_CC ABC_LoginShimLogout(tABC_Error *pError)
+void ABC_LoginShimLogout()
 {
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
-
+    std::lock_guard<std::mutex> lock(gLoginMutex);
     ABC_LoginCacheClear();
-
-exit:
-    ABC_LoginShimMutexUnlock(NULL);
-    return cc;
 }
 
 /**
@@ -110,10 +102,7 @@ tABC_CC ABC_LoginShimLogin(const char *szUserName,
 {
     tABC_Error error;
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
+    std::lock_guard<std::mutex> lock(gLoginMutex);
 
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
@@ -121,8 +110,6 @@ tABC_CC ABC_LoginShimLogin(const char *szUserName,
     ABC_GeneralUpdateInfo(&error);
 
 exit:
-    ABC_LoginShimMutexUnlock(NULL);
-
     return cc;
 }
 
@@ -134,22 +121,17 @@ tABC_CC ABC_LoginShimNewAccount(const char *szUserName,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
+    std::lock_guard<std::mutex> lock(gLoginMutex);
 
     ABC_LoginCacheClear();
     ABC_CHECK_RET(ABC_LoginCreate(szUserName, szPassword, &gLoginCache, pError));
-    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
 
     // Take this non-blocking opportunity to update the general info:
     ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
     ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
 
 exit:
-    ABC_LoginShimMutexUnlock(NULL);
-
     return cc;
 }
 
@@ -168,10 +150,7 @@ tABC_CC ABC_LoginShimSetRecovery(const char *szUserName,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
+    std::lock_guard<std::mutex> lock(gLoginMutex);
 
     // Load the account into the cache:
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
@@ -181,8 +160,6 @@ tABC_CC ABC_LoginShimSetRecovery(const char *szUserName,
         szRecoveryQuestions, szRecoveryAnswers, pError));
 
 exit:
-    ABC_LoginShimMutexUnlock(NULL);
-
     return cc;
 }
 
@@ -201,11 +178,7 @@ tABC_CC ABC_LoginShimSetPassword(const char *szUserName,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szNewPassword);
-    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
+    std::lock_guard<std::mutex> lock(gLoginMutex);
 
     // Clear the cache if it has the wrong object:
     ABC_LoginCacheClearOther(szUserName);
@@ -216,12 +189,12 @@ tABC_CC ABC_LoginShimSetPassword(const char *szUserName,
         if (szPassword)
         {
             ABC_CHECK_RET(ABC_LoginPassword(&gLoginCache, szUserName, szPassword, pError));
-            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
         }
         else
         {
             ABC_CHECK_RET(ABC_LoginRecovery(&gLoginCache, szUserName, szRecoveryAnswers, pError));
-            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
         }
     }
 
@@ -229,11 +202,9 @@ tABC_CC ABC_LoginShimSetPassword(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginPasswordSet(gLoginCache, szNewPassword, pError));
 
     // Clear wallet cache
-    ABC_CHECK_RET(ABC_WalletClearCache(pError));
+    ABC_WalletClearCache();
 
 exit:
-    ABC_LoginShimMutexUnlock(NULL);
-
     return cc;
 }
 
@@ -247,12 +218,8 @@ tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-
+    std::lock_guard<std::mutex> lock(gLoginMutex);
     tABC_Login *pObject = NULL;
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szRecoveryAnswers);
-    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
 
     cc = ABC_LoginRecovery(&pObject, szUserName, szRecoveryAnswers, pError);
 
@@ -262,44 +229,13 @@ tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
         ABC_LoginCacheClear();
         gLoginCache = pObject;
         *pbValid = true;
-        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
     }
     else if (ABC_CC_DecryptFailure == cc)
     {
         // The answers didn't match, which is OK:
         ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     }
-
-exit:
-    ABC_LoginShimMutexUnlock(NULL);
-
-    return cc;
-}
-
-/**
- * Get the recovery questions for a given account.
- *
- * The questions will be returned in a single allocated string with
- * each questions seperated by a newline.
- *
- * @param szUserName                UserName for the account
- * @param pszQuestions              Pointer into which allocated string should be stored.
- * @param pError                    A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_LoginShimGetRecovery(const char *szUserName,
-                                 char **pszQuestions,
-                                 tABC_Error *pError)
-{
-    ABC_DebugLog("%s called", __FUNCTION__);
-
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(pszQuestions);
-
-    ABC_CHECK_RET(ABC_LoginGetRQ(szUserName, pszQuestions, pError));
 
 exit:
     return cc;
@@ -309,26 +245,20 @@ exit:
  * Logs in using the PIN-based mechanism.
  */
 tABC_CC ABC_LoginShimPinLogin(const char *szUserName,
-                              const char *szPIN,
+                              const char *szPin,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-
+    std::lock_guard<std::mutex> lock(gLoginMutex);
     tABC_Login *pObject = NULL;
 
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPIN);
-    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
-
-    ABC_CHECK_RET(ABC_LoginPin(&pObject, szUserName, szPIN, pError));
+    ABC_CHECK_RET(ABC_LoginPin(&pObject, szUserName, szPin, pError));
     ABC_LoginCacheClear();
     gLoginCache = pObject;
 
-    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->AccountNum, gLoginCache->szSyncKey, pError));
+    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLoginCache->directory, gLoginCache->szSyncKey, pError));
 
 exit:
-    ABC_LoginShimMutexUnlock(NULL);
-
     return cc;
 }
 
@@ -337,29 +267,163 @@ exit:
  */
 tABC_CC ABC_LoginShimPinSetup(const char *szUserName,
                               const char *szPassword,
-                              const char *szPIN,
+                              const char *szPin,
                               time_t expires,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    std::lock_guard<std::mutex> lock(gLoginMutex);
 
     // Load the account into the cache:
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
-    // Grab the keys:
-    ABC_CHECK_RET(ABC_LoginPinSetup(gLoginCache, szPIN, expires, pError));
+    ABC_CHECK_RET(ABC_LoginPinSetup(gLoginCache, szPin, expires, pError));
 
 exit:
-    ABC_LoginShimMutexUnlock(NULL);
-
     return cc;
 }
 
+tABC_CC ABC_LoginShim2FAEnable(const char *szUserName,
+                               const char *szPassword,
+                               long timeout,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_U08Buf L1       = ABC_BUF_NULL;
+    tABC_U08Buf LP1      = ABC_BUF_NULL;
+
+    ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_RET(ABC_TwoFactorEnable(gLoginCache, L1, LP1, timeout, pError));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FADisable(const char *szUserName,
+                                const char *szPassword,
+                                tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_U08Buf L1       = ABC_BUF_NULL;
+    tABC_U08Buf LP1      = ABC_BUF_NULL;
+
+    ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_RET(ABC_TwoFactorDisable(gLoginCache, L1, LP1, pError));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FAStatus(const char *szUserName, const char *szPassword,
+        bool *on, long *timeout, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_U08Buf L1       = ABC_BUF_NULL;
+    tABC_U08Buf LP1      = ABC_BUF_NULL;
+
+    ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginServerOtpStatus(L1, LP1, on, timeout, pError));
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FAGetSecret(const char *szUserName,
+                                  const char *szPassword,
+                                  char **pszSecret,
+                                  tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+
+    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_TwoFactorGetSecret(gLoginCache, pszSecret, pError));
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FAQrCode(const char *szUserName, const char *szPassword,
+    unsigned char **paData, unsigned int *pWidth, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+
+    ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+    ABC_CHECK_RET(ABC_TwoFactorGetQrCode(gLoginCache, paData, pWidth, pError));
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FASetSecret(const char *szUserName,
+                                  const char *szPassword,
+                                  const char *szSecret,
+                                  bool loggedIn,
+                                  tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+
+    if (loggedIn)
+    {
+        ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
+        ABC_CHECK_RET(ABC_TwoFactorSetSecret(gLoginCache, szSecret, pError));
+    }
+    else
+    {
+        ABC_CHECK_RET(ABC_TwoFactorSetSecret(NULL, szSecret, pError));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginShim2FARequestReset(const char *szUserName,
+                                     const char *szPassword,
+                                     tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_CC loggedIn;
+    AutoU08Buf L1;
+    AutoU08Buf LP;
+    AutoU08Buf LP1;
+    tABC_Login *pSelfTemp          = NULL;
+    tABC_CarePackage *pCarePackage = NULL;
+
+    loggedIn = ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError);
+    if (loggedIn == ABC_CC_Ok)
+    {
+        ABC_CHECK_RET(ABC_TwoFactorReset(L1, LP1, pError));
+    }
+    else
+    {
+        // User is not logged in, so we have to manually build LP1
+        ABC_CHECK_RET(ABC_LoginNew(&pSelfTemp, szUserName, pError));
+        ABC_CHECK_RET(ABC_CarePackageNew(&pCarePackage, pError));
+
+        ABC_BUF_STRCAT(LP, pSelfTemp->szUserName, szPassword);
+        ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP1, &LP1, pError));
+
+        ABC_CHECK_RET(ABC_TwoFactorReset(pSelfTemp->L1, LP1, pError));
+    }
+
+exit:
+    ABC_LoginFree(pSelfTemp);
+    ABC_CarePackageFree(pCarePackage);
+
+    return cc;
+}
 
 /**
  * Obtains the information needed to access the sync dir for a given account.
@@ -375,9 +439,8 @@ tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    std::lock_guard<std::mutex> lock(gLoginMutex);
 
-    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(ppKeys);
@@ -385,12 +448,9 @@ tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
     // Load the account into the cache:
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
-    // Grab the keys:
     ABC_CHECK_RET(ABC_LoginGetSyncKeys(gLoginCache, ppKeys, pError));
 
 exit:
-    ABC_LoginShimMutexUnlock(NULL);
-
     return cc;
 }
 
@@ -411,22 +471,14 @@ tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(pL1);
-    ABC_CHECK_NULL(pLP1);
+    std::lock_guard<std::mutex> lock(gLoginMutex);
 
     // Load the account into the cache:
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
-    // Grab the keys:
     ABC_CHECK_RET(ABC_LoginGetServerKeys(gLoginCache, pL1, pLP1, pError));
 
 exit:
-    ABC_LoginShimMutexUnlock(NULL);
     return cc;
 }
 
@@ -440,70 +492,15 @@ tABC_CC ABC_LoginShimPasswordOk(const char *szUserName,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_RET(ABC_LoginShimMutexLock(pError));
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    std::lock_guard<std::mutex> lock(gLoginMutex);
 
     // Load the account into the cache:
     ABC_CHECK_RET(ABC_LoginCacheObject(szUserName, szPassword, pError));
 
-    // Grab the keys:
     ABC_CHECK_RET(ABC_LoginPasswordOk(gLoginCache, szPassword, pOk, pError));
 
 exit:
-    ABC_LoginShimMutexUnlock(NULL);
     return cc;
-}
-
-/**
- * Downloads and saves a new LoginPackage from the server.
- */
-tABC_CC ABC_LoginShimCheckPasswordChange(const char *szUserName,
-                                         const char *szPassword,
-                                         tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    tABC_LoginPackage *pLoginPackage = NULL;
-    tABC_U08Buf LRA1 = ABC_BUF_NULL; // Do not free
-    AutoU08Buf L1;
-    AutoU08Buf LP1;
-
-    ABC_CHECK_NULL(szUserName);
-
-    ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
-
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &pLoginPackage, pError));
-
-exit:
-    ABC_LoginPackageFree(pLoginPackage);
-
-    return cc;
-}
-
-/**
- * Locks the mutex
- *
- * ABC_Wallet uses the same mutex as ABC_Login so that there will be no situation in
- * which one thread is in ABC_Wallet locked on a mutex and calling a thread safe ABC_Login call
- * that is locked from another thread calling a thread safe ABC_Wallet call.
- * In other words, since they call each other, they need to share a recursive mutex.
- */
-static
-tABC_CC ABC_LoginShimMutexLock(tABC_Error *pError)
-{
-    return ABC_MutexLock(pError);
-}
-
-/**
- * Unlocks the mutex
- */
-static
-tABC_CC ABC_LoginShimMutexUnlock(tABC_Error *pError)
-{
-    return ABC_MutexUnlock(pError);
 }
 
 } // namespace abcd
