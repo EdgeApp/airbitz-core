@@ -690,6 +690,11 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
 void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
                                unsigned int nCount);
 
+tABC_CC ABC_QrEncode(const char *szText,
+                     unsigned char **paData,
+                     unsigned int *pWidth,
+                     tABC_Error *pError);
+
 /* === Login lifetime: === */
 tABC_CC ABC_SignIn(const char *szUserName,
                    const char *szPassword,
