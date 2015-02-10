@@ -6,6 +6,7 @@
  */
 
 #include "Commands.hpp"
+#include "Otp.hpp"
 #include "../abcd/util/Util.hpp"
 #include <stdio.h>
 #include <iostream>
@@ -29,6 +30,7 @@ static Status run(int argc, char *argv[])
 
     std::string command = argv[2];
     ABC_CHECK(
+        // Command.cpp:
         command == "account-decrypt"    ? accountDecrypt(argc-3, argv+3) :
         command == "account-encrypt"    ? accountEncrypt(argc-3, argv+3) :
         command == "add-category"       ? addCategory(argc-3, argv+3) :
@@ -59,6 +61,11 @@ static Status run(int argc, char *argv[])
         command == "wallet-decrypt"     ? walletDecrypt(argc-3, argv+3) :
         command == "wallet-encrypt"     ? walletEncrypt(argc-3, argv+3) :
         command == "wallet-get-address" ? walletGetAddress(argc-3, argv+3) :
+        // Otp.cpp:
+        command == "otp-key-get"        ? otpKeyGet(argc-3, argv+3) :
+        command == "otp-key-set"        ? otpKeySet(argc-3, argv+3) :
+        command == "otp-key-remove"     ? otpKeyRemove(argc-3, argv+3) :
+        // Washer.cpp:
         command == "washer"             ? washer(argc-3, argv+3) :
         ABC_ERROR(ABC_CC_Error, "unknown command " + command));
 
