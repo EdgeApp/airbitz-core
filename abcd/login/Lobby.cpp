@@ -7,8 +7,17 @@
 
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
+#include "../util/FileIO.hpp"
+#include "../util/JsonFile.hpp"
 
 namespace abcd {
+
+struct OtpFile : public JsonFile
+{
+    ABC_JSON_STRING(Key, "TOTP")
+};
+
+const char otpFilename[] = "OtpKey.json";
 
 Status
 Lobby::init(const std::string &username)
@@ -25,6 +34,14 @@ Lobby::init(const std::string &username)
     ABC_CHECK_OLD(ABC_CryptoScryptSNRP(toU08Buf(username_), SNRP0, &L1, &error));
     authId_ = DataChunk(L1.p, L1.end);
 
+    // Load the OTP key, if possible:
+    OtpFile file;
+    const char *base32;
+    otpKeyOk_ = !directory_.empty() &&
+        file.load(directory_ + otpFilename) &&
+        file.getKey(base32) &&
+        otpKey_.decodeBase32(base32);
+
     return Status();
 }
 
@@ -32,6 +49,28 @@ Status
 Lobby::createDirectory()
 {
     ABC_CHECK_OLD(ABC_LoginDirCreate(directory_, username_.c_str(), &error));
+    ABC_CHECK(otpKeySave());
+    return Status();
+}
+
+Status
+Lobby::otpKey(const OtpKey &key)
+{
+    otpKey_ = key;
+    otpKeyOk_ = true;
+    ABC_CHECK(otpKeySave());
+    return Status();
+}
+
+Status
+Lobby::otpKeyRemove()
+{
+    if (!directory_.empty())
+    {
+        auto filename = directory_ + otpFilename;
+        ABC_CHECK_OLD(ABC_FileIODeleteFile(filename.c_str(), &error));
+    }
+    otpKeyOk_ = false;
     return Status();
 }
 
@@ -73,6 +112,18 @@ Lobby::fixUsername(std::string &result, const std::string &username)
     }
 
     result = std::move(out);
+    return Status();
+}
+
+Status
+Lobby::otpKeySave()
+{
+    if (!directory_.empty() && otpKeyOk_)
+    {
+        OtpFile file;
+        ABC_CHECK(file.setKey(otpKey_.encodeBase32().c_str()));
+        ABC_CHECK(file.save(directory_ + otpFilename));
+    }
     return Status();
 }
 

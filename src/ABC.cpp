@@ -40,11 +40,13 @@
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
 #include "../abcd/Exchanges.hpp"
+#include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/LoginDir.hpp"
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
+#include "../abcd/login/OtpKey.hpp"
 #include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
@@ -393,6 +395,79 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
 exit:
     return cc;
 }
+
+tABC_CC ABC_OtpKeyGet(const char *szUserName,
+                      char **pszKey,
+                      tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    std::string key;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(pszKey);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+
+        const OtpKey *key = gLobbyCache->otpKey();
+        ABC_CHECK_ASSERT(key, ABC_CC_NULLPtr, "No OTP key in account.");
+        ABC_STRDUP(*pszKey, key->encodeBase32().c_str());
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpKeySet(const char *szUserName,
+                      char *szKey,
+                      tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szKey);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+
+        OtpKey key;
+        ABC_CHECK_NEW(key.decodeBase32(szKey), pError);
+        ABC_CHECK_NEW(gLobbyCache->otpKey(key), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpKeyRemove(const char *szUserName,
+                         tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        ABC_CHECK_NEW(gLobbyCache->otpKeyRemove(), pError);
+    }
+
+exit:
+    return cc;
+}
+
 
 /**
  * Create a new wallet.

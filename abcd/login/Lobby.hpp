@@ -8,11 +8,14 @@
 #ifndef ABCD_LOGIN_LOBBY_HPP
 #define ABCD_LOGIN_LOBBY_HPP
 
+#include "OtpKey.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 #include <string>
 
 namespace abcd {
+
+class OtpKey;
 
 /**
  * The lobby object contains the account data that is knowable from just
@@ -55,6 +58,24 @@ public:
     authId() const { return authId_; }
 
     /**
+     * Obtains the OTP key associated with this user, if any.
+     */
+    const OtpKey *
+    otpKey() const { return otpKeyOk_? &otpKey_ : nullptr; }
+
+    /**
+     * Assigns an existing OTP key to the account.
+     */
+    Status
+    otpKey(const OtpKey &key);
+
+    /**
+     * Removes the OTP key and deletes the file, if any.
+     */
+    Status
+    otpKeyRemove();
+
+    /**
      * Re-formats a username to all-lowercase,
      * checking for disallowed characters and collapsing spaces.
      */
@@ -65,6 +86,15 @@ private:
     std::string username_;
     std::string directory_;
     DataChunk authId_;
+
+    bool otpKeyOk_ = false;
+    OtpKey otpKey_;
+
+    /**
+     * Writes the OTP key to disk, assuming the account has a directory.
+     */
+    Status
+    otpKeySave();
 };
 
 } // namespace abcd
