@@ -288,6 +288,18 @@ Status getQuestionChoices(int argc, char *argv[])
     return Status();
 }
 
+Status getQuestions(int argc, char *argv[])
+{
+    if (argc != 1)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... get-questions <user>");
+
+    AutoString questions;
+    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(argv[0], &questions.get(), &error));
+    printf("Questions: %s\n", questions.get());
+
+    return Status();
+}
+
 Status getSettings(int argc, char *argv[])
 {
     if (argc != 2)

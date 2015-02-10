@@ -12,62 +12,68 @@
 #ifndef ABC_Login_h
 #define ABC_Login_h
 
+#include "../util/Data.hpp"
+#include "../util/Status.hpp"
 #include "../util/Sync.hpp"
 #include "../../src/ABC.h"
-#include <string>
 
 namespace abcd {
+
+class Lobby;
+typedef struct sABC_LoginPackage tABC_LoginPackage;
 
 class Login
 {
 public:
-    ~Login();
-    Login();
+    Login(Lobby *lobby, DataSlice mk);
 
-    // Identity:
-    char            *szUserName;
-    std::string     directory;
-    tABC_U08Buf     L1;
+    /**
+     * Prepares the Login object for use.
+     */
+    Status
+    init(tABC_LoginPackage *package);
 
-    // Account access:
-    tABC_U08Buf     MK;
-    char            *szSyncKey; // Hex-encoded
+    /**
+     * Obtains a reference to the lobby object associated with this account.
+     */
+    Lobby &
+    lobby() const { return *lobby_; }
+
+    /**
+     * Obtains the master key for the account.
+     */
+    DataSlice
+    mk() const { return mk_; }
+
+    /**
+     * Obtains the data-sync key for the account.
+     */
+    const std::string &
+    syncKey() const { return syncKey_; }
+
+private:
+    Lobby *lobby_;
+    DataChunk mk_;
+    std::string syncKey_;
 };
 
 typedef Login tABC_Login;
 
-// Destructor:
-void ABC_LoginFree(tABC_Login *pSelf);
-
-tABC_CC ABC_LoginNew(tABC_Login **ppSelf,
-                     const char *szUserName,
-                     tABC_Error *pError);
-
 // Constructors:
-tABC_CC ABC_LoginCreate(const char *szUserName,
+tABC_CC ABC_LoginCreate(Login *&result,
+                        Lobby *lobby,
                         const char *szPassword,
-                        tABC_Login **ppSelf,
                         tABC_Error *pError);
 
 // Read accessors:
-tABC_CC ABC_LoginCheckUserName(tABC_Login *pSelf,
-                               const char *szUserName,
-                               int *pMatch,
-                               tABC_Error *pError);
-
-tABC_CC ABC_LoginGetSyncKeys(tABC_Login *pSelf,
+tABC_CC ABC_LoginGetSyncKeys(Login &login,
                              tABC_SyncKeys **ppKeys,
                              tABC_Error *pError);
 
-tABC_CC ABC_LoginGetServerKeys(tABC_Login *pSelf,
+tABC_CC ABC_LoginGetServerKeys(Login &login,
                                tABC_U08Buf *pL1,
                                tABC_U08Buf *pLP1,
                                tABC_Error *pError);
-
-// Utility:
-tABC_CC ABC_LoginFixUserName(const char *szUserName,
-                             char **pszOut,
-                             tABC_Error *pError);
 
 } // namespace abcd
 

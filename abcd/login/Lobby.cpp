@@ -1,0 +1,79 @@
+/*
+ * Copyright (c) 2014, AirBitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
+ */
+
+#include "Lobby.hpp"
+#include "LoginDir.hpp"
+
+namespace abcd {
+
+Status
+Lobby::init(const std::string &username)
+{
+    // Set up identity:
+    ABC_CHECK(fixUsername(username_, username));
+    directory_ = loginDirFind(username_);
+
+    // Create authId:
+    // TODO: Make this lazy!
+    AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> SNRP0;
+    ABC_CHECK_OLD(ABC_CryptoCreateSNRPForServer(&SNRP0.get(), &error));
+    AutoU08Buf L1;
+    ABC_CHECK_OLD(ABC_CryptoScryptSNRP(toU08Buf(username_), SNRP0, &L1, &error));
+    authId_ = DataChunk(L1.p, L1.end);
+
+    return Status();
+}
+
+Status
+Lobby::createDirectory()
+{
+    ABC_CHECK_OLD(ABC_LoginDirCreate(directory_, username_.c_str(), &error));
+    return Status();
+}
+
+Status
+Lobby::fixUsername(std::string &result, const std::string &username)
+{
+    std::string out;
+    out.reserve(username.size());
+
+    // Collapse leading & internal spaces:
+    bool space = true;
+    for (auto c: username)
+    {
+        if (isspace(c))
+        {
+            // Only write a space on the no-space -> space transition:
+            if (!space)
+                out += ' ';
+            space = true;
+        }
+        else
+        {
+            out += c;
+            space = false;
+        }
+    }
+
+    // Stomp trailing space, if any:
+    if (out.size() && out.back() == ' ')
+        out.pop_back();
+
+    // Scan for bad characters, and make lowercase:
+    for (auto &c: out)
+    {
+        if (c < ' ' || '~' < c)
+            return ABC_ERROR(ABC_CC_NotSupported, "Bad username");
+        if ('A' <= c && c <= 'Z')
+            c = c - 'A' + 'a';
+    }
+
+    result = std::move(out);
+    return Status();
+}
+
+} // namespace abcd

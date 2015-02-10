@@ -41,6 +41,7 @@
 #include "../abcd/Tx.hpp"
 #include "../abcd/Exchanges.hpp"
 #include "../abcd/login/LoginDir.hpp"
+#include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
@@ -383,10 +384,13 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(pOk);
 
-    ABC_CHECK_RET(ABC_LoginShimPasswordOk(szUserName, szPassword, pOk, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_RET(ABC_LoginPasswordOk(*gLoginCache, szPassword, pOk, pError));
+    }
 
 exit:
-
     return cc;
 }
 
@@ -902,7 +906,11 @@ tABC_CC ABC_PinSetup(const char *szUserName,
 
     expires = time(NULL);
     expires += 60 * pSettings->minutesAutoLogout;
-    ABC_CHECK_RET(ABC_LoginShimPinSetup(szUserName, szPassword, pSettings->szPIN, expires, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_RET(ABC_LoginPinSetup(*gLoginCache, pSettings->szPIN, expires, pError));
+    }
 
 exit:
     if (pSettings)      ABC_AccountSettingsFree(pSettings);
@@ -1202,10 +1210,13 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(pszQuestions);
 
-    ABC_CHECK_RET(ABC_LoginGetRQ(szUserName, pszQuestions, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        ABC_CHECK_RET(ABC_LoginGetRQ(*gLobbyCache, pszQuestions, pError));
+    }
 
 exit:
-
     return cc;
 }
 
