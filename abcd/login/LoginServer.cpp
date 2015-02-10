@@ -17,6 +17,10 @@
 #include "../util/Crypto.hpp"
 #include "../util/FileIO.hpp"
 
+// For OTP token hack:
+#include "Lobby.hpp"
+#include "../../src/LoginShim.hpp"
+
 namespace abcd {
 
 // Server strings:
@@ -354,6 +358,12 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LR
                                              ABC_SERVER_JSON_LP1_FIELD, szAuth_Base64);
         }
     }
+    {
+        // No mutex or cache load! We might segfault...
+        auto key = gLobbyCache->otpKey();
+        if (key)
+            json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_FIELD, json_string(key->totp().c_str()));
+    }
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
@@ -631,6 +641,12 @@ tABC_CC ABC_LoginServerOtpEnable(tABC_U08Buf L1,
                         ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
                         ABC_SERVER_JSON_OTP_SECRET_FIELD, szOtpSecret,
                         ABC_SERVER_JSON_OTP_TIMEOUT, timeout);
+    {
+        // No mutex or cache load! We might segfault...
+        auto key = gLobbyCache->otpKey();
+        if (key)
+            json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_FIELD, json_string(key->totp().c_str()));
+    }
 
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
@@ -678,6 +694,12 @@ tABC_CC ABC_LoginServerOtpRequest(const char *szUrl,
     {
         ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
         json_object_set_new(pJSON_Root, ABC_SERVER_JSON_LP1_FIELD, json_string(szLP1_Base64));
+    }
+    {
+        // No mutex or cache load! We might segfault...
+        auto key = gLobbyCache->otpKey();
+        if (key)
+            json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_FIELD, json_string(key->totp().c_str()));
     }
     json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_RESET_AUTH, json_string(gOtpResetAuth.c_str()));
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
