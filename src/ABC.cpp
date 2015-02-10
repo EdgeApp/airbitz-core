@@ -54,6 +54,7 @@
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/URL.hpp"
 #include "../abcd/util/Util.hpp"
+#include <qrencode.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -2510,6 +2511,44 @@ void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
         }
         ABC_CLEAR_FREE(aRules, sizeof(tABC_PasswordRule *) * nCount);
     }
+}
+
+tABC_CC ABC_QrEncode(const char *szText,
+                     unsigned char **paData,
+                     unsigned int *pWidth,
+                     tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    QRcode *qr = nullptr;
+    unsigned int length = 0;
+    unsigned char *aData = nullptr;
+
+    ABC_CHECK_NULL(szText);
+    ABC_CHECK_NULL(paData);
+    ABC_CHECK_NULL(pWidth);
+
+    qr = QRcode_encodeString(szText, 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+    ABC_CHECK_ASSERT(qr, ABC_CC_Error, "Unable to create QR code");
+
+    length = qr->width * qr->width;
+    ABC_ARRAY_NEW(aData, length, unsigned char);
+    for (unsigned i = 0; i < length; i++)
+    {
+        aData[i] = qr->data[i] & 0x1;
+    }
+    *pWidth = qr->width;
+    *paData = aData;
+    aData = nullptr;
+
+exit:
+    QRcode_free(qr);
+    ABC_CLEAR_FREE(aData, length);
+
+    return cc;
 }
 
 /**
