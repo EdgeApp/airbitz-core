@@ -65,6 +65,12 @@ static Status run(int argc, char *argv[])
         command == "otp-key-get"        ? otpKeyGet(argc-3, argv+3) :
         command == "otp-key-set"        ? otpKeySet(argc-3, argv+3) :
         command == "otp-key-remove"     ? otpKeyRemove(argc-3, argv+3) :
+        command == "otp-auth-get"       ? otpAuthGet(argc-3, argv+3) :
+        command == "otp-auth-set"       ? otpAuthSet(argc-3, argv+3) :
+        command == "otp-auth-remove"    ? otpAuthRemove(argc-3, argv+3) :
+        command == "otp-reset-get"      ? otpResetGet(argc-3, argv+3) :
+        command == "otp-reset-set"      ? otpResetSet(argc-3, argv+3) :
+        command == "otp-reset-remove"   ? otpResetRemove(argc-3, argv+3) :
         // Washer.cpp:
         command == "washer"             ? washer(argc-3, argv+3) :
         ABC_ERROR(ABC_CC_Error, "unknown command " + command));
