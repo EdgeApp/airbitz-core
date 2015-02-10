@@ -2993,8 +2993,8 @@ tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
 
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    tABC_TxInfo **pTransactions;
-    unsigned int iCount;
+    tABC_TxInfo **pTransactions = nullptr;
+    unsigned int iCount = 0;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_RET(ABC_GetTransactions(szUserName,
