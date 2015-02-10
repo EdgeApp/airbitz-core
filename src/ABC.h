@@ -761,6 +761,35 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
                        bool *pOk,
                        tABC_Error *pError);
 
+/* === OTP authentication: === */
+
+/**
+ * Obtains the OTP key stored for the given username, if any.
+ * @param pszKey a pointer to receive the key. The caller frees this.
+ * @return An error if the OTP token does not exist, or is unreadable.
+ */
+tABC_CC ABC_OtpKeyGet(const char *szUserName,
+                      char **pszKey,
+                      tABC_Error *pError);
+
+/**
+ * Associates an OTP key with the given username.
+ * This will not write to disk until the user has successfully logged in
+ * at least once.
+ */
+tABC_CC ABC_OtpKeySet(const char *szUserName,
+                      char *szKey,
+                      tABC_Error *pError);
+
+
+/**
+ * Removes the OTP key associated with the given username.
+ * This will remove the key from disk as well.
+ */
+tABC_CC ABC_OtpKeyRemove(const char *szUserName,
+                         tABC_Error *pError);
+
+/* === Account sync data: === */
 tABC_CC ABC_LoadAccountSettings(const char *szUserName,
                                 const char *szPassword,
                                 tABC_AccountSettings **ppSettings,
