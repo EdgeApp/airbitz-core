@@ -15,4 +15,11 @@ abcd::Status otpKeyGet(int argc, char *argv[]);
 abcd::Status otpKeySet(int argc, char *argv[]);
 abcd::Status otpKeyRemove(int argc, char *argv[]);
 
+abcd::Status otpAuthGet(int argc, char *argv[]);
+abcd::Status otpAuthSet(int argc, char *argv[]);
+abcd::Status otpAuthRemove(int argc, char *argv[]);
+
+abcd::Status otpResetGet(int argc, char *argv[]);
+abcd::Status otpResetRemove(int argc, char *argv[]);
+
 #endif

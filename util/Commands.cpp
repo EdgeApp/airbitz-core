@@ -509,7 +509,13 @@ Status signIn(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... sign-in <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_SignIn(argv[0], argv[1], NULL, NULL, &error));
+    tABC_Error error;
+    tABC_CC cc = ABC_SignIn(argv[0], argv[1], NULL, NULL, &error);
+    if (ABC_CC_InvalidOTP == cc)
+    {
+        std::cout << "No OTP token, resetting account 2-factor auth." << std::endl;
+        ABC_CHECK_OLD(ABC_OtpResetSet(argv[0], &error));
+    }
 
     return Status();
 }

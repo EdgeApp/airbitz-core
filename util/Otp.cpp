@@ -46,3 +46,67 @@ otpKeyRemove(int argc, char *argv[])
 
     return Status();
 }
+
+Status
+otpAuthGet(int argc, char *argv[])
+{
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-auth-get <user> <pass>");
+
+    bool enabled;
+    long timeout;
+    ABC_CHECK_OLD(ABC_OtpAuthGet(argv[0], argv[1], &enabled, &timeout, &error));
+    if (enabled)
+        std::cout << "OTP on, timeout: " << timeout << std::endl;
+    else
+        std::cout << "OTP off." << std::endl;
+
+    return Status();
+}
+
+Status
+otpAuthSet(int argc, char *argv[])
+{
+    if (argc != 3)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-auth-set <user> <pass> <timeout-sec>");
+
+    ABC_CHECK_OLD(ABC_OtpAuthSet(argv[0], argv[1], atol(argv[2]), &error));
+
+    return Status();
+}
+
+Status
+otpAuthRemove(int argc, char *argv[])
+{
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-auth-remove <user> <pass>");
+
+    ABC_CHECK_OLD(ABC_OtpAuthRemove(argv[0], argv[1], &error));
+    ABC_CHECK_OLD(ABC_OtpKeyRemove(argv[0], &error));
+
+    return Status();
+}
+
+Status
+otpResetGet(int argc, char *argv[])
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-reset-get");
+
+    AutoString names;
+    ABC_CHECK_OLD(ABC_OtpResetGet(&names.get(), &error));
+    std::cout << names.get() << std::endl;
+
+    return Status();
+}
+
+Status
+otpResetRemove(int argc, char *argv[])
+{
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-reset-remove <user> <pass>");
+
+    ABC_CHECK_OLD(ABC_OtpResetRemove(argv[0], argv[1], &error));
+
+    return Status();
+}
