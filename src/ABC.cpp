@@ -46,6 +46,7 @@
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
+#include "../abcd/login/Otp.hpp"
 #include "../abcd/login/OtpKey.hpp"
 #include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/Debug.hpp"
@@ -469,6 +470,156 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_OtpAuthGet(const char *szUserName,
+                       const char *szPassword,
+                       bool *pbEnabled,
+                       long *pTimeout,
+                       tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(pbEnabled);
+    ABC_CHECK_NULL(pTimeout);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthGet(*gLoginCache, *pbEnabled, *pTimeout), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpAuthSet(const char *szUserName,
+                       const char *szPassword,
+                       long timeout,
+                       tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthSet(*gLoginCache, timeout), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpAuthRemove(const char *szUserName,
+                          const char *szPassword,
+                          tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthRemove(*gLoginCache), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpResetGet(char **pszUsernames,
+                        tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    auto usernames = loginDirList();
+    std::list<DataChunk> authIds;
+    std::list<bool> results;
+    std::string out;
+
+    ABC_CHECK_NULL(pszUsernames);
+
+    // Make the request:
+    for (const auto &i: usernames)
+    {
+        Lobby lobby;
+        ABC_CHECK_NEW(lobby.init(i), pError);
+        auto authId = lobby.authId();
+        authIds.emplace_back(authId.begin(), authId.end());
+    }
+    ABC_CHECK_NEW(otpResetGet(authIds, results), pError);
+
+    // Smush the results:
+    {
+        auto i = results.begin();
+        auto j = usernames.begin();
+        while (i != results.end() && j != usernames.end())
+        {
+            if (*i)
+                out += *j + "\n";
+            ++i; ++j;
+        }
+    }
+    ABC_STRDUP(*pszUsernames, out.c_str());
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpResetSet(const char *szUserName,
+                        tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        ABC_CHECK_NEW(otpResetSet(*gLobbyCache), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpResetRemove(const char *szUserName,
+                           const char *szPassword,
+                           tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpResetRemove(*gLoginCache), pError);
+    }
+
+exit:
+    return cc;
+}
 
 /**
  * Create a new wallet.
@@ -2685,7 +2836,11 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
         cc = ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &pLoginPackage.get(), &error);
 
-        if (cc == ABC_CC_BadPassword)
+        if (cc == ABC_CC_InvalidOTP)
+        {
+            ABC_CHECK_RET(cc);
+        }
+        else if (cc == ABC_CC_BadPassword)
         {
             if (fAsyncBitCoinEventCallback)
             {

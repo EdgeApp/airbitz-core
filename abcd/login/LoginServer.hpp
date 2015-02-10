@@ -13,11 +13,13 @@
 #define ABC_LoginServer_h
 
 #include "LoginPackages.hpp"
+#include "../util/Data.hpp"
 #include "../util/Status.hpp"
 #include "../util/Sync.hpp"
 #include "../util/U08Buf.hpp"
 #include "../../src/ABC.h"
 #include <time.h>
+#include <list>
 
 namespace abcd {
 
@@ -73,6 +75,13 @@ LoginServerWalletCreate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey);
  */
 Status
 LoginServerWalletActivate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey);
+
+tABC_CC ABC_LoginServerOtpEnable(tABC_U08Buf L1, tABC_U08Buf LP1, const char *szOtpToken, const long timeout, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpDisable(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpStatus(tABC_U08Buf L1, tABC_U08Buf LP1, bool *on, long *timeout, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpReset(tABC_U08Buf L1, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpPending(std::list<DataChunk> users, std::list<bool> &isPending, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpResetCancelPending(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError);
 
 tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
                                   tABC_U08Buf LP1,
