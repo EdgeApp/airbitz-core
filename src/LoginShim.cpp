@@ -258,27 +258,6 @@ exit:
 }
 
 /**
- * Sets up a PIN login package, both on-disk and on the server.
- */
-tABC_CC ABC_LoginShimPinSetup(const char *szUserName,
-                              const char *szPassword,
-                              const char *szPin,
-                              time_t expires,
-                              tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    std::lock_guard<std::mutex> lock(gLoginMutex);
-
-    // Log the user in, if necessary:
-    ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
-
-    ABC_CHECK_RET(ABC_LoginPinSetup(*gLoginCache, szPin, expires, pError));
-
-exit:
-    return cc;
-}
-
-/**
  * Obtains the information needed to access the sync dir for a given account.
  *
  * @param szUserName UserName for the account to access
@@ -330,27 +309,6 @@ tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
     ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
 
     ABC_CHECK_RET(ABC_LoginGetServerKeys(*gLoginCache, pL1, pLP1, pError));
-
-exit:
-    return cc;
-}
-
-/**
- * Validates that the provided password is correct.
- * This is used in the GUI to guard access to certain actions.
- */
-tABC_CC ABC_LoginShimPasswordOk(const char *szUserName,
-                                const char *szPassword,
-                                bool *pOk,
-                                tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    std::lock_guard<std::mutex> lock(gLoginMutex);
-
-    // Log the user in, if necessary:
-    ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
-
-    ABC_CHECK_RET(ABC_LoginPasswordOk(*gLoginCache, szPassword, pOk, pError));
 
 exit:
     return cc;

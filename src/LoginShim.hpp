@@ -87,12 +87,6 @@ tABC_CC ABC_LoginShimPinLogin(const char *szUserName,
                               const char *szPin,
                               tABC_Error *pError);
 
-tABC_CC ABC_LoginShimPinSetup(const char *szUserName,
-                              const char *szPassword,
-                              const char *szPin,
-                              time_t expires,
-                              tABC_Error *pError);
-
 tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
                                  const char *szPassword,
                                  tABC_SyncKeys **ppKeys,
@@ -103,11 +97,6 @@ tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
                                    tABC_U08Buf *pL1,
                                    tABC_U08Buf *pLP1,
                                    tABC_Error *pError);
-
-tABC_CC ABC_LoginShimPasswordOk(const char *szUserName,
-                                const char *szPassword,
-                                bool *pOk,
-                                tABC_Error *pError);
 
 } // namespace abcd
 
