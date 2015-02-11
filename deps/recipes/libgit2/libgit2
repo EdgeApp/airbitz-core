@@ -1,8 +1,8 @@
 depends="openssl"
 inherit lib
 
-version="0.21.3"
-source="https://github.com/libgit2/libgit2/archive/v$version.tar.gz#d116cb15f76edf2283c85da40389e4fecc8d5aeb"
+version="0.21.5"
+source="https://github.com/libgit2/libgit2/archive/v$version.tar.gz#bcf1c486237f06bd860cc604250f3c2af45a6ad7"
 
 build() {
     cd "libgit2-$version"
