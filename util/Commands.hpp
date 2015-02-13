@@ -38,6 +38,7 @@ abcd::Status searchBitcoinSeed(int argc, char *argv[]);
 abcd::Status setNickname(int argc, char *argv[]);
 abcd::Status signIn(int argc, char *argv[]);
 abcd::Status uploadLogs(int argc, char *argv[]);
+abcd::Status walletArchive(int argc, char *argv[]);
 abcd::Status walletDecrypt(int argc, char *argv[]);
 abcd::Status walletEncrypt(int argc, char *argv[]);
 abcd::Status walletGetAddress(int argc, char *argv[]);

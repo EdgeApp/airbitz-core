@@ -531,6 +531,15 @@ Status uploadLogs(int argc, char *argv[])
     return Status();
 }
 
+Status walletArchive(int argc, char *argv[])
+{
+    if (argc != 4)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-archive <user> <pass> <wallet-name> 1|0");
+
+    ABC_CHECK_OLD(ABC_SetWalletArchived(argv[0], argv[1], argv[2], atoi(argv[3]), &error));
+    return Status();
+}
+
 Status walletDecrypt(int argc, char *argv[])
 {
     if (argc != 4)

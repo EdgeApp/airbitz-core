@@ -58,6 +58,7 @@ static Status run(int argc, char *argv[])
         command == "set-nickname"       ? setNickname(argc-3, argv+3) :
         command == "sign-in"            ? signIn(argc-3, argv+3) :
         command == "upload-logs"        ? uploadLogs(argc-3, argv+3) :
+        command == "wallet-archive"     ? walletArchive(argc-3, argv+3) :
         command == "wallet-decrypt"     ? walletDecrypt(argc-3, argv+3) :
         command == "wallet-encrypt"     ? walletEncrypt(argc-3, argv+3) :
         command == "wallet-get-address" ? walletGetAddress(argc-3, argv+3) :
