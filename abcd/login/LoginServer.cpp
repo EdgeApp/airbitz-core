@@ -10,11 +10,16 @@
 #include "../util/Json.hpp"
 #include "../util/URL.hpp"
 #include "../util/Util.hpp"
+#include <map>
 
 // For debug upload:
 #include "../Bridge.hpp"
 #include "../util/Crypto.hpp"
 #include "../util/FileIO.hpp"
+
+// For OTP token hack:
+#include "Lobby.hpp"
+#include "../../src/LoginShim.hpp"
 
 namespace abcd {
 
@@ -25,8 +30,11 @@ namespace abcd {
 
 #define DATETIME_LENGTH 20
 
+static std::string gOtpResetAuth;
+
 static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, const char *szURL, const char *szField, char **szResponse, tABC_Error *pError);
 static tABC_CC checkResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError);
+static tABC_CC ABC_LoginServerOtpRequest(const char *szUrl, tABC_U08Buf L1, tABC_U08Buf LP1, json_t **pJSON_Results, tABC_Error *pError);
 
 /**
  * Creates an git repo on the server.
@@ -350,6 +358,12 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LR
                                              ABC_SERVER_JSON_LP1_FIELD, szAuth_Base64);
         }
     }
+    {
+        // No mutex or cache load! We might segfault...
+        auto key = gLobbyCache->otpKey();
+        if (key)
+            json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_FIELD, json_string(key->totp().c_str()));
+    }
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
@@ -591,6 +605,294 @@ exit:
 }
 
 /**
+ * Enables 2 Factor authentication
+ *
+ * @param L1   Login hash for the account
+ * @param LP1  Password hash for the account
+ * @param timeout Amount of time needed for a reset to complete
+ */
+tABC_CC ABC_LoginServerOtpEnable(tABC_U08Buf L1,
+                                 tABC_U08Buf LP1,
+                                 const char *szOtpSecret,
+                                 const long timeout,
+                                 tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szResults = NULL;
+    char *szPost    = NULL;
+    char *szL1_Base64 = NULL;
+    char *szLP1_Base64 = NULL;
+    json_t *pJSON_Root = NULL;
+
+    std::string url(ABC_SERVER_ROOT);
+    url += "/otp/on";
+
+    ABC_CHECK_NULL_BUF(L1);
+    ABC_CHECK_NULL_BUF(LP1);
+
+    // create base64 versions of L1 and LP1
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
+
+    // create the post data
+    pJSON_Root = json_pack("{sssssssi}",
+                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
+                        ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
+                        ABC_SERVER_JSON_OTP_SECRET_FIELD, szOtpSecret,
+                        ABC_SERVER_JSON_OTP_TIMEOUT, timeout);
+    {
+        // No mutex or cache load! We might segfault...
+        auto key = gLobbyCache->otpKey();
+        if (key)
+            json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_FIELD, json_string(key->totp().c_str()));
+    }
+
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
+    json_decref(pJSON_Root);
+    pJSON_Root = NULL;
+    ABC_DebugLog("Server URL: %s, Data: %s", url.c_str(), szPost);
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %s", szResults);
+
+    ABC_CHECK_RET(checkResults(szResults, NULL, pError));
+exit:
+    ABC_FREE_STR(szResults);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szL1_Base64);
+    ABC_FREE_STR(szLP1_Base64);
+    if (pJSON_Root)     json_decref(pJSON_Root);
+
+    return cc;
+}
+
+tABC_CC ABC_LoginServerOtpRequest(const char *szUrl,
+                                  tABC_U08Buf L1,
+                                  tABC_U08Buf LP1,
+                                  json_t **pJSON_Results,
+                                  tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    char *szResults = NULL;
+    char *szPost    = NULL;
+    char *szL1_Base64 = NULL;
+    char *szLP1_Base64 = NULL;
+    json_t *pJSON_Root = NULL;
+
+    ABC_CHECK_NULL_BUF(L1);
+
+    // create base64 versions of L1 and LP1
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
+
+    // create the post data
+    pJSON_Root = json_pack("{ss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64);
+    // If there is a LP1 provided
+    if (ABC_BUF_PTR(LP1))
+    {
+        ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
+        json_object_set_new(pJSON_Root, ABC_SERVER_JSON_LP1_FIELD, json_string(szLP1_Base64));
+    }
+    {
+        // No mutex or cache load! We might segfault...
+        auto key = gLobbyCache->otpKey();
+        if (key)
+            json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_FIELD, json_string(key->totp().c_str()));
+    }
+    json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_RESET_AUTH, json_string(gOtpResetAuth.c_str()));
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
+    json_decref(pJSON_Root);
+    pJSON_Root = NULL;
+    ABC_DebugLog("Server URL: %s, Data: %s", szUrl, szPost);
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(szUrl, szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %s", szResults);
+
+    if (pJSON_Results) {
+        ABC_CHECK_RET(checkResults(szResults, pJSON_Results, pError));
+    } else {
+        ABC_CHECK_RET(checkResults(szResults, NULL, pError));
+    }
+exit:
+    ABC_FREE_STR(szResults);
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szL1_Base64);
+    ABC_FREE_STR(szLP1_Base64);
+    if (pJSON_Root)     json_decref(pJSON_Root);
+    return cc;
+}
+
+/**
+ * Disable 2 Factor authentication
+ *
+ * @param L1   Login hash for the account
+ * @param LP1  Password hash for the account
+ */
+tABC_CC ABC_LoginServerOtpDisable(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    std::string url(ABC_SERVER_ROOT);
+    url += "/otp/off";
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, LP1, NULL, pError));
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginServerOtpStatus(tABC_U08Buf L1, tABC_U08Buf LP1,
+    bool *on, long *timeout, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    json_t *pJSON_Root = NULL;
+    json_t *pJSON_Value = NULL;
+
+    std::string url(ABC_SERVER_ROOT);
+    url += "/otp/status";
+
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, LP1, &pJSON_Root, pError));
+
+    pJSON_Root = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
+    ABC_CHECK_ASSERT((pJSON_Root && json_is_object(pJSON_Root)), ABC_CC_JSONError, "Error parsing server JSON care package results");
+
+    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_OTP_ON);
+    ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error otp/on JSON");
+    *on = json_is_true(pJSON_Value);
+
+    if (*on)
+    {
+        pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_OTP_TIMEOUT);
+        ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error otp/timeout JSON");
+        *timeout = json_integer_value(pJSON_Value);
+    }
+exit:
+    if (pJSON_Root)      json_decref(pJSON_Root);
+    if (pJSON_Value)     json_decref(pJSON_Value);
+
+    return cc;
+}
+
+/**
+ * Request Reset 2 Factor authentication
+ *
+ * @param L1   Login hash for the account
+ * @param LP1  Password hash for the account
+ */
+tABC_CC ABC_LoginServerOtpReset(tABC_U08Buf L1, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    tABC_U08Buf LP1 = ABC_BUF_NULL;
+    std::string url(ABC_SERVER_ROOT);
+    url += "/otp/reset";
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, LP1, NULL, pError));
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_LoginServerOtpPending(std::list<DataChunk> users, std::list<bool> &isPending, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    json_t *pJSON_Root = NULL;
+    json_t *pJSON_Row = NULL;
+    json_t *pJSON_Value = NULL;
+    size_t rows = 0;
+    char *szResults = NULL;
+    char *szPost = NULL;
+    std::map<std::string, bool> userMap;
+    std::list<std::string> usersEncoded;
+
+    std::string url(ABC_SERVER_ROOT);
+    url += "/otp/pending/check";
+
+    std::string param;
+    for (const auto &u : users)
+    {
+        char *szL1 = NULL;
+        ABC_CHECK_RET(ABC_CryptoBase64Encode(toU08Buf(u), &szL1, pError));
+
+        std::string username(szL1);
+        param += (username + ",");
+        userMap[username] = false;
+        usersEncoded.push_back(username);
+
+        ABC_FREE_STR(szL1);
+    }
+
+    // create the post data
+    pJSON_Root = json_pack("{ss}", "l1s", param.c_str());
+    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
+    json_decref(pJSON_Root);
+    pJSON_Root = NULL;
+    ABC_DebugLog("Server URL: %s, Data: %s", url.c_str(), szPost);
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), szPost, &szResults, pError));
+    ABC_DebugLog("Server results: %s", szResults);
+    ABC_CHECK_RET(checkResults(szResults, &pJSON_Root, pError));
+
+    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
+    if (pJSON_Value)
+    {
+        ABC_CHECK_ASSERT((pJSON_Value && json_is_array(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON care package results");
+
+        rows = (size_t) json_array_size(pJSON_Value);
+        for (unsigned i = 0; i < rows; i++)
+        {
+            json_t *pJSON_Row = json_array_get(pJSON_Value, i);
+            ABC_CHECK_ASSERT((pJSON_Row && json_is_object(pJSON_Row)), ABC_CC_JSONError, "Error parsing JSON array element object");
+
+            pJSON_Value = json_object_get(pJSON_Row, "login");
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error otp/pending/login JSON");
+            std::string username(json_string_value(pJSON_Value));
+
+            pJSON_Value = json_object_get(pJSON_Row, ABC_SERVER_JSON_OTP_PENDING);
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error otp/pending/pending JSON");
+            if (json_is_true(pJSON_Value))
+            {
+                userMap[username] = json_is_true(pJSON_Value);;
+            }
+        }
+    }
+    isPending.clear();
+    for (auto &username: usersEncoded) {
+        isPending.push_back(userMap[username]);
+    }
+exit:
+    ABC_FREE_STR(szPost);
+    ABC_FREE_STR(szResults);
+
+    if (pJSON_Root)      json_decref(pJSON_Root);
+    if (pJSON_Row)       json_decref(pJSON_Row);
+    if (pJSON_Value)     json_decref(pJSON_Value);
+
+    return cc;
+}
+
+/**
+ * Request Reset 2 Factor authentication
+ *
+ * @param L1   Login hash for the account
+ * @param LP1  Password hash for the account
+ */
+tABC_CC ABC_LoginServerOtpResetCancelPending(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    std::string url(ABC_SERVER_ROOT);
+    url += "/otp/pending/cancel";
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, LP1, NULL, pError));
+
+exit:
+    return cc;
+}
+
+
+/**
  * Upload files to auth server for debugging
  *
  * @param szUserName    UserName for the account associated with the settings
@@ -729,6 +1031,17 @@ tABC_CC checkResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *
         else if (ABC_Server_Code_PinExpired == statusCode)
         {
             ABC_RET_ERROR(ABC_CC_PinExpired, "Invalid password on server");
+        }
+        else if (ABC_Server_Code_InvalidOTP == statusCode)
+        {
+            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_object(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON object value");
+
+            pJSON_Value = json_object_get(pJSON_Value, ABC_SERVER_JSON_OTP_RESET_AUTH);
+            ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
+            gOtpResetAuth = json_string_value(pJSON_Value);
+
+            ABC_RET_ERROR(ABC_CC_InvalidOTP, "Invalid OTP");
         }
         else
         {

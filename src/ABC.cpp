@@ -40,11 +40,14 @@
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
 #include "../abcd/Exchanges.hpp"
+#include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/LoginDir.hpp"
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
+#include "../abcd/login/Otp.hpp"
+#include "../abcd/login/OtpKey.hpp"
 #include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
@@ -52,6 +55,7 @@
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/URL.hpp"
 #include "../abcd/util/Util.hpp"
+#include <qrencode.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -388,6 +392,229 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
         AutoLoginLock lock(gLoginMutex);
         ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
         ABC_CHECK_RET(ABC_LoginPasswordOk(*gLoginCache, szPassword, pOk, pError));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpKeyGet(const char *szUserName,
+                      char **pszKey,
+                      tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    std::string key;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(pszKey);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+
+        const OtpKey *key = gLobbyCache->otpKey();
+        ABC_CHECK_ASSERT(key, ABC_CC_NULLPtr, "No OTP key in account.");
+        ABC_STRDUP(*pszKey, key->encodeBase32().c_str());
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpKeySet(const char *szUserName,
+                      char *szKey,
+                      tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szKey);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+
+        OtpKey key;
+        ABC_CHECK_NEW(key.decodeBase32(szKey), pError);
+        ABC_CHECK_NEW(gLobbyCache->otpKey(key), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpKeyRemove(const char *szUserName,
+                         tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        ABC_CHECK_NEW(gLobbyCache->otpKeyRemove(), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpAuthGet(const char *szUserName,
+                       const char *szPassword,
+                       bool *pbEnabled,
+                       long *pTimeout,
+                       tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(pbEnabled);
+    ABC_CHECK_NULL(pTimeout);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthGet(*gLoginCache, *pbEnabled, *pTimeout), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpAuthSet(const char *szUserName,
+                       const char *szPassword,
+                       long timeout,
+                       tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthSet(*gLoginCache, timeout), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpAuthRemove(const char *szUserName,
+                          const char *szPassword,
+                          tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthRemove(*gLoginCache), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpResetGet(char **pszUsernames,
+                        tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    auto usernames = loginDirList();
+    std::list<DataChunk> authIds;
+    std::list<bool> results;
+    std::string out;
+
+    ABC_CHECK_NULL(pszUsernames);
+
+    // Make the request:
+    for (const auto &i: usernames)
+    {
+        Lobby lobby;
+        ABC_CHECK_NEW(lobby.init(i), pError);
+        auto authId = lobby.authId();
+        authIds.emplace_back(authId.begin(), authId.end());
+    }
+    ABC_CHECK_NEW(otpResetGet(authIds, results), pError);
+
+    // Smush the results:
+    {
+        auto i = results.begin();
+        auto j = usernames.begin();
+        while (i != results.end() && j != usernames.end())
+        {
+            if (*i)
+                out += *j + "\n";
+            ++i; ++j;
+        }
+    }
+    ABC_STRDUP(*pszUsernames, out.c_str());
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpResetSet(const char *szUserName,
+                        tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        ABC_CHECK_NEW(otpResetSet(*gLobbyCache), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpResetRemove(const char *szUserName,
+                           const char *szPassword,
+                           tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpResetRemove(*gLoginCache), pError);
     }
 
 exit:
@@ -2437,6 +2664,44 @@ void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
     }
 }
 
+tABC_CC ABC_QrEncode(const char *szText,
+                     unsigned char **paData,
+                     unsigned int *pWidth,
+                     tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    QRcode *qr = nullptr;
+    unsigned int length = 0;
+    unsigned char *aData = nullptr;
+
+    ABC_CHECK_NULL(szText);
+    ABC_CHECK_NULL(paData);
+    ABC_CHECK_NULL(pWidth);
+
+    qr = QRcode_encodeString(szText, 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+    ABC_CHECK_ASSERT(qr, ABC_CC_Error, "Unable to create QR code");
+
+    length = qr->width * qr->width;
+    ABC_ARRAY_NEW(aData, length, unsigned char);
+    for (unsigned i = 0; i < length; i++)
+    {
+        aData[i] = qr->data[i] & 0x1;
+    }
+    *pWidth = qr->width;
+    *paData = aData;
+    aData = nullptr;
+
+exit:
+    QRcode_free(qr);
+    ABC_CLEAR_FREE(aData, length);
+
+    return cc;
+}
+
 /**
  * Loads the settings for a specific account
  *
@@ -2571,7 +2836,11 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
         cc = ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &pLoginPackage.get(), &error);
 
-        if (cc == ABC_CC_BadPassword)
+        if (cc == ABC_CC_InvalidOTP)
+        {
+            ABC_CHECK_RET(cc);
+        }
+        else if (cc == ABC_CC_BadPassword)
         {
             if (fAsyncBitCoinEventCallback)
             {
