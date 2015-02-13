@@ -380,11 +380,11 @@ Status listWallets(int argc, char *argv[])
         printf("%s: ", uuids.data[i]);
 
         // Get wallet name filename:
-        char *szDir;
+        AutoString szDir;
         char szFilename[ABC_FILEIO_MAX_PATH_LENGTH];
-        ABC_CHECK_OLD(ABC_WalletGetDirName(&szDir, uuids.data[i], &error));
+        ABC_CHECK_OLD(ABC_WalletGetDirName(&szDir.get(), uuids.data[i], &error));
         snprintf(szFilename, sizeof(szFilename),
-            "%s/sync/WalletName.json", szDir);
+            "%s/sync/WalletName.json", szDir.get());
 
         // Print wallet name:
         AutoU08Buf data;

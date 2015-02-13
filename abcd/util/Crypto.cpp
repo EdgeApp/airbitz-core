@@ -134,6 +134,7 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
     struct timeval timerEnd;
     int totalTime;
     tABC_U08Buf Salt; // Do not free
+    AutoU08Buf temp;
 
     ABC_DebugLog("%s called", __FUNCTION__);
 
@@ -153,7 +154,7 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
                                    SCRYPT_DEFAULT_CLIENT_R,
                                    SCRYPT_DEFAULT_CLIENT_P,
                                    SCRYPT_DEFAULT_LENGTH,
-                                   &Salt,
+                                   &temp,
                                    pError));
     gettimeofday(&timerEnd, NULL);
 
@@ -991,6 +992,8 @@ tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
     // set final values
     ABC_BUF_SET_PTR(*pEncData, pTmpEncData, c_len + f_len);
 
+    EVP_CIPHER_CTX_cleanup(&e_ctx);
+
 exit:
 
     return cc;
@@ -1054,11 +1057,12 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
     EVP_DecryptUpdate(&d_ctx, pTmpData, &p_len, ABC_BUF_PTR(EncData), ABC_BUF_SIZE(EncData));
     EVP_DecryptFinal_ex(&d_ctx, pTmpData + p_len, &f_len);
 
+    EVP_CIPHER_CTX_cleanup(&d_ctx);
+
     // set final values
     ABC_BUF_SET_PTR(*pData, pTmpData, p_len + f_len);
 
 exit:
-
     return cc;
 }
 

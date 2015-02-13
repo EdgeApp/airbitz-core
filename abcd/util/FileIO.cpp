@@ -162,6 +162,7 @@ void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList)
                     ABC_CLEAR_FREE(pFileList->apFiles[i], sizeof(tABC_FileIOFileInfo));
                 }
             }
+            ABC_FREE(pFileList->apFiles);
         }
         ABC_CLEAR_FREE(pFileList, sizeof(tABC_FileIOList));
     }
