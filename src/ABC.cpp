@@ -725,6 +725,11 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_GeneralInfoUpdate(tABC_Error *pError)
+{
+    return ABC_GeneralUpdateInfo(pError);
+}
+
 /**
  * Create a new wallet.
  *

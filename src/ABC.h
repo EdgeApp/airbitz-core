@@ -653,6 +653,13 @@ tABC_CC ABC_DataSyncAll(const char *szUserName,
                         tABC_Error *pError);
 
 /* === General info: === */
+
+/**
+ * Fetches the general info from the auth server
+ * (obelisk servers, mining fees, &c.).
+ */
+tABC_CC ABC_GeneralInfoUpdate(tABC_Error *pError);
+
 tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
                           int *pCount,
                          tABC_Error *pError);
