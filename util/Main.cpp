@@ -62,6 +62,7 @@ static Status run(int argc, char *argv[])
         command == "wallet-decrypt"     ? walletDecrypt(argc-3, argv+3) :
         command == "wallet-encrypt"     ? walletEncrypt(argc-3, argv+3) :
         command == "wallet-get-address" ? walletGetAddress(argc-3, argv+3) :
+        command == "wallet-order"       ? walletOrder(argc-3, argv+3) :
         // Otp.cpp:
         command == "otp-key-get"        ? otpKeyGet(argc-3, argv+3) :
         command == "otp-key-set"        ? otpKeySet(argc-3, argv+3) :

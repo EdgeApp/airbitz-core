@@ -42,6 +42,7 @@ abcd::Status walletArchive(int argc, char *argv[]);
 abcd::Status walletDecrypt(int argc, char *argv[]);
 abcd::Status walletEncrypt(int argc, char *argv[]);
 abcd::Status walletGetAddress(int argc, char *argv[]);
+abcd::Status walletOrder(int argc, char *argv[]);
 
 // Implemented in its own file:
 abcd::Status washer(int argc, char *argv[]);

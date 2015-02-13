@@ -623,3 +623,21 @@ Status walletGetAddress(int argc, char *argv[])
 
     return Status();
 }
+
+Status walletOrder(int argc, char *argv[])
+{
+    if (argc < 3)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-get-address <user> <pass> <wallet-names>...");
+
+    AutoStringArray ids;
+    ids.size = argc - 2;
+    ids.data = (char**)calloc(ids.size, sizeof(char*));
+    for (size_t i = 0; i < ids.size; ++i)
+    {
+        ids.data[i] = strdup(argv[2 + i]);
+    }
+
+    ABC_CHECK_OLD(ABC_SetWalletOrder(argv[0], argv[1], ids.data, ids.size, &error));
+
+    return Status();
+}
