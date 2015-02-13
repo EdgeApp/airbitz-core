@@ -952,8 +952,7 @@ void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
 
 tABC_CC ABC_SetWalletOrder(const char *szUserName,
                            const char *szPassword,
-                           char **aszUUIDArray,
-                           unsigned int countUUIDs,
+                           char *szUUIDs,
                            tABC_Error *pError);
 
 /* === Wallet data: === */

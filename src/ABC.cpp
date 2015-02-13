@@ -1358,8 +1358,7 @@ void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
  */
 tABC_CC ABC_SetWalletOrder(const char *szUserName,
                            const char *szPassword,
-                           char **aszUUIDArray,
-                           unsigned int countUUIDs,
+                           char *szUUIDs,
                            tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -1372,7 +1371,7 @@ tABC_CC ABC_SetWalletOrder(const char *szUserName,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_AccountWalletReorder(pKeys, aszUUIDArray, countUUIDs, pError));
+    ABC_CHECK_RET(ABC_AccountWalletReorder(pKeys, szUUIDs, pError));
 
 exit:
     return cc;

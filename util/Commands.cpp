@@ -629,15 +629,14 @@ Status walletOrder(int argc, char *argv[])
     if (argc < 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-get-address <user> <pass> <wallet-names>...");
 
-    AutoStringArray ids;
-    ids.size = argc - 2;
-    ids.data = (char**)calloc(ids.size, sizeof(char*));
-    for (size_t i = 0; i < ids.size; ++i)
+    std::string ids("");
+    size_t count = argc - 2;
+    for (size_t i = 0; i < count; ++i)
     {
-        ids.data[i] = strdup(argv[2 + i]);
+        ids += std::string(argv[2 + 1]) + "\n";
     }
 
-    ABC_CHECK_OLD(ABC_SetWalletOrder(argv[0], argv[1], ids.data, ids.size, &error));
+    ABC_CHECK_OLD(ABC_SetWalletOrder(argv[0], argv[1], (char *) ids.c_str(), &error));
 
     return Status();
 }

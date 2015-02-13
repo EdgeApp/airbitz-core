@@ -1070,17 +1070,21 @@ exit:
  * @param count     The number of items in the array.
  */
 tABC_CC ABC_AccountWalletReorder(tABC_SyncKeys *pKeys,
-                                 char **aszUUID,
-                                 unsigned count,
+                                 char *szUUIDs,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    for (unsigned i = 0; i < count; ++i)
+    char *uuid, *brkt;
+    unsigned int i = 0;
+
+    for (uuid = strtok_r(szUUIDs, "\n", &brkt);
+         uuid;
+         uuid = strtok_r(NULL, "\n", &brkt), i++)
     {
         AutoAccountWalletInfo info;
-        ABC_CHECK_RET(ABC_AccountWalletLoad(pKeys, aszUUID[i], &info, pError));
+        ABC_CHECK_RET(ABC_AccountWalletLoad(pKeys, uuid, &info, pError));
         if (info.sortIndex != i)
         {
             info.sortIndex = i;
