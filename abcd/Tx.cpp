@@ -1644,8 +1644,8 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
     AutoCoreLock lock(gCoreMutex);
+    AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
 
     char *szTxDir = NULL;
     tABC_FileIOList *pFileList = NULL;
@@ -3583,8 +3583,8 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
                            tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
     AutoCoreLock lock(gCoreMutex);
+    AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
 
     char *szAddrDir = NULL;
     tABC_FileIOList *pFileList = NULL;
