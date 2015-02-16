@@ -40,8 +40,6 @@ void async_callback(const tABC_AsyncBitCoinInfo *pInfo)
         printf("ABC_AsyncEventType_IncomingBitCoin\n");
     } else if (pInfo->eventType == ABC_AsyncEventType_BlockHeightChange) {
         printf("ABC_AsyncEventType_BlockHeightChange\n");
-    } else if (pInfo->eventType == ABC_AsyncEventType_ExchangeRateUpdate) {
-        printf("ABC_AsyncEventType_ExchangeRateUpdate\n");
     } else if (pInfo->eventType == ABC_AsyncEventType_DataSyncUpdate) {
         printf("ABC_AsyncEventType_DataSyncUpdate\n");
     } else if (pInfo->eventType == ABC_AsyncEventType_RemotePasswordChange) {

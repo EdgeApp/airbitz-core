@@ -3140,20 +3140,14 @@ exit:
 
 /**
  * Request an update to the exchange for a currency
- *
- * @param szUserName           UserName for the account
- * @param szPassword           Password for the account
- * @param currencyNum          The currency number to update
- * @param fRequestCallback     The function that will be called when the account signin process has finished.
- * @param pData                A pointer to data to be returned back in callback
- * @param pError               A pointer to the location to store the error if there is one
+ * @param pDeprecated0 Formerly a callback function, but no longer does anything.
  */
 tABC_CC
 ABC_RequestExchangeRateUpdate(const char *szUserName,
                               const char *szPassword,
                               int currencyNum,
-                              tABC_Request_Callback fRequestCallback,
-                              void *pData,
+                              void *pDeprecated0,
+                              void *pDeprecated1,
                               tABC_Error *pError)
 {
     tABC_ExchangeInfo *pInfo = NULL;
@@ -3169,22 +3163,9 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(
-        ABC_ExchangeAlloc(pKeys, currencyNum,
-                          fRequestCallback, pData, &pInfo, pError));
-    if (fRequestCallback)
-    {
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_ExchangeUpdateThreaded, pInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        cc = ABC_ExchangeUpdate(pInfo, pError);
-        ABC_ExchangeFreeInfo(pInfo);
-    }
+    ABC_CHECK_RET(ABC_ExchangeAlloc(pKeys, currencyNum, &pInfo, pError));
+    cc = ABC_ExchangeUpdate(pInfo, pError);
+    ABC_ExchangeFreeInfo(pInfo);
 
 exit:
     return cc;

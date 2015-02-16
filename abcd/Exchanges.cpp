@@ -116,7 +116,7 @@ tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
     }
     else
     {
-        ABC_CHECK_RET(ABC_ExchangeAlloc(pKeys, currencyNum, NULL, NULL, &pInfo, pError));
+        ABC_CHECK_RET(ABC_ExchangeAlloc(pKeys, currencyNum, &pInfo, pError));
         ABC_CHECK_RET(ABC_ExchangeGetRate(pInfo, pRate, pError));
         ABC_ExchangeFreeInfo(pInfo);
     }
@@ -154,33 +154,6 @@ tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
 exit:
     return cc;
 }
-
-void *ABC_ExchangeUpdateThreaded(void *pData)
-{
-    tABC_ExchangeInfo *pInfo = (tABC_ExchangeInfo *) pData;
-    if (pInfo)
-    {
-        tABC_RequestResults results;
-        memset(&results, 0, sizeof(tABC_RequestResults));
-
-        results.requestType = ABC_RequestType_SendBitcoin;
-
-        results.bSuccess = false;
-
-        // send the transaction
-        tABC_CC CC = ABC_ExchangeUpdate(pInfo, &(results.errorInfo));
-        results.errorInfo.code = CC;
-
-        // we are done so load up the info and ship it back to the caller via the callback
-        results.bSuccess = (CC == ABC_CC_Ok ? true : false);
-        pInfo->fRequestCallback(&results);
-
-        // it is our responsibility to free the info struct
-        ABC_ExchangeFreeInfo(pInfo);
-    }
-    return NULL;
-}
-
 
 static
 tABC_CC ABC_ExchangeGetRate(tABC_ExchangeInfo *pInfo, double *pRate, tABC_Error *pError)
@@ -707,7 +680,6 @@ exit:
 
 tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
                           int currencyNum,
-                          tABC_Request_Callback fRequestCallback, void *pData,
                           tABC_ExchangeInfo **ppInfo, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -715,8 +687,6 @@ tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
 
     ABC_NEW(pInfo, tABC_ExchangeInfo);
     ABC_CHECK_RET(ABC_SyncKeysCopy(&pInfo->pKeys, pKeys, pError));
-    pInfo->fRequestCallback = fRequestCallback;
-    pInfo->pData = pData;
     pInfo->currencyNum = currencyNum;
 
     *ppInfo = pInfo;

@@ -68,10 +68,6 @@ typedef struct sABC_ExchangeInfo
     tABC_SyncKeys         *pKeys;
     /** The currency to request or update **/
     int                   currencyNum;
-    /** Callback fired after a update **/
-    tABC_Request_Callback fRequestCallback;
-    /** Data to return with the callback **/
-    void                  *pData;
 } tABC_ExchangeInfo;
 
 /**
@@ -91,13 +87,10 @@ tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
 
 tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
 
-void *ABC_ExchangeUpdateThreaded(void *pData);
-
 void ABC_ExchangeClearCache();
 
 tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
                           int currencyNum,
-                          tABC_Request_Callback fRequestCallback, void *pData,
                           tABC_ExchangeInfo **ppInfo, tABC_Error *pError);
 void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo);
 
