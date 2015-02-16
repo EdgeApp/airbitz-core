@@ -676,10 +676,6 @@ tABC_CC ABC_ParseBitcoinURI(const char *szURI,
 
 void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo);
 
-double ABC_SatoshiToBitcoin(int64_t satoshi);
-
-int64_t ABC_BitcoinToSatoshi(double bitcoin);
-
 tABC_CC ABC_ParseAmount(const char *szAmount,
                         uint64_t *pAmountOut,
                         unsigned decimalPlaces);

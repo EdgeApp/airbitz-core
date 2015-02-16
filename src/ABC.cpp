@@ -1626,26 +1626,6 @@ void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo)
 }
 
 /**
- * Converts amount from Satoshi to Bitcoin
- *
- * @param satoshi Amount in Satoshi
- */
-double ABC_SatoshiToBitcoin(int64_t satoshi)
-{
-    return(ABC_TxSatoshiToBitcoin(satoshi));
-}
-
-/**
- * Converts amount from Bitcoin to Satoshi
- *
- * @param bitcoin Amount in Bitcoin
- */
-int64_t ABC_BitcoinToSatoshi(double bitcoin)
-{
-    return(ABC_TxBitcoinToSatoshi(bitcoin));
-}
-
-/**
  * Converts Satoshi to given currency
  *
  * @param satoshi     Amount in Satoshi

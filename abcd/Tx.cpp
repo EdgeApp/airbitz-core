@@ -647,26 +647,6 @@ void ABC_TxFreeDetails(tABC_TxDetails *pDetails)
 }
 
 /**
- * Converts amount from Satoshi to Bitcoin
- *
- * @param satoshi Amount in Satoshi
- */
-double ABC_TxSatoshiToBitcoin(int64_t satoshi)
-{
-    return((double) satoshi / (double) SATOSHI_PER_BITCOIN);
-}
-
-/**
- * Converts amount from Bitcoin to Satoshi
- *
- * @param bitcoin Amount in Bitcoin
- */
-int64_t ABC_TxBitcoinToSatoshi(double bitcoin)
-{
-    return((int64_t) (bitcoin * (double) SATOSHI_PER_BITCOIN));
-}
-
-/**
  * Converts Satoshi to given currency
  *
  * @param satoshi     Amount in Satoshi
@@ -688,7 +668,7 @@ tABC_CC ABC_TxSatoshiToCurrency(tABC_SyncKeys *pKeys,
     *pCurrency = 0.0;
 
     ABC_CHECK_RET(ABC_ExchangeCurrentRate(pKeys, currencyNum, &pRate, pError));
-    *pCurrency = ABC_SatoshiToBitcoin(satoshi) * pRate;
+    *pCurrency = satoshi * (pRate / SATOSHI_PER_BITCOIN);
 exit:
 
     return cc;
@@ -716,7 +696,7 @@ tABC_CC ABC_TxCurrencyToSatoshi(tABC_SyncKeys *pKeys,
     *pSatoshi = 0;
 
     ABC_CHECK_RET(ABC_ExchangeCurrentRate(pKeys, currencyNum, &pRate, pError));
-    *pSatoshi = ABC_BitcoinToSatoshi(currency) / pRate;
+    *pSatoshi = static_cast<int64_t>(currency * (SATOSHI_PER_BITCOIN / pRate));
 exit:
 
     return cc;
