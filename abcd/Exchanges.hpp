@@ -36,8 +36,9 @@
 #ifndef ABC_Exchanges_h
 #define ABC_Exchanges_h
 
-#include "../src/ABC.h"
 #include "util/Sync.hpp"
+#include "util/Status.hpp"
+#include "../src/ABC.h"
 #include <stddef.h>
 
 namespace abcd {
@@ -99,6 +100,14 @@ tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
                           tABC_Request_Callback fRequestCallback, void *pData,
                           tABC_ExchangeInfo **ppInfo, tABC_Error *pError);
 void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo);
+
+Status
+exchangeSatoshiToCurrency(tABC_SyncKeys *pKeys,
+    int64_t satoshi, double &currency, int currencyNum);
+
+Status
+exchangeCurrencyToSatoshi(tABC_SyncKeys *pKeys,
+    double currency, int64_t &satoshi, int currencyNum);
 
 } // namespace abcd
 

@@ -50,8 +50,6 @@
 
 namespace abcd {
 
-#define SATOSHI_PER_BITCOIN                     100000000
-
 #define MIN_RECYCLABLE 5
 
 #define TX_MAX_ADDR_ID_LENGTH                   20 // largest char count for the string version of the id number - 20 digits should handle it
@@ -409,9 +407,9 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
             ABC_WalletID(pInfo->wallet.pKeys, pInfo->szDestWalletUUID);
 
         ABC_CHECK_RET(ABC_WalletGetInfo(recvWallet, &pDestWallet, pError));
-        ABC_CHECK_RET(ABC_TxSatoshiToCurrency(recvWallet.pKeys,
-                        pReceiveTx->pDetails->amountSatoshi, &Currency,
-                        pDestWallet->currencyNum, pError));
+        ABC_CHECK_NEW(exchangeSatoshiToCurrency(recvWallet.pKeys,
+                        pReceiveTx->pDetails->amountSatoshi, Currency,
+                        pDestWallet->currencyNum), pError);
         pReceiveTx->pDetails->amountCurrency = Currency;
 
         if (pReceiveTx->pDetails->amountSatoshi < 0)
@@ -644,62 +642,6 @@ void ABC_TxFreeDetails(tABC_TxDetails *pDetails)
         ABC_FREE_STR(pDetails->szNotes);
         ABC_CLEAR_FREE(pDetails, sizeof(tABC_TxDetails));
     }
-}
-
-/**
- * Converts Satoshi to given currency
- *
- * @param satoshi     Amount in Satoshi
- * @param pCurrency   Pointer to location to store amount converted to currency.
- * @param currencyNum Currency ISO 4217 num
- * @param pError      A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_TxSatoshiToCurrency(tABC_SyncKeys *pKeys,
-                                int64_t satoshi,
-                                double *pCurrency,
-                                int currencyNum,
-                                tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    double pRate;
-
-    ABC_CHECK_NULL(pCurrency);
-    *pCurrency = 0.0;
-
-    ABC_CHECK_RET(ABC_ExchangeCurrentRate(pKeys, currencyNum, &pRate, pError));
-    *pCurrency = satoshi * (pRate / SATOSHI_PER_BITCOIN);
-exit:
-
-    return cc;
-}
-
-/**
- * Converts given currency to Satoshi
- *
- * @param currency    Amount in given currency
- * @param currencyNum Currency ISO 4217 num
- * @param pSatoshi    Pointer to location to store amount converted to Satoshi
- * @param pError      A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_TxCurrencyToSatoshi(tABC_SyncKeys *pKeys,
-                                double currency,
-                                int currencyNum,
-                                int64_t *pSatoshi,
-                                tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    double pRate;
-
-    ABC_CHECK_NULL(pSatoshi);
-    *pSatoshi = 0;
-
-    ABC_CHECK_RET(ABC_ExchangeCurrentRate(pKeys, currencyNum, &pRate, pError));
-    *pSatoshi = static_cast<int64_t>(currency * (SATOSHI_PER_BITCOIN / pRate));
-exit:
-
-    return cc;
 }
 
 tABC_CC
@@ -940,8 +882,8 @@ tABC_CC ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi,
     tABC_WalletInfo *pWallet = NULL;
 
     ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet, pError));
-    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(
-        self.pKeys, amountSatoshi, &Currency, pWallet->currencyNum, pError));
+    ABC_CHECK_NEW(exchangeSatoshiToCurrency(self.pKeys,
+        amountSatoshi, Currency, pWallet->currencyNum), pError);
 
     *pCurrency = Currency;
 exit:
@@ -2524,9 +2466,9 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
     pTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
     ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWalletInfo, pError));
-    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(wallet.pKeys,
-                    pTx->pDetails->amountSatoshi, &currency,
-                    pWalletInfo->currencyNum, pError));
+    ABC_CHECK_NEW(exchangeSatoshiToCurrency(wallet.pKeys,
+                    pTx->pDetails->amountSatoshi, currency,
+                    pWalletInfo->currencyNum), pError);
     pTx->pDetails->amountCurrency = currency;
 
     // save the transaction

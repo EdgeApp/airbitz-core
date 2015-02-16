@@ -42,6 +42,8 @@
 
 namespace abcd {
 
+#define SATOSHI_PER_BITCOIN                     100000000
+
 #define EXCHANGE_RATE_DIRECTORY "Exchanges"
 
 #define BITSTAMP_RATE_URL "https://www.bitstamp.net/api/ticker/"
@@ -756,6 +758,32 @@ void ABC_ExchangeFreeCacheEntry(tABC_ExchangeCacheEntry *pCache)
     {
         ABC_CLEAR_FREE(pCache, sizeof(tABC_ExchangeCacheEntry));
     }
+}
+
+Status
+exchangeSatoshiToCurrency(tABC_SyncKeys *pKeys,
+    int64_t satoshi, double &currency, int currencyNum)
+{
+    currency = 0.0;
+
+    double rate;
+    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(pKeys, currencyNum, &rate, &error));
+    currency = satoshi * (rate / SATOSHI_PER_BITCOIN);
+
+    return Status();
+}
+
+Status
+exchangeCurrencyToSatoshi(tABC_SyncKeys *pKeys,
+    double currency, int64_t &satoshi, int currencyNum)
+{
+    satoshi = 0;
+
+    double rate;
+    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(pKeys, currencyNum, &rate, &error));
+    satoshi = static_cast<int64_t>(currency * (SATOSHI_PER_BITCOIN / rate));
+
+    return Status();
 }
 
 } // namespace abcd

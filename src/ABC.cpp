@@ -1649,7 +1649,7 @@ tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(pKeys, satoshi, pCurrency, currencyNum, pError));
+    ABC_CHECK_NEW(exchangeSatoshiToCurrency(pKeys, satoshi, *pCurrency, currencyNum), pError);
 
 exit:
     return cc;
@@ -1680,7 +1680,7 @@ tABC_CC ABC_CurrencyToSatoshi(const char *szUserName,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_TxCurrencyToSatoshi(pKeys, currency, currencyNum, pSatoshi, pError));
+    ABC_CHECK_NEW(exchangeCurrencyToSatoshi(pKeys, currency, *pSatoshi, currencyNum), pError);
 
 exit:
     return cc;
