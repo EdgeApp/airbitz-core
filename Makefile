@@ -26,6 +26,9 @@ sources = \
 
 objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(sources))))
 
+check_sources = $(wildcard test/*.cpp)
+check_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(check_sources))))
+
 # Targets:
 libabc.so: $(WORK_DIR)/libabc.so $(WORK_DIR)/link-test
 libabc.a:  $(WORK_DIR)/libabc.a
@@ -37,7 +40,13 @@ $(WORK_DIR)/libabc.so: $(objects)
 	$(CXX) -shared -o $@ $^ $(LDFLAGS) $(LIBS)
 
 $(WORK_DIR)/link-test: $(WORK_DIR)/libabc.so
-	$(CXX) -o $(WORK_DIR)/link-test -L$(WORK_DIR) -labc link-test.cpp
+	$(CXX) -o $@ -L$(WORK_DIR) -labc link-test.cpp
+
+$(WORK_DIR)/test.bin: $(check_objects) $(objects)
+	$(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
+
+check: $(WORK_DIR)/test.bin
+	$<
 
 clean:
 	$(RM) -r build

@@ -40,8 +40,12 @@
 #include "U08Buf.hpp"
 #include <curl/curl.h>
 #include <jansson.h>
+#include <mutex>
 
 namespace abcd {
+
+extern std::recursive_mutex gCurlMutex;
+typedef std::lock_guard<std::recursive_mutex> AutoCurlLock;
 
 #define ABC_URL_MAX_PATH_LENGTH 2048
 
@@ -67,12 +71,7 @@ tABC_CC ABC_URLPostString(const char *szURL,
                           char **pszResults,
                           tABC_Error *pError);
 
-tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError);
-
 tABC_CC ABC_URLCurlHandleInit(CURL **ppCurlHandle, tABC_Error *pError);
-
-tABC_CC ABC_URLMutexLock(tABC_Error *pError);
-tABC_CC ABC_URLMutexUnlock(tABC_Error *pError);
 
 } // namespace abcd
 

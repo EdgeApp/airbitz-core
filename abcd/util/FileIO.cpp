@@ -34,7 +34,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -44,46 +43,7 @@
 namespace abcd {
 
 static char             gszRootDir[ABC_MAX_STRING_LENGTH + 1] = ".";
-
-static bool             gbInitialized = false;
-static pthread_mutex_t  gMutex; // to block multiple threads from accessing files at the same time
-
-/**
- * Initialize the FileIO system
- */
-tABC_CC ABC_FileIOInitialize(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "ABC_FileIO has already been initalized");
-
-    // create a mutex to block multiple threads from accessing files at the same time
-    pthread_mutexattr_t mutexAttrib;
-    ABC_CHECK_ASSERT(0 == pthread_mutexattr_init(&mutexAttrib), ABC_CC_MutexError, "ABC_FileIO could not create mutex attribute");
-    ABC_CHECK_ASSERT(0 == pthread_mutexattr_settype(&mutexAttrib, PTHREAD_MUTEX_RECURSIVE), ABC_CC_MutexError, "ABC_FileIO could not set mutex attributes");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_init(&gMutex, &mutexAttrib), ABC_CC_MutexError, "ABC_FileIO could not create mutex");
-    pthread_mutexattr_destroy(&mutexAttrib);
-
-    gbInitialized = true;
-
-exit:
-
-    return cc;
-}
-
-/**
- * Shut down the FileIO system
- */
-void ABC_FileIOTerminate()
-{
-    if (gbInitialized == true)
-    {
-        pthread_mutex_destroy(&gMutex);
-
-        gbInitialized = false;
-    }
-}
+std::recursive_mutex gFileMutex;
 
 /**
  * Sets the root directory to the string given
@@ -92,15 +52,13 @@ tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock lock(gFileMutex);
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(szRootDir);
     strncpy(gszRootDir, szRootDir, ABC_MAX_STRING_LENGTH);
     gszRootDir[ABC_MAX_STRING_LENGTH] = '\0';
 
 exit:
-
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -113,15 +71,13 @@ exit:
 tABC_CC ABC_FileIOGetRootDir(char **pszRootDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock lock(gFileMutex);
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(pszRootDir);
 
     ABC_STRDUP(*pszRootDir, gszRootDir);
 
 exit:
-
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -133,10 +89,10 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock lock(gFileMutex);
 
     tABC_FileIOList *pFileList = NULL;
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(ppFileList);
     ABC_CHECK_NULL(szDir);
 
@@ -186,8 +142,6 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
     *ppFileList = pFileList;
 
 exit:
-
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -208,6 +162,7 @@ void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList)
                     ABC_CLEAR_FREE(pFileList->apFiles[i], sizeof(tABC_FileIOFileInfo));
                 }
             }
+            ABC_FREE(pFileList->apFiles);
         }
         ABC_CLEAR_FREE(pFileList, sizeof(tABC_FileIOList));
     }
@@ -221,8 +176,8 @@ tABC_CC ABC_FileIOFileExists(const char *szFilename,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock lock(gFileMutex);
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(pbExists);
     *pbExists = false;
 
@@ -235,8 +190,6 @@ tABC_CC ABC_FileIOFileExists(const char *szFilename,
     }
 
 exit:
-
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -247,10 +200,10 @@ tABC_CC ABC_FileIOCreateDir(const char *szDir,
                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock lock(gFileMutex);
     int e = 0;
     mode_t process_mask;
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(szDir);
 
     process_mask = umask(0);
@@ -263,8 +216,6 @@ tABC_CC ABC_FileIOCreateDir(const char *szDir,
     }
 
 exit:
-
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -276,10 +227,10 @@ tABC_CC ABC_FileIOWriteFile(const char *szFilename,
                             tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock lock(gFileMutex);
 
     FILE *fp = NULL;
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL_BUF(Data);
 
@@ -299,7 +250,6 @@ tABC_CC ABC_FileIOWriteFile(const char *szFilename,
 exit:
     if (fp) fclose(fp);
 
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -312,10 +262,10 @@ tABC_CC ABC_FileIOWriteFileStr(const char *szFilename,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock lock(gFileMutex);
 
     FILE *fp = NULL;
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(szData);
 
@@ -342,7 +292,6 @@ tABC_CC ABC_FileIOWriteFileStr(const char *szFilename,
 exit:
     if (fp) fclose(fp);
 
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -355,11 +304,11 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
                               tABC_Error  *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock lock(gFileMutex);
 
     FILE *fp = NULL;
     size_t size = 0;
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(pszData);
 
@@ -388,7 +337,6 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
 exit:
     if (fp) fclose(fp);
 
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -401,11 +349,11 @@ tABC_CC ABC_FileIOReadFile(const char  *szFilename,
                            tABC_Error  *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock lock(gFileMutex);
 
     FILE *fp = NULL;
     char *szData = NULL;
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(pszData);
 
@@ -437,7 +385,6 @@ exit:
     ABC_FREE_STR(szData);
     if (fp) fclose(fp);
 
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -452,12 +399,12 @@ tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
                                  tABC_Error  *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+    AutoFileLock lock(gFileMutex);
 
     char *szData_JSON = NULL;
     json_t *pJSON_Root = NULL;
     bool bExists = false;
 
-    ABC_CHECK_RET(ABC_FileIOMutexLock(pError));
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(ppJSON_Data);
 
@@ -490,7 +437,6 @@ exit:
     ABC_FREE_STR(szData_JSON);
     if (pJSON_Root) json_decref(pJSON_Root);
 
-    ABC_FileIOMutexUnlock(NULL);
     return cc;
 }
 
@@ -513,7 +459,6 @@ tABC_CC ABC_FileIODeleteFile(const char *szFilename,
     }
 
 exit:
-
     return cc;
 }
 
@@ -604,39 +549,6 @@ tABC_CC ABC_FileIOFileModTime(const char *szFilename,
     *pTime = statInfo.st_mtime;
 
 exit:
-
-    return cc;
-}
-
-/**
- * Locks the global mutex
- *
- */
-tABC_CC ABC_FileIOMutexLock(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_lock(&gMutex), ABC_CC_MutexError, "ABC_FileIO error locking mutex");
-
-exit:
-
-    return cc;
-}
-
-/**
- * Unlocks the global mutex
- *
- */
-tABC_CC ABC_FileIOMutexUnlock(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_FileIO has not been initalized");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_unlock(&gMutex), ABC_CC_MutexError, "ABC_FileIO error unlocking mutex");
-
-exit:
-
     return cc;
 }
 

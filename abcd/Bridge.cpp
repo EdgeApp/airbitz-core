@@ -39,9 +39,10 @@
 #include "bitcoin/picker.hpp"
 #include <curl/curl.h>
 #include <wallet/wallet.hpp>
+#include <bitcoin/watcher.hpp> // Includes the rest of the stack
+#include <algorithm>
 #include <list>
 #include <unordered_map>
-#include <bitcoin/watcher.hpp> // Includes the rest of the stack
 
 #include "config.h"
 
@@ -100,7 +101,7 @@ static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, 
 static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash);
 static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
 static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo);
-static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo);
+static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64_t amountSatoshi);
 static std::string ABC_BridgeWatcherFile(const char *szWalletUUID);
 static tABC_CC     ABC_BridgeWatcherLoad(WatcherInfo *watcherInfo, tABC_Error *pError);
 static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
@@ -865,7 +866,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
     // Output to  Destination Address
     ABC_BridgeAppendOutput(outputs, pSendInfo->pDetails->amountSatoshi, dest);
 
-    minerFees = ABC_BridgeCalcMinerFees(bc::satoshi_raw_size(utx->tx), ppInfo);
+    minerFees = ABC_BridgeCalcMinerFees(bc::satoshi_raw_size(utx->tx), ppInfo, pSendInfo->pDetails->amountSatoshi);
     if (minerFees > 0)
     {
         // If there are miner fees, increase totalSatoshi
@@ -1000,7 +1001,7 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
             total -= ABC_BridgeCalcAbFees(total, ppInfo);
         }
         // Subtract minimum tx fee
-        total -= ABC_BridgeCalcMinerFees(0, ppInfo);
+        total -= ABC_BridgeCalcMinerFees(0, ppInfo, total);
 
         SendInfo.pDetails = &Details;
         SendInfo.bTransfer = bTransfer;
@@ -1634,21 +1635,34 @@ uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo)
 }
 
 static
-uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo)
+uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64_t amountSatoshi)
 {
-    uint64_t fees = 0;
+    // Look up the size-based fees from the table:
+    uint64_t sizeFee = 0;
     if (pInfo->countMinersFees > 0)
     {
         for (unsigned i = 0; i < pInfo->countMinersFees; ++i)
         {
             if (tx_size <= pInfo->aMinersFees[i]->sizeTransaction)
             {
-                fees = pInfo->aMinersFees[i]->amountSatoshi;
+                sizeFee = pInfo->aMinersFees[i]->amountSatoshi;
                 break;
             }
         }
     }
-    return fees;
+    if (!sizeFee)
+        return 0;
+
+    // The amount-based fee is 0.1% of total funds sent:
+    uint64_t amountFee = amountSatoshi / 1000;
+
+    // Clamp the amount fee between 10% and 100% of the size-based fee:
+    uint64_t minFee = sizeFee / 10;
+    amountFee = std::max(amountFee, minFee);
+    amountFee = std::min(amountFee, sizeFee);
+
+    // Make the result an integer multiple of the minimum fee:
+    return amountFee - amountFee % minFee;
 }
 
 static

@@ -12,8 +12,8 @@
 #ifndef ABC_LoginPin_h
 #define ABC_LoginPin_h
 
-#include "../src/ABC.h"
 #include "Login.hpp"
+#include "../../src/ABC.h"
 #include <time.h>
 
 namespace abcd {
@@ -25,13 +25,13 @@ tABC_CC ABC_LoginPinExists(const char *szUserName,
 tABC_CC ABC_LoginPinDelete(const char *szUserName,
                            tABC_Error *pError);
 
-tABC_CC ABC_LoginPin(tABC_Login **ppSelf,
-                     const char *szUserName,
-                     const char *szPIN,
+tABC_CC ABC_LoginPin(Login *&result,
+                     Lobby *lobby,
+                     const char *szPin,
                      tABC_Error *pError);
 
-tABC_CC ABC_LoginPinSetup(tABC_Login *pSelf,
-                          const char *szPIN,
+tABC_CC ABC_LoginPinSetup(Login &login,
+                          const char *szPin,
                           time_t expires,
                           tABC_Error *pError);
 

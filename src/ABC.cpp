@@ -33,8 +33,6 @@
 #include "LoginRequest.hpp"
 #include "LoginShim.hpp"
 #include "WalletAsync.hpp"
-#include "../abcd/LoginPIN.hpp"
-#include "../abcd/LoginServer.hpp"
 #include "../abcd/Account.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Bridge.hpp"
@@ -42,14 +40,22 @@
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
 #include "../abcd/Exchanges.hpp"
+#include "../abcd/login/Lobby.hpp"
+#include "../abcd/login/LoginDir.hpp"
+#include "../abcd/login/LoginPassword.hpp"
+#include "../abcd/login/LoginPin.hpp"
+#include "../abcd/login/LoginRecovery.hpp"
+#include "../abcd/login/LoginServer.hpp"
+#include "../abcd/login/Otp.hpp"
+#include "../abcd/login/OtpKey.hpp"
 #include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Json.hpp"
-#include "../abcd/util/Mutex.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/URL.hpp"
 #include "../abcd/util/Util.hpp"
+#include <qrencode.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -114,27 +120,17 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // override the alloc and free of janson so we can have a secure method
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
-    // initialize the mutex system
-    ABC_CHECK_RET(ABC_MutexInitialize(pError));
-
     // initialize bridge
     ABC_CHECK_RET(ABC_BridgeInitialize(pError));
 
     // initialize URL system
     ABC_CHECK_RET(ABC_URLInitialize(szCaCertPath, pError));
 
-    // initialize the FileIO system
-    ABC_CHECK_RET(ABC_FileIOInitialize(pError));
-
     // initialize Bitcoin transaction system
     ABC_CHECK_RET(ABC_TxInitialize(pError));
 
-    // initialize Bitcoin exchange system
-    ABC_CHECK_RET(ABC_ExchangeInitialize(pError));
-
     // initialize Crypto perf checks to determine hashing power
     ABC_CHECK_RET(ABC_InitializeCrypto(pError));
-
 
     // initialize sync
     ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
@@ -169,11 +165,7 @@ void ABC_Terminate()
 
         ABC_URLTerminate();
 
-        ABC_FileIOTerminate();
-
-        ABC_ExchangeTerminate();
-
-        ABC_MutexTerminate();
+        ABC_ExchangeClearCache();
 
         ABC_SyncTerminate();
 
@@ -250,14 +242,14 @@ exit:
  *
  * @param szUserName                UserName for the account
  * @param szPassword                Password for the account
- * @param szPIN                     PIN for the account
+ * @param szPin                     PIN for the account
  * @param fRequestCallback          The function that will be called when the account create process has finished.
  * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_CreateAccount(const char *szUserName,
                           const char *szPassword,
-                          const char *szPIN,
+                          const char *szPin,
                           tABC_Request_Callback fRequestCallback,
                           void *pData,
                           tABC_Error *pError)
@@ -272,8 +264,8 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) >= ABC_MIN_USERNAME_LENGTH, ABC_CC_Error, "Username too short");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(szPIN);
-    ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "PIN is too short");
+    ABC_CHECK_NULL(szPin);
+    ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "PIN is too short");
 
     if (fRequestCallback)
     {
@@ -285,7 +277,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
                                                   szPassword,
                                                   NULL, // recovery questions
                                                   NULL, // recovery answers
-                                                  szPIN,
+                                                  szPin,
                                                   NULL, // new password
                                                   fRequestCallback,
                                                   pData,
@@ -299,7 +291,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     else
     {
         ABC_CHECK_RET(ABC_LoginShimNewAccount(szUserName, szPassword, pError));
-        ABC_CHECK_RET(ABC_SetPIN(szUserName, szPassword, szPIN, pError));
+        ABC_CHECK_RET(ABC_SetPIN(szUserName, szPassword, szPin, pError));
     }
 
 exit:
@@ -396,10 +388,236 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
     ABC_CHECK_NULL(pOk);
 
-    ABC_CHECK_RET(ABC_LoginShimPasswordOk(szUserName, szPassword, pOk, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_RET(ABC_LoginPasswordOk(*gLoginCache, szPassword, pOk, pError));
+    }
 
 exit:
+    return cc;
+}
 
+tABC_CC ABC_OtpKeyGet(const char *szUserName,
+                      char **pszKey,
+                      tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    std::string key;
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(pszKey);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+
+        const OtpKey *key = gLobbyCache->otpKey();
+        ABC_CHECK_ASSERT(key, ABC_CC_NULLPtr, "No OTP key in account.");
+        ABC_STRDUP(*pszKey, key->encodeBase32().c_str());
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpKeySet(const char *szUserName,
+                      char *szKey,
+                      tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szKey);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+
+        OtpKey key;
+        ABC_CHECK_NEW(key.decodeBase32(szKey), pError);
+        ABC_CHECK_NEW(gLobbyCache->otpKey(key), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpKeyRemove(const char *szUserName,
+                         tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        ABC_CHECK_NEW(gLobbyCache->otpKeyRemove(), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpAuthGet(const char *szUserName,
+                       const char *szPassword,
+                       bool *pbEnabled,
+                       long *pTimeout,
+                       tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(pbEnabled);
+    ABC_CHECK_NULL(pTimeout);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthGet(*gLoginCache, *pbEnabled, *pTimeout), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpAuthSet(const char *szUserName,
+                       const char *szPassword,
+                       long timeout,
+                       tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthSet(*gLoginCache, timeout), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpAuthRemove(const char *szUserName,
+                          const char *szPassword,
+                          tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthRemove(*gLoginCache), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpResetGet(char **pszUsernames,
+                        tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    auto usernames = loginDirList();
+    std::list<DataChunk> authIds;
+    std::list<bool> results;
+    std::string out;
+
+    ABC_CHECK_NULL(pszUsernames);
+
+    // Make the request:
+    for (const auto &i: usernames)
+    {
+        Lobby lobby;
+        ABC_CHECK_NEW(lobby.init(i), pError);
+        auto authId = lobby.authId();
+        authIds.emplace_back(authId.begin(), authId.end());
+    }
+    ABC_CHECK_NEW(otpResetGet(authIds, results), pError);
+
+    // Smush the results:
+    {
+        auto i = results.begin();
+        auto j = usernames.begin();
+        while (i != results.end() && j != usernames.end())
+        {
+            if (*i)
+                out += *j + "\n";
+            ++i; ++j;
+        }
+    }
+    ABC_STRDUP(*pszUsernames, out.c_str());
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpResetSet(const char *szUserName,
+                        tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        ABC_CHECK_NEW(otpResetSet(*gLobbyCache), pError);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_OtpResetRemove(const char *szUserName,
+                           const char *szPassword,
+                           tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpResetRemove(*gLoginCache), pError);
+    }
+
+exit:
     return cc;
 }
 
@@ -499,13 +717,17 @@ tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginShimLogout(pError));
-
-    ABC_CHECK_RET(ABC_WalletClearCache(pError));
+    ABC_LoginShimLogout();
+    ABC_WalletClearCache();
 
 exit:
 
     return cc;
+}
+
+tABC_CC ABC_GeneralInfoUpdate(tABC_Error *pError)
+{
+    return ABC_GeneralUpdateInfo(pError);
 }
 
 /**
@@ -548,13 +770,13 @@ exit:
  *
  * @param szUserName             UserName for the account
  * @param szPassword             Password for the account
- * @param pszPIN                 Pointer where to store allocated PIN string.
+ * @param pszPin                 Pointer where to store allocated PIN string.
  *                               This will be set to NULL if there is no PIN.
  * @param pError                 A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_GetPIN(const char *szUserName,
                    const char *szPassword,
-                   char **pszPIN,
+                   char **pszPin,
                    tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -567,15 +789,15 @@ tABC_CC ABC_GetPIN(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(pszPIN);
+    ABC_CHECK_NULL(pszPin);
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
 
-    *pszPIN = NULL;
+    *pszPin = NULL;
     if (pSettings->szPIN)
     {
-        ABC_STRDUP(*pszPIN, pSettings->szPIN);
+        ABC_STRDUP(*pszPin, pSettings->szPIN);
     }
 
 exit:
@@ -592,12 +814,12 @@ exit:
  *
  * @param szUserName            UserName for the account
  * @param szPassword            Password for the account
- * @param szPIN                 PIN string
+ * @param szPin                 PIN string
  * @param pError                A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_SetPIN(const char *szUserName,
                    const char *szPassword,
-                   const char *szPIN,
+                   const char *szPin,
                    tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -610,13 +832,13 @@ tABC_CC ABC_SetPIN(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_NULL(szPIN);
-    ABC_CHECK_ASSERT(strlen(szPIN) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "Pin is too short");
+    ABC_CHECK_NULL(szPin);
+    ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "Pin is too short");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
     ABC_FREE_STR(pSettings->szPIN);
-    ABC_STRDUP(pSettings->szPIN, szPIN);
+    ABC_STRDUP(pSettings->szPIN, szPin);
     ABC_CHECK_RET(ABC_AccountSettingsSave(pKeys, pSettings, pError));
 
 exit:
@@ -818,6 +1040,8 @@ tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szRecoveryAnswers);
 
     ABC_CHECK_RET(ABC_LoginShimCheckRecovery(szUserName, szRecoveryAnswers, pbValid, pError));
 
@@ -870,7 +1094,7 @@ exit:
  * Performs a PIN-based login for the given user.
  */
 tABC_CC ABC_PinLogin(const char *szUserName,
-                     const char *szPIN,
+                     const char *szPin,
                      tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -879,8 +1103,10 @@ tABC_CC ABC_PinLogin(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szPin);
 
-    ABC_CHECK_RET(ABC_LoginShimPinLogin(szUserName, szPIN, pError));
+    ABC_CHECK_RET(ABC_LoginShimPinLogin(szUserName, szPin, pError));
 
 exit:
     return cc;
@@ -904,6 +1130,7 @@ tABC_CC ABC_PinSetup(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &pSettings, pError));
@@ -911,11 +1138,41 @@ tABC_CC ABC_PinSetup(const char *szUserName,
 
     expires = time(NULL);
     expires += 60 * pSettings->minutesAutoLogout;
-    ABC_CHECK_RET(ABC_LoginShimPinSetup(szUserName, szPassword, pSettings->szPIN, expires, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_RET(ABC_LoginPinSetup(*gLoginCache, pSettings->szPIN, expires, pError));
+    }
 
 exit:
     if (pSettings)      ABC_AccountSettingsFree(pSettings);
 
+    return cc;
+}
+
+/**
+ * List all the accounts currently present on the device.
+ * @param szUserNames a newline-separated list of usernames.
+ */
+tABC_CC ABC_ListAccounts(char **pszUserNames,
+                         tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    std::string out;
+    auto list = loginDirList();
+
+    ABC_CHECK_NULL(pszUserNames);
+
+    for (const auto &username: list)
+        out += username + '\n';
+
+    ABC_STRDUP(*pszUserNames, out.c_str());
+
+exit:
     return cc;
 }
 
@@ -1101,8 +1358,7 @@ void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
  */
 tABC_CC ABC_SetWalletOrder(const char *szUserName,
                            const char *szPassword,
-                           char **aszUUIDArray,
-                           unsigned int countUUIDs,
+                           char *szUUIDs,
                            tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -1115,7 +1371,7 @@ tABC_CC ABC_SetWalletOrder(const char *szUserName,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_AccountWalletReorder(pKeys, aszUUIDArray, countUUIDs, pError));
+    ABC_CHECK_RET(ABC_AccountWalletReorder(pKeys, szUUIDs, pError));
 
 exit:
     return cc;
@@ -1185,10 +1441,13 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(pszQuestions);
 
-    ABC_CHECK_RET(ABC_LoginShimGetRecovery(szUserName, pszQuestions, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        ABC_CHECK_RET(ABC_LoginGetRQ(*gLobbyCache, pszQuestions, pError));
+    }
 
 exit:
-
     return cc;
 }
 
@@ -2409,6 +2668,44 @@ void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
     }
 }
 
+tABC_CC ABC_QrEncode(const char *szText,
+                     unsigned char **paData,
+                     unsigned int *pWidth,
+                     tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    QRcode *qr = nullptr;
+    unsigned int length = 0;
+    unsigned char *aData = nullptr;
+
+    ABC_CHECK_NULL(szText);
+    ABC_CHECK_NULL(paData);
+    ABC_CHECK_NULL(pWidth);
+
+    qr = QRcode_encodeString(szText, 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+    ABC_CHECK_ASSERT(qr, ABC_CC_Error, "Unable to create QR code");
+
+    length = qr->width * qr->width;
+    ABC_ARRAY_NEW(aData, length, unsigned char);
+    for (unsigned i = 0; i < length; i++)
+    {
+        aData[i] = qr->data[i] & 0x1;
+    }
+    *pWidth = qr->width;
+    *paData = aData;
+    aData = nullptr;
+
+exit:
+    QRcode_free(qr);
+    ABC_CLEAR_FREE(aData, length);
+
+    return cc;
+}
+
 /**
  * Loads the settings for a specific account
  *
@@ -2526,27 +2823,43 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
-    tABC_CC fetchCC = ABC_CC_Ok;
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
-    fetchCC = ABC_LoginShimCheckPasswordChange(szUserName, szPassword, pError);
-
-    // Try fetch login package, if it fails, notify password change
-    if (fetchCC == ABC_CC_BadPassword)
+    // Has the password changed?
     {
-        if (fAsyncBitCoinEventCallback)
+        tABC_Error error;
+        AutoFree<tABC_LoginPackage, ABC_LoginPackageFree> pLoginPackage;
+        tABC_U08Buf LRA1 = ABC_BUF_NULL; // Do not free
+        AutoU08Buf L1;
+        AutoU08Buf LP1;
+
+        ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+        cc = ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &pLoginPackage.get(), &error);
+
+        if (cc == ABC_CC_InvalidOTP)
         {
-            tABC_AsyncBitCoinInfo info;
-            info.eventType = ABC_AsyncEventType_RemotePasswordChange;
-            info.pData = pData;
-            ABC_STRDUP(info.szDescription, "Password changed");
-            fAsyncBitCoinEventCallback(&info);
-            ABC_FREE_STR(info.szDescription);
+            ABC_CHECK_RET(cc);
+        }
+        else if (cc == ABC_CC_BadPassword)
+        {
+            if (fAsyncBitCoinEventCallback)
+            {
+                tABC_AsyncBitCoinInfo info;
+                info.eventType = ABC_AsyncEventType_RemotePasswordChange;
+                info.pData = pData;
+                ABC_STRDUP(info.szDescription, "Password changed");
+                fAsyncBitCoinEventCallback(&info);
+                ABC_FREE_STR(info.szDescription);
+            }
+            goto exit;
         }
     }
-    else
+
+    // Actually do the sync:
     {
         AutoSyncKeys pKeys;
         int accountDirty = 0;
@@ -2557,7 +2870,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         if (accountDirty && fAsyncBitCoinEventCallback)
         {
             // Try to clear the wallet cache in case the Wallets list changed
-            ABC_CHECK_RET(ABC_WalletClearCache(pError));
+            ABC_WalletClearCache();
 
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
@@ -2567,6 +2880,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
             ABC_FREE_STR(info.szDescription);
         }
     }
+
 exit:
     return cc;
 }
@@ -2952,8 +3266,8 @@ tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
 
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    tABC_TxInfo **pTransactions;
-    unsigned int iCount;
+    tABC_TxInfo **pTransactions = nullptr;
+    unsigned int iCount = 0;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_RET(ABC_GetTransactions(szUserName,
@@ -2984,6 +3298,7 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));

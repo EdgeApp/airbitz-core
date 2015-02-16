@@ -4,7 +4,13 @@ LDFLAGS  += -L../build/ -g
 LIBS     += -labc -lpthread \
             $(shell pkg-config --libs libwallet)
 
-build/abc: build/Main.o build/Commands.o build/Washer.o
+objects = \
+	build/Commands.o \
+	build/Main.o \
+	build/Otp.o \
+	build/Washer.o
+
+build/abc: $(objects)
 	@mkdir -p build
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
 

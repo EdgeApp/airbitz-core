@@ -30,8 +30,8 @@ download() {
             output="${output%% *}"
             if [ -n "$hash" -a "$hash" != "$output" ]; then
                 echo "error: checksum failed on $(relative path): expected $hash, got $output"
-                echo "deleting $(relative $path)"
-                rm "$path"
+                echo "moving $(relative $path) to $(relative $path).fail"
+                mv "$path" "$path.fail"
                 return 1
             else
                 echo "SHA1 $(relative $path) = $output"
@@ -53,6 +53,9 @@ unpack() {
         # Unpack:
         if [ $path != ${path%.git} ]; then
             git --git-dir="$path" --work-tree="$work_dir" reset --hard "${hash:-master}"
+        elif [ $path != ${path%.bin} ]; then
+            chmod +x "$path"
+            $path -o"$work_dir"
         elif [ $path != ${path%.tar*} -o $path != ${path%.tgz} ]; then
             echo "Unpacking $(relative $path) to $(relative $work_dir)..."
             tar -C "$work_dir" -xf "$path"

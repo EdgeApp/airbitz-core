@@ -288,6 +288,18 @@ Status getQuestionChoices(int argc, char *argv[])
     return Status();
 }
 
+Status getQuestions(int argc, char *argv[])
+{
+    if (argc != 1)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... get-questions <user>");
+
+    AutoString questions;
+    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(argv[0], &questions.get(), &error));
+    printf("Questions: %s\n", questions.get());
+
+    return Status();
+}
+
 Status getSettings(int argc, char *argv[])
 {
     if (argc != 2)
@@ -334,6 +346,18 @@ Status getWalletInfo(int argc, char *argv[])
     return Status();
 }
 
+Status listAccounts(int argc, char *argv[])
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... list-accounts");
+
+    AutoString usernames;
+    ABC_CHECK_OLD(ABC_ListAccounts(&usernames.get(), &error));
+    printf("Usernames:\n%s", usernames.get());
+
+    return Status();
+}
+
 Status listWallets(int argc, char *argv[])
 {
     if (argc != 2)
@@ -356,11 +380,11 @@ Status listWallets(int argc, char *argv[])
         printf("%s: ", uuids.data[i]);
 
         // Get wallet name filename:
-        char *szDir;
+        AutoString szDir;
         char szFilename[ABC_FILEIO_MAX_PATH_LENGTH];
-        ABC_CHECK_OLD(ABC_WalletGetDirName(&szDir, uuids.data[i], &error));
+        ABC_CHECK_OLD(ABC_WalletGetDirName(&szDir.get(), uuids.data[i], &error));
         snprintf(szFilename, sizeof(szFilename),
-            "%s/sync/WalletName.json", szDir);
+            "%s/sync/WalletName.json", szDir.get());
 
         // Print wallet name:
         AutoU08Buf data;
@@ -485,7 +509,13 @@ Status signIn(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... sign-in <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_SignIn(argv[0], argv[1], NULL, NULL, &error));
+    tABC_Error error;
+    tABC_CC cc = ABC_SignIn(argv[0], argv[1], NULL, NULL, &error);
+    if (ABC_CC_InvalidOTP == cc)
+    {
+        std::cout << "No OTP token, resetting account 2-factor auth." << std::endl;
+        ABC_CHECK_OLD(ABC_OtpResetSet(argv[0], &error));
+    }
 
     return Status();
 }
@@ -498,6 +528,15 @@ Status uploadLogs(int argc, char *argv[])
     // TODO: Command non-functional without a watcher thread!
     ABC_CHECK_OLD(ABC_UploadLogs(argv[0], argv[1], &error));
 
+    return Status();
+}
+
+Status walletArchive(int argc, char *argv[])
+{
+    if (argc != 4)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-archive <user> <pass> <wallet-name> 1|0");
+
+    ABC_CHECK_OLD(ABC_SetWalletArchived(argv[0], argv[1], argv[2], atoi(argv[3]), &error));
     return Status();
 }
 
@@ -581,6 +620,24 @@ Status walletGetAddress(int argc, char *argv[])
 
     printf("URI: %s\n", szURI.get());
     printf("Address: %s\n", szAddress.get());
+
+    return Status();
+}
+
+Status walletOrder(int argc, char *argv[])
+{
+    if (argc < 3)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-get-address <user> <pass> <wallet-names>...");
+
+    std::string ids;
+    size_t count = argc - 2;
+    for (size_t i = 0; i < count; ++i)
+    {
+        ids += argv[2 + i];
+        ids += "\n";
+    }
+
+    ABC_CHECK_OLD(ABC_SetWalletOrder(argv[0], argv[1], ids.c_str(), &error));
 
     return Status();
 }

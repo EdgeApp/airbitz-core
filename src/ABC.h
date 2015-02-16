@@ -153,7 +153,9 @@ typedef enum eABC_CC
     /** Unable to find an address */
     ABC_CC_NoAvailableAddress = 35,
     /** Login PIN has expired */
-    ABC_CC_PinExpired = 36
+    ABC_CC_PinExpired = 36,
+     /** Two Factor required */
+    ABC_CC_InvalidOTP = 37,
 } tABC_CC;
 
 /**
@@ -651,6 +653,13 @@ tABC_CC ABC_DataSyncAll(const char *szUserName,
                         tABC_Error *pError);
 
 /* === General info: === */
+
+/**
+ * Fetches the general info from the auth server
+ * (obelisk servers, mining fees, &c.).
+ */
+tABC_CC ABC_GeneralInfoUpdate(tABC_Error *pError);
+
 tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
                           int *pCount,
                          tABC_Error *pError);
@@ -690,6 +699,11 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
 void ABC_FreePasswordRuleArray(tABC_PasswordRule **aRules,
                                unsigned int nCount);
 
+tABC_CC ABC_QrEncode(const char *szText,
+                     unsigned char **paData,
+                     unsigned int *pWidth,
+                     tABC_Error *pError);
+
 /* === Login lifetime: === */
 tABC_CC ABC_SignIn(const char *szUserName,
                    const char *szPassword,
@@ -699,7 +713,7 @@ tABC_CC ABC_SignIn(const char *szUserName,
 
 tABC_CC ABC_CreateAccount(const char *szUserName,
                           const char *szPassword,
-                          const char *szPIN,
+                          const char *szPin,
                           tABC_Request_Callback fRequestCallback,
                           void *pData,
                           tABC_Error *pError);
@@ -721,12 +735,15 @@ tABC_CC ABC_PinLoginDelete(const char *szUserName,
                            tABC_Error *pError);
 
 tABC_CC ABC_PinLogin(const char *szUserName,
-                     const char *szPIN,
+                     const char *szPin,
                      tABC_Error *pError);
 
 tABC_CC ABC_PinSetup(const char *szUserName,
                      const char *szPassword,
                      tABC_Error *pError);
+
+tABC_CC ABC_ListAccounts(char **pszUserNames,
+                         tABC_Error *pError);
 
 /* === Login data: === */
 tABC_CC ABC_ChangePassword(const char *szUserName,
@@ -758,6 +775,88 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
                        bool *pOk,
                        tABC_Error *pError);
 
+/* === OTP authentication: === */
+
+/**
+ * Obtains the OTP key stored for the given username, if any.
+ * @param pszKey a pointer to receive the key. The caller frees this.
+ * @return An error if the OTP token does not exist, or is unreadable.
+ */
+tABC_CC ABC_OtpKeyGet(const char *szUserName,
+                      char **pszKey,
+                      tABC_Error *pError);
+
+/**
+ * Associates an OTP key with the given username.
+ * This will not write to disk until the user has successfully logged in
+ * at least once.
+ */
+tABC_CC ABC_OtpKeySet(const char *szUserName,
+                      char *szKey,
+                      tABC_Error *pError);
+
+
+/**
+ * Removes the OTP key associated with the given username.
+ * This will remove the key from disk as well.
+ */
+tABC_CC ABC_OtpKeyRemove(const char *szUserName,
+                         tABC_Error *pError);
+
+/**
+ * Reads the OTP configuration from the server.
+ */
+tABC_CC ABC_OtpAuthGet(const char *szUserName,
+                       const char *szPassword,
+                       bool *pbEnabled,
+                       long *pTimeout,
+                       tABC_Error *pError);
+
+/**
+ * Sets up OTP authentication on the server.
+ * This will generate a new token if the username doesn't already have one.
+ * @param timeout Reset time, in seconds.
+ */
+tABC_CC ABC_OtpAuthSet(const char *szUserName,
+                       const char *szPassword,
+                       long timeout,
+                       tABC_Error *pError);
+
+/**
+ * Removes the OTP authentication requirement from the server.
+ */
+tABC_CC ABC_OtpAuthRemove(const char *szUserName,
+                          const char *szPassword,
+                          tABC_Error *pError);
+
+/**
+ * Returns the reset status for all accounts currently on the device.
+ * @return A newline-separated list of usernames with pending resets.
+ * The caller frees this.
+ */
+tABC_CC ABC_OtpResetGet(char **szUsernames,
+                        tABC_Error *pError);
+
+/**
+ * Launches an OTP reset timer on the server,
+ * which will disable the OTP authentication requirement when it expires.
+ *
+ * This only works after the caller has successfully authenticated
+ * with the server, such as through a password login,
+ * but has failed to fully log in due to a missing OTP key.
+ */
+tABC_CC ABC_OtpResetSet(const char *szUserName,
+                        tABC_Error *pError);
+
+/**
+ * Cancels an OTP reset timer.
+ */
+tABC_CC ABC_OtpResetRemove(const char *szUserName,
+                           const char *szPassword,
+                           tABC_Error *pError);
+
+
+/* === Account sync data: === */
 tABC_CC ABC_LoadAccountSettings(const char *szUserName,
                                 const char *szPassword,
                                 tABC_AccountSettings **ppSettings,
@@ -772,12 +871,12 @@ void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings);
 
 tABC_CC ABC_GetPIN(const char *szUserName,
                    const char *szPassword,
-                   char **pszPIN,
+                   char **pszPin,
                    tABC_Error *pError);
 
 tABC_CC ABC_SetPIN(const char *szUserName,
                    const char *szPassword,
-                   const char *szPIN,
+                   const char *szPin,
                    tABC_Error *pError);
 
 tABC_CC ABC_GetCategories(const char *szUserName,
@@ -853,8 +952,7 @@ void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
 
 tABC_CC ABC_SetWalletOrder(const char *szUserName,
                            const char *szPassword,
-                           char **aszUUIDArray,
-                           unsigned int countUUIDs,
+                           char *szUUIDs,
                            tABC_Error *pError);
 
 /* === Wallet data: === */

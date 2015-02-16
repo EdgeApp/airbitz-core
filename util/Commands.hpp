@@ -25,8 +25,10 @@ abcd::Status getBitcoinSeed(int argc, char *argv[]);
 abcd::Status getCategories(int argc, char *argv[]);
 abcd::Status getExchangeRate(int argc, char *argv[]);
 abcd::Status getQuestionChoices(int argc, char *argv[]);
+abcd::Status getQuestions(int argc, char *argv[]);
 abcd::Status getSettings(int argc, char *argv[]);
 abcd::Status getWalletInfo(int argc, char *argv[]);
+abcd::Status listAccounts(int argc, char *argv[]);
 abcd::Status listWallets(int argc, char *argv[]);
 abcd::Status pinLogin(int argc, char *argv[]);
 abcd::Status pinLoginSetup(int argc, char *argv[]);
@@ -36,9 +38,11 @@ abcd::Status searchBitcoinSeed(int argc, char *argv[]);
 abcd::Status setNickname(int argc, char *argv[]);
 abcd::Status signIn(int argc, char *argv[]);
 abcd::Status uploadLogs(int argc, char *argv[]);
+abcd::Status walletArchive(int argc, char *argv[]);
 abcd::Status walletDecrypt(int argc, char *argv[]);
 abcd::Status walletEncrypt(int argc, char *argv[]);
 abcd::Status walletGetAddress(int argc, char *argv[]);
+abcd::Status walletOrder(int argc, char *argv[]);
 
 // Implemented in its own file:
 abcd::Status washer(int argc, char *argv[]);

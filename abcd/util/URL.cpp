@@ -34,11 +34,10 @@
 #include "FileIO.hpp"
 #include "Pin.hpp"
 #include "Util.hpp"
-#include "../ServerDefs.hpp"
+#include "../config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <curl/curl.h>
-#include <pthread.h>
 #include <openssl/ssl.h>
 
 namespace abcd {
@@ -47,7 +46,7 @@ namespace abcd {
 
 static char *gszCaCertPath = NULL;
 static bool gbInitialized = false;
-static pthread_mutex_t  gMutex; // to block multiple threads from accessing curl at the same time
+std::recursive_mutex gCurlMutex;
 
 static CURLcode ABC_URLSSLCallback(CURL *curl, void *ssl_ctx, void *userptr);
 static size_t   ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
@@ -61,13 +60,6 @@ tABC_CC ABC_URLInitialize(const char *szCaCertPath, tABC_Error *pError)
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "ABC_URL has already been initalized");
-
-    // create a mutex to block multiple threads from accessing curl at the same time
-    pthread_mutexattr_t mutexAttrib;
-    ABC_CHECK_ASSERT(0 == pthread_mutexattr_init(&mutexAttrib), ABC_CC_MutexError, "ABC_URL could not create mutex attribute");
-    ABC_CHECK_ASSERT(0 == pthread_mutexattr_settype(&mutexAttrib, PTHREAD_MUTEX_RECURSIVE), ABC_CC_MutexError, "ABC_URL could not set mutex attributes");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_init(&gMutex, &mutexAttrib), ABC_CC_MutexError, "ABC_URL could not create mutex");
-    pthread_mutexattr_destroy(&mutexAttrib);
 
     // initialize curl
     CURLcode curlCode;
@@ -98,8 +90,6 @@ void ABC_URLTerminate()
         // cleanup curl
         curl_global_cleanup();
 
-        pthread_mutex_destroy(&gMutex);
-
         ABC_FREE_STR(gszCaCertPath);
 
         gbInitialized = false;
@@ -114,13 +104,12 @@ void ABC_URLTerminate()
 tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCurlLock lock(gCurlMutex);
 
     CURLcode curlCode = CURLE_OK;
     AutoU08Buf Data;
     CURL *pCurlHandle = NULL;
 
-    ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(pData);
 
@@ -162,7 +151,6 @@ tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError
 exit:
     curl_easy_cleanup(pCurlHandle);
 
-    ABC_URLMutexUnlock(NULL);
     return cc;
 }
 
@@ -177,11 +165,10 @@ tABC_CC ABC_URLRequestString(const char *szURL,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCurlLock lock(gCurlMutex);
 
     AutoU08Buf Data;
 
-    ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(pszResults);
 
@@ -196,7 +183,6 @@ tABC_CC ABC_URLRequestString(const char *szURL,
     ABC_BUF_CLEAR(Data);
 
 exit:
-    ABC_URLMutexUnlock(NULL);
     return cc;
 }
 
@@ -221,14 +207,13 @@ CURLcode ABC_URLSSLCallback(CURL *curl, void *ssl_ctx, void *userptr)
 tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pData, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCurlLock lock(gCurlMutex);
 
     AutoU08Buf Data;
     CURL *pCurlHandle = NULL;
     struct curl_slist *slist = NULL;
     CURLcode curlCode = CURLE_OK;
 
-    ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(szPostData);
     ABC_CHECK_NULL(pData);
@@ -296,7 +281,6 @@ exit:
     curl_easy_cleanup(pCurlHandle);
     curl_slist_free_all(slist);
 
-    ABC_URLMutexUnlock(NULL);
     return cc;
 }
 
@@ -313,11 +297,10 @@ tABC_CC ABC_URLPostString(const char *szURL,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    AutoCurlLock lock(gCurlMutex);
 
     AutoU08Buf Data;
 
-    ABC_CHECK_RET(ABC_URLMutexLock(pError));
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(szPostData);
     ABC_CHECK_NULL(pszResults);
@@ -333,69 +316,6 @@ tABC_CC ABC_URLPostString(const char *szURL,
     ABC_BUF_CLEAR(Data);
 
 exit:
-    ABC_URLMutexUnlock(NULL);
-    return cc;
-}
-
-/**
- * Makes a URL post request and returns results in a string.
- * @param szURL         The request URL.
- * @param szPostData    The data to be posted in the request
- * @param pszResults    The location to store the allocated string with results.
- *                      The caller is responsible for free'ing this.
- */
-tABC_CC ABC_URLCheckResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    int statusCode = 0;
-    json_error_t error;
-    json_t *pJSON_Root = NULL;
-    json_t *pJSON_Value = NULL;
-
-    pJSON_Root = json_loads(szResults, 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-
-    // get the status code
-    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
-    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
-    statusCode = (int) json_integer_value(pJSON_Value);
-
-    // if there was a failure
-    if (ABC_Server_Code_Success != statusCode)
-    {
-        if (ABC_Server_Code_AccountExists == statusCode)
-        {
-            ABC_RET_ERROR(ABC_CC_AccountAlreadyExists, "Account already exists on server");
-        }
-        else if (ABC_Server_Code_NoAccount == statusCode)
-        {
-            ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "Account does not exist on server");
-        }
-        else if (ABC_Server_Code_InvalidPassword == statusCode)
-        {
-            ABC_RET_ERROR(ABC_CC_BadPassword, "Invalid password on server");
-        }
-        else if (ABC_Server_Code_PinExpired == statusCode)
-        {
-            ABC_RET_ERROR(ABC_CC_PinExpired, "Invalid password on server");
-        }
-        else
-        {
-            // get the message
-            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
-            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
-            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
-        }
-    }
-	if (ppJSON_Result)
-	{
-		*ppJSON_Result = pJSON_Root;
-		pJSON_Root = NULL;
-	}
-exit:
-    if (pJSON_Root) json_decref(pJSON_Root);
     return cc;
 }
 
@@ -452,38 +372,6 @@ size_t ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers,
     }
 
     return amountWritten;
-}
-
-/**
- * Locks the global mutex
- *
- */
-tABC_CC ABC_URLMutexLock(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_URL has not been initalized");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_lock(&gMutex), ABC_CC_MutexError, "ABC_URL error locking mutex");
-
-exit:
-
-    return cc;
-}
-
-/**
- * Unlocks the global mutex
- *
- */
-tABC_CC ABC_URLMutexUnlock(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "ABC_URL has not been initalized");
-    ABC_CHECK_ASSERT(0 == pthread_mutex_unlock(&gMutex), ABC_CC_MutexError, "ABC_URL error unlocking mutex");
-
-exit:
-
-    return cc;
 }
 
 } // namespace abcd

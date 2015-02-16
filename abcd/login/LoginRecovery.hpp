@@ -12,21 +12,21 @@
 #ifndef ABC_LoginRecovery_h
 #define ABC_LoginRecovery_h
 
-#include "../src/ABC.h"
 #include "Login.hpp"
+#include "../../src/ABC.h"
 
 namespace abcd {
 
-tABC_CC ABC_LoginGetRQ(const char *szUserName,
+tABC_CC ABC_LoginGetRQ(Lobby &lobby,
                        char **pszRecoveryQuestions,
                        tABC_Error *pError);
 
-tABC_CC ABC_LoginRecovery(tABC_Login **ppSelf,
-                          const char *szUserName,
+tABC_CC ABC_LoginRecovery(Login *&result,
+                          Lobby *lobby,
                           const char *szRecoveryAnswers,
                           tABC_Error *pError);
 
-tABC_CC ABC_LoginRecoverySet(tABC_Login *pSelf,
+tABC_CC ABC_LoginRecoverySet(Login &login,
                              const char *szRecoveryQuestions,
                              const char *szRecoveryAnswers,
                              tABC_Error *pError);

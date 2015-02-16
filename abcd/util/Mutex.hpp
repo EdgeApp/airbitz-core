@@ -37,16 +37,18 @@
 #define ABC_Mutex_h
 
 #include "../../src/ABC.h"
+#include <mutex>
 
 namespace abcd {
 
-tABC_CC ABC_MutexInitialize(tABC_Error *pError);
+/**
+ * This mutex protects core account and transaction stuff.
+ * It's not clear what exactly is being protected here,
+ * so the goal is to eventually replace this with more fine-grained locks.
+ */
+extern std::recursive_mutex gCoreMutex;
 
-void ABC_MutexTerminate();
-
-tABC_CC ABC_MutexLock(tABC_Error *pError);
-
-tABC_CC ABC_MutexUnlock(tABC_Error *pError);
+typedef std::lock_guard<std::recursive_mutex> AutoCoreLock;
 
 } // namespace abcd
 
