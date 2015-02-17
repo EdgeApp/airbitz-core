@@ -54,10 +54,6 @@ namespace abcd {
 #define CURRENCY_NUM_USD                840
 #define CURRENCY_NUM_EUR                978
 
-#define ABC_BITSTAMP "Bitstamp"
-#define ABC_COINBASE "Coinbase"
-#define ABC_BNC      "BraveNewCoin"
-
 /**
  * AirBitz default exchange info
  */
