@@ -407,7 +407,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
             ABC_WalletID(pInfo->wallet.pKeys, pInfo->szDestWalletUUID);
 
         ABC_CHECK_RET(ABC_WalletGetInfo(recvWallet, &pDestWallet, pError));
-        ABC_CHECK_NEW(exchangeSatoshiToCurrency(recvWallet.pKeys,
+        ABC_CHECK_NEW(exchangeSatoshiToCurrency(
                         pReceiveTx->pDetails->amountSatoshi, Currency,
                         pDestWallet->currencyNum), pError);
         pReceiveTx->pDetails->amountCurrency = Currency;
@@ -882,7 +882,7 @@ tABC_CC ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi,
     tABC_WalletInfo *pWallet = NULL;
 
     ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet, pError));
-    ABC_CHECK_NEW(exchangeSatoshiToCurrency(self.pKeys,
+    ABC_CHECK_NEW(exchangeSatoshiToCurrency(
         amountSatoshi, Currency, pWallet->currencyNum), pError);
 
     *pCurrency = Currency;
@@ -2466,7 +2466,7 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
     pTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
     ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWalletInfo, pError));
-    ABC_CHECK_NEW(exchangeSatoshiToCurrency(wallet.pKeys,
+    ABC_CHECK_NEW(exchangeSatoshiToCurrency(
                     pTx->pDetails->amountSatoshi, currency,
                     pWalletInfo->currencyNum), pError);
     pTx->pDetails->amountCurrency = currency;

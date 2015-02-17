@@ -60,17 +60,6 @@ namespace abcd {
 #define ABC_BNC      "BraveNewCoin"
 
 /**
- * AirBitz Exchange Info Structure
- */
-typedef struct sABC_ExchangeInfo
-{
-    /** Access to the account settings */
-    tABC_SyncKeys         *pKeys;
-    /** The currency to request or update **/
-    int                   currencyNum;
-} tABC_ExchangeInfo;
-
-/**
  * AirBitz default exchange info
  */
 typedef struct sABC_ExchangeDefaults {
@@ -82,25 +71,16 @@ typedef struct sABC_ExchangeDefaults {
 extern const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[];
 extern const size_t EXCHANGE_DEFAULTS_SIZE;
 
-tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
-                                int currencyNum, double *pRate, tABC_Error *pError);
-
-tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
+tABC_CC ABC_ExchangeUpdate(tABC_SyncKeys *pKeys, int currencyNum, tABC_Error *pError);
 
 void ABC_ExchangeClearCache();
 
-tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
-                          int currencyNum,
-                          tABC_ExchangeInfo **ppInfo, tABC_Error *pError);
-void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo);
 
 Status
-exchangeSatoshiToCurrency(tABC_SyncKeys *pKeys,
-    int64_t satoshi, double &currency, int currencyNum);
+exchangeSatoshiToCurrency(int64_t satoshi, double &currency, int currencyNum);
 
 Status
-exchangeCurrencyToSatoshi(tABC_SyncKeys *pKeys,
-    double currency, int64_t &satoshi, int currencyNum);
+exchangeCurrencyToSatoshi(double currency, int64_t &satoshi, int currencyNum);
 
 } // namespace abcd
 

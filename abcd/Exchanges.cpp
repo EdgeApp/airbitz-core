@@ -80,19 +80,18 @@ static tABC_ExchangeCacheEntry **gaExchangeCacheArray = NULL;
 std::recursive_mutex gExchangeMutex;
 typedef std::lock_guard<std::recursive_mutex> AutoExchangeLock;
 
-static tABC_CC ABC_ExchangeGetRate(tABC_ExchangeInfo *pInfo, double *szRate, tABC_Error *pError);
-static tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired, double *szRate, tABC_Error *pError);
-static tABC_CC ABC_ExchangeBitStampRate(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
-static tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
+static tABC_CC ABC_ExchangeNeedsUpdate(int currencyNum, bool *bUpdateRequired, double *szRate, tABC_Error *pError);
+static tABC_CC ABC_ExchangeBitStampRate(int currencyNum, tABC_Error *pError);
+static tABC_CC ABC_ExchangeCoinBaseRates(int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_ExchangeCoinBaseMap(int currencyNum, std::string& field, tABC_Error *pError);
-static tABC_CC ABC_ExchangeBncRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError);
+static tABC_CC ABC_ExchangeBncRates(int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_ExchangeBncMap(int currencyNum, std::string& url, tABC_Error *pError);
 static tABC_CC ABC_ExchangeExtractAndSave(json_t *pJSON_Root, const char *szField, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_ExchangeGet(const char *szUrl, tABC_U08Buf *pData, tABC_Error *pError);
 static tABC_CC ABC_ExchangeGetString(const char *szURL, char **pszResults, tABC_Error *pError);
 static size_t  ABC_ExchangeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 static tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC_Error *pError);
-static tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo, char **szSource, tABC_Error *pError);
+static tABC_CC ABC_ExchangeExtractSource(tABC_SyncKeys *pKeys, int currencyNum, char **szSource, tABC_Error *pError);
 
 static tABC_CC ABC_ExchangeGetFromCache(int currencyNum, tABC_ExchangeCacheEntry **ppData, tABC_Error *pError);
 static tABC_CC ABC_ExchangeAddToCache(tABC_ExchangeCacheEntry *pData, tABC_Error *pError);
@@ -102,11 +101,9 @@ static void ABC_ExchangeFreeCacheEntry(tABC_ExchangeCacheEntry *pCache);
 /**
  * Fetches the current rate and requests a new value if the current value is old.
  */
-tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
-                                int currencyNum, double *pRate, tABC_Error *pError)
+tABC_CC ABC_ExchangeCurrentRate(int currencyNum, double *pRate, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_ExchangeInfo *pInfo = NULL;
     tABC_ExchangeCacheEntry *pCache = NULL;
 
     ABC_CHECK_RET(ABC_ExchangeGetFromCache(currencyNum, &pCache, pError));
@@ -116,38 +113,37 @@ tABC_CC ABC_ExchangeCurrentRate(tABC_SyncKeys *pKeys,
     }
     else
     {
-        ABC_CHECK_RET(ABC_ExchangeAlloc(pKeys, currencyNum, &pInfo, pError));
-        ABC_CHECK_RET(ABC_ExchangeGetRate(pInfo, pRate, pError));
-        ABC_ExchangeFreeInfo(pInfo);
+        bool bUpdateRequired = true; // Ignored
+        ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(currencyNum, &bUpdateRequired, pRate, pError));
     }
 exit:
     return cc;
 }
 
-tABC_CC ABC_ExchangeUpdate(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
+tABC_CC ABC_ExchangeUpdate(tABC_SyncKeys *pKeys, int currencyNum, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szSource = NULL;
     double rate;
     bool bUpdateRequired = true;
 
-    ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(pInfo, &bUpdateRequired, &rate, pError));
+    ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(currencyNum, &bUpdateRequired, &rate, pError));
     if (bUpdateRequired)
     {
-        ABC_CHECK_RET(ABC_ExchangeExtractSource(pInfo, &szSource, pError));
+        ABC_CHECK_RET(ABC_ExchangeExtractSource(pKeys, currencyNum, &szSource, pError));
         if (szSource)
         {
             if (strcmp(ABC_BITSTAMP, szSource) == 0)
             {
-                ABC_CHECK_RET(ABC_ExchangeBitStampRate(pInfo, pError));
+                ABC_CHECK_RET(ABC_ExchangeBitStampRate(currencyNum, pError));
             }
             else if (strcmp(ABC_COINBASE, szSource) == 0)
             {
-                ABC_CHECK_RET(ABC_ExchangeCoinBaseRates(pInfo, pError));
+                ABC_CHECK_RET(ABC_ExchangeCoinBaseRates(currencyNum, pError));
             }
             else if (strcmp(ABC_BNC, szSource) == 0)
             {
-                ABC_CHECK_RET(ABC_ExchangeBncRates(pInfo,  pError));
+                ABC_CHECK_RET(ABC_ExchangeBncRates(currencyNum,  pError));
             }
         }
     }
@@ -156,18 +152,7 @@ exit:
 }
 
 static
-tABC_CC ABC_ExchangeGetRate(tABC_ExchangeInfo *pInfo, double *pRate, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    bool bUpdateRequired = true; // Ignored
-
-    ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(pInfo, &bUpdateRequired, pRate, pError));
-exit:
-    return cc;
-}
-
-static
-tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired, double *pRate, tABC_Error *pError)
+tABC_CC ABC_ExchangeNeedsUpdate(int currencyNum, bool *bUpdateRequired, double *pRate, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szFilename = NULL;
@@ -177,7 +162,7 @@ tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired,
     bool bExists = false;
     AutoExchangeLock lock(gExchangeMutex);
 
-    ABC_CHECK_RET(ABC_ExchangeGetFromCache(pInfo->currencyNum, &pCache, pError));
+    ABC_CHECK_RET(ABC_ExchangeGetFromCache(currencyNum, &pCache, pError));
     if (pCache)
     {
         if ((timeNow - pCache->last_updated) < ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS)
@@ -188,7 +173,7 @@ tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired,
     }
     else
     {
-        ABC_CHECK_RET(ABC_ExchangeGetFilename(&szFilename, pInfo->currencyNum, pError));
+        ABC_CHECK_RET(ABC_ExchangeGetFilename(&szFilename, currencyNum, pError));
         ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
         if (true == bExists)
         {
@@ -210,7 +195,7 @@ tABC_CC ABC_ExchangeNeedsUpdate(tABC_ExchangeInfo *pInfo, bool *bUpdateRequired,
             *bUpdateRequired = true;
             *pRate = 0.0;
         }
-        ABC_CHECK_RET(ABC_ExchangeAllocCacheEntry(&pCache, pInfo->currencyNum,
+        ABC_CHECK_RET(ABC_ExchangeAllocCacheEntry(&pCache, currencyNum,
                                                   timeNow, *pRate, pError));
         if (ABC_CC_WalletAlreadyExists == ABC_ExchangeAddToCache(pCache, pError))
         {
@@ -224,7 +209,7 @@ exit:
 }
 
 static
-tABC_CC ABC_ExchangeBitStampRate(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
+tABC_CC ABC_ExchangeBitStampRate(int currencyNum, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     json_error_t error;
@@ -248,7 +233,7 @@ exit:
 }
 
 static
-tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
+tABC_CC ABC_ExchangeCoinBaseRates(int currencyNum, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     json_error_t error;
@@ -264,8 +249,8 @@ tABC_CC ABC_ExchangeCoinBaseRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
 
-    ABC_CHECK_RET(ABC_ExchangeCoinBaseMap(pInfo->currencyNum, field, pError));
-    ABC_ExchangeExtractAndSave(pJSON_Root, field.c_str(), pInfo->currencyNum, pError);
+    ABC_CHECK_RET(ABC_ExchangeCoinBaseMap(currencyNum, field, pError));
+    ABC_ExchangeExtractAndSave(pJSON_Root, field.c_str(), currencyNum, pError);
 exit:
     ABC_FREE_STR(szResponse);
     if (pJSON_Root) json_decref(pJSON_Root);
@@ -320,7 +305,7 @@ exit:
 }
 
 static
-tABC_CC ABC_ExchangeBncRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
+tABC_CC ABC_ExchangeBncRates(int currencyNum, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     json_error_t error;
@@ -328,7 +313,7 @@ tABC_CC ABC_ExchangeBncRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
     char *szResponse = NULL;
 
     std::string url;
-    ABC_CHECK_RET(ABC_ExchangeBncMap(pInfo->currencyNum, url, pError));
+    ABC_CHECK_RET(ABC_ExchangeBncMap(currencyNum, url, pError));
     ABC_CHECK_RET(ABC_ExchangeGetString(url.c_str(), &szResponse, pError));
 
     // Parse the json
@@ -336,7 +321,7 @@ tABC_CC ABC_ExchangeBncRates(tABC_ExchangeInfo *pInfo, tABC_Error *pError)
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
 
-    ABC_ExchangeExtractAndSave(pJSON_Root, "last_price", pInfo->currencyNum, pError);
+    ABC_ExchangeExtractAndSave(pJSON_Root, "last_price", currencyNum, pError);
 exit:
     ABC_FREE_STR(szResponse);
     if (pJSON_Root) json_decref(pJSON_Root);
@@ -531,16 +516,16 @@ exit:
 }
 
 static
-tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
+tABC_CC ABC_ExchangeExtractSource(tABC_SyncKeys *pKeys, int currencyNum,
                                   char **szSource, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_AccountSettings *pAccountSettings = NULL;
 
     *szSource = NULL;
-    if (pInfo->pKeys)
+    if (pKeys)
     {
-        ABC_AccountSettingsLoad(pInfo->pKeys,
+        ABC_AccountSettingsLoad(pKeys,
                                 &pAccountSettings,
                                 pError);
     }
@@ -551,7 +536,7 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
         {
             for (unsigned i = 0; i < pSources->numSources; i++)
             {
-                if (pSources->aSources[i]->currencyNum == pInfo->currencyNum)
+                if (pSources->aSources[i]->currencyNum == currencyNum)
                 {
                     ABC_STRDUP(*szSource, pSources->aSources[i]->szSource);
                     break;
@@ -562,7 +547,7 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeInfo *pInfo,
     if (!(*szSource))
     {
         // If the settings are not populated, defaults
-        switch (pInfo->currencyNum)
+        switch (currencyNum)
         {
             case CURRENCY_NUM_USD:
                 ABC_STRDUP(*szSource, ABC_BITSTAMP);
@@ -678,31 +663,6 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_ExchangeAlloc(tABC_SyncKeys *pKeys,
-                          int currencyNum,
-                          tABC_ExchangeInfo **ppInfo, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_ExchangeInfo *pInfo;
-
-    ABC_NEW(pInfo, tABC_ExchangeInfo);
-    ABC_CHECK_RET(ABC_SyncKeysCopy(&pInfo->pKeys, pKeys, pError));
-    pInfo->currencyNum = currencyNum;
-
-    *ppInfo = pInfo;
-exit:
-    return cc;
-}
-
-void ABC_ExchangeFreeInfo(tABC_ExchangeInfo *pInfo)
-{
-    if (pInfo)
-    {
-        ABC_SyncFreeKeys(pInfo->pKeys);
-        ABC_CLEAR_FREE(pInfo, sizeof(tABC_ExchangeInfo));
-    }
-}
-
 static
 tABC_CC ABC_ExchangeAllocCacheEntry(tABC_ExchangeCacheEntry **ppCache,
                                     int currencyNum, time_t last_updated,
@@ -731,26 +691,24 @@ void ABC_ExchangeFreeCacheEntry(tABC_ExchangeCacheEntry *pCache)
 }
 
 Status
-exchangeSatoshiToCurrency(tABC_SyncKeys *pKeys,
-    int64_t satoshi, double &currency, int currencyNum)
+exchangeSatoshiToCurrency(int64_t satoshi, double &currency, int currencyNum)
 {
     currency = 0.0;
 
     double rate;
-    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(pKeys, currencyNum, &rate, &error));
+    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(currencyNum, &rate, &error));
     currency = satoshi * (rate / SATOSHI_PER_BITCOIN);
 
     return Status();
 }
 
 Status
-exchangeCurrencyToSatoshi(tABC_SyncKeys *pKeys,
-    double currency, int64_t &satoshi, int currencyNum)
+exchangeCurrencyToSatoshi(double currency, int64_t &satoshi, int currencyNum)
 {
     satoshi = 0;
 
     double rate;
-    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(pKeys, currencyNum, &rate, &error));
+    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(currencyNum, &rate, &error));
     satoshi = static_cast<int64_t>(currency * (SATOSHI_PER_BITCOIN / rate));
 
     return Status();

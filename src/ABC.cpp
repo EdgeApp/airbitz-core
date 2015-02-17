@@ -1645,11 +1645,9 @@ tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoSyncKeys pKeys;
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_NEW(exchangeSatoshiToCurrency(pKeys, satoshi, *pCurrency, currencyNum), pError);
+    ABC_CHECK_NEW(exchangeSatoshiToCurrency(satoshi, *pCurrency, currencyNum), pError);
 
 exit:
     return cc;
@@ -1675,12 +1673,9 @@ tABC_CC ABC_CurrencyToSatoshi(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoSyncKeys pKeys;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_NEW(exchangeCurrencyToSatoshi(pKeys, currency, *pSatoshi, currencyNum), pError);
+    ABC_CHECK_NEW(exchangeCurrencyToSatoshi(currency, *pSatoshi, currencyNum), pError);
 
 exit:
     return cc;
@@ -3150,7 +3145,6 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
                               void *pDeprecated1,
                               tABC_Error *pError)
 {
-    tABC_ExchangeInfo *pInfo = NULL;
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
@@ -3163,9 +3157,7 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_ExchangeAlloc(pKeys, currencyNum, &pInfo, pError));
-    cc = ABC_ExchangeUpdate(pInfo, pError);
-    ABC_ExchangeFreeInfo(pInfo);
+    cc = ABC_ExchangeUpdate(pKeys, currencyNum, pError);
 
 exit:
     return cc;
