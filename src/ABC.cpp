@@ -39,7 +39,7 @@
 #include "../abcd/Export.hpp"
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
-#include "../abcd/Exchanges.hpp"
+#include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/LoginDir.hpp"
 #include "../abcd/login/LoginPassword.hpp"
@@ -164,8 +164,6 @@ void ABC_Terminate()
         ABC_ClearKeyCache(NULL);
 
         ABC_URLTerminate();
-
-        ABC_ExchangeClearCache();
 
         ABC_SyncTerminate();
 
@@ -1626,26 +1624,6 @@ void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo)
 }
 
 /**
- * Converts amount from Satoshi to Bitcoin
- *
- * @param satoshi Amount in Satoshi
- */
-double ABC_SatoshiToBitcoin(int64_t satoshi)
-{
-    return(ABC_TxSatoshiToBitcoin(satoshi));
-}
-
-/**
- * Converts amount from Bitcoin to Satoshi
- *
- * @param bitcoin Amount in Bitcoin
- */
-int64_t ABC_BitcoinToSatoshi(double bitcoin)
-{
-    return(ABC_TxBitcoinToSatoshi(bitcoin));
-}
-
-/**
  * Converts Satoshi to given currency
  *
  * @param satoshi     Amount in Satoshi
@@ -1665,11 +1643,9 @@ tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoSyncKeys pKeys;
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(pKeys, satoshi, pCurrency, currencyNum, pError));
+    ABC_CHECK_NEW(exchangeSatoshiToCurrency(satoshi, *pCurrency, currencyNum), pError);
 
 exit:
     return cc;
@@ -1695,12 +1671,9 @@ tABC_CC ABC_CurrencyToSatoshi(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoSyncKeys pKeys;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_TxCurrencyToSatoshi(pKeys, currency, currencyNum, pSatoshi, pError));
+    ABC_CHECK_NEW(exchangeCurrencyToSatoshi(currency, *pSatoshi, currencyNum), pError);
 
 exit:
     return cc;
@@ -3160,51 +3133,31 @@ exit:
 
 /**
  * Request an update to the exchange for a currency
- *
- * @param szUserName           UserName for the account
- * @param szPassword           Password for the account
- * @param currencyNum          The currency number to update
- * @param fRequestCallback     The function that will be called when the account signin process has finished.
- * @param pData                A pointer to data to be returned back in callback
- * @param pError               A pointer to the location to store the error if there is one
+ * @param pDeprecated0 Formerly a callback function, but no longer does anything.
  */
 tABC_CC
 ABC_RequestExchangeRateUpdate(const char *szUserName,
                               const char *szPassword,
                               int currencyNum,
-                              tABC_Request_Callback fRequestCallback,
-                              void *pData,
+                              void *pDeprecated0,
+                              void *pDeprecated1,
                               tABC_Error *pError)
 {
-    tABC_ExchangeInfo *pInfo = NULL;
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     AutoSyncKeys pKeys;
+    AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(
-        ABC_ExchangeAlloc(pKeys, currencyNum,
-                          fRequestCallback, pData, &pInfo, pError));
-    if (fRequestCallback)
-    {
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_ExchangeUpdateThreaded, pInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        cc = ABC_ExchangeUpdate(pInfo, pError);
-        ABC_ExchangeFreeInfo(pInfo);
-    }
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &settings.get(), pError));
+    cc = ABC_ExchangeUpdate(settings->exchangeRateSources, currencyNum, pError);
 
 exit:
     return cc;

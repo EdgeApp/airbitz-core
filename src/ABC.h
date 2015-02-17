@@ -214,7 +214,6 @@ typedef enum eABC_AsyncEventType
 {
     ABC_AsyncEventType_IncomingBitCoin,
     ABC_AsyncEventType_BlockHeightChange,
-    ABC_AsyncEventType_ExchangeRateUpdate,
     ABC_AsyncEventType_DataSyncUpdate,
     ABC_AsyncEventType_RemotePasswordChange,
     ABC_AsyncEventType_IncomingSweep
@@ -676,10 +675,6 @@ tABC_CC ABC_ParseBitcoinURI(const char *szURI,
 
 void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo);
 
-double ABC_SatoshiToBitcoin(int64_t satoshi);
-
-int64_t ABC_BitcoinToSatoshi(double bitcoin);
-
 tABC_CC ABC_ParseAmount(const char *szAmount,
                         uint64_t *pAmountOut,
                         unsigned decimalPlaces);
@@ -908,8 +903,9 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
 /* === Exchange rates: === */
 tABC_CC ABC_RequestExchangeRateUpdate(const char *szUserName, const char *szPassword,
                                       int currencyNum,
-                                      tABC_Request_Callback fRequestCallback,
-                                      void *pData, tABC_Error *pError);
+                                      void *pDeprecated0,
+                                      void *pDeprecated1,
+                                      tABC_Error *pError);
 
 tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
                               const char *szPassword,
