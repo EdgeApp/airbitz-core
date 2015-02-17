@@ -9,7 +9,7 @@
 #include "../src/LoginShim.hpp"
 #include "../abcd/Account.hpp"
 #include "../abcd/Bridge.hpp"
-#include "../abcd/Exchanges.hpp"
+#include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/Wallet.hpp"
 #include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/FileIO.hpp"

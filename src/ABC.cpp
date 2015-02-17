@@ -39,7 +39,7 @@
 #include "../abcd/Export.hpp"
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
-#include "../abcd/Exchanges.hpp"
+#include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/LoginDir.hpp"
 #include "../abcd/login/LoginPassword.hpp"

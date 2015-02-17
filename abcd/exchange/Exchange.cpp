@@ -29,11 +29,11 @@
  *  either expressed or implied, of the Airbitz Project.
  */
 
-#include "Exchanges.hpp"
-#include "Account.hpp"
-#include "util/FileIO.hpp"
-#include "util/URL.hpp"
-#include "util/Util.hpp"
+#include "Exchange.hpp"
+#include "../Account.hpp"
+#include "../util/FileIO.hpp"
+#include "../util/URL.hpp"
+#include "../util/Util.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <curl/curl.h>

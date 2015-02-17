@@ -33,11 +33,11 @@
  * AirBitz exchange-rate conversion functions.
  */
 
-#ifndef ABC_Exchanges_h
-#define ABC_Exchanges_h
+#ifndef ABCD_EXCHANGE_EXCHANGE_H
+#define ABCD_EXCHANGE_EXCHANGE_H
 
-#include "util/Status.hpp"
-#include "../src/ABC.h"
+#include "../util/Status.hpp"
+#include "../../src/ABC.h"
 #include <stddef.h>
 
 namespace abcd {

@@ -31,7 +31,7 @@
 
 #include "Tx.hpp"
 #include "Account.hpp"
-#include "Exchanges.hpp"
+#include "exchange/Exchange.hpp"
 #include "Wallet.hpp"
 #include "Bridge.hpp"
 #include "util/Crypto.hpp"

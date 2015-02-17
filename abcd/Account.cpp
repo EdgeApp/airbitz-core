@@ -6,7 +6,7 @@
  */
 
 #include "Account.hpp"
-#include "Exchanges.hpp"
+#include "exchange/Exchange.hpp"
 #include "util/Crypto.hpp"
 #include "util/FileIO.hpp"
 #include "util/Json.hpp"
