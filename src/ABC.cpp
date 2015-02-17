@@ -622,7 +622,6 @@ exit:
  * @param szPassword                Password for the account
  * @param szWalletName              Wallet Name
  * @param currencyNum               ISO 4217 currency number
- * @param attributes                Attributes to be used for filtering (e.g., archive bit)
  * @param fRequestCallback          The function that will be called when the wallet create process has finished.
  * @param pData                     Pointer to data to be returned back in callback,
  *                                  or `char **pszUUID` if callbacks aren't used.
@@ -632,7 +631,6 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                          const char *szPassword,
                          const char *szWalletName,
                          int        currencyNum,
-                         unsigned int attributes,
                          tABC_Request_Callback fRequestCallback,
                          void *pData,
                          tABC_Error *pError)
@@ -666,7 +664,6 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                                                 szUserName,
                                                 szWalletName,
                                                 currencyNum,
-                                                attributes,
                                                 fRequestCallback,
                                                 pData,
                                                 pError));
@@ -684,7 +681,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
         ABC_STR_NEW(output, 100);
         results->pRetData = output;
         ABC_CHECK_RET(ABC_WalletCreate(pKeys, L1, LP1, szUserName, szWalletName,
-            currencyNum, attributes, (char**) &(results->pRetData), pError));
+            currencyNum, (char**) &(results->pRetData), pError));
     }
 
 exit:

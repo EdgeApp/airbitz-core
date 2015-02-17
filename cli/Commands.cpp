@@ -173,7 +173,7 @@ Status createWallet(int argc, char *argv[])
 
     tABC_RequestResults results;
     ABC_CHECK_OLD(ABC_CreateWallet(argv[0], argv[1], argv[2],
-        CURRENCY_NUM_USD, 0, NULL, &results, &error));
+        CURRENCY_NUM_USD, NULL, &results, &error));
 
     return Status();
 }

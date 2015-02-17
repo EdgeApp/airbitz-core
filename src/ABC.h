@@ -918,7 +918,6 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                          const char *szPassword,
                          const char *szWalletName,
                          int        currencyNum,
-                         unsigned int attributes,
                          tABC_Request_Callback fRequestCallback,
                          void *pData,
                          tABC_Error *pError);

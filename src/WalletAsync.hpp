@@ -72,7 +72,6 @@ tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
                                   const char *szUserName,
                                   const char *szWalletName,
                                   int        currencyNum,
-                                  unsigned int  attributes,
                                   tABC_Request_Callback fRequestCallback,
                                   void *pData,
                                   tABC_Error *pError);
