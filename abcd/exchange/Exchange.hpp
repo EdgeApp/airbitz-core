@@ -72,9 +72,6 @@ extern const size_t EXCHANGE_DEFAULTS_SIZE;
 
 tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, tABC_Error *pError);
 
-void ABC_ExchangeClearCache();
-
-
 Status
 exchangeSatoshiToCurrency(int64_t satoshi, double &currency, int currencyNum);
 

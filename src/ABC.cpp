@@ -165,8 +165,6 @@ void ABC_Terminate()
 
         ABC_URLTerminate();
 
-        ABC_ExchangeClearCache();
-
         ABC_SyncTerminate();
 
         ABC_DebugTerminate();

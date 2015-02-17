@@ -30,6 +30,7 @@
  */
 
 #include "Exchange.hpp"
+#include "ExchangeCache.hpp"
 #include "../Account.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/URL.hpp"
@@ -37,7 +38,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <curl/curl.h>
-#include <mutex>
 #include <string>
 
 namespace abcd {
@@ -68,18 +68,6 @@ const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[] =
 const size_t EXCHANGE_DEFAULTS_SIZE = sizeof(EXCHANGE_DEFAULTS)
                                     / sizeof(tABC_ExchangeDefaults);
 
-typedef struct sABC_ExchangeCacheEntry
-{
-    int currencyNum;
-    time_t last_updated;
-    double exchange_rate;
-} tABC_ExchangeCacheEntry;
-
-static unsigned int gExchangesCacheCount = 0;
-static tABC_ExchangeCacheEntry **gaExchangeCacheArray = NULL;
-std::recursive_mutex gExchangeMutex;
-typedef std::lock_guard<std::recursive_mutex> AutoExchangeLock;
-
 static tABC_CC ABC_ExchangeNeedsUpdate(int currencyNum, bool *bUpdateRequired, double *szRate, tABC_Error *pError);
 static tABC_CC ABC_ExchangeBitStampRate(int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_ExchangeCoinBaseRates(int currencyNum, tABC_Error *pError);
@@ -93,29 +81,25 @@ static size_t  ABC_ExchangeCurlWriteData(void *pBuffer, size_t memberSize, size_
 static tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeRateSources &sources, int currencyNum, char **szSource, tABC_Error *pError);
 
-static tABC_CC ABC_ExchangeGetFromCache(int currencyNum, tABC_ExchangeCacheEntry **ppData, tABC_Error *pError);
-static tABC_CC ABC_ExchangeAddToCache(tABC_ExchangeCacheEntry *pData, tABC_Error *pError);
-static tABC_CC ABC_ExchangeAllocCacheEntry(tABC_ExchangeCacheEntry **ppCache, int currencyNum, time_t last_updated, double exchange_rate, tABC_Error *pError);
-static void ABC_ExchangeFreeCacheEntry(tABC_ExchangeCacheEntry *pCache);
-
 /**
  * Fetches the current rate and requests a new value if the current value is old.
  */
 tABC_CC ABC_ExchangeCurrentRate(int currencyNum, double *pRate, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_ExchangeCacheEntry *pCache = NULL;
 
-    ABC_CHECK_RET(ABC_ExchangeGetFromCache(currencyNum, &pCache, pError));
-    if (pCache)
+    double rate;
+    time_t lastUpdated;
+    if (exchangeCacheGet(currencyNum, rate, lastUpdated))
     {
-        *pRate = pCache->exchange_rate;
+        *pRate = rate;
     }
     else
     {
         bool bUpdateRequired = true; // Ignored
         ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(currencyNum, &bUpdateRequired, pRate, pError));
     }
+
 exit:
     return cc;
 }
@@ -157,19 +141,18 @@ tABC_CC ABC_ExchangeNeedsUpdate(int currencyNum, bool *bUpdateRequired, double *
     tABC_CC cc = ABC_CC_Ok;
     char *szFilename = NULL;
     char *szRate = NULL;
-    tABC_ExchangeCacheEntry *pCache = NULL;
     time_t timeNow = time(NULL);
     bool bExists = false;
-    AutoExchangeLock lock(gExchangeMutex);
 
-    ABC_CHECK_RET(ABC_ExchangeGetFromCache(currencyNum, &pCache, pError));
-    if (pCache)
+    double rate;
+    time_t lastUpdated;
+    if (exchangeCacheGet(currencyNum, rate, lastUpdated))
     {
-        if ((timeNow - pCache->last_updated) < ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS)
+        if ((timeNow - lastUpdated) < ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS)
         {
             *bUpdateRequired = false;
         }
-        *pRate = pCache->exchange_rate;
+        *pRate = rate;
     }
     else
     {
@@ -195,12 +178,8 @@ tABC_CC ABC_ExchangeNeedsUpdate(int currencyNum, bool *bUpdateRequired, double *
             *bUpdateRequired = true;
             *pRate = 0.0;
         }
-        ABC_CHECK_RET(ABC_ExchangeAllocCacheEntry(&pCache, currencyNum,
-                                                  timeNow, *pRate, pError));
-        if (ABC_CC_WalletAlreadyExists == ABC_ExchangeAddToCache(pCache, pError))
-        {
-            ABC_ExchangeFreeCacheEntry(pCache);
-        }
+
+        ABC_CHECK_NEW(exchangeCacheSet(currencyNum, *pRate), pError);
     }
 exit:
     ABC_FREE_STR(szFilename);
@@ -378,9 +357,6 @@ tABC_CC ABC_ExchangeExtractAndSave(json_t *pJSON_Root, const char *szField,
     char *szFilename = NULL;
     char *szValue = NULL;
     json_t *jsonVal = NULL;
-    tABC_ExchangeCacheEntry *pCache = NULL;
-    time_t timeNow = time(NULL);
-    AutoExchangeLock lock(gExchangeMutex);
 
     // Extract value from json
     jsonVal = json_object_get(pJSON_Root, szField);
@@ -393,11 +369,8 @@ tABC_CC ABC_ExchangeExtractAndSave(json_t *pJSON_Root, const char *szField,
     ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szValue, pError));
 
     // Update the cache
-    ABC_CHECK_RET(ABC_ExchangeAllocCacheEntry(&pCache, currencyNum, timeNow, strtod(szValue, NULL), pError));
-    if (ABC_CC_WalletAlreadyExists == ABC_ExchangeAddToCache(pCache, pError))
-    {
-        ABC_ExchangeFreeCacheEntry(pCache);
-    }
+    ABC_CHECK_NEW(exchangeCacheSet(currencyNum, strtod(szValue, nullptr)), pError);
+
 exit:
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szValue);
@@ -560,119 +533,6 @@ tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeRateSources &sources, int currenc
 
 exit:
     return cc;
-}
-
-/**
- * Clears all the data from the cache
- */
-void ABC_ExchangeClearCache()
-{
-    AutoExchangeLock lock(gExchangeMutex);
-
-    if ((gExchangesCacheCount > 0) && (NULL != gaExchangeCacheArray))
-    {
-        for (unsigned i = 0; i < gExchangesCacheCount; i++)
-        {
-            tABC_ExchangeCacheEntry *pData = gaExchangeCacheArray[i];
-            ABC_FREE(pData);
-        }
-
-        ABC_FREE(gaExchangeCacheArray);
-        gExchangesCacheCount = 0;
-    }
-}
-
-static
-tABC_CC ABC_ExchangeGetFromCache(int currencyNum, tABC_ExchangeCacheEntry **ppData, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    // assume we didn't find it
-    *ppData = NULL;
-
-    if ((gExchangesCacheCount > 0) && (NULL != gaExchangeCacheArray))
-    {
-        for (unsigned i = 0; i < gExchangesCacheCount; i++)
-        {
-            tABC_ExchangeCacheEntry *pData = gaExchangeCacheArray[i];
-            if (currencyNum == pData->currencyNum)
-            {
-                // found it
-                *ppData = pData;
-                break;
-            }
-        }
-    }
-    return cc;
-}
-
-static
-tABC_CC ABC_ExchangeAddToCache(tABC_ExchangeCacheEntry *pData, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoExchangeLock lock(gExchangeMutex);
-
-    tABC_ExchangeCacheEntry *pExistingExchangeData = NULL;
-
-    ABC_CHECK_NULL(pData);
-
-    // see if it exists first
-    ABC_CHECK_RET(ABC_ExchangeGetFromCache(pData->currencyNum, &pExistingExchangeData, pError));
-
-    // if it doesn't currently exist in the array
-    if (pExistingExchangeData == NULL)
-    {
-        // if we don't have an array yet
-        if ((gExchangesCacheCount == 0) || (NULL == gaExchangeCacheArray))
-        {
-            // create a new one
-            gExchangesCacheCount = 0;
-            ABC_ARRAY_NEW(gaExchangeCacheArray, 1, tABC_ExchangeCacheEntry*);
-        }
-        else
-        {
-            // extend the current one
-            ABC_ARRAY_RESIZE(gaExchangeCacheArray, gExchangesCacheCount + 1, tABC_ExchangeCacheEntry*)
-        }
-        gaExchangeCacheArray[gExchangesCacheCount] = pData;
-        gExchangesCacheCount++;
-    }
-    else
-    {
-        pExistingExchangeData->last_updated = pData->last_updated;
-        pExistingExchangeData->exchange_rate = pData->exchange_rate;
-        cc = ABC_CC_WalletAlreadyExists;
-    }
-
-exit:
-    return cc;
-}
-
-static
-tABC_CC ABC_ExchangeAllocCacheEntry(tABC_ExchangeCacheEntry **ppCache,
-                                    int currencyNum, time_t last_updated,
-                                    double exchange_rate, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_ExchangeCacheEntry *pCache;
-
-    ABC_NEW(pCache, tABC_ExchangeCacheEntry);
-    pCache->currencyNum = currencyNum;
-    pCache->last_updated = last_updated;
-    pCache->exchange_rate = exchange_rate;
-
-    *ppCache = pCache;
-exit:
-    return cc;
-}
-
-static
-void ABC_ExchangeFreeCacheEntry(tABC_ExchangeCacheEntry *pCache)
-{
-    if (pCache)
-    {
-        ABC_CLEAR_FREE(pCache, sizeof(tABC_ExchangeCacheEntry));
-    }
 }
 
 Status
