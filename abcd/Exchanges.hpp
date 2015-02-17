@@ -36,7 +36,6 @@
 #ifndef ABC_Exchanges_h
 #define ABC_Exchanges_h
 
-#include "util/Sync.hpp"
 #include "util/Status.hpp"
 #include "../src/ABC.h"
 #include <stddef.h>
@@ -71,7 +70,7 @@ typedef struct sABC_ExchangeDefaults {
 extern const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[];
 extern const size_t EXCHANGE_DEFAULTS_SIZE;
 
-tABC_CC ABC_ExchangeUpdate(tABC_SyncKeys *pKeys, int currencyNum, tABC_Error *pError);
+tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, tABC_Error *pError);
 
 void ABC_ExchangeClearCache();
 

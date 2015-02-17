@@ -91,7 +91,7 @@ static tABC_CC ABC_ExchangeGet(const char *szUrl, tABC_U08Buf *pData, tABC_Error
 static tABC_CC ABC_ExchangeGetString(const char *szURL, char **pszResults, tABC_Error *pError);
 static size_t  ABC_ExchangeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
 static tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC_Error *pError);
-static tABC_CC ABC_ExchangeExtractSource(tABC_SyncKeys *pKeys, int currencyNum, char **szSource, tABC_Error *pError);
+static tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeRateSources &sources, int currencyNum, char **szSource, tABC_Error *pError);
 
 static tABC_CC ABC_ExchangeGetFromCache(int currencyNum, tABC_ExchangeCacheEntry **ppData, tABC_Error *pError);
 static tABC_CC ABC_ExchangeAddToCache(tABC_ExchangeCacheEntry *pData, tABC_Error *pError);
@@ -120,7 +120,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_ExchangeUpdate(tABC_SyncKeys *pKeys, int currencyNum, tABC_Error *pError)
+tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szSource = NULL;
@@ -130,7 +130,7 @@ tABC_CC ABC_ExchangeUpdate(tABC_SyncKeys *pKeys, int currencyNum, tABC_Error *pE
     ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(currencyNum, &bUpdateRequired, &rate, pError));
     if (bUpdateRequired)
     {
-        ABC_CHECK_RET(ABC_ExchangeExtractSource(pKeys, currencyNum, &szSource, pError));
+        ABC_CHECK_RET(ABC_ExchangeExtractSource(sources, currencyNum, &szSource, pError));
         if (szSource)
         {
             if (strcmp(ABC_BITSTAMP, szSource) == 0)
@@ -516,32 +516,18 @@ exit:
 }
 
 static
-tABC_CC ABC_ExchangeExtractSource(tABC_SyncKeys *pKeys, int currencyNum,
+tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeRateSources &sources, int currencyNum,
                                   char **szSource, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_AccountSettings *pAccountSettings = NULL;
 
     *szSource = NULL;
-    if (pKeys)
+    for (unsigned i = 0; i < sources.numSources; i++)
     {
-        ABC_AccountSettingsLoad(pKeys,
-                                &pAccountSettings,
-                                pError);
-    }
-    if (pAccountSettings)
-    {
-        tABC_ExchangeRateSources *pSources = &(pAccountSettings->exchangeRateSources);
-        if (pSources->numSources > 0)
+        if (sources.aSources[i]->currencyNum == currencyNum)
         {
-            for (unsigned i = 0; i < pSources->numSources; i++)
-            {
-                if (pSources->aSources[i]->currencyNum == currencyNum)
-                {
-                    ABC_STRDUP(*szSource, pSources->aSources[i]->szSource);
-                    break;
-                }
-            }
+            ABC_STRDUP(*szSource, sources.aSources[i]->szSource);
+            break;
         }
     }
     if (!(*szSource))
@@ -571,9 +557,8 @@ tABC_CC ABC_ExchangeExtractSource(tABC_SyncKeys *pKeys, int currencyNum,
                 break;
         }
     }
-exit:
-    ABC_FreeAccountSettings(pAccountSettings);
 
+exit:
     return cc;
 }
 

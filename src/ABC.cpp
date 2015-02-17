@@ -3151,13 +3151,15 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     AutoSyncKeys pKeys;
+    AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    cc = ABC_ExchangeUpdate(pKeys, currencyNum, pError);
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &settings.get(), pError));
+    cc = ABC_ExchangeUpdate(settings->exchangeRateSources, currencyNum, pError);
 
 exit:
     return cc;
