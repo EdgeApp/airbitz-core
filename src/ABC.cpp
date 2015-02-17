@@ -639,7 +639,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                          const char *szPassword,
                          const char *szWalletName,
                          int        currencyNum,
-                         unsigned int attributes,
+                         unsigned int deprecated,
                          tABC_Request_Callback fRequestCallback,
                          void *pData,
                          tABC_Error *pError)
@@ -673,7 +673,6 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                                                 szUserName,
                                                 szWalletName,
                                                 currencyNum,
-                                                attributes,
                                                 fRequestCallback,
                                                 pData,
                                                 pError));
@@ -691,7 +690,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
         ABC_STR_NEW(output, 100);
         results->pRetData = output;
         ABC_CHECK_RET(ABC_WalletCreate(pKeys, L1, LP1, szUserName, szWalletName,
-            currencyNum, attributes, (char**) &(results->pRetData), pError));
+            currencyNum, (char**) &(results->pRetData), pError));
     }
 
 exit:

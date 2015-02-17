@@ -46,7 +46,6 @@ tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
                                   const char *szUserName,
                                   const char *szWalletName,
                                   int        currencyNum,
-                                  unsigned int attributes,
                                   tABC_Request_Callback fRequestCallback,
                                   void *pData,
                                   tABC_Error *pError)
@@ -63,7 +62,6 @@ tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
 
     ABC_STRDUP(pWalletCreateInfo->szWalletName, szWalletName);
     pWalletCreateInfo->currencyNum = currencyNum;
-    pWalletCreateInfo->attributes = attributes;
 
     pWalletCreateInfo->fRequestCallback = fRequestCallback;
 
@@ -118,7 +116,7 @@ void *ABC_WalletCreateThreaded(void *pData)
 
         // create the wallet
         tABC_CC CC = ABC_WalletCreate(pInfo->pKeys, pInfo->L1, pInfo->LP1, pInfo->szUserName,
-            pInfo->szWalletName, pInfo->currencyNum, pInfo->attributes,
+            pInfo->szWalletName, pInfo->currencyNum,
             (char **) &(results.pRetData), &(results.errorInfo));
         results.errorInfo.code = CC;
 
