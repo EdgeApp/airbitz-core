@@ -3139,8 +3139,6 @@ tABC_CC
 ABC_RequestExchangeRateUpdate(const char *szUserName,
                               const char *szPassword,
                               int currencyNum,
-                              void *pDeprecated0,
-                              void *pDeprecated1,
                               tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);

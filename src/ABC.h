@@ -903,8 +903,6 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
 /* === Exchange rates: === */
 tABC_CC ABC_RequestExchangeRateUpdate(const char *szUserName, const char *szPassword,
                                       int currencyNum,
-                                      void *pDeprecated0,
-                                      void *pDeprecated1,
                                       tABC_Error *pError);
 
 tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
