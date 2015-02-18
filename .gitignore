@@ -1,10 +1,9 @@
 *.o
-*~
-.*.swp
-.DS_Store
 *.vpj
 *.vpw
 *.vpwhistu
-/build
+*~
+.*.swp
+.DS_Store
 /abcd/config.h
-/src/config.h
+/build

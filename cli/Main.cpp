@@ -14,7 +14,7 @@
 
 using namespace abcd;
 
-#define CA_CERT "./ca-certificates.crt"
+#define CA_CERT "./cli/ca-certificates.crt"
 
 /**
  * The main program body.
