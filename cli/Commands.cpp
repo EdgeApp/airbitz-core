@@ -171,9 +171,10 @@ Status createWallet(int argc, char *argv[])
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... create-wallet <user> <pass> <wallet-name>");
 
-    tABC_RequestResults results;
+    AutoString uuid;
     ABC_CHECK_OLD(ABC_CreateWallet(argv[0], argv[1], argv[2],
-        CURRENCY_NUM_USD, NULL, &results, &error));
+        CURRENCY_NUM_USD, &uuid.get(), &error));
+    std::cout << "Created wallet " << uuid.get() << std::endl;
 
     return Status();
 }

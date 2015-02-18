@@ -32,7 +32,6 @@
 #include "ABC.h"
 #include "LoginRequest.hpp"
 #include "LoginShim.hpp"
-#include "WalletAsync.hpp"
 #include "../abcd/Account.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Bridge.hpp"
@@ -622,17 +621,14 @@ exit:
  * @param szPassword                Password for the account
  * @param szWalletName              Wallet Name
  * @param currencyNum               ISO 4217 currency number
- * @param fRequestCallback          The function that will be called when the wallet create process has finished.
- * @param pData                     Pointer to data to be returned back in callback,
- *                                  or `char **pszUUID` if callbacks aren't used.
+ * @param pszUuid                   Resulting wallet name. The caller frees this.
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_CreateWallet(const char *szUserName,
                          const char *szPassword,
                          const char *szWalletName,
                          int        currencyNum,
-                         tABC_Request_Callback fRequestCallback,
-                         void *pData,
+                         char       **pszUuid,
                          tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -654,35 +650,8 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
 
-    if (fRequestCallback)
-    {
-        tABC_WalletCreateInfo *pWalletCreateInfo = NULL;
-        ABC_CHECK_RET(ABC_WalletCreateInfoAlloc(&pWalletCreateInfo,
-                                                pKeys,
-                                                L1,
-                                                LP1,
-                                                szUserName,
-                                                szWalletName,
-                                                currencyNum,
-                                                fRequestCallback,
-                                                pData,
-                                                pError));
-
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_WalletCreateThreaded, pWalletCreateInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        tABC_RequestResults *results = (tABC_RequestResults*)pData;
-        char *output = NULL;
-        ABC_STR_NEW(output, 100);
-        results->pRetData = output;
-        ABC_CHECK_RET(ABC_WalletCreate(pKeys, L1, LP1, szUserName, szWalletName,
-            currencyNum, (char**) &(results->pRetData), pError));
-    }
+    ABC_CHECK_RET(ABC_WalletCreate(pKeys, L1, LP1, szUserName, szWalletName,
+        currencyNum, pszUuid, pError));
 
 exit:
     return cc;

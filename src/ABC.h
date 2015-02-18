@@ -918,8 +918,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                          const char *szPassword,
                          const char *szWalletName,
                          int        currencyNum,
-                         tABC_Request_Callback fRequestCallback,
-                         void *pData,
+                         char       **pszUuid,
                          tABC_Error *pError);
 
 tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
