@@ -1,5 +1,5 @@
 # Common variables
-download_dir=$base_dir/download
+download_dir=${DOWNLOAD_DIR:-$base_dir/download}
 
 # Common tasks
 

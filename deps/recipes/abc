@@ -1,4 +1,3 @@
-
 depends="curl jansson libbitcoin-watcher libcsv libgit2 libqrencode openssl"
 inherit lib
 
@@ -6,8 +5,8 @@ build() {
     cd $base_dir/..
 
     case $target in
-    ios-*)  output=libabc.a ;;
-    *)      output=libabc.so ;;
+    android-*)  output=libabc.so ;;
+    *)          output=libabc.a ;;
     esac
 
     if [ -n ${DEBUG+x} ]; then
@@ -17,7 +16,12 @@ build() {
 
     # Build:
     export WORK_DIR=$work_dir
-    make $output
+    make $output V=1
+
+    # Run unit tests:
+    if [ $target = native ]; then
+        make check
+    fi
 
     # Install:
     mkdir -p $install_dir/lib
