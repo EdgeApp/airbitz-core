@@ -30,7 +30,6 @@
  */
 
 #include "ABC.h"
-#include "LoginRequest.hpp"
 #include "LoginShim.hpp"
 #include "../abcd/Account.hpp"
 #include "../abcd/General.hpp"
@@ -179,14 +178,10 @@ void ABC_Terminate()
  *
  * @param szUserName                UserName for the account
  * @param szPassword                Password for the account
- * @param fRequestCallback          The function that will be called when the account signin process has finished.
- * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_SignIn(const char *szUserName,
                    const char *szPassword,
-                   tABC_Request_Callback fRequestCallback,
-                   void *pData,
                    tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -200,34 +195,9 @@ tABC_CC ABC_SignIn(const char *szUserName,
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
-    if (fRequestCallback)
-    {
-        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-
-        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                                  ABC_RequestType_AccountSignIn,
-                                                  szUserName,
-                                                  szPassword,
-                                                  NULL, // recovery questions
-                                                  NULL, // recovery answers
-                                                  NULL, // new password
-                                                  fRequestCallback,
-                                                  pData,
-                                                  pError));
-
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        ABC_CHECK_RET(ABC_LoginShimLogin(szUserName, szPassword, pError));
-    }
+    ABC_CHECK_RET(ABC_LoginShimLogin(szUserName, szPassword, pError));
 
 exit:
-
     return cc;
 }
 
@@ -239,14 +209,10 @@ exit:
  * @param szUserName                UserName for the account
  * @param szPassword                Password for the account
  * @param szPin                     PIN for the account
- * @param fRequestCallback          The function that will be called when the account create process has finished.
- * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_CreateAccount(const char *szUserName,
                           const char *szPassword,
-                          tABC_Request_Callback fRequestCallback,
-                          void *pData,
                           tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -260,33 +226,9 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
-    if (fRequestCallback)
-    {
-        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-
-        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                                  ABC_RequestType_CreateAccount,
-                                                  szUserName,
-                                                  szPassword,
-                                                  NULL, // recovery questions
-                                                  NULL, // recovery answers
-                                                  NULL, // new password
-                                                  fRequestCallback,
-                                                  pData,
-                                                  pError));
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        ABC_CHECK_RET(ABC_LoginShimNewAccount(szUserName, szPassword, pError));
-    }
+    ABC_CHECK_RET(ABC_LoginShimNewAccount(szUserName, szPassword, pError));
 
 exit:
-
     return cc;
 }
 
@@ -300,16 +242,12 @@ exit:
  * @param szPassword                Password of the account
  * @param szRecoveryQuestions       Recovery questions - newline seperated
  * @param szRecoveryAnswers         Recovery answers - newline seperated
- * @param fRequestCallback          The function that will be called when the recovery questions are ready.
- * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                         const char *szPassword,
                                         const char *szRecoveryQuestions,
                                         const char *szRecoveryAnswers,
-                                        tABC_Request_Callback fRequestCallback,
-                                        void *pData,
                                         tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -325,35 +263,10 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     ABC_CHECK_NULL(szRecoveryAnswers);
     ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error, "No recovery answers provided");
 
-    if (fRequestCallback)
-    {
-        tABC_LoginRequestInfo *pInfo = NULL;
-
-        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pInfo,
-                                                  ABC_RequestType_SetAccountRecoveryQuestions,
-                                                  szUserName,
-                                                  szPassword,
-                                                  szRecoveryQuestions,
-                                                  szRecoveryAnswers,
-                                                  NULL, // new password
-                                                  fRequestCallback,
-                                                  pData,
-                                                  pError));
-
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        ABC_CHECK_RET(ABC_LoginShimSetRecovery(szUserName, szPassword,
-            szRecoveryQuestions, szRecoveryAnswers, pError));
-    }
+    ABC_CHECK_RET(ABC_LoginShimSetRecovery(szUserName, szPassword,
+        szRecoveryQuestions, szRecoveryAnswers, pError));
 
 exit:
-
     return cc;
 }
 
@@ -1418,8 +1331,6 @@ exit:
 tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,
                            const char *szNewPassword,
-                           tABC_Request_Callback fRequestCallback,
-                           void *pData,
                            tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -1435,35 +1346,10 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     ABC_CHECK_NULL(szNewPassword);
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
 
-    if (fRequestCallback)
-    {
-        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-
-        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                                  ABC_RequestType_ChangePassword,
-                                                  szUserName,
-                                                  szPassword,
-                                                  NULL, // recovery questions
-                                                  NULL, // recovery answers
-                                                  szNewPassword,
-                                                  fRequestCallback,
-                                                  pData,
-                                                  pError));
-
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        ABC_CHECK_RET(ABC_LoginShimSetPassword(szUserName, szPassword, NULL,
-            szNewPassword, pError));
-    }
+    ABC_CHECK_RET(ABC_LoginShimSetPassword(szUserName, szPassword, NULL,
+        szNewPassword, pError));
 
 exit:
-
     return cc;
 }
 
@@ -1484,8 +1370,6 @@ exit:
 tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
                                               const char *szRecoveryAnswers,
                                               const char *szNewPassword,
-                                              tABC_Request_Callback fRequestCallback,
-                                              void *pData,
                                               tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -1501,35 +1385,10 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     ABC_CHECK_NULL(szNewPassword);
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
 
-    if (fRequestCallback)
-    {
-        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-
-        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                                  ABC_RequestType_ChangePassword,
-                                                  szUserName,
-                                                  NULL, // recovery questions
-                                                  NULL, // password
-                                                  szRecoveryAnswers,
-                                                  szNewPassword,
-                                                  fRequestCallback,
-                                                  pData,
-                                                  pError));
-
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        ABC_CHECK_RET(ABC_LoginShimSetPassword(szUserName, NULL,
-            szRecoveryAnswers, szNewPassword, pError));
-    }
+    ABC_CHECK_RET(ABC_LoginShimSetPassword(szUserName, NULL,
+        szRecoveryAnswers, szNewPassword, pError));
 
 exit:
-
     return cc;
 }
 
@@ -3080,7 +2939,6 @@ exit:
 
 /**
  * Request an update to the exchange for a currency
- * @param pDeprecated0 Formerly a callback function, but no longer does anything.
  */
 tABC_CC
 ABC_RequestExchangeRateUpdate(const char *szUserName,

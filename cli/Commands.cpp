@@ -112,9 +112,9 @@ Status changePassword(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... change-password <pw|ra> <user> <pass|ra> <new-pass>");
 
     if (strncmp(argv[0], "pw", 2) == 0)
-        ABC_CHECK_OLD(ABC_ChangePassword(argv[1], argv[2], argv[3], NULL, NULL, &error));
+        ABC_CHECK_OLD(ABC_ChangePassword(argv[1], argv[2], argv[3], &error));
     else
-        ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(argv[1], argv[2], argv[3], NULL, NULL, &error));
+        ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(argv[1], argv[2], argv[3], &error));
 
     return Status();
 }
@@ -160,7 +160,7 @@ Status createAccount(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... create-account <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_CreateAccount(argv[0], argv[1], NULL, NULL, &error));
+    ABC_CHECK_OLD(ABC_CreateAccount(argv[0], argv[1], &error));
     ABC_CHECK_OLD(ABC_SetPIN(argv[2], argv[3], "1234", &error));
 
     return Status();
@@ -184,7 +184,7 @@ Status dataSync(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... data-sync <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_SignIn(argv[0], argv[1], NULL, NULL, &error));
+    ABC_CHECK_OLD(ABC_SignIn(argv[0], argv[1], &error));
     ABC_CHECK_OLD(ABC_DataSyncAll(argv[0], argv[1], NULL, NULL, &error));
 
     return Status();
@@ -512,7 +512,7 @@ Status signIn(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... sign-in <user> <pass>");
 
     tABC_Error error;
-    tABC_CC cc = ABC_SignIn(argv[0], argv[1], NULL, NULL, &error);
+    tABC_CC cc = ABC_SignIn(argv[0], argv[1], &error);
     if (ABC_CC_InvalidOTP == cc)
     {
         std::cout << "No OTP token, resetting account 2-factor auth." << std::endl;

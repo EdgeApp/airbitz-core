@@ -700,14 +700,10 @@ tABC_CC ABC_QrEncode(const char *szText,
 /* === Login lifetime: === */
 tABC_CC ABC_SignIn(const char *szUserName,
                    const char *szPassword,
-                   tABC_Request_Callback fRequestCallback,
-                   void *pData,
                    tABC_Error *pError);
 
 tABC_CC ABC_CreateAccount(const char *szUserName,
                           const char *szPassword,
-                          tABC_Request_Callback fRequestCallback,
-                          void *pData,
                           tABC_Error *pError);
 
 tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
@@ -741,23 +737,17 @@ tABC_CC ABC_ListAccounts(char **pszUserNames,
 tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,
                            const char *szNewPassword,
-                           tABC_Request_Callback fRequestCallback,
-                           void *pData,
                            tABC_Error *pError);
 
 tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
                                               const char *szRecoveryAnswers,
                                               const char *szNewPassword,
-                                              tABC_Request_Callback fRequestCallback,
-                                              void *pData,
                                               tABC_Error *pError);
 
 tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                         const char *szPassword,
                                         const char *szRecoveryQuestions,
                                         const char *szRecoveryAnswers,
-                                        tABC_Request_Callback fRequestCallback,
-                                        void *pData,
                                         tABC_Error *pError);
 
 tABC_CC ABC_PasswordOk(const char *szUserName,
