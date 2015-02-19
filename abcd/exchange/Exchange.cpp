@@ -95,7 +95,7 @@ tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, t
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szSource = NULL;
-    double rate;
+    double rate = 0;
     bool bUpdateRequired = true;
 
     ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(currencyNum, &bUpdateRequired, &rate, pError));
@@ -104,7 +104,6 @@ tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, t
         ABC_CHECK_RET(ABC_ExchangeExtractSource(sources, currencyNum, &szSource, pError));
         if (szSource)
         {
-            double rate;
             std::stringstream rateStr;
             AutoString szFilename;
 
