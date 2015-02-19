@@ -9,7 +9,6 @@
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "../Account.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"

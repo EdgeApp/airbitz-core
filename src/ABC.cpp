@@ -31,11 +31,11 @@
 
 #include "ABC.h"
 #include "LoginShim.hpp"
-#include "../abcd/Account.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Export.hpp"
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
+#include "../abcd/account/Account.hpp"
 #include "../abcd/bitcoin/Testnet.hpp"
 #include "../abcd/bitcoin/Text.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"

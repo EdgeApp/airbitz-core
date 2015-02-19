@@ -30,8 +30,8 @@
  */
 
 #include "Tx.hpp"
-#include "Account.hpp"
 #include "Wallet.hpp"
+#include "account/Account.hpp"
 #include "bitcoin/Text.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"

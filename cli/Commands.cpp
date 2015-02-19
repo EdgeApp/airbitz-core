@@ -7,8 +7,8 @@
 
 #include "Commands.hpp"
 #include "../src/LoginShim.hpp"
-#include "../abcd/Account.hpp"
 #include "../abcd/Wallet.hpp"
+#include "../abcd/account/Account.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Crypto.hpp"
 #include "../abcd/crypto/Encoding.hpp"

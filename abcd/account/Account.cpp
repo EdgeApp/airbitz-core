@@ -6,13 +6,13 @@
  */
 
 #include "Account.hpp"
-#include "crypto/Crypto.hpp"
-#include "crypto/Encoding.hpp"
-#include "exchange/Exchange.hpp"
-#include "util/FileIO.hpp"
-#include "util/Json.hpp"
-#include "util/Mutex.hpp"
-#include "util/Util.hpp"
+#include "../crypto/Crypto.hpp"
+#include "../crypto/Encoding.hpp"
+#include "../exchange/Exchange.hpp"
+#include "../util/FileIO.hpp"
+#include "../util/Json.hpp"
+#include "../util/Mutex.hpp"
+#include "../util/Util.hpp"
 
 namespace abcd {
 
