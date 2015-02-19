@@ -2974,9 +2974,8 @@ ABC_IsTestNet(bool *pResult, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     *pResult = ABC_BridgeIsTestNet();
-exit:
+
     return cc;
 }
 
@@ -2987,26 +2986,12 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoU08Buf Version;
-    bool bTestnet = false;
+    std::string version = ABC_VERSION;
+    version += ABC_BridgeIsTestNet() ? "-testnet" : "-mainnet";
 
-    ABC_IsTestNet(&bTestnet, pError);
-    ABC_BUF_DUP_PTR(Version, ABC_VERSION, strlen(ABC_VERSION));
-    ABC_BUF_APPEND_PTR(Version, "-", 1);
-    if (bTestnet)
-    {
-        ABC_BUF_APPEND_PTR(Version, "testnet", 7);
-    }
-    else
-    {
-        ABC_BUF_APPEND_PTR(Version, "mainnet", 7);
-    }
-    // null byte
-    ABC_BUF_APPEND_PTR(Version, "", 1);
+    ABC_STRDUP(*szVersion, version.c_str());
 
-    *szVersion = (char *)ABC_BUF_PTR(Version);
-    ABC_BUF_CLEAR(Version);
-
+exit:
     return cc;
 }
 

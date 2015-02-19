@@ -16,12 +16,23 @@ using namespace abcd;
 
 #define CA_CERT "./cli/ca-certificates.crt"
 
+static Status
+showVersion()
+{
+    AutoString version;
+    ABC_CHECK_OLD(ABC_Version(&version.get(), &error));
+    std::cout << "ABC version: " << version.get() << std::endl;
+    return Status();
+}
+
 /**
  * The main program body.
  */
 static Status run(int argc, char *argv[])
 {
     std::string program = argv[0];
+    if (argc == 1)
+        return showVersion();
     if (argc < 3)
         return ABC_ERROR(ABC_CC_Error, "usage: " + program + " <dir> <command> ...\n");
 
