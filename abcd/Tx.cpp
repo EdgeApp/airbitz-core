@@ -32,6 +32,7 @@
 #include "Tx.hpp"
 #include "Wallet.hpp"
 #include "account/Account.hpp"
+#include "account/AccountSettings.hpp"
 #include "bitcoin/Text.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"

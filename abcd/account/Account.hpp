@@ -37,7 +37,6 @@
 #define ABC_Account_h
 
 #include "../util/Sync.hpp"
-#include "../../src/ABC.h"
 
 namespace abcd {
 
@@ -62,29 +61,6 @@ typedef struct sABC_AccountWalletInfo
     /** True if the wallet should be hidden. */
     bool archived;
 } tABC_AccountWalletInfo;
-
-tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
-                                  char ***paszCategories,
-                                  unsigned int *pCount,
-                                  tABC_Error *pError);
-
-tABC_CC ABC_AccountCategoriesAdd(tABC_SyncKeys *pKeys,
-                                 char *szCategory,
-                                 tABC_Error *pError);
-
-tABC_CC ABC_AccountCategoriesRemove(tABC_SyncKeys *pKeys,
-                                    char *szCategory,
-                                    tABC_Error *pError);
-
-tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
-                                tABC_AccountSettings **ppSettings,
-                                tABC_Error *pError);
-
-tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
-                                tABC_AccountSettings *pSettings,
-                                tABC_Error *pError);
-
-void ABC_AccountSettingsFree(tABC_AccountSettings *pSettings);
 
 void ABC_AccountWalletInfoFree(tABC_AccountWalletInfo *pInfo);
 void ABC_AccountWalletInfoFreeArray(tABC_AccountWalletInfo *aInfo,
