@@ -62,7 +62,6 @@ namespace abcd {
 
 #define JSON_WALLET_WALLETS_FIELD               "wallets"
 #define JSON_WALLET_NAME_FIELD                  "walletName"
-#define JSON_WALLET_ATTRIBUTES_FIELD            "attributes"
 #define JSON_WALLET_CURRENCY_NUM_FIELD          "num"
 #define JSON_WALLET_ACCOUNTS_FIELD              "accounts"
 
@@ -151,7 +150,6 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
                          const char *szUserName,
                          const char *szWalletName,
                          int  currencyNum,
-                         unsigned int attributes,
                          char                  **pszUUID,
                          tABC_Error            *pError)
 {
@@ -1018,7 +1016,6 @@ void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo)
     {
         ABC_FREE_STR(pWalletInfo->szUUID);
         ABC_FREE_STR(pWalletInfo->szName);
-        ABC_FREE_STR(pWalletInfo->szUserName);
 
         ABC_CLEAR_FREE(pWalletInfo, sizeof(sizeof(tABC_WalletInfo)));
     }

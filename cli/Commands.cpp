@@ -112,9 +112,9 @@ Status changePassword(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... change-password <pw|ra> <user> <pass|ra> <new-pass>");
 
     if (strncmp(argv[0], "pw", 2) == 0)
-        ABC_CHECK_OLD(ABC_ChangePassword(argv[1], argv[2], argv[3], NULL, NULL, NULL, &error));
+        ABC_CHECK_OLD(ABC_ChangePassword(argv[1], argv[2], argv[3], &error));
     else
-        ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(argv[1], argv[2], argv[3], NULL, NULL, NULL, &error));
+        ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(argv[1], argv[2], argv[3], &error));
 
     return Status();
 }
@@ -160,7 +160,8 @@ Status createAccount(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... create-account <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_CreateAccount(argv[0], argv[1], "1234", NULL, NULL, &error));
+    ABC_CHECK_OLD(ABC_CreateAccount(argv[0], argv[1], &error));
+    ABC_CHECK_OLD(ABC_SetPIN(argv[2], argv[3], "1234", &error));
 
     return Status();
 }
@@ -170,9 +171,10 @@ Status createWallet(int argc, char *argv[])
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... create-wallet <user> <pass> <wallet-name>");
 
-    tABC_RequestResults results;
+    AutoString uuid;
     ABC_CHECK_OLD(ABC_CreateWallet(argv[0], argv[1], argv[2],
-        CURRENCY_NUM_USD, 0, NULL, &results, &error));
+        CURRENCY_NUM_USD, &uuid.get(), &error));
+    std::cout << "Created wallet " << uuid.get() << std::endl;
 
     return Status();
 }
@@ -182,7 +184,7 @@ Status dataSync(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... data-sync <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_SignIn(argv[0], argv[1], NULL, NULL, &error));
+    ABC_CHECK_OLD(ABC_SignIn(argv[0], argv[1], &error));
     ABC_CHECK_OLD(ABC_DataSyncAll(argv[0], argv[1], NULL, NULL, &error));
 
     return Status();
@@ -253,18 +255,18 @@ Status getExchangeRate(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-exchange-rate <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_USD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_AUD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CAD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CNY, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CUP, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_HKD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_MXN, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_NZD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_PHP, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_GBP, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_USD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_EUR, NULL, NULL, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_USD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_AUD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CAD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CNY, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CUP, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_HKD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_MXN, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_NZD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_PHP, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_GBP, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_USD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_EUR, &error));
 
     return Status();
 }
@@ -510,7 +512,7 @@ Status signIn(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... sign-in <user> <pass>");
 
     tABC_Error error;
-    tABC_CC cc = ABC_SignIn(argv[0], argv[1], NULL, NULL, &error);
+    tABC_CC cc = ABC_SignIn(argv[0], argv[1], &error);
     if (ABC_CC_InvalidOTP == cc)
     {
         std::cout << "No OTP token, resetting account 2-factor auth." << std::endl;

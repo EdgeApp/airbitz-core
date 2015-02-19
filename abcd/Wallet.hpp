@@ -115,7 +115,6 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
                          const char *szUserName,
                          const char *szWalletName,
                          int  currencyNum,
-                         unsigned int attributes,
                          char **pszUUID,
                          tABC_Error *pError);
 
