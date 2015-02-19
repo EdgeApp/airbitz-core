@@ -25,6 +25,8 @@ abc_sources = \
 cli_sources = $(wildcard cli/*.cpp)
 test_sources = $(wildcard test/*.cpp)
 
+generated_headers = abcd/config.h
+
 # Objects:
 abc_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(abc_sources))))
 cli_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(cli_sources))))
@@ -60,14 +62,19 @@ clean:
 	$(RM) -r build
 
 # Automatic dependency rules:
-$(WORK_DIR)/%.o: %.c
+$(WORK_DIR)/%.o: %.c $(generated_headers)
 	@mkdir -p $(dir $@)
 	$(RUN) $(CC) -c -MMD $(CFLAGS) -o $@ $<
 
-$(WORK_DIR)/%.o: %.cpp
+$(WORK_DIR)/%.o: %.cpp $(generated_headers)
 	@mkdir -p $(dir $@)
 	$(RUN) $(CXX) -c -MMD $(CXXFLAGS) -o $@ $<
 
 include $(shell find $(WORK_DIR) -name *.d)
 %.h: ;
 %.hpp: ;
+
+# API key file:
+abcd/config.h:
+	@echo "error: Please copy abcd/config.h.example to abcd/config.h add you API keys."
+	@exit 1
