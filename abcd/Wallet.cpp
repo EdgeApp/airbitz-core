@@ -1016,7 +1016,6 @@ void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo)
     {
         ABC_FREE_STR(pWalletInfo->szUUID);
         ABC_FREE_STR(pWalletInfo->szName);
-        ABC_FREE_STR(pWalletInfo->szUserName);
 
         ABC_CLEAR_FREE(pWalletInfo, sizeof(sizeof(tABC_WalletInfo)));
     }

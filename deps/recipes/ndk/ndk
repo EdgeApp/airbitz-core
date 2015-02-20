@@ -20,6 +20,11 @@ esac
 # $1 arch name for installing the toolchain.
 # $2 NDK toolchain name.
 setup() {
+    echo Unpacking NDK...
+    archive="$download_dir/android-ndk-$version-$system.bin"
+    chmod +x "$archive"
+    $archive -o"$work_dir" -y
+
     echo Unpacking toolchain...
     cd android-ndk-$version
     ./build/tools/make-standalone-toolchain.sh --toolchain=$2-4.8 --install-dir=$work_dir/$1 --system=$system --verbose
@@ -37,7 +42,7 @@ setup_mips() {
     setup mips mipsel-linux-android
 }
 
-task setup-arm unpack
-task setup-x86 unpack
-task setup-mips unpack
+task setup-arm
+task setup-x86
+task setup-mips
 default=setup-arm

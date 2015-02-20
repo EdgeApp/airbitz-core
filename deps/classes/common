@@ -1,5 +1,5 @@
 # Common variables
-download_dir=$base_dir/download
+download_dir=${DOWNLOAD_DIR:-$base_dir/download}
 
 # Common tasks
 
@@ -53,9 +53,6 @@ unpack() {
         # Unpack:
         if [ $path != ${path%.git} ]; then
             git --git-dir="$path" --work-tree="$work_dir" reset --hard "${hash:-master}"
-        elif [ $path != ${path%.bin} ]; then
-            chmod +x "$path"
-            $path -o"$work_dir"
         elif [ $path != ${path%.tar*} -o $path != ${path%.tgz} ]; then
             echo "Unpacking $(relative $path) to $(relative $work_dir)..."
             tar -C "$work_dir" -xf "$path"

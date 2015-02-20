@@ -2,7 +2,7 @@
 
 The build system consists of recipe files and classes. Recipe files typically contain instructions for building a specific piece of software, while classes typically contain more general information like "how to build something for Android." Both recipes and classes are written in the shell scripting language.
 
-Recipes exist to define "tasks", which are simply functions that can be invoked from the outer build script. Tasks can have dependencies, which the build script will run before running the task itself. The script remembers which tasks have been run successfully, and will not run them again unless a dependency has changed, or the task has been cleaned.
+Recipes exist to define "tasks", which are simply functions that can be invoked from the outer build script. Tasks can have dependencies, which the build script will run before running the task itself. The script remembers which tasks have been run successfully, and will not run them again unless the recipe has changed, the task has been cleaned, or a dependency has been updated.
 
 The `inherit` keyword allows a recipe to pull in a class. Any code that exists in the class becomes part of the recipe. Most recipes do not include task definitions themselves, but instead rely on one or more classes to provide common tasks such as `download`, `clean`, or `build-android-arm`. The recipes then customize these tasks with various variable or function definitions. For example, defining a `source` variable tells the `download` task which files to get.
 
@@ -52,7 +52,7 @@ The `common` class provides a `download` task, which places its output in the `d
 
 ### download
 
-The download task expects a `source` variable to be defined, which contains a space-separated list of URL's to download. The class defines a variable called `download_dir`, which contains the location of the downloaded files.
+The download task expects a `source` variable to be defined, which contains a space-separated list of URL's to download. The class defines a variable called `download_dir`, which contains the location of the downloaded files. To change the download directory, define an environment variable called `DOWNLOAD_DIR`.
 
 If the URL ends with `.git`, the download task will use git to download the source code.
 

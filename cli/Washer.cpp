@@ -101,9 +101,7 @@ void send_tx(tABC_WalletInfo *wallet)
     printf("Dest Address: %s\n", szAddress);
     printf("Balance: %ld\n", wallet->balanceSatoshi);
     printf("Max Spendable: %ld\n", maxSatoshi);
-    if (maxSatoshi < 0) {
-        return;
-    }
+
     // break max spendable a part
     int num = maxSatoshi / MIN_BALANCE;
     for (int i = 0; i < num; ++i) {

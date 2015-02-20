@@ -159,30 +159,6 @@ typedef enum eABC_CC
 } tABC_CC;
 
 /**
- * AirBitz Request Types
- *
- * The requests results structure contains this
- * identifier to indicate which request it is
- * associated with.
- *
- */
-typedef enum eABC_RequestType
-{
-    /** Account sign-in request */
-    ABC_RequestType_AccountSignIn = 0,
-    /** Create account request */
-    ABC_RequestType_CreateAccount = 1,
-    /** Set account recovery questions */
-    ABC_RequestType_SetAccountRecoveryQuestions = 2,
-    /** Create wallet request */
-    ABC_RequestType_CreateWallet = 3,
-    /** Change password request */
-    ABC_RequestType_ChangePassword = 5,
-    /** Send bitcoin request */
-    ABC_RequestType_SendBitcoin = 6
-} tABC_RequestType;
-
-/**
  * AirBitz Core Error Structure
  *
  * This structure contains the detailed information associated
@@ -251,29 +227,6 @@ typedef struct sABC_AsyncBitCoinInfo
 } tABC_AsyncBitCoinInfo;
 
 /**
- * AirBitz Core Request Results Structure
- *
- * This structure contains the detailed information associated
- * with a create account result.
- *
- */
-typedef struct sABC_RequestResults
-{
-    /** request type these results are associated with */
-    tABC_RequestType    requestType;
-    /** data pointer given by caller at initial create call time */
-    void                *pData;
-    /** data pointer holding return data if the request returns data */
-    void                *pRetData;
-    /** true if successful */
-    bool                bSuccess;
-    /** if the event involved a wallet, this is its ID */
-    char                *szWalletUUID;
-    /** information the error if there was a failure */
-    tABC_Error          errorInfo;
-} tABC_RequestResults;
-
-/**
  * AirBitz Currency Structure
  *
  * This structure contains the id's and names of all the currencies.
@@ -304,8 +257,6 @@ typedef struct sABC_WalletInfo
     char            *szUUID;
     /** wallet name */
     char            *szName;
-    /** account associated with this wallet */
-    char            *szUserName; /* DEPRECATED! Do not use! */
     /** wallet ISO 4217 currency code */
     int             currencyNum;
     /** true if the wallet is archived */
@@ -637,15 +588,6 @@ typedef void (*tABC_Sweep_Done_Callback)(tABC_CC cc,
                                          const char *szID,
                                          uint64_t amount);
 
-/**
- * AirBitz Request callback
- *
- * This is the form of the callback that will be called when a request
- * call has completed.
- *
- */
-typedef void (*tABC_Request_Callback)(const tABC_RequestResults *pResults);
-
 /* === Library lifetime: === */
 tABC_CC ABC_Initialize(const char                   *szRootDir,
                        const char                   *szCaCertPath,
@@ -719,15 +661,10 @@ tABC_CC ABC_QrEncode(const char *szText,
 /* === Login lifetime: === */
 tABC_CC ABC_SignIn(const char *szUserName,
                    const char *szPassword,
-                   tABC_Request_Callback fRequestCallback,
-                   void *pData,
                    tABC_Error *pError);
 
 tABC_CC ABC_CreateAccount(const char *szUserName,
                           const char *szPassword,
-                          const char *szPin,
-                          tABC_Request_Callback fRequestCallback,
-                          void *pData,
                           tABC_Error *pError);
 
 tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
@@ -761,25 +698,17 @@ tABC_CC ABC_ListAccounts(char **pszUserNames,
 tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,
                            const char *szNewPassword,
-                           const char *szDeprecated,
-                           tABC_Request_Callback fRequestCallback,
-                           void *pData,
                            tABC_Error *pError);
 
 tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
                                               const char *szRecoveryAnswers,
                                               const char *szNewPassword,
-                                              const char *szDeprecated,
-                                              tABC_Request_Callback fRequestCallback,
-                                              void *pData,
                                               tABC_Error *pError);
 
 tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                         const char *szPassword,
                                         const char *szRecoveryQuestions,
                                         const char *szRecoveryAnswers,
-                                        tABC_Request_Callback fRequestCallback,
-                                        void *pData,
                                         tABC_Error *pError);
 
 tABC_CC ABC_PasswordOk(const char *szUserName,
@@ -806,7 +735,6 @@ tABC_CC ABC_OtpKeyGet(const char *szUserName,
 tABC_CC ABC_OtpKeySet(const char *szUserName,
                       char *szKey,
                       tABC_Error *pError);
-
 
 /**
  * Removes the OTP key associated with the given username.
@@ -920,8 +848,6 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
 /* === Exchange rates: === */
 tABC_CC ABC_RequestExchangeRateUpdate(const char *szUserName, const char *szPassword,
                                       int currencyNum,
-                                      void *pDeprecated0,
-                                      void *pDeprecated1,
                                       tABC_Error *pError);
 
 tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
@@ -943,9 +869,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                          const char *szPassword,
                          const char *szWalletName,
                          int        currencyNum,
-                         unsigned int deprecated,
-                         tABC_Request_Callback fRequestCallback,
-                         void *pData,
+                         char       **pszUuid,
                          tABC_Error *pError);
 
 /**
