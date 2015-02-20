@@ -44,7 +44,7 @@ libabc.a:  $(WORK_DIR)/libabc.a
 libabc.so: $(WORK_DIR)/libabc.so
 
 $(WORK_DIR)/libabc.a: $(abc_objects)
-	$(RUN) $(AR) rcs $@ $^
+	$(RUN) $(RM) $@; $(AR) rcs $@ $^
 
 $(WORK_DIR)/libabc.so: $(abc_objects)
 	$(RUN) $(CXX) -shared -o $@ $^ $(LDFLAGS) $(LIBS)
