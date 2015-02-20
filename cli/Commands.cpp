@@ -19,33 +19,6 @@
 
 using namespace abcd;
 
-/**
- * Reads a file into memory.
- */
-static char *Slurp(const char *szFilename)
-{
-    // Where's the error checking?
-    FILE *f;
-    long l;
-    char *buffer;
-
-    f = fopen(szFilename, "r");
-    fseek(f , 0L , SEEK_END);
-    l = ftell(f);
-    rewind(f);
-
-    buffer = (char *)malloc(l + 1);
-    if (!buffer) {
-        return NULL;
-    }
-    if (fread(buffer, l, 1, f) != 1) {
-        return NULL;
-    }
-
-    fclose(f);
-    return buffer;
-}
-
 Status accountDecrypt(int argc, char *argv[])
 {
     if (argc != 3)
@@ -81,17 +54,13 @@ Status accountEncrypt(int argc, char *argv[])
     file += "/";
     file += argv[2];
 
-    AutoString szContents = Slurp(file.c_str());
-    AutoString szEncrypted;
-    if (szContents)
-    {
-        tABC_U08Buf data; // Do not free
-        ABC_BUF_SET_PTR(data, (unsigned char *) szContents.get(), strlen(szContents));
+    DataChunk contents;
+    ABC_CHECK(fileLoad(file, contents));
 
-        ABC_CHECK_OLD(ABC_CryptoEncryptJSONString(data, pKeys->MK,
-            ABC_CryptoType_AES256, &szEncrypted.get(), &error));
-        printf("%s\n", szEncrypted.get());
-    }
+    AutoString szEncrypted;
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONString(toU08Buf(contents), pKeys->MK,
+        ABC_CryptoType_AES256, &szEncrypted.get(), &error));
+    printf("%s\n", szEncrypted.get());
 
     return Status();
 }
@@ -576,17 +545,13 @@ Status walletEncrypt(int argc, char *argv[])
     AutoAccountWalletInfo info;
     ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, argv[2], &info, &error));
 
-    AutoString szContents = Slurp(argv[3]);
-    if (szContents)
-    {
-        tABC_U08Buf data; // Do not free
-        ABC_BUF_SET_PTR(data, (unsigned char *) szContents.get(), strlen(szContents));
+    DataChunk contents;
+    ABC_CHECK(fileLoad(argv[3], contents));
 
-        AutoString szEncrypted;
-        ABC_CHECK_OLD(ABC_CryptoEncryptJSONString(data, info.MK,
-            ABC_CryptoType_AES256, &szEncrypted.get(), &error));
-        printf("%s\n", szEncrypted.get());
-    }
+    AutoString szEncrypted;
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONString(toU08Buf(contents), info.MK,
+        ABC_CryptoType_AES256, &szEncrypted.get(), &error));
+    printf("%s\n", szEncrypted.get());
 
     return Status();
 }

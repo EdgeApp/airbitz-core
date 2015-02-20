@@ -918,12 +918,10 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     char *szLogData       = NULL;
     char *szLogData_Hex   = NULL;
     char *szWatchFilename = NULL;
-    void *aWatchData      = NULL;
     char *szWatchData_Hex = NULL;
     json_t *pJSON_Root    = NULL;
     tABC_U08Buf LogData   = ABC_BUF_NULL; // Do not free
-    tABC_U08Buf WatchData = ABC_BUF_NULL; // Do not free
-    size_t watcherSize    = 0;
+    DataChunk watchData;
     unsigned int nCount   = 0;
     tABC_WalletInfo **paWalletInfo = NULL;
     json_t *pJSON_array = NULL;
@@ -946,15 +944,13 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     {
         ABC_CHECK_RET(ABC_BridgeWatchPath(paWalletInfo[i]->szUUID,
                                           &szWatchFilename, pError));
-        ABC_CHECK_RET(ABC_FileIOReadFile(szWatchFilename, &aWatchData, &watcherSize, pError));
-        ABC_BUF_SET_PTR(WatchData, (unsigned char*)aWatchData, watcherSize);
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(WatchData, &szWatchData_Hex, pError));
+        ABC_CHECK_NEW(fileLoad(szWatchFilename, watchData), pError);
+        ABC_CHECK_RET(ABC_CryptoBase64Encode(toU08Buf(watchData), &szWatchData_Hex, pError));
 
         json_t *element = json_pack("s", szWatchData_Hex);
         json_array_append_new(pJSON_array, element);
 
         ABC_FREE_STR(szWatchFilename);
-        ABC_FREE(aWatchData);
     }
 
     pJSON_Root = json_pack("{ss, ss, ss}",
@@ -980,7 +976,6 @@ exit:
     ABC_BUF_CLEAR(LogData);
 
     ABC_FREE_STR(szWatchFilename);
-    ABC_FREE(aWatchData);
     ABC_FREE_STR(szWatchData_Hex);
 
     ABC_FreeWalletInfoArray(paWalletInfo, nCount);

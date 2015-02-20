@@ -37,7 +37,8 @@
 #define ABC_FileIO_h
 
 #include "../../src/ABC.h"
-#include "U08Buf.hpp"
+#include "Data.hpp"
+#include "Status.hpp"
 #include <jansson.h>
 #include <time.h>
 #include <mutex>
@@ -99,10 +100,8 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
                               char        **pszData,
                               tABC_Error  *pError);
 
-tABC_CC ABC_FileIOReadFile(const char  *szFilename,
-                           void        **pszData,
-                           size_t      *nSize,
-                           tABC_Error  *pError);
+Status
+fileLoad(const std::string &filename, DataChunk &result);
 
 tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
                                  json_t **ppJSON_Data,
