@@ -7,8 +7,8 @@
 
 #include "LoginDir.hpp"
 #include "../bitcoin/Testnet.hpp"
+#include "../json/JsonObject.hpp"
 #include "../util/FileIO.hpp"
-#include "../util/JsonFile.hpp"
 #include "../util/Status.hpp"
 #include "../util/Sync.hpp"
 #include "../util/Util.hpp"
@@ -17,9 +17,10 @@
 
 namespace abcd {
 
-struct UsernameFile: public JsonFile
+struct UsernameFile:
+    public JsonObject
 {
-    ABC_JSON_STRING(Username, "userName")
+    ABC_JSON_STRING(Username, "userName", nullptr)
 };
 
 #define ACCOUNT_DIR                             "Accounts"
@@ -57,12 +58,11 @@ accountsDirectory()
 static Status
 readUsername(const std::string &directory, std::string &result)
 {
-    const char *username;
     UsernameFile f;
     ABC_CHECK(f.load(directory + ACCOUNT_NAME_FILENAME));
-    ABC_CHECK(f.getUsername(username));
+    ABC_CHECK(f.hasUsername());
 
-    result = username;
+    result = f.getUsername();
     return Status();
 }
 

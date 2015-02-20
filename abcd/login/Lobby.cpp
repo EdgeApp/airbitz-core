@@ -7,14 +7,15 @@
 
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
+#include "../json/JsonObject.hpp"
 #include "../util/FileIO.hpp"
-#include "../util/JsonFile.hpp"
 
 namespace abcd {
 
-struct OtpFile : public JsonFile
+struct OtpFile:
+    public JsonObject
 {
-    ABC_JSON_STRING(Key, "TOTP")
+    ABC_JSON_STRING(Key, "TOTP", "!bad")
 };
 
 const char otpFilename[] = "OtpKey.json";
@@ -36,11 +37,9 @@ Lobby::init(const std::string &username)
 
     // Load the OTP key, if possible:
     OtpFile file;
-    const char *base32;
     otpKeyOk_ = !directory_.empty() &&
         file.load(directory_ + otpFilename) &&
-        file.getKey(base32) &&
-        otpKey_.decodeBase32(base32);
+        otpKey_.decodeBase32(file.getKey());
 
     return Status();
 }
