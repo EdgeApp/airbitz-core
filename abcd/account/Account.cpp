@@ -11,6 +11,7 @@
 #include "../util/FileIO.hpp"
 #include "../util/Mutex.hpp"
 #include "../util/Util.hpp"
+#include <sstream>
 
 namespace abcd {
 
@@ -70,25 +71,18 @@ tABC_CC ABC_AccountWalletGetDir(tABC_SyncKeys *pKeys,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szWalletDir = NULL;
-
     // Get the name:
-    ABC_STR_NEW(szWalletDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szWalletDir, "%s/%s", pKeys->szSyncDir, ACCOUNT_WALLET_DIRNAME);
+    std::string out = pKeys->szSyncDir;
+    out += "/" ACCOUNT_WALLET_DIRNAME;
 
     // Create if neccessary:
-    ABC_CHECK_NEW(fileEnsureDir(szWalletDir), pError);
+    ABC_CHECK_NEW(fileEnsureDir(out), pError);
 
     // Output:
     if (pszWalletDir)
-    {
-        *pszWalletDir = szWalletDir;
-        szWalletDir = NULL;
-    }
+        ABC_STRDUP(*pszWalletDir, out.c_str());
 
 exit:
-    ABC_FREE_STR(szWalletDir);
-
     return cc;
 }
 
@@ -225,17 +219,17 @@ tABC_CC ABC_AccountWalletLoad(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
     int e;
 
-    char *szFilename = NULL;
     json_t *pJSON = NULL;
     const char *szSyncKey = NULL;
     const char *szMK = NULL;
     const char *szBPS = NULL;
     DataChunk syncKey, dataKey, bitcoinKey;
+    std::stringstream filename;
+    filename << pKeys->szSyncDir << "/Wallets/" << szUUID << ".json";
 
     // Load and decrypt:
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, ACCOUNT_WALLET_FILENAME, pKeys->szSyncDir, szUUID);
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, pKeys->MK, &pJSON, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(filename.str().c_str(),
+        pKeys->MK, &pJSON, pError));
 
     // Wallet name:
     ABC_STRDUP(pInfo->szUUID, szUUID);
@@ -264,7 +258,6 @@ tABC_CC ABC_AccountWalletLoad(tABC_SyncKeys *pKeys,
 
 exit:
     ABC_AccountWalletInfoFree(pInfo);
-    ABC_FREE_STR(szFilename);
     if (pJSON) json_decref(pJSON);
 
     return cc;
@@ -281,7 +274,8 @@ tABC_CC ABC_AccountWalletSave(tABC_SyncKeys *pKeys,
     AutoCoreLock lock(gCoreMutex);
 
     json_t *pJSON = NULL;
-    char *szFilename = NULL;
+    std::stringstream filename;
+    filename << pKeys->szSyncDir << "/Wallets/" << pInfo->szUUID << ".json";
 
     // JSON-encode everything:
     pJSON = json_pack("{ss, ss, ss, si, sb}",
@@ -295,13 +289,12 @@ tABC_CC ABC_AccountWalletSave(tABC_SyncKeys *pKeys,
     ABC_CHECK_RET(ABC_AccountWalletGetDir(pKeys, NULL, pError));
 
     // Write out:
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, ACCOUNT_WALLET_FILENAME, pKeys->szSyncDir, pInfo->szUUID);
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON, pKeys->MK, ABC_CryptoType_AES256, szFilename, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON,
+        pKeys->MK, ABC_CryptoType_AES256,
+        filename.str().c_str(), pError));
 
 exit:
     if (pJSON) json_decref(pJSON);
-    ABC_FREE_STR(szFilename);
 
     return cc;
 }

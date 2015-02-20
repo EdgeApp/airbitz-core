@@ -355,29 +355,24 @@ Status listWallets(int argc, char *argv[])
         &uuids.data, &uuids.size, &error));
     for (unsigned i = 0; i < uuids.size; ++i)
     {
-        tABC_Error error;
-
         // Print the UUID:
         printf("%s: ", uuids.data[i]);
 
         // Get wallet name filename:
         AutoString szDir;
-        char szFilename[ABC_FILEIO_MAX_PATH_LENGTH];
         ABC_CHECK_OLD(ABC_WalletGetDirName(&szDir.get(), uuids.data[i], &error));
-        snprintf(szFilename, sizeof(szFilename),
-            "%s/sync/WalletName.json", szDir.get());
+        std::string filename = szDir.get();
+        filename += "/sync/WalletName.json";
 
         // Print wallet name:
         AutoU08Buf data;
         AutoAccountWalletInfo info;
         ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, uuids.data[i], &info, &error));
-        if (ABC_CC_Ok == ABC_CryptoDecryptJSONFile(szFilename, info.MK, &data, &error))
-        {
-            fwrite(data.p, data.end - data.p, 1, stdout);
-            printf("\n");
-        }
+        ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(filename.c_str(),
+            info.MK, &data, &error));
+        fwrite(data.p, data.end - data.p, 1, stdout);
+        printf("\n");
     }
-    printf("\n");
 
     return Status();
 }

@@ -31,28 +31,26 @@ tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szFilename = NULL;
     AutoU08Buf data;
-
     *paszCategories = NULL;
     *pCount = 0;
     bool bExists = false;
+    std::string filename = pKeys->szSyncDir;
+    filename += '/';
+    filename += ACCOUNT_CATEGORIES_FILENAME;
 
     // Find the file:
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_CATEGORIES_FILENAME);
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(filename.c_str(), &bExists, pError));
 
     // Load the entries (if any):
     if (bExists)
     {
-        ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, pKeys->MK, &data, pError));
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(filename.c_str(),
+            pKeys->MK, &data, pError));
         ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)data.p, JSON_ACCT_CATEGORIES_FIELD, paszCategories, pCount, pError));
     }
 
 exit:
-    ABC_FREE_STR(szFilename);
-
     return cc;
 }
 
@@ -144,19 +142,20 @@ tABC_CC ABC_AccountCategoriesSave(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
 
     json_t *dataJSON = NULL;
-    char *szFilename = NULL;
+    std::string filename = pKeys->szSyncDir;
+    filename += '/';
+    filename += ACCOUNT_CATEGORIES_FILENAME;
 
     // create the categories JSON
     ABC_CHECK_RET(ABC_UtilCreateArrayJSONObject(aszCategories, count, JSON_ACCT_CATEGORIES_FIELD, &dataJSON, pError));
 
     // write them out
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_CATEGORIES_FILENAME);
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(dataJSON, pKeys->MK, ABC_CryptoType_AES256, szFilename, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(dataJSON,
+        pKeys->MK, ABC_CryptoType_AES256,
+        filename.c_str(), pError));
 
 exit:
     if (dataJSON)       json_decref(dataJSON);
-    ABC_FREE_STR(szFilename);
 
     return cc;
 }

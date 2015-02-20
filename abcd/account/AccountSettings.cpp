@@ -121,22 +121,21 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
     AutoCoreLock lock(gCoreMutex);
 
     tABC_AccountSettings *pSettings = NULL;
-    char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
     bool bExists = false;
+    std::string filename = pKeys->szSyncDir;
+    filename += '/';
+    filename += ACCOUNT_SETTINGS_FILENAME;
 
     ABC_CHECK_NULL(ppSettings);
 
-    // get the settings filename
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_SETTINGS_FILENAME);
-
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(filename.c_str(), &bExists, pError));
     if (true == bExists)
     {
         // load and decrypted the file into a json object
-        ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, pKeys->MK, &pJSON_Root, pError));
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
+            pKeys->MK, &pJSON_Root, pError));
         //ABC_DebugLog("Loaded settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
 
         // allocate the new settings object
@@ -417,7 +416,6 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
 
 exit:
     ABC_AccountSettingsFree(pSettings);
-    ABC_FREE_STR(szFilename);
     if (pJSON_Root) json_decref(pJSON_Root);
 
     return cc;
@@ -441,8 +439,10 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     json_t *pJSON_Denom = NULL;
     json_t *pJSON_SourcesArray = NULL;
     json_t *pJSON_Source = NULL;
-    char *szFilename = NULL;
     int retVal = 0;
+    std::string filename = pKeys->szSyncDir;
+    filename += '/';
+    filename += ACCOUNT_SETTINGS_FILENAME;
 
     ABC_CHECK_NULL(pSettings);
 
@@ -574,13 +574,11 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     retVal = json_object_set(pJSON_Root, JSON_ACCT_EX_RATE_SOURCES_FIELD, pJSON_SourcesArray);
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
-    // get the settings filename
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", pKeys->szSyncDir, ACCOUNT_SETTINGS_FILENAME);
-
     // encrypt and save json
 //    ABC_DebugLog("Saving settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, pKeys->MK, ABC_CryptoType_AES256, szFilename, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root,
+        pKeys->MK, ABC_CryptoType_AES256,
+        filename.c_str(), pError));
 
 
 exit:
@@ -588,7 +586,6 @@ exit:
     if (pJSON_Denom) json_decref(pJSON_Denom);
     if (pJSON_SourcesArray) json_decref(pJSON_SourcesArray);
     if (pJSON_Source) json_decref(pJSON_Source);
-    ABC_FREE_STR(szFilename);
 
     return cc;
 }
