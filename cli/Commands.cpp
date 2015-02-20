@@ -8,9 +8,10 @@
 #include "Commands.hpp"
 #include "../src/LoginShim.hpp"
 #include "../abcd/Account.hpp"
+#include "../abcd/Wallet.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/exchange/Exchange.hpp"
-#include "../abcd/Wallet.hpp"
+#include "../abcd/json/JsonFile.hpp"
 #include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Util.hpp"
@@ -57,10 +58,13 @@ Status accountEncrypt(int argc, char *argv[])
     DataChunk contents;
     ABC_CHECK(fileLoad(file, contents));
 
-    AutoString szEncrypted;
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONString(toU08Buf(contents), pKeys->MK,
-        ABC_CryptoType_AES256, &szEncrypted.get(), &error));
-    printf("%s\n", szEncrypted.get());
+    json_t *encrypted;
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents), pKeys->MK,
+        ABC_CryptoType_AES256, &encrypted, &error));
+
+    std::string str;
+    ABC_CHECK(JsonFile(encrypted).encode(str));
+    std::cout << str << std::endl;
 
     return Status();
 }
@@ -548,10 +552,13 @@ Status walletEncrypt(int argc, char *argv[])
     DataChunk contents;
     ABC_CHECK(fileLoad(argv[3], contents));
 
-    AutoString szEncrypted;
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONString(toU08Buf(contents), info.MK,
-        ABC_CryptoType_AES256, &szEncrypted.get(), &error));
-    printf("%s\n", szEncrypted.get());
+    json_t *encrypted;
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents), info.MK,
+        ABC_CryptoType_AES256, &encrypted, &error));
+
+    std::string str;
+    ABC_CHECK(JsonFile(encrypted).encode(str));
+    std::cout << str << std::endl;
 
     return Status();
 }

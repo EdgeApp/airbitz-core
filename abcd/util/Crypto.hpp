@@ -79,12 +79,6 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
                                 tABC_Error *pError);
 
 // Encryption:
-tABC_CC ABC_CryptoEncryptJSONString(const tABC_U08Buf Data,
-                                    const tABC_U08Buf Key,
-                                    tABC_CryptoType   cryptoType,
-                                    char              **pszEncDataJSON,
-                                    tABC_Error        *pError);
-
 tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
                                     const tABC_U08Buf Key,
                                     tABC_CryptoType   cryptoType,
@@ -102,11 +96,6 @@ tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
                                         tABC_CryptoType cryptoType,
                                         const char *szFilename,
                                         tABC_Error  *pError);
-
-tABC_CC ABC_CryptoDecryptJSONString(const char        *szEncDataJSON,
-                                    const tABC_U08Buf Key,
-                                    tABC_U08Buf       *pData,
-                                    tABC_Error        *pError);
 
 tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
                                     const tABC_U08Buf Key,
