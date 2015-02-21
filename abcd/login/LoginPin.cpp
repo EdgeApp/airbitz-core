@@ -112,7 +112,7 @@ tABC_CC ABC_LoginPinExists(const char *szUserName,
     std::string directory;
 
     ABC_CHECK_NEW(Lobby::fixUsername(fixed, szUserName), pError);
-    directory = loginDirFind(szUserName);
+    directory = loginDirFind(fixed.c_str());
 
     *pbExists = false;
     if (ABC_CC_Ok == ABC_LoginPinLocalLoad(&pLocal, directory, &error))
