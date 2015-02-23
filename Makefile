@@ -70,7 +70,7 @@ $(WORK_DIR)/%.o: %.cpp $(generated_headers)
 	@mkdir -p $(dir $@)
 	$(RUN) $(CXX) -c -MMD $(CXXFLAGS) -o $@ $<
 
-include $(shell find $(WORK_DIR) -name *.d)
+include $(wildcard $(WORK_DIR)/*/*.d $(WORK_DIR)/*/*/*.d)
 %.h: ;
 %.hpp: ;
 
