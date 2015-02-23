@@ -46,8 +46,6 @@
 
 namespace abcd {
 
-tABC_CC ABC_BridgeInitialize(tABC_Error *pError);
-
 tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
                             tABC_U08Buf *pOut,
                             bool *pbCompressed,
@@ -157,8 +155,6 @@ tABC_CC ABC_BridgeFilterTransactions(const char *szWalletUUID,
                                      tABC_TxInfo **aTransactions,
                                      unsigned int *pCount,
                                      tABC_Error *pError);
-
-bool ABC_BridgeIsTestNet();
 
 } // namespace abcd
 

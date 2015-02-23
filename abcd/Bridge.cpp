@@ -37,6 +37,7 @@
 #include "util/URL.hpp"
 #include "util/Util.hpp"
 #include "bitcoin/picker.hpp"
+#include "bitcoin/Testnet.hpp"
 #include <curl/curl.h>
 #include <wallet/wallet.hpp>
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
@@ -84,8 +85,6 @@ struct WatcherInfo
     tABC_WalletID wallet;
 };
 
-static uint8_t pubkey_version = 0x00;
-static uint8_t script_version = 0x05;
 typedef std::string WalletUUID;
 static std::map<WalletUUID, WatcherInfo*> watchers_;
 
@@ -111,22 +110,6 @@ static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx);
 static tABC_CC     ABC_BridgeChainPostTx(const bc::transaction_type& tx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeBlockhainPostTx(const bc::transaction_type& tx, tABC_Error *pError);
 static size_t      ABC_BridgeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
-
-/**
- * Prepares the event subsystem for operation.
- */
-tABC_CC ABC_BridgeInitialize(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    if (ABC_BridgeIsTestNet())
-    {
-        pubkey_version = 0x6f;
-        script_version = 0xc4;
-    }
-
-    return cc;
-}
 
 bool check_minikey(const std::string& minikey)
 {
@@ -198,7 +181,7 @@ tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
 
     // Get address:
     ec_addr = bc::secret_to_public_key(secret, bCompressed);
-    address.set(pubkey_version, bc::bitcoin_short_hash(ec_addr));
+    address.set(pubkeyVersion(), bc::bitcoin_short_hash(ec_addr));
     ABC_STRDUP(szAddress, address.encoded().c_str());
 
     // Write out:
@@ -313,8 +296,8 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
         ABC_STRDUP(pInfo->szMessage, result.message.get().c_str());
 
     // Reject altcoin addresses:
-    if (result.address.get().version() != pubkey_version &&
-        result.address.get().version() != script_version)
+    if (result.address.get().version() != pubkeyVersion() &&
+        result.address.get().version() != scriptVersion())
     {
         ABC_RET_ERROR(ABC_CC_ParseError, "Wrong network URI");
     }
@@ -534,7 +517,7 @@ tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
         ABC_CC_Error, "Bad key size");
     std::copy(key.p, key.end, ec_key.data());
     ec_addr = bc::secret_to_public_key(ec_key, compressed);
-    address.set(pubkey_version, bc::bitcoin_short_hash(ec_addr));
+    address.set(pubkeyVersion(), bc::bitcoin_short_hash(ec_addr));
 
     // Start the sweep:
     sweep.address = address;
@@ -645,7 +628,7 @@ tABC_CC ABC_BridgeWatcherConnect(const char *szWalletUUID, tABC_Error *pError)
     watcherInfo = row->second;
 
     // Pick a server:
-    if (ABC_BridgeIsTestNet())
+    if (isTestnet())
     {
         szServer = TESTNET_OBELISK;
     }
@@ -925,7 +908,7 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     // Send to chain
     cc = ABC_BridgeChainPostTx(utx->tx, pError);
     // If we are not on testnet and chain failed try block chain as well
-    if (!ABC_BridgeIsTestNet())
+    if (!isTestnet())
     {
         if (cc == ABC_CC_Ok)
             ABC_BridgeBlockhainPostTx(utx->tx, pError);
@@ -1250,14 +1233,6 @@ exit:
     return cc;
 }
 
-bool
-ABC_BridgeIsTestNet()
-{
-    bc::payment_address foo;
-    bc::set_public_key_hash(foo, bc::null_short_hash);
-    return foo.version() != 0;
-}
-
 static
 tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
                           PendingSweep& sweep,
@@ -1345,7 +1320,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
 
     // Send:
     cc = ABC_BridgeChainPostTx(utx.tx, pError);
-    if (!ABC_BridgeIsTestNet())
+    if (!isTestnet())
     {
         if (cc == ABC_CC_Ok)
             ABC_BridgeBlockhainPostTx(utx.tx, pError);
@@ -1583,11 +1558,11 @@ void ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amoun
 {
     bc::transaction_output_type output;
     output.value = amount;
-    if (addr.version() == pubkey_version)
+    if (addr.version() == pubkeyVersion())
     {
         output.script = ABC_BridgeCreatePubKeyHash(addr.hash());
     }
-    else if (addr.version() == script_version)
+    else if (addr.version() == scriptVersion())
     {
         output.script = ABC_BridgeCreateScriptHash(addr.hash());
     }
@@ -1768,7 +1743,7 @@ tABC_CC ABC_BridgeChainPostTx(const bc::transaction_type& tx, tABC_Error *pError
     std::string encoded(bc::encode_hex(raw_tx));
     std::string pretty(bc::pretty(tx));
 
-    if (ABC_BridgeIsTestNet())
+    if (isTestnet())
     {
         url.append("https://api.chain.com/v1/testnet3/transactions");
     }

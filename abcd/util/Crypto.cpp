@@ -35,6 +35,7 @@
 #include "Json.hpp"
 #include "Util.hpp"
 #include "../Bridge.hpp"
+#include "../bitcoin/Testnet.hpp"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -139,7 +140,7 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
     ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    if (gbIsTestNet)
+    if (isTestnet())
     {
         ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1));
     }
@@ -1343,7 +1344,7 @@ tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
     ABC_CHECK_NULL(ppSNRP);
 
     // get the server salt
-    if (gbIsTestNet)
+    if (isTestnet())
     {
         ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1));
     }
