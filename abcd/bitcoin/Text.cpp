@@ -12,40 +12,28 @@
 
 namespace abcd {
 
-#define MAX_BTC_STRING_SIZE 20
-
 /**
  * Attempts to find the bitcoin address for a private key.
  * @return false for failure.
  */
-static
-bool ABC_BridgeDecodeWIFAddress(bc::payment_address& address, std::string wif)
+static Status
+wifToAddress(bc::payment_address &result, const std::string &wif)
 {
-    tABC_Error error;
     AutoU08Buf secret;
+    AutoString szAddress;
     bool bCompressed;
-    char *szAddress = NULL;
-
-    // If the text starts with "hbitz://", get rid of that:
-    if (0 == wif.find("hbits://"))
-        wif.erase(0, 8);
-
-    // Try to parse this as a key:
-    if (ABC_CC_Ok != ABC_BridgeDecodeWIF(wif.c_str(),
-        &secret, &bCompressed, &szAddress, &error))
-        return false;
+    ABC_CHECK_OLD(ABC_BridgeDecodeWIF(wif.c_str(),
+        &secret, &bCompressed, &szAddress.get(), &error));
 
     // Output:
-    if (!address.set_encoded(szAddress))
-    {
-        ABC_FREE_STR(szAddress);
-        return false;
-    }
-    ABC_FREE_STR(szAddress);
-    return true;
+    if (!result.set_encoded(szAddress.get()))
+        return ABC_ERROR(ABC_CC_ParseError, "Not a private key");
+
+    return Status();
 }
 
-bool check_minikey(const std::string& minikey)
+static bool
+minikeyCheck(const std::string &minikey)
 {
     // Legacy minikeys are 22 chars long
     if (minikey.size() != 22 && minikey.size() != 30)
@@ -53,25 +41,41 @@ bool check_minikey(const std::string& minikey)
     return bc::sha256_hash(bc::to_data_chunk(minikey + "?"))[0] == 0x00;
 }
 
-bool check_hiddenbitz(const std::string& minikey)
+/**
+ * Decodes an `hbits` private key.
+ *
+ * This format is very similar to the minikey format, but with some changes:
+ * - The checksum character is `!` instead of `?`.
+ * - The final public key is compressed.
+ * - The private key must be XOR'ed with a magic constant.
+ *
+ * Test vector:
+ * hbits://S23c2fe8dbd330539a5fbab16a7602
+ * Address: 1Lbd7DZWdz7fMR1sHHnWfnfQeAFoT52ZAi
+ */
+static Status
+hbitsDecode(bc::ec_secret &result, const std::string &hbits)
 {
-    // Legacy minikeys are 22 chars long
-    if (minikey.size() != 22 && minikey.size() != 30)
-        return false;
-    return bc::sha256_hash(bc::to_data_chunk(minikey + "!"))[0] == 0x00;
-}
+    // If the text starts with "hbitz://", get rid of that:
+    std::string trimmed = hbits;
+    if (0 == trimmed.find("hbits://"))
+        trimmed.erase(0, 8);
 
-bc::ec_secret hiddenbitz_to_secret(const std::string& minikey)
-{
-    if (!check_hiddenbitz(minikey))
-        return bc::ec_secret();
-    auto secret = bc::sha256_hash(bc::to_data_chunk(minikey));
+    // Sanity checks:
+    if (trimmed.size() != 22 && trimmed.size() != 30)
+        return ABC_ERROR(ABC_CC_ParseError, "Wrong hbits length");
+    if (0x00 != bc::sha256_hash(bc::to_data_chunk(trimmed + "!"))[0])
+        return ABC_ERROR(ABC_CC_ParseError, "Wrong hbits checksum");
+
+    // Extract the secret:
+    result = bc::sha256_hash(bc::to_data_chunk(trimmed));
+
+    // XOR with our magic number:
     auto mix = bc::decode_hex(HIDDENBITZ_KEY);
+    for (size_t i = 0; i < mix.size() && i < result.size(); ++i)
+        result[i] ^= mix[i];
 
-    for (size_t i = 0; i < mix.size() && i < secret.size(); ++i)
-        secret[i] ^= mix[i];
-
-    return secret;
+    return Status();
 }
 
 /**
@@ -92,20 +96,21 @@ tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
     bool bCompressed = true;
     char *szAddress = NULL;
 
+    std::string wif = szWIF;
+
     // Parse as WIF:
-    secret = libwallet::wif_to_secret(szWIF);
+    secret = libwallet::wif_to_secret(wif);
     if (secret != bc::null_hash)
     {
-        bCompressed = libwallet::is_wif_compressed(szWIF);
+        bCompressed = libwallet::is_wif_compressed(wif);
     }
-    else if (check_minikey(szWIF))
+    else if (minikeyCheck(wif))
     {
-        secret = libwallet::minikey_to_secret(szWIF);
+        secret = libwallet::minikey_to_secret(wif);
         bCompressed = false;
     }
-    else if (check_hiddenbitz(szWIF))
+    else if (hbitsDecode(secret, wif))
     {
-        secret = hiddenbitz_to_secret(szWIF);
         bCompressed = true;
     }
     else
@@ -182,7 +187,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
         if (!address.set_encoded(uriString))
         {
             // Try to parse as a private key:
-            if (!ABC_BridgeDecodeWIFAddress(address, uriString))
+            if (!wifToAddress(address, uriString))
             {
                 ABC_RET_ERROR(ABC_CC_ParseError, "Malformed bitcoin URI");
             }
@@ -269,26 +274,21 @@ tABC_CC ABC_BridgeFormatAmount(int64_t amount,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    char *szBuff;
     std::string out;
 
     ABC_CHECK_NULL(pszAmountOut);
 
-    if (bAddSign && (amount < 0))
+    if (amount < 0)
     {
-        amount = llabs(amount);
-        out = libwallet::format_amount(amount, decimalPlaces);
-        ABC_STR_NEW(szBuff, MAX_BTC_STRING_SIZE);
-        snprintf(szBuff, MAX_BTC_STRING_SIZE, "-%s", out.c_str());
-        *pszAmountOut = szBuff;
-
+        out = libwallet::format_amount(-amount, decimalPlaces);
+        if (bAddSign)
+            out.insert(0, 1, '-');
     }
     else
     {
-        amount = llabs(amount);
-        out = libwallet::format_amount((uint64_t) amount, decimalPlaces);
-        ABC_STRDUP(*pszAmountOut, out.c_str());
+        out = libwallet::format_amount(amount, decimalPlaces);
     }
+    ABC_STRDUP(*pszAmountOut, out.c_str());
 
 exit:
     return cc;
