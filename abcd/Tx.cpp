@@ -31,9 +31,10 @@
 
 #include "Tx.hpp"
 #include "Account.hpp"
-#include "exchange/Exchange.hpp"
 #include "Wallet.hpp"
 #include "Bridge.hpp"
+#include "bitcoin/Text.hpp"
+#include "exchange/Exchange.hpp"
 #include "util/Crypto.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"

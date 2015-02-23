@@ -38,6 +38,7 @@
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
 #include "../abcd/bitcoin/Testnet.hpp"
+#include "../abcd/bitcoin/Text.hpp"
 #include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/LoginDir.hpp"

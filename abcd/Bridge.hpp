@@ -46,36 +46,6 @@
 
 namespace abcd {
 
-tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
-                            tABC_U08Buf *pOut,
-                            bool *pbCompressed,
-                            char **pszAddress,
-                            tABC_Error *pError);
-
-tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
-                            tABC_BitcoinURIInfo **ppInfo,
-                            tABC_Error *pError);
-
-void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo);
-
-tABC_CC ABC_BridgeParseAmount(const char *szAmount,
-                              uint64_t *pAmountOut,
-                              unsigned decimalPlaces);
-
-tABC_CC ABC_BridgeFormatAmount(int64_t amount,
-                               char **pszAmountOut,
-                               unsigned decimalPlaces,
-                               bool bAddSign,
-                               tABC_Error *pError);
-
-tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
-                                   tABC_BitcoinURIInfo *pInfo,
-                                   tABC_Error *pError);
-
-tABC_CC ABC_BridgeBase58Encode(tABC_U08Buf Data,
-                               char **pszBase58,
-                               tABC_Error *pError);
-
 tABC_CC ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
                                        tABC_U08Buf PrivateSeed,
                                        int32_t N,
