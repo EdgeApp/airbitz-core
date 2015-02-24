@@ -46,16 +46,6 @@
 
 namespace abcd {
 
-tABC_CC ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
-                                       tABC_U08Buf PrivateSeed,
-                                       int32_t N,
-                                       tABC_Error *pError);
-
-tABC_CC ABC_BridgeGetBitcoinPrivAddress(char **pszPrivAddress,
-                                        tABC_U08Buf PrivateSeed,
-                                        int32_t N,
-                                        tABC_Error *pError);
-
 tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
                            tABC_U08Buf key,
                            bool compressed,

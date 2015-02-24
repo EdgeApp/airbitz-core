@@ -473,11 +473,15 @@ Status searchBitcoinSeed(int argc, char *argv[])
     tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
 
+    libbitcoin::data_chunk seed(data.p, data.end);
+    libwallet::hd_private_key m(seed);
+    libwallet::hd_private_key m0 = m.generate_private_key(0);
+    libwallet::hd_private_key m00 = m0.generate_private_key(0);
+
     for (long i = start, c = 0; i <= end; i++, ++c)
     {
-        AutoString szPubAddress;
-        ABC_BridgeGetBitcoinPubAddress(&szPubAddress.get(), data, (int32_t) i, NULL);
-        if (strncmp(szPubAddress.get(), szMatchAddr, strlen(szMatchAddr)) == 0)
+        libwallet::hd_private_key m00n = m00.generate_private_key(i);
+        if (m00n.address().encoded() == szMatchAddr)
         {
             printf("Found %s at %ld\n", szMatchAddr, i);
             break;

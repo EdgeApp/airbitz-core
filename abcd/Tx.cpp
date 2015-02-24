@@ -46,6 +46,7 @@
 #include <time.h>
 #include <string.h>
 #include <qrencode.h>
+#include <wallet/wallet.hpp>
 #include <unordered_map>
 #include <string>
 
@@ -189,6 +190,67 @@ static tABC_CC  ABC_TxWalletOwnsAddress(tABC_WalletID self, const char *szAddres
 static tABC_CC  ABC_TxGetPrivAddresses(tABC_WalletID self, tABC_U08Buf seed, char ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxTrashAddresses(tABC_WalletID self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
 static tABC_CC  ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
+
+/**
+ * Calculates a public address for the HD wallet main external chain.
+ * @param pszPubAddress set to the newly-generated address, or set to NULL if
+ * there is a math error. If that happens, add 1 to N and try again.
+ * @param PrivateSeed any amount of random data to seed the generator
+ * @param N the index of the key to generate
+ */
+static tABC_CC
+ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
+                                       tABC_U08Buf PrivateSeed,
+                                       int32_t N,
+                                       tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    libbitcoin::data_chunk seed(PrivateSeed.p, PrivateSeed.end);
+    libwallet::hd_private_key m(seed);
+    libwallet::hd_private_key m0 = m.generate_private_key(0);
+    libwallet::hd_private_key m00 = m0.generate_private_key(0);
+    libwallet::hd_private_key m00n = m00.generate_private_key(N);
+    if (m00n.valid())
+    {
+        std::string out = m00n.address().encoded();
+        ABC_STRDUP(*pszPubAddress, out.c_str());
+    }
+    else
+    {
+        *pszPubAddress = nullptr;
+    }
+
+exit:
+    return cc;
+}
+
+static tABC_CC
+ABC_BridgeGetBitcoinPrivAddress(char **pszPrivAddress,
+                                        tABC_U08Buf PrivateSeed,
+                                        int32_t N,
+                                        tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    libbitcoin::data_chunk seed(PrivateSeed.p, PrivateSeed.end);
+    libwallet::hd_private_key m(seed);
+    libwallet::hd_private_key m0 = m.generate_private_key(0);
+    libwallet::hd_private_key m00 = m0.generate_private_key(0);
+    libwallet::hd_private_key m00n = m00.generate_private_key(N);
+    if (m00n.valid())
+    {
+        std::string out = bc::encode_hex(m00n.private_key());
+        ABC_STRDUP(*pszPrivAddress, out.c_str());
+    }
+    else
+    {
+        *pszPrivAddress = nullptr;
+    }
+
+exit:
+    return cc;
+}
 
 /**
  * Initializes the
