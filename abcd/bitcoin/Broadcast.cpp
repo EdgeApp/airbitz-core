@@ -10,7 +10,7 @@
 #include "../config.h"
 #include "../util/Crypto.hpp"
 #include "../util/Json.hpp"
-#include "../util/Url.hpp"
+#include "../util/URL.hpp"
 #include "../util/Util.hpp"
 #include <curl/curl.h>
 
