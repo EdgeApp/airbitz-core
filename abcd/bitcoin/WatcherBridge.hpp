@@ -30,19 +30,20 @@
  */
 /**
  * @file
- * AirBitz C++ bridge function prototypes.
+ * Caching and utility wrapper layer around the bitcoin `watcher` class.
  *
- * These were originally used to bridge between C and C++,
- * but now that the entire codebase is C++,
- * this layer should eventually go away.
+ * There was a time when `watcher` was part of libbitcoin-watcher,
+ * and the AirBitz software was plain C.
+ * This module used to bridge the gap between those two worlds,
+ * but now it is less useful.
  */
 
 #ifndef ABC_Bridge_h
 #define ABC_Bridge_h
 
-#include "../src/ABC.h"
-#include "Tx.hpp"
-#include "util/U08Buf.hpp"
+#include "../Tx.hpp"
+#include "../util/U08Buf.hpp"
+#include "../../src/ABC.h"
 
 namespace abcd {
 

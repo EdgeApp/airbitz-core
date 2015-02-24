@@ -13,7 +13,7 @@
 #include <map>
 
 // For debug upload:
-#include "../Bridge.hpp"
+#include "../bitcoin/WatcherBridge.hpp"
 #include "../util/Crypto.hpp"
 #include "../util/FileIO.hpp"
 

@@ -34,7 +34,6 @@
 #include "FileIO.hpp"
 #include "Json.hpp"
 #include "Util.hpp"
-#include "../Bridge.hpp"
 #include "../bitcoin/Testnet.hpp"
 #include <stdio.h>
 #include <string.h>

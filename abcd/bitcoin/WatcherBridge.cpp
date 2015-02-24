@@ -29,12 +29,12 @@
  *  either expressed or implied, of the Airbitz Project.
  */
 
-#include "Bridge.hpp"
-#include "General.hpp"
-#include "util/Util.hpp"
-#include "bitcoin/Broadcast.hpp"
-#include "bitcoin/picker.hpp"
-#include "bitcoin/Testnet.hpp"
+#include "WatcherBridge.hpp"
+#include "Broadcast.hpp"
+#include "picker.hpp"
+#include "Testnet.hpp"
+#include "../General.hpp"
+#include "../util/Util.hpp"
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
 #include <algorithm>
 #include <list>
