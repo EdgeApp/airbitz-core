@@ -6,6 +6,7 @@
  */
 
 #include "LoginDir.hpp"
+#include "../bitcoin/Testnet.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/JsonFile.hpp"
 #include "../util/Status.hpp"
@@ -44,7 +45,7 @@ accountsDirectory()
     if (root.back() != '/')
         root += '/';
 
-    if (gbIsTestNet)
+    if (isTestnet())
         return root + ACCOUNT_DIR "-testnet/";
     else
         return root + ACCOUNT_DIR "/";

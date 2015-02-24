@@ -33,10 +33,12 @@
 #include "LoginShim.hpp"
 #include "../abcd/Account.hpp"
 #include "../abcd/General.hpp"
-#include "../abcd/Bridge.hpp"
 #include "../abcd/Export.hpp"
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
+#include "../abcd/bitcoin/Testnet.hpp"
+#include "../abcd/bitcoin/Text.hpp"
+#include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/LoginDir.hpp"
@@ -64,7 +66,6 @@
 using namespace abcd;
 
 static bool gbInitialized = false;
-bool gbIsTestNet = false;
 
 static tABC_Currency gaCurrencies[] = {
     { "AUD", 36, "Australian Dollar", " Australia, Christmas Island (CX), Cocos (Keeling) Islands (CC), Heard and McDonald Islands (HM), Kiribati (KI), Nauru (NR), Norfolk Island (NF), Tuvalu (TV), and Australian Antarctic Territory" },
@@ -118,9 +119,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // override the alloc and free of janson so we can have a secure method
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
-    // initialize bridge
-    ABC_CHECK_RET(ABC_BridgeInitialize(pError));
-
     // initialize URL system
     ABC_CHECK_RET(ABC_URLInitialize(szCaCertPath, pError));
 
@@ -142,7 +140,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_RET(ABC_CryptoSetRandomSeed(Seed, pError));
 
     gbInitialized = true;
-    gbIsTestNet = ABC_BridgeIsTestNet();
 
 exit:
     return cc;
@@ -2974,7 +2971,7 @@ ABC_IsTestNet(bool *pResult, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    *pResult = ABC_BridgeIsTestNet();
+    *pResult = isTestnet();
 
     return cc;
 }
@@ -2987,7 +2984,7 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     std::string version = ABC_VERSION;
-    version += ABC_BridgeIsTestNet() ? "-testnet" : "-mainnet";
+    version += isTestnet() ? "-testnet" : "-mainnet";
 
     ABC_STRDUP(*szVersion, version.c_str());
 
