@@ -9,6 +9,18 @@
 
 namespace abcd {
 
+std::string
+toString(DataSlice slice)
+{
+    // Due to a bug, lots of AirBitz encrypted blobs end with a null byte.
+    // Get rid of those:
+    auto size = slice.size();
+    if (0 < size && !slice.data()[size - 1])
+        size--;
+
+    return std::string(reinterpret_cast<const char *>(slice.data()), size);
+}
+
 DataChunk
 buildData(std::initializer_list<DataSlice> slices)
 {
