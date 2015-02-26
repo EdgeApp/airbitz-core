@@ -8,7 +8,25 @@
 #include "../abcd/json/JsonObject.hpp"
 #include "../minilibs/catch/catch.hpp"
 
-TEST_CASE("Json file classes", "[util][json]")
+TEST_CASE("JsonFile copy constructor", "[util][json]")
+{
+    abcd::JsonFile a, b;
+    REQUIRE(a.decode("{\"x\": 1}"));
+    REQUIRE(b.decode("[2]"));
+    REQUIRE(json_is_object(a.root()));
+    REQUIRE(json_is_array(b.root()));
+
+    abcd::JsonFile c(a);
+    REQUIRE(json_is_object(c.root()));
+
+    c = b;
+    REQUIRE(json_is_array(c.root()));
+
+    REQUIRE(json_is_object(a.root()));
+    REQUIRE(json_is_array(b.root()));
+}
+
+TEST_CASE("JsonObject manipulation", "[util][json]")
 {
     struct TestFile:
         public abcd::JsonObject
