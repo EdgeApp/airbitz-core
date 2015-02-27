@@ -216,6 +216,7 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     time_t timeResult;
     clock_t clockVal;
     pid_t pid;
+    std::string rootDir = getRootDir();
 
     AutoU08Buf NewSeed;
 
@@ -226,11 +227,9 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
 
     // mix in some info on our file system
 #ifndef __ANDROID__
-
-    ABC_CHECK_RET(ABC_FileIOGetRootDir(&szFileIORootDir, pError));
-    ABC_BUF_APPEND_PTR(NewSeed, szFileIORootDir, strlen(szFileIORootDir));
+    ABC_BUF_APPEND_PTR(NewSeed, rootDir.data(), rootDir.size());
     struct statvfs fiData;
-    if ((statvfs(szFileIORootDir, &fiData)) >= 0 )
+    if ((statvfs(rootDir.c_str(), &fiData)) >= 0 )
     {
         ABC_BUF_APPEND_PTR(NewSeed, (unsigned char *)&fiData, sizeof(struct statvfs));
 

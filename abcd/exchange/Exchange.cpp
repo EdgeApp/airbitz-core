@@ -40,7 +40,7 @@ namespace abcd {
 
 #define SATOSHI_PER_BITCOIN                     100000000
 
-#define EXCHANGE_RATE_DIRECTORY "Exchanges"
+#define EXCHANGE_RATE_DIRECTORY "Exchanges/"
 
 #define ABC_BITSTAMP "Bitstamp"
 #define ABC_COINBASE "Coinbase"
@@ -191,29 +191,24 @@ tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC_Error 
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    char *szRoot     = NULL;
-    char *szRateRoot = NULL;
-    char *szFilename = NULL;
-    bool bExists     = false;
+
+    std::string rateDir = getRootDir() + EXCHANGE_RATE_DIRECTORY;
+    std::stringstream filename;
+    bool bExists = false;
 
     ABC_CHECK_NULL(pszFilename);
     *pszFilename = NULL;
 
-    ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRoot, pError));
-    ABC_STR_NEW(szRateRoot, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szRateRoot, "%s/%s", szRoot, EXCHANGE_RATE_DIRECTORY);
-    ABC_CHECK_RET(ABC_FileIOFileExists(szRateRoot, &bExists, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(rateDir.c_str(), &bExists, pError));
     if (true != bExists)
     {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szRateRoot, pError));
+        ABC_CHECK_RET(ABC_FileIOCreateDir(rateDir.c_str(), pError));
     }
 
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%d.txt", szRateRoot, currencyNum);
-    *pszFilename = szFilename;
+    filename << rateDir << currencyNum << ".txt";
+    ABC_STRDUP(*pszFilename, filename.str().c_str());
+
 exit:
-    ABC_FREE_STR(szRoot);
-    ABC_FREE_STR(szRateRoot);
     return cc;
 }
 

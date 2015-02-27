@@ -113,6 +113,8 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_NULL(pSeedData);
     ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "The core library has already been initalized");
 
+    setRootDir(szRootDir);
+
     // initialize logging
     ABC_CHECK_RET(ABC_DebugInitialize(szRootDir, pError));
 
@@ -130,11 +132,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
     // initialize sync
     ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
-
-    if (szRootDir)
-    {
-        ABC_CHECK_RET(ABC_FileIOSetRootDir(szRootDir, pError));
-    }
 
     ABC_BUF_DUP_PTR(Seed, pSeedData, seedLength);
     ABC_CHECK_RET(ABC_CryptoSetRandomSeed(Seed, pError));

@@ -503,19 +503,12 @@ tABC_CC ABC_WalletGetRootDirName(char **pszRootDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szFileIORootDir = NULL;
+    std::string out = getRootDir() + WALLET_DIR;
 
     ABC_CHECK_NULL(pszRootDir);
-
-    ABC_CHECK_RET(ABC_FileIOGetRootDir(&szFileIORootDir, pError));
-
-    // create the wallet directory string
-    ABC_STR_NEW(*pszRootDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszRootDir, "%s/%s", szFileIORootDir, WALLET_DIR);
+    ABC_STRDUP(*pszRootDir, out.c_str());
 
 exit:
-    ABC_FREE_STR(szFileIORootDir);
-
     return cc;
 }
 

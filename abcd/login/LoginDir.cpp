@@ -35,21 +35,10 @@ struct UsernameFile:
 static std::string
 accountsDirectory()
 {
-    std::string root;
-    AutoString szRoot;
-    tABC_Error error;
-    if (ABC_CC_Ok == ABC_FileIOGetRootDir(&szRoot.get(), &error))
-        root = szRoot;
-    else
-        root = '.';
-
-    if (root.back() != '/')
-        root += '/';
-
     if (isTestnet())
-        return root + ACCOUNT_DIR "-testnet/";
+        return getRootDir() + ACCOUNT_DIR "-testnet/";
     else
-        return root + ACCOUNT_DIR "/";
+        return getRootDir() + ACCOUNT_DIR "/";
 }
 
 /**

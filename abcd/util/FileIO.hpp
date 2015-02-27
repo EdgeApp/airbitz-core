@@ -69,11 +69,18 @@ typedef struct sABC_FileIOFileList
     tABC_FileIOFileInfo **apFiles;
 } tABC_FileIOList;
 
-tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
-                             tABC_Error *pError);
+/**
+ * Sets the core root directory.
+ */
+void
+setRootDir(const std::string &rootDir);
 
-tABC_CC ABC_FileIOGetRootDir(char **pszRootDir,
-                             tABC_Error *pError);
+/**
+ * Obtains the core root directory.
+ * The returned directory always ends with a `/`.
+ */
+const std::string &
+getRootDir();
 
 tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
                                  const char *szDir,
