@@ -69,8 +69,6 @@ typedef struct sABC_TxSendInfo
 } tABC_TxSendInfo;
 
 
-tABC_CC ABC_TxInitialize(tABC_Error *pError);
-
 tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
                          const tABC_TxDetails *pOldDetails,
                          tABC_Error *pError);

@@ -254,15 +254,6 @@ exit:
 }
 
 /**
- * Initializes the
- */
-tABC_CC ABC_TxInitialize(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    return cc;
-}
-
-/**
  * Allocate a send info struct and populate it with the data given
  */
 tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
