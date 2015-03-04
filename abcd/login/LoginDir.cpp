@@ -332,6 +332,9 @@ tABC_CC ABC_LoginDirMakeSyncDir(const std::string &directory,
     {
         int dirty = 0;
         std::string tempName = directory + "tmp";
+        ABC_CHECK_RET(ABC_FileIOFileExists(tempName.c_str(), &exists, pError));
+        if (exists)
+            ABC_CHECK_RET(ABC_FileIODeleteRecursive(tempName.c_str(), pError));
         ABC_CHECK_RET(ABC_FileIOCreateDir(tempName.c_str(), pError));
         ABC_CHECK_RET(ABC_SyncMakeRepo(tempName.c_str(), pError));
         ABC_CHECK_RET(ABC_SyncRepo(tempName.c_str(), szSyncKey, &dirty, pError));
