@@ -20,6 +20,14 @@
 
 using namespace abcd;
 
+Status accountAvailable(int argc, char *argv[])
+{
+    if (argc != 1)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... account-available <user>");
+    ABC_CHECK_OLD(ABC_AcountAvailable(argv[0], &error));
+    return Status();
+}
+
 Status accountDecrypt(int argc, char *argv[])
 {
     if (argc != 3)

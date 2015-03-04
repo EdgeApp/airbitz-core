@@ -42,6 +42,7 @@ static Status run(int argc, char *argv[])
     std::string command = argv[2];
     ABC_CHECK(
         // Command.cpp:
+        command == "account-available"  ? accountAvailable(argc-3, argv+3) :
         command == "account-decrypt"    ? accountDecrypt(argc-3, argv+3) :
         command == "account-encrypt"    ? accountEncrypt(argc-3, argv+3) :
         command == "add-category"       ? addCategory(argc-3, argv+3) :

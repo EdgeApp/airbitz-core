@@ -11,6 +11,7 @@
 #include "../src/ABC.h"
 #include "../abcd/util/Status.hpp"
 
+abcd::Status accountAvailable(int argc, char *argv[]);
 abcd::Status accountDecrypt(int argc, char *argv[]);
 abcd::Status accountEncrypt(int argc, char *argv[]);
 abcd::Status addCategory(int argc, char *argv[]);

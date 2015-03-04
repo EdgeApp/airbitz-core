@@ -7,6 +7,7 @@
 
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
+#include "LoginServer.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/FileIO.hpp"
 
@@ -70,6 +71,13 @@ Lobby::otpKeyRemove()
         ABC_CHECK_OLD(ABC_FileIODeleteFile(filename.c_str(), &error));
     }
     otpKeyOk_ = false;
+    return Status();
+}
+
+Status
+Lobby::available()
+{
+    ABC_CHECK_OLD(ABC_LoginServerAvailable(toU08Buf(authId()), &error));
     return Status();
 }
 

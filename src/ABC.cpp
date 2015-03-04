@@ -196,6 +196,29 @@ exit:
 }
 
 /**
+ * Returns success if the requested username is available on the server.
+ */
+tABC_CC ABC_AcountAvailable(const char *szUserName,
+                            tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        ABC_CHECK_NEW(gLobbyCache->available(), pError);
+    }
+
+exit:
+    return cc;
+}
+
+/**
  * Create a new account.
  *
  * This function kicks off a thread to create a new account. The callback will be called when it has finished.

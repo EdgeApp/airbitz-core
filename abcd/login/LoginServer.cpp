@@ -7,6 +7,7 @@
 
 #include "LoginServer.hpp"
 #include "ServerDefs.hpp"
+#include "../json/JsonObject.hpp"
 #include "../util/Json.hpp"
 #include "../util/URL.hpp"
 #include "../util/Util.hpp"
@@ -29,6 +30,11 @@ namespace abcd {
 #define JSON_ACCT_PIN_PACKAGE                   "pin_package"
 
 #define DATETIME_LENGTH 20
+
+struct AccountAvailableJson: public JsonObject
+{
+    ABC_JSON_STRING(L1, "l1", nullptr)
+};
 
 static std::string gOtpResetAuth;
 
@@ -170,6 +176,43 @@ exit:
     ABC_FREE_STR(szL1_Base64);
     ABC_FREE_STR(szLP1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
+
+    return cc;
+}
+
+/**
+ * Queries the server to determine if a username is available.
+ */
+tABC_CC ABC_LoginServerAvailable(tABC_U08Buf L1,
+                                 tABC_Error *pError)
+{
+
+    tABC_CC cc = ABC_CC_Ok;
+
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_ACCOUNT_AVAILABLE;
+    std::string get;
+    AccountAvailableJson json;
+    char *szL1_Base64 = NULL;
+    char *szResults = NULL;
+
+    ABC_CHECK_NULL_BUF(L1);
+
+    // create the json
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
+    ABC_CHECK_NEW(json.setL1(szL1_Base64), pError);
+    ABC_CHECK_NEW(json.encode(get), pError);
+    ABC_DebugLog("Server URL: %s, Data: %.50s", url.c_str(), get.c_str());
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), get.c_str(), &szResults, pError));
+    ABC_DebugLog("Server results: %.50s", szResults);
+
+    // decode the result
+    ABC_CHECK_RET(checkResults(szResults, NULL, pError));
+
+exit:
+    ABC_FREE_STR(szL1_Base64);
+    ABC_FREE_STR(szResults);
 
     return cc;
 }
