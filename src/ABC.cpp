@@ -250,6 +250,32 @@ exit:
 }
 
 /**
+ * Deletes an account off the local filesystem.
+ */
+tABC_CC ABC_AccountDelete(const char *szUserName,
+                          tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    std::string username;
+    std::string directory;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_NEW(Lobby::fixUsername(username, szUserName), pError);
+    directory = loginDirFind(username);
+    ABC_CHECK_ASSERT(!directory.empty(), ABC_CC_AccountDoesNotExist, "Account not found on disk");
+    ABC_CHECK_RET(ABC_FileIODeleteRecursive(directory.c_str(), pError));
+
+exit:
+    return cc;
+}
+
+/**
  * Set the recovery questions for an account
  *
  * This function kicks off a thread to set the recovery questions for an account.
