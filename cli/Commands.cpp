@@ -24,7 +24,7 @@ Status accountAvailable(int argc, char *argv[])
 {
     if (argc != 1)
         return ABC_ERROR(ABC_CC_Error, "usage: ... account-available <user>");
-    ABC_CHECK_OLD(ABC_AcountAvailable(argv[0], &error));
+    ABC_CHECK_OLD(ABC_AccountAvailable(argv[0], &error));
     return Status();
 }
 

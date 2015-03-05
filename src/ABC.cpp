@@ -198,7 +198,7 @@ exit:
 /**
  * Returns success if the requested username is available on the server.
  */
-tABC_CC ABC_AcountAvailable(const char *szUserName,
+tABC_CC ABC_AccountAvailable(const char *szUserName,
                             tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);

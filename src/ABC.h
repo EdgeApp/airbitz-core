@@ -644,7 +644,7 @@ tABC_CC ABC_SignIn(const char *szUserName,
                    const char *szPassword,
                    tABC_Error *pError);
 
-tABC_CC ABC_AcountAvailable(const char *szUserName,
+tABC_CC ABC_AccountAvailable(const char *szUserName,
                             tABC_Error *pError);
 
 tABC_CC ABC_CreateAccount(const char *szUserName,
