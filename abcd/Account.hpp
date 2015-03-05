@@ -110,7 +110,7 @@ tABC_CC ABC_AccountWalletSave(tABC_SyncKeys *pKeys,
                               tABC_Error *pError);
 
 tABC_CC ABC_AccountWalletReorder(tABC_SyncKeys *pKeys,
-                                 char *szUUIDs,
+                                 const char *szUUIDs,
                                  tABC_Error *pError);
 
 struct AutoAccountWalletInfo:

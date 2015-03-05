@@ -41,6 +41,7 @@ namespace abcd {
 #define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api/v1"
 #define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
 #define ABC_SERVER_ACCOUNT_ACTIVATE         "account/activate"
+#define ABC_SERVER_ACCOUNT_AVAILABLE        "account/available"
 #define ABC_SERVER_CHANGE_PASSWORD_PATH     "account/password/update"
 #define ABC_SERVER_GET_CARE_PACKAGE_PATH    "account/carepackage/get"
 #define ABC_SERVER_LOGIN_PACK_GET_PATH      "account/loginpackage/get"

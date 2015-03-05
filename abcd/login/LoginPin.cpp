@@ -264,10 +264,12 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     ABC_CHECK_NULL(pLocal);
     szLocal = ABC_UtilStringFromJSONObject(pLocal, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
     ABC_CHECK_NULL(szLocal);
-    ABC_CHECK_RET(ABC_LoginDirFileSave(szLocal, login.lobby().directory(), PIN_FILENAME, pError));
 
     // Set up the server:
     ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(L1, LP1, DID, LPIN1, szEPINK, expires, pError));
+
+    // Save the local file
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szLocal, login.lobby().directory(), PIN_FILENAME, pError));
 
 exit:
     ABC_CarePackageFree(pCarePackage);

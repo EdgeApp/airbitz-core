@@ -8,9 +8,10 @@
 #include "Commands.hpp"
 #include "../src/LoginShim.hpp"
 #include "../abcd/Account.hpp"
-#include "../abcd/Bridge.hpp"
-#include "../abcd/Exchanges.hpp"
 #include "../abcd/Wallet.hpp"
+#include "../abcd/bitcoin/WatcherBridge.hpp"
+#include "../abcd/exchange/Exchange.hpp"
+#include "../abcd/json/JsonFile.hpp"
 #include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Util.hpp"
@@ -19,31 +20,12 @@
 
 using namespace abcd;
 
-/**
- * Reads a file into memory.
- */
-static char *Slurp(const char *szFilename)
+Status accountAvailable(int argc, char *argv[])
 {
-    // Where's the error checking?
-    FILE *f;
-    long l;
-    char *buffer;
-
-    f = fopen(szFilename, "r");
-    fseek(f , 0L , SEEK_END);
-    l = ftell(f);
-    rewind(f);
-
-    buffer = (char *)malloc(l + 1);
-    if (!buffer) {
-        return NULL;
-    }
-    if (fread(buffer, l, 1, f) != 1) {
-        return NULL;
-    }
-
-    fclose(f);
-    return buffer;
+    if (argc != 1)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... account-available <user>");
+    ABC_CHECK_OLD(ABC_AccountAvailable(argv[0], &error));
+    return Status();
 }
 
 Status accountDecrypt(int argc, char *argv[])
@@ -81,17 +63,16 @@ Status accountEncrypt(int argc, char *argv[])
     file += "/";
     file += argv[2];
 
-    AutoString szContents = Slurp(file.c_str());
-    AutoString szEncrypted;
-    if (szContents)
-    {
-        tABC_U08Buf data; // Do not free
-        ABC_BUF_SET_PTR(data, (unsigned char *) szContents.get(), strlen(szContents));
+    DataChunk contents;
+    ABC_CHECK(fileLoad(file, contents));
 
-        ABC_CHECK_OLD(ABC_CryptoEncryptJSONString(data, pKeys->MK,
-            ABC_CryptoType_AES256, &szEncrypted.get(), &error));
-        printf("%s\n", szEncrypted.get());
-    }
+    json_t *encrypted;
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents), pKeys->MK,
+        ABC_CryptoType_AES256, &encrypted, &error));
+
+    std::string str;
+    ABC_CHECK(JsonFile(encrypted).encode(str));
+    std::cout << str << std::endl;
 
     return Status();
 }
@@ -112,9 +93,9 @@ Status changePassword(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... change-password <pw|ra> <user> <pass|ra> <new-pass>");
 
     if (strncmp(argv[0], "pw", 2) == 0)
-        ABC_CHECK_OLD(ABC_ChangePassword(argv[1], argv[2], argv[3], NULL, NULL, NULL, &error));
+        ABC_CHECK_OLD(ABC_ChangePassword(argv[1], argv[2], argv[3], &error));
     else
-        ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(argv[1], argv[2], argv[3], NULL, NULL, NULL, &error));
+        ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(argv[1], argv[2], argv[3], &error));
 
     return Status();
 }
@@ -160,7 +141,8 @@ Status createAccount(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... create-account <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_CreateAccount(argv[0], argv[1], "1234", NULL, NULL, &error));
+    ABC_CHECK_OLD(ABC_CreateAccount(argv[0], argv[1], &error));
+    ABC_CHECK_OLD(ABC_SetPIN(argv[2], argv[3], "1234", &error));
 
     return Status();
 }
@@ -170,9 +152,10 @@ Status createWallet(int argc, char *argv[])
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... create-wallet <user> <pass> <wallet-name>");
 
-    tABC_RequestResults results;
+    AutoString uuid;
     ABC_CHECK_OLD(ABC_CreateWallet(argv[0], argv[1], argv[2],
-        CURRENCY_NUM_USD, 0, NULL, &results, &error));
+        CURRENCY_NUM_USD, &uuid.get(), &error));
+    std::cout << "Created wallet " << uuid.get() << std::endl;
 
     return Status();
 }
@@ -182,7 +165,7 @@ Status dataSync(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... data-sync <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_SignIn(argv[0], argv[1], NULL, NULL, &error));
+    ABC_CHECK_OLD(ABC_SignIn(argv[0], argv[1], &error));
     ABC_CHECK_OLD(ABC_DataSyncAll(argv[0], argv[1], NULL, NULL, &error));
 
     return Status();
@@ -253,18 +236,18 @@ Status getExchangeRate(int argc, char *argv[])
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-exchange-rate <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_USD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_AUD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CAD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CNY, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CUP, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_HKD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_MXN, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_NZD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_PHP, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_GBP, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_USD, NULL, NULL, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_EUR, NULL, NULL, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_USD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_AUD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CAD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CNY, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CUP, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_HKD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_MXN, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_NZD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_PHP, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_GBP, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_USD, &error));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_EUR, &error));
 
     return Status();
 }
@@ -471,11 +454,15 @@ Status searchBitcoinSeed(int argc, char *argv[])
     tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
 
+    libbitcoin::data_chunk seed(data.p, data.end);
+    libwallet::hd_private_key m(seed);
+    libwallet::hd_private_key m0 = m.generate_private_key(0);
+    libwallet::hd_private_key m00 = m0.generate_private_key(0);
+
     for (long i = start, c = 0; i <= end; i++, ++c)
     {
-        AutoString szPubAddress;
-        ABC_BridgeGetBitcoinPubAddress(&szPubAddress.get(), data, (int32_t) i, NULL);
-        if (strncmp(szPubAddress.get(), szMatchAddr, strlen(szMatchAddr)) == 0)
+        libwallet::hd_private_key m00n = m00.generate_private_key(i);
+        if (m00n.address().encoded() == szMatchAddr)
         {
             printf("Found %s at %ld\n", szMatchAddr, i);
             break;
@@ -510,7 +497,7 @@ Status signIn(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... sign-in <user> <pass>");
 
     tABC_Error error;
-    tABC_CC cc = ABC_SignIn(argv[0], argv[1], NULL, NULL, &error);
+    tABC_CC cc = ABC_SignIn(argv[0], argv[1], &error);
     if (ABC_CC_InvalidOTP == cc)
     {
         std::cout << "No OTP token, resetting account 2-factor auth." << std::endl;
@@ -570,17 +557,16 @@ Status walletEncrypt(int argc, char *argv[])
     AutoAccountWalletInfo info;
     ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, argv[2], &info, &error));
 
-    AutoString szContents = Slurp(argv[3]);
-    if (szContents)
-    {
-        tABC_U08Buf data; // Do not free
-        ABC_BUF_SET_PTR(data, (unsigned char *) szContents.get(), strlen(szContents));
+    DataChunk contents;
+    ABC_CHECK(fileLoad(argv[3], contents));
 
-        AutoString szEncrypted;
-        ABC_CHECK_OLD(ABC_CryptoEncryptJSONString(data, info.MK,
-            ABC_CryptoType_AES256, &szEncrypted.get(), &error));
-        printf("%s\n", szEncrypted.get());
-    }
+    json_t *encrypted;
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents), info.MK,
+        ABC_CryptoType_AES256, &encrypted, &error));
+
+    std::string str;
+    ABC_CHECK(JsonFile(encrypted).encode(str));
+    std::cout << str << std::endl;
 
     return Status();
 }

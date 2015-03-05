@@ -30,11 +30,13 @@
  */
 
 #include "Crypto.hpp"
+#include "Data.hpp"
 #include "Debug.hpp"
 #include "FileIO.hpp"
 #include "Json.hpp"
 #include "Util.hpp"
-#include "../Bridge.hpp"
+#include "../bitcoin/Testnet.hpp"
+#include "../json/JsonFile.hpp"
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -139,7 +141,7 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
     ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    if (gbIsTestNet)
+    if (isTestnet())
     {
         ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1));
     }
@@ -214,6 +216,7 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     time_t timeResult;
     clock_t clockVal;
     pid_t pid;
+    std::string rootDir = getRootDir();
 
     AutoU08Buf NewSeed;
 
@@ -224,11 +227,9 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
 
     // mix in some info on our file system
 #ifndef __ANDROID__
-
-    ABC_CHECK_RET(ABC_FileIOGetRootDir(&szFileIORootDir, pError));
-    ABC_BUF_APPEND_PTR(NewSeed, szFileIORootDir, strlen(szFileIORootDir));
+    ABC_BUF_APPEND_PTR(NewSeed, rootDir.data(), rootDir.size());
     struct statvfs fiData;
-    if ((statvfs(szFileIORootDir, &fiData)) >= 0 )
+    if ((statvfs(rootDir.c_str(), &fiData)) >= 0 )
     {
         ABC_BUF_APPEND_PTR(NewSeed, (unsigned char *)&fiData, sizeof(struct statvfs));
 
@@ -342,33 +343,6 @@ tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
     *pszUUID = szUUID;
 
 exit:
-    return cc;
-}
-
-/**
- * Encrypted the given data and create a json string
- */
-tABC_CC ABC_CryptoEncryptJSONString(const tABC_U08Buf Data,
-                                    const tABC_U08Buf Key,
-                                    tABC_CryptoType   cryptoType,
-                                    char              **pszEncDataJSON,
-                                    tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    json_t          *jsonRoot       = NULL;
-
-    ABC_CHECK_NULL_BUF(Data);
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL(pszEncDataJSON);
-
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(Data, Key, cryptoType, &jsonRoot, pError));
-    *pszEncDataJSON = ABC_UtilStringFromJSONObject(jsonRoot, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-
-exit:
-    if (jsonRoot)     json_decref(jsonRoot);
-
     return cc;
 }
 
@@ -487,21 +461,16 @@ tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char *szJSON = NULL;
+    json_t *root = nullptr;
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(szFilename);
 
-    // create the encrypted string
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONString(Data, Key, cryptoType, &szJSON, pError));
-
-    // write the file
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(Data, Key, cryptoType, &root, pError));
+    ABC_CHECK_NEW(JsonFile(root).save(szFilename), pError);
 
 exit:
-    ABC_FREE_STR(szJSON);
-
     return cc;
 }
 
@@ -517,54 +486,20 @@ tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char *szJSON = NULL;
-    tABC_U08Buf Data = ABC_BUF_NULL; // Do not free
+    std::string data;
 
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(pJSON_Data);
 
-    // create the json string
-    szJSON = ABC_UtilStringFromJSONObject(pJSON_Data, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-    ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
-
-    // write out the data encrypted to a file
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(Data, Key, cryptoType, szFilename, pError));
-
-exit:
-    ABC_FREE_STR(szJSON);
-
-    return cc;
-}
-
-/**
- * Given a JSON string holding encrypted data, this function decrypts it
- */
-tABC_CC ABC_CryptoDecryptJSONString(const char        *szEncDataJSON,
-                                    const tABC_U08Buf Key,
-                                    tABC_U08Buf       *pData,
-                                    tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    json_t          *root   = NULL;
-
-    ABC_CHECK_NULL(szEncDataJSON);
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL(pData);
-
-    json_error_t error;
-    root = json_loads(szEncDataJSON, 0, &error);
-    ABC_CHECK_ASSERT(root != NULL, ABC_CC_DecryptError, "Error parsing JSON encrypt package");
-    ABC_CHECK_ASSERT(json_is_object(root), ABC_CC_DecryptError, "Error parsing JSON encrypt package");
-
-    // decrypted the object data
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(root, Key, pData, pError));
+    ABC_CHECK_NEW(JsonFile(json_incref(pJSON_Data)).encode(data), pError);
+     // Downstream decoders often forget to null-terminate their input.
+     // This is a bug, but we can save the app from crashing by
+     // including a null byte in the encrypted data.
+    data.push_back(0);
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(toU08Buf(data), Key, cryptoType, szFilename, pError));
 
 exit:
-    if (root) json_decref(root);
-
     return cc;
 }
 
@@ -644,21 +579,16 @@ tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char      *szJSON_Enc = NULL;
+    JsonFile json;
 
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(pData);
 
-    // read the file
-    ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szJSON_Enc, pError));
-
-    // decrypted it
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONString(szJSON_Enc, Key, pData, pError));
+    ABC_CHECK_NEW(json.load(szFilename), pError);
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(json.root(), Key, pData, pError));
 
 exit:
-    ABC_FREE_STR(szJSON_Enc);
-
     return cc;
 }
 
@@ -676,35 +606,19 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    json_error_t error;
     AutoU08Buf Data;
-    json_t *pJSON_Root = NULL;
-    char *szData_JSON = NULL;
+    JsonFile file;
 
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(ppJSON_Data);
     *ppJSON_Data = NULL;
 
-    // read the file and decrypt it
     ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, Key, &Data, pError));
-
-    // get the string form
-    ABC_BUF_APPEND_PTR(Data, "", 1); // make sure it is null terminated so we can get the string
-    szData_JSON = (char *) ABC_BUF_PTR(Data);
-
-    // decode the json
-    pJSON_Root = json_loads(szData_JSON, 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-
-    // assign the result
-    *ppJSON_Data = pJSON_Root;
-    pJSON_Root = NULL; // so we don't decref it
+    ABC_CHECK_NEW(file.decode(toString(U08Buf(Data))), pError);
+    *ppJSON_Data = json_incref(file.root());
 
 exit:
-    if (pJSON_Root) json_decref(pJSON_Root);
-
     return cc;
 }
 
@@ -1343,7 +1257,7 @@ tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
     ABC_CHECK_NULL(ppSNRP);
 
     // get the server salt
-    if (gbIsTestNet)
+    if (isTestnet())
     {
         ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1));
     }

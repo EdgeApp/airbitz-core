@@ -18,7 +18,10 @@ host system:
 * pkgconfig
 * wget
 
-To install these on the Mac, please use [Homebrew](http://brew.sh/).
+To install these on the Mac, please use [Homebrew](http://brew.sh/):
+
+    brew install autoconf automake cmake git libtool pkgconfig wget
+
 The 'wget' and 'cmake' that come from MacPorts are known to be broken.
 If you are building for iOS or Mac native, you also need a working installation
 of the XCode command-line tools.
@@ -61,12 +64,13 @@ the "src" directory will go away.
 The "deps" directory contains a system for downloading and building all the
 libraries that ABC depends on, as well as ABC itself, for mobile platforms.
 
-The "util" directory contains a set of command-line tools that exercise the
-core. We use these internally for debugging and testing.
-
-The "server" directory contains the source code for our git replication
-utility. We run this on our sync servers each time a wallet pushes new data,
-copying the data to the other servers as well.
-
 The "minilibs" directory contains small support libraries that don't have
 a standalone distribution.
+
+The "cli" directory contains a command-line tool for exercising the core.
+We use this internally for debugging and testing.
+
+The "test" directory conains unit tests.
+
+The "util" directory contains ancillary utilities,
+such as a script for generating private keys from an exported wallet seed.

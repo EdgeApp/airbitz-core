@@ -34,6 +34,9 @@ tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1,
                                 tABC_U08Buf LP1,
                                 tABC_Error *pError);
 
+tABC_CC ABC_LoginServerAvailable(tABC_U08Buf L1,
+                                 tABC_Error *pError);
+
 tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
                                       tABC_U08Buf oldLP1,
                                       tABC_U08Buf newLP1,

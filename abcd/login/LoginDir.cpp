@@ -6,8 +6,9 @@
  */
 
 #include "LoginDir.hpp"
+#include "../bitcoin/Testnet.hpp"
+#include "../json/JsonObject.hpp"
 #include "../util/FileIO.hpp"
-#include "../util/JsonFile.hpp"
 #include "../util/Status.hpp"
 #include "../util/Sync.hpp"
 #include "../util/Util.hpp"
@@ -16,9 +17,10 @@
 
 namespace abcd {
 
-struct UsernameFile: public JsonFile
+struct UsernameFile:
+    public JsonObject
 {
-    ABC_JSON_STRING(Username, "userName")
+    ABC_JSON_STRING(Username, "userName", nullptr)
 };
 
 #define ACCOUNT_DIR                             "Accounts"
@@ -33,21 +35,10 @@ struct UsernameFile: public JsonFile
 static std::string
 accountsDirectory()
 {
-    std::string root;
-    AutoString szRoot;
-    tABC_Error error;
-    if (ABC_CC_Ok == ABC_FileIOGetRootDir(&szRoot.get(), &error))
-        root = szRoot;
+    if (isTestnet())
+        return getRootDir() + ACCOUNT_DIR "-testnet/";
     else
-        root = '.';
-
-    if (root.back() != '/')
-        root += '/';
-
-    if (gbIsTestNet)
-        return root + ACCOUNT_DIR "-testnet/";
-    else
-        return root + ACCOUNT_DIR "/";
+        return getRootDir() + ACCOUNT_DIR "/";
 }
 
 /**
@@ -56,12 +47,11 @@ accountsDirectory()
 static Status
 readUsername(const std::string &directory, std::string &result)
 {
-    const char *username;
     UsernameFile f;
     ABC_CHECK(f.load(directory + ACCOUNT_NAME_FILENAME));
-    ABC_CHECK(f.getUsername(username));
+    ABC_CHECK(f.hasUsername());
 
-    result = username;
+    result = f.getUsername();
     return Status();
 }
 
@@ -342,6 +332,9 @@ tABC_CC ABC_LoginDirMakeSyncDir(const std::string &directory,
     {
         int dirty = 0;
         std::string tempName = directory + "tmp";
+        ABC_CHECK_RET(ABC_FileIOFileExists(tempName.c_str(), &exists, pError));
+        if (exists)
+            ABC_CHECK_RET(ABC_FileIODeleteRecursive(tempName.c_str(), pError));
         ABC_CHECK_RET(ABC_FileIOCreateDir(tempName.c_str(), pError));
         ABC_CHECK_RET(ABC_SyncMakeRepo(tempName.c_str(), pError));
         ABC_CHECK_RET(ABC_SyncRepo(tempName.c_str(), szSyncKey, &dirty, pError));

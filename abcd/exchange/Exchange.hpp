@@ -30,56 +30,49 @@
  */
 /**
  * @file
- * Provides the ability to run wallet functions on their own thread.
+ * AirBitz exchange-rate conversion functions.
  */
 
-#ifndef ABC_WalletAsync_h
-#define ABC_WalletAsync_h
+#ifndef ABCD_EXCHANGE_EXCHANGE_H
+#define ABCD_EXCHANGE_EXCHANGE_H
 
-#include "ABC.h"
-#include "../abcd/util/Sync.hpp"
-#include "../abcd/util/U08Buf.hpp"
+#include "../util/Status.hpp"
+#include "../../src/ABC.h"
+#include <stddef.h>
 
 namespace abcd {
 
+#define CURRENCY_NUM_AUD                 36
+#define CURRENCY_NUM_CAD                124
+#define CURRENCY_NUM_CNY                156
+#define CURRENCY_NUM_CUP                192
+#define CURRENCY_NUM_HKD                344
+#define CURRENCY_NUM_MXN                484
+#define CURRENCY_NUM_NZD                554
+#define CURRENCY_NUM_PHP                608
+#define CURRENCY_NUM_GBP                826
+#define CURRENCY_NUM_USD                840
+#define CURRENCY_NUM_EUR                978
+
 /**
- * AirBitz Core Create Wallet Structure
- *
- * This structure contains the detailed information associated
- * with creating a new wallet.
- *
+ * AirBitz default exchange info
  */
-typedef struct sABC_WalletCreateInfo
-{
-    /** data pointer given by caller at initial create call time */
-    void                    *pData;
+typedef struct sABC_ExchangeDefaults {
+    int currencyNum;
+    const char *szDefaultExchange;
+} tABC_ExchangeDefaults;
 
-    tABC_SyncKeys           *pKeys;
-    tABC_U08Buf             L1;
-    tABC_U08Buf             LP1;
-    char                    *szUserName;
+// Default Exchange array
+extern const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[];
+extern const size_t EXCHANGE_DEFAULTS_SIZE;
 
-    char                    *szWalletName;
-    int                     currencyNum;
-    unsigned int            attributes;
-    tABC_Request_Callback   fRequestCallback;
-} tABC_WalletCreateInfo;
+tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, tABC_Error *pError);
 
-tABC_CC ABC_WalletCreateInfoAlloc(tABC_WalletCreateInfo **ppWalletCreateInfo,
-                                  tABC_SyncKeys *pKeys,
-                                  tABC_U08Buf L1,
-                                  tABC_U08Buf LP1,
-                                  const char *szUserName,
-                                  const char *szWalletName,
-                                  int        currencyNum,
-                                  unsigned int  attributes,
-                                  tABC_Request_Callback fRequestCallback,
-                                  void *pData,
-                                  tABC_Error *pError);
+Status
+exchangeSatoshiToCurrency(int64_t satoshi, double &currency, int currencyNum);
 
-void ABC_WalletCreateInfoFree(tABC_WalletCreateInfo *pWalletCreateInfo);
-
-void *ABC_WalletCreateThreaded(void *pData);
+Status
+exchangeCurrencyToSatoshi(double currency, int64_t &satoshi, int currencyNum);
 
 } // namespace abcd
 

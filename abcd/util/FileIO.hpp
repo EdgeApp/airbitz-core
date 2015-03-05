@@ -37,7 +37,8 @@
 #define ABC_FileIO_h
 
 #include "../../src/ABC.h"
-#include "U08Buf.hpp"
+#include "Data.hpp"
+#include "Status.hpp"
 #include <jansson.h>
 #include <time.h>
 #include <mutex>
@@ -68,11 +69,18 @@ typedef struct sABC_FileIOFileList
     tABC_FileIOFileInfo **apFiles;
 } tABC_FileIOList;
 
-tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
-                             tABC_Error *pError);
+/**
+ * Sets the core root directory.
+ */
+void
+setRootDir(const std::string &rootDir);
 
-tABC_CC ABC_FileIOGetRootDir(char **pszRootDir,
-                             tABC_Error *pError);
+/**
+ * Obtains the core root directory.
+ * The returned directory always ends with a `/`.
+ */
+const std::string &
+getRootDir();
 
 tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
                                  const char *szDir,
@@ -99,10 +107,8 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
                               char        **pszData,
                               tABC_Error  *pError);
 
-tABC_CC ABC_FileIOReadFile(const char  *szFilename,
-                           void        **pszData,
-                           size_t      *nSize,
-                           tABC_Error  *pError);
+Status
+fileLoad(const std::string &filename, DataChunk &result);
 
 tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
                                  json_t **ppJSON_Data,

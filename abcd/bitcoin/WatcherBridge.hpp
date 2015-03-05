@@ -30,63 +30,22 @@
  */
 /**
  * @file
- * AirBitz C++ bridge function prototypes.
+ * Caching and utility wrapper layer around the bitcoin `watcher` class.
  *
- * These were originally used to bridge between C and C++,
- * but now that the entire codebase is C++,
- * this layer should eventually go away.
+ * There was a time when `watcher` was part of libbitcoin-watcher,
+ * and the AirBitz software was plain C.
+ * This module used to bridge the gap between those two worlds,
+ * but now it is less useful.
  */
 
 #ifndef ABC_Bridge_h
 #define ABC_Bridge_h
 
-#include "../src/ABC.h"
-#include "Tx.hpp"
-#include "util/U08Buf.hpp"
+#include "../Tx.hpp"
+#include "../util/U08Buf.hpp"
+#include "../../src/ABC.h"
 
 namespace abcd {
-
-tABC_CC ABC_BridgeInitialize(tABC_Error *pError);
-
-tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
-                            tABC_U08Buf *pOut,
-                            bool *pbCompressed,
-                            char **pszAddress,
-                            tABC_Error *pError);
-
-tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
-                            tABC_BitcoinURIInfo **ppInfo,
-                            tABC_Error *pError);
-
-void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo);
-
-tABC_CC ABC_BridgeParseAmount(const char *szAmount,
-                              uint64_t *pAmountOut,
-                              unsigned decimalPlaces);
-
-tABC_CC ABC_BridgeFormatAmount(int64_t amount,
-                               char **pszAmountOut,
-                               unsigned decimalPlaces,
-                               bool bAddSign,
-                               tABC_Error *pError);
-
-tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
-                                   tABC_BitcoinURIInfo *pInfo,
-                                   tABC_Error *pError);
-
-tABC_CC ABC_BridgeBase58Encode(tABC_U08Buf Data,
-                               char **pszBase58,
-                               tABC_Error *pError);
-
-tABC_CC ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
-                                       tABC_U08Buf PrivateSeed,
-                                       int32_t N,
-                                       tABC_Error *pError);
-
-tABC_CC ABC_BridgeGetBitcoinPrivAddress(char **pszPrivAddress,
-                                        tABC_U08Buf PrivateSeed,
-                                        int32_t N,
-                                        tABC_Error *pError);
 
 tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
                            tABC_U08Buf key,
@@ -157,8 +116,6 @@ tABC_CC ABC_BridgeFilterTransactions(const char *szWalletUUID,
                                      tABC_TxInfo **aTransactions,
                                      unsigned int *pCount,
                                      tABC_Error *pError);
-
-bool ABC_BridgeIsTestNet();
 
 } // namespace abcd
 

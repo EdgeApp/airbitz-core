@@ -32,7 +32,7 @@
 #include "Wallet.hpp"
 #include "Tx.hpp"
 #include "Account.hpp"
-#include "Bridge.hpp"
+#include "bitcoin/WatcherBridge.hpp"
 #include "login/LoginServer.hpp"
 #include "util/Crypto.hpp"
 #include "util/FileIO.hpp"
@@ -62,7 +62,6 @@ namespace abcd {
 
 #define JSON_WALLET_WALLETS_FIELD               "wallets"
 #define JSON_WALLET_NAME_FIELD                  "walletName"
-#define JSON_WALLET_ATTRIBUTES_FIELD            "attributes"
 #define JSON_WALLET_CURRENCY_NUM_FIELD          "num"
 #define JSON_WALLET_ACCOUNTS_FIELD              "accounts"
 
@@ -151,7 +150,6 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
                          const char *szUserName,
                          const char *szWalletName,
                          int  currencyNum,
-                         unsigned int attributes,
                          char                  **pszUUID,
                          tABC_Error            *pError)
 {
@@ -505,19 +503,12 @@ tABC_CC ABC_WalletGetRootDirName(char **pszRootDir, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szFileIORootDir = NULL;
+    std::string out = getRootDir() + WALLET_DIR;
 
     ABC_CHECK_NULL(pszRootDir);
-
-    ABC_CHECK_RET(ABC_FileIOGetRootDir(&szFileIORootDir, pError));
-
-    // create the wallet directory string
-    ABC_STR_NEW(*pszRootDir, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszRootDir, "%s/%s", szFileIORootDir, WALLET_DIR);
+    ABC_STRDUP(*pszRootDir, out.c_str());
 
 exit:
-    ABC_FREE_STR(szFileIORootDir);
-
     return cc;
 }
 
@@ -1018,7 +1009,6 @@ void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo)
     {
         ABC_FREE_STR(pWalletInfo->szUUID);
         ABC_FREE_STR(pWalletInfo->szName);
-        ABC_FREE_STR(pWalletInfo->szUserName);
 
         ABC_CLEAR_FREE(pWalletInfo, sizeof(sizeof(tABC_WalletInfo)));
     }

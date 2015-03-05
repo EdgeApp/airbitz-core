@@ -14,7 +14,16 @@
 
 using namespace abcd;
 
-#define CA_CERT "./ca-certificates.crt"
+#define CA_CERT "./cli/ca-certificates.crt"
+
+static Status
+showVersion()
+{
+    AutoString version;
+    ABC_CHECK_OLD(ABC_Version(&version.get(), &error));
+    std::cout << "ABC version: " << version.get() << std::endl;
+    return Status();
+}
 
 /**
  * The main program body.
@@ -22,6 +31,8 @@ using namespace abcd;
 static Status run(int argc, char *argv[])
 {
     std::string program = argv[0];
+    if (argc == 1)
+        return showVersion();
     if (argc < 3)
         return ABC_ERROR(ABC_CC_Error, "usage: " + program + " <dir> <command> ...\n");
 
@@ -31,6 +42,7 @@ static Status run(int argc, char *argv[])
     std::string command = argv[2];
     ABC_CHECK(
         // Command.cpp:
+        command == "account-available"  ? accountAvailable(argc-3, argv+3) :
         command == "account-decrypt"    ? accountDecrypt(argc-3, argv+3) :
         command == "account-encrypt"    ? accountEncrypt(argc-3, argv+3) :
         command == "add-category"       ? addCategory(argc-3, argv+3) :

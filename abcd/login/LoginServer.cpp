@@ -7,13 +7,14 @@
 
 #include "LoginServer.hpp"
 #include "ServerDefs.hpp"
+#include "../json/JsonObject.hpp"
 #include "../util/Json.hpp"
 #include "../util/URL.hpp"
 #include "../util/Util.hpp"
 #include <map>
 
 // For debug upload:
-#include "../Bridge.hpp"
+#include "../bitcoin/WatcherBridge.hpp"
 #include "../util/Crypto.hpp"
 #include "../util/FileIO.hpp"
 
@@ -29,6 +30,11 @@ namespace abcd {
 #define JSON_ACCT_PIN_PACKAGE                   "pin_package"
 
 #define DATETIME_LENGTH 20
+
+struct AccountAvailableJson: public JsonObject
+{
+    ABC_JSON_STRING(L1, "l1", nullptr)
+};
 
 static std::string gOtpResetAuth;
 
@@ -170,6 +176,43 @@ exit:
     ABC_FREE_STR(szL1_Base64);
     ABC_FREE_STR(szLP1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
+
+    return cc;
+}
+
+/**
+ * Queries the server to determine if a username is available.
+ */
+tABC_CC ABC_LoginServerAvailable(tABC_U08Buf L1,
+                                 tABC_Error *pError)
+{
+
+    tABC_CC cc = ABC_CC_Ok;
+
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_ACCOUNT_AVAILABLE;
+    std::string get;
+    AccountAvailableJson json;
+    char *szL1_Base64 = NULL;
+    char *szResults = NULL;
+
+    ABC_CHECK_NULL_BUF(L1);
+
+    // create the json
+    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
+    ABC_CHECK_NEW(json.setL1(szL1_Base64), pError);
+    ABC_CHECK_NEW(json.encode(get), pError);
+    ABC_DebugLog("Server URL: %s, Data: %.50s", url.c_str(), get.c_str());
+
+    // send the command
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), get.c_str(), &szResults, pError));
+    ABC_DebugLog("Server results: %.50s", szResults);
+
+    // decode the result
+    ABC_CHECK_RET(checkResults(szResults, NULL, pError));
+
+exit:
+    ABC_FREE_STR(szL1_Base64);
+    ABC_FREE_STR(szResults);
 
     return cc;
 }
@@ -918,12 +961,10 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     char *szLogData       = NULL;
     char *szLogData_Hex   = NULL;
     char *szWatchFilename = NULL;
-    void *aWatchData      = NULL;
     char *szWatchData_Hex = NULL;
     json_t *pJSON_Root    = NULL;
     tABC_U08Buf LogData   = ABC_BUF_NULL; // Do not free
-    tABC_U08Buf WatchData = ABC_BUF_NULL; // Do not free
-    size_t watcherSize    = 0;
+    DataChunk watchData;
     unsigned int nCount   = 0;
     tABC_WalletInfo **paWalletInfo = NULL;
     json_t *pJSON_array = NULL;
@@ -946,15 +987,13 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     {
         ABC_CHECK_RET(ABC_BridgeWatchPath(paWalletInfo[i]->szUUID,
                                           &szWatchFilename, pError));
-        ABC_CHECK_RET(ABC_FileIOReadFile(szWatchFilename, &aWatchData, &watcherSize, pError));
-        ABC_BUF_SET_PTR(WatchData, (unsigned char*)aWatchData, watcherSize);
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(WatchData, &szWatchData_Hex, pError));
+        ABC_CHECK_NEW(fileLoad(szWatchFilename, watchData), pError);
+        ABC_CHECK_RET(ABC_CryptoBase64Encode(toU08Buf(watchData), &szWatchData_Hex, pError));
 
         json_t *element = json_pack("s", szWatchData_Hex);
         json_array_append_new(pJSON_array, element);
 
         ABC_FREE_STR(szWatchFilename);
-        ABC_FREE(aWatchData);
     }
 
     pJSON_Root = json_pack("{ss, ss, ss}",
@@ -980,7 +1019,6 @@ exit:
     ABC_BUF_CLEAR(LogData);
 
     ABC_FREE_STR(szWatchFilename);
-    ABC_FREE(aWatchData);
     ABC_FREE_STR(szWatchData_Hex);
 
     ABC_FreeWalletInfoArray(paWalletInfo, nCount);

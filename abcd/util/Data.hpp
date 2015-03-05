@@ -71,12 +71,8 @@ toU08Buf(DataSlice slice)
 /**
  * Casts a data slice to a string.
  */
-inline std::string
-toString(DataSlice slice)
-{
-    return std::string(reinterpret_cast<const char *>(slice.data()),
-        slice.size());
-}
+std::string
+toString(DataSlice slice);
 
 /**
  * A block of data with its size fixed at compile time.

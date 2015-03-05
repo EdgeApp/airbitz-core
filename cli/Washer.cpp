@@ -40,8 +40,6 @@ void async_callback(const tABC_AsyncBitCoinInfo *pInfo)
         printf("ABC_AsyncEventType_IncomingBitCoin\n");
     } else if (pInfo->eventType == ABC_AsyncEventType_BlockHeightChange) {
         printf("ABC_AsyncEventType_BlockHeightChange\n");
-    } else if (pInfo->eventType == ABC_AsyncEventType_ExchangeRateUpdate) {
-        printf("ABC_AsyncEventType_ExchangeRateUpdate\n");
     } else if (pInfo->eventType == ABC_AsyncEventType_DataSyncUpdate) {
         printf("ABC_AsyncEventType_DataSyncUpdate\n");
     } else if (pInfo->eventType == ABC_AsyncEventType_RemotePasswordChange) {
@@ -103,9 +101,7 @@ void send_tx(tABC_WalletInfo *wallet)
     printf("Dest Address: %s\n", szAddress);
     printf("Balance: %ld\n", wallet->balanceSatoshi);
     printf("Max Spendable: %ld\n", maxSatoshi);
-    if (maxSatoshi < 0) {
-        return;
-    }
+
     // break max spendable a part
     int num = maxSatoshi / MIN_BALANCE;
     for (int i = 0; i < num; ++i) {

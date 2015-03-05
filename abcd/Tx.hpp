@@ -92,18 +92,6 @@ double ABC_TxSatoshiToBitcoin(int64_t satoshi);
 
 int64_t ABC_TxBitcoinToSatoshi(double bitcoin);
 
-tABC_CC ABC_TxSatoshiToCurrency(tABC_SyncKeys *pKeys,
-                                int64_t satoshi,
-                                double *pCurrency,
-                                int currencyNum,
-                                tABC_Error *pError);
-
-tABC_CC ABC_TxCurrencyToSatoshi(tABC_SyncKeys *pKeys,
-                                double currency,
-                                int currencyNum,
-                                int64_t *pSatoshi,
-                                tABC_Error *pError);
-
 tABC_CC ABC_TxBlockHeightUpdate(uint64_t height,
                                 tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
                                 void *pData,

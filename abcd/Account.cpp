@@ -6,7 +6,7 @@
  */
 
 #include "Account.hpp"
-#include "Exchanges.hpp"
+#include "exchange/Exchange.hpp"
 #include "util/Crypto.hpp"
 #include "util/FileIO.hpp"
 #include "util/Json.hpp"
@@ -1070,7 +1070,7 @@ exit:
  * @param count     The number of items in the array.
  */
 tABC_CC ABC_AccountWalletReorder(tABC_SyncKeys *pKeys,
-                                 char *szUUIDs,
+                                 const char *szUUIDs,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1079,7 +1079,10 @@ tABC_CC ABC_AccountWalletReorder(tABC_SyncKeys *pKeys,
     char *uuid, *brkt;
     unsigned int i = 0;
 
-    for (uuid = strtok_r(szUUIDs, "\n", &brkt);
+    AutoString uuids;
+    ABC_STRDUP(uuids.get(), szUUIDs);
+
+    for (uuid = strtok_r(uuids, "\n", &brkt);
          uuid;
          uuid = strtok_r(NULL, "\n", &brkt), i++)
     {

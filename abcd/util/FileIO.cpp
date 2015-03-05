@@ -42,43 +42,24 @@
 
 namespace abcd {
 
-static char             gszRootDir[ABC_MAX_STRING_LENGTH + 1] = ".";
+static std::string gRootDir = ".";
 std::recursive_mutex gFileMutex;
 
-/**
- * Sets the root directory to the string given
- */
-tABC_CC ABC_FileIOSetRootDir(const char *szRootDir,
-                             tABC_Error *pError)
+void
+setRootDir(const std::string &rootDir)
 {
-    tABC_CC cc = ABC_CC_Ok;
     AutoFileLock lock(gFileMutex);
 
-    ABC_CHECK_NULL(szRootDir);
-    strncpy(gszRootDir, szRootDir, ABC_MAX_STRING_LENGTH);
-    gszRootDir[ABC_MAX_STRING_LENGTH] = '\0';
-
-exit:
-    return cc;
+    gRootDir = rootDir;
+    if (gRootDir.back() != '/')
+        gRootDir += '/';
 }
 
-/**
- * Gets the root directory
- *
- * @param pszRootDir pointer to store allocated string
- *                   (the user is responsible for free'ing)
- */
-tABC_CC ABC_FileIOGetRootDir(char **pszRootDir, tABC_Error *pError)
+const std::string &
+getRootDir()
 {
-    tABC_CC cc = ABC_CC_Ok;
     AutoFileLock lock(gFileMutex);
-
-    ABC_CHECK_NULL(pszRootDir);
-
-    ABC_STRDUP(*pszRootDir, gszRootDir);
-
-exit:
-    return cc;
+    return gRootDir;
 }
 
 /**
@@ -340,52 +321,28 @@ exit:
     return cc;
 }
 
-/**
- * Reads the given filename into a void *
- */
-tABC_CC ABC_FileIOReadFile(const char  *szFilename,
-                           void        **pszData,
-                           size_t      *nSize,
-                           tABC_Error  *pError)
+Status
+fileLoad(const std::string &filename, DataChunk &result)
 {
-    tABC_CC cc = ABC_CC_Ok;
     AutoFileLock lock(gFileMutex);
 
-    FILE *fp = NULL;
-    char *szData = NULL;
+    FILE *fp = fopen(filename.c_str(), "rb");
+    if (!fp)
+        return ABC_ERROR(ABC_CC_FileOpenError, "Could not open file for reading");
 
-    ABC_CHECK_NULL(szFilename);
-    ABC_CHECK_NULL(pszData);
-
-    // open the file
-    fp = fopen(szFilename, "rb");
-    if (fp == NULL)
-    {
-        ABC_RET_ERROR(ABC_CC_FileOpenError, "Could not open file for reading");
-    }
-
-    // get the length
     fseek(fp, 0, SEEK_END);
-    *nSize = ftell(fp);
+    size_t size = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    // create the memory
-    ABC_STR_NEW(szData, *nSize);
-
-    // write the data
-    if (fread(szData, 1, *nSize, fp) != *nSize)
+    result.resize(size);
+    if (fread(result.data(), 1, size, fp) != size)
     {
-        ABC_RET_ERROR(ABC_CC_FileReadError, "Could not read from file");
+        fclose(fp);
+        return ABC_ERROR(ABC_CC_FileReadError, "Could not read from file");
     }
 
-    *pszData = szData;
-    szData = NULL;
-
-exit:
-    ABC_FREE_STR(szData);
-    if (fp) fclose(fp);
-
-    return cc;
+    fclose(fp);
+    return Status();
 }
 
 /**

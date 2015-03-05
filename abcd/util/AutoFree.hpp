@@ -50,11 +50,6 @@ public:
         return p_;
     }
 
-    T &operator *()
-    {
-        return *p_;
-    }
-
 private:
     T *p_;
 };

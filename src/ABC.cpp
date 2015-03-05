@@ -30,16 +30,16 @@
  */
 
 #include "ABC.h"
-#include "LoginRequest.hpp"
 #include "LoginShim.hpp"
-#include "WalletAsync.hpp"
 #include "../abcd/Account.hpp"
 #include "../abcd/General.hpp"
-#include "../abcd/Bridge.hpp"
 #include "../abcd/Export.hpp"
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
-#include "../abcd/Exchanges.hpp"
+#include "../abcd/bitcoin/Testnet.hpp"
+#include "../abcd/bitcoin/Text.hpp"
+#include "../abcd/bitcoin/WatcherBridge.hpp"
+#include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/LoginDir.hpp"
 #include "../abcd/login/LoginPassword.hpp"
@@ -66,7 +66,6 @@
 using namespace abcd;
 
 static bool gbInitialized = false;
-bool gbIsTestNet = false;
 
 static tABC_Currency gaCurrencies[] = {
     { "AUD", 36, "Australian Dollar", " Australia, Christmas Island (CX), Cocos (Keeling) Islands (CC), Heard and McDonald Islands (HM), Kiribati (KI), Nauru (NR), Norfolk Island (NF), Tuvalu (TV), and Australian Antarctic Territory" },
@@ -114,14 +113,13 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_NULL(pSeedData);
     ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "The core library has already been initalized");
 
+    setRootDir(szRootDir);
+
     // initialize logging
     ABC_CHECK_RET(ABC_DebugInitialize(szRootDir, pError));
 
     // override the alloc and free of janson so we can have a secure method
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
-
-    // initialize bridge
-    ABC_CHECK_RET(ABC_BridgeInitialize(pError));
 
     // initialize URL system
     ABC_CHECK_RET(ABC_URLInitialize(szCaCertPath, pError));
@@ -135,16 +133,10 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // initialize sync
     ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
 
-    if (szRootDir)
-    {
-        ABC_CHECK_RET(ABC_FileIOSetRootDir(szRootDir, pError));
-    }
-
     ABC_BUF_DUP_PTR(Seed, pSeedData, seedLength);
     ABC_CHECK_RET(ABC_CryptoSetRandomSeed(Seed, pError));
 
     gbInitialized = true;
-    gbIsTestNet = ABC_BridgeIsTestNet();
 
 exit:
     return cc;
@@ -165,8 +157,6 @@ void ABC_Terminate()
 
         ABC_URLTerminate();
 
-        ABC_ExchangeClearCache();
-
         ABC_SyncTerminate();
 
         ABC_DebugTerminate();
@@ -182,14 +172,10 @@ void ABC_Terminate()
  *
  * @param szUserName                UserName for the account
  * @param szPassword                Password for the account
- * @param fRequestCallback          The function that will be called when the account signin process has finished.
- * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_SignIn(const char *szUserName,
                    const char *szPassword,
-                   tABC_Request_Callback fRequestCallback,
-                   void *pData,
                    tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -203,35 +189,32 @@ tABC_CC ABC_SignIn(const char *szUserName,
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
-    if (fRequestCallback)
-    {
-        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
+    ABC_CHECK_RET(ABC_LoginShimLogin(szUserName, szPassword, pError));
 
-        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                                  ABC_RequestType_AccountSignIn,
-                                                  szUserName,
-                                                  szPassword,
-                                                  NULL, // recovery questions
-                                                  NULL, // recovery answers
-                                                  NULL, // PIN
-                                                  NULL, // new password
-                                                  fRequestCallback,
-                                                  pData,
-                                                  pError));
+exit:
+    return cc;
+}
 
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
+/**
+ * Returns success if the requested username is available on the server.
+ */
+tABC_CC ABC_AccountAvailable(const char *szUserName,
+                            tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_CHECK_NULL(szUserName);
+
     {
-        ABC_CHECK_RET(ABC_LoginShimLogin(szUserName, szPassword, pError));
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        ABC_CHECK_NEW(gLobbyCache->available(), pError);
     }
 
 exit:
-
     return cc;
 }
 
@@ -243,15 +226,10 @@ exit:
  * @param szUserName                UserName for the account
  * @param szPassword                Password for the account
  * @param szPin                     PIN for the account
- * @param fRequestCallback          The function that will be called when the account create process has finished.
- * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_CreateAccount(const char *szUserName,
                           const char *szPassword,
-                          const char *szPin,
-                          tABC_Request_Callback fRequestCallback,
-                          void *pData,
                           tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -264,38 +242,36 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) >= ABC_MIN_USERNAME_LENGTH, ABC_CC_Error, "Username too short");
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
-    ABC_CHECK_NULL(szPin);
-    ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "PIN is too short");
 
-    if (fRequestCallback)
-    {
-        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-
-        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                                  ABC_RequestType_CreateAccount,
-                                                  szUserName,
-                                                  szPassword,
-                                                  NULL, // recovery questions
-                                                  NULL, // recovery answers
-                                                  szPin,
-                                                  NULL, // new password
-                                                  fRequestCallback,
-                                                  pData,
-                                                  pError));
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        ABC_CHECK_RET(ABC_LoginShimNewAccount(szUserName, szPassword, pError));
-        ABC_CHECK_RET(ABC_SetPIN(szUserName, szPassword, szPin, pError));
-    }
+    ABC_CHECK_RET(ABC_LoginShimNewAccount(szUserName, szPassword, pError));
 
 exit:
+    return cc;
+}
 
+/**
+ * Deletes an account off the local filesystem.
+ */
+tABC_CC ABC_AccountDelete(const char *szUserName,
+                          tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    std::string username;
+    std::string directory;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_NEW(Lobby::fixUsername(username, szUserName), pError);
+    directory = loginDirFind(username);
+    ABC_CHECK_ASSERT(!directory.empty(), ABC_CC_AccountDoesNotExist, "Account not found on disk");
+    ABC_CHECK_RET(ABC_FileIODeleteRecursive(directory.c_str(), pError));
+
+exit:
     return cc;
 }
 
@@ -309,16 +285,12 @@ exit:
  * @param szPassword                Password of the account
  * @param szRecoveryQuestions       Recovery questions - newline seperated
  * @param szRecoveryAnswers         Recovery answers - newline seperated
- * @param fRequestCallback          The function that will be called when the recovery questions are ready.
- * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                         const char *szPassword,
                                         const char *szRecoveryQuestions,
                                         const char *szRecoveryAnswers,
-                                        tABC_Request_Callback fRequestCallback,
-                                        void *pData,
                                         tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -334,36 +306,10 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     ABC_CHECK_NULL(szRecoveryAnswers);
     ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error, "No recovery answers provided");
 
-    if (fRequestCallback)
-    {
-        tABC_LoginRequestInfo *pInfo = NULL;
-
-        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pInfo,
-                                                  ABC_RequestType_SetAccountRecoveryQuestions,
-                                                  szUserName,
-                                                  szPassword,
-                                                  szRecoveryQuestions,
-                                                  szRecoveryAnswers,
-                                                  NULL, // PIN
-                                                  NULL, // new password
-                                                  fRequestCallback,
-                                                  pData,
-                                                  pError));
-
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        ABC_CHECK_RET(ABC_LoginShimSetRecovery(szUserName, szPassword,
-            szRecoveryQuestions, szRecoveryAnswers, pError));
-    }
+    ABC_CHECK_RET(ABC_LoginShimSetRecovery(szUserName, szPassword,
+        szRecoveryQuestions, szRecoveryAnswers, pError));
 
 exit:
-
     return cc;
 }
 
@@ -631,19 +577,14 @@ exit:
  * @param szPassword                Password for the account
  * @param szWalletName              Wallet Name
  * @param currencyNum               ISO 4217 currency number
- * @param attributes                Attributes to be used for filtering (e.g., archive bit)
- * @param fRequestCallback          The function that will be called when the wallet create process has finished.
- * @param pData                     Pointer to data to be returned back in callback,
- *                                  or `char **pszUUID` if callbacks aren't used.
+ * @param pszUuid                   Resulting wallet name. The caller frees this.
  * @param pError                    A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_CreateWallet(const char *szUserName,
                          const char *szPassword,
                          const char *szWalletName,
                          int        currencyNum,
-                         unsigned int attributes,
-                         tABC_Request_Callback fRequestCallback,
-                         void *pData,
+                         char       **pszUuid,
                          tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -665,36 +606,8 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
 
-    if (fRequestCallback)
-    {
-        tABC_WalletCreateInfo *pWalletCreateInfo = NULL;
-        ABC_CHECK_RET(ABC_WalletCreateInfoAlloc(&pWalletCreateInfo,
-                                                pKeys,
-                                                L1,
-                                                LP1,
-                                                szUserName,
-                                                szWalletName,
-                                                currencyNum,
-                                                attributes,
-                                                fRequestCallback,
-                                                pData,
-                                                pError));
-
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_WalletCreateThreaded, pWalletCreateInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        tABC_RequestResults *results = (tABC_RequestResults*)pData;
-        char *output = NULL;
-        ABC_STR_NEW(output, 100);
-        results->pRetData = output;
-        ABC_CHECK_RET(ABC_WalletCreate(pKeys, L1, LP1, szUserName, szWalletName,
-            currencyNum, attributes, (char**) &(results->pRetData), pError));
-    }
+    ABC_CHECK_RET(ABC_WalletCreate(pKeys, L1, LP1, szUserName, szWalletName,
+        currencyNum, pszUuid, pError));
 
 exit:
     return cc;
@@ -1205,7 +1118,6 @@ tABC_CC ABC_GetWalletInfo(const char *szUserName,
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(pKeys, szUUID), ppWalletInfo, pError));
-    ABC_STRDUP((*ppWalletInfo)->szUserName, szUserName);
 
 exit:
     return cc;
@@ -1312,17 +1224,12 @@ tABC_CC ABC_GetWallets(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    unsigned i = 0;
     AutoSyncKeys pKeys;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_WalletGetWallets(pKeys, paWalletInfo, pCount, pError));
-    for (i = 0; i < *pCount; ++i)
-    {
-        ABC_STRDUP((*paWalletInfo)[i]->szUserName, szUserName);
-    }
 
 exit:
     return cc;
@@ -1358,7 +1265,7 @@ void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
  */
 tABC_CC ABC_SetWalletOrder(const char *szUserName,
                            const char *szPassword,
-                           char *szUUIDs,
+                           const char *szUUIDs,
                            tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -1460,7 +1367,6 @@ exit:
  * @param szUserName                UserName for the account
  * @param szPassword                Password for the account
  * @param szNewPassword             New Password for the account
- * @param szDeprecated              This used to be the PIN, but is no longer used
  * @param fRequestCallback          The function that will be called when the password change has finished.
  * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
@@ -1468,9 +1374,6 @@ exit:
 tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,
                            const char *szNewPassword,
-                           const char *szDeprecated,
-                           tABC_Request_Callback fRequestCallback,
-                           void *pData,
                            tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -1486,36 +1389,10 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     ABC_CHECK_NULL(szNewPassword);
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
 
-    if (fRequestCallback)
-    {
-        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-
-        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                                  ABC_RequestType_ChangePassword,
-                                                  szUserName,
-                                                  szPassword,
-                                                  NULL, // recovery questions
-                                                  NULL, // recovery answers
-                                                  NULL, // PIN
-                                                  szNewPassword,
-                                                  fRequestCallback,
-                                                  pData,
-                                                  pError));
-
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        ABC_CHECK_RET(ABC_LoginShimSetPassword(szUserName, szPassword, NULL,
-            szNewPassword, pError));
-    }
+    ABC_CHECK_RET(ABC_LoginShimSetPassword(szUserName, szPassword, NULL,
+        szNewPassword, pError));
 
 exit:
-
     return cc;
 }
 
@@ -1529,7 +1406,6 @@ exit:
  * @param szUserName                UserName for the account
  * @param szRecoveryAnswers         Recovery answers (each answer seperated by a newline)
  * @param szNewPassword             New Password for the account
- * @param szDeprecated              This used to be the PIN, but is no longer used
  * @param fRequestCallback          The function that will be called when the password change has finished.
  * @param pData                     Pointer to data to be returned back in callback
  * @param pError                    A pointer to the location to store the error if there is one
@@ -1537,9 +1413,6 @@ exit:
 tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
                                               const char *szRecoveryAnswers,
                                               const char *szNewPassword,
-                                              const char *szDeprecated,
-                                              tABC_Request_Callback fRequestCallback,
-                                              void *pData,
                                               tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -1555,36 +1428,10 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     ABC_CHECK_NULL(szNewPassword);
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
 
-    if (fRequestCallback)
-    {
-        tABC_LoginRequestInfo *pAccountRequestInfo = NULL;
-
-        ABC_CHECK_RET(ABC_LoginRequestInfoAlloc(&pAccountRequestInfo,
-                                                  ABC_RequestType_ChangePassword,
-                                                  szUserName,
-                                                  NULL, // recovery questions
-                                                  NULL, // password
-                                                  szRecoveryAnswers,
-                                                  NULL,
-                                                  szNewPassword,
-                                                  fRequestCallback,
-                                                  pData,
-                                                  pError));
-
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_LoginRequestThreaded, pAccountRequestInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        ABC_CHECK_RET(ABC_LoginShimSetPassword(szUserName, NULL,
-            szRecoveryAnswers, szNewPassword, pError));
-    }
+    ABC_CHECK_RET(ABC_LoginShimSetPassword(szUserName, NULL,
+        szRecoveryAnswers, szNewPassword, pError));
 
 exit:
-
     return cc;
 }
 
@@ -1626,26 +1473,6 @@ void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo)
 }
 
 /**
- * Converts amount from Satoshi to Bitcoin
- *
- * @param satoshi Amount in Satoshi
- */
-double ABC_SatoshiToBitcoin(int64_t satoshi)
-{
-    return(ABC_TxSatoshiToBitcoin(satoshi));
-}
-
-/**
- * Converts amount from Bitcoin to Satoshi
- *
- * @param bitcoin Amount in Bitcoin
- */
-int64_t ABC_BitcoinToSatoshi(double bitcoin)
-{
-    return(ABC_TxBitcoinToSatoshi(bitcoin));
-}
-
-/**
  * Converts Satoshi to given currency
  *
  * @param satoshi     Amount in Satoshi
@@ -1665,11 +1492,9 @@ tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoSyncKeys pKeys;
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_TxSatoshiToCurrency(pKeys, satoshi, pCurrency, currencyNum, pError));
+    ABC_CHECK_NEW(exchangeSatoshiToCurrency(satoshi, *pCurrency, currencyNum), pError);
 
 exit:
     return cc;
@@ -1695,12 +1520,9 @@ tABC_CC ABC_CurrencyToSatoshi(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoSyncKeys pKeys;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_TxCurrencyToSatoshi(pKeys, currency, currencyNum, pSatoshi, pError));
+    ABC_CHECK_NEW(exchangeCurrencyToSatoshi(currency, *pSatoshi, currencyNum), pError);
 
 exit:
     return cc;
@@ -3160,51 +2982,28 @@ exit:
 
 /**
  * Request an update to the exchange for a currency
- *
- * @param szUserName           UserName for the account
- * @param szPassword           Password for the account
- * @param currencyNum          The currency number to update
- * @param fRequestCallback     The function that will be called when the account signin process has finished.
- * @param pData                A pointer to data to be returned back in callback
- * @param pError               A pointer to the location to store the error if there is one
  */
 tABC_CC
 ABC_RequestExchangeRateUpdate(const char *szUserName,
                               const char *szPassword,
                               int currencyNum,
-                              tABC_Request_Callback fRequestCallback,
-                              void *pData,
                               tABC_Error *pError)
 {
-    tABC_ExchangeInfo *pInfo = NULL;
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     AutoSyncKeys pKeys;
+    AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(
-        ABC_ExchangeAlloc(pKeys, currencyNum,
-                          fRequestCallback, pData, &pInfo, pError));
-    if (fRequestCallback)
-    {
-        pthread_t handle;
-        if (!pthread_create(&handle, NULL, ABC_ExchangeUpdateThreaded, pInfo))
-        {
-            pthread_detach(handle);
-        }
-    }
-    else
-    {
-        cc = ABC_ExchangeUpdate(pInfo, pError);
-        ABC_ExchangeFreeInfo(pInfo);
-    }
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(pKeys, &settings.get(), pError));
+    cc = ABC_ExchangeUpdate(settings->exchangeRateSources, currencyNum, pError);
 
 exit:
     return cc;
@@ -3218,9 +3017,8 @@ ABC_IsTestNet(bool *pResult, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-    *pResult = ABC_BridgeIsTestNet();
-exit:
+    *pResult = isTestnet();
+
     return cc;
 }
 
@@ -3231,26 +3029,12 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoU08Buf Version;
-    bool bTestnet = false;
+    std::string version = ABC_VERSION;
+    version += isTestnet() ? "-testnet" : "-mainnet";
 
-    ABC_IsTestNet(&bTestnet, pError);
-    ABC_BUF_DUP_PTR(Version, ABC_VERSION, strlen(ABC_VERSION));
-    ABC_BUF_APPEND_PTR(Version, "-", 1);
-    if (bTestnet)
-    {
-        ABC_BUF_APPEND_PTR(Version, "testnet", 7);
-    }
-    else
-    {
-        ABC_BUF_APPEND_PTR(Version, "mainnet", 7);
-    }
-    // null byte
-    ABC_BUF_APPEND_PTR(Version, "", 1);
+    ABC_STRDUP(*szVersion, version.c_str());
 
-    *szVersion = (char *)ABC_BUF_PTR(Version);
-    ABC_BUF_CLEAR(Version);
-
+exit:
     return cc;
 }
 

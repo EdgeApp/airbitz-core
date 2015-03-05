@@ -364,18 +364,12 @@ tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char *szRootDir = NULL;
+    std::string filename = getRootDir() + GENERAL_INFO_FILENAME;
 
     ABC_CHECK_NULL(pszFilename);
-    *pszFilename = NULL;
-
-    ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRootDir, pError));
-    ABC_STR_NEW(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszFilename, "%s/%s", szRootDir, GENERAL_INFO_FILENAME);
+    ABC_STRDUP(*pszFilename, filename.c_str());
 
 exit:
-    ABC_FREE_STR(szRootDir);
-
     return cc;
 }
 
@@ -420,8 +414,7 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szRootDir = NULL;
-    char *szFilename = NULL;
+    std::string filename = getRootDir() + GENERAL_QUESTIONS_FILENAME;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
     tABC_QuestionChoices *pQuestionChoices = NULL;
@@ -430,13 +423,8 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
 
     ABC_CHECK_NULL(ppQuestionChoices);
 
-    // create the filename for the question json
-    ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRootDir, pError));
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szRootDir, GENERAL_QUESTIONS_FILENAME);
-
     // if the file doesn't exist
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(filename.c_str(), &bExists, pError));
     if (true != bExists)
     {
         // get an update from the server
@@ -444,7 +432,7 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     }
 
     // read in the recovery question choices json object
-    ABC_CHECK_RET(ABC_FileIOReadFileObject(szFilename, &pJSON_Root, true, pError));
+    ABC_CHECK_RET(ABC_FileIOReadFileObject(filename.c_str(), &pJSON_Root, true, pError));
 
     // get the questions array field
     pJSON_Value = json_object_get(pJSON_Root, JSON_QUESTIONS_FIELD);
@@ -491,8 +479,6 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     pQuestionChoices = NULL; // so we don't free it below
 
 exit:
-    ABC_FREE_STR(szRootDir);
-    ABC_FREE_STR(szFilename);
     if (pJSON_Root) json_decref(pJSON_Root);
     if (pQuestionChoices) ABC_GeneralFreeQuestionChoices(pQuestionChoices);
 
@@ -509,10 +495,9 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    std::string filename = getRootDir() + GENERAL_QUESTIONS_FILENAME;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Q    = NULL;
-    char   *szRootDir  = NULL;
-    char   *szFilename = NULL;
     char   *szJSON     = NULL;
 
     // get the questions from the server
@@ -524,23 +509,15 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
     // set our final json for the array element
     json_object_set(pJSON_Root, JSON_QUESTIONS_FIELD, pJSON_Q);
 
-    // create the filename for the question json
-    ABC_CHECK_RET(ABC_FileIOGetRootDir(&szRootDir, pError));
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(szFilename, "%s/%s", szRootDir, GENERAL_QUESTIONS_FILENAME);
-
     // get the JSON for the file
     szJSON = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
 
     // write the file
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, szJSON, pError));
+    ABC_CHECK_RET(ABC_FileIOWriteFileStr(filename.c_str(), szJSON, pError));
 
 exit:
-
     if (pJSON_Root)     json_decref(pJSON_Root);
     if (pJSON_Q)        json_decref(pJSON_Q);
-    ABC_FREE_STR(szRootDir);
-    ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szJSON);
 
     return cc;
