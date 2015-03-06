@@ -5,11 +5,11 @@
  * See the LICENSE file for more information.
  */
 
-#include "../abcd/login/OtpKey.hpp"
-#include "../abcd/login/Base32.hpp"
+#include "../abcd/crypto/OtpKey.hpp"
+#include "../abcd/crypto/Base32.hpp"
 #include "../minilibs/catch/catch.hpp"
 
-TEST_CASE("RFC 4226 test vectors", "[login][otp][otpkey]" )
+TEST_CASE("RFC 4226 test vectors", "[crypto][otp]" )
 {
     abcd::DataChunk secret
     {
@@ -41,7 +41,7 @@ TEST_CASE("RFC 4226 test vectors", "[login][otp][otpkey]" )
     }
 }
 
-TEST_CASE("Leading zeros in OTP output", "[login][otp][otpkey]" )
+TEST_CASE("Leading zeros in OTP output", "[crypto][otp]" )
 {
     abcd::OtpKey key;
     REQUIRE(key.decodeBase32("AAAAAAAA"));

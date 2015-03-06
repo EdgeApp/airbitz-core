@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_LOGIN_OTPKEY_HPP
-#define ABCD_LOGIN_OTPKEY_HPP
+#ifndef ABCD_CRYPTO_OTPKEY_HPP
+#define ABCD_CRYPTO_OTPKEY_HPP
 
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"

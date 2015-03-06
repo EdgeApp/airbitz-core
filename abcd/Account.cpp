@@ -6,8 +6,8 @@
  */
 
 #include "Account.hpp"
+#include "crypto/Crypto.hpp"
 #include "exchange/Exchange.hpp"
-#include "util/Crypto.hpp"
 #include "util/FileIO.hpp"
 #include "util/Json.hpp"
 #include "util/Mutex.hpp"

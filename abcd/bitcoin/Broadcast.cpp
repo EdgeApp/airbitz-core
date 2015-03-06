@@ -8,8 +8,8 @@
 #include "Broadcast.hpp"
 #include "Testnet.hpp"
 #include "../config.h"
+#include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
-#include "../util/Crypto.hpp"
 #include "../util/URL.hpp"
 #include <curl/curl.h>
 

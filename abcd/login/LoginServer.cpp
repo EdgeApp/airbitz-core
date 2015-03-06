@@ -15,7 +15,7 @@
 
 // For debug upload:
 #include "../bitcoin/WatcherBridge.hpp"
-#include "../util/Crypto.hpp"
+#include "../crypto/Crypto.hpp"
 #include "../util/FileIO.hpp"
 
 // For OTP token hack:

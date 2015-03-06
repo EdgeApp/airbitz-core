@@ -10,7 +10,7 @@
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
 #include "../Account.hpp"
-#include "../util/Crypto.hpp"
+#include "../crypto/Crypto.hpp"
 #include "../util/Util.hpp"
 #include <ctype.h>
 #include <memory>

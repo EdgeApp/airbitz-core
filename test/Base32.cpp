@@ -5,10 +5,10 @@
  * See the LICENSE file for more information.
  */
 
-#include "../abcd/login/Base32.hpp"
+#include "../abcd/crypto/Base32.hpp"
 #include "../minilibs/catch/catch.hpp"
 
-TEST_CASE("RFC 4648 base32 test vectors", "[login][base32]")
+TEST_CASE("RFC 4648 base32 test vectors", "[crypto][base32]")
 {
     struct TestCase
     {
@@ -44,7 +44,7 @@ TEST_CASE("RFC 4648 base32 test vectors", "[login][base32]")
     }
 }
 
-TEST_CASE("Bad base32 strings", "[login][base32]")
+TEST_CASE("Bad base32 strings", "[crypto][base32]")
 {
     abcd::DataChunk result;
 

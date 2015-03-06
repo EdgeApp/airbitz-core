@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_LOGIN_BASE32_HPP
-#define ABCD_LOGIN_BASE32_HPP
+#ifndef ABCD_CRYPTO_BASE32_HPP
+#define ABCD_CRYPTO_BASE32_HPP
 
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"

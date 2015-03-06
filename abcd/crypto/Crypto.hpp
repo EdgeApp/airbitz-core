@@ -33,11 +33,11 @@
  * AirBitz cryptographic function wrappers.
  */
 
-#ifndef ABC_Crypto_h
-#define ABC_Crypto_h
+#ifndef ABCD_CRYPTO_CRYPTO_HPP
+#define ABCD_CRYPTO_CRYPTO_HPP
 
+#include "../util/U08Buf.hpp"
 #include "../../src/ABC.h"
-#include "U08Buf.hpp"
 #include <jansson.h>
 
 namespace abcd {

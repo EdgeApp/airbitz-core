@@ -10,9 +10,9 @@
 #include "../abcd/Account.hpp"
 #include "../abcd/Wallet.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
+#include "../abcd/crypto/Crypto.hpp"
 #include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/json/JsonFile.hpp"
-#include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Util.hpp"
 #include <wallet/wallet.hpp>

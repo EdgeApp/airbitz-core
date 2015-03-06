@@ -30,17 +30,11 @@
  */
 
 #include "Crypto.hpp"
-#include "Data.hpp"
-#include "Debug.hpp"
-#include "FileIO.hpp"
-#include "Json.hpp"
-#include "Util.hpp"
 #include "../bitcoin/Testnet.hpp"
 #include "../json/JsonFile.hpp"
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
+#include "../util/Data.hpp"
+#include "../util/FileIO.hpp"
+#include "../util/Util.hpp"
 #include <unistd.h>
 #include <sys/time.h>
 #ifndef __ANDROID__
@@ -49,11 +43,9 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
-#include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include <openssl/hmac.h>
-#include <jansson.h>
 #include "../../minilibs/scrypt/crypto_scrypt.h"
 #include "../../minilibs/scrypt/sha256.h"
 

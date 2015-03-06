@@ -7,7 +7,7 @@
 
 #include "OtpKey.hpp"
 #include "Base32.hpp"
-#include "../util/Crypto.hpp"
+#include "Crypto.hpp"
 #include "../util/U08Buf.hpp"
 #include <openssl/hmac.h>
 #include <time.h>
