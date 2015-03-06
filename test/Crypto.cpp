@@ -14,6 +14,14 @@
 static const char keyHex[] =
     "002688cc350a5333a87fa622eacec626c3d1c0ebf9f3793de3885fa254d7e393";
 
+TEST_CASE("File name", "[crypto]")
+{
+    const std::string name("1PeChFbhxDD9NLbU21DfD55aQBC4ZTR3tE");
+    const std::string key("Satoshi");
+    CHECK(abcd::cryptoFilename(key, name) ==
+        "5vJNMWZ68tsp2HJa1AfMhZpcpU9Wm9ccEw7cTwvARHXh");
+}
+
 TEST_CASE("Decryption", "[crypto][encryption]")
 {
     tABC_Error error;

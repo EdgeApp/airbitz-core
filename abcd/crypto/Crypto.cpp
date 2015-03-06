@@ -33,11 +33,10 @@
 #include "Encoding.hpp"
 #include "Random.hpp"
 #include "../json/JsonFile.hpp"
-#include "../util/Data.hpp"
 #include "../util/Util.hpp"
+#include <bitcoin/bitcoin.hpp> // wow! such slow, very compile time
 #include <openssl/evp.h>
 #include <openssl/err.h>
-#include <openssl/hmac.h>
 #include <openssl/sha.h>
 
 namespace abcd {
@@ -70,6 +69,13 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
                                 const tABC_U08Buf IV,
                                 tABC_U08Buf       *pData,
                                 tABC_Error        *pError);
+
+std::string
+cryptoFilename(DataSlice key, const std::string &name)
+{
+    return bc::encode_base58(bc::to_data_chunk(
+        bc::hmac_sha256_hash(DataSlice(name), key)));
+}
 
 /**
  * Encrypt data into a jansson object
@@ -621,58 +627,6 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
     ABC_BUF_SET_PTR(*pData, pTmpData, p_len + f_len);
 
 exit:
-    return cc;
-}
-
-/**
- * Generates HMAC-256 of the given data with the given key
- * @param pDataHMAC An un-allocated data buffer. This function will allocate
- * memory and assign it to the buffer. The data should then be freed.
- */
-tABC_CC ABC_CryptoHMAC256(tABC_U08Buf Data,
-                          tABC_U08Buf Key,
-                          tABC_U08Buf *pDataHMAC,
-                          tABC_Error  *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL_BUF(Data);
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL(pDataHMAC);
-
-    // call HMAC-256 in openssl
-    ABC_BUF_NEW(*pDataHMAC, HMAC_SHA_256_LENGTH);
-    HMAC(EVP_sha256(), ABC_BUF_PTR(Key), ABC_BUF_SIZE(Key), ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data), ABC_BUF_PTR(*pDataHMAC), NULL);
-
-exit:
-
-    return cc;
-}
-
-/**
- * Generates HMAC-512 of the given data with the given key
- * @param pDataHMAC An un-allocated data buffer. This function will allocate
- * memory and assign it to the buffer. The data should then be freed.
- */
-tABC_CC ABC_CryptoHMAC512(tABC_U08Buf Data,
-                          tABC_U08Buf Key,
-                          tABC_U08Buf *pDataHMAC,
-                          tABC_Error  *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL_BUF(Data);
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL(pDataHMAC);
-
-    // call HMAC-512 in openssl
-    ABC_BUF_NEW(*pDataHMAC, HMAC_SHA_512_LENGTH);
-    HMAC(EVP_sha512(), ABC_BUF_PTR(Key), ABC_BUF_SIZE(Key), ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data), ABC_BUF_PTR(*pDataHMAC), NULL);
-
-exit:
-
     return cc;
 }
 

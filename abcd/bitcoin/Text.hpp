@@ -43,10 +43,6 @@ tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
                                    tABC_BitcoinURIInfo *pInfo,
                                    tABC_Error *pError);
 
-tABC_CC ABC_BridgeBase58Encode(tABC_U08Buf Data,
-                               char **pszBase58,
-                               tABC_Error *pError);
-
 } // namespace abcd
 
 #endif
