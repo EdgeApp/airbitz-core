@@ -56,16 +56,6 @@ typedef enum eABC_CryptoType
     ABC_CryptoType_Count
 } tABC_CryptoType;
 
-typedef struct sABC_CryptoSNRP
-{
-    tABC_U08Buf     Salt;
-    unsigned long   N;
-    unsigned long   r;
-    unsigned long   p;
-} tABC_CryptoSNRP;
-
-tABC_CC ABC_InitializeCrypto(tABC_Error        *pError);
-
 // Random:
 tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
                                 tABC_Error        *pError);
@@ -129,43 +119,6 @@ tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
                                tABC_Error   *pError);
 
 // Hashing:
-tABC_CC ABC_CryptoScryptSNRP(const tABC_U08Buf     Data,
-                             const tABC_CryptoSNRP *pSNRP,
-                             tABC_U08Buf           *pScryptData,
-                             tABC_Error            *pError);
-
-tABC_CC ABC_CryptoScrypt(const tABC_U08Buf Data,
-                         const tABC_U08Buf Salt,
-                         unsigned long     N,
-                         unsigned long     r,
-                         unsigned long     p,
-                         unsigned int      scryptDataLength,
-                         tABC_U08Buf       *pScryptData,
-                         tABC_Error        *pError);
-
-tABC_CC ABC_CryptoCreateSNRPForClient(tABC_CryptoSNRP   **ppSNRP,
-                                      tABC_Error        *pError);
-
-tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
-                                      tABC_Error        *pError);
-
-tABC_CC ABC_CryptoCreateSNRP(const tABC_U08Buf Salt,
-                             unsigned long     N,
-                             unsigned long     r,
-                             unsigned long     p,
-                             tABC_CryptoSNRP   **ppSNRP,
-                             tABC_Error        *pError);
-
-tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
-                                       json_t                 **ppJSON_SNRP,
-                                       tABC_Error             *pError);
-
-tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
-                                       tABC_CryptoSNRP   **ppSNRP,
-                                       tABC_Error        *pError);
-
-void ABC_CryptoFreeSNRP(tABC_CryptoSNRP *pSNRP);
-
 tABC_CC ABC_CryptoHMAC256(tABC_U08Buf Data,
                           tABC_U08Buf Key,
                           tABC_U08Buf *pDataHMAC,

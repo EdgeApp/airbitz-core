@@ -9,6 +9,7 @@
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
+#include "../crypto/Crypto.hpp"
 #include "../util/Json.hpp"
 #include "../util/Util.hpp"
 #include <jansson.h>

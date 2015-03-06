@@ -12,7 +12,7 @@
 #ifndef ABC_LoginPackage_h
 #define ABC_LoginPackage_h
 
-#include "../crypto/Crypto.hpp"
+#include "../crypto/Scrypt.hpp"
 #include "../../src/ABC.h"
 #include <jansson.h>
 
