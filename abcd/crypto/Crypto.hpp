@@ -53,7 +53,6 @@ namespace abcd {
 typedef enum eABC_CryptoType
 {
     ABC_CryptoType_AES256 = 0,
-    ABC_CryptoType_AES256_Scrypt,
     ABC_CryptoType_Count
 } tABC_CryptoType;
 

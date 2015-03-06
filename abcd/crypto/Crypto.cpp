@@ -58,7 +58,6 @@ namespace abcd {
 #define JSON_ENC_P_FIELD        "p"
 #define JSON_ENC_IV_FIELD       "iv_hex"
 #define JSON_ENC_DATA_FIELD     "data_base64"
-#define JSON_ENC_SNRP_FIELD     "SNRP"
 
 #define UUID_BYTE_COUNT         16
 #define UUID_STR_LENGTH         (UUID_BYTE_COUNT * 2) + 4
@@ -350,50 +349,22 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoU08Buf     GenKey;
-    AutoU08Buf     Salt;
     AutoU08Buf     EncData;
     AutoU08Buf     IV;
-    char            *szSalt_Hex     = NULL;
     char            *szIV_Hex       = NULL;
     char            *szDataBase64   = NULL;
     json_t          *jsonRoot       = NULL;
-    json_t          *jsonSNRP       = NULL;
-    AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> pSNRP;
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_ASSERT(cryptoType < ABC_CryptoType_Count, ABC_CC_UnknownCryptoType, "Invalid encryption type");
     ABC_CHECK_NULL(ppJSON_Enc);
 
-    if ((cryptoType == ABC_CryptoType_AES256) || (cryptoType == ABC_CryptoType_AES256_Scrypt))
+    if (cryptoType == ABC_CryptoType_AES256)
     {
-        const tABC_U08Buf *pFinalKey = &Key;
-
-        // if we are using scrypt then we need to gen the key
-        if (cryptoType == ABC_CryptoType_AES256_Scrypt)
-        {
-            // gen some salt
-            ABC_CHECK_RET(ABC_CryptoCreateRandomData(SCRYPT_DEFAULT_SALT_LENGTH, &Salt, pError));
-
-            // encode the Salt into a Hex string
-            ABC_CHECK_RET(ABC_CryptoHexEncode(Salt, &szSalt_Hex, pError));
-
-            // generate a key using the salt and scrypt
-            ABC_CHECK_RET(ABC_CryptoScrypt(Key,
-                                           Salt,
-                                           g_timedScryptN,
-                                           g_timedScryptR,
-                                           SCRYPT_DEFAULT_CLIENT_P,
-                                           AES_256_KEY_LENGTH,
-                                           &GenKey,
-                                           pError));
-            pFinalKey = &GenKey;
-        }
-
         // encrypt
         ABC_CHECK_RET(ABC_CryptoEncryptAES256Package(Data,
-                                                     *pFinalKey,
+                                                     Key,
                                                      &EncData,
                                                      &IV,
                                                      pError));
@@ -410,19 +381,6 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
                             JSON_ENC_IV_FIELD,   szIV_Hex,
                             JSON_ENC_DATA_FIELD, szDataBase64);
 
-        // if this is Scrypt version, we need to add SNRP
-        if (cryptoType == ABC_CryptoType_AES256_Scrypt)
-        {
-            ABC_CHECK_RET(ABC_CryptoCreateSNRP(Salt,
-                                               g_timedScryptN,
-                                               g_timedScryptR,
-                                               SCRYPT_DEFAULT_CLIENT_P,
-                                               &pSNRP.get(),
-                                               pError));
-            ABC_CHECK_RET(ABC_CryptoCreateJSONObjectSNRP(pSNRP, &jsonSNRP, pError));
-            json_object_set(jsonRoot, JSON_ENC_SNRP_FIELD, jsonSNRP);
-        }
-
         // assign our final result
         *ppJSON_Enc = jsonRoot;
         json_incref(jsonRoot);  // because we will decl below
@@ -433,7 +391,6 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
     }
 
 exit:
-    ABC_FREE_STR(szSalt_Hex);
     ABC_FREE_STR(szIV_Hex);
     ABC_FREE_STR(szDataBase64);
     if (jsonRoot)     json_decref(jsonRoot);
@@ -508,12 +465,9 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
 
     AutoU08Buf     EncData;
     AutoU08Buf     IV;
-    AutoU08Buf     GenKey;
-    AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> pSNRP;
 
     int type;
     json_t *jsonVal = NULL;
-    const tABC_U08Buf *pFinalKey = NULL;
     const char *szIV = NULL;
     const char *szDataBase64 = NULL;
 
@@ -524,22 +478,7 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_TYPE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing type");
     type = (int) json_integer_value(jsonVal);
-    ABC_CHECK_ASSERT((ABC_CryptoType_AES256 == type || ABC_CryptoType_AES256_Scrypt == type), ABC_CC_UnknownCryptoType, "Invalid encryption type");
-
-    pFinalKey = &Key;
-
-    // check if we need to gen a new key
-    if (ABC_CryptoType_AES256_Scrypt == type)
-    {
-        // Decode the SNRP
-        json_t *jsonSNRP = json_object_get(pJSON_Enc, JSON_ENC_SNRP_FIELD);
-        ABC_CHECK_ASSERT((jsonSNRP && json_is_object(jsonSNRP)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing SNRP");
-        ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(jsonSNRP, &pSNRP.get(), pError));
-
-        // generate a key using the salt and scrypt
-        ABC_CHECK_RET(ABC_CryptoScryptSNRP(Key, pSNRP, &GenKey, pError));
-        pFinalKey = &GenKey;
-    }
+    ABC_CHECK_ASSERT(ABC_CryptoType_AES256 == type, ABC_CC_UnknownCryptoType, "Invalid encryption type");
 
     // get the IV
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_IV_FIELD);
@@ -554,7 +493,7 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     ABC_CHECK_RET(ABC_CryptoBase64Decode(szDataBase64, &EncData, pError));
 
     // decrypted the data
-    ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(EncData, *pFinalKey, IV, pData, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(EncData, Key, IV, pData, pError));
 
 exit:
     return cc;
