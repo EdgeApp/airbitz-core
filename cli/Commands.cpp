@@ -207,10 +207,7 @@ Status getBitcoinSeed(int argc, char *argv[])
 
     tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
-
-    AutoString szSeed;
-    ABC_CHECK_OLD(ABC_CryptoHexEncode(data, &szSeed.get(), &error));
-    printf("%s\n", szSeed.get());
+    std::cout << base16Encode(data) << std::endl;
 
     return Status();
 }

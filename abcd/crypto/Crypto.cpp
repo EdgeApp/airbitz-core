@@ -85,7 +85,6 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
 
     AutoU08Buf     EncData;
     AutoU08Buf     IV;
-    char            *szIV_Hex       = NULL;
     json_t          *jsonRoot       = NULL;
 
     ABC_CHECK_NULL_BUF(Data);
@@ -102,13 +101,10 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
                                                      &IV,
                                                      pError));
 
-        // encode the IV into a Hex string
-        ABC_CHECK_RET(ABC_CryptoHexEncode(IV, &szIV_Hex, pError));
-
         // Encoding
         jsonRoot = json_pack("{sissss}",
             JSON_ENC_TYPE_FIELD, cryptoType,
-            JSON_ENC_IV_FIELD,   szIV_Hex,
+            JSON_ENC_IV_FIELD,   base16Encode(U08Buf(IV)).c_str(),
             JSON_ENC_DATA_FIELD, base64Encode(U08Buf(EncData)).c_str());
 
         // assign our final result
@@ -121,7 +117,6 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
     }
 
 exit:
-    ABC_FREE_STR(szIV_Hex);
     if (jsonRoot)     json_decref(jsonRoot);
 
     return cc;
@@ -193,11 +188,9 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     DataChunk data;
-    AutoU08Buf     IV;
-
+    DataChunk iv;
     int type;
     json_t *jsonVal = NULL;
-    const char *szIV = NULL;
 
     ABC_CHECK_NULL(pJSON_Enc);
     ABC_CHECK_NULL_BUF(Key);
@@ -211,8 +204,7 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     // get the IV
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_IV_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing iv");
-    szIV = json_string_value(jsonVal);
-    ABC_CHECK_RET(ABC_CryptoHexDecode(szIV, &IV, pError));
+    ABC_CHECK_NEW(base16Decode(iv, json_string_value(jsonVal)), pError);
 
     // get the encrypted data
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_DATA_FIELD);
@@ -220,7 +212,7 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     ABC_CHECK_NEW(base64Decode(data, json_string_value(jsonVal)), pError);
 
     // decrypted the data
-    ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(toU08Buf(data), Key, IV, pData, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(toU08Buf(data), Key, toU08Buf(iv), pData, pError));
 
 exit:
     return cc;

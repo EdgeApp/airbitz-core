@@ -106,6 +106,18 @@ chunkDecode(DataChunk &result, const std::string &in)
 }
 
 static int
+base16Decode(char c)
+{
+    if ('0' <= c && c <= '9')
+        return c - '0';
+    if ('A' <= c && c <= 'F')
+        return 10 + c - 'A';
+    if ('a' <= c && c <= 'f')
+        return 10 + c - 'a';
+    return -1;
+}
+
+static int
 base32Decode(char c)
 {
     if ('A' <= c && c <= 'Z')
@@ -132,6 +144,18 @@ base64Decode(char c)
 }
 
 std::string
+base16Encode(DataSlice data)
+{
+    return chunkEncode<1, 2>(data, "0123456789abcdef");
+}
+
+Status
+base16Decode(DataChunk &result, const std::string &in)
+{
+    return chunkDecode<1, 2, base16Decode>(result, in);
+}
+
+std::string
 base32Encode(DataSlice data)
 {
     return chunkEncode<5, 8>(data, "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567");
@@ -154,71 +178,6 @@ Status
 base64Decode(DataChunk &result, const std::string &in)
 {
     return chunkDecode<3, 4, base64Decode>(result, in);
-}
-
-/**
- * Encodes the data into a hex string
- *
- * @param pszDataHex Location to store allocated string (caller must free)
- */
-tABC_CC ABC_CryptoHexEncode(const tABC_U08Buf Data,
-                            char              **pszDataHex,
-                            tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    unsigned int dataLength;
-
-    ABC_CHECK_NULL_BUF(Data);
-    ABC_CHECK_NULL(pszDataHex);
-
-    char *szDataHex;
-    dataLength = ABC_BUF_SIZE(Data);
-    ABC_STR_NEW(szDataHex, (dataLength * 2) + 1);
-
-    for (unsigned i = 0; i < dataLength; i++)
-    {
-        unsigned char *pCurByte = (unsigned char *) (ABC_BUF_PTR(Data) + i);
-        sprintf(&(szDataHex[i * 2]), "%02x", *pCurByte);
-    }
-    *pszDataHex = szDataHex;
-
-exit:
-
-    return cc;
-}
-
-/**
- * Decodes the given hex string into data
- */
-tABC_CC ABC_CryptoHexDecode(const char  *szDataHex,
-                            tABC_U08Buf *pData,
-                            tABC_Error  *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    unsigned int dataLength;
-
-    ABC_CHECK_NULL(szDataHex);
-    ABC_CHECK_NULL(pData);
-
-    dataLength = (unsigned int) (strlen(szDataHex) / 2);
-
-    ABC_BUF_NEW(*pData, dataLength);
-
-    for (unsigned i = 0; i < dataLength; i++)
-    {
-        unsigned int val;
-        sscanf(&(szDataHex[i * 2]), "%02x", &val);
-        unsigned char *pCurByte = (unsigned char *) (ABC_BUF_PTR(*pData) + i);
-        *pCurByte = (unsigned char) val;
-    }
-
-exit:
-
-    return cc;
 }
 
 } // namespace abcd

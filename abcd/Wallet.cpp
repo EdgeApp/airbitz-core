@@ -186,7 +186,7 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
 
     // Create Wallet Repo key
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(SYNC_KEY_LENGTH, &WalletAcctKey, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(WalletAcctKey, &(pData->szWalletAcctKey), pError));
+    ABC_STRDUP(pData->szWalletAcctKey, base16Encode(U08Buf(WalletAcctKey)).c_str());
 
     // create the wallet root directory if necessary
     ABC_CHECK_RET(ABC_WalletCreateRootDir(pError));
@@ -668,7 +668,7 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
         info.BitcoinSeed.p = NULL;
 
         // Encode the sync key into our struct:
-        ABC_CHECK_RET(ABC_CryptoHexEncode(info.SyncKey, &(pData->szWalletAcctKey), pError));
+        ABC_STRDUP(pData->szWalletAcctKey, base16Encode(info.SyncKey).c_str());
 
         // make sure this wallet exists, if it doesn't leave fields empty
         bool bExists = false;

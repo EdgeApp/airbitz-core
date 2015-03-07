@@ -289,24 +289,17 @@ tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char    *szSalt_Hex     = NULL;
-
     ABC_CHECK_NULL(pSNRP);
     ABC_CHECK_NULL(ppJSON_SNRP);
 
-    // encode the Salt into a Hex string
-    ABC_CHECK_RET(ABC_CryptoHexEncode(pSNRP->Salt, &szSalt_Hex, pError));
-
     // create the jansson object
     *ppJSON_SNRP = json_pack("{sssisisi}",
-                             JSON_ENC_SALT_FIELD, szSalt_Hex,
-                             JSON_ENC_N_FIELD, pSNRP->N,
-                             JSON_ENC_R_FIELD, pSNRP->r,
-                             JSON_ENC_P_FIELD, pSNRP->p);
+        JSON_ENC_SALT_FIELD, base16Encode(pSNRP->Salt).c_str(),
+        JSON_ENC_N_FIELD, pSNRP->N,
+        JSON_ENC_R_FIELD, pSNRP->r,
+        JSON_ENC_P_FIELD, pSNRP->p);
 
 exit:
-    ABC_FREE_STR(szSalt_Hex);
-
     return cc;
 }
 
@@ -320,7 +313,7 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoU08Buf Salt;
+    DataChunk salt;
     tABC_CryptoSNRP *pSNRP = NULL;
     const char *szSaltHex = NULL;
     unsigned long N, r, p;
@@ -336,7 +329,7 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
     szSaltHex = json_string_value(jsonVal);
 
     // decrypt the salt
-    ABC_CHECK_RET(ABC_CryptoHexDecode(szSaltHex, &Salt, pError));
+    ABC_CHECK_NEW(base16Decode(salt, szSaltHex), pError);
 
     // get n
     jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_N_FIELD);
@@ -355,8 +348,7 @@ tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
 
     // store final values
     ABC_NEW(pSNRP, tABC_CryptoSNRP);
-    pSNRP->Salt = Salt;
-    ABC_BUF_CLEAR(Salt); // so we don't free it when we leave
+    ABC_BUF_DUP(pSNRP->Salt, toU08Buf(salt));
     pSNRP->N = N;
     pSNRP->r = r;
     pSNRP->p = p;

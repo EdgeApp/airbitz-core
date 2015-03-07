@@ -66,7 +66,7 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
                               tABC_U08Buf LP1,
                               tABC_CarePackage *pCarePackage,
                               tABC_LoginPackage *pLoginPackage,
-                              char *szRepoAcctKey,
+                              const char *szRepoAcctKey,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;

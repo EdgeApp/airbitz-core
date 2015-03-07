@@ -14,6 +14,18 @@
 namespace abcd {
 
 /**
+ * Encodes data into a hex string.
+ */
+std::string
+base16Encode(DataSlice data);
+
+/**
+ * Decodes a hex string.
+ */
+Status
+base16Decode(DataChunk &result, const std::string &in);
+
+/**
  * Encodes data into a base-32 string according to rfc4648.
  */
 std::string
@@ -36,15 +48,6 @@ base64Encode(DataSlice data);
  */
 Status
 base64Decode(DataChunk &result, const std::string &in);
-
-// Old versions:
-tABC_CC ABC_CryptoHexEncode(const tABC_U08Buf Data,
-                            char              **pszDataHex,
-                            tABC_Error        *pError);
-
-tABC_CC ABC_CryptoHexDecode(const char  *szDataHex,
-                            tABC_U08Buf *pData,
-                            tABC_Error  *pError);
 
 } // namespace abcd
 

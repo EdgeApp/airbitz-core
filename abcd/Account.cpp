@@ -984,6 +984,7 @@ tABC_CC ABC_AccountWalletLoad(tABC_SyncKeys *pKeys,
     const char *szSyncKey = NULL;
     const char *szMK = NULL;
     const char *szBPS = NULL;
+    DataChunk syncKey, dataKey, bitcoinKey;
 
     // Load and decrypt:
     ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
@@ -1003,9 +1004,14 @@ tABC_CC ABC_AccountWalletLoad(tABC_SyncKeys *pKeys,
     ABC_CHECK_SYS(!e, "json_unpack(account wallet data)");
 
     // Decode hex strings:
-    ABC_CHECK_RET(ABC_CryptoHexDecode(szSyncKey, &pInfo->SyncKey, pError));
-    ABC_CHECK_RET(ABC_CryptoHexDecode(szMK, &pInfo->MK, pError));
-    ABC_CHECK_RET(ABC_CryptoHexDecode(szBPS, &pInfo->BitcoinSeed, pError));
+    ABC_CHECK_NEW(base16Decode(syncKey, szSyncKey), pError);
+    ABC_CHECK_NEW(base16Decode(dataKey, szMK), pError);
+    ABC_CHECK_NEW(base16Decode(bitcoinKey, szBPS), pError);
+
+    // Write out:
+    ABC_BUF_DUP(pInfo->SyncKey, toU08Buf(syncKey));
+    ABC_BUF_DUP(pInfo->MK, toU08Buf(dataKey));
+    ABC_BUF_DUP(pInfo->BitcoinSeed, toU08Buf(bitcoinKey));
 
     // Success, so do not free the members:
     pInfo = NULL;
@@ -1028,24 +1034,16 @@ tABC_CC ABC_AccountWalletSave(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    char *szSyncKey = NULL;
-    char *szMK = NULL;
-    char *szBPS = NULL;
     json_t *pJSON = NULL;
     char *szFilename = NULL;
 
-    // Hex-encode the keys:
-    ABC_CHECK_RET(ABC_CryptoHexEncode(pInfo->SyncKey, &szSyncKey, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(pInfo->MK, &szMK, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(pInfo->BitcoinSeed, &szBPS, pError));
-
     // JSON-encode everything:
     pJSON = json_pack("{ss, ss, ss, si, sb}",
-                      JSON_ACCT_WALLET_SYNC_KEY_FIELD, szSyncKey,
-                      JSON_ACCT_WALLET_MK_FIELD, szMK,
-                      JSON_ACCT_WALLET_BPS_FIELD, szBPS,
-                      JSON_ACCT_WALLET_SORT_FIELD, pInfo->sortIndex,
-                      JSON_ACCT_WALLET_ARCHIVE_FIELD, pInfo->archived);
+        JSON_ACCT_WALLET_SYNC_KEY_FIELD, base16Encode(pInfo->SyncKey).c_str(),
+        JSON_ACCT_WALLET_MK_FIELD, base16Encode(pInfo->MK).c_str(),
+        JSON_ACCT_WALLET_BPS_FIELD, base16Encode(pInfo->BitcoinSeed).c_str(),
+        JSON_ACCT_WALLET_SORT_FIELD, pInfo->sortIndex,
+        JSON_ACCT_WALLET_ARCHIVE_FIELD, pInfo->archived);
 
     // Ensure the directory exists:
     ABC_CHECK_RET(ABC_AccountWalletGetDir(pKeys, NULL, pError));
@@ -1056,9 +1054,6 @@ tABC_CC ABC_AccountWalletSave(tABC_SyncKeys *pKeys,
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON, pKeys->MK, ABC_CryptoType_AES256, szFilename, pError));
 
 exit:
-    ABC_FREE_STR(szSyncKey);
-    ABC_FREE_STR(szMK);
-    ABC_FREE_STR(szBPS);
     if (pJSON) json_decref(pJSON);
     ABC_FREE_STR(szFilename);
 

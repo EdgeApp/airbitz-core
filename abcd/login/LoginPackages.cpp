@@ -288,7 +288,7 @@ tABC_CC ABC_LoginPackageGetSyncKey(tABC_LoginPackage *pSelf,
     AutoU08Buf SyncKey;
 
     ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pSelf->ESyncKey, MK, &SyncKey, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(SyncKey, pszSyncKey, pError));
+    ABC_STRDUP(*pszSyncKey, base16Encode(U08Buf(SyncKey)).c_str());
 
 exit:
     return cc;
