@@ -6,7 +6,7 @@
  */
 
 #include "Scrypt.hpp"
-#include "Crypto.hpp"
+#include "Encoding.hpp"
 #include "Random.hpp"
 #include "../bitcoin/Testnet.hpp"
 #include "../../minilibs/scrypt/crypto_scrypt.h"

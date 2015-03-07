@@ -7,6 +7,7 @@
 
 #include "LoginServer.hpp"
 #include "ServerDefs.hpp"
+#include "../crypto/Encoding.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/Json.hpp"
 #include "../util/URL.hpp"
@@ -15,7 +16,6 @@
 
 // For debug upload:
 #include "../bitcoin/WatcherBridge.hpp"
-#include "../crypto/Crypto.hpp"
 #include "../util/FileIO.hpp"
 
 // For OTP token hack:

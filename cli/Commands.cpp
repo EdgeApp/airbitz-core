@@ -11,6 +11,7 @@
 #include "../abcd/Wallet.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Crypto.hpp"
+#include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/json/JsonFile.hpp"
 #include "../abcd/util/FileIO.hpp"

@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "../abcd/crypto/Base32.hpp"
+#include "../abcd/crypto/Encoding.hpp"
 #include "../minilibs/catch/catch.hpp"
 
 TEST_CASE("RFC 4648 base32 test vectors", "[crypto][base32]")

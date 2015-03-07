@@ -90,23 +90,6 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
                                         json_t **ppJSON_Data,
                                         tABC_Error  *pError);
 
-// Formats:
-tABC_CC ABC_CryptoHexEncode(const tABC_U08Buf Data,
-                            char              **pszDataHex,
-                            tABC_Error        *pError);
-
-tABC_CC ABC_CryptoHexDecode(const char  *szDataHex,
-                            tABC_U08Buf *pData,
-                            tABC_Error  *pError);
-
-tABC_CC ABC_CryptoBase64Encode(const tABC_U08Buf Data,
-                               char              **pszDataBase64,
-                               tABC_Error        *pError);
-
-tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
-                               tABC_U08Buf  *pData,
-                               tABC_Error   *pError);
-
 // Hashing:
 tABC_CC ABC_CryptoHMAC256(tABC_U08Buf Data,
                           tABC_U08Buf Key,

@@ -7,6 +7,7 @@
 
 #include "LoginPackages.hpp"
 #include "../crypto/Crypto.hpp"
+#include "../crypto/Encoding.hpp"
 #include "../util/Json.hpp"
 #include "../util/Util.hpp"
 

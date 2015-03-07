@@ -6,7 +6,7 @@
  */
 
 #include "../abcd/crypto/OtpKey.hpp"
-#include "../abcd/crypto/Base32.hpp"
+#include "../abcd/crypto/Encoding.hpp"
 #include "../minilibs/catch/catch.hpp"
 
 TEST_CASE("RFC 4226 test vectors", "[crypto][otp]" )
