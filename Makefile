@@ -19,7 +19,7 @@ endif
 # Source files:
 abc_sources = \
 	$(wildcard abcd/*.cpp abcd/*/*.cpp src/*.cpp) \
-	minilibs/scrypt/crypto_scrypt.c minilibs/scrypt/sha256.c \
+	minilibs/scrypt/crypto_scrypt.c \
 	minilibs/git-sync/sync.c
 
 cli_sources = $(wildcard cli/*.cpp)

@@ -30,6 +30,7 @@
 #define _CRYPTO_SCRYPT_H_
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #ifdef __cplusplus
 extern "C" {

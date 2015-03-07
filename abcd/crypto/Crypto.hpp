@@ -45,7 +45,6 @@ namespace abcd {
 #define AES_256_IV_LENGTH       16
 #define AES_256_BLOCK_LENGTH    16
 #define AES_256_KEY_LENGTH      32
-#define SHA_256_LENGTH          32
 
 #define HMAC_SHA_256_LENGTH     32
 #define HMAC_SHA_512_LENGTH     64

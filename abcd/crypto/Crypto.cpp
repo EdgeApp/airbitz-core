@@ -38,7 +38,7 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/hmac.h>
-#include "../../minilibs/scrypt/sha256.h"
+#include <openssl/sha.h>
 
 namespace abcd {
 
@@ -301,7 +301,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     unsigned long totalSizeUnencrypted = 0;
     unsigned char *pCurUnencryptedData = NULL;
     unsigned char nSizeByte = 0;
-    unsigned char sha256Output[SHA_256_LENGTH];
+    unsigned char sha256Output[SHA256_DIGEST_LENGTH];
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Key);
@@ -336,7 +336,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     totalSizeUnencrypted += ABC_BUF_SIZE(Data); // data
     totalSizeUnencrypted += 1; // footer count
     totalSizeUnencrypted += nRandomFooterBytes; // footer
-    totalSizeUnencrypted += SHA_256_LENGTH; // sha256
+    totalSizeUnencrypted += SHA256_DIGEST_LENGTH; // sha256
     //printf("total size unencrypted: %lu\n", (unsigned long) totalSizeUnencrypted);
 
     // allocate the unencrypted buffer
@@ -374,12 +374,9 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     pCurUnencryptedData += nRandomFooterBytes;
 
     // add the sha256
-    SHA256_CTX sha256Context;
-    sc_SHA256_Init(&sha256Context);
-    sc_SHA256_Update(&sha256Context, ABC_BUF_PTR(UnencryptedData), totalSizeUnencrypted - SHA_256_LENGTH);
-    sc_SHA256_Final(sha256Output, &sha256Context);
-    memcpy(pCurUnencryptedData, sha256Output, SHA_256_LENGTH);
-    pCurUnencryptedData += SHA_256_LENGTH;
+    SHA256(ABC_BUF_PTR(UnencryptedData), totalSizeUnencrypted - SHA256_DIGEST_LENGTH, sha256Output);
+    memcpy(pCurUnencryptedData, sha256Output, SHA256_DIGEST_LENGTH);
+    pCurUnencryptedData += SHA256_DIGEST_LENGTH;
 
     // encrypted our new unencrypted package
     ABC_CHECK_RET(ABC_CryptoEncryptAES256(UnencryptedData, Key, *pIV, pEncData, pError));
@@ -419,8 +416,7 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     unsigned char footerLength;
     unsigned int shaCheckLength;
     unsigned char *pSHALoc;
-    SHA256_CTX sha256Context;
-    unsigned char sha256Output[SHA_256_LENGTH];
+    unsigned char sha256Output[SHA256_DIGEST_LENGTH];
     unsigned char *pFinalDataPos;
 
     ABC_CHECK_NULL_BUF(EncData);
@@ -443,7 +439,7 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     headerLength = *ABC_BUF_PTR(Data);
 
     // check that we have enough data based upon this info
-    minSize = 1 + headerLength + 4 + 1 + 1 + SHA_256_LENGTH; // decrypted package must be at least this big
+    minSize = 1 + headerLength + 4 + 1 + 1 + SHA256_DIGEST_LENGTH; // decrypted package must be at least this big
     ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
 
     // get the size of the data section
@@ -457,14 +453,14 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     dataSecLength += ((unsigned int) *pDataLengthPos);
 
     // check that we have enough data based upon this info
-    minSize = 1 + headerLength + 4 + dataSecLength + 1 + SHA_256_LENGTH; // decrypted package must be at least this big
+    minSize = 1 + headerLength + 4 + dataSecLength + 1 + SHA256_DIGEST_LENGTH; // decrypted package must be at least this big
     ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
 
     // get the size of the random footer section
     footerLength = *(ABC_BUF_PTR(Data) + 1 + headerLength + 4 + dataSecLength);
 
     // check that we have enough data based upon this info
-    minSize = 1 + headerLength + 4 + dataSecLength + 1 + footerLength + SHA_256_LENGTH; // decrypted package must be at least this big
+    minSize = 1 + headerLength + 4 + dataSecLength + 1 + footerLength + SHA256_DIGEST_LENGTH; // decrypted package must be at least this big
     ABC_CHECK_ASSERT(ABC_BUF_SIZE(Data) >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
 
     // set up for the SHA check
@@ -472,12 +468,10 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     pSHALoc = ABC_BUF_PTR(Data) + shaCheckLength;
 
     // calc the sha256
-    sc_SHA256_Init(&sha256Context);
-    sc_SHA256_Update(&sha256Context, ABC_BUF_PTR(Data), shaCheckLength);
-    sc_SHA256_Final(sha256Output, &sha256Context);
+    SHA256(ABC_BUF_PTR(Data), shaCheckLength, sha256Output);
 
     // check the sha256
-    if (0 != memcmp(pSHALoc, sha256Output, SHA_256_LENGTH))
+    if (0 != memcmp(pSHALoc, sha256Output, SHA256_DIGEST_LENGTH))
     {
         // this can be specifically used by the caller to possibly determine whether the key was incorrect
         ABC_RET_ERROR(ABC_CC_DecryptFailure, "Decrypted data failed checksum (SHA) check");
