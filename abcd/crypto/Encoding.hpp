@@ -22,8 +22,20 @@ base32Encode(DataSlice data);
 /**
  * Decodes a base-32 string as defined by rfc4648.
  */
-bool
+Status
 base32Decode(DataChunk &result, const std::string &in);
+
+/**
+ * Encodes data into a hex string.
+ */
+std::string
+base64Encode(DataSlice data);
+
+/**
+ * Decodes a hex string.
+ */
+Status
+base64Decode(DataChunk &result, const std::string &in);
 
 // Old versions:
 tABC_CC ABC_CryptoHexEncode(const tABC_U08Buf Data,
@@ -33,14 +45,6 @@ tABC_CC ABC_CryptoHexEncode(const tABC_U08Buf Data,
 tABC_CC ABC_CryptoHexDecode(const char  *szDataHex,
                             tABC_U08Buf *pData,
                             tABC_Error  *pError);
-
-tABC_CC ABC_CryptoBase64Encode(const tABC_U08Buf Data,
-                               char              **pszDataBase64,
-                               tABC_Error        *pError);
-
-tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
-                               tABC_U08Buf  *pData,
-                               tABC_Error   *pError);
 
 } // namespace abcd
 

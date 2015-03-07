@@ -86,7 +86,6 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
     AutoU08Buf     EncData;
     AutoU08Buf     IV;
     char            *szIV_Hex       = NULL;
-    char            *szDataBase64   = NULL;
     json_t          *jsonRoot       = NULL;
 
     ABC_CHECK_NULL_BUF(Data);
@@ -106,14 +105,11 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
         // encode the IV into a Hex string
         ABC_CHECK_RET(ABC_CryptoHexEncode(IV, &szIV_Hex, pError));
 
-        // encode the encrypted data into base64
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(EncData, &szDataBase64, pError));
-
         // Encoding
         jsonRoot = json_pack("{sissss}",
-                            JSON_ENC_TYPE_FIELD, cryptoType,
-                            JSON_ENC_IV_FIELD,   szIV_Hex,
-                            JSON_ENC_DATA_FIELD, szDataBase64);
+            JSON_ENC_TYPE_FIELD, cryptoType,
+            JSON_ENC_IV_FIELD,   szIV_Hex,
+            JSON_ENC_DATA_FIELD, base64Encode(U08Buf(EncData)).c_str());
 
         // assign our final result
         *ppJSON_Enc = jsonRoot;
@@ -126,7 +122,6 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
 
 exit:
     ABC_FREE_STR(szIV_Hex);
-    ABC_FREE_STR(szDataBase64);
     if (jsonRoot)     json_decref(jsonRoot);
 
     return cc;
@@ -197,13 +192,12 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoU08Buf     EncData;
+    DataChunk data;
     AutoU08Buf     IV;
 
     int type;
     json_t *jsonVal = NULL;
     const char *szIV = NULL;
-    const char *szDataBase64 = NULL;
 
     ABC_CHECK_NULL(pJSON_Enc);
     ABC_CHECK_NULL_BUF(Key);
@@ -223,11 +217,10 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     // get the encrypted data
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_DATA_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing data");
-    szDataBase64 = json_string_value(jsonVal);
-    ABC_CHECK_RET(ABC_CryptoBase64Decode(szDataBase64, &EncData, pError));
+    ABC_CHECK_NEW(base64Decode(data, json_string_value(jsonVal)), pError);
 
     // decrypted the data
-    ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(EncData, Key, IV, pData, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(toU08Buf(data), Key, IV, pData, pError));
 
 exit:
     return cc;

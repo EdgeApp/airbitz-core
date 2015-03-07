@@ -32,7 +32,7 @@ namespace abcd {
 typedef struct sABC_PinLocal
 {
     json_t          *pEMK_PINK;
-    tABC_U08Buf     DID;
+    DataChunk       DID;
     time_t          expires;
 } tABC_PinLocal;
 
@@ -45,8 +45,6 @@ void ABC_LoginPinLocalFree(tABC_PinLocal *pSelf)
     if (pSelf)
     {
         if (pSelf->pEMK_PINK) json_decref(pSelf->pEMK_PINK);
-        ABC_BUF_FREE(pSelf->DID);
-
         ABC_CLEAR_FREE(pSelf, sizeof(tABC_PinLocal));
     }
 }
@@ -83,7 +81,7 @@ tABC_CC ABC_LoginPinLocalLoad(tABC_PinLocal **ppSelf,
     ABC_CHECK_SYS(!e, "Error parsing local PIN JSON");
 
     // Unpack items:
-    ABC_CHECK_RET(ABC_CryptoBase64Decode(szDID, &pSelf->DID, pError));
+    ABC_CHECK_NEW(base64Decode(pSelf->DID, szDID), pError);
     pSelf->expires = expires;
 
     // Assign the final output:
@@ -181,7 +179,7 @@ tABC_CC ABC_LoginPin(Login *&result,
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LPIN, pCarePackage->pSNRP2, &LPIN2, pError));
 
     // Get EPINK from the server:
-    ABC_CHECK_RET(ABC_LoginServerGetPinPackage(pLocal->DID, LPIN1, &szEPINK, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetPinPackage(toU08Buf(pLocal->DID), LPIN1, &szEPINK, pError));
     pEPINK = json_loads(szEPINK, 0, &je);
     ABC_CHECK_ASSERT(pEPINK != NULL && json_is_object(pEPINK),
         ABC_CC_JSONError, "Error parsing EPINK JSON");
@@ -226,7 +224,6 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     json_t              *pEMK_PINK      = NULL;
     json_t              *pEPINK         = NULL;
     json_t              *pLocal         = NULL;
-    char *              szDID           = NULL;
     char *              szEPINK         = NULL;
     char *              szLocal         = NULL;
     AutoU08Buf          L1;
@@ -257,12 +254,11 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 
     // Set up DID:
     ABC_CHECK_RET(ABC_CryptoCreateRandomData(KEY_LENGTH, &DID, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(DID, &szDID, pError));
 
     // Set up the local file:
     pLocal = json_pack("{s:O, s:s, s:I}",
         JSON_LOCAL_EMK_PINK_FIELD, pEMK_PINK,
-        JSON_LOCAL_DID_FIELD, szDID,
+        JSON_LOCAL_DID_FIELD, base64Encode(U08Buf(DID)).c_str(),
         JSON_LOCAL_EXPIRES_FIELD, (json_int_t)expires);
     ABC_CHECK_NULL(pLocal);
     szLocal = ABC_UtilStringFromJSONObject(pLocal, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
@@ -280,7 +276,6 @@ exit:
     if (pEMK_PINK)      json_decref(pEMK_PINK);
     if (pEPINK)         json_decref(pEPINK);
     if (pLocal)         json_decref(pLocal);
-    ABC_FREE_STR(szDID);
     ABC_FREE_STR(szEPINK);
     ABC_FREE_STR(szLocal);
 

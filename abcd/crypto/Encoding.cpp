@@ -6,74 +6,79 @@
  */
 
 #include "Encoding.hpp"
-#include <openssl/bio.h>
-#include <openssl/buffer.h>
-#include <openssl/evp.h>
 #include <algorithm>
 
 namespace abcd {
 
-static
-int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64);
-
-std::string
-base32Encode(DataSlice data)
+/**
+ * Encodes data in an arbitrary power-of-2 base.
+ * @param Bytes number of bytes per chunk of characters.
+ * @param Chars number of characters per chunk.
+ */
+template<unsigned Bytes, unsigned Chars> std::string
+chunkEncode(DataSlice data, const char *alphabet)
 {
-    const char base32Sym[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     std::string out;
-    auto chunks = (data.size() + 4) / 5; // Rounding up
-    out.reserve(8 * chunks);
+    auto chunks = (data.size() + Bytes - 1) / Bytes; // Rounding up
+    out.reserve(Chars * chunks);
 
-    auto i = data.begin();
+    constexpr unsigned shift = 8 * Bytes / Chars; // Bits per character
     uint16_t buffer = 0; // Bits waiting to be written out, MSB first
     int bits = 0; // Number of bits currently in the buffer
+    auto i = data.begin();
     while (i != data.end() || 0 < bits)
     {
         // Reload the buffer if we need more bits:
-        if (i != data.end() && bits < 5)
+        if (i != data.end() && bits < shift)
         {
             buffer |= *i++ << (8 - bits);
             bits += 8;
         }
 
-        // Write out 5 most-significant bits in the buffer:
-        out += base32Sym[buffer >> 11];
-        buffer <<= 5;
-        bits -= 5;
+        // Write out the most-significant bits in the buffer:
+        out += alphabet[buffer >> (16 - shift)];
+        buffer <<= shift;
+        bits -= shift;
     }
 
-    // Pad the final string to a multiple of 8 characters long:
-    out.append(-out.size() % 8, '=');
+    // Pad the final string to a multiple of the chunk size:
+    out.append(-out.size() % Chars, '=');
     return out;
 }
 
-bool
-base32Decode(DataChunk &result, const std::string &in)
+/**
+ * Decodes data from an arbitrary power-of-2 base.
+ * @param Bytes number of bytes per chunk of characters.
+ * @param Chars number of characters per chunk.
+ * @param Decode function for converting characters to their values.
+ * A negative value indicates an invalid character.
+ */
+template<unsigned Bytes, unsigned Chars, int Decode(char c)>
+Status
+chunkDecode(DataChunk &result, const std::string &in)
 {
-    // The string must be a multiple of 8 characters long:
-    if (in.size() % 8)
-        return false;
+    // The string must be a multiple of the chunk size:
+    if (in.size() % Chars)
+        return ABC_ERROR(ABC_CC_ParseError, "Bad encoding");
 
     DataChunk out;
-    out.reserve(5 * (in.size() / 8));
+    out.reserve(Bytes * (in.size() / Chars));
 
-    auto i = in.begin();
+    constexpr unsigned shift = 8 * Bytes / Chars; // Bits per character
     uint16_t buffer = 0; // Bits waiting to be written out, MSB first
     int bits = 0; // Number of bits currently in the buffer
+    auto i = in.begin();
     while (i != in.end())
     {
         // Read one character from the string:
-        int value = 0;
-        if ('A' <= *i && *i <= 'Z')
-            value = *i++ - 'A';
-        else if ('2' <= *i && *i <= '7')
-            value = 26 + *i++ - '2';
-        else
+        int value = Decode(*i);
+        if (value < 0)
             break;
+        ++i;
 
         // Append the bits to the buffer:
-        buffer |= value << (11 - bits);
-        bits += 5;
+        buffer |= value << (16 - bits - shift);
+        bits += shift;
 
         // Write out some bits if the buffer has a byte's worth:
         if (8 <= bits)
@@ -86,18 +91,69 @@ base32Decode(DataChunk &result, const std::string &in)
 
     // Any extra characters must be '=':
     if (!std::all_of(i, in.end(), [](char c){ return '=' == c; }))
-        return false;
+        return ABC_ERROR(ABC_CC_ParseError, "Bad encoding");
 
     // There cannot be extra padding:
-    if (8 <= in.end() - i)
-        return false;
+    if (Chars <= in.end() - i || shift <= bits)
+        return ABC_ERROR(ABC_CC_ParseError, "Bad encoding");
 
     // Any extra bits must be 0 (but rfc4648 decoders can be liberal here):
 //    if (buffer != 0)
 //        return false;
 
     result = std::move(out);
-    return true;
+    return Status();
+}
+
+static int
+base32Decode(char c)
+{
+    if ('A' <= c && c <= 'Z')
+        return c - 'A';
+    if ('2' <= c && c <= '7')
+        return 26 + c - '2';
+    return -1;
+}
+
+static int
+base64Decode(char c)
+{
+    if ('A' <= c && c <= 'Z')
+        return c - 'A';
+    if ('a' <= c && c <= 'z')
+        return 26 + c - 'a';
+    if ('0' <= c && c <= '9')
+        return 52 + c - '0';
+    if ('+' == c)
+        return 62;
+    if ('/' == c)
+        return 63;
+    return -1;
+}
+
+std::string
+base32Encode(DataSlice data)
+{
+    return chunkEncode<5, 8>(data, "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567");
+}
+
+Status
+base32Decode(DataChunk &result, const std::string &in)
+{
+    return chunkDecode<5, 8, base32Decode>(result, in);
+}
+
+std::string
+base64Encode(DataSlice data)
+{
+    return chunkEncode<3, 4>(data,
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
+}
+
+Status
+base64Decode(DataChunk &result, const std::string &in)
+{
+    return chunkDecode<3, 4, base64Decode>(result, in);
 }
 
 /**
@@ -163,115 +219,6 @@ tABC_CC ABC_CryptoHexDecode(const char  *szDataHex,
 exit:
 
     return cc;
-}
-
-/**
- * Converts a buffer of binary data to a base-64 string.
- * @param Data The passed-in data. The caller owns this.
- * @param pszDataBase64 The returned string, which the caller must free().
- */
-tABC_CC ABC_CryptoBase64Encode(const tABC_U08Buf Data,
-                               char              **pszDataBase64,
-                               tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    BIO *bio = NULL;
-    BIO *mem = NULL;
-    BIO *b64 = NULL;
-    unsigned len;
-
-    ABC_CHECK_NULL_BUF(Data);
-    ABC_CHECK_NULL(pszDataBase64);
-
-    // Set up the pipleline:
-    bio = BIO_new(BIO_s_mem());
-    ABC_CHECK_SYS(bio, "BIO_new_mem_buf");
-    mem = bio;
-    b64 = BIO_new(BIO_f_base64());
-    ABC_CHECK_SYS(b64, "BIO_f_base64");
-    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // Do not use newlines to flush buffer
-    bio = BIO_push(b64, bio);
-
-    // Push the data through:
-    len = BIO_write(bio, ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data));
-    if (len != ABC_BUF_SIZE(Data))
-    {
-        ABC_RET_ERROR(ABC_CC_SysError, "Base64 encode has failed");
-    }
-    (void)BIO_flush(bio);
-
-    // Move the data to the output:
-    BUF_MEM *bptr;
-    BIO_get_mem_ptr(mem, &bptr);
-    ABC_STR_NEW(*pszDataBase64, bptr->length + 1);
-    memcpy(*pszDataBase64, bptr->data, bptr->length);
-
-exit:
-    if (bio) BIO_free_all(bio);
-    return cc;
-}
-
-/**
- * Converts a string of base-64 encoded data to a buffer of binary data.
- * @param pData An un-allocated data buffer. This function will allocate
- * memory and assign it to the buffer. The data should then be freed.
- */
-tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
-                               tABC_U08Buf  *pData,
-                               tABC_Error   *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    BIO *bio = NULL;
-    BIO *b64 = NULL;
-    unsigned char *pTmpData = NULL;
-    int len;
-    int decodeLen;
-
-    ABC_CHECK_NULL(szDataBase64);
-    ABC_CHECK_NULL(pData);
-
-    // Set up the pipeline:
-    bio = BIO_new_mem_buf((void *)szDataBase64, (int)strlen(szDataBase64));
-    ABC_CHECK_SYS(bio, "BIO_new_mem_buf");
-    b64 = BIO_new(BIO_f_base64());
-    ABC_CHECK_SYS(b64, "BIO_f_base64");
-    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL); // Do not use newlines to flush buffer
-    bio = BIO_push(b64, bio);
-
-    // Push the data through:
-    decodeLen = ABC_CryptoCalcBase64DecodeLength(szDataBase64);
-    ABC_ARRAY_NEW(pTmpData, decodeLen + 1, unsigned char);
-    len = BIO_read(bio, pTmpData, (int)strlen(szDataBase64));
-    if (len != decodeLen)
-    {
-        ABC_RET_ERROR(ABC_CC_SysError, "Base64 decode is incorrect");
-    }
-    ABC_BUF_SET_PTR(*pData, pTmpData, len);
-
-exit:
-    if (bio) BIO_free_all(bio);
-    return cc;
-}
-
-/*
- * Calculates the length of a decoded base64 string
- */
-static
-int ABC_CryptoCalcBase64DecodeLength(const char *szDataBase64)
-{
-    int len = (int) strlen(szDataBase64);
-    int padding = 0;
-
-    if (szDataBase64[len-1] == '=' && szDataBase64[len-2] == '=') //last two chars are =
-    padding = 2;
-    else if (szDataBase64[len-1] == '=') //last char is =
-    padding = 1;
-
-    return (3*len)/4 - padding;
 }
 
 } // namespace abcd

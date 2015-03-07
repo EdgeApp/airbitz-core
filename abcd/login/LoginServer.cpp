@@ -74,8 +74,6 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
     char *szURL     = NULL;
     char *szResults = NULL;
     char *szPost    = NULL;
-    char *szL1_Base64 = NULL;
-    char *szLP1_Base64 = NULL;
     char *szCarePackage     = NULL;
     char *szLoginPackage    = NULL;
     json_t *pJSON_Root = NULL;
@@ -87,20 +85,16 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
     ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_ACCOUNT_CREATE_PATH);
 
-    // create base64 versions of L1 and LP1
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
-
     ABC_CHECK_RET(ABC_CarePackageEncode(pCarePackage, &szCarePackage, pError));
     ABC_CHECK_RET(ABC_LoginPackageEncode(pLoginPackage, &szLoginPackage, pError));
 
     // create the post data
     pJSON_Root = json_pack("{ssssssssss}",
-                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                        ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
-                        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage,
-                        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage,
-                        ABC_SERVER_JSON_REPO_FIELD, szRepoAcctKey);
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
+        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage,
+        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage,
+        ABC_SERVER_JSON_REPO_FIELD, szRepoAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
 
@@ -114,8 +108,6 @@ exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szL1_Base64);
-    ABC_FREE_STR(szLP1_Base64);
     ABC_FREE_STR(szCarePackage);
     ABC_FREE_STR(szLoginPackage);
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -139,8 +131,6 @@ tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1,
     char *szURL     = NULL;
     char *szResults = NULL;
     char *szPost    = NULL;
-    char *szL1_Base64 = NULL;
-    char *szLP1_Base64 = NULL;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
@@ -150,14 +140,10 @@ tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1,
     ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_ACCOUNT_ACTIVATE);
 
-    // create base64 versions of L1 and LP1
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
-
     // create the post data
     pJSON_Root = json_pack("{ssss}",
-                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                        ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64);
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str());
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
@@ -173,8 +159,6 @@ exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szL1_Base64);
-    ABC_FREE_STR(szLP1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
 
     return cc;
@@ -192,14 +176,12 @@ tABC_CC ABC_LoginServerAvailable(tABC_U08Buf L1,
     std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_ACCOUNT_AVAILABLE;
     std::string get;
     AccountAvailableJson json;
-    char *szL1_Base64 = NULL;
     char *szResults = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
 
     // create the json
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-    ABC_CHECK_NEW(json.setL1(szL1_Base64), pError);
+    ABC_CHECK_NEW(json.setL1(base64Encode(L1).c_str()), pError);
     ABC_CHECK_NEW(json.encode(get), pError);
     ABC_DebugLog("Server URL: %s, Data: %.50s", url.c_str(), get.c_str());
 
@@ -211,7 +193,6 @@ tABC_CC ABC_LoginServerAvailable(tABC_U08Buf L1,
     ABC_CHECK_RET(checkResults(szResults, NULL, pError));
 
 exit:
-    ABC_FREE_STR(szL1_Base64);
     ABC_FREE_STR(szResults);
 
     return cc;
@@ -240,10 +221,6 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     char *szURL     = NULL;
     char *szResults = NULL;
     char *szPost    = NULL;
-    char *szBase64_L1       = NULL;
-    char *szBase64_OldLP1   = NULL;
-    char *szBase64_NewLP1   = NULL;
-    char *szBase64_NewLRA1  = NULL;
     char *szCarePackage     = NULL;
     char *szLoginPackage    = NULL;
     json_t *pJSON_OldLRA1   = NULL;
@@ -258,28 +235,22 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_CHANGE_PASSWORD_PATH);
 
-    // create base64 versions of L1, oldLP1, and newLP1:
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1,     &szBase64_L1,     pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(oldLP1, &szBase64_OldLP1, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(newLP1, &szBase64_NewLP1, pError));
-
     ABC_CHECK_RET(ABC_CarePackageEncode(pCarePackage, &szCarePackage, pError));
     ABC_CHECK_RET(ABC_LoginPackageEncode(pLoginPackage, &szLoginPackage, pError));
 
     // Encode those:
     pJSON_Root = json_pack("{ss, ss, ss, ss, ss}",
-                           ABC_SERVER_JSON_L1_FIELD,      szBase64_L1,
-                           ABC_SERVER_JSON_LP1_FIELD,     szBase64_OldLP1,
-                           ABC_SERVER_JSON_NEW_LP1_FIELD, szBase64_NewLP1,
-                           ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  szCarePackage,
-                           ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
+        ABC_SERVER_JSON_L1_FIELD,      base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD,     base64Encode(oldLP1).c_str(),
+        ABC_SERVER_JSON_NEW_LP1_FIELD, base64Encode(newLP1).c_str(),
+        ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  szCarePackage,
+        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
     ABC_CHECK_NULL(pJSON_Root);
 
     // set up the recovery, if any:
     if (ABC_BUF_PTR(newLRA1))
     {
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(newLRA1, &szBase64_NewLRA1, pError));
-        pJSON_NewLRA1 = json_string(szBase64_NewLRA1);
+        pJSON_NewLRA1 = json_string(base64Encode(newLRA1).c_str());
         json_object_set(pJSON_Root, ABC_SERVER_JSON_NEW_LRA1_FIELD, pJSON_NewLRA1);
     }
 
@@ -296,10 +267,6 @@ exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szBase64_L1);
-    ABC_FREE_STR(szBase64_OldLP1);
-    ABC_FREE_STR(szBase64_NewLP1);
-    ABC_FREE_STR(szBase64_NewLRA1);
     ABC_FREE_STR(szCarePackage);
     ABC_FREE_STR(szLoginPackage);
     if (pJSON_OldLRA1)  json_decref(pJSON_OldLRA1);
@@ -372,33 +339,29 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LR
     json_t  *pJSON_Value    = NULL;
     json_t  *pJSON_Root     = NULL;
     char    *szPost         = NULL;
-    char    *szL1_Base64    = NULL;
-    char    *szAuth_Base64  = NULL;
     char    *szResults      = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
 
-    // create base64 versions of L1
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-
     // create the post data with or without LP1
     if (ABC_BUF_PTR(LP1) == NULL && ABC_BUF_PTR(LRA1) == NULL)
     {
-        pJSON_Root = json_pack("{ss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64);
+        pJSON_Root = json_pack("{ss}",
+            ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str());
     }
     else
     {
         if (ABC_BUF_PTR(LP1) == NULL)
         {
-            ABC_CHECK_RET(ABC_CryptoBase64Encode(LRA1, &szAuth_Base64, pError));
-            pJSON_Root = json_pack("{ssss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                                             ABC_SERVER_JSON_LRA1_FIELD, szAuth_Base64);
+            pJSON_Root = json_pack("{ssss}",
+                ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+                ABC_SERVER_JSON_LRA1_FIELD, base64Encode(LRA1).c_str());
         }
         else
         {
-            ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szAuth_Base64, pError));
-            pJSON_Root = json_pack("{ssss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                                             ABC_SERVER_JSON_LP1_FIELD, szAuth_Base64);
+            pJSON_Root = json_pack("{ssss}",
+                ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+                ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str());
         }
     }
     {
@@ -429,8 +392,6 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LR
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szL1_Base64);
-    ABC_FREE_STR(szAuth_Base64);
     ABC_FREE_STR(szResults);
 
     return cc;
@@ -448,8 +409,6 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     char    *szURL          = NULL;
 
     char    *szPost         = NULL;
-    char    *szDid_Base64   = NULL;
-    char    *szLPIN1_Base64 = NULL;
     char    *szResults      = NULL;
 
     ABC_CHECK_NULL_BUF(DID);
@@ -458,13 +417,9 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_PIN_PACK_GET_PATH);
 
-    // create base64 versions
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(DID, &szDid_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LPIN1, &szLPIN1_Base64, pError));
-
     pJSON_Root = json_pack("{ss, ss}",
-                    ABC_SERVER_JSON_DID_FIELD, szDid_Base64,
-                    ABC_SERVER_JSON_LPIN1_FIELD, szLPIN1_Base64);
+        ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
+        ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1).c_str());
 
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
@@ -491,8 +446,6 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szDid_Base64);
-    ABC_FREE_STR(szLPIN1_Base64);
     ABC_FREE_STR(szResults);
 
     return cc;
@@ -521,10 +474,6 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
     char *szURL          = NULL;
     char *szResults      = NULL;
     char *szPost         = NULL;
-    char *szBase64_L1    = NULL;
-    char *szBase64_LP1   = NULL;
-    char *szBase64_LPIN1 = NULL;
-    char *szBase64_DID   = NULL;
     json_t *pJSON_Root   = NULL;
     char szALI[DATETIME_LENGTH];
 
@@ -537,23 +486,17 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
     ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_PIN_PACK_UPDATE_PATH);
 
-    // create base64 versions
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1,  &szBase64_L1,  pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szBase64_LP1, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(DID, &szBase64_DID, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LPIN1, &szBase64_LPIN1, pError));
-
     // format the ali
     strftime(szALI, DATETIME_LENGTH, "%Y-%m-%dT%H:%M:%S", gmtime(&ali));
 
     // Encode those:
     pJSON_Root = json_pack("{ss, ss, ss, ss, ss, ss}",
-                           ABC_SERVER_JSON_L1_FIELD, szBase64_L1,
-                           ABC_SERVER_JSON_LP1_FIELD, szBase64_LP1,
-                           ABC_SERVER_JSON_DID_FIELD, szBase64_DID,
-                           ABC_SERVER_JSON_LPIN1_FIELD, szBase64_LPIN1,
-                           JSON_ACCT_PIN_PACKAGE, szPinPackage,
-                           ABC_SERVER_JSON_ALI_FIELD, szALI);
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
+        ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
+        ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1).c_str(),
+        JSON_ACCT_PIN_PACKAGE, szPinPackage,
+        ABC_SERVER_JSON_ALI_FIELD, szALI);
     ABC_CHECK_NULL(pJSON_Root);
 
     // create the post data
@@ -569,10 +512,6 @@ exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szBase64_L1);
-    ABC_FREE_STR(szBase64_LP1);
-    ABC_FREE_STR(szBase64_DID);
-    ABC_FREE_STR(szBase64_LPIN1);
     if (pJSON_Root)     json_decref(pJSON_Root);
 
     return cc;
@@ -606,8 +545,6 @@ tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
     char *szURL     = NULL;
     char *szResults = NULL;
     char *szPost    = NULL;
-    char *szL1_Base64 = NULL;
-    char *szLP1_Base64 = NULL;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
@@ -617,15 +554,11 @@ tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
     ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, szPath);
 
-    // create base64 versions of L1 and LP1
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
-
     // create the post data
     pJSON_Root = json_pack("{ssssss}",
-                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                        ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
-                        ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey);
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
+        ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
@@ -640,8 +573,6 @@ exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szL1_Base64);
-    ABC_FREE_STR(szLP1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
 
     return cc;
@@ -664,8 +595,6 @@ tABC_CC ABC_LoginServerOtpEnable(tABC_U08Buf L1,
 
     char *szResults = NULL;
     char *szPost    = NULL;
-    char *szL1_Base64 = NULL;
-    char *szLP1_Base64 = NULL;
     json_t *pJSON_Root = NULL;
 
     std::string url(ABC_SERVER_ROOT);
@@ -674,16 +603,12 @@ tABC_CC ABC_LoginServerOtpEnable(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL_BUF(LP1);
 
-    // create base64 versions of L1 and LP1
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
-
     // create the post data
     pJSON_Root = json_pack("{sssssssi}",
-                        ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                        ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
-                        ABC_SERVER_JSON_OTP_SECRET_FIELD, szOtpSecret,
-                        ABC_SERVER_JSON_OTP_TIMEOUT, timeout);
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
+        ABC_SERVER_JSON_OTP_SECRET_FIELD, szOtpSecret,
+        ABC_SERVER_JSON_OTP_TIMEOUT, timeout);
     {
         // No mutex or cache load! We might segfault...
         auto key = gLobbyCache->otpKey();
@@ -704,8 +629,6 @@ tABC_CC ABC_LoginServerOtpEnable(tABC_U08Buf L1,
 exit:
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szL1_Base64);
-    ABC_FREE_STR(szLP1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
 
     return cc;
@@ -721,22 +644,18 @@ tABC_CC ABC_LoginServerOtpRequest(const char *szUrl,
 
     char *szResults = NULL;
     char *szPost    = NULL;
-    char *szL1_Base64 = NULL;
-    char *szLP1_Base64 = NULL;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
 
-    // create base64 versions of L1 and LP1
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-
     // create the post data
-    pJSON_Root = json_pack("{ss}", ABC_SERVER_JSON_L1_FIELD, szL1_Base64);
+    pJSON_Root = json_pack("{ss}",
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str());
     // If there is a LP1 provided
     if (ABC_BUF_PTR(LP1))
     {
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
-        json_object_set_new(pJSON_Root, ABC_SERVER_JSON_LP1_FIELD, json_string(szLP1_Base64));
+        json_object_set_new(pJSON_Root, ABC_SERVER_JSON_LP1_FIELD,
+            json_string(base64Encode(LP1).c_str()));
     }
     {
         // No mutex or cache load! We might segfault...
@@ -762,8 +681,6 @@ tABC_CC ABC_LoginServerOtpRequest(const char *szUrl,
 exit:
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szL1_Base64);
-    ABC_FREE_STR(szLP1_Base64);
     if (pJSON_Root)     json_decref(pJSON_Root);
     return cc;
 }
@@ -856,15 +773,10 @@ tABC_CC ABC_LoginServerOtpPending(std::list<DataChunk> users, std::list<bool> &i
     std::string param;
     for (const auto &u : users)
     {
-        char *szL1 = NULL;
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(toU08Buf(u), &szL1, pError));
-
-        std::string username(szL1);
+        std::string username = base64Encode(u);
         param += (username + ",");
         userMap[username] = false;
         usersEncoded.push_back(username);
-
-        ABC_FREE_STR(szL1);
     }
 
     // create the post data
@@ -952,18 +864,13 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char *szL1_Base64     = NULL;
-    char *szLP1_Base64    = NULL;
     char *szPost          = NULL;
     char *szResults       = NULL;
     char *szURL           = NULL;
     char *szLogFilename   = NULL;
-    char *szLogData       = NULL;
-    char *szLogData_Hex   = NULL;
     char *szWatchFilename = NULL;
-    char *szWatchData_Hex = NULL;
     json_t *pJSON_Root    = NULL;
-    tABC_U08Buf LogData   = ABC_BUF_NULL; // Do not free
+    DataChunk logData;
     DataChunk watchData;
     unsigned int nCount   = 0;
     tABC_WalletInfo **paWalletInfo = NULL;
@@ -973,13 +880,8 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_DEBUG_PATH);
 
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(L1, &szL1_Base64, pError));
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LP1, &szLP1_Base64, pError));
-
     ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
-    ABC_CHECK_RET(ABC_FileIOReadFileStr(szLogFilename, &szLogData, pError));
-    ABC_BUF_SET_PTR(LogData, (unsigned char *)szLogData, strlen(szLogData) + 1);
-    ABC_CHECK_RET(ABC_CryptoBase64Encode(LogData, &szLogData_Hex, pError));
+    ABC_CHECK_NEW(fileLoad(szLogFilename, logData), pError);
 
     ABC_CHECK_RET(ABC_WalletGetWallets(pKeys, &paWalletInfo, &nCount, pError));
     pJSON_array = json_array();
@@ -988,18 +890,17 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
         ABC_CHECK_RET(ABC_BridgeWatchPath(paWalletInfo[i]->szUUID,
                                           &szWatchFilename, pError));
         ABC_CHECK_NEW(fileLoad(szWatchFilename, watchData), pError);
-        ABC_CHECK_RET(ABC_CryptoBase64Encode(toU08Buf(watchData), &szWatchData_Hex, pError));
 
-        json_t *element = json_pack("s", szWatchData_Hex);
-        json_array_append_new(pJSON_array, element);
+        json_array_append_new(pJSON_array,
+            json_string(base64Encode(watchData).c_str()));
 
         ABC_FREE_STR(szWatchFilename);
     }
 
     pJSON_Root = json_pack("{ss, ss, ss}",
-                            ABC_SERVER_JSON_L1_FIELD, szL1_Base64,
-                            ABC_SERVER_JSON_LP1_FIELD, szLP1_Base64,
-                            "log", szLogData_Hex);
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
+        "log", base64Encode(logData).c_str());
     json_object_set(pJSON_Root, "watchers", pJSON_array);
 
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
@@ -1014,12 +915,8 @@ exit:
     ABC_FREE_STR(szPost);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szLogFilename);
-    ABC_FREE_STR(szLogData);
-    ABC_FREE_STR(szLogData_Hex);
-    ABC_BUF_CLEAR(LogData);
 
     ABC_FREE_STR(szWatchFilename);
-    ABC_FREE_STR(szWatchData_Hex);
 
     ABC_FreeWalletInfoArray(paWalletInfo, nCount);
 

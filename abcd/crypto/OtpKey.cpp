@@ -27,8 +27,7 @@ OtpKey::create(size_t keySize)
 Status
 OtpKey::decodeBase32(const std::string &key)
 {
-    if (!base32Decode(key_, key))
-        return ABC_ERROR(ABC_CC_ParseError, "Key is not valid base32");
+    ABC_CHECK(base32Decode(key_, key));
     return Status();
 }
 
