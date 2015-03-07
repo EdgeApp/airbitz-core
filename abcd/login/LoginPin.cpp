@@ -10,6 +10,7 @@
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
 #include "../crypto/Crypto.hpp"
+#include "../crypto/Random.hpp"
 #include "../util/Json.hpp"
 #include "../util/Util.hpp"
 #include <jansson.h>

@@ -11,6 +11,7 @@
 #include "LoginServer.hpp"
 #include "../Account.hpp"
 #include "../crypto/Crypto.hpp"
+#include "../crypto/Random.hpp"
 #include "../util/Util.hpp"
 #include <ctype.h>
 #include <memory>

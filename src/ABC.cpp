@@ -40,6 +40,7 @@
 #include "../abcd/bitcoin/Text.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Crypto.hpp"
+#include "../abcd/crypto/Random.hpp"
 #include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/LoginDir.hpp"

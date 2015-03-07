@@ -34,6 +34,7 @@
 #include "Account.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"
+#include "crypto/Random.hpp"
 #include "login/LoginServer.hpp"
 #include "util/FileIO.hpp"
 #include "util/Json.hpp"

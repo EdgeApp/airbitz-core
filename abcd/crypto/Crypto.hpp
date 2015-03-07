@@ -56,17 +56,6 @@ typedef enum eABC_CryptoType
     ABC_CryptoType_Count
 } tABC_CryptoType;
 
-// Random:
-tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
-                                tABC_Error        *pError);
-
-tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
-                                   tABC_U08Buf   *pData,
-                                   tABC_Error    *pError);
-
-tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
-                                tABC_Error *pError);
-
 // Encryption:
 tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
                                     const tABC_U08Buf Key,
