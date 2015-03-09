@@ -39,6 +39,8 @@
 #include "../abcd/bitcoin/Testnet.hpp"
 #include "../abcd/bitcoin/Text.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
+#include "../abcd/crypto/Encoding.hpp"
+#include "../abcd/crypto/Random.hpp"
 #include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/LoginDir.hpp"
@@ -47,8 +49,6 @@
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
 #include "../abcd/login/Otp.hpp"
-#include "../abcd/login/OtpKey.hpp"
-#include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Json.hpp"
@@ -1153,8 +1153,8 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf pSeedBuf = ABC_BUF_NULL; // Do not free
     AutoSyncKeys pKeys;
+    tABC_U08Buf seedBuf = ABC_BUF_NULL; // Do not free
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
@@ -1164,8 +1164,8 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
     // This points to an internal struct in the wallet cache
     //
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, szUUID), &pSeedBuf, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(pSeedBuf, pszWalletSeed, pError));
+    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, szUUID), &seedBuf, pError));
+    ABC_STRDUP(*pszWalletSeed, base16Encode(seedBuf).c_str());
 
 exit:
     return cc;

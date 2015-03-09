@@ -10,9 +10,10 @@
 #include "../abcd/Account.hpp"
 #include "../abcd/Wallet.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
+#include "../abcd/crypto/Crypto.hpp"
+#include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/json/JsonFile.hpp"
-#include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Util.hpp"
 #include <wallet/wallet.hpp>
@@ -206,10 +207,7 @@ Status getBitcoinSeed(int argc, char *argv[])
 
     tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
-
-    AutoString szSeed;
-    ABC_CHECK_OLD(ABC_CryptoHexEncode(data, &szSeed.get(), &error));
-    printf("%s\n", szSeed.get());
+    std::cout << base16Encode(data) << std::endl;
 
     return Status();
 }

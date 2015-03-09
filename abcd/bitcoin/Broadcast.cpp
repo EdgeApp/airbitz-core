@@ -8,8 +8,8 @@
 #include "Broadcast.hpp"
 #include "Testnet.hpp"
 #include "../config.h"
+#include "../crypto/Encoding.hpp"
 #include "../json/JsonObject.hpp"
-#include "../util/Crypto.hpp"
 #include "../util/URL.hpp"
 #include <curl/curl.h>
 
@@ -38,10 +38,8 @@ chainPostTx(DataSlice tx)
         "https://api.chain.com/v1/testnet3/transactions":
         "https://api.chain.com/v1/bitcoin/transactions";
 
-    AutoString encoded;
-    ABC_CHECK_OLD(ABC_CryptoHexEncode(toU08Buf(tx), &encoded.get(), &error));
     ChainPost object;
-    object.setHex(encoded.get());
+    object.setHex(base16Encode(tx).c_str());
     std::string body;
     ABC_CHECK(object.encode(body));
 
@@ -84,10 +82,7 @@ blockhainPostTx(DataSlice tx)
 {
     const char *url = "https://blockchain.info/pushtx";
 
-    AutoString encoded;
-    ABC_CHECK_OLD(ABC_CryptoHexEncode(toU08Buf(tx), &encoded.get(), &error));
-    std::string body = "tx=";
-    body += encoded.get();
+    std::string body = "tx=" + base16Encode(tx);
 
     ABC_DebugLog("%s\n", body.c_str());
 

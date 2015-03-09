@@ -26,18 +26,15 @@
  * This file was originally written by Colin Percival as part of the Tarsnap
  * online backup system.
  */
-//#include "scrypt_platform.h"
 
+#include "crypto_scrypt.h"
+#include "sysendian.h"
+#include <openssl/evp.h>
 #include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-
-#include "sha256.h"
-#include "sysendian.h"
-
-#include "crypto_scrypt.h"
 
 static void blkcpy(uint8_t *, uint8_t *, size_t);
 static void blkxor(uint8_t *, uint8_t *, size_t);
@@ -256,7 +253,9 @@ crypto_scrypt(const uint8_t * passwd, size_t passwdlen,
 		goto err2;
 
 	/* 1: (B_0 ... B_{p-1}) <-- PBKDF2(P, S, 1, p * MFLen) */
-	PBKDF2_SHA256(passwd, passwdlen, salt, saltlen, 1, B, p * 128 * r);
+	if (!PKCS5_PBKDF2_HMAC((char *)passwd, passwdlen, salt, saltlen,
+		1, EVP_sha256(), p * 128 * r, B))
+		goto err2;
 
 	/* 2: for i = 0 to p - 1 do */
 	for (i = 0; i < p; i++) {
@@ -265,7 +264,9 @@ crypto_scrypt(const uint8_t * passwd, size_t passwdlen,
 	}
 
 	/* 5: DK <-- PBKDF2(P, B, 1, dkLen) */
-	PBKDF2_SHA256(passwd, passwdlen, B, p * 128 * r, 1, buf, buflen);
+	if (!PKCS5_PBKDF2_HMAC((char *)passwd, passwdlen, B, p * 128 * r,
+		1, EVP_sha256(), buflen, buf))
+		goto err2;
 
 	/* Free memory. */
 	free(V);
