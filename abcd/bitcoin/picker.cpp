@@ -16,6 +16,8 @@ namespace abcd {
 using namespace libbitcoin;
 using namespace libwallet;
 
+constexpr unsigned min_output = 5430;
+
 static std::map<data_chunk, std::string> address_map;
 static operation create_data_operation(data_chunk& data);
 
@@ -61,6 +63,19 @@ BC_API bool make_tx(
         change.script = build_pubkey_hash_script(changeAddr.hash());
         utx.tx.outputs.push_back(change);
     }
+
+    // Remove any dust outputs, returning those funds to the miners:
+    auto last = std::remove_if(utx.tx.outputs.begin(), utx.tx.outputs.end(),
+        [](transaction_output_type &o){ return o.value < min_output; });
+    utx.tx.outputs.erase(last, utx.tx.outputs.end());
+
+    // If all the outputs were dust, we can't send this transaction:
+    if (!utx.tx.outputs.size())
+    {
+        utx.code = insufficent_funds;
+        return false;
+    }
+
     return true;
 }
 
