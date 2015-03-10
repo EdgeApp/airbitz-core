@@ -1084,6 +1084,13 @@ tABC_CC ABC_SearchTransactions(const char *szUserName,
                                unsigned int *pCount,
                                tABC_Error *pError);
 
+tABC_CC ABC_GetRawTransaction(const char *szUserName,
+                              const char *szPassword,
+                              const char *szWalletUUID,
+                              const char *szID,
+                              char **pszHex,
+                              tABC_Error *pError);
+
 void ABC_FreeTransaction(tABC_TxInfo *pTransaction);
 
 void ABC_FreeTransactions(tABC_TxInfo **aTransactions,

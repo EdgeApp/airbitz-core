@@ -1321,4 +1321,20 @@ static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
     return bc::encode_hex(bc::hash_transaction(tx, bc::sighash::all));
 }
 
+Status
+watcherBridgeRawTx(const char *szWalletUUID, const char *szTxID,
+    DataChunk &result)
+{
+    auto row = watchers_.find(szWalletUUID);
+    if (row == watchers_.end())
+        return ABC_ERROR(ABC_CC_Synchronizing, "Unable to find watcher");
+    WatcherInfo *watcherInfo = row->second;
+
+    auto tx = watcherInfo->watcher->find_tx(bc::decode_hash(szTxID));
+    result.resize(satoshi_raw_size(tx));
+    bc::satoshi_save(tx, result.begin());
+
+    return Status();
+}
+
 } // namespace abcd

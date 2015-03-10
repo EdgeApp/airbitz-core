@@ -2093,6 +2093,38 @@ exit:
 }
 
 /**
+ * Obtains a raw Bitcoin transaction in hex form.
+ */
+tABC_CC ABC_GetRawTransaction(const char *szUserName,
+                              const char *szPassword,
+                              const char *szWalletUUID,
+                              const char *szID,
+                              char **pszHex,
+                              tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    AutoSyncKeys pKeys;
+    AutoFree<tABC_TxInfo, ABC_FreeTransaction> info;
+    DataChunk tx;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+
+    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
+    ABC_CHECK_RET(ABC_TxGetTransaction(ABC_WalletID(pKeys, szWalletUUID),
+        szID, &info.get(), pError));
+
+    ABC_CHECK_NEW(watcherBridgeRawTx(szWalletUUID, info->szMalleableTxId, tx), pError);
+    ABC_STRDUP(*pszHex, base16Encode(tx).c_str());
+
+exit:
+    return cc;
+}
+
+/**
  * Frees the given transactions
  *
  * @param pTransaction Pointer to transaction

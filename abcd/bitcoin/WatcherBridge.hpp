@@ -42,8 +42,8 @@
 #define ABC_Bridge_h
 
 #include "../Tx.hpp"
-#include "../util/U08Buf.hpp"
-#include "../../src/ABC.h"
+#include "../util/Data.hpp"
+#include "../util/Status.hpp"
 
 namespace abcd {
 
@@ -116,6 +116,13 @@ tABC_CC ABC_BridgeFilterTransactions(const char *szWalletUUID,
                                      tABC_TxInfo **aTransactions,
                                      unsigned int *pCount,
                                      tABC_Error *pError);
+
+/**
+ * Pulls a raw transaction out of the watcher database.
+ */
+Status
+watcherBridgeRawTx(const char *szWalletUUID, const char *szTxID,
+    DataChunk &result);
 
 } // namespace abcd
 
