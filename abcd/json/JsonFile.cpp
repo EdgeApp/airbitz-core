@@ -22,7 +22,7 @@ Status
 JsonFile::load(const std::string &filename)
 {
     json_error_t error;
-    json_t *root = json_load_file(filename.c_str(), 0, &error);
+    json_t *root = json_load_file(filename.c_str(), loadFlags, &error);
     if (!root)
         return ABC_ERROR(ABC_CC_JSONError, error.text);
     reset(root);
@@ -33,7 +33,7 @@ Status
 JsonFile::decode(const std::string &data)
 {
     json_error_t error;
-    json_t *root = json_loadb(data.data(), data.size(), 0, &error);
+    json_t *root = json_loadb(data.data(), data.size(), loadFlags, &error);
     if (!root)
         return ABC_ERROR(ABC_CC_JSONError, error.text);
     reset(root);

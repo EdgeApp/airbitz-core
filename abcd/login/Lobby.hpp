@@ -8,7 +8,7 @@
 #ifndef ABCD_LOGIN_LOBBY_HPP
 #define ABCD_LOGIN_LOBBY_HPP
 
-#include "OtpKey.hpp"
+#include "../crypto/OtpKey.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 #include <string>

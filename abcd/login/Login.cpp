@@ -9,8 +9,9 @@
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "../Account.hpp"
-#include "../util/Crypto.hpp"
+#include "../crypto/Crypto.hpp"
+#include "../crypto/Encoding.hpp"
+#include "../crypto/Random.hpp"
 #include "../util/Util.hpp"
 #include <ctype.h>
 #include <memory>
@@ -55,7 +56,6 @@ tABC_CC ABC_LoginCreate(Login *&result,
     AutoU08Buf           LP;
     AutoU08Buf           LP1;
     AutoU08Buf           LP2;
-    AutoString szSyncKey;
 
     // Set up packages:
     ABC_CHECK_RET(ABC_CarePackageNew(&pCarePackage, pError));
@@ -85,9 +85,8 @@ tABC_CC ABC_LoginCreate(Login *&result,
         ABC_CryptoType_AES256, &pLoginPackage->ELP1, pError));
 
     // Create the account and repo on server:
-    ABC_CHECK_RET(ABC_CryptoHexEncode(SyncKey, &szSyncKey.get(), pError));
     ABC_CHECK_RET(ABC_LoginServerCreate(toU08Buf(lobby->authId()), LP1,
-        pCarePackage, pLoginPackage, szSyncKey, pError));
+        pCarePackage, pLoginPackage, base16Encode(U08Buf(SyncKey)).c_str(), pError));
 
     // Latch the account:
     ABC_CHECK_RET(ABC_LoginServerActivate(toU08Buf(lobby->authId()), LP1, pError));

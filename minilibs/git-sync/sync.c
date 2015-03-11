@@ -295,6 +295,10 @@ static int sync_workdir_tree(git_oid *out,
     git_strarray paths = {NULL, 0};
     git_check(git_index_add_all(index, &paths, 0, NULL, NULL));
     git_check(git_index_write_tree(out, index));
+    if (!git_repository_is_bare(repo))
+    {
+        git_check(git_index_write(index));
+    }
 
 exit:
     if (index)          git_index_free(index);

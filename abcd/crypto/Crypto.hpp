@@ -33,11 +33,11 @@
  * AirBitz cryptographic function wrappers.
  */
 
-#ifndef ABC_Crypto_h
-#define ABC_Crypto_h
+#ifndef ABCD_CRYPTO_CRYPTO_HPP
+#define ABCD_CRYPTO_CRYPTO_HPP
 
+#include "../util/Data.hpp"
 #include "../../src/ABC.h"
-#include "U08Buf.hpp"
 #include <jansson.h>
 
 namespace abcd {
@@ -45,38 +45,21 @@ namespace abcd {
 #define AES_256_IV_LENGTH       16
 #define AES_256_BLOCK_LENGTH    16
 #define AES_256_KEY_LENGTH      32
-#define SHA_256_LENGTH          32
-
-#define HMAC_SHA_256_LENGTH     32
-#define HMAC_SHA_512_LENGTH     64
 
 typedef enum eABC_CryptoType
 {
     ABC_CryptoType_AES256 = 0,
-    ABC_CryptoType_AES256_Scrypt,
     ABC_CryptoType_Count
 } tABC_CryptoType;
 
-typedef struct sABC_CryptoSNRP
-{
-    tABC_U08Buf     Salt;
-    unsigned long   N;
-    unsigned long   r;
-    unsigned long   p;
-} tABC_CryptoSNRP;
-
-tABC_CC ABC_InitializeCrypto(tABC_Error        *pError);
-
-// Random:
-tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
-                                tABC_Error        *pError);
-
-tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
-                                   tABC_U08Buf   *pData,
-                                   tABC_Error    *pError);
-
-tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
-                                tABC_Error *pError);
+/**
+ * Creates a cryptographically secure filename from a meaningful name
+ * and a secret key.
+ * This prevents the filename from leaking information about its contents
+ * to anybody but the key holder.
+ */
+std::string
+cryptoFilename(DataSlice key, const std::string &name);
 
 // Encryption:
 tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
@@ -111,71 +94,6 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
                                         const tABC_U08Buf Key,
                                         json_t **ppJSON_Data,
                                         tABC_Error  *pError);
-
-// Formats:
-tABC_CC ABC_CryptoHexEncode(const tABC_U08Buf Data,
-                            char              **pszDataHex,
-                            tABC_Error        *pError);
-
-tABC_CC ABC_CryptoHexDecode(const char  *szDataHex,
-                            tABC_U08Buf *pData,
-                            tABC_Error  *pError);
-
-tABC_CC ABC_CryptoBase64Encode(const tABC_U08Buf Data,
-                               char              **pszDataBase64,
-                               tABC_Error        *pError);
-
-tABC_CC ABC_CryptoBase64Decode(const char   *szDataBase64,
-                               tABC_U08Buf  *pData,
-                               tABC_Error   *pError);
-
-// Hashing:
-tABC_CC ABC_CryptoScryptSNRP(const tABC_U08Buf     Data,
-                             const tABC_CryptoSNRP *pSNRP,
-                             tABC_U08Buf           *pScryptData,
-                             tABC_Error            *pError);
-
-tABC_CC ABC_CryptoScrypt(const tABC_U08Buf Data,
-                         const tABC_U08Buf Salt,
-                         unsigned long     N,
-                         unsigned long     r,
-                         unsigned long     p,
-                         unsigned int      scryptDataLength,
-                         tABC_U08Buf       *pScryptData,
-                         tABC_Error        *pError);
-
-tABC_CC ABC_CryptoCreateSNRPForClient(tABC_CryptoSNRP   **ppSNRP,
-                                      tABC_Error        *pError);
-
-tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
-                                      tABC_Error        *pError);
-
-tABC_CC ABC_CryptoCreateSNRP(const tABC_U08Buf Salt,
-                             unsigned long     N,
-                             unsigned long     r,
-                             unsigned long     p,
-                             tABC_CryptoSNRP   **ppSNRP,
-                             tABC_Error        *pError);
-
-tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
-                                       json_t                 **ppJSON_SNRP,
-                                       tABC_Error             *pError);
-
-tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
-                                       tABC_CryptoSNRP   **ppSNRP,
-                                       tABC_Error        *pError);
-
-void ABC_CryptoFreeSNRP(tABC_CryptoSNRP *pSNRP);
-
-tABC_CC ABC_CryptoHMAC256(tABC_U08Buf Data,
-                          tABC_U08Buf Key,
-                          tABC_U08Buf *pDataHMAC,
-                          tABC_Error  *pError);
-
-tABC_CC ABC_CryptoHMAC512(tABC_U08Buf Data,
-                          tABC_U08Buf Key,
-                          tABC_U08Buf *pDataHMAC,
-                          tABC_Error  *pError);
 
 } // namespace abcd
 

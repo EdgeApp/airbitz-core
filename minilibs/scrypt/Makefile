@@ -1,7 +1,7 @@
 PREFIX ?= /usr/local
 CFLAGS += -fPIC -O2
 
-libscrypt.a: crypto_scrypt.o sha256.o
+libscrypt.a: crypto_scrypt.o
 	$(AR) rcs libscrypt.a $^
 
 %.o: %.c

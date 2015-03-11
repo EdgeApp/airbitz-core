@@ -31,14 +31,19 @@
 
 #include "ABC.h"
 #include "LoginShim.hpp"
-#include "../abcd/Account.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Export.hpp"
 #include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
+#include "../abcd/account/Account.hpp"
+#include "../abcd/account/AccountSettings.hpp"
+#include "../abcd/account/AccountCategories.hpp"
+#include "../abcd/account/PluginData.hpp"
 #include "../abcd/bitcoin/Testnet.hpp"
 #include "../abcd/bitcoin/Text.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
+#include "../abcd/crypto/Encoding.hpp"
+#include "../abcd/crypto/Random.hpp"
 #include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/LoginDir.hpp"
@@ -47,8 +52,6 @@
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
 #include "../abcd/login/Otp.hpp"
-#include "../abcd/login/OtpKey.hpp"
-#include "../abcd/util/Crypto.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Json.hpp"
@@ -1153,8 +1156,8 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_U08Buf pSeedBuf = ABC_BUF_NULL; // Do not free
     AutoSyncKeys pKeys;
+    tABC_U08Buf seedBuf = ABC_BUF_NULL; // Do not free
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
@@ -1164,8 +1167,8 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
     // This points to an internal struct in the wallet cache
     //
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, szUUID), &pSeedBuf, pError));
-    ABC_CHECK_RET(ABC_CryptoHexEncode(pSeedBuf, pszWalletSeed, pError));
+    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, szUUID), &seedBuf, pError));
+    ABC_STRDUP(*pszWalletSeed, base16Encode(seedBuf).c_str());
 
 exit:
     return cc;
@@ -2977,6 +2980,101 @@ tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Err
     cc = ABC_BridgeTxBlockHeight(szWalletUUID, height, pError);
 exit:
 
+    return cc;
+}
+
+tABC_CC ABC_PluginDataGet(const char *szUserName,
+                          const char *szPassword,
+                          const char *szPlugin,
+                          const char *szKey,
+                          char **pszData,
+                          tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    AutoSyncKeys pKeys;
+    std::string data;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
+    ABC_CHECK_NEW(pluginDataGet(pKeys, szPlugin, szKey, data), pError);
+    ABC_STRDUP(*pszData, data.c_str());
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_PluginDataSet(const char *szUserName,
+                          const char *szPassword,
+                          const char *szPlugin,
+                          const char *szKey,
+                          const char *szData,
+                          tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    AutoSyncKeys pKeys;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
+    ABC_CHECK_NEW(pluginDataSet(pKeys, szPlugin, szKey, szData), pError);
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_PluginDataRemove(const char *szUserName,
+                             const char *szPassword,
+                             const char *szPlugin,
+                             const char *szKey,
+                             tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    AutoSyncKeys pKeys;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
+    ABC_CHECK_NEW(pluginDataRemove(pKeys, szPlugin, szKey), pError);
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_PluginDataClear(const char *szUserName,
+                            const char *szPassword,
+                            const char *szPlugin,
+                            tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    AutoSyncKeys pKeys;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+
+    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
+    ABC_CHECK_NEW(pluginDataClear(pKeys, szPlugin), pError);
+
+exit:
     return cc;
 }
 

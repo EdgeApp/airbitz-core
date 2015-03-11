@@ -62,6 +62,16 @@ getRootDir()
     return gRootDir;
 }
 
+Status
+fileVerifyDir(const std::string &dir)
+{
+    bool exists;
+    ABC_CHECK_OLD(ABC_FileIOFileExists(dir.c_str(), &exists, &error));
+    if (!exists)
+        ABC_CHECK_OLD(ABC_FileIOCreateDir(dir.c_str(), &error));
+    return Status();
+}
+
 /**
  * Creates a filelist structure for a specified directory
  */

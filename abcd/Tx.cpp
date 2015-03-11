@@ -30,12 +30,13 @@
  */
 
 #include "Tx.hpp"
-#include "Account.hpp"
 #include "Wallet.hpp"
+#include "account/Account.hpp"
+#include "account/AccountSettings.hpp"
 #include "bitcoin/Text.hpp"
 #include "bitcoin/WatcherBridge.hpp"
+#include "crypto/Crypto.hpp"
 #include "exchange/Exchange.hpp"
-#include "util/Crypto.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"
 #include "util/Mutex.hpp"
@@ -2556,31 +2557,22 @@ tABC_CC ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const cha
 
     char *szTxDir = NULL;
     tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
-    AutoU08Buf DataHMAC;
-    char *szDataBase58 = NULL;
-    tABC_U08Buf TxID = ABC_BUF_NULL; // Do not free
+    std::string hash;
 
     *pszFilename = NULL;
 
     // Get the master key we will need to encode the filename
     // (note that this will also make sure the account and wallet exist)
     ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
+    hash = cryptoFilename(MK, szTxID);
 
     ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, self.szUUID, pError));
 
-    // create an hmac-256 of the TxID
-    ABC_BUF_SET_PTR(TxID, (unsigned char *)szTxID, strlen(szTxID));
-    ABC_CHECK_RET(ABC_CryptoHMAC256(TxID, MK, &DataHMAC, pError));
-
-    // create a base58 of the hmac-256 TxID
-    ABC_CHECK_RET(ABC_BridgeBase58Encode(DataHMAC, &szDataBase58, pError));
-
     ABC_STR_NEW(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszFilename, "%s/%s%s", szTxDir, szDataBase58, (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX));
+    sprintf(*pszFilename, "%s/%s%s", szTxDir, hash.c_str(), (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX));
 
 exit:
     ABC_FREE_STR(szTxDir);
-    ABC_FREE_STR(szDataBase58);
 
     return cc;
 }
@@ -3421,32 +3413,23 @@ tABC_CC ABC_TxCreateAddressFilename(tABC_WalletID self, char **pszFilename, cons
 
     char *szAddrDir = NULL;
     tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
-    AutoU08Buf DataHMAC;
-    char *szDataBase58 = NULL;
-    tABC_U08Buf PubAddress = ABC_BUF_NULL; // Do not free
+    std::string hash;
 
     *pszFilename = NULL;
 
     // Get the master key we will need to encode the filename
     // (note that this will also make sure the account and wallet exist)
     ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
+    hash = cryptoFilename(MK, pAddress->szPubAddress);
 
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, self.szUUID, pError));
 
-    // create an hmac-256 of the public address
-    ABC_BUF_SET_PTR(PubAddress, (unsigned char *)pAddress->szPubAddress, strlen(pAddress->szPubAddress));
-    ABC_CHECK_RET(ABC_CryptoHMAC256(PubAddress, MK, &DataHMAC, pError));
-
-    // create a base58 of the hmac-256 public address
-    ABC_CHECK_RET(ABC_BridgeBase58Encode(DataHMAC, &szDataBase58, pError));
-
     // create the filename
     ABC_STR_NEW(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszFilename, "%s/%u-%s.json", szAddrDir, pAddress->seq, szDataBase58);
+    sprintf(*pszFilename, "%s/%u-%s.json", szAddrDir, pAddress->seq, hash.c_str());
 
 exit:
     ABC_FREE_STR(szAddrDir);
-    ABC_FREE_STR(szDataBase58);
 
     return cc;
 }

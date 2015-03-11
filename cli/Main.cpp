@@ -7,6 +7,7 @@
 
 #include "Commands.hpp"
 #include "Otp.hpp"
+#include "Plugin.hpp"
 #include "../abcd/util/Util.hpp"
 #include <stdio.h>
 #include <iostream>
@@ -84,6 +85,11 @@ static Status run(int argc, char *argv[])
         command == "otp-auth-remove"    ? otpAuthRemove(argc-3, argv+3) :
         command == "otp-reset-get"      ? otpResetGet(argc-3, argv+3) :
         command == "otp-reset-remove"   ? otpResetRemove(argc-3, argv+3) :
+        // Plugin.cpp:
+        command == "plugin-get"        ? pluginGet(argc-3, argv+3) :
+        command == "plugin-set"        ? pluginSet(argc-3, argv+3) :
+        command == "plugin-remove"     ? pluginRemove(argc-3, argv+3) :
+        command == "plugin-clear"      ? pluginClear(argc-3, argv+3) :
         // Washer.cpp:
         command == "washer"             ? washer(argc-3, argv+3) :
         ABC_ERROR(ABC_CC_Error, "unknown command " + command));

@@ -319,23 +319,4 @@ exit:
     return cc;
 }
 
-/**
- * Converts a block of data to a Base58-encoded string.
- *
- * @param Data Buffer of data to convert.
- * @param pszBase58 Output string, allocated by this function.
- */
-tABC_CC ABC_BridgeBase58Encode(tABC_U08Buf Data, char **pszBase58, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    libbitcoin::data_chunk in(Data.p, Data.end);
-    std::string out = libbitcoin::encode_base58(in);
-
-    ABC_STRDUP(*pszBase58, out.c_str());
-
-exit:
-    return cc;
-}
-
 } // namespace abcd

@@ -832,6 +832,50 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
                        const char *szPassword,
                        tABC_Error *pError);
 
+/** === Plugin data: === */
+
+/**
+ * Retreives an item from the plugin key/value store.
+ * @param szPlugin The plugin's unique ID.
+ * @param szKey The data location. Merges happen at the key level,
+ * so the account may contain a mix of keys from different devices.
+ * The key contents are atomic, however. Place data accordingly.
+ * @param szData The value stored with the key.
+ */
+tABC_CC ABC_PluginDataGet(const char *szUserName,
+                          const char *szPassword,
+                          const char *szPlugin,
+                          const char *szKey,
+                          char **pszData,
+                          tABC_Error *pError);
+
+/**
+ * Saves an item to the plugin key/value store.
+ */
+tABC_CC ABC_PluginDataSet(const char *szUserName,
+                          const char *szPassword,
+                          const char *szPlugin,
+                          const char *szKey,
+                          const char *szData,
+                          tABC_Error *pError);
+
+/**
+ * Deletes an item from the plugin key/value store.
+ */
+tABC_CC ABC_PluginDataRemove(const char *szUserName,
+                             const char *szPassword,
+                             const char *szPlugin,
+                             const char *szKey,
+                             tABC_Error *pError);
+
+/**
+ * Removes the entire key/value store for a particular plugin.
+ */
+tABC_CC ABC_PluginDataClear(const char *szUserName,
+                            const char *szPassword,
+                            const char *szPlugin,
+                            tABC_Error *pError);
+
 /* === Exchange rates: === */
 tABC_CC ABC_RequestExchangeRateUpdate(const char *szUserName, const char *szPassword,
                                       int currencyNum,

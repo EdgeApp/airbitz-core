@@ -6,8 +6,8 @@
  */
 
 #include "OtpKey.hpp"
-#include "Base32.hpp"
-#include "../util/Crypto.hpp"
+#include "Encoding.hpp"
+#include "Random.hpp"
 #include "../util/U08Buf.hpp"
 #include <openssl/hmac.h>
 #include <time.h>
@@ -27,8 +27,7 @@ OtpKey::create(size_t keySize)
 Status
 OtpKey::decodeBase32(const std::string &key)
 {
-    if (!base32Decode(key_, key))
-        return ABC_ERROR(ABC_CC_ParseError, "Key is not valid base32");
+    ABC_CHECK(base32Decode(key_, key));
     return Status();
 }
 

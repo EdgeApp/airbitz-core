@@ -82,6 +82,12 @@ setRootDir(const std::string &rootDir);
 const std::string &
 getRootDir();
 
+/**
+ * Ensures that a directory exists, creating it if not.
+ */
+Status
+fileVerifyDir(const std::string &dir);
+
 tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
                                  const char *szDir,
                                  tABC_Error *pError);
