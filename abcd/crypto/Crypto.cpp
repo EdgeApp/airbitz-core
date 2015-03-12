@@ -49,7 +49,7 @@ static
 tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
                                        const tABC_U08Buf Key,
                                        tABC_U08Buf       *pEncData,
-                                       tABC_U08Buf       *pIV,
+                                       DataChunk         &IV,
                                        tABC_Error        *pError);
 static
 tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
@@ -90,7 +90,7 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     AutoU08Buf     EncData;
-    AutoU08Buf     IV;
+    DataChunk      IV;
     json_t          *jsonRoot       = NULL;
 
     ABC_CHECK_NULL_BUF(Data);
@@ -104,13 +104,13 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
         ABC_CHECK_RET(ABC_CryptoEncryptAES256Package(Data,
                                                      Key,
                                                      &EncData,
-                                                     &IV,
+                                                     IV,
                                                      pError));
 
         // Encoding
         jsonRoot = json_pack("{sissss}",
             JSON_ENC_TYPE_FIELD, cryptoType,
-            JSON_ENC_IV_FIELD,   base16Encode(U08Buf(IV)).c_str(),
+            JSON_ENC_IV_FIELD,   base16Encode(IV).c_str(),
             JSON_ENC_DATA_FIELD, base64Encode(U08Buf(EncData)).c_str());
 
         // assign our final result
@@ -293,14 +293,14 @@ static
 tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
                                        const tABC_U08Buf Key,
                                        tABC_U08Buf       *pEncData,
-                                       tABC_U08Buf       *pIV,
+                                       DataChunk         &IV,
                                        tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoU08Buf RandHeaderBytes;
-    AutoU08Buf RandFooterBytes;
+    DataChunk headerData;
+    DataChunk footerData;
     AutoU08Buf UnencryptedData;
     unsigned char nRandomHeaderBytes;
     unsigned char nRandomFooterBytes;
@@ -312,28 +312,27 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(pEncData);
-    ABC_CHECK_NULL(pIV);
 
     // create a random IV
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(AES_256_IV_LENGTH, pIV, pError));
+    ABC_CHECK_NEW(randomData(IV, AES_256_IV_LENGTH), pError);
 
     // create a random number of header bytes 0-255
     {
-        AutoU08Buf RandCount;
-        ABC_CHECK_RET(ABC_CryptoCreateRandomData(1, &RandCount, pError));
-        nRandomHeaderBytes = *(RandCount.p);
+        DataChunk r;
+        ABC_CHECK_NEW(randomData(r, 1), pError);
+        nRandomHeaderBytes = r[0];
     }
     //printf("rand header count: %d\n", nRandomHeaderBytes);
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(nRandomHeaderBytes, &RandHeaderBytes, pError));
+    ABC_CHECK_NEW(randomData(headerData, nRandomHeaderBytes), pError);
 
     // create a random number of footer bytes 0-255
     {
-        AutoU08Buf RandCount;
-        ABC_CHECK_RET(ABC_CryptoCreateRandomData(1, &RandCount, pError));
-        nRandomFooterBytes = *(RandCount.p);
+        DataChunk r;
+        ABC_CHECK_NEW(randomData(r, 1), pError);
+        nRandomFooterBytes = r[0];
     }
     //printf("rand footer count: %d\n", nRandomFooterBytes);
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(nRandomFooterBytes, &RandFooterBytes, pError));
+    ABC_CHECK_NEW(randomData(footerData, nRandomFooterBytes), pError);
 
     // calculate the size of our unencrypted buffer
     totalSizeUnencrypted += 1; // header count
@@ -352,7 +351,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     // add the random header count and bytes
     memcpy(pCurUnencryptedData, &nRandomHeaderBytes, 1);
     pCurUnencryptedData += 1;
-    memcpy(pCurUnencryptedData, ABC_BUF_PTR(RandHeaderBytes), ABC_BUF_SIZE(RandHeaderBytes));
+    memcpy(pCurUnencryptedData, headerData.data(), headerData.size());
     pCurUnencryptedData += nRandomHeaderBytes;
 
     // add the size of the data
@@ -376,7 +375,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     // add the random footer count and bytes
     memcpy(pCurUnencryptedData, &nRandomFooterBytes, 1);
     pCurUnencryptedData += 1;
-    memcpy(pCurUnencryptedData, ABC_BUF_PTR(RandFooterBytes), ABC_BUF_SIZE(RandFooterBytes));
+    memcpy(pCurUnencryptedData, footerData.data(), footerData.size());
     pCurUnencryptedData += nRandomFooterBytes;
 
     // add the sha256
@@ -385,7 +384,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     pCurUnencryptedData += SHA256_DIGEST_LENGTH;
 
     // encrypted our new unencrypted package
-    ABC_CHECK_RET(ABC_CryptoEncryptAES256(UnencryptedData, Key, *pIV, pEncData, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptAES256(UnencryptedData, Key, toU08Buf(IV), pEncData, pError));
 
 exit:
     return cc;

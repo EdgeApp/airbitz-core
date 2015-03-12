@@ -194,14 +194,14 @@ tABC_CC ABC_CryptoCreateSNRPForClient(tABC_CryptoSNRP   **ppSNRP,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoU08Buf Salt;
+    DataChunk salt;
 
     ABC_CHECK_NULL(ppSNRP);
 
     // gen some salt
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(SCRYPT_DEFAULT_SALT_LENGTH, &Salt, pError));
+    ABC_CHECK_NEW(randomData(salt, SCRYPT_DEFAULT_SALT_LENGTH), pError);
 
-    ABC_CHECK_RET(ABC_CryptoCreateSNRP(Salt,
+    ABC_CHECK_RET(ABC_CryptoCreateSNRP(toU08Buf(salt),
                                        g_timedScryptN,
                                        g_timedScryptR,
                                        SCRYPT_DEFAULT_CLIENT_P,
