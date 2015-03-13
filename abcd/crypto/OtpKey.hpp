@@ -19,6 +19,9 @@ namespace abcd {
 class OtpKey
 {
 public:
+    OtpKey() {}
+    OtpKey(DataSlice key): key_(key.begin(), key.end()) {}
+
     /**
      * Initializes the key with random data.
      */
@@ -53,7 +56,7 @@ public:
      * Obtains access to the underlying binary key.
      */
     DataSlice
-    bytes() const { return key_; }
+    key() const { return key_; }
 
 private:
     DataChunk key_;
