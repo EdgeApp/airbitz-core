@@ -6,7 +6,6 @@
  */
 
 #include "WatcherBridge.hpp"
-#include "TxUpdater.hpp"
 #include "Testnet.hpp"
 #include "Utility.hpp"
 #include "Watcher.hpp"
@@ -14,10 +13,8 @@
 #include "../spend/Broadcast.hpp"
 #include "../spend/Inputs.hpp"
 #include "../spend/Outputs.hpp"
-#include "../spend/Spend.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
-#include "../wallet/Address.hpp"
 #include "../wallet/Wallet.hpp"
 #include <algorithm>
 #include <list>
@@ -29,7 +26,7 @@ namespace abcd {
 struct PendingSweep
 {
     std::string address;
-    abcd::wif_key key;
+    std::string key;
     bool done;
 };
 
@@ -118,7 +115,7 @@ bridgeSweepKey(Wallet &self, DataSlice key, bool compressed)
     // Start the sweep:
     PendingSweep sweep;
     sweep.address = address.encoded();
-    sweep.key = abcd::wif_key{ec_key, compressed};
+    sweep.key = bc::secret_to_wif(ec_key, compressed);
     sweep.done = false;
     watcherInfo->sweeping.push_back(sweep);
     self.addressCache.insert(sweep.address);
@@ -310,12 +307,6 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
               PendingSweep &sweep,
               tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    Address address;
-    uint64_t funds = 0;
-    abcd::unsigned_transaction utx;
-    bc::transaction_output_type output;
-    abcd::key_table keys;
-
     // Find utxos for this address:
     AddressSet addresses;
     addresses.insert(sweep.address);
@@ -343,45 +334,47 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
         return Status();
     }
 
-    // Create a new receive request:
-    watcherInfo->wallet.addresses.getNew(address);
-
     // Build a transaction:
-    utx.tx.version = 1;
-    utx.tx.locktime = 0;
-    for (auto &utxo : utxos)
+    bc::transaction_type tx;
+    tx.version = 1;
+    tx.locktime = 0;
+
+    // Set up the inputs:
+    uint64_t funds = 0;
+    for (const auto &utxo: utxos)
     {
-        bc::transaction_input_type input;
-        input.sequence = 0xffffffff;
-        input.previous_output = utxo.point;
         funds += utxo.value;
-        utx.tx.inputs.push_back(input);
+        bc::transaction_input_type input = { utxo.point, {}, 0xffffffff };
+        tx.inputs.push_back(input);
     }
     if (10000 < funds)
         funds -= 10000; // Ugh, hard-coded mining fee
     if (outputIsDust(funds))
         return ABC_ERROR(ABC_CC_InsufficientFunds, "Not enough funds");
+
+    // Set up the output:
+    Address address;
+    watcherInfo->wallet.addresses.getNew(address);
+    bc::transaction_output_type output;
     output.value = funds;
     ABC_CHECK(outputScriptForAddress(output.script, address.address));
-    utx.tx.outputs.push_back(output);
+    tx.outputs.push_back(output);
 
     // Now sign that:
+    KeyTable keys;
     keys[sweep.address] = sweep.key;
-    if (!gather_challenges(utx, watcherInfo->wallet))
-        return ABC_ERROR(ABC_CC_SysError, "gather_challenges failed");
-    if (!sign_tx(utx, keys))
-        return ABC_ERROR(ABC_CC_SysError, "sign_tx failed");
+    ABC_CHECK(signTx(tx, watcherInfo->wallet.txdb, keys));
 
     // Send:
-    bc::data_chunk raw_tx(satoshi_raw_size(utx.tx));
-    bc::satoshi_save(utx.tx, raw_tx.begin());
+    bc::data_chunk raw_tx(satoshi_raw_size(tx));
+    bc::satoshi_save(tx, raw_tx.begin());
     ABC_CHECK(broadcastTx(watcherInfo->wallet, raw_tx));
-    if (watcherInfo->wallet.txdb.insert(utx.tx))
+    if (watcherInfo->wallet.txdb.insert(tx))
         watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 
     // Save the transaction in the metadatabase:
-    const auto txid = bc::encode_hash(bc::hash_transaction(utx.tx));
-    const auto ntxid = bc::encode_hash(makeNtxid(utx.tx));
+    const auto txid = bc::encode_hash(bc::hash_transaction(tx));
+    const auto ntxid = bc::encode_hash(makeNtxid(tx));
     ABC_CHECK(txSweepSave(watcherInfo->wallet, ntxid, txid, funds));
 
     // Done:

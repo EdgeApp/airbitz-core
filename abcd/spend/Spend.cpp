@@ -112,7 +112,7 @@ spendSignTx(DataChunk &result, Wallet &self, SendInfo *pInfo)
 
     // Sign the transaction:
     KeyTable keys = self.addresses.keyTable();
-    ABC_CHECK(signTx(tx, self, keys));
+    ABC_CHECK(signTx(tx, self.txdb, keys));
     result.resize(satoshi_raw_size(tx));
     bc::satoshi_save(tx, result.begin());
 

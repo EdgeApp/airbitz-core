@@ -19,13 +19,14 @@ namespace abcd {
 static std::map<bc::data_chunk, std::string> address_map;
 
 Status
-signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
+signTx(bc::transaction_type &result, const TxDatabase &txdb,
+       const KeyTable &keys)
 {
     for (size_t i = 0; i < result.inputs.size(); ++i)
     {
         // Find the utxo this input refers to:
         bc::input_point &point = result.inputs[i].previous_output;
-        bc::transaction_type tx = wallet.txdb.txidLookup(point.hash);
+        bc::transaction_type tx = txdb.txidLookup(point.hash);
 
         // Find the address for that utxo:
         bc::payment_address pa;
@@ -59,77 +60,6 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
     }
 
     return Status();
-}
-
-bool gather_challenges(unsigned_transaction &utx, Wallet &wallet)
-{
-    utx.challenges.resize(utx.tx.inputs.size());
-
-    for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
-    {
-        bc::input_point &point = utx.tx.inputs[i].previous_output;
-        if (!wallet.txdb.txidExists(point.hash))
-            return false;
-        bc::transaction_type tx = wallet.txdb.txidLookup(point.hash);
-        utx.challenges[i] = tx.outputs[point.index].script;
-    }
-
-    return true;
-}
-
-bool sign_tx(unsigned_transaction &utx, const key_table &keys)
-{
-    bool all_done = true;
-
-    for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
-    {
-        auto &input = utx.tx.inputs[i];
-        auto &challenge = utx.challenges[i];
-
-        // Already signed?
-        if (input.script.operations().size())
-            continue;
-
-        // Extract the address:
-        bc::payment_address from_address;
-        if (!bc::extract(from_address, challenge))
-        {
-            all_done = false;
-            continue;
-        }
-
-        // Find a matching key:
-        auto key = keys.find(from_address);
-        if (key == keys.end())
-        {
-            all_done = false;
-            continue;
-        }
-        auto &secret = key->second.secret;
-        auto pubkey = bc::secret_to_public_key(secret, key->second.compressed);
-
-        // Create the sighash for this input:
-        bc::hash_digest sighash =
-            bc::script_type::generate_signature_hash(utx.tx, i, challenge, 1);
-        if (sighash == bc::null_hash)
-        {
-            all_done = false;
-            continue;
-        }
-
-        // Sign:
-        bc::data_chunk signature = bc::sign(secret, sighash,
-                                            bc::create_nonce(secret, sighash));
-        signature.push_back(0x01);
-
-        // Save:
-        bc::script_type scriptsig;
-        scriptsig.push_operation(makePushOperation(signature));
-        scriptsig.push_operation(makePushOperation(pubkey));
-        utx.tx.inputs[i].script = scriptsig;
-    }
-
-    return all_done;
 }
 
 static uint64_t
@@ -200,7 +130,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
         for (auto &point: chosen.points)
         {
             bc::transaction_input_type input;
-            input.sequence = 4294967295;
+            input.sequence = 0xffffffff;
             input.previous_output = point;
             tx.inputs.push_back(input);
         }
@@ -226,7 +156,7 @@ inputsPickMaximum(uint64_t &resultFee, uint64_t &resultUsable,
     for (auto &utxo: utxos)
     {
         bc::transaction_input_type input;
-        input.sequence = 4294967295;
+        input.sequence = 0xffffffff;
         input.previous_output = utxo.point;
         tx.inputs.push_back(input);
         sourced += utxo.value;
