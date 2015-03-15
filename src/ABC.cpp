@@ -127,9 +127,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     // initialize URL system
     ABC_CHECK_RET(ABC_URLInitialize(szCaCertPath, pError));
 
-    // initialize Bitcoin transaction system
-    ABC_CHECK_RET(ABC_TxInitialize(pError));
-
     // initialize Crypto perf checks to determine hashing power
     ABC_CHECK_RET(ABC_InitializeCrypto(pError));
 

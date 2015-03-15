@@ -71,18 +71,13 @@ tABC_CC ABC_AccountWalletGetDir(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
 
     char *szWalletDir = NULL;
-    bool bExists = false;
 
     // Get the name:
     ABC_STR_NEW(szWalletDir, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szWalletDir, "%s/%s", pKeys->szSyncDir, ACCOUNT_WALLET_DIRNAME);
 
     // Create if neccessary:
-    ABC_CHECK_RET(ABC_FileIOFileExists(szWalletDir, &bExists, pError));
-    if (!bExists)
-    {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szWalletDir, pError));
-    }
+    ABC_CHECK_NEW(fileEnsureDir(szWalletDir), pError);
 
     // Output:
     if (pszWalletDir)

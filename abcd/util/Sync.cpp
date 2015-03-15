@@ -132,8 +132,9 @@ void ABC_SyncTerminate()
 }
 
 /**
- * Prepares a directory for syncing. This must be called one time after
- * the directory has first been created.
+ * Prepares a directory for syncing.
+ * This will create the directory if it does not exist already.
+ * Has no effect if the repo has already been created.
  */
 tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
                          tABC_Error *pError)
@@ -142,9 +143,12 @@ tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
     AutoSyncLock lock(gSyncMutex);
     int e = 0;
 
+    git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
     git_repository *repo = NULL;
 
-    e = git_repository_init(&repo, szRepoPath, 0);
+    opts.flags |= GIT_REPOSITORY_INIT_MKDIR;
+    opts.flags |= GIT_REPOSITORY_INIT_MKPATH;
+    e = git_repository_init_ext(&repo, szRepoPath, &opts);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_init failed");
 
 exit:

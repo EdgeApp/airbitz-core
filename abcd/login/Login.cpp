@@ -51,42 +51,42 @@ tABC_CC ABC_LoginCreate(Login *&result,
     std::unique_ptr<Login> login;
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
-    AutoU08Buf           MK;
-    AutoU08Buf           SyncKey;
     AutoU08Buf           LP;
     AutoU08Buf           LP1;
     AutoU08Buf           LP2;
+    DataChunk dataKey;
+    DataChunk syncKey;
 
     // Set up packages:
     ABC_CHECK_RET(ABC_CarePackageNew(&pCarePackage, pError));
     ABC_NEW(pLoginPackage, tABC_LoginPackage);
 
     // Generate MK:
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(ACCOUNT_MK_LENGTH, &MK, pError));
+    ABC_CHECK_NEW(randomData(dataKey, ACCOUNT_MK_LENGTH), pError);
 
     // Generate SyncKey:
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(SYNC_KEY_LENGTH, &SyncKey, pError));
+    ABC_CHECK_NEW(randomData(syncKey, SYNC_KEY_LENGTH), pError);
 
     // LP = L + P:
     ABC_BUF_STRCAT(LP, lobby->username().c_str(), szPassword);
 
     // Set up EMK_LP2:
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(MK, LP2,
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(dataKey), LP2,
         ABC_CryptoType_AES256, &pLoginPackage->EMK_LP2, pError));
 
     // Set up ESyncKey:
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(SyncKey, MK,
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(syncKey), toU08Buf(dataKey),
         ABC_CryptoType_AES256, &pLoginPackage->ESyncKey, pError));
 
     // Set up ELP1:
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP1, &LP1, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LP1, MK,
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LP1, toU08Buf(dataKey),
         ABC_CryptoType_AES256, &pLoginPackage->ELP1, pError));
 
     // Create the account and repo on server:
     ABC_CHECK_RET(ABC_LoginServerCreate(toU08Buf(lobby->authId()), LP1,
-        pCarePackage, pLoginPackage, base16Encode(U08Buf(SyncKey)).c_str(), pError));
+        pCarePackage, pLoginPackage, base16Encode(syncKey).c_str(), pError));
 
     // Latch the account:
     ABC_CHECK_RET(ABC_LoginServerActivate(toU08Buf(lobby->authId()), LP1, pError));
@@ -96,7 +96,7 @@ tABC_CC ABC_LoginCreate(Login *&result,
     ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->directory(), pCarePackage, pLoginPackage, pError));
 
     // Create the Login object:
-    login.reset(new Login(lobby, static_cast<U08Buf>(MK)));
+    login.reset(new Login(lobby, dataKey));
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
     result = login.release();
 

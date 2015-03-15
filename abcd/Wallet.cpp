@@ -159,11 +159,13 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
 
     char *szFilename       = NULL;
     char *szJSON           = NULL;
-    char *szUUID           = NULL;
     char *szWalletDir      = NULL;
     json_t *pJSON_Data     = NULL;
     json_t *pJSON_Wallets  = NULL;
-    AutoU08Buf WalletAcctKey;
+    std::string uuid;
+    DataChunk dataKey;
+    DataChunk syncKey;
+    DataChunk bitcoinKey;
 
     tWalletData *pData = NULL;
 
@@ -174,47 +176,49 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
     pData->archived = 0;
 
     // create wallet guid
-    ABC_CHECK_RET(ABC_CryptoGenUUIDString(&szUUID, pError));
-    ABC_STRDUP(pData->szUUID, szUUID);
-    ABC_STRDUP(*pszUUID, szUUID);
+    ABC_CHECK_NEW(randomUuid(uuid), pError);
+    ABC_STRDUP(pData->szUUID, uuid.c_str());
+    ABC_STRDUP(*pszUUID, uuid.c_str());
 
     // generate the master key for this wallet - MK_<Wallet_GUID1>
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(WALLET_KEY_LENGTH, &pData->MK, pError));
+    ABC_CHECK_NEW(randomData(dataKey, WALLET_KEY_LENGTH), pError);
+    ABC_BUF_DUP(pData->MK, toU08Buf(dataKey));
 
     // create and set the bitcoin private seed for this wallet
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(WALLET_BITCOIN_PRIVATE_SEED_LENGTH, &pData->BitcoinPrivateSeed, pError));
+    ABC_CHECK_NEW(randomData(bitcoinKey, WALLET_BITCOIN_PRIVATE_SEED_LENGTH), pError);
+    ABC_BUF_DUP(pData->BitcoinPrivateSeed, toU08Buf(bitcoinKey));
 
     // Create Wallet Repo key
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(SYNC_KEY_LENGTH, &WalletAcctKey, pError));
-    ABC_STRDUP(pData->szWalletAcctKey, base16Encode(U08Buf(WalletAcctKey)).c_str());
+    ABC_CHECK_NEW(randomData(syncKey, SYNC_KEY_LENGTH), pError);
+    ABC_STRDUP(pData->szWalletAcctKey, base16Encode(syncKey).c_str());
 
     // create the wallet root directory if necessary
     ABC_CHECK_RET(ABC_WalletCreateRootDir(pError));
 
     // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
     ABC_CHECK_RET(ABC_WalletGetDirName(&(pData->szWalletDir), pData->szUUID, pError));
-    ABC_CHECK_RET(ABC_FileIOCreateDir(pData->szWalletDir, pError));
+    ABC_CHECK_NEW(fileEnsureDir(pData->szWalletDir), pError);
     ABC_STRDUP(szWalletDir, pData->szWalletDir);
 
     // create the wallet sync dir under the main dir
     ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), pData->szUUID, pError));
-    ABC_CHECK_RET(ABC_FileIOCreateDir(pData->szWalletSyncDir, pError));
+    ABC_CHECK_NEW(fileEnsureDir(pData->szWalletSyncDir), pError);
 
     // we now have a new wallet so go ahead and cache its data
     ABC_CHECK_RET(ABC_WalletAddToCache(pData, pError));
 
     // all the functions below assume the wallet is in the cache or can be loaded into the cache
     // set the wallet name
-    ABC_CHECK_RET(ABC_WalletSetName(ABC_WalletID(pKeys, szUUID), szWalletName, pError));
+    ABC_CHECK_RET(ABC_WalletSetName(ABC_WalletID(pKeys, pData->szUUID), szWalletName, pError));
 
     // set the currency
-    ABC_CHECK_RET(ABC_WalletSetCurrencyNum(ABC_WalletID(pKeys, szUUID), currencyNum, pError));
+    ABC_CHECK_RET(ABC_WalletSetCurrencyNum(ABC_WalletID(pKeys, pData->szUUID), currencyNum, pError));
 
     // Request remote wallet repo
     ABC_CHECK_NEW(LoginServerWalletCreate(L1, LP1, pData->szWalletAcctKey), pError);
 
     // set this account for the wallet's first account
-    ABC_CHECK_RET(ABC_WalletAddAccount(ABC_WalletID(pKeys, szUUID), szUserName, pError));
+    ABC_CHECK_RET(ABC_WalletAddAccount(ABC_WalletID(pKeys, pData->szUUID), szUserName, pError));
 
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
@@ -228,10 +232,10 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
 
     // If everything worked, add the wallet to the account:
     tABC_AccountWalletInfo info; // No need to free this
-    info.szUUID = szUUID;
+    info.szUUID = pData->szUUID;
     info.MK = pData->MK;
     info.BitcoinSeed = pData->BitcoinPrivateSeed;
-    info.SyncKey = WalletAcctKey;
+    info.SyncKey = toU08Buf(syncKey);
     info.archived = 0;
     ABC_CHECK_RET(ABC_AccountWalletList(pKeys, NULL, &info.sortIndex, pError));
     ABC_CHECK_RET(ABC_AccountWalletSave(pKeys, &info, pError));
@@ -247,9 +251,9 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
 exit:
     if (cc != ABC_CC_Ok)
     {
-        if (szUUID)
+        if (!uuid.empty())
         {
-            ABC_WalletRemoveFromCache(szUUID, NULL);
+            ABC_WalletRemoveFromCache(uuid.c_str(), NULL);
         }
         if (szWalletDir)
         {
@@ -259,7 +263,6 @@ exit:
     ABC_FREE_STR(szWalletDir);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szJSON);
-    ABC_FREE_STR(szUUID);
     if (pJSON_Data)         json_decref(pJSON_Data);
     if (pJSON_Wallets)      json_decref(pJSON_Wallets);
     if (pData)              ABC_WalletFreeData(pData);
@@ -318,20 +321,13 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, int *pDirty, tABC_Error *pError)
 
     // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
     ABC_CHECK_RET(ABC_WalletGetDirName(&szDirectory, self.szUUID, pError));
-    ABC_CHECK_RET(ABC_FileIOFileExists(szDirectory, &bExists, pError));
-    if (!bExists)
-    {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szDirectory, pError));
-    }
+    ABC_CHECK_NEW(fileEnsureDir(szDirectory), pError);
 
     // create the wallet sync dir under the main dir
     ABC_CHECK_RET(ABC_WalletGetSyncDirName(&szSyncDirectory, self.szUUID, pError));
     ABC_CHECK_RET(ABC_FileIOFileExists(szSyncDirectory, &bExists, pError));
     if (!bExists)
     {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szSyncDirectory, pError));
-
-        // Init repo
         ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDirectory, pError));
         bNew = true;
     }
@@ -478,17 +474,12 @@ tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     char *szWalletRoot = NULL;
-    bool bExists = false;
 
     // create the account directory string
     ABC_CHECK_RET(ABC_WalletGetRootDirName(&szWalletRoot, pError));
 
     // if it doesn't exist
-    ABC_CHECK_RET(ABC_FileIOFileExists(szWalletRoot, &bExists, pError));
-    if (true != bExists)
-    {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szWalletRoot, pError));
-    }
+    ABC_CHECK_NEW(fileEnsureDir(szWalletRoot), pError);
 
 exit:
     ABC_FREE_STR(szWalletRoot);

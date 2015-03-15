@@ -14,6 +14,26 @@ namespace abcd {
 constexpr size_t loadFlags = 0;
 constexpr size_t saveFlags = JSON_INDENT(4) | JSON_SORT_KEYS;
 
+JsonFile::~JsonFile()
+{
+    reset();
+}
+
+JsonFile::JsonFile():
+    root_(nullptr)
+{}
+
+JsonFile::JsonFile(JsonFile &copy):
+    root_(json_incref(copy.root()))
+{}
+
+JsonFile &
+JsonFile::operator=(JsonFile &copy)
+{
+    root_ = json_incref(copy.root());
+    return *this;
+}
+
 JsonFile::JsonFile(json_t *root):
     root_(json_incref(root))
 {}

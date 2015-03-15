@@ -881,7 +881,7 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_DEBUG_PATH);
 
     ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
-    ABC_CHECK_NEW(fileLoad(szLogFilename, logData), pError);
+    ABC_CHECK_NEW(fileLoad(logData, szLogFilename), pError);
 
     ABC_CHECK_RET(ABC_WalletGetWallets(pKeys, &paWalletInfo, &nCount, pError));
     pJSON_array = json_array();
@@ -889,7 +889,7 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     {
         ABC_CHECK_RET(ABC_BridgeWatchPath(paWalletInfo[i]->szUUID,
                                           &szWatchFilename, pError));
-        ABC_CHECK_NEW(fileLoad(szWatchFilename, watchData), pError);
+        ABC_CHECK_NEW(fileLoad(watchData, szWatchFilename), pError);
 
         json_array_append_new(pJSON_array,
             json_string(base64Encode(watchData).c_str()));

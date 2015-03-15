@@ -16,12 +16,17 @@ namespace abcd {
 tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
                                 tABC_Error        *pError);
 
-tABC_CC ABC_CryptoCreateRandomData(unsigned int  length,
-                                   tABC_U08Buf   *pData,
-                                   tABC_Error    *pError);
+/**
+ * Generates cryptographically-secure random data.
+ */
+Status
+randomData(DataChunk &result, size_t size);
 
-tABC_CC ABC_CryptoGenUUIDString(char       **pszUUID,
-                                tABC_Error *pError);
+/**
+ * Creates a random version 4 UUID.
+ */
+Status
+randomUuid(std::string &result);
 
 } // namespace abcd
 

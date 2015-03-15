@@ -15,6 +15,7 @@
 
 #include "General.hpp"
 #include "login/ServerDefs.hpp"
+#include "json/JsonObject.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"
 #include "util/Json.hpp"
@@ -43,7 +44,11 @@ namespace abcd {
 #define JSON_INFO_OBELISK_SERVERS_FIELD         "obeliskServers"
 #define JSON_INFO_SYNC_SERVERS_FIELD            "syncServers"
 
-#define JSON_QUESTIONS_FIELD                    "questions"
+struct QuestionsFile:
+    public JsonObject
+{
+    ABC_JSON_VALUE(Questions, "questions", JSON_ARRAY);
+};
 
 static tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename, tABC_Error *pError);
 static tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError);
@@ -103,6 +108,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    JsonFile file;
     json_t  *pJSON_Root             = NULL;
     json_t  *pJSON_Value            = NULL;
     char    *szInfoFilename         = NULL;
@@ -127,7 +133,8 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     }
 
     // load the json
-    ABC_CHECK_RET(ABC_FileIOReadFileObject(szInfoFilename, &pJSON_Root, true, pError));
+    ABC_CHECK_NEW(file.load(szInfoFilename), pError);
+    pJSON_Root = file.root();
 
     // allocate the struct
     ABC_NEW(pInfo, tABC_GeneralInfo);
@@ -249,8 +256,6 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     pInfo = NULL;
 
 exit:
-
-    if (pJSON_Root) json_decref(pJSON_Root);
     ABC_FREE_STR(szInfoFilename);
     ABC_GeneralFreeInfo(pInfo);
 
@@ -335,10 +340,10 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
         // get the info
         pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
         ABC_CHECK_ASSERT((pJSON_Value && json_is_object(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON info results");
-        szJSON = ABC_UtilStringFromJSONObject(pJSON_Value, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-
-        // write the file
-        ABC_CHECK_RET(ABC_FileIOWriteFileStr(szInfoFilename, szJSON, pError));
+        {
+            JsonFile json(json_incref(pJSON_Value));
+            ABC_CHECK_NEW(json.save(szInfoFilename), pError);
+        }
     }
 
 exit:
@@ -415,7 +420,7 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     tABC_CC cc = ABC_CC_Ok;
 
     std::string filename = getRootDir() + GENERAL_QUESTIONS_FILENAME;
-    json_t *pJSON_Root = NULL;
+    QuestionsFile file;
     json_t *pJSON_Value = NULL;
     tABC_QuestionChoices *pQuestionChoices = NULL;
     bool bExists = false;
@@ -431,12 +436,10 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
         ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
     }
 
-    // read in the recovery question choices json object
-    ABC_CHECK_RET(ABC_FileIOReadFileObject(filename.c_str(), &pJSON_Root, true, pError));
-
-    // get the questions array field
-    pJSON_Value = json_object_get(pJSON_Root, JSON_QUESTIONS_FIELD);
-    ABC_CHECK_ASSERT((pJSON_Value && json_is_array(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON array value for recovery questions");
+    // Read in the recovery question choices json object
+    ABC_CHECK_NEW(file.load(filename), pError);
+    ABC_CHECK_NEW(file.hasQuestions(), pError);
+    pJSON_Value = file.getQuestions();
 
     // get the number of elements in the array
     count = (unsigned int) json_array_size(pJSON_Value);
@@ -479,7 +482,6 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     pQuestionChoices = NULL; // so we don't free it below
 
 exit:
-    if (pJSON_Root) json_decref(pJSON_Root);
     if (pQuestionChoices) ABC_GeneralFreeQuestionChoices(pQuestionChoices);
 
     return cc;
@@ -495,30 +497,16 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::string filename = getRootDir() + GENERAL_QUESTIONS_FILENAME;
-    json_t *pJSON_Root = NULL;
     json_t *pJSON_Q    = NULL;
-    char   *szJSON     = NULL;
+    QuestionsFile file;
 
     // get the questions from the server
     ABC_CHECK_RET(ABC_GeneralServerGetQuestions(&pJSON_Q, pError));
-
-    // create the json object that will be our questions
-    pJSON_Root = json_object();
-
-    // set our final json for the array element
-    json_object_set(pJSON_Root, JSON_QUESTIONS_FIELD, pJSON_Q);
-
-    // get the JSON for the file
-    szJSON = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-
-    // write the file
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(filename.c_str(), szJSON, pError));
+    ABC_CHECK_NEW(file.setQuestions(pJSON_Q), pError);
+    ABC_CHECK_NEW(file.save(getRootDir() + GENERAL_QUESTIONS_FILENAME), pError);
 
 exit:
-    if (pJSON_Root)     json_decref(pJSON_Root);
     if (pJSON_Q)        json_decref(pJSON_Q);
-    ABC_FREE_STR(szJSON);
 
     return cc;
 }

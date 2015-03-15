@@ -8,7 +8,6 @@
 #include "OtpKey.hpp"
 #include "Encoding.hpp"
 #include "Random.hpp"
-#include "../util/U08Buf.hpp"
 #include <openssl/hmac.h>
 #include <time.h>
 #include <sstream>
@@ -18,9 +17,7 @@ namespace abcd {
 Status
 OtpKey::create(size_t keySize)
 {
-    AutoU08Buf rawKey;
-    ABC_CHECK_OLD(ABC_CryptoCreateRandomData(keySize, &rawKey, &error));
-    key_ = DataChunk(rawKey.p, rawKey.end);
+    ABC_CHECK(randomData(key_, keySize));
     return Status();
 }
 

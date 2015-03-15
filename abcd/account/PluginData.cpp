@@ -66,8 +66,8 @@ Status
 pluginDataSet(tABC_SyncKeys *pKeys, const std::string &plugin,
     const std::string &key, const std::string &data)
 {
-    ABC_CHECK(fileVerifyDir(pluginsDirectory(pKeys)));
-    ABC_CHECK(fileVerifyDir(pluginDirectory(pKeys, plugin)));
+    ABC_CHECK(fileEnsureDir(pluginsDirectory(pKeys)));
+    ABC_CHECK(fileEnsureDir(pluginDirectory(pKeys, plugin)));
 
     PluginDataFile json;
     json.setKey(key.c_str());
