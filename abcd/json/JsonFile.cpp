@@ -30,7 +30,7 @@ JsonFile::JsonFile(JsonFile &copy):
 JsonFile &
 JsonFile::operator=(JsonFile &copy)
 {
-    root_ = json_incref(copy.root());
+    reset(json_incref(copy.root()));
     return *this;
 }
 
