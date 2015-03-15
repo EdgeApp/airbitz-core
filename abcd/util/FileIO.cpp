@@ -63,7 +63,7 @@ getRootDir()
 }
 
 Status
-fileVerifyDir(const std::string &dir)
+fileEnsureDir(const std::string &dir)
 {
     bool exists;
     ABC_CHECK_OLD(ABC_FileIOFileExists(dir.c_str(), &exists, &error));
@@ -332,7 +332,7 @@ exit:
 }
 
 Status
-fileLoad(const std::string &filename, DataChunk &result)
+fileLoad(DataChunk &result, const std::string &filename)
 {
     AutoFileLock lock(gFileMutex);
 

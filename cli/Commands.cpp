@@ -65,7 +65,7 @@ Status accountEncrypt(int argc, char *argv[])
     file += argv[2];
 
     DataChunk contents;
-    ABC_CHECK(fileLoad(file, contents));
+    ABC_CHECK(fileLoad(contents, file));
 
     json_t *encrypted;
     ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents), pKeys->MK,
@@ -556,7 +556,7 @@ Status walletEncrypt(int argc, char *argv[])
     ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, argv[2], &info, &error));
 
     DataChunk contents;
-    ABC_CHECK(fileLoad(argv[3], contents));
+    ABC_CHECK(fileLoad(contents, argv[3]));
 
     json_t *encrypted;
     ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents), info.MK,

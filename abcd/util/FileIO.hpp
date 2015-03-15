@@ -86,7 +86,7 @@ getRootDir();
  * Ensures that a directory exists, creating it if not.
  */
 Status
-fileVerifyDir(const std::string &dir);
+fileEnsureDir(const std::string &dir);
 
 tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
                                  const char *szDir,
@@ -114,7 +114,7 @@ tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
                               tABC_Error  *pError);
 
 Status
-fileLoad(const std::string &filename, DataChunk &result);
+fileLoad(DataChunk &result, const std::string &filename);
 
 tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
                                  json_t **ppJSON_Data,
