@@ -197,12 +197,12 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
 
     // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
     ABC_CHECK_RET(ABC_WalletGetDirName(&(pData->szWalletDir), pData->szUUID, pError));
-    ABC_CHECK_RET(ABC_FileIOCreateDir(pData->szWalletDir, pError));
+    ABC_CHECK_NEW(fileEnsureDir(pData->szWalletDir), pError);
     ABC_STRDUP(szWalletDir, pData->szWalletDir);
 
     // create the wallet sync dir under the main dir
     ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), pData->szUUID, pError));
-    ABC_CHECK_RET(ABC_FileIOCreateDir(pData->szWalletSyncDir, pError));
+    ABC_CHECK_NEW(fileEnsureDir(pData->szWalletSyncDir), pError);
 
     // we now have a new wallet so go ahead and cache its data
     ABC_CHECK_RET(ABC_WalletAddToCache(pData, pError));
@@ -321,20 +321,13 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, int *pDirty, tABC_Error *pError)
 
     // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
     ABC_CHECK_RET(ABC_WalletGetDirName(&szDirectory, self.szUUID, pError));
-    ABC_CHECK_RET(ABC_FileIOFileExists(szDirectory, &bExists, pError));
-    if (!bExists)
-    {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szDirectory, pError));
-    }
+    ABC_CHECK_NEW(fileEnsureDir(szDirectory), pError);
 
     // create the wallet sync dir under the main dir
     ABC_CHECK_RET(ABC_WalletGetSyncDirName(&szSyncDirectory, self.szUUID, pError));
     ABC_CHECK_RET(ABC_FileIOFileExists(szSyncDirectory, &bExists, pError));
     if (!bExists)
     {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szSyncDirectory, pError));
-
-        // Init repo
         ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDirectory, pError));
         bNew = true;
     }
@@ -481,17 +474,12 @@ tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     char *szWalletRoot = NULL;
-    bool bExists = false;
 
     // create the account directory string
     ABC_CHECK_RET(ABC_WalletGetRootDirName(&szWalletRoot, pError));
 
     // if it doesn't exist
-    ABC_CHECK_RET(ABC_FileIOFileExists(szWalletRoot, &bExists, pError));
-    if (true != bExists)
-    {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szWalletRoot, pError));
-    }
+    ABC_CHECK_NEW(fileEnsureDir(szWalletRoot), pError);
 
 exit:
     ABC_FREE_STR(szWalletRoot);

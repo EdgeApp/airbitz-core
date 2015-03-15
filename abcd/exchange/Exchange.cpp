@@ -192,16 +192,11 @@ tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC_Error 
 
     std::string rateDir = getRootDir() + EXCHANGE_RATE_DIRECTORY;
     std::stringstream filename;
-    bool bExists = false;
 
     ABC_CHECK_NULL(pszFilename);
     *pszFilename = NULL;
 
-    ABC_CHECK_RET(ABC_FileIOFileExists(rateDir.c_str(), &bExists, pError));
-    if (true != bExists)
-    {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(rateDir.c_str(), pError));
-    }
+    ABC_CHECK_NEW(fileEnsureDir(rateDir), pError);
 
     filename << rateDir << currencyNum << ".txt";
     ABC_STRDUP(*pszFilename, filename.str().c_str());

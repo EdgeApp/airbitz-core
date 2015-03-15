@@ -150,13 +150,7 @@ tABC_CC ABC_LoginDirCreate(std::string &directory,
     UsernameFile f;
 
     // make sure the accounts directory is in place:
-    bool exists = false;
-    std::string accountsDir = accountsDirectory();
-    ABC_CHECK_RET(ABC_FileIOFileExists(accountsDir.c_str(), &exists, pError));
-    if (!exists)
-    {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(accountsDir.c_str(), pError));
-    }
+    ABC_CHECK_NEW(fileEnsureDir(accountsDirectory()), pError);
 
     // We don't need to do anything if our directory already exists:
     if (!directory.empty())
@@ -166,7 +160,7 @@ tABC_CC ABC_LoginDirCreate(std::string &directory,
     ABC_CHECK_NEW(newDirName(directory), pError);
 
     // Create main account directory:
-    ABC_CHECK_RET(ABC_FileIOCreateDir(directory.c_str(), pError));
+    ABC_CHECK_NEW(fileEnsureDir(directory), pError);
 
     // Write user name:
     ABC_CHECK_NEW(f.setUsername(szUserName), pError);
@@ -336,7 +330,6 @@ tABC_CC ABC_LoginDirMakeSyncDir(const std::string &directory,
         ABC_CHECK_RET(ABC_FileIOFileExists(tempName.c_str(), &exists, pError));
         if (exists)
             ABC_CHECK_RET(ABC_FileIODeleteRecursive(tempName.c_str(), pError));
-        ABC_CHECK_RET(ABC_FileIOCreateDir(tempName.c_str(), pError));
         ABC_CHECK_RET(ABC_SyncMakeRepo(tempName.c_str(), pError));
         ABC_CHECK_RET(ABC_SyncRepo(tempName.c_str(), szSyncKey, &dirty, pError));
         ABC_CHECK_SYS(!rename(tempName.c_str(), syncName.c_str()), "rename");

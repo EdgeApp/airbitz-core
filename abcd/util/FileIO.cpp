@@ -65,10 +65,20 @@ getRootDir()
 Status
 fileEnsureDir(const std::string &dir)
 {
+    AutoFileLock lock(gFileMutex);
+
     bool exists;
     ABC_CHECK_OLD(ABC_FileIOFileExists(dir.c_str(), &exists, &error));
     if (!exists)
-        ABC_CHECK_OLD(ABC_FileIOCreateDir(dir.c_str(), &error));
+    {
+        mode_t process_mask = umask(0);
+        int e = mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+        umask(process_mask);
+
+        if (e)
+            return ABC_ERROR(ABC_CC_DirReadError, "Could not create directory");
+    }
+
     return Status();
 }
 
@@ -178,32 +188,6 @@ tABC_CC ABC_FileIOFileExists(const char *szFilename,
         {
             *pbExists = true;
         }
-    }
-
-exit:
-    return cc;
-}
-
-/**
- * Creates a directory
- */
-tABC_CC ABC_FileIOCreateDir(const char *szDir,
-                            tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoFileLock lock(gFileMutex);
-    int e = 0;
-    mode_t process_mask;
-
-    ABC_CHECK_NULL(szDir);
-
-    process_mask = umask(0);
-    e = mkdir(szDir, S_IRWXU | S_IRWXG | S_IRWXO);
-    umask(process_mask);
-
-    if (0 != e)
-    {
-        ABC_RET_ERROR(ABC_CC_DirReadError, "Could not create directory");
     }
 
 exit:

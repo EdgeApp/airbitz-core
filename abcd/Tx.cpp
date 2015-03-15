@@ -2805,17 +2805,12 @@ tABC_CC ABC_TxCreateTxDir(const char *szWalletUUID, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     char *szTxDir = NULL;
-    bool bExists = false;
 
     // get the transaction directory
     ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
 
     // if transaction dir doesn't exist, create it
-    ABC_CHECK_RET(ABC_FileIOFileExists(szTxDir, &bExists, pError));
-    if (true != bExists)
-    {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szTxDir, pError));
-    }
+    ABC_CHECK_NEW(fileEnsureDir(szTxDir), pError);
 
 exit:
     ABC_FREE_STR(szTxDir);
@@ -3434,17 +3429,12 @@ tABC_CC ABC_TxCreateAddressDir(const char *szWalletUUID, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     char *szAddrDir = NULL;
-    bool bExists = false;
 
     // get the address directory
     ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
 
     // if transaction dir doesn't exist, create it
-    ABC_CHECK_RET(ABC_FileIOFileExists(szAddrDir, &bExists, pError));
-    if (true != bExists)
-    {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szAddrDir, pError));
-    }
+    ABC_CHECK_NEW(fileEnsureDir(szAddrDir), pError);
 
 exit:
     ABC_FREE_STR(szAddrDir);

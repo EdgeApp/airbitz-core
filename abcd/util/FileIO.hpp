@@ -98,9 +98,6 @@ tABC_CC ABC_FileIOFileExists(const char *szFilename,
                              bool *pbExists,
                              tABC_Error *pError);
 
-tABC_CC ABC_FileIOCreateDir(const char *szDir,
-                            tABC_Error *pError);
-
 /**
  * Reads a file from disk.
  */
