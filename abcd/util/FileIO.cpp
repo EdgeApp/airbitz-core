@@ -211,40 +211,6 @@ exit:
 }
 
 /**
- * Writes the given data to the specified filename
- */
-tABC_CC ABC_FileIOWriteFile(const char *szFilename,
-                            tABC_U08Buf Data,
-                            tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoFileLock lock(gFileMutex);
-
-    FILE *fp = NULL;
-
-    ABC_CHECK_NULL(szFilename);
-    ABC_CHECK_NULL_BUF(Data);
-
-    // open the file
-    fp = fopen(szFilename, "wb");
-    if (fp == NULL)
-    {
-        ABC_RET_ERROR(ABC_CC_FileOpenError, "Could not open file for writing");
-    }
-
-    // write the data
-    if (fwrite(ABC_BUF_PTR(Data), 1, ABC_BUF_SIZE(Data), fp) != ABC_BUF_SIZE(Data))
-    {
-        ABC_RET_ERROR(ABC_CC_FileWriteError, "Could not write to file");
-    }
-
-exit:
-    if (fp) fclose(fp);
-
-    return cc;
-}
-
-/**
  * writes the given string to the specified filename
  * a newline is added to the end of the file
  */

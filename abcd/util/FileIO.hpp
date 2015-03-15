@@ -101,10 +101,6 @@ tABC_CC ABC_FileIOFileExists(const char *szFilename,
 tABC_CC ABC_FileIOCreateDir(const char *szDir,
                             tABC_Error *pError);
 
-tABC_CC ABC_FileIOWriteFile(const char *szFilename,
-                            tABC_U08Buf Data,
-                            tABC_Error *pError);
-
 tABC_CC ABC_FileIOWriteFileStr(const char *szFilename,
                                const char *szData,
                                tABC_Error *pError);
