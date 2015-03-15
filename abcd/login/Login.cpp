@@ -20,16 +20,16 @@ namespace abcd {
 
 #define ACCOUNT_MK_LENGTH 32
 
-Login::Login(Lobby *lobby, DataSlice mk):
+Login::Login(Lobby *lobby, DataSlice dataKey):
     lobby_(lobby),
-    mk_(mk.begin(), mk.end())
+    dataKey_(dataKey.begin(), dataKey.end())
 {}
 
 Status
 Login::init(tABC_LoginPackage *package)
 {
     AutoString syncKey;
-    ABC_CHECK_OLD(ABC_LoginPackageGetSyncKey(package, toU08Buf(mk_), &syncKey.get(), &error));
+    ABC_CHECK_OLD(ABC_LoginPackageGetSyncKey(package, toU08Buf(dataKey_), &syncKey.get(), &error));
     syncKey_ = syncKey.get();
     return Status();
 }
@@ -119,7 +119,7 @@ tABC_CC ABC_LoginGetSyncKeys(Login &login,
 
     ABC_NEW(pKeys.get(), tABC_SyncKeys);
     ABC_CHECK_RET(ABC_LoginDirGetSyncDir(login.lobby().dir(), &pKeys->szSyncDir, pError));
-    ABC_BUF_DUP(pKeys->MK, toU08Buf(login.mk()));
+    ABC_BUF_DUP(pKeys->MK, toU08Buf(login.dataKey()));
     ABC_STRDUP(pKeys->szSyncKey, login.syncKey().c_str());
 
     *ppKeys = pKeys;
@@ -146,7 +146,7 @@ tABC_CC ABC_LoginGetServerKeys(Login &login,
     ABC_BUF_DUP(*pL1, toU08Buf(login.lobby().authId()));
 
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLoginPackage->ELP1, toU08Buf(login.mk()), pLP1, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLoginPackage->ELP1, toU08Buf(login.dataKey()), pLP1, pError));
 
 exit:
     ABC_CarePackageFree(pCarePackage);

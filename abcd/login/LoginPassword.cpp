@@ -148,7 +148,7 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &oldL1, &oldLP1, pError));
     if (pLoginPackage->ELRA1)
     {
-        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLoginPackage->ELRA1, toU08Buf(login.mk()), &oldLRA1, pError));
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLoginPackage->ELRA1, toU08Buf(login.dataKey()), &oldLRA1, pError));
     }
 
     // Update SNRP2:
@@ -162,13 +162,13 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     // Update EMK_LP2:
     json_decref(pLoginPackage->EMK_LP2);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.mk()), LP2,
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.dataKey()), LP2,
         ABC_CryptoType_AES256, &pLoginPackage->EMK_LP2, pError));
 
     // Update ELP1:
     json_decref(pLoginPackage->ELP1);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP1, &LP1, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LP1, toU08Buf(login.mk()),
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LP1, toU08Buf(login.dataKey()),
         ABC_CryptoType_AES256, &pLoginPackage->ELP1, pError));
 
     // Change the server login:

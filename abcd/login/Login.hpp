@@ -23,7 +23,7 @@ typedef struct sABC_LoginPackage tABC_LoginPackage;
 class Login
 {
 public:
-    Login(Lobby *lobby, DataSlice mk);
+    Login(Lobby *lobby, DataSlice dataKey);
 
     /**
      * Prepares the Login object for use.
@@ -41,7 +41,7 @@ public:
      * Obtains the master key for the account.
      */
     DataSlice
-    mk() const { return mk_; }
+    dataKey() const { return dataKey_; }
 
     /**
      * Obtains the data-sync key for the account.
@@ -51,7 +51,7 @@ public:
 
 private:
     Lobby *lobby_;
-    DataChunk mk_;
+    DataChunk dataKey_;
     std::string syncKey_;
 };
 

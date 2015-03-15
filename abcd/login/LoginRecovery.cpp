@@ -159,13 +159,13 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     if (pLoginPackage->EMK_LRA3) json_decref(pLoginPackage->EMK_LRA3);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pCarePackage->pSNRP3, &LRA3, pError));
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pCarePackage->pSNRP3, &LRA3, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.mk()), LRA3,
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.dataKey()), LRA3,
         ABC_CryptoType_AES256, &pLoginPackage->EMK_LRA3, pError));
 
     // Update ELRA1:
     if (pLoginPackage->ELRA1) json_decref(pLoginPackage->ELRA1);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pCarePackage->pSNRP1, &LRA1, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LRA1, toU08Buf(login.mk()),
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LRA1, toU08Buf(login.dataKey()),
         ABC_CryptoType_AES256, &pLoginPackage->ELRA1, pError));
 
     // Change the server login:

@@ -246,7 +246,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 
     // Set up PINK stuff:
     ABC_CHECK_NEW(randomData(PINK, KEY_LENGTH), pError);
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.mk()), toU08Buf(PINK),
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.dataKey()), toU08Buf(PINK),
         ABC_CryptoType_AES256, &pEMK_PINK, pError));
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(PINK), LPIN2,
         ABC_CryptoType_AES256, &pEPINK, pError));
