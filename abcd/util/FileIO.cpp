@@ -210,93 +210,6 @@ exit:
     return cc;
 }
 
-/**
- * writes the given string to the specified filename
- * a newline is added to the end of the file
- */
-tABC_CC ABC_FileIOWriteFileStr(const char *szFilename,
-                               const char *szData,
-                              tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoFileLock lock(gFileMutex);
-
-    FILE *fp = NULL;
-
-    ABC_CHECK_NULL(szFilename);
-    ABC_CHECK_NULL(szData);
-
-    // open the file
-    fp = fopen(szFilename, "wb");
-    if (fp == NULL)
-    {
-        ABC_RET_ERROR(ABC_CC_FileOpenError, "Could not open file for writing");
-    }
-
-    // write the data
-    if (fwrite(szData, 1, strlen(szData), fp) != strlen(szData))
-    {
-        ABC_RET_ERROR(ABC_CC_FileWriteError, "Could not write to file");
-    }
-
-    // write a newline
-    if (fwrite("\n", 1, 1, fp) != 1)
-    {
-        ABC_RET_ERROR(ABC_CC_FileWriteError, "Could not write to file");
-    }
-
-
-exit:
-    if (fp) fclose(fp);
-
-    return cc;
-}
-
-/**
- * Reads the given filename into a string
- * the data is stored in an allocated buffer and then a '\0' is appended
- */
-tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
-                              char        **pszData,
-                              tABC_Error  *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoFileLock lock(gFileMutex);
-
-    FILE *fp = NULL;
-    size_t size = 0;
-
-    ABC_CHECK_NULL(szFilename);
-    ABC_CHECK_NULL(pszData);
-
-    // open the file
-    fp = fopen(szFilename, "rb");
-    if (fp == NULL)
-    {
-        ABC_RET_ERROR(ABC_CC_FileOpenError, "Could not open file for reading");
-    }
-
-    // get the length
-    fseek(fp, 0, SEEK_END);
-    size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    // create the memory
-    ABC_STR_NEW(*pszData, size + 1); // +1 for the '\0'
-
-    // write the data
-    if (fread(*pszData, 1, size, fp) != size)
-    {
-        ABC_FREE_STR(*pszData);
-        ABC_RET_ERROR(ABC_CC_FileReadError, "Could not read from file");
-    }
-
-exit:
-    if (fp) fclose(fp);
-
-    return cc;
-}
-
 Status
 fileLoad(DataChunk &result, const std::string &filename)
 {
@@ -321,56 +234,23 @@ fileLoad(DataChunk &result, const std::string &filename)
     return Status();
 }
 
-/**
- * Reads the given filename into a JSON object
- * the JSON object must be deref'ed by the caller
- * if bMustExist is false, a new empty object is created if the file doesn't exist
- */
-tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
-                                 json_t **ppJSON_Data,
-                                 bool bMustExist,
-                                 tABC_Error  *pError)
+Status
+fileSave(DataSlice data, const std::string &filename)
 {
-    tABC_CC cc = ABC_CC_Ok;
     AutoFileLock lock(gFileMutex);
 
-    char *szData_JSON = NULL;
-    json_t *pJSON_Root = NULL;
-    bool bExists = false;
+    FILE *fp = fopen(filename.c_str(), "wb");
+    if (!fp)
+        return ABC_ERROR(ABC_CC_FileOpenError, "Could not open file for writing");
 
-    ABC_CHECK_NULL(szFilename);
-    ABC_CHECK_NULL(ppJSON_Data);
-
-    // if the file exists
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-    if (true == bExists)
+    if (1 != fwrite(data.data(), data.size(), 1, fp))
     {
-        ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szData_JSON, pError));
-
-        // decode the json
-        json_error_t error;
-        pJSON_Root = json_loads(szData_JSON, 0, &error);
-        ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
-        ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-    }
-    else if (false == bMustExist)
-    {
-        // make a new one
-        pJSON_Root = json_object();
-    }
-    else
-    {
-        ABC_RET_ERROR(ABC_CC_FileDoesNotExist, "Could not find file");
+        fclose(fp);
+        return ABC_ERROR(ABC_CC_FileReadError, "Could not write to file");
     }
 
-    *ppJSON_Data = pJSON_Root;
-    pJSON_Root = NULL; // so we don't decref it
-
-exit:
-    ABC_FREE_STR(szData_JSON);
-    if (pJSON_Root) json_decref(pJSON_Root);
-
-    return cc;
+    fclose(fp);
+    return Status();
 }
 
 /**

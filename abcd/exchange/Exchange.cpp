@@ -119,11 +119,11 @@ tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, t
                 ABC_CHECK_RET(ABC_ExchangeBncRates(currencyNum, rate, pError));
             }
             rateStr.precision(10);
-            rateStr << rate;
+            rateStr << rate << '\n';
 
             // Right changes to disk
             ABC_CHECK_RET(ABC_ExchangeGetFilename(&szFilename.get(), currencyNum, pError));
-            ABC_CHECK_RET(ABC_FileIOWriteFileStr(szFilename, rateStr.str().c_str(), pError));
+            ABC_CHECK_NEW(fileSave(rateStr.str(), szFilename.get()), pError);
 
             // Update the cache
             ABC_CHECK_NEW(exchangeCacheSet(currencyNum, rate), pError);
@@ -138,7 +138,6 @@ tABC_CC ABC_ExchangeNeedsUpdate(int currencyNum, bool *bUpdateRequired, double *
 {
     tABC_CC cc = ABC_CC_Ok;
     char *szFilename = NULL;
-    char *szRate = NULL;
     time_t timeNow = time(NULL);
     bool bExists = false;
 
@@ -158,9 +157,10 @@ tABC_CC ABC_ExchangeNeedsUpdate(int currencyNum, bool *bUpdateRequired, double *
         ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
         if (true == bExists)
         {
-            ABC_CHECK_RET(ABC_FileIOReadFileStr(szFilename, &szRate, pError));
+            DataChunk data;
+            ABC_CHECK_NEW(fileLoad(data, szFilename), pError);
             // Set the exchange rate
-            *pRate = strtod(szRate, NULL);
+            *pRate = strtod(toString(data).c_str(), NULL);
             // get the time the file was last changed
             time_t timeFileMod;
             ABC_CHECK_RET(ABC_FileIOFileModTime(szFilename, &timeFileMod, pError));
@@ -181,7 +181,6 @@ tABC_CC ABC_ExchangeNeedsUpdate(int currencyNum, bool *bUpdateRequired, double *
     }
 exit:
     ABC_FREE_STR(szFilename);
-    ABC_FREE_STR(szRate);
     return cc;
 }
 

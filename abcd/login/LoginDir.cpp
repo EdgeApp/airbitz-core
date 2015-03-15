@@ -186,8 +186,9 @@ tABC_CC ABC_LoginDirFileLoad(char **pszData,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::string filename = directory + szFile;
-    ABC_CHECK_RET(ABC_FileIOReadFileStr(filename.c_str(), pszData, pError));
+    DataChunk out;
+    ABC_CHECK_NEW(fileLoad(out, directory + szFile), pError);
+    ABC_STRDUP(*pszData, toString(out).c_str());
 
 exit:
     return cc;
@@ -203,8 +204,8 @@ tABC_CC ABC_LoginDirFileSave(const char *szData,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::string filename = directory + szFile;
-    ABC_CHECK_RET(ABC_FileIOWriteFileStr(filename.c_str(), szData, pError));
+    ABC_CHECK_NEW(fileSave(std::string(szData) + '\n',
+        directory + szFile), pError);
 
 exit:
     return cc;
