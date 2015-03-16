@@ -118,10 +118,6 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
                          char **pszUUID,
                          tABC_Error *pError);
 
-tABC_CC ABC_WalletSyncAll(tABC_SyncKeys *pKeys,
-                          int *pDirty,
-                          tABC_Error *pError);
-
 tABC_CC ABC_WalletSyncData(tABC_WalletID self,
                            int *pDirty,
                            tABC_Error *pError);

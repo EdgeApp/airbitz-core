@@ -270,34 +270,6 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_WalletSyncAll(tABC_SyncKeys *pKeys, int *pDirty, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    AutoStringArray uuids;
-    unsigned int i = 0;
-
-    // Its not dirty...yet
-    *pDirty = 0;
-
-    // Get the wallet list
-    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &uuids.data, &uuids.size, pError));
-
-    for (i = 0; i < uuids.size; ++i)
-    {
-        char *szUUID = uuids.data[i];
-        int dirty = 0;
-        ABC_CHECK_RET(ABC_WalletSyncData(ABC_WalletID(pKeys, szUUID), &dirty, pError));
-        if (dirty)
-        {
-            *pDirty = 1;
-        }
-    }
-exit:
-    return cc;
-}
-
 /**
  * Sync the wallet's data
  */

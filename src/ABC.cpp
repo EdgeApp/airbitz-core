@@ -2647,14 +2647,23 @@ tABC_CC ABC_DataSyncAll(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     int walletDirty = 0;
     AutoSyncKeys pKeys;
+    AutoStringArray uuids;
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
     ABC_CHECK_RET(ABC_DataSyncAccount(szUserName, szPassword, fAsyncBitCoinEventCallback, pData, pError));
-    // Sync Wallet Data
-    ABC_CHECK_RET(ABC_WalletSyncAll(pKeys, &walletDirty, pError));
+
+    // Sync the wallets:
+    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &uuids.data, &uuids.size, pError));
+    for (size_t i = 0; i < uuids.size; ++i)
+    {
+        int dirty = 0;
+        ABC_CHECK_RET(ABC_WalletSyncData(ABC_WalletID(pKeys, uuids.data[i]), &dirty, pError));
+        walletDirty |= dirty;
+    }
+
     if (walletDirty && fAsyncBitCoinEventCallback)
     {
         tABC_AsyncBitCoinInfo info;
