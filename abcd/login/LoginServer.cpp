@@ -15,6 +15,7 @@
 #include <map>
 
 // For debug upload:
+#include "../account/Account.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/FileIO.hpp"
 
@@ -872,8 +873,7 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     json_t *pJSON_Root    = NULL;
     DataChunk logData;
     DataChunk watchData;
-    unsigned int nCount   = 0;
-    tABC_WalletInfo **paWalletInfo = NULL;
+    AutoStringArray uuids;
     json_t *pJSON_array = NULL;
 
     // create the URL
@@ -883,11 +883,11 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
     ABC_CHECK_NEW(fileLoad(logData, szLogFilename), pError);
 
-    ABC_CHECK_RET(ABC_WalletGetWallets(pKeys, &paWalletInfo, &nCount, pError));
+    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &uuids.data, &uuids.size, pError));
     pJSON_array = json_array();
-    for (unsigned i = 0; i < nCount; ++i)
+    for (unsigned i = 0; i < uuids.size; ++i)
     {
-        ABC_CHECK_RET(ABC_BridgeWatchPath(paWalletInfo[i]->szUUID,
+        ABC_CHECK_RET(ABC_BridgeWatchPath(uuids.data[i],
                                           &szWatchFilename, pError));
         ABC_CHECK_NEW(fileLoad(watchData, szWatchFilename), pError);
 
@@ -917,8 +917,6 @@ exit:
     ABC_FREE_STR(szLogFilename);
 
     ABC_FREE_STR(szWatchFilename);
-
-    ABC_FreeWalletInfoArray(paWalletInfo, nCount);
 
     return cc;
 }

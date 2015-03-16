@@ -1202,7 +1202,7 @@ exit:
 }
 
 /**
- * Gets wallets for a specified account.
+ * DEPRECATED - Gets wallets for a specified account.
  *
  * This function allocates and fills in an array of wallet info structures with the information
  * associated with the wallets of the given user
@@ -1225,18 +1225,46 @@ tABC_CC ABC_GetWallets(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     AutoSyncKeys pKeys;
+    tABC_WalletInfo **aWalletInfo = NULL;
 
+    ABC_CHECK_NULL(paWalletInfo);
+    ABC_CHECK_NULL(pCount);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
+    // Return an empty list by default:
+    *paWalletInfo = NULL;
+    *pCount = 0;
+
     ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
-    ABC_CHECK_RET(ABC_WalletGetWallets(pKeys, paWalletInfo, pCount, pError));
+    {
+        AutoStringArray uuids;
+        ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &uuids.data, &uuids.size, pError));
+
+        // Only build a list if we have stuff to put inside:
+        if (uuids.size > 0)
+        {
+            ABC_ARRAY_NEW(aWalletInfo, uuids.size, tABC_WalletInfo*);
+
+            for (unsigned i = 0; i < uuids.size; i++)
+            {
+                ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(pKeys, uuids.data[i]),
+                    &aWalletInfo[i], pError));
+            }
+
+            *paWalletInfo = aWalletInfo;
+            *pCount = uuids.size;
+            aWalletInfo = NULL;
+        }
+    }
 
 exit:
+    ABC_FreeWalletInfoArray(aWalletInfo, *pCount);
+
     return cc;
 }
 
 /**
- * Free the wallet info array.
+ * DEPRECATED - Free the wallet info array.
  *
  * This function frees the wallet info array returned from ABC_GetWallets.
  *
@@ -1248,7 +1276,15 @@ void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    ABC_WalletFreeInfoArray(aWalletInfo, nCount);
+    if ((aWalletInfo != NULL) && (nCount > 0))
+    {
+        for (unsigned i = 0; i < nCount; i++)
+        {
+            ABC_WalletFreeInfo(aWalletInfo[i]);
+        }
+
+        ABC_FREE(aWalletInfo);
+    }
 }
 
 /**

@@ -76,14 +76,6 @@ tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
 
 void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo);
 
-tABC_CC ABC_WalletGetWallets(tABC_SyncKeys *pKeys,
-                             tABC_WalletInfo ***paWalletInfo,
-                             unsigned int *pCount,
-                             tABC_Error *pError);
-
-void ABC_WalletFreeInfoArray(tABC_WalletInfo **aWalletInfo,
-                             unsigned int nCount);
-
 tABC_CC ABC_WalletGetMK(tABC_WalletID self,
                         tABC_U08Buf *pMK,
                         tABC_Error *pError);
