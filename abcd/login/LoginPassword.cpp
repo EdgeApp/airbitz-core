@@ -31,7 +31,7 @@ tABC_CC ABC_LoginPasswordDisk(Login *&result,
     AutoU08Buf          MK;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->directory(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), &pCarePackage, &pLoginPackage, pError));
 
     // Decrypt MK:
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
@@ -81,8 +81,8 @@ tABC_CC ABC_LoginPasswordServer(Login *&result,
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
 
     // Set up the on-disk login:
-    ABC_CHECK_NEW(lobby->createDirectory(), pError);
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->directory(), pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_NEW(lobby->dirCreate(), pError);
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
 
     // Assign the result:
     result = login.release();
@@ -142,7 +142,7 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     AutoU08Buf LP2;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().directory(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
 
     // Load the old keys:
     ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &oldL1, &oldLP1, pError));
@@ -176,7 +176,7 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
         LP1, oldLRA1, pCarePackage, pLoginPackage, pError));
 
     // Change the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(login.lobby().directory(), pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(login.lobby().dir(), pCarePackage, pLoginPackage, pError));
 
 exit:
     ABC_CarePackageFree(pCarePackage);
@@ -208,7 +208,7 @@ tABC_CC ABC_LoginPasswordOk(Login &login,
     *pOk = false;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().directory(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
 
     // LP = L + P:
     ABC_BUF_STRCAT(LP, login.lobby().username().c_str(), szPassword);

@@ -31,7 +31,7 @@ otpAuthSet(Login &login, long timeout)
     {
         OtpKey random;
         ABC_CHECK(random.create());
-        login.lobby().otpKey(random);
+        login.lobby().otpKeySet(random);
     }
 
     AutoU08Buf L1;

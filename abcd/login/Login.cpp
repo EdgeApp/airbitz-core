@@ -92,8 +92,8 @@ tABC_CC ABC_LoginCreate(Login *&result,
     ABC_CHECK_RET(ABC_LoginServerActivate(toU08Buf(lobby->authId()), LP1, pError));
 
     // Set up the on-disk login:
-    ABC_CHECK_NEW(lobby->createDirectory(), pError);
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->directory(), pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_NEW(lobby->dirCreate(), pError);
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
 
     // Create the Login object:
     login.reset(new Login(lobby, dataKey));
@@ -118,7 +118,7 @@ tABC_CC ABC_LoginGetSyncKeys(Login &login,
     AutoSyncKeys pKeys;
 
     ABC_NEW(pKeys.get(), tABC_SyncKeys);
-    ABC_CHECK_RET(ABC_LoginDirGetSyncDir(login.lobby().directory(), &pKeys->szSyncDir, pError));
+    ABC_CHECK_RET(ABC_LoginDirGetSyncDir(login.lobby().dir(), &pKeys->szSyncDir, pError));
     ABC_BUF_DUP(pKeys->MK, toU08Buf(login.mk()));
     ABC_STRDUP(pKeys->szSyncKey, login.syncKey().c_str());
 
@@ -145,7 +145,7 @@ tABC_CC ABC_LoginGetServerKeys(Login &login,
 
     ABC_BUF_DUP(*pL1, toU08Buf(login.lobby().authId()));
 
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().directory(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
     ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLoginPackage->ELP1, toU08Buf(login.mk()), pLP1, pError));
 
 exit:

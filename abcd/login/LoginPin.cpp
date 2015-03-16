@@ -171,8 +171,8 @@ tABC_CC ABC_LoginPin(Login *&result,
     AutoU08Buf          MK;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->directory(), &pCarePackage, &pLoginPackage, pError));
-    ABC_CHECK_RET(ABC_LoginPinLocalLoad(&pLocal, lobby->directory(), pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginPinLocalLoad(&pLocal, lobby->dir(), pError));
 
     // LPIN = L + PIN:
     ABC_BUF_STRCAT(LPIN, lobby->username().c_str(), szPin);
@@ -236,7 +236,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     DataChunk DID;
 
     // Get login stuff:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().directory(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
     ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &L1, &LP1, pError));
 
     // LPIN = L + PIN:
@@ -269,7 +269,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(L1, LP1, toU08Buf(DID), LPIN1, szEPINK, expires, pError));
 
     // Save the local file
-    ABC_CHECK_RET(ABC_LoginDirFileSave(szLocal, login.lobby().directory(), PIN_FILENAME, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szLocal, login.lobby().dir(), PIN_FILENAME, pError));
 
 exit:
     ABC_CarePackageFree(pCarePackage);

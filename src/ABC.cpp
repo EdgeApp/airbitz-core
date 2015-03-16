@@ -389,7 +389,7 @@ tABC_CC ABC_OtpKeySet(const char *szUserName,
 
         OtpKey key;
         ABC_CHECK_NEW(key.decodeBase32(szKey), pError);
-        ABC_CHECK_NEW(gLobbyCache->otpKey(key), pError);
+        ABC_CHECK_NEW(gLobbyCache->otpKeySet(key), pError);
     }
 
 exit:

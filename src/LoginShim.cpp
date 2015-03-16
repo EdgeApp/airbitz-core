@@ -74,7 +74,7 @@ cacheLogin(const char *szUserName, const char *szPassword)
             return ABC_ERROR(ABC_CC_NULLPtr, "Not logged in");
 
         ABC_CHECK_OLD(ABC_LoginPassword(gLoginCache, gLobbyCache, szPassword, &error));
-        ABC_CHECK_OLD(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->syncKey().c_str(), &error));
+        ABC_CHECK_OLD(ABC_LoginDirMakeSyncDir(gLobbyCache->dir(), gLoginCache->syncKey().c_str(), &error));
     }
 
     return Status();
@@ -120,7 +120,7 @@ tABC_CC ABC_LoginShimNewAccount(const char *szUserName,
     cacheClear();
     ABC_CHECK_NEW(cacheLobby(szUserName), pError);
     ABC_CHECK_RET(ABC_LoginCreate(gLoginCache, gLobbyCache, szPassword, pError));
-    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->syncKey().c_str(), pError));
+    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->dir(), gLoginCache->syncKey().c_str(), pError));
 
     // Take this non-blocking opportunity to update the general info:
     ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
@@ -189,7 +189,7 @@ tABC_CC ABC_LoginShimSetPassword(const char *szUserName,
         {
             ABC_CHECK_RET(ABC_LoginRecovery(gLoginCache, gLobbyCache, szRecoveryAnswers, pError));
         }
-        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->syncKey().c_str(), pError));
+        ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->dir(), gLoginCache->syncKey().c_str(), pError));
     }
 
     ABC_CHECK_RET(ABC_LoginPasswordSet(*gLoginCache, szNewPassword, pError));
@@ -222,7 +222,7 @@ tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
         {
             gLoginCache = login;
             login = nullptr;
-            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->syncKey().c_str(), pError));
+            ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->dir(), gLoginCache->syncKey().c_str(), pError));
         }
         *pbValid = true;
     }
@@ -251,7 +251,7 @@ tABC_CC ABC_LoginShimPinLogin(const char *szUserName,
     cacheClear();
     ABC_CHECK_NEW(cacheLobby(szUserName), pError);
     ABC_CHECK_RET(ABC_LoginPin(gLoginCache, gLobbyCache, szPin, pError));
-    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->directory(), gLoginCache->syncKey().c_str(), pError));
+    ABC_CHECK_RET(ABC_LoginDirMakeSyncDir(gLobbyCache->dir(), gLoginCache->syncKey().c_str(), pError));
 
 exit:
     return cc;

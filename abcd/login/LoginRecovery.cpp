@@ -96,8 +96,8 @@ tABC_CC ABC_LoginRecovery(Login *&result,
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
 
     // Set up the on-disk login:
-    ABC_CHECK_NEW(lobby->createDirectory(), pError);
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->directory(), pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_NEW(lobby->dirCreate(), pError);
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
 
     // Assign the final output:
     result = login.release();
@@ -130,7 +130,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     AutoU08Buf LRA3;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().directory(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
 
     // Load the old keys:
     ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &oldL1, &oldLP1, pError));
@@ -173,7 +173,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
         oldLP1, LRA1, pCarePackage, pLoginPackage, pError));
 
     // Change the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(login.lobby().directory(), pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(login.lobby().dir(), pCarePackage, pLoginPackage, pError));
 
 exit:
     ABC_CarePackageFree(pCarePackage);
