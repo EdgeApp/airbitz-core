@@ -56,7 +56,7 @@ typedef struct sABC_TxSendInfo
 
     // Transfer from money from one wallet to another
     bool                    bTransfer;
-    char                    *szDestWalletUUID;
+    tABC_WalletID           walletDest;
     char                    *szDestName;
     char                    *szDestCategory;
     char                    *szSrcName;

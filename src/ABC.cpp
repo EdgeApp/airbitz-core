@@ -1884,7 +1884,8 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
                                       pDetails,
                                       pError));
     pTxSendInfo->bTransfer = true;
-    ABC_STRDUP(pTxSendInfo->szDestWalletUUID, pTransfer->szDestWalletUUID);
+    ABC_CHECK_RET(ABC_WalletIDCopy(&pTxSendInfo->walletDest,
+        ABC_WalletID(pKeys, pTransfer->szDestWalletUUID), pError));
     ABC_STRDUP(pTxSendInfo->szDestName, pTransfer->szDestName);
     ABC_STRDUP(pTxSendInfo->szDestCategory, pTransfer->szDestCategory);
     ABC_STRDUP(pTxSendInfo->szSrcName, pTransfer->szSrcName);

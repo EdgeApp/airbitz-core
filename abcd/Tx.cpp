@@ -296,7 +296,7 @@ void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo)
         ABC_WalletIDFree(pTxSendInfo->wallet);
         ABC_FREE_STR(pTxSendInfo->szDestAddress);
 
-        ABC_FREE_STR(pTxSendInfo->szDestWalletUUID);
+        ABC_WalletIDFree(pTxSendInfo->walletDest);
         ABC_FREE_STR(pTxSendInfo->szDestName);
         ABC_FREE_STR(pTxSendInfo->szDestCategory);
 
@@ -458,10 +458,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
         //
         pReceiveTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
-        tABC_WalletID recvWallet =
-            ABC_WalletID(pInfo->wallet.pKeys, pInfo->szDestWalletUUID);
-
-        ABC_CHECK_RET(ABC_WalletGetInfo(recvWallet, &pDestWallet, pError));
+        ABC_CHECK_RET(ABC_WalletGetInfo(pInfo->walletDest, &pDestWallet, pError));
         ABC_CHECK_NEW(exchangeSatoshiToCurrency(
                         pReceiveTx->pDetails->amountSatoshi, Currency,
                         pDestWallet->currencyNum), pError);
@@ -479,7 +476,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
         ABC_CHECK_RET(ABC_TxTransferPopulate(pInfo, pTx, pReceiveTx, pError));
 
         // save the transaction
-        ABC_CHECK_RET(ABC_TxSaveTransaction(recvWallet, pReceiveTx, pError));
+        ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->walletDest, pReceiveTx, pError));
     }
 
     // save the transaction
