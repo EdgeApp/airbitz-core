@@ -49,6 +49,18 @@ public:
     const std::string &
     syncKey() const { return syncKey_; }
 
+    /**
+     * Returns the account's sync directory name.
+     */
+    std::string
+    syncDir() const;
+
+    /**
+     * If the sync dir doesn't exist, create and sync it.
+     */
+    Status
+    syncDirCreate() const;
+
 private:
     Lobby *lobby_;
     DataChunk dataKey_;

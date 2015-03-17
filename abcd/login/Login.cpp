@@ -12,6 +12,7 @@
 #include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
+#include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
 #include <ctype.h>
 #include <memory>
@@ -31,6 +32,36 @@ Login::init(tABC_LoginPackage *package)
     AutoString syncKey;
     ABC_CHECK_OLD(ABC_LoginPackageGetSyncKey(package, toU08Buf(dataKey_), &syncKey.get(), &error));
     syncKey_ = syncKey.get();
+    return Status();
+}
+
+std::string
+Login::syncDir() const
+{
+    return lobby_->dir() + "sync/";
+}
+
+Status
+Login::syncDirCreate() const
+{
+    // Locate the sync dir:
+    bool exists = false;
+    ABC_CHECK_OLD(ABC_FileIOFileExists(syncDir().c_str(), &exists, &error));
+
+    // If it doesn't exist, create it:
+    if (!exists)
+    {
+        int dirty = 0;
+        std::string tempName = lobby_->dir() + "tmp/";
+        ABC_CHECK_OLD(ABC_FileIOFileExists(tempName.c_str(), &exists, &error));
+        if (exists)
+            ABC_CHECK_OLD(ABC_FileIODeleteRecursive(tempName.c_str(), &error));
+        ABC_CHECK_OLD(ABC_SyncMakeRepo(tempName.c_str(), &error));
+        ABC_CHECK_OLD(ABC_SyncRepo(tempName.c_str(), syncKey_.c_str(), &dirty, &error));
+        if (rename(tempName.c_str(), syncDir().c_str()))
+            return ABC_ERROR(ABC_CC_SysError, "rename failed");
+    }
+
     return Status();
 }
 
@@ -118,7 +149,7 @@ tABC_CC ABC_LoginGetSyncKeys(Login &login,
     AutoSyncKeys pKeys;
 
     ABC_NEW(pKeys.get(), tABC_SyncKeys);
-    ABC_CHECK_RET(ABC_LoginDirGetSyncDir(login.lobby().dir(), &pKeys->szSyncDir, pError));
+    ABC_STRDUP(pKeys->szSyncDir, login.syncDir().c_str());
     ABC_BUF_DUP(pKeys->MK, toU08Buf(login.dataKey()));
     ABC_STRDUP(pKeys->szSyncKey, login.syncKey().c_str());
 

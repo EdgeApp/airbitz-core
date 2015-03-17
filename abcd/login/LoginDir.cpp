@@ -27,7 +27,6 @@ struct UsernameFile:
 #define ACCOUNT_NAME_FILENAME                   "UserName.json"
 #define ACCOUNT_CARE_PACKAGE_FILENAME           "CarePackage.json"
 #define ACCOUNT_LOGIN_PACKAGE_FILENAME          "LoginPackage.json"
-#define ACCOUNT_SYNC_DIR                        "sync"
 
 /**
  * Finds the name of the base "Accounts" directory.
@@ -289,53 +288,6 @@ tABC_CC ABC_LoginDirSavePackages(const std::string &directory,
 exit:
     if (szCarePackage)  ABC_FREE_STR(szCarePackage);
     if (szLoginPackage) ABC_FREE_STR(szLoginPackage);
-    return cc;
-}
-
-/**
- * Gets the account sync directory for a given user.
- */
-tABC_CC ABC_LoginDirGetSyncDir(const std::string &directory,
-                               char **pszDirName,
-                               tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    std::string filename = directory + ACCOUNT_SYNC_DIR;
-    ABC_STRDUP(*pszDirName, filename.c_str());
-
-exit:
-    return cc;
-}
-
-/**
- * If the sync dir doesn't exist, create it, initialize it, and sync it.
- */
-tABC_CC ABC_LoginDirMakeSyncDir(const std::string &directory,
-                                const char *szSyncKey,
-                                tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    // Locate the sync dir:
-    bool exists = false;
-    std::string syncName = directory + ACCOUNT_SYNC_DIR;
-    ABC_CHECK_RET(ABC_FileIOFileExists(syncName.c_str(), &exists, pError));
-
-    // If it doesn't exist, create it:
-    if (!exists)
-    {
-        int dirty = 0;
-        std::string tempName = directory + "tmp";
-        ABC_CHECK_RET(ABC_FileIOFileExists(tempName.c_str(), &exists, pError));
-        if (exists)
-            ABC_CHECK_RET(ABC_FileIODeleteRecursive(tempName.c_str(), pError));
-        ABC_CHECK_RET(ABC_SyncMakeRepo(tempName.c_str(), pError));
-        ABC_CHECK_RET(ABC_SyncRepo(tempName.c_str(), szSyncKey, &dirty, pError));
-        ABC_CHECK_SYS(!rename(tempName.c_str(), syncName.c_str()), "rename");
-    }
-
-exit:
     return cc;
 }
 
