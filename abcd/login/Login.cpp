@@ -13,6 +13,7 @@
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
 #include "../util/FileIO.hpp"
+#include "../util/Sync.hpp"
 #include "../util/Util.hpp"
 #include <ctype.h>
 
@@ -133,29 +134,6 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
 exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
-    return cc;
-}
-
-/**
- * Obtains the sync keys for accessing an account's repo.
- * @param ppKeys    The returned keys. Call ABC_SyncFreeKeys when done.
- */
-tABC_CC ABC_LoginGetSyncKeys(Login &login,
-                             tABC_SyncKeys **ppKeys,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoSyncKeys pKeys;
-
-    ABC_NEW(pKeys.get(), tABC_SyncKeys);
-    ABC_STRDUP(pKeys->szSyncDir, login.syncDir().c_str());
-    ABC_BUF_DUP(pKeys->MK, toU08Buf(login.dataKey()));
-    ABC_STRDUP(pKeys->szSyncKey, login.syncKey().c_str());
-
-    *ppKeys = pKeys;
-    pKeys.get() = NULL;
-
-exit:
     return cc;
 }
 

@@ -9,6 +9,7 @@
 #include "Util.hpp"
 #include "Mutex.hpp"
 #include "../General.hpp"
+#include "../util/Data.hpp"
 #include "../../minilibs/git-sync/sync.h"
 #include <stdlib.h>
 #include <mutex>
@@ -53,42 +54,6 @@ static void SyncLogGitError(int e)
     else
     {
         ABC_DebugLog("libgit2 returned %d: <no message>", e);
-    }
-}
-
-/**
- * Copies a tABC_SyncKeys structure and all its contents.
- */
-tABC_CC ABC_SyncKeysCopy(tABC_SyncKeys **ppOut,
-                         tABC_SyncKeys *pIn,
-                         tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoSyncKeys pKeys;
-
-    ABC_NEW(pKeys.get(), tABC_SyncKeys);
-    ABC_STRDUP(pKeys->szSyncDir, pIn->szSyncDir);
-    ABC_STRDUP(pKeys->szSyncKey, pIn->szSyncKey);
-    ABC_BUF_DUP(pKeys->MK, pIn->MK);
-
-    *ppOut = pKeys;
-    pKeys.get() = NULL;
-
-exit:
-    return cc;
-}
-
-/**
- * Frees a tABC_SyncKeys structure and all its members.
- */
-void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys)
-{
-    if (pKeys)
-    {
-        ABC_FREE_STR(pKeys->szSyncDir);
-        ABC_FREE_STR(pKeys->szSyncKey);
-        ABC_BUF_FREE(pKeys->MK);
-        ABC_CLEAR_FREE(pKeys, sizeof(tABC_SyncKeys));
     }
 }
 

@@ -860,7 +860,7 @@ exit:
  */
 tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
                                   tABC_U08Buf LP1,
-                                  tABC_SyncKeys *pKeys,
+                                  const Login &login,
                                   tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -886,7 +886,7 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
     ABC_CHECK_NEW(fileLoad(logData, szLogFilename), pError);
 
-    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &uuids.data, &uuids.size, pError));
+    ABC_CHECK_RET(ABC_AccountWalletList(login, &uuids.data, &uuids.size, pError));
     pJSON_array = json_array();
     for (unsigned i = 0; i < uuids.size; ++i)
     {

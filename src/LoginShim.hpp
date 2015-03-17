@@ -15,8 +15,8 @@
 #ifndef ABC_LoginShim_h
 #define ABC_LoginShim_h
 
+#include "../abcd/util/Data.hpp"
 #include "../abcd/util/Status.hpp"
-#include "../abcd/util/Sync.hpp"
 #include <memory>
 
 namespace abcd {
@@ -63,11 +63,6 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
 Status
 cacheLoginPin(std::shared_ptr<Login> &result,
     const char *szUserName, const char *szPin);
-
-tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
-                                 const char *szPassword,
-                                 tABC_SyncKeys **ppKeys,
-                                 tABC_Error *pError);
 
 tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
                                    const char *szPassword,

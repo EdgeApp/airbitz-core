@@ -36,21 +36,23 @@
 #ifndef ABC_Wallet_h
 #define ABC_Wallet_h
 
-#include "../src/ABC.h"
 #include "General.hpp"
-#include "util/Sync.hpp"
+#include "util/Data.hpp"
+#include "../src/ABC.h"
 
 namespace abcd {
+
+class Login;
 
 /* Temporary struct to bundle wallet identification. This will become
  * an opaque pointer to the wallet itself at some point. */
 typedef struct sABC_WalletID
 {
-    tABC_SyncKeys *pKeys;
+    const Login *login;
     const char *szUUID;
 } tABC_WalletID;
 
-tABC_WalletID ABC_WalletID(tABC_SyncKeys *pKeys,
+tABC_WalletID ABC_WalletID(const Login &login,
                            const char *szUUID);
 
 tABC_CC ABC_WalletIDCopy(tABC_WalletID *out,
@@ -101,7 +103,7 @@ tABC_CC ABC_WalletGetAddressDirName(char **pszDir,
                                     tABC_Error *pError);
 
 // Blocking functions:
-tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
+tABC_CC ABC_WalletCreate(const Login &login,
                          tABC_U08Buf L1,
                          tABC_U08Buf LP1,
                          const char *szUserName,

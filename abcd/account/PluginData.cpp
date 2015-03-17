@@ -8,8 +8,8 @@
 #include "PluginData.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
+#include "../login/Login.hpp"
 #include "../util/FileIO.hpp"
-#include "../util/Sync.hpp"
 #include <sstream>
 
 namespace abcd {
@@ -25,35 +25,35 @@ struct PluginDataFile:
 };
 
 static std::string
-pluginsDirectory(tABC_SyncKeys *pKeys)
+pluginsDirectory(const Login &login)
 {
-    return std::string(pKeys->szSyncDir) + "/Plugins/";
+    return login.syncDir() + "/Plugins/";
 }
 
 static std::string
-pluginDirectory(tABC_SyncKeys *pKeys, const std::string &plugin)
+pluginDirectory(const Login &login, const std::string &plugin)
 {
-    return pluginsDirectory(pKeys) +
-        cryptoFilename(pKeys->MK, plugin) + "/";
+    return pluginsDirectory(login) +
+        cryptoFilename(login.dataKey(), plugin) + "/";
 }
 
 static std::string
-keyFilename(tABC_SyncKeys *pKeys, const std::string &plugin,
+keyFilename(const Login &login, const std::string &plugin,
     const std::string &key)
 {
-    return pluginDirectory(pKeys, plugin) +
-        cryptoFilename(pKeys->MK, key) + ".json";
+    return pluginDirectory(login, plugin) +
+        cryptoFilename(login.dataKey(), key) + ".json";
 }
 
 Status
-pluginDataGet(tABC_SyncKeys *pKeys, const std::string &plugin,
+pluginDataGet(const Login &login, const std::string &plugin,
     const std::string &key, std::string &data)
 {
-    std::string filename = keyFilename(pKeys, plugin, key);
+    std::string filename = keyFilename(login, plugin, key);
 
     json_t *temp;
-    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFileObject(filename.c_str(), pKeys->MK,
-        &temp, &error));
+    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
+        toU08Buf(login.dataKey()), &temp, &error));
     PluginDataFile json(temp);
     ABC_CHECK(json.hasKey());
     ABC_CHECK(json.hasData());
@@ -63,26 +63,27 @@ pluginDataGet(tABC_SyncKeys *pKeys, const std::string &plugin,
 }
 
 Status
-pluginDataSet(tABC_SyncKeys *pKeys, const std::string &plugin,
+pluginDataSet(const Login &login, const std::string &plugin,
     const std::string &key, const std::string &data)
 {
-    ABC_CHECK(fileEnsureDir(pluginsDirectory(pKeys)));
-    ABC_CHECK(fileEnsureDir(pluginDirectory(pKeys, plugin)));
+    ABC_CHECK(fileEnsureDir(pluginsDirectory(login)));
+    ABC_CHECK(fileEnsureDir(pluginDirectory(login, plugin)));
 
     PluginDataFile json;
     json.setKey(key.c_str());
     json.setData(data.c_str());
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(json.root(), pKeys->MK,
-        ABC_CryptoType_AES256, keyFilename(pKeys, plugin, key).c_str(), &error));
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(json.root(),
+        toU08Buf(login.dataKey()), ABC_CryptoType_AES256,
+        keyFilename(login, plugin, key).c_str(), &error));
 
     return Status();
 }
 
 Status
-pluginDataRemove(tABC_SyncKeys *pKeys, const std::string &plugin,
+pluginDataRemove(const Login &login, const std::string &plugin,
     const std::string &key)
 {
-    std::string filename = keyFilename(pKeys, plugin, key);
+    std::string filename = keyFilename(login, plugin, key);
 
     bool exists;
     ABC_CHECK_OLD(ABC_FileIOFileExists(filename.c_str(), &exists, &error));
@@ -93,9 +94,9 @@ pluginDataRemove(tABC_SyncKeys *pKeys, const std::string &plugin,
 }
 
 Status
-pluginDataClear(tABC_SyncKeys *pKeys, const std::string &plugin)
+pluginDataClear(const Login &login, const std::string &plugin)
 {
-    std::string directory = pluginDirectory(pKeys, plugin);
+    std::string directory = pluginDirectory(login, plugin);
 
     bool exists;
     ABC_CHECK_OLD(ABC_FileIOFileExists(directory.c_str(), &exists, &error));

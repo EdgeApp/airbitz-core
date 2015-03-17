@@ -172,11 +172,11 @@ Status generateAddresses(int argc, char *argv[])
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... generate-addresses <user> <pass> <wallet-name> <count>");
 
-    AutoSyncKeys pKeys;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
+    std::shared_ptr<Login> login;
+    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
 
     tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
+    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(*login, argv[2]), &data, &error));
 
     libbitcoin::data_chunk seed(data.p, data.end);
     libwallet::hd_private_key m(seed);
@@ -197,11 +197,11 @@ Status getBitcoinSeed(int argc, char *argv[])
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-bitcoin-seed <user> <pass> <wallet-name>");
 
-    AutoSyncKeys pKeys;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
+    std::shared_ptr<Login> login;
+    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
 
     tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
+    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(*login, argv[2]), &data, &error));
     std::cout << base16Encode(data) << std::endl;
 
     return Status();
@@ -340,8 +340,8 @@ Status listWallets(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... list-wallets <user> <pass>");
 
     // Setup:
-    AutoSyncKeys pKeys;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
+    std::shared_ptr<Login> login;
+    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
     ABC_CHECK_OLD(ABC_DataSyncAll(argv[0], argv[1], NULL, NULL, &error));
 
     // Iterate over wallets:
@@ -362,7 +362,7 @@ Status listWallets(int argc, char *argv[])
         // Print wallet name:
         AutoU08Buf data;
         AutoAccountWalletInfo info;
-        ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, uuids.data[i], &info, &error));
+        ABC_CHECK_OLD(ABC_AccountWalletLoad(*login, uuids.data[i], &info, &error));
         ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(filename.c_str(),
             info.MK, &data, &error));
         fwrite(data.p, data.end - data.p, 1, stdout);
@@ -436,11 +436,11 @@ Status searchBitcoinSeed(int argc, char *argv[])
     long end = strtol(argv[5], 0, 10);
     char *szMatchAddr = argv[3];
 
-    AutoSyncKeys pKeys;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
+    std::shared_ptr<Login> login;
+    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
 
     tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(pKeys, argv[2]), &data, &error));
+    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(*login, argv[2]), &data, &error));
 
     libbitcoin::data_chunk seed(data.p, data.end);
     libwallet::hd_private_key m(seed);
@@ -520,11 +520,11 @@ Status walletDecrypt(int argc, char *argv[])
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-decrypt <user> <pass> <wallet-name> <file>");
 
-    AutoSyncKeys pKeys;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
+    std::shared_ptr<Login> login;
+    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
 
     AutoAccountWalletInfo info;
-    ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, argv[2], &info, &error));
+    ABC_CHECK_OLD(ABC_AccountWalletLoad(*login, argv[2], &info, &error));
 
     AutoU08Buf data;
     ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(argv[3], info.MK, &data, &error));
@@ -539,11 +539,11 @@ Status walletEncrypt(int argc, char *argv[])
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-encrypt <user> <pass> <wallet-name> <file>");
 
-    AutoSyncKeys pKeys;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
+    std::shared_ptr<Login> login;
+    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
 
     AutoAccountWalletInfo info;
-    ABC_CHECK_OLD(ABC_AccountWalletLoad(pKeys, argv[2], &info, &error));
+    ABC_CHECK_OLD(ABC_AccountWalletLoad(*login, argv[2], &info, &error));
 
     DataChunk contents;
     ABC_CHECK(fileLoad(contents, argv[3]));

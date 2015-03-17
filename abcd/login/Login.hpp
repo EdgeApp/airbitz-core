@@ -10,7 +10,6 @@
 
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
-#include "../util/Sync.hpp"
 #include <memory>
 
 namespace abcd {
@@ -78,10 +77,6 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
                         tABC_Error *pError);
 
 // Read accessors:
-tABC_CC ABC_LoginGetSyncKeys(Login &login,
-                             tABC_SyncKeys **ppKeys,
-                             tABC_Error *pError);
-
 tABC_CC ABC_LoginGetServerKeys(Login &login,
                                tABC_U08Buf *pL1,
                                tABC_U08Buf *pLP1,

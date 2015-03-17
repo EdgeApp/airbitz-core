@@ -7,6 +7,7 @@
 
 #include "AccountCategories.hpp"
 #include "../crypto/Crypto.hpp"
+#include "../login/Login.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Json.hpp"
 #include "../util/Mutex.hpp"
@@ -17,14 +18,14 @@ namespace abcd {
 #define ACCOUNT_CATEGORIES_FILENAME             "Categories.json"
 #define JSON_ACCT_CATEGORIES_FIELD              "categories"
 
-static tABC_CC ABC_AccountCategoriesSave(tABC_SyncKeys *pKeys, char **aszCategories, unsigned int Count, tABC_Error *pError);
+static tABC_CC ABC_AccountCategoriesSave(const Login &login, char **aszCategories, unsigned int Count, tABC_Error *pError);
 
 /**
  * This function gets the categories for an account.
  * An array of allocated strings is allocated so the user is responsible for
  * free'ing all the elements as well as the array itself.
  */
-tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
+tABC_CC ABC_AccountCategoriesLoad(const Login &login,
                                   char ***paszCategories,
                                   unsigned int *pCount,
                                   tABC_Error *pError)
@@ -35,9 +36,7 @@ tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
     *paszCategories = NULL;
     *pCount = 0;
     bool bExists = false;
-    std::string filename = pKeys->szSyncDir;
-    filename += '/';
-    filename += ACCOUNT_CATEGORIES_FILENAME;
+    auto filename = login.syncDir() + ACCOUNT_CATEGORIES_FILENAME;
 
     // Find the file:
     ABC_CHECK_RET(ABC_FileIOFileExists(filename.c_str(), &bExists, pError));
@@ -46,7 +45,7 @@ tABC_CC ABC_AccountCategoriesLoad(tABC_SyncKeys *pKeys,
     if (bExists)
     {
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(filename.c_str(),
-            pKeys->MK, &data, pError));
+            toU08Buf(login.dataKey()), &data, pError));
         ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)data.p, JSON_ACCT_CATEGORIES_FIELD, paszCategories, pCount, pError));
     }
 
@@ -58,7 +57,7 @@ exit:
  * This function adds a category to an account.
  * No attempt is made to avoid a duplicate entry.
  */
-tABC_CC ABC_AccountCategoriesAdd(tABC_SyncKeys *pKeys,
+tABC_CC ABC_AccountCategoriesAdd(const Login &login,
                                  char *szCategory,
                                  tABC_Error *pError)
 {
@@ -67,7 +66,7 @@ tABC_CC ABC_AccountCategoriesAdd(tABC_SyncKeys *pKeys,
     AutoStringArray categories;
 
     // load the current categories
-    ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &categories.data, &categories.size, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesLoad(login, &categories.data, &categories.size, pError));
 
     // if there are categories
     if (categories.data)
@@ -81,7 +80,7 @@ tABC_CC ABC_AccountCategoriesAdd(tABC_SyncKeys *pKeys,
     ABC_STRDUP(categories.data[categories.size++], szCategory);
 
     // save out the categories
-    ABC_CHECK_RET(ABC_AccountCategoriesSave(pKeys, categories.data, categories.size, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesSave(login, categories.data, categories.size, pError));
 
 exit:
     return cc;
@@ -92,7 +91,7 @@ exit:
  * If there is more than one category with this name, all categories by this name are removed.
  * If the category does not exist, no error is returned.
  */
-tABC_CC ABC_AccountCategoriesRemove(tABC_SyncKeys *pKeys,
+tABC_CC ABC_AccountCategoriesRemove(const Login &login,
                                     char *szCategory,
                                     tABC_Error *pError)
 {
@@ -102,7 +101,7 @@ tABC_CC ABC_AccountCategoriesRemove(tABC_SyncKeys *pKeys,
     AutoStringArray newCat;
 
     // load the current categories
-    ABC_CHECK_RET(ABC_AccountCategoriesLoad(pKeys, &oldCat.data, &oldCat.size, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesLoad(login, &oldCat.data, &oldCat.size, pError));
 
     // got through all the categories and only add ones that are not this one
     for (unsigned i = 0; i < oldCat.size; i++)
@@ -124,7 +123,7 @@ tABC_CC ABC_AccountCategoriesRemove(tABC_SyncKeys *pKeys,
     }
 
     // save out the new categories
-    ABC_CHECK_RET(ABC_AccountCategoriesSave(pKeys, newCat.data, newCat.size, pError));
+    ABC_CHECK_RET(ABC_AccountCategoriesSave(login, newCat.data, newCat.size, pError));
 
 exit:
     return cc;
@@ -134,7 +133,7 @@ exit:
  * Saves the categories for the given account
  */
 static
-tABC_CC ABC_AccountCategoriesSave(tABC_SyncKeys *pKeys,
+tABC_CC ABC_AccountCategoriesSave(const Login &login,
                                   char **aszCategories,
                                   unsigned int count,
                                   tABC_Error *pError)
@@ -142,16 +141,14 @@ tABC_CC ABC_AccountCategoriesSave(tABC_SyncKeys *pKeys,
     tABC_CC cc = ABC_CC_Ok;
 
     json_t *dataJSON = NULL;
-    std::string filename = pKeys->szSyncDir;
-    filename += '/';
-    filename += ACCOUNT_CATEGORIES_FILENAME;
+    auto filename = login.syncDir() + ACCOUNT_CATEGORIES_FILENAME;
 
     // create the categories JSON
     ABC_CHECK_RET(ABC_UtilCreateArrayJSONObject(aszCategories, count, JSON_ACCT_CATEGORIES_FIELD, &dataJSON, pError));
 
     // write them out
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(dataJSON,
-        pKeys->MK, ABC_CryptoType_AES256,
+        toU08Buf(login.dataKey()), ABC_CryptoType_AES256,
         filename.c_str(), pError));
 
 exit:

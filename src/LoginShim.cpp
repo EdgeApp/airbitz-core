@@ -151,33 +151,6 @@ cacheLoginPin(std::shared_ptr<Login> &result,
 }
 
 /**
- * Obtains the information needed to access the sync dir for a given account.
- *
- * @param szUserName UserName for the account to access
- * @param szPassword Password for the account to access
- * @param ppKeys     Location to store returned pointer. The caller must free the structure.
- * @param pError     A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
-                                 const char *szPassword,
-                                 tABC_SyncKeys **ppKeys,
-                                 tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    std::shared_ptr<Login> login;
-
-    ABC_CHECK_NULL(szUserName);
-    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
-    ABC_CHECK_NULL(ppKeys);
-
-    ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
-    ABC_CHECK_RET(ABC_LoginGetSyncKeys(*login, ppKeys, pError));
-
-exit:
-    return cc;
-}
-
-/**
  * Obtains the information needed to access the server for a given account.
  *
  * @param szUserName UserName for the account to access
