@@ -32,6 +32,7 @@ Login::init(tABC_LoginPackage *package)
     AutoString syncKey;
     ABC_CHECK_OLD(ABC_LoginPackageGetSyncKey(package, toU08Buf(dataKey_), &syncKey.get(), &error));
     syncKey_ = syncKey.get();
+    ABC_CHECK(syncDirCreate());
     return Status();
 }
 

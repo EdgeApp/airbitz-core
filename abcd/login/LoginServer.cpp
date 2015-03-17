@@ -449,6 +449,7 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     ABC_STRDUP(*szPinPackage, json_string_value(pJSON_Value));
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
+    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szPost);
     ABC_FREE_STR(szResults);
 

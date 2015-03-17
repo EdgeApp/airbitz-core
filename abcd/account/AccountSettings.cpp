@@ -596,6 +596,7 @@ void ABC_AccountSettingsFree(tABC_AccountSettings *pSettings)
     {
         ABC_FREE_STR(pSettings->szFirstName);
         ABC_FREE_STR(pSettings->szLastName);
+        ABC_FREE_STR(pSettings->szFullName);
         ABC_FREE_STR(pSettings->szNickname);
         ABC_FREE_STR(pSettings->szLanguage);
         ABC_FREE_STR(pSettings->szPIN);
