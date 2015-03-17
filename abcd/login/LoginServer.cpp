@@ -21,9 +21,12 @@
 
 // For OTP token hack:
 #include "Lobby.hpp"
-#include "../../src/LoginShim.hpp"
+#include <memory>
 
 namespace abcd {
+
+// hack: Reaching into the LoginShim is very bad on multiple levels...
+extern std::shared_ptr<Lobby> gLobbyCache;
 
 // Server strings:
 #define JSON_ACCT_CARE_PACKAGE                  "care_package"

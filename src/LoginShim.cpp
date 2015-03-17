@@ -13,10 +13,16 @@
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
+#include <mutex>
 
 namespace abcd {
 
-// We cache a single account, which is fine for the UI's needs:
+// This mutex protects the shared_ptr caches themselves.
+// Using a reference count ensures that any objects still in use
+// on another thread will not be destroyed during a cache update.
+// The mutex only needs to be locked when updating the cache,
+// not when using the objects inside.
+// The cached objects must provide their own thread safety.
 std::mutex gLoginMutex;
 std::shared_ptr<Lobby> gLobbyCache;
 std::shared_ptr<Login> gLoginCache;
@@ -40,8 +46,10 @@ cacheLogout()
 }
 
 Status
-cacheLobby(const char *szUserName)
+cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName)
 {
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+
     // Clear the cache if the username has changed:
     if (gLobbyCache)
     {
@@ -59,73 +67,86 @@ cacheLobby(const char *szUserName)
         gLobbyCache.reset(lobby.release());
     }
 
+    result = gLobbyCache;
     return Status();
 }
 
 Status
-cacheLoginNew(const char *szUserName, const char *szPassword)
+cacheLoginNew(std::shared_ptr<Login> &result,
+    const char *szUserName, const char *szPassword)
 {
-    // Ensure that the username hasn't changed:
-    ABC_CHECK(cacheLobby(szUserName));
+    std::shared_ptr<Lobby> lobby;
+    ABC_CHECK(cacheLobby(lobby, szUserName));
 
     // Log the user in, if necessary:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginCreate(gLoginCache, gLobbyCache, szPassword, &error));
+        ABC_CHECK_OLD(ABC_LoginCreate(gLoginCache, lobby, szPassword, &error));
         ABC_CHECK(gLoginCache->syncDirCreate());
     }
 
+    result = gLoginCache;
     return Status();
 }
 
 Status
-cacheLoginPassword(const char *szUserName, const char *szPassword)
+cacheLoginPassword(std::shared_ptr<Login> &result,
+    const char *szUserName, const char *szPassword)
 {
-    // Ensure that the username hasn't changed:
-    ABC_CHECK(cacheLobby(szUserName));
+    std::shared_ptr<Lobby> lobby;
+    ABC_CHECK(cacheLobby(lobby, szUserName));
 
     // Log the user in, if necessary:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
         if (!szPassword)
             return ABC_ERROR(ABC_CC_NULLPtr, "Not logged in");
 
-        ABC_CHECK_OLD(ABC_LoginPassword(gLoginCache, gLobbyCache, szPassword, &error));
+        ABC_CHECK_OLD(ABC_LoginPassword(gLoginCache, lobby, szPassword, &error));
         ABC_CHECK(gLoginCache->syncDirCreate());
     }
 
+    result = gLoginCache;
     return Status();
 }
 
 Status
-cacheLoginRecovery(const char *szUserName, const char *szRecoveryAnswers)
+cacheLoginRecovery(std::shared_ptr<Login> &result,
+    const char *szUserName, const char *szRecoveryAnswers)
 {
-    // Ensure that the username hasn't changed:
-    ABC_CHECK(cacheLobby(szUserName));
+    std::shared_ptr<Lobby> lobby;
+    ABC_CHECK(cacheLobby(lobby, szUserName));
 
     // Log the user in, if necessary:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginRecovery(gLoginCache, gLobbyCache, szRecoveryAnswers, &error));
+        ABC_CHECK_OLD(ABC_LoginRecovery(gLoginCache, lobby, szRecoveryAnswers, &error));
         ABC_CHECK(gLoginCache->syncDirCreate());
     }
 
+    result = gLoginCache;
     return Status();
 }
 
 Status
-cacheLoginPin(const char *szUserName, const char *szPin)
+cacheLoginPin(std::shared_ptr<Login> &result,
+    const char *szUserName, const char *szPin)
 {
-    // Ensure that the username hasn't changed:
-    ABC_CHECK(cacheLobby(szUserName));
+    std::shared_ptr<Lobby> lobby;
+    ABC_CHECK(cacheLobby(lobby, szUserName));
 
     // Log the user in, if necessary:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginPin(gLoginCache, gLobbyCache, szPin, &error));
+        ABC_CHECK_OLD(ABC_LoginPin(gLoginCache, lobby, szPin, &error));
         ABC_CHECK(gLoginCache->syncDirCreate());
     }
 
+    result = gLoginCache;
     return Status();
 }
 
@@ -143,16 +164,14 @@ tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    std::lock_guard<std::mutex> lock(gLoginMutex);
+    std::shared_ptr<Login> login;
 
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
     ABC_CHECK_NULL(ppKeys);
 
-    // Log the user in, if necessary:
-    ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
-
-    ABC_CHECK_RET(ABC_LoginGetSyncKeys(*gLoginCache, ppKeys, pError));
+    ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
+    ABC_CHECK_RET(ABC_LoginGetSyncKeys(*login, ppKeys, pError));
 
 exit:
     return cc;
@@ -175,12 +194,10 @@ tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    std::lock_guard<std::mutex> lock(gLoginMutex);
+    std::shared_ptr<Login> login;
 
-    // Log the user in, if necessary:
-    ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
-
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(*gLoginCache, pL1, pLP1, pError));
+    ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
+    ABC_CHECK_RET(ABC_LoginGetServerKeys(*login, pL1, pLP1, pError));
 
 exit:
     return cc;

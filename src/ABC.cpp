@@ -190,8 +190,8 @@ tABC_CC ABC_SignIn(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
     {
-        AutoLoginLock lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
 
         // Take this non-blocking opportunity to update the general info:
         ABC_GeneralUpdateInfo(pError);
@@ -215,9 +215,9 @@ tABC_CC ABC_AccountAvailable(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
 
     {
-        std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
-        ABC_CHECK_NEW(gLobbyCache->available(), pError);
+        std::shared_ptr<Lobby> lobby;
+        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_CHECK_NEW(lobby->available(), pError);
     }
 
 exit:
@@ -250,8 +250,8 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
     {
-        AutoLoginLock lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginNew(szUserName, szPassword), pError);
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginNew(login, szUserName, szPassword), pError);
 
         // Take this non-blocking opportunity to update the general info:
         ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
@@ -320,9 +320,9 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error, "No recovery answers provided");
 
     {
-        AutoLoginLock lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
-        ABC_CHECK_RET(ABC_LoginRecoverySet(*gLoginCache,
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
+        ABC_CHECK_RET(ABC_LoginRecoverySet(*login,
             szRecoveryQuestions, szRecoveryAnswers, pError));
     }
 
@@ -352,9 +352,9 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
     ABC_CHECK_NULL(pOk);
 
     {
-        AutoLoginLock lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
-        ABC_CHECK_RET(ABC_LoginPasswordOk(*gLoginCache, szPassword, pOk, pError));
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
+        ABC_CHECK_RET(ABC_LoginPasswordOk(*login, szPassword, pOk, pError));
     }
 
 exit:
@@ -376,10 +376,10 @@ tABC_CC ABC_OtpKeyGet(const char *szUserName,
     ABC_CHECK_NULL(pszKey);
 
     {
-        std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        std::shared_ptr<Lobby> lobby;
+        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
 
-        const OtpKey *key = gLobbyCache->otpKey();
+        const OtpKey *key = lobby->otpKey();
         ABC_CHECK_ASSERT(key, ABC_CC_NULLPtr, "No OTP key in account.");
         ABC_STRDUP(*pszKey, key->encodeBase32().c_str());
     }
@@ -401,12 +401,12 @@ tABC_CC ABC_OtpKeySet(const char *szUserName,
     ABC_CHECK_NULL(szKey);
 
     {
-        std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
+        std::shared_ptr<Lobby> lobby;
+        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
 
         OtpKey key;
         ABC_CHECK_NEW(key.decodeBase32(szKey), pError);
-        ABC_CHECK_NEW(gLobbyCache->otpKeySet(key), pError);
+        ABC_CHECK_NEW(lobby->otpKeySet(key), pError);
     }
 
 exit:
@@ -424,9 +424,9 @@ tABC_CC ABC_OtpKeyRemove(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
 
     {
-        std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
-        ABC_CHECK_NEW(gLobbyCache->otpKeyRemove(), pError);
+        std::shared_ptr<Lobby> lobby;
+        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_CHECK_NEW(lobby->otpKeyRemove(), pError);
     }
 
 exit:
@@ -449,9 +449,9 @@ tABC_CC ABC_OtpAuthGet(const char *szUserName,
     ABC_CHECK_NULL(pTimeout);
 
     {
-        std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
-        ABC_CHECK_NEW(otpAuthGet(*gLoginCache, *pbEnabled, *pTimeout), pError);
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthGet(*login, *pbEnabled, *pTimeout), pError);
     }
 
 exit:
@@ -471,9 +471,9 @@ tABC_CC ABC_OtpAuthSet(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
 
     {
-        std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
-        ABC_CHECK_NEW(otpAuthSet(*gLoginCache, timeout), pError);
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthSet(*login, timeout), pError);
     }
 
 exit:
@@ -492,9 +492,9 @@ tABC_CC ABC_OtpAuthRemove(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
 
     {
-        std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
-        ABC_CHECK_NEW(otpAuthRemove(*gLoginCache), pError);
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpAuthRemove(*login), pError);
     }
 
 exit:
@@ -554,9 +554,9 @@ tABC_CC ABC_OtpResetSet(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
 
     {
-        std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
-        ABC_CHECK_NEW(otpResetSet(*gLobbyCache), pError);
+        std::shared_ptr<Lobby> lobby;
+        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_CHECK_NEW(otpResetSet(*lobby), pError);
     }
 
 exit:
@@ -575,9 +575,9 @@ tABC_CC ABC_OtpResetRemove(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
 
     {
-        std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
-        ABC_CHECK_NEW(otpResetRemove(*gLoginCache), pError);
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
+        ABC_CHECK_NEW(otpResetRemove(*login), pError);
     }
 
 exit:
@@ -973,8 +973,8 @@ tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
     ABC_CHECK_NULL(szRecoveryAnswers);
 
     {
-        AutoLoginLock lock(gLoginMutex);
-        Status s = cacheLoginRecovery(szUserName, szRecoveryAnswers);
+        std::shared_ptr<Login> login;
+        Status s = cacheLoginRecovery(login, szUserName, szRecoveryAnswers);
         if (s)
         {
             *pbValid = true;
@@ -1052,8 +1052,8 @@ tABC_CC ABC_PinLogin(const char *szUserName,
     ABC_CHECK_NULL(szPin);
 
     {
-        AutoLoginLock lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginPin(szUserName, szPin), pError);
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginPin(login, szUserName, szPin), pError);
     }
 
 exit:
@@ -1087,9 +1087,9 @@ tABC_CC ABC_PinSetup(const char *szUserName,
     expires = time(NULL);
     expires += 60 * pSettings->minutesAutoLogout;
     {
-        AutoLoginLock lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
-        ABC_CHECK_RET(ABC_LoginPinSetup(*gLoginCache, pSettings->szPIN, expires, pError));
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
+        ABC_CHECK_RET(ABC_LoginPinSetup(*login, pSettings->szPIN, expires, pError));
     }
 
 exit:
@@ -1420,9 +1420,9 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
     ABC_CHECK_NULL(pszQuestions);
 
     {
-        AutoLoginLock lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLobby(szUserName), pError);
-        ABC_CHECK_RET(ABC_LoginGetRQ(*gLobbyCache, pszQuestions, pError));
+        std::shared_ptr<Lobby> lobby;
+        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_CHECK_RET(ABC_LoginGetRQ(*lobby, pszQuestions, pError));
     }
 
 exit:
@@ -1461,9 +1461,9 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
 
     {
-        AutoLoginLock lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
-        ABC_CHECK_RET(ABC_LoginPasswordSet(*gLoginCache, szNewPassword, pError));
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
+        ABC_CHECK_RET(ABC_LoginPasswordSet(*login, szNewPassword, pError));
         ABC_WalletClearCache(); // added in 23fab303, but no idea why
     }
 
@@ -1504,9 +1504,9 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
 
     {
-        AutoLoginLock lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLoginRecovery(szUserName, szRecoveryAnswers), pError);
-        ABC_CHECK_RET(ABC_LoginPasswordSet(*gLoginCache, szNewPassword, pError));
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLoginRecovery(login, szUserName, szRecoveryAnswers), pError);
+        ABC_CHECK_RET(ABC_LoginPasswordSet(*login, szNewPassword, pError));
         ABC_WalletClearCache(); // added in 23fab303, but no idea why
     }
 
