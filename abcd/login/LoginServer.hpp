@@ -9,14 +9,13 @@
  * Functions for communicating with the AirBitz login servers.
  */
 
-#ifndef ABC_LoginServer_h
-#define ABC_LoginServer_h
+#ifndef ABCD_LOGIN_LOGIN_SERVER_HPP
+#define ABCD_LOGIN_LOGIN_SERVER_HPP
 
 #include "LoginPackages.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 #include "../util/Sync.hpp"
-#include "../util/U08Buf.hpp"
 #include "../../src/ABC.h"
 #include <time.h>
 #include <list>

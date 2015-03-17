@@ -9,8 +9,8 @@
  * Storage backend for login data.
  */
 
-#ifndef ABC_LoginDir_h
-#define ABC_LoginDir_h
+#ifndef ABCD_LOGIN_LOGIN_DIR_HPP
+#define ABCD_LOGIN_LOGIN_DIR_HPP
 
 #include "LoginPackages.hpp"
 #include "../../src/ABC.h"

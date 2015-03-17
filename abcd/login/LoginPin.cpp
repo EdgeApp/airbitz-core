@@ -7,6 +7,7 @@
 
 #include "LoginPin.hpp"
 #include "Lobby.hpp"
+#include "Login.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
 #include "../crypto/Crypto.hpp"

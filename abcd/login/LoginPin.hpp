@@ -9,14 +9,16 @@
  * PIN-based re-login logic.
  */
 
-#ifndef ABC_LoginPin_h
-#define ABC_LoginPin_h
+#ifndef ABCD_LOGIN_LOGIN_PIN_HPP
+#define ABCD_LOGIN_LOGIN_PIN_HPP
 
-#include "Login.hpp"
 #include "../../src/ABC.h"
 #include <time.h>
 
 namespace abcd {
+
+class Login;
+class Lobby;
 
 tABC_CC ABC_LoginPinExists(const char *szUserName,
                            bool *pbExists,

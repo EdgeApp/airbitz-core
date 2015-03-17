@@ -33,8 +33,8 @@
  * Strings and constants used when talking to the AirBitz login servers.
  */
 
-#ifndef ABC_Defs_h
-#define ABC_Defs_h
+#ifndef ABCD_LOGIN_SERVER_DEFS_HPP
+#define ABCD_LOGIN_SERVER_DEFS_HPP
 
 namespace abcd {
 

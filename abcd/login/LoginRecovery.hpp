@@ -9,13 +9,15 @@
  * Recovery-question login logic.
  */
 
-#ifndef ABC_LoginRecovery_h
-#define ABC_LoginRecovery_h
+#ifndef ABCD_LOGIN_LOGIN_RECOVERY_HPP
+#define ABCD_LOGIN_LOGIN_RECOVERY_HPP
 
-#include "Login.hpp"
 #include "../../src/ABC.h"
 
 namespace abcd {
+
+class Login;
+class Lobby;
 
 tABC_CC ABC_LoginGetRQ(Lobby &lobby,
                        char **pszRecoveryQuestions,

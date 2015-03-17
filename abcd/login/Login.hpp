@@ -4,24 +4,22 @@
  *
  * See the LICENSE file for more information.
  */
-/**
- * @file
- * An object representing a logged-in account.
- */
 
-#ifndef ABC_Login_h
-#define ABC_Login_h
+#ifndef ABCD_LOGIN_LOGIN_HPP
+#define ABCD_LOGIN_LOGIN_HPP
 
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 #include "../util/Sync.hpp"
-#include "../../src/ABC.h"
 
 namespace abcd {
 
 class Lobby;
 typedef struct sABC_LoginPackage tABC_LoginPackage;
 
+/**
+ * Holds the keys for a logged-in account.
+ */
 class Login
 {
 public:
