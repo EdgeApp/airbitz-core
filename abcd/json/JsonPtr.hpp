@@ -9,8 +9,8 @@
 #define ABCD_JSON_JSON_PTR_HPP
 
 #include "../util/Status.hpp"
+#include "../util/Data.hpp"
 #include <jansson.h>
-#include <string>
 
 namespace abcd {
 
@@ -52,6 +52,12 @@ public:
     load(const std::string &filename);
 
     /**
+     * Loads the JSON object from disk using encryption.
+     */
+    Status
+    load(const std::string &filename, DataSlice dataKey);
+
+    /**
      * Loads the JSON object from an in-memory string.
      */
     Status
@@ -62,6 +68,12 @@ public:
      */
     Status
     save(const std::string &filename) const;
+
+    /**
+     * Saves the JSON object to disk using encryption.
+     */
+    Status
+    save(const std::string &filename, DataSlice dataKey) const;
 
     /**
      * Saves the JSON object to an in-memory string.

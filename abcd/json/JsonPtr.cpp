@@ -6,6 +6,7 @@
  */
 
 #include "JsonPtr.hpp"
+#include "../crypto/Crypto.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Json.hpp"
 
@@ -64,6 +65,16 @@ JsonPtr::load(const std::string &filename)
 }
 
 Status
+JsonPtr::load(const std::string &filename, DataSlice dataKey)
+{
+    json_t *root = nullptr;
+    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
+        toU08Buf(dataKey), &root, &error));
+    reset(root);
+    return Status();
+}
+
+Status
 JsonPtr::decode(const std::string &data)
 {
     json_error_t error;
@@ -79,6 +90,15 @@ JsonPtr::save(const std::string &filename) const
 {
     if (json_dump_file(root_, filename.c_str(), saveFlags))
         return ABC_ERROR(ABC_CC_JSONError, "Cannot write JSON file " + filename);
+    return Status();
+}
+
+Status
+JsonPtr::save(const std::string &filename, DataSlice dataKey) const
+{
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(root_,
+        toU08Buf(dataKey), ABC_CryptoType_AES256,
+        filename.c_str(), &error));
     return Status();
 }
 

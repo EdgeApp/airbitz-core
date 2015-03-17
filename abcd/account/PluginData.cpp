@@ -48,12 +48,8 @@ Status
 pluginDataGet(const Login &login, const std::string &plugin,
     const std::string &key, std::string &data)
 {
-    std::string filename = keyFilename(login, plugin, key);
-
-    json_t *temp;
-    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
-        toU08Buf(login.dataKey()), &temp, &error));
-    PluginDataFile json(temp);
+    PluginDataFile json;
+    ABC_CHECK(json.load(keyFilename(login, plugin, key), login.dataKey()));
     ABC_CHECK(json.keyOk());
     ABC_CHECK(json.dataOk());
 
@@ -71,9 +67,7 @@ pluginDataSet(const Login &login, const std::string &plugin,
     PluginDataFile json;
     json.keySet(key.c_str());
     json.dataSet(data.c_str());
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(json.get(),
-        toU08Buf(login.dataKey()), ABC_CryptoType_AES256,
-        keyFilename(login, plugin, key).c_str(), &error));
+    ABC_CHECK(json.save(keyFilename(login, plugin, key), login.dataKey()));
 
     return Status();
 }
