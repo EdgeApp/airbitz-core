@@ -45,6 +45,7 @@ void ABC_LoginPinLocalFree(tABC_PinLocal *pSelf)
     if (pSelf)
     {
         if (pSelf->pEMK_PINK) json_decref(pSelf->pEMK_PINK);
+        pSelf->DID.~DataChunk();
         ABC_CLEAR_FREE(pSelf, sizeof(tABC_PinLocal));
     }
 }

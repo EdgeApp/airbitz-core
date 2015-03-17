@@ -157,7 +157,6 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     // Update EMK_LRA3:
     if (pLoginPackage->EMK_LRA3) json_decref(pLoginPackage->EMK_LRA3);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pCarePackage->pSNRP3, &LRA3, pError));
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pCarePackage->pSNRP3, &LRA3, pError));
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.dataKey()), LRA3,
         ABC_CryptoType_AES256, &pLoginPackage->EMK_LRA3, pError));
 
