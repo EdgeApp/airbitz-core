@@ -8,6 +8,7 @@
 #include "AccountSettings.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../exchange/Exchange.hpp"
+#include "../login/Login.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Json.hpp"
 #include "../util/Mutex.hpp"
@@ -109,11 +110,11 @@ exit:
  * Loads the settings for a specific account using the given key
  * If no settings file exists for the given user, defaults are created
  *
- * @param pKeys         Access to the account sync dir
+ * @param login         Access to the account sync dir
  * @param ppSettings    Location to store ptr to allocated settings (caller must free)
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
+tABC_CC ABC_AccountSettingsLoad(const Login &login,
                                 tABC_AccountSettings **ppSettings,
                                 tABC_Error *pError)
 {
@@ -124,9 +125,7 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
     bool bExists = false;
-    std::string filename = pKeys->szSyncDir;
-    filename += '/';
-    filename += ACCOUNT_SETTINGS_FILENAME;
+    auto filename = login.syncDir() + ACCOUNT_SETTINGS_FILENAME;
 
     ABC_CHECK_NULL(ppSettings);
 
@@ -135,7 +134,7 @@ tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
     {
         // load and decrypted the file into a json object
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
-            pKeys->MK, &pJSON_Root, pError));
+            toU08Buf(login.dataKey()), &pJSON_Root, pError));
         //ABC_DebugLog("Loaded settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
 
         // allocate the new settings object
@@ -424,11 +423,11 @@ exit:
 /**
  * Saves the settings for a specific account using the given key
  *
- * @param pKeys         Access to the account sync dir
+ * @param login         Access to the account sync dir
  * @param pSettings     Pointer to settings
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
+tABC_CC ABC_AccountSettingsSave(const Login &login,
                                 tABC_AccountSettings *pSettings,
                                 tABC_Error *pError)
 {
@@ -440,9 +439,7 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     json_t *pJSON_SourcesArray = NULL;
     json_t *pJSON_Source = NULL;
     int retVal = 0;
-    std::string filename = pKeys->szSyncDir;
-    filename += '/';
-    filename += ACCOUNT_SETTINGS_FILENAME;
+    auto filename = login.syncDir() + ACCOUNT_SETTINGS_FILENAME;
 
     ABC_CHECK_NULL(pSettings);
 
@@ -577,7 +574,7 @@ tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
     // encrypt and save json
 //    ABC_DebugLog("Saving settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root,
-        pKeys->MK, ABC_CryptoType_AES256,
+        toU08Buf(login.dataKey()), ABC_CryptoType_AES256,
         filename.c_str(), pError));
 
 

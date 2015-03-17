@@ -10,7 +10,7 @@
 
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
-#include "../util/Sync.hpp"
+#include <memory>
 
 namespace abcd {
 
@@ -23,7 +23,7 @@ typedef struct sABC_LoginPackage tABC_LoginPackage;
 class Login
 {
 public:
-    Login(Lobby *lobby, DataSlice dataKey);
+    Login(std::shared_ptr<Lobby> lobby, DataSlice dataKey);
 
     /**
      * Prepares the Login object for use.
@@ -62,24 +62,21 @@ public:
     syncDirCreate() const;
 
 private:
-    Lobby *lobby_;
+    // No mutex, since all members are immutable after init.
+    // The lobby mutext can cover disk-based things like logging in and
+    // changing passwords if we ever want to to protect those one day.
+    std::shared_ptr<Lobby> lobby_;
     DataChunk dataKey_;
     std::string syncKey_;
 };
 
-typedef Login tABC_Login;
-
 // Constructors:
-tABC_CC ABC_LoginCreate(Login *&result,
-                        Lobby *lobby,
+tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
+                        std::shared_ptr<Lobby> lobby,
                         const char *szPassword,
                         tABC_Error *pError);
 
 // Read accessors:
-tABC_CC ABC_LoginGetSyncKeys(Login &login,
-                             tABC_SyncKeys **ppKeys,
-                             tABC_Error *pError);
-
 tABC_CC ABC_LoginGetServerKeys(Login &login,
                                tABC_U08Buf *pL1,
                                tABC_U08Buf *pLP1,

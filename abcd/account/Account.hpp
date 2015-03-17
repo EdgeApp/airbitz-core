@@ -36,9 +36,12 @@
 #ifndef ABC_Account_h
 #define ABC_Account_h
 
-#include "../util/Sync.hpp"
+#include "../util/Data.hpp"
+#include "../../src/ABC.h"
 
 namespace abcd {
+
+class Login;
 
 /**
  * Account-level wallet structure.
@@ -64,21 +67,21 @@ typedef struct sABC_AccountWalletInfo
 
 void ABC_AccountWalletInfoFree(tABC_AccountWalletInfo *pInfo);
 
-tABC_CC ABC_AccountWalletList(tABC_SyncKeys *pKeys,
+tABC_CC ABC_AccountWalletList(const Login &login,
                               char ***paszUUID,
                               unsigned *pCount,
                               tABC_Error *pError);
 
-tABC_CC ABC_AccountWalletLoad(tABC_SyncKeys *pKeys,
+tABC_CC ABC_AccountWalletLoad(const Login &login,
                               const char *szUUID,
                               tABC_AccountWalletInfo *pInfo,
                               tABC_Error *pError);
 
-tABC_CC ABC_AccountWalletSave(tABC_SyncKeys *pKeys,
+tABC_CC ABC_AccountWalletSave(const Login &login,
                               tABC_AccountWalletInfo *pInfo,
                               tABC_Error *pError);
 
-tABC_CC ABC_AccountWalletReorder(tABC_SyncKeys *pKeys,
+tABC_CC ABC_AccountWalletReorder(const Login &login,
                                  const char *szUUIDs,
                                  tABC_Error *pError);
 

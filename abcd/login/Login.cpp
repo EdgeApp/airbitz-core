@@ -13,16 +13,16 @@
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
 #include "../util/FileIO.hpp"
+#include "../util/Sync.hpp"
 #include "../util/Util.hpp"
 #include <ctype.h>
-#include <memory>
 
 namespace abcd {
 
 #define ACCOUNT_MK_LENGTH 32
 
-Login::Login(Lobby *lobby, DataSlice dataKey):
-    lobby_(lobby),
+Login::Login(std::shared_ptr<Lobby> lobby, DataSlice dataKey):
+    lobby_(std::move(lobby)),
     dataKey_(dataKey.begin(), dataKey.end())
 {}
 
@@ -72,8 +72,8 @@ Login::syncDirCreate() const
  * @param szPassword    The password for the account.
  * @param ppSelf        The returned login object.
  */
-tABC_CC ABC_LoginCreate(Login *&result,
-                        Lobby *lobby,
+tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
+                        std::shared_ptr<Lobby> lobby,
                         const char *szPassword,
                         tABC_Error *pError)
 {
@@ -129,34 +129,11 @@ tABC_CC ABC_LoginCreate(Login *&result,
     // Create the Login object:
     login.reset(new Login(lobby, dataKey));
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
-    result = login.release();
+    result.reset(login.release());
 
 exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
-    return cc;
-}
-
-/**
- * Obtains the sync keys for accessing an account's repo.
- * @param ppKeys    The returned keys. Call ABC_SyncFreeKeys when done.
- */
-tABC_CC ABC_LoginGetSyncKeys(Login &login,
-                             tABC_SyncKeys **ppKeys,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoSyncKeys pKeys;
-
-    ABC_NEW(pKeys.get(), tABC_SyncKeys);
-    ABC_STRDUP(pKeys->szSyncDir, login.syncDir().c_str());
-    ABC_BUF_DUP(pKeys->MK, toU08Buf(login.dataKey()));
-    ABC_STRDUP(pKeys->szSyncKey, login.syncKey().c_str());
-
-    *ppKeys = pKeys;
-    pKeys.get() = NULL;
-
-exit:
     return cc;
 }
 

@@ -24,6 +24,8 @@ const char otpFilename[] = "OtpKey.json";
 Status
 Lobby::init(const std::string &username)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     // Set up identity:
     ABC_CHECK(fixUsername(username_, username));
     dir_ = loginDirFind(username_);
@@ -45,9 +47,17 @@ Lobby::init(const std::string &username)
     return Status();
 }
 
+const std::string &
+Lobby::dir() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return dir_;
+}
+
 Status
 Lobby::dirCreate()
 {
+    std::lock_guard<std::mutex> lock(mutex_);
     ABC_CHECK_OLD(ABC_LoginDirCreate(dir_, username_.c_str(), &error));
     ABC_CHECK(otpKeySave());
     return Status();
@@ -56,6 +66,8 @@ Lobby::dirCreate()
 Status
 Lobby::otpKeySet(const OtpKey &key)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     otpKey_ = key;
     otpKeyOk_ = true;
     ABC_CHECK(otpKeySave());
@@ -65,6 +77,8 @@ Lobby::otpKeySet(const OtpKey &key)
 Status
 Lobby::otpKeyRemove()
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     if (!dir_.empty())
     {
         auto filename = dir_ + otpFilename;
@@ -77,6 +91,7 @@ Lobby::otpKeyRemove()
 Status
 Lobby::available() const
 {
+    // No lock needed.
     ABC_CHECK_OLD(ABC_LoginServerAvailable(toU08Buf(authId()), &error));
     return Status();
 }

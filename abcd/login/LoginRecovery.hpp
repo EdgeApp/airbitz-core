@@ -13,6 +13,7 @@
 #define ABCD_LOGIN_LOGIN_RECOVERY_HPP
 
 #include "../../src/ABC.h"
+#include <memory>
 
 namespace abcd {
 
@@ -23,8 +24,8 @@ tABC_CC ABC_LoginGetRQ(Lobby &lobby,
                        char **pszRecoveryQuestions,
                        tABC_Error *pError);
 
-tABC_CC ABC_LoginRecovery(Login *&result,
-                          Lobby *lobby,
+tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
+                          std::shared_ptr<Lobby> lobby,
                           const char *szRecoveryAnswers,
                           tABC_Error *pError);
 

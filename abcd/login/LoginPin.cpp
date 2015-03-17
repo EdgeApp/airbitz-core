@@ -16,7 +16,6 @@
 #include "../util/Json.hpp"
 #include "../util/Util.hpp"
 #include <jansson.h>
-#include <memory>
 
 namespace abcd {
 
@@ -150,8 +149,8 @@ exit:
 /**
  * Assuming a PIN-based login pagage exits, log the user in.
  */
-tABC_CC ABC_LoginPin(Login *&result,
-                     Lobby *lobby,
+tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
+                     std::shared_ptr<Lobby> lobby,
                      const char *szPin,
                      tABC_Error *pError)
 {
@@ -192,7 +191,7 @@ tABC_CC ABC_LoginPin(Login *&result,
     // Create the Login object:
     login.reset(new Login(lobby, static_cast<U08Buf>(MK)));
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
-    result = login.release();
+    result.reset(login.release());
 
 exit:
     ABC_CarePackageFree(pCarePackage);
