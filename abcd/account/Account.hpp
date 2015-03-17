@@ -38,10 +38,27 @@
 
 #include "../util/Data.hpp"
 #include "../../src/ABC.h"
+#include <memory>
 
 namespace abcd {
 
 class Login;
+
+/**
+ * Manages the account sync directory.
+ */
+class Account
+{
+public:
+    Account(std::shared_ptr<Login> login);
+
+    const Login &login() const { return *login_; }
+    const std::string &dir() const { return dir_; }
+
+private:
+    const std::shared_ptr<Login> login_;
+    const std::string dir_;
+};
 
 /**
  * Account-level wallet structure.

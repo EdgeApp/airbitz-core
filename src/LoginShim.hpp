@@ -23,6 +23,7 @@ namespace abcd {
 
 class Lobby;
 class Login;
+class Account;
 
 /**
  * Clears all cached login objects.
@@ -70,6 +71,12 @@ cacheLoginPin(std::shared_ptr<Login> &result,
  */
 Status
 cacheLogin(std::shared_ptr<Login> &result, const char *szUserName);
+
+/**
+ * Retrieves the cached account, assuming the username still matches.
+ */
+Status
+cacheAccount(std::shared_ptr<Account> &result, const char *szUserName);
 
 } // namespace abcd
 

@@ -6,6 +6,7 @@
  */
 
 #include "LoginShim.hpp"
+#include "../abcd/account/Account.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/login/LoginDir.hpp"
@@ -26,6 +27,7 @@ namespace abcd {
 std::mutex gLoginMutex;
 std::shared_ptr<Lobby> gLobbyCache;
 std::shared_ptr<Login> gLoginCache;
+std::shared_ptr<Account> gAccountCache;
 
 /**
  * Clears the cached login.
@@ -36,6 +38,7 @@ cacheClear()
 {
     gLobbyCache.reset();
     gLoginCache.reset();
+    gAccountCache.reset();
 }
 
 void
@@ -157,6 +160,23 @@ cacheLogin(std::shared_ptr<Login> &result, const char *szUserName)
         return ABC_ERROR(ABC_CC_AccountDoesNotExist, "Not logged in");
 
     result = gLoginCache;
+    return Status();
+}
+
+Status
+cacheAccount(std::shared_ptr<Account> &result, const char *szUserName)
+{
+    std::shared_ptr<Login> login;
+    ABC_CHECK(cacheLogin(login, szUserName));
+
+    // Create the object, if necessary:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+    if (!gAccountCache)
+    {
+        gAccountCache.reset(new Account(login));
+    }
+
+    result = gAccountCache;
     return Status();
 }
 

@@ -30,6 +30,11 @@ static tABC_CC ABC_AccountWalletGetDir(const Login &login, char **pszWalletDir, 
 static int ABC_AccountWalletCompare(const void *a, const void *b);
 static tABC_CC ABC_AccountWalletsLoad(const Login &login, tABC_AccountWalletInfo **paInfo, unsigned *pCount, tABC_Error *pError);
 
+Account::Account(std::shared_ptr<Login> login):
+    login_(login),
+    dir_(login->syncDir())
+{}
+
 /**
  * Releases the members of a tABC_AccountWalletInfo structure. Unlike most
  * types in the ABC, this does *not* free the structure itself. This allows

@@ -54,6 +54,10 @@ static Status run(int argc, char *argv[])
         ABC_CHECK_OLD(ABC_SignIn(argv[3], argv[4], &error));
         ABC_CHECK(cacheLogin(session.login, argv[3]));
     }
+    if (InitLevel::account <= command->level())
+    {
+        ABC_CHECK(cacheAccount(session.account, argv[3]));
+    }
     if (InitLevel::wallet <= command->level())
     {
         if (argc < 6)
