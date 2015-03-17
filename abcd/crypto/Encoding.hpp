@@ -38,13 +38,13 @@ Status
 base32Decode(DataChunk &result, const std::string &in);
 
 /**
- * Encodes data into a hex string.
+ * Encodes data into a base-64 string according to rfc4648.
  */
 std::string
 base64Encode(DataSlice data);
 
 /**
- * Decodes a hex string.
+ * Decodes a base-64 string as defined by rfc4648.
  */
 Status
 base64Decode(DataChunk &result, const std::string &in);

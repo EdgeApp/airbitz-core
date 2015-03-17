@@ -15,14 +15,18 @@
 #include <map>
 
 // For debug upload:
+#include "../account/Account.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/FileIO.hpp"
 
 // For OTP token hack:
 #include "Lobby.hpp"
-#include "../../src/LoginShim.hpp"
+#include <memory>
 
 namespace abcd {
+
+// hack: Reaching into the LoginShim is very bad on multiple levels...
+extern std::shared_ptr<Lobby> gLobbyCache;
 
 // Server strings:
 #define JSON_ACCT_CARE_PACKAGE                  "care_package"
@@ -856,7 +860,7 @@ exit:
  */
 tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
                                   tABC_U08Buf LP1,
-                                  tABC_SyncKeys *pKeys,
+                                  const Login &login,
                                   tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -872,8 +876,7 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     json_t *pJSON_Root    = NULL;
     DataChunk logData;
     DataChunk watchData;
-    unsigned int nCount   = 0;
-    tABC_WalletInfo **paWalletInfo = NULL;
+    AutoStringArray uuids;
     json_t *pJSON_array = NULL;
 
     // create the URL
@@ -881,15 +884,15 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_DEBUG_PATH);
 
     ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
-    ABC_CHECK_NEW(fileLoad(szLogFilename, logData), pError);
+    ABC_CHECK_NEW(fileLoad(logData, szLogFilename), pError);
 
-    ABC_CHECK_RET(ABC_WalletGetWallets(pKeys, &paWalletInfo, &nCount, pError));
+    ABC_CHECK_RET(ABC_AccountWalletList(login, &uuids.data, &uuids.size, pError));
     pJSON_array = json_array();
-    for (unsigned i = 0; i < nCount; ++i)
+    for (unsigned i = 0; i < uuids.size; ++i)
     {
-        ABC_CHECK_RET(ABC_BridgeWatchPath(paWalletInfo[i]->szUUID,
+        ABC_CHECK_RET(ABC_BridgeWatchPath(uuids.data[i],
                                           &szWatchFilename, pError));
-        ABC_CHECK_NEW(fileLoad(szWatchFilename, watchData), pError);
+        ABC_CHECK_NEW(fileLoad(watchData, szWatchFilename), pError);
 
         json_array_append_new(pJSON_array,
             json_string(base64Encode(watchData).c_str()));
@@ -917,8 +920,6 @@ exit:
     ABC_FREE_STR(szLogFilename);
 
     ABC_FREE_STR(szWatchFilename);
-
-    ABC_FreeWalletInfoArray(paWalletInfo, nCount);
 
     return cc;
 }

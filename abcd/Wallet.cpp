@@ -36,6 +36,7 @@
 #include "crypto/Crypto.hpp"
 #include "crypto/Encoding.hpp"
 #include "crypto/Random.hpp"
+#include "login/Login.hpp"
 #include "login/LoginServer.hpp"
 #include "util/FileIO.hpp"
 #include "util/Json.hpp"
@@ -102,11 +103,11 @@ static void    ABC_WalletFreeData(tWalletData *pData);
 /**
  * Initializes the members of a tABC_WalletID structure.
  */
-tABC_WalletID ABC_WalletID(tABC_SyncKeys *pKeys,
+tABC_WalletID ABC_WalletID(const Login &login,
                            const char *szUUID)
 {
     tABC_WalletID out;
-    out.pKeys = pKeys;
+    out.login = &login;
     out.szUUID = szUUID;
     return out;
 }
@@ -120,7 +121,7 @@ tABC_CC ABC_WalletIDCopy(tABC_WalletID *out,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_CHECK_RET(ABC_SyncKeysCopy(&out->pKeys, in.pKeys, pError));
+    out->login = in.login;
     ABC_STRDUP(out->szUUID, in.szUUID);
 
 exit:
@@ -136,8 +137,6 @@ exit:
 void ABC_WalletIDFree(tABC_WalletID in)
 {
     char *szUUID     = (char *)in.szUUID;
-
-    ABC_SyncFreeKeys(in.pKeys);
     ABC_FREE_STR(szUUID);
 }
 
@@ -146,7 +145,7 @@ void ABC_WalletIDFree(tABC_WalletID in)
  *
  * @param pszUUID Pointer to hold allocated pointer to UUID string
  */
-tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
+tABC_CC ABC_WalletCreate(const Login &login,
                          tABC_U08Buf L1,
                          tABC_U08Buf LP1,
                          const char *szUserName,
@@ -159,11 +158,13 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
 
     char *szFilename       = NULL;
     char *szJSON           = NULL;
-    char *szUUID           = NULL;
     char *szWalletDir      = NULL;
     json_t *pJSON_Data     = NULL;
     json_t *pJSON_Wallets  = NULL;
-    AutoU08Buf WalletAcctKey;
+    std::string uuid;
+    DataChunk dataKey;
+    DataChunk syncKey;
+    DataChunk bitcoinKey;
 
     tWalletData *pData = NULL;
 
@@ -174,47 +175,49 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
     pData->archived = 0;
 
     // create wallet guid
-    ABC_CHECK_RET(ABC_CryptoGenUUIDString(&szUUID, pError));
-    ABC_STRDUP(pData->szUUID, szUUID);
-    ABC_STRDUP(*pszUUID, szUUID);
+    ABC_CHECK_NEW(randomUuid(uuid), pError);
+    ABC_STRDUP(pData->szUUID, uuid.c_str());
+    ABC_STRDUP(*pszUUID, uuid.c_str());
 
     // generate the master key for this wallet - MK_<Wallet_GUID1>
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(WALLET_KEY_LENGTH, &pData->MK, pError));
+    ABC_CHECK_NEW(randomData(dataKey, WALLET_KEY_LENGTH), pError);
+    ABC_BUF_DUP(pData->MK, toU08Buf(dataKey));
 
     // create and set the bitcoin private seed for this wallet
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(WALLET_BITCOIN_PRIVATE_SEED_LENGTH, &pData->BitcoinPrivateSeed, pError));
+    ABC_CHECK_NEW(randomData(bitcoinKey, WALLET_BITCOIN_PRIVATE_SEED_LENGTH), pError);
+    ABC_BUF_DUP(pData->BitcoinPrivateSeed, toU08Buf(bitcoinKey));
 
     // Create Wallet Repo key
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(SYNC_KEY_LENGTH, &WalletAcctKey, pError));
-    ABC_STRDUP(pData->szWalletAcctKey, base16Encode(U08Buf(WalletAcctKey)).c_str());
+    ABC_CHECK_NEW(randomData(syncKey, SYNC_KEY_LENGTH), pError);
+    ABC_STRDUP(pData->szWalletAcctKey, base16Encode(syncKey).c_str());
 
     // create the wallet root directory if necessary
     ABC_CHECK_RET(ABC_WalletCreateRootDir(pError));
 
     // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
     ABC_CHECK_RET(ABC_WalletGetDirName(&(pData->szWalletDir), pData->szUUID, pError));
-    ABC_CHECK_RET(ABC_FileIOCreateDir(pData->szWalletDir, pError));
+    ABC_CHECK_NEW(fileEnsureDir(pData->szWalletDir), pError);
     ABC_STRDUP(szWalletDir, pData->szWalletDir);
 
     // create the wallet sync dir under the main dir
     ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), pData->szUUID, pError));
-    ABC_CHECK_RET(ABC_FileIOCreateDir(pData->szWalletSyncDir, pError));
+    ABC_CHECK_NEW(fileEnsureDir(pData->szWalletSyncDir), pError);
 
     // we now have a new wallet so go ahead and cache its data
     ABC_CHECK_RET(ABC_WalletAddToCache(pData, pError));
 
     // all the functions below assume the wallet is in the cache or can be loaded into the cache
     // set the wallet name
-    ABC_CHECK_RET(ABC_WalletSetName(ABC_WalletID(pKeys, szUUID), szWalletName, pError));
+    ABC_CHECK_RET(ABC_WalletSetName(ABC_WalletID(login, pData->szUUID), szWalletName, pError));
 
     // set the currency
-    ABC_CHECK_RET(ABC_WalletSetCurrencyNum(ABC_WalletID(pKeys, szUUID), currencyNum, pError));
+    ABC_CHECK_RET(ABC_WalletSetCurrencyNum(ABC_WalletID(login, pData->szUUID), currencyNum, pError));
 
     // Request remote wallet repo
     ABC_CHECK_NEW(LoginServerWalletCreate(L1, LP1, pData->szWalletAcctKey), pError);
 
     // set this account for the wallet's first account
-    ABC_CHECK_RET(ABC_WalletAddAccount(ABC_WalletID(pKeys, szUUID), szUserName, pError));
+    ABC_CHECK_RET(ABC_WalletAddAccount(ABC_WalletID(login, pData->szUUID), szUserName, pError));
 
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
@@ -228,28 +231,28 @@ tABC_CC ABC_WalletCreate(tABC_SyncKeys *pKeys,
 
     // If everything worked, add the wallet to the account:
     tABC_AccountWalletInfo info; // No need to free this
-    info.szUUID = szUUID;
+    info.szUUID = pData->szUUID;
     info.MK = pData->MK;
     info.BitcoinSeed = pData->BitcoinPrivateSeed;
-    info.SyncKey = WalletAcctKey;
+    info.SyncKey = toU08Buf(syncKey);
     info.archived = 0;
-    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, NULL, &info.sortIndex, pError));
-    ABC_CHECK_RET(ABC_AccountWalletSave(pKeys, &info, pError));
+    ABC_CHECK_RET(ABC_AccountWalletList(login, NULL, &info.sortIndex, pError));
+    ABC_CHECK_RET(ABC_AccountWalletSave(login, &info, pError));
 
     // Now the wallet is written to disk, generate some addresses
-    ABC_CHECK_RET(ABC_TxCreateInitialAddresses(ABC_WalletID(pKeys, pData->szUUID), pError));
+    ABC_CHECK_RET(ABC_TxCreateInitialAddresses(ABC_WalletID(login, pData->szUUID), pError));
 
     // After wallet is created, sync the account, ignoring any errors
     tABC_Error Error;
-    ABC_CHECK_RET(ABC_SyncRepo(pKeys->szSyncDir, pKeys->szSyncKey, &dirty, &Error));
+    ABC_CHECK_RET(ABC_SyncRepo(login.syncDir().c_str(), login.syncKey().c_str(), &dirty, &Error));
 
     pData = NULL; // so we don't free what we just added to the cache
 exit:
     if (cc != ABC_CC_Ok)
     {
-        if (szUUID)
+        if (!uuid.empty())
         {
-            ABC_WalletRemoveFromCache(szUUID, NULL);
+            ABC_WalletRemoveFromCache(uuid.c_str(), NULL);
         }
         if (szWalletDir)
         {
@@ -259,39 +262,10 @@ exit:
     ABC_FREE_STR(szWalletDir);
     ABC_FREE_STR(szFilename);
     ABC_FREE_STR(szJSON);
-    ABC_FREE_STR(szUUID);
     if (pJSON_Data)         json_decref(pJSON_Data);
     if (pJSON_Wallets)      json_decref(pJSON_Wallets);
     if (pData)              ABC_WalletFreeData(pData);
 
-    return cc;
-}
-
-tABC_CC ABC_WalletSyncAll(tABC_SyncKeys *pKeys, int *pDirty, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    AutoStringArray uuids;
-    unsigned int i = 0;
-
-    // Its not dirty...yet
-    *pDirty = 0;
-
-    // Get the wallet list
-    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &uuids.data, &uuids.size, pError));
-
-    for (i = 0; i < uuids.size; ++i)
-    {
-        char *szUUID = uuids.data[i];
-        int dirty = 0;
-        ABC_CHECK_RET(ABC_WalletSyncData(ABC_WalletID(pKeys, szUUID), &dirty, pError));
-        if (dirty)
-        {
-            *pDirty = 1;
-        }
-    }
-exit:
     return cc;
 }
 
@@ -318,20 +292,13 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, int *pDirty, tABC_Error *pError)
 
     // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
     ABC_CHECK_RET(ABC_WalletGetDirName(&szDirectory, self.szUUID, pError));
-    ABC_CHECK_RET(ABC_FileIOFileExists(szDirectory, &bExists, pError));
-    if (!bExists)
-    {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szDirectory, pError));
-    }
+    ABC_CHECK_NEW(fileEnsureDir(szDirectory), pError);
 
     // create the wallet sync dir under the main dir
     ABC_CHECK_RET(ABC_WalletGetSyncDirName(&szSyncDirectory, self.szUUID, pError));
     ABC_CHECK_RET(ABC_FileIOFileExists(szSyncDirectory, &bExists, pError));
     if (!bExists)
     {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szSyncDirectory, pError));
-
-        // Init repo
         ABC_CHECK_RET(ABC_SyncMakeRepo(szSyncDirectory, pError));
         bNew = true;
     }
@@ -478,17 +445,12 @@ tABC_CC ABC_WalletCreateRootDir(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     char *szWalletRoot = NULL;
-    bool bExists = false;
 
     // create the account directory string
     ABC_CHECK_RET(ABC_WalletGetRootDirName(&szWalletRoot, pError));
 
     // if it doesn't exist
-    ABC_CHECK_RET(ABC_FileIOFileExists(szWalletRoot, &bExists, pError));
-    if (true != bExists)
-    {
-        ABC_CHECK_RET(ABC_FileIOCreateDir(szWalletRoot, pError));
-    }
+    ABC_CHECK_NEW(fileEnsureDir(szWalletRoot), pError);
 
 exit:
     ABC_FREE_STR(szWalletRoot);
@@ -656,7 +618,7 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
         ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), self.szUUID, pError));
 
         // Get the wallet info from the account:
-        ABC_CHECK_RET(ABC_AccountWalletLoad(self.pKeys, self.szUUID, &info, pError));
+        ABC_CHECK_RET(ABC_AccountWalletLoad(*self.login, self.szUUID, &info, pError));
         pData->archived = info.archived;
 
         // Steal the wallet info into our struct:
@@ -1017,81 +979,6 @@ void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo)
 }
 
 /**
- * Gets wallets for a specified account.
- *
- * This function allocates and fills in an array of wallet info structures with the information
- * associated with the wallets of the given user
- *
- * @param paWalletInfo          Pointer to store the allocated array of wallet info structs
- * @param pCount                Pointer to store number of wallets in the array
- * @param pError                A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_WalletGetWallets(tABC_SyncKeys *pKeys,
-                             tABC_WalletInfo ***paWalletInfo,
-                             unsigned int *pCount,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
-
-    AutoStringArray uuids;
-    tABC_WalletInfo **aWalletInfo = NULL;
-
-    ABC_CHECK_NULL(paWalletInfo);
-    *paWalletInfo = NULL;
-    ABC_CHECK_NULL(pCount);
-    *pCount = 0;
-
-    // get the array of wallet UUIDs for this account
-    ABC_CHECK_RET(ABC_AccountWalletList(pKeys, &uuids.data, &uuids.size, pError));
-
-    // if we got anything
-    if (uuids.size > 0)
-    {
-        ABC_ARRAY_NEW(aWalletInfo, uuids.size, tABC_WalletInfo*);
-
-        for (unsigned i = 0; i < uuids.size; i++)
-        {
-            tABC_WalletInfo *pInfo = NULL;
-            ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(pKeys, uuids.data[i]), &pInfo, pError));
-
-            aWalletInfo[i] = pInfo;
-        }
-    }
-
-    // assign them
-    *pCount = uuids.size;
-    *paWalletInfo = aWalletInfo;
-    aWalletInfo = NULL;
-
-exit:
-    return cc;
-}
-
-/**
- * Free the wallet info array.
- *
- * This function frees the array of wallet info structs returned from ABC_WalletGetWallets.
- *
- * @param aWalletInfo   Wallet info array to be free'd
- * @param nCount        Number of elements in the array
- */
-void ABC_WalletFreeInfoArray(tABC_WalletInfo **aWalletInfo,
-                             unsigned int nCount)
-{
-    if ((aWalletInfo != NULL) && (nCount > 0))
-    {
-        // go through all the elements
-        for (unsigned i = 0; i < nCount; i++)
-        {
-            ABC_WalletFreeInfo(aWalletInfo[i]);
-        }
-
-        ABC_FREE(aWalletInfo);
-    }
-}
-
-/**
  * Gets the master key for the specified wallet
  *
  * @param pMK Pointer to store the master key
@@ -1144,7 +1031,7 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self, tABC_U08Buf *pSe
 
     AutoAccountWalletInfo info;
 
-    ABC_CHECK_RET(ABC_AccountWalletLoad(self.pKeys, self.szUUID, &info, pError));
+    ABC_CHECK_RET(ABC_AccountWalletLoad(*self.login, self.szUUID, &info, pError));
 
     // assign the address
     ABC_BUF_DUP(*pSeed, info.BitcoinSeed);

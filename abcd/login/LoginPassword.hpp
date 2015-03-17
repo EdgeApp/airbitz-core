@@ -9,16 +9,19 @@
  * Password-based login logic.
  */
 
-#ifndef ABC_LoginPassword_h
-#define ABC_LoginPassword_h
+#ifndef ABCD_LOGIN_LOGIN_PASSWORD_HPP
+#define ABCD_LOGIN_LOGIN_PASSWORD_HPP
 
-#include "Login.hpp"
 #include "../../src/ABC.h"
+#include <memory>
 
 namespace abcd {
 
-tABC_CC ABC_LoginPassword(Login *&result,
-                          Lobby *lobby,
+class Login;
+class Lobby;
+
+tABC_CC ABC_LoginPassword(std::shared_ptr<Login> &result,
+                          std::shared_ptr<Lobby> lobby,
                           const char *szPassword,
                           tABC_Error *pError);
 

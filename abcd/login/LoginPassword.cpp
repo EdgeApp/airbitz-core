@@ -7,17 +7,17 @@
 
 #include "LoginPassword.hpp"
 #include "Lobby.hpp"
+#include "Login.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../util/Util.hpp"
-#include <memory>
 
 namespace abcd {
 
 static
-tABC_CC ABC_LoginPasswordDisk(Login *&result,
-                              Lobby *lobby,
+tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
+                              std::shared_ptr<Lobby> lobby,
                               tABC_U08Buf LP,
                               tABC_Error *pError)
 {
@@ -30,7 +30,7 @@ tABC_CC ABC_LoginPasswordDisk(Login *&result,
     AutoU08Buf          MK;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->directory(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), &pCarePackage, &pLoginPackage, pError));
 
     // Decrypt MK:
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
@@ -39,7 +39,7 @@ tABC_CC ABC_LoginPasswordDisk(Login *&result,
     // Decrypt SyncKey:
     login.reset(new Login(lobby, static_cast<U08Buf>(MK)));
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
-    result = login.release();
+    result.reset(login.release());
 
 exit:
     ABC_CarePackageFree(pCarePackage);
@@ -49,8 +49,8 @@ exit:
 }
 
 static
-tABC_CC ABC_LoginPasswordServer(Login *&result,
-                                Lobby *lobby,
+tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
+                                std::shared_ptr<Lobby> lobby,
                                 tABC_U08Buf LP,
                                 tABC_Error *pError)
 {
@@ -80,11 +80,11 @@ tABC_CC ABC_LoginPasswordServer(Login *&result,
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
 
     // Set up the on-disk login:
-    ABC_CHECK_NEW(lobby->createDirectory(), pError);
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->directory(), pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_NEW(lobby->dirCreate(), pError);
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
 
     // Assign the result:
-    result = login.release();
+    result.reset(login.release());
 
 exit:
     ABC_CarePackageFree(pCarePackage);
@@ -98,8 +98,8 @@ exit:
  *
  * @param szPassword    The password for the account.
  */
-tABC_CC ABC_LoginPassword(Login *&result,
-                          Lobby *lobby,
+tABC_CC ABC_LoginPassword(std::shared_ptr<Login> &result,
+                          std::shared_ptr<Lobby> lobby,
                           const char *szPassword,
                           tABC_Error *pError)
 {
@@ -141,13 +141,13 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     AutoU08Buf LP2;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().directory(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
 
     // Load the old keys:
     ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &oldL1, &oldLP1, pError));
     if (pLoginPackage->ELRA1)
     {
-        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLoginPackage->ELRA1, toU08Buf(login.mk()), &oldLRA1, pError));
+        ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLoginPackage->ELRA1, toU08Buf(login.dataKey()), &oldLRA1, pError));
     }
 
     // Update SNRP2:
@@ -161,13 +161,13 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     // Update EMK_LP2:
     json_decref(pLoginPackage->EMK_LP2);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.mk()), LP2,
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.dataKey()), LP2,
         ABC_CryptoType_AES256, &pLoginPackage->EMK_LP2, pError));
 
     // Update ELP1:
     json_decref(pLoginPackage->ELP1);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP1, &LP1, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LP1, toU08Buf(login.mk()),
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LP1, toU08Buf(login.dataKey()),
         ABC_CryptoType_AES256, &pLoginPackage->ELP1, pError));
 
     // Change the server login:
@@ -175,7 +175,7 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
         LP1, oldLRA1, pCarePackage, pLoginPackage, pError));
 
     // Change the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(login.lobby().directory(), pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(login.lobby().dir(), pCarePackage, pLoginPackage, pError));
 
 exit:
     ABC_CarePackageFree(pCarePackage);
@@ -207,7 +207,7 @@ tABC_CC ABC_LoginPasswordOk(Login &login,
     *pOk = false;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().directory(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
 
     // LP = L + P:
     ABC_BUF_STRCAT(LP, login.lobby().username().c_str(), szPassword);

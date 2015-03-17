@@ -9,8 +9,8 @@
  * Helper functions for dealing with login and care packages.
  */
 
-#ifndef ABC_LoginPackage_h
-#define ABC_LoginPackage_h
+#ifndef ABCD_LOGIN_LOGIN_PACKAGES_HPP
+#define ABCD_LOGIN_LOGIN_PACKAGES_HPP
 
 #include "../crypto/Scrypt.hpp"
 #include "../../src/ABC.h"

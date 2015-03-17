@@ -12,7 +12,7 @@
 
 namespace abcd {
 
-typedef struct sABC_SyncKeys tABC_SyncKeys;
+class Login;
 
 /**
  * Retreives an item from the plugin key/value store.
@@ -23,28 +23,28 @@ typedef struct sABC_SyncKeys tABC_SyncKeys;
  * @param data The value stored with the key.
  */
 Status
-pluginDataGet(tABC_SyncKeys *pKeys, const std::string &plugin,
+pluginDataGet(const Login &login, const std::string &plugin,
     const std::string &key, std::string &data);
 
 /**
  * Saves an item to the plugin key/value store.
  */
 Status
-pluginDataSet(tABC_SyncKeys *pKeys, const std::string &plugin,
+pluginDataSet(const Login &login, const std::string &plugin,
     const std::string &key, const std::string &data);
 
 /**
  * Deletes an item from the plugin key/value store.
  */
 Status
-pluginDataRemove(tABC_SyncKeys *pKeys, const std::string &plugin,
+pluginDataRemove(const Login &login, const std::string &plugin,
     const std::string &key);
 
 /**
  * Removes the entire key/value store for a particular plugin.
  */
 Status
-pluginDataClear(tABC_SyncKeys *pKeys, const std::string &plugin);
+pluginDataClear(const Login &login, const std::string &plugin);
 
 } // namespace abcd
 

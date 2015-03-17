@@ -9,8 +9,8 @@
  * Storage backend for login data.
  */
 
-#ifndef ABC_LoginDir_h
-#define ABC_LoginDir_h
+#ifndef ABCD_LOGIN_LOGIN_DIR_HPP
+#define ABCD_LOGIN_LOGIN_DIR_HPP
 
 #include "LoginPackages.hpp"
 #include "../../src/ABC.h"
@@ -64,14 +64,6 @@ tABC_CC ABC_LoginDirSavePackages(const std::string &directory,
                                  tABC_CarePackage *pCarePackage,
                                  tABC_LoginPackage *pLoginPackage,
                                  tABC_Error *pError);
-
-tABC_CC ABC_LoginDirGetSyncDir(const std::string &directory,
-                               char **pszDirName,
-                               tABC_Error *pError);
-
-tABC_CC ABC_LoginDirMakeSyncDir(const std::string &directory,
-                                const char *szSyncKey,
-                                tABC_Error *pError);
 
 } // namespace abcd
 

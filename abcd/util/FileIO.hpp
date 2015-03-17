@@ -86,7 +86,7 @@ getRootDir();
  * Ensures that a directory exists, creating it if not.
  */
 Status
-fileVerifyDir(const std::string &dir);
+fileEnsureDir(const std::string &dir);
 
 tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
                                  const char *szDir,
@@ -98,28 +98,17 @@ tABC_CC ABC_FileIOFileExists(const char *szFilename,
                              bool *pbExists,
                              tABC_Error *pError);
 
-tABC_CC ABC_FileIOCreateDir(const char *szDir,
-                            tABC_Error *pError);
-
-tABC_CC ABC_FileIOWriteFile(const char *szFilename,
-                            tABC_U08Buf Data,
-                            tABC_Error *pError);
-
-tABC_CC ABC_FileIOWriteFileStr(const char *szFilename,
-                               const char *szData,
-                               tABC_Error *pError);
-
-tABC_CC ABC_FileIOReadFileStr(const char  *szFilename,
-                              char        **pszData,
-                              tABC_Error  *pError);
-
+/**
+ * Reads a file from disk.
+ */
 Status
-fileLoad(const std::string &filename, DataChunk &result);
+fileLoad(DataChunk &result, const std::string &filename);
 
-tABC_CC ABC_FileIOReadFileObject(const char  *szFilename,
-                                 json_t **ppJSON_Data,
-                                 bool bMustExist,
-                                 tABC_Error  *pError);
+/**
+ * Writes a file to disk.
+ */
+Status
+fileSave(DataSlice data, const std::string &filename);
 
 tABC_CC ABC_FileIODeleteFile(const char *szFilename,
                              tABC_Error *pError);

@@ -8,15 +8,17 @@
 #ifndef ABCD_ACCOUNT_ACCOUNT_SETTINGS_HPP
 #define ABCD_ACCOUNT_ACCOUNT_SETTINGS_HPP
 
-#include "../util/Sync.hpp"
+#include "../../src/ABC.h"
 
 namespace abcd {
 
-tABC_CC ABC_AccountSettingsLoad(tABC_SyncKeys *pKeys,
+class Login;
+
+tABC_CC ABC_AccountSettingsLoad(const Login &login,
                                 tABC_AccountSettings **ppSettings,
                                 tABC_Error *pError);
 
-tABC_CC ABC_AccountSettingsSave(tABC_SyncKeys *pKeys,
+tABC_CC ABC_AccountSettingsSave(const Login &login,
                                 tABC_AccountSettings *pSettings,
                                 tABC_Error *pError);
 

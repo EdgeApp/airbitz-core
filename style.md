@@ -33,6 +33,11 @@ so we continue to use the old `ABC` prefix, like `ABC_ERROR`.
 New files should be named after the C++ class they implement.
 Headers should use the `.hpp` extension.
 
+Read accessors should just be the name of the thing, like `name`.
+Write accessors should be the name of the thing followed by a verb,
+like `nameSet` or `nameClear`. Immutable members are always preferable,
+so write accessors should be rare.
+
 ## Spacing
 
 Indentation is 4 spaces (no tabs)

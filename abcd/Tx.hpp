@@ -36,9 +36,8 @@
 #ifndef ABC_Tx_h
 #define ABC_Tx_h
 
-#include "../src/ABC.h"
 #include "Wallet.hpp"
-#include "util/Sync.hpp"
+#include "../src/ABC.h"
 
 namespace abcd {
 
@@ -56,7 +55,7 @@ typedef struct sABC_TxSendInfo
 
     // Transfer from money from one wallet to another
     bool                    bTransfer;
-    char                    *szDestWalletUUID;
+    tABC_WalletID           walletDest;
     char                    *szDestName;
     char                    *szDestCategory;
     char                    *szSrcName;
@@ -68,8 +67,6 @@ typedef struct sABC_TxSendInfo
     tABC_Error  errorInfo;
 } tABC_TxSendInfo;
 
-
-tABC_CC ABC_TxInitialize(tABC_Error *pError);
 
 tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
                          const tABC_TxDetails *pOldDetails,

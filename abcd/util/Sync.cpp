@@ -9,6 +9,7 @@
 #include "Util.hpp"
 #include "Mutex.hpp"
 #include "../General.hpp"
+#include "../util/Data.hpp"
 #include "../../minilibs/git-sync/sync.h"
 #include <stdlib.h>
 #include <mutex>
@@ -57,42 +58,6 @@ static void SyncLogGitError(int e)
 }
 
 /**
- * Copies a tABC_SyncKeys structure and all its contents.
- */
-tABC_CC ABC_SyncKeysCopy(tABC_SyncKeys **ppOut,
-                         tABC_SyncKeys *pIn,
-                         tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoSyncKeys pKeys;
-
-    ABC_NEW(pKeys.get(), tABC_SyncKeys);
-    ABC_STRDUP(pKeys->szSyncDir, pIn->szSyncDir);
-    ABC_STRDUP(pKeys->szSyncKey, pIn->szSyncKey);
-    ABC_BUF_DUP(pKeys->MK, pIn->MK);
-
-    *ppOut = pKeys;
-    pKeys.get() = NULL;
-
-exit:
-    return cc;
-}
-
-/**
- * Frees a tABC_SyncKeys structure and all its members.
- */
-void ABC_SyncFreeKeys(tABC_SyncKeys *pKeys)
-{
-    if (pKeys)
-    {
-        ABC_FREE_STR(pKeys->szSyncDir);
-        ABC_FREE_STR(pKeys->szSyncKey);
-        ABC_BUF_FREE(pKeys->MK);
-        ABC_CLEAR_FREE(pKeys, sizeof(tABC_SyncKeys));
-    }
-}
-
-/**
  * Initializes the underlying git library. Should be called at program start.
  */
 tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError)
@@ -132,8 +97,9 @@ void ABC_SyncTerminate()
 }
 
 /**
- * Prepares a directory for syncing. This must be called one time after
- * the directory has first been created.
+ * Prepares a directory for syncing.
+ * This will create the directory if it does not exist already.
+ * Has no effect if the repo has already been created.
  */
 tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
                          tABC_Error *pError)
@@ -142,9 +108,12 @@ tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
     AutoSyncLock lock(gSyncMutex);
     int e = 0;
 
+    git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
     git_repository *repo = NULL;
 
-    e = git_repository_init(&repo, szRepoPath, 0);
+    opts.flags |= GIT_REPOSITORY_INIT_MKDIR;
+    opts.flags |= GIT_REPOSITORY_INIT_MKPATH;
+    e = git_repository_init_ext(&repo, szRepoPath, &opts);
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_init failed");
 
 exit:

@@ -9,19 +9,18 @@
  * Functions for communicating with the AirBitz login servers.
  */
 
-#ifndef ABC_LoginServer_h
-#define ABC_LoginServer_h
+#ifndef ABCD_LOGIN_LOGIN_SERVER_HPP
+#define ABCD_LOGIN_LOGIN_SERVER_HPP
 
 #include "LoginPackages.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
-#include "../util/Sync.hpp"
-#include "../util/U08Buf.hpp"
-#include "../../src/ABC.h"
 #include <time.h>
 #include <list>
 
 namespace abcd {
+
+class Login;
 
 tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
                               tABC_U08Buf LP1,
@@ -88,7 +87,7 @@ tABC_CC ABC_LoginServerOtpResetCancelPending(tABC_U08Buf L1, tABC_U08Buf LP1, tA
 
 tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
                                   tABC_U08Buf LP1,
-                                  tABC_SyncKeys *pKeys,
+                                  const Login &login,
                                   tABC_Error *pError);
 
 } // namespace abcd

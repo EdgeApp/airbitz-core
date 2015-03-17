@@ -7,6 +7,7 @@
 
 #include "LoginPin.hpp"
 #include "Lobby.hpp"
+#include "Login.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
 #include "../crypto/Crypto.hpp"
@@ -15,7 +16,6 @@
 #include "../util/Json.hpp"
 #include "../util/Util.hpp"
 #include <jansson.h>
-#include <memory>
 
 namespace abcd {
 
@@ -149,8 +149,8 @@ exit:
 /**
  * Assuming a PIN-based login pagage exits, log the user in.
  */
-tABC_CC ABC_LoginPin(Login *&result,
-                     Lobby *lobby,
+tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
+                     std::shared_ptr<Lobby> lobby,
                      const char *szPin,
                      tABC_Error *pError)
 {
@@ -170,8 +170,8 @@ tABC_CC ABC_LoginPin(Login *&result,
     AutoU08Buf          MK;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->directory(), &pCarePackage, &pLoginPackage, pError));
-    ABC_CHECK_RET(ABC_LoginPinLocalLoad(&pLocal, lobby->directory(), pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginPinLocalLoad(&pLocal, lobby->dir(), pError));
 
     // LPIN = L + PIN:
     ABC_BUF_STRCAT(LPIN, lobby->username().c_str(), szPin);
@@ -191,7 +191,7 @@ tABC_CC ABC_LoginPin(Login *&result,
     // Create the Login object:
     login.reset(new Login(lobby, static_cast<U08Buf>(MK)));
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
-    result = login.release();
+    result.reset(login.release());
 
 exit:
     ABC_CarePackageFree(pCarePackage);
@@ -231,11 +231,11 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     AutoU08Buf          LPIN;
     AutoU08Buf          LPIN1;
     AutoU08Buf          LPIN2;
-    AutoU08Buf          PINK;
-    AutoU08Buf          DID;
+    DataChunk PINK;
+    DataChunk DID;
 
     // Get login stuff:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().directory(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
     ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &L1, &LP1, pError));
 
     // LPIN = L + PIN:
@@ -244,31 +244,31 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LPIN, pCarePackage->pSNRP2, &LPIN2, pError));
 
     // Set up PINK stuff:
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(KEY_LENGTH, &PINK, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.mk()), PINK,
+    ABC_CHECK_NEW(randomData(PINK, KEY_LENGTH), pError);
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.dataKey()), toU08Buf(PINK),
         ABC_CryptoType_AES256, &pEMK_PINK, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(PINK, LPIN2,
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(PINK), LPIN2,
         ABC_CryptoType_AES256, &pEPINK, pError));
     szEPINK = ABC_UtilStringFromJSONObject(pEPINK, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
     ABC_CHECK_NULL(szEPINK);
 
     // Set up DID:
-    ABC_CHECK_RET(ABC_CryptoCreateRandomData(KEY_LENGTH, &DID, pError));
+    ABC_CHECK_NEW(randomData(DID, KEY_LENGTH), pError);
 
     // Set up the local file:
     pLocal = json_pack("{s:O, s:s, s:I}",
         JSON_LOCAL_EMK_PINK_FIELD, pEMK_PINK,
-        JSON_LOCAL_DID_FIELD, base64Encode(U08Buf(DID)).c_str(),
+        JSON_LOCAL_DID_FIELD, base64Encode(DID).c_str(),
         JSON_LOCAL_EXPIRES_FIELD, (json_int_t)expires);
     ABC_CHECK_NULL(pLocal);
     szLocal = ABC_UtilStringFromJSONObject(pLocal, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
     ABC_CHECK_NULL(szLocal);
 
     // Set up the server:
-    ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(L1, LP1, DID, LPIN1, szEPINK, expires, pError));
+    ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(L1, LP1, toU08Buf(DID), LPIN1, szEPINK, expires, pError));
 
     // Save the local file
-    ABC_CHECK_RET(ABC_LoginDirFileSave(szLocal, login.lobby().directory(), PIN_FILENAME, pError));
+    ABC_CHECK_RET(ABC_LoginDirFileSave(szLocal, login.lobby().dir(), PIN_FILENAME, pError));
 
 exit:
     ABC_CarePackageFree(pCarePackage);

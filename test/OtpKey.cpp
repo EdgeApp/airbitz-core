@@ -11,11 +11,9 @@
 
 TEST_CASE("RFC 4226 test vectors", "[crypto][otp]" )
 {
-    abcd::DataChunk secret
-    {
-        0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30,
-        0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x30
-    };
+    std::string secretData = "12345678901234567890";
+    abcd::OtpKey key(secretData);
+
     const char *cases[] =
     {
         "755224",
@@ -29,10 +27,6 @@ TEST_CASE("RFC 4226 test vectors", "[crypto][otp]" )
         "399871",
         "520489"
     };
-
-    abcd::OtpKey key;
-    REQUIRE(key.decodeBase32(abcd::base32Encode(secret)));
-
     int i = 0;
     for (auto test: cases)
     {

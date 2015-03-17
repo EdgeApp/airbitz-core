@@ -20,8 +20,10 @@ namespace abcd {
 class JsonFile
 {
 public:
-    ~JsonFile() { reset(); }
-    JsonFile(): root_(nullptr) {}
+    ~JsonFile();
+    JsonFile();
+    JsonFile(JsonFile &copy);
+    JsonFile &operator=(JsonFile &copy);
 
     /**
      * Accepts a JSON value for use as the file root.

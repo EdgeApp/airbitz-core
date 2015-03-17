@@ -4,28 +4,26 @@
  *
  * See the LICENSE file for more information.
  */
-/**
- * @file
- * An object representing a logged-in account.
- */
 
-#ifndef ABC_Login_h
-#define ABC_Login_h
+#ifndef ABCD_LOGIN_LOGIN_HPP
+#define ABCD_LOGIN_LOGIN_HPP
 
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
-#include "../util/Sync.hpp"
-#include "../../src/ABC.h"
+#include <memory>
 
 namespace abcd {
 
 class Lobby;
 typedef struct sABC_LoginPackage tABC_LoginPackage;
 
+/**
+ * Holds the keys for a logged-in account.
+ */
 class Login
 {
 public:
-    Login(Lobby *lobby, DataSlice mk);
+    Login(std::shared_ptr<Lobby> lobby, DataSlice dataKey);
 
     /**
      * Prepares the Login object for use.
@@ -43,7 +41,7 @@ public:
      * Obtains the master key for the account.
      */
     DataSlice
-    mk() const { return mk_; }
+    dataKey() const { return dataKey_; }
 
     /**
      * Obtains the data-sync key for the account.
@@ -51,25 +49,34 @@ public:
     const std::string &
     syncKey() const { return syncKey_; }
 
+    /**
+     * Returns the account's sync directory name.
+     */
+    std::string
+    syncDir() const;
+
+    /**
+     * If the sync dir doesn't exist, create and sync it.
+     */
+    Status
+    syncDirCreate() const;
+
 private:
-    Lobby *lobby_;
-    DataChunk mk_;
+    // No mutex, since all members are immutable after init.
+    // The lobby mutext can cover disk-based things like logging in and
+    // changing passwords if we ever want to to protect those one day.
+    std::shared_ptr<Lobby> lobby_;
+    DataChunk dataKey_;
     std::string syncKey_;
 };
 
-typedef Login tABC_Login;
-
 // Constructors:
-tABC_CC ABC_LoginCreate(Login *&result,
-                        Lobby *lobby,
+tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
+                        std::shared_ptr<Lobby> lobby,
                         const char *szPassword,
                         tABC_Error *pError);
 
 // Read accessors:
-tABC_CC ABC_LoginGetSyncKeys(Login &login,
-                             tABC_SyncKeys **ppKeys,
-                             tABC_Error *pError);
-
 tABC_CC ABC_LoginGetServerKeys(Login &login,
                                tABC_U08Buf *pL1,
                                tABC_U08Buf *pLP1,
