@@ -14,6 +14,7 @@
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/json/JsonFile.hpp"
+#include "../abcd/login/Login.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Util.hpp"
 #include <wallet/wallet.hpp>
@@ -35,15 +36,13 @@ Status accountDecrypt(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... account-decrypt <user> <pass> <filename>\n"
             "note: The filename is account-relative.");
 
-    AutoSyncKeys pKeys;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
+    std::shared_ptr<Login> login;
+    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
 
-    std::string file = pKeys->szSyncDir;
-    file += "/";
-    file += argv[2];
+    std::string file = login->syncDir() + argv[2];
 
     AutoU08Buf data;
-    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(file.c_str(), pKeys->MK, &data, &error));
+    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(file.c_str(), toU08Buf(login->dataKey()), &data, &error));
     fwrite(data.p, data.end - data.p, 1, stdout);
     printf("\n");
 
@@ -57,18 +56,14 @@ Status accountEncrypt(int argc, char *argv[])
         return ABC_ERROR(ABC_CC_Error, "usage: ... account-encrypt <user> <pass> <filename>\n"
             "note: The filename is account-relative.");
 
-    AutoSyncKeys pKeys;
-    ABC_CHECK_OLD(ABC_LoginShimGetSyncKeys(argv[0], argv[1], &pKeys.get(), &error));
-
-    std::string file = pKeys->szSyncDir;
-    file += "/";
-    file += argv[2];
+    std::shared_ptr<Login> login;
+    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
 
     DataChunk contents;
-    ABC_CHECK(fileLoad(contents, file));
+    ABC_CHECK(fileLoad(contents, login->syncDir() + argv[2]));
 
     json_t *encrypted;
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents), pKeys->MK,
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents), toU08Buf(login->dataKey()),
         ABC_CryptoType_AES256, &encrypted, &error));
 
     std::string str;
