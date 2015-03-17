@@ -189,7 +189,13 @@ tABC_CC ABC_SignIn(const char *szUserName,
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
-    ABC_CHECK_RET(ABC_LoginShimLogin(szUserName, szPassword, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
+
+        // Take this non-blocking opportunity to update the general info:
+        ABC_GeneralUpdateInfo(pError);
+    }
 
 exit:
     return cc;
@@ -243,7 +249,14 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_NULL(szPassword);
     ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
-    ABC_CHECK_RET(ABC_LoginShimNewAccount(szUserName, szPassword, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLoginNew(szUserName, szPassword), pError);
+
+        // Take this non-blocking opportunity to update the general info:
+        ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
+        ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
+    }
 
 exit:
     return cc;
@@ -306,8 +319,12 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     ABC_CHECK_NULL(szRecoveryAnswers);
     ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error, "No recovery answers provided");
 
-    ABC_CHECK_RET(ABC_LoginShimSetRecovery(szUserName, szPassword,
-        szRecoveryQuestions, szRecoveryAnswers, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
+        ABC_CHECK_RET(ABC_LoginRecoverySet(*gLoginCache,
+            szRecoveryQuestions, szRecoveryAnswers, pError));
+    }
 
 exit:
     return cc;
@@ -336,7 +353,7 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
 
     {
         AutoLoginLock lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
         ABC_CHECK_RET(ABC_LoginPasswordOk(*gLoginCache, szPassword, pOk, pError));
     }
 
@@ -433,7 +450,7 @@ tABC_CC ABC_OtpAuthGet(const char *szUserName,
 
     {
         std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
         ABC_CHECK_NEW(otpAuthGet(*gLoginCache, *pbEnabled, *pTimeout), pError);
     }
 
@@ -455,7 +472,7 @@ tABC_CC ABC_OtpAuthSet(const char *szUserName,
 
     {
         std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
         ABC_CHECK_NEW(otpAuthSet(*gLoginCache, timeout), pError);
     }
 
@@ -476,7 +493,7 @@ tABC_CC ABC_OtpAuthRemove(const char *szUserName,
 
     {
         std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
         ABC_CHECK_NEW(otpAuthRemove(*gLoginCache), pError);
     }
 
@@ -559,7 +576,7 @@ tABC_CC ABC_OtpResetRemove(const char *szUserName,
 
     {
         std::lock_guard<std::mutex> lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
         ABC_CHECK_NEW(otpResetRemove(*gLoginCache), pError);
     }
 
@@ -630,11 +647,10 @@ tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_LoginShimLogout();
+    cacheLogout();
     ABC_WalletClearCache();
 
 exit:
-
     return cc;
 }
 
@@ -956,10 +972,26 @@ tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szRecoveryAnswers);
 
-    ABC_CHECK_RET(ABC_LoginShimCheckRecovery(szUserName, szRecoveryAnswers, pbValid, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        Status s = cacheLoginRecovery(szUserName, szRecoveryAnswers);
+        if (s)
+        {
+            *pbValid = true;
+        }
+        else if (ABC_CC_DecryptFailure == s.value())
+        {
+            *pbValid = false;
+        }
+        else
+        {
+            s.toError(*pError);
+            cc = s.value();
+            goto exit;
+        }
+    }
 
 exit:
-
     return cc;
 }
 
@@ -1019,7 +1051,10 @@ tABC_CC ABC_PinLogin(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(szPin);
 
-    ABC_CHECK_RET(ABC_LoginShimPinLogin(szUserName, szPin, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLoginPin(szUserName, szPin), pError);
+    }
 
 exit:
     return cc;
@@ -1053,7 +1088,7 @@ tABC_CC ABC_PinSetup(const char *szUserName,
     expires += 60 * pSettings->minutesAutoLogout;
     {
         AutoLoginLock lock(gLoginMutex);
-        ABC_CHECK_NEW(cacheLogin(szUserName, szPassword), pError);
+        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
         ABC_CHECK_RET(ABC_LoginPinSetup(*gLoginCache, pSettings->szPIN, expires, pError));
     }
 
@@ -1425,8 +1460,12 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     ABC_CHECK_NULL(szNewPassword);
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
 
-    ABC_CHECK_RET(ABC_LoginShimSetPassword(szUserName, szPassword, NULL,
-        szNewPassword, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLoginPassword(szUserName, szPassword), pError);
+        ABC_CHECK_RET(ABC_LoginPasswordSet(*gLoginCache, szNewPassword, pError));
+        ABC_WalletClearCache(); // added in 23fab303, but no idea why
+    }
 
 exit:
     return cc;
@@ -1464,8 +1503,12 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     ABC_CHECK_NULL(szNewPassword);
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
 
-    ABC_CHECK_RET(ABC_LoginShimSetPassword(szUserName, NULL,
-        szRecoveryAnswers, szNewPassword, pError));
+    {
+        AutoLoginLock lock(gLoginMutex);
+        ABC_CHECK_NEW(cacheLoginRecovery(szUserName, szRecoveryAnswers), pError);
+        ABC_CHECK_RET(ABC_LoginPasswordSet(*gLoginCache, szNewPassword, pError));
+        ABC_WalletClearCache(); // added in 23fab303, but no idea why
+    }
 
 exit:
     return cc;

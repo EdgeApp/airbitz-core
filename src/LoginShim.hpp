@@ -15,10 +15,8 @@
 #ifndef ABC_LoginShim_h
 #define ABC_LoginShim_h
 
-#include "ABC.h"
 #include "../abcd/util/Status.hpp"
 #include "../abcd/util/Sync.hpp"
-#include <time.h>
 #include <mutex>
 
 namespace abcd {
@@ -36,6 +34,12 @@ extern Lobby *gLobbyCache;
 extern Login *gLoginCache;
 
 /**
+ * Clears all cached login objects.
+ */
+void
+cacheLogout();
+
+/**
  * Loads the lobby for the given user into the cache.
  * The caller should already be holding the login mutex,
  * and must continue holding the mutex while accessing the object.
@@ -44,48 +48,36 @@ Status
 cacheLobby(const char *szUserName);
 
 /**
- * Loads the account for the given user into the cache.
+ * Creates a new account and adds it to the cache.
  * The caller should already be holding the login mutex,
  * and must continue holding the mutex while accessing the object.
  */
 Status
-cacheLogin(const char *szUserName, const char *szPassword);
+cacheLoginNew(const char *szUserName, const char *szPassword);
 
 /**
- * Clears all cached login objects.
+ * Logs the user in with a password, if necessary.
+ * The caller should already be holding the login mutex,
+ * and must continue holding the mutex while accessing the object.
  */
-void ABC_LoginShimLogout();
+Status
+cacheLoginPassword(const char *szUserName, const char *szPassword);
 
-// Blocking functions (see ABC_LoginRequest):
-tABC_CC ABC_LoginShimLogin(const char *szUserName,
-                           const char *szPassword,
-                           tABC_Error *pError);
+/**
+ * Logs the user in with their recovery answers, if necessary.
+ * The caller should already be holding the login mutex,
+ * and must continue holding the mutex while accessing the object.
+ */
+Status
+cacheLoginRecovery(const char *szUserName, const char *szRecoveryAnswers);
 
-tABC_CC ABC_LoginShimNewAccount(const char *szUserName,
-                                const char *szPassword,
-                                tABC_Error *pError);
-
-tABC_CC ABC_LoginShimSetRecovery(const char *szUserName,
-                                 const char *szPassword,
-                                 const char *szRecoveryQuestions,
-                                 const char *szRecoveryAnswers,
-                                 tABC_Error *pError);
-
-tABC_CC ABC_LoginShimSetPassword(const char *szUserName,
-                                 const char *szPassword,
-                                 const char *szRecoveryAnswers,
-                                 const char *szNewPassword,
-                                 tABC_Error *pError);
-
-// Ordinary functions:
-tABC_CC ABC_LoginShimCheckRecovery(const char *szUserName,
-                                   const char *szRecoveryAnswers,
-                                   bool *pbValid,
-                                   tABC_Error *pError);
-
-tABC_CC ABC_LoginShimPinLogin(const char *szUserName,
-                              const char *szPin,
-                              tABC_Error *pError);
+/**
+ * Logs the user in with their PIN, if necessary.
+ * The caller should already be holding the login mutex,
+ * and must continue holding the mutex while accessing the object.
+ */
+Status
+cacheLoginPin(const char *szUserName, const char *szPin);
 
 tABC_CC ABC_LoginShimGetSyncKeys(const char *szUserName,
                                  const char *szPassword,
