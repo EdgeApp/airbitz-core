@@ -15,14 +15,13 @@
 #include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
 #include <ctype.h>
-#include <memory>
 
 namespace abcd {
 
 #define ACCOUNT_MK_LENGTH 32
 
-Login::Login(Lobby *lobby, DataSlice dataKey):
-    lobby_(lobby),
+Login::Login(std::shared_ptr<Lobby> lobby, DataSlice dataKey):
+    lobby_(std::move(lobby)),
     dataKey_(dataKey.begin(), dataKey.end())
 {}
 
@@ -72,8 +71,8 @@ Login::syncDirCreate() const
  * @param szPassword    The password for the account.
  * @param ppSelf        The returned login object.
  */
-tABC_CC ABC_LoginCreate(Login *&result,
-                        Lobby *lobby,
+tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
+                        std::shared_ptr<Lobby> lobby,
                         const char *szPassword,
                         tABC_Error *pError)
 {
@@ -129,7 +128,7 @@ tABC_CC ABC_LoginCreate(Login *&result,
     // Create the Login object:
     login.reset(new Login(lobby, dataKey));
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
-    result = login.release();
+    result.reset(login.release());
 
 exit:
     ABC_CarePackageFree(pCarePackage);

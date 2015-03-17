@@ -18,8 +18,8 @@ namespace abcd {
 
 // We cache a single account, which is fine for the UI's needs:
 std::mutex gLoginMutex;
-Lobby *gLobbyCache = nullptr;
-Login *gLoginCache = nullptr;
+std::shared_ptr<Lobby> gLobbyCache;
+std::shared_ptr<Login> gLoginCache;
 
 /**
  * Clears the cached login.
@@ -28,10 +28,8 @@ Login *gLoginCache = nullptr;
 static void
 cacheClear()
 {
-    delete gLobbyCache;
-    delete gLoginCache;
-    gLobbyCache = nullptr;
-    gLoginCache = nullptr;
+    gLobbyCache.reset();
+    gLoginCache.reset();
 }
 
 void
@@ -48,18 +46,17 @@ cacheLobby(const char *szUserName)
     if (gLobbyCache)
     {
         std::string fixed;
-        if (!Lobby::fixUsername(fixed, szUserName) ||
-            gLobbyCache->username() != fixed)
-        {
+        ABC_CHECK(Lobby::fixUsername(fixed, szUserName));
+        if (gLobbyCache->username() != fixed)
             cacheClear();
-        }
     }
 
     // Load the new lobby, if necessary:
     if (!gLobbyCache)
     {
-        gLobbyCache = new Lobby();
-        ABC_CHECK(gLobbyCache->init(szUserName));
+        std::unique_ptr<Lobby> lobby(new Lobby());
+        ABC_CHECK(lobby->init(szUserName));
+        gLobbyCache.reset(lobby.release());
     }
 
     return Status();

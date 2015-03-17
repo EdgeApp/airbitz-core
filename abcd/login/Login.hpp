@@ -11,6 +11,7 @@
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 #include "../util/Sync.hpp"
+#include <memory>
 
 namespace abcd {
 
@@ -23,7 +24,7 @@ typedef struct sABC_LoginPackage tABC_LoginPackage;
 class Login
 {
 public:
-    Login(Lobby *lobby, DataSlice dataKey);
+    Login(std::shared_ptr<Lobby> lobby, DataSlice dataKey);
 
     /**
      * Prepares the Login object for use.
@@ -62,7 +63,7 @@ public:
     syncDirCreate() const;
 
 private:
-    Lobby *lobby_;
+    std::shared_ptr<Lobby> lobby_;
     DataChunk dataKey_;
     std::string syncKey_;
 };
@@ -70,8 +71,8 @@ private:
 typedef Login tABC_Login;
 
 // Constructors:
-tABC_CC ABC_LoginCreate(Login *&result,
-                        Lobby *lobby,
+tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
+                        std::shared_ptr<Lobby> lobby,
                         const char *szPassword,
                         tABC_Error *pError);
 

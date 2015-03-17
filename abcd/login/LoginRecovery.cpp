@@ -12,7 +12,6 @@
 #include "LoginServer.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../util/Util.hpp"
-#include <memory>
 
 namespace abcd {
 
@@ -61,8 +60,8 @@ exit:
  * Loads an existing login object, either from the server or from disk.
  * Uses recovery answers rather than a password.
  */
-tABC_CC ABC_LoginRecovery(Login *&result,
-                          Lobby *lobby,
+tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
+                          std::shared_ptr<Lobby> lobby,
                           const char *szRecoveryAnswers,
                           tABC_Error *pError)
 {
@@ -100,7 +99,7 @@ tABC_CC ABC_LoginRecovery(Login *&result,
     ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
 
     // Assign the final output:
-    result = login.release();
+    result.reset(login.release());
 
 exit:
     ABC_CarePackageFree(pCarePackage);

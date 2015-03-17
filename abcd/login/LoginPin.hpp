@@ -14,6 +14,7 @@
 
 #include "../../src/ABC.h"
 #include <time.h>
+#include <memory>
 
 namespace abcd {
 
@@ -27,8 +28,8 @@ tABC_CC ABC_LoginPinExists(const char *szUserName,
 tABC_CC ABC_LoginPinDelete(const char *szUserName,
                            tABC_Error *pError);
 
-tABC_CC ABC_LoginPin(Login *&result,
-                     Lobby *lobby,
+tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
+                     std::shared_ptr<Lobby> lobby,
                      const char *szPin,
                      tABC_Error *pError);
 

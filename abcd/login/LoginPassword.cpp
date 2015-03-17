@@ -12,13 +12,12 @@
 #include "LoginServer.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../util/Util.hpp"
-#include <memory>
 
 namespace abcd {
 
 static
-tABC_CC ABC_LoginPasswordDisk(Login *&result,
-                              Lobby *lobby,
+tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
+                              std::shared_ptr<Lobby> lobby,
                               tABC_U08Buf LP,
                               tABC_Error *pError)
 {
@@ -40,7 +39,7 @@ tABC_CC ABC_LoginPasswordDisk(Login *&result,
     // Decrypt SyncKey:
     login.reset(new Login(lobby, static_cast<U08Buf>(MK)));
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
-    result = login.release();
+    result.reset(login.release());
 
 exit:
     ABC_CarePackageFree(pCarePackage);
@@ -50,8 +49,8 @@ exit:
 }
 
 static
-tABC_CC ABC_LoginPasswordServer(Login *&result,
-                                Lobby *lobby,
+tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
+                                std::shared_ptr<Lobby> lobby,
                                 tABC_U08Buf LP,
                                 tABC_Error *pError)
 {
@@ -85,7 +84,7 @@ tABC_CC ABC_LoginPasswordServer(Login *&result,
     ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
 
     // Assign the result:
-    result = login.release();
+    result.reset(login.release());
 
 exit:
     ABC_CarePackageFree(pCarePackage);
@@ -99,8 +98,8 @@ exit:
  *
  * @param szPassword    The password for the account.
  */
-tABC_CC ABC_LoginPassword(Login *&result,
-                          Lobby *lobby,
+tABC_CC ABC_LoginPassword(std::shared_ptr<Login> &result,
+                          std::shared_ptr<Lobby> lobby,
                           const char *szPassword,
                           tABC_Error *pError)
 {

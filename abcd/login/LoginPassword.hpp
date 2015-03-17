@@ -13,14 +13,15 @@
 #define ABCD_LOGIN_LOGIN_PASSWORD_HPP
 
 #include "../../src/ABC.h"
+#include <memory>
 
 namespace abcd {
 
 class Login;
 class Lobby;
 
-tABC_CC ABC_LoginPassword(Login *&result,
-                          Lobby *lobby,
+tABC_CC ABC_LoginPassword(std::shared_ptr<Login> &result,
+                          std::shared_ptr<Lobby> lobby,
                           const char *szPassword,
                           tABC_Error *pError);
 

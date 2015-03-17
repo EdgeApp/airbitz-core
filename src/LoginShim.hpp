@@ -17,6 +17,7 @@
 
 #include "../abcd/util/Status.hpp"
 #include "../abcd/util/Sync.hpp"
+#include <memory>
 #include <mutex>
 
 namespace abcd {
@@ -30,8 +31,8 @@ class Login;
 extern std::mutex gLoginMutex;
 typedef std::lock_guard<std::mutex> AutoLoginLock;
 
-extern Lobby *gLobbyCache;
-extern Login *gLoginCache;
+extern std::shared_ptr<Lobby> gLobbyCache;
+extern std::shared_ptr<Login> gLoginCache;
 
 /**
  * Clears all cached login objects.
