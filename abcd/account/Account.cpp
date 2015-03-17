@@ -25,8 +25,10 @@ namespace abcd {
 #define JSON_ACCT_WALLET_ARCHIVE_FIELD          "Archived"
 #define JSON_ACCT_WALLET_SORT_FIELD             "SortIndex"
 
+static void ABC_AccountWalletInfoFreeArray(tABC_AccountWalletInfo *aInfo, unsigned count);
 static tABC_CC ABC_AccountWalletGetDir(tABC_SyncKeys *pKeys, char **pszWalletDir, tABC_Error *pError);
 static int ABC_AccountWalletCompare(const void *a, const void *b);
+static tABC_CC ABC_AccountWalletsLoad(tABC_SyncKeys *pKeys, tABC_AccountWalletInfo **paInfo, unsigned *pCount, tABC_Error *pError);
 
 /**
  * Releases the members of a tABC_AccountWalletInfo structure. Unlike most

@@ -63,18 +63,11 @@ typedef struct sABC_AccountWalletInfo
 } tABC_AccountWalletInfo;
 
 void ABC_AccountWalletInfoFree(tABC_AccountWalletInfo *pInfo);
-void ABC_AccountWalletInfoFreeArray(tABC_AccountWalletInfo *aInfo,
-                                    unsigned count);
 
 tABC_CC ABC_AccountWalletList(tABC_SyncKeys *pKeys,
                               char ***paszUUID,
                               unsigned *pCount,
                               tABC_Error *pError);
-
-tABC_CC ABC_AccountWalletsLoad(tABC_SyncKeys *pKeys,
-                               tABC_AccountWalletInfo **paInfo,
-                               unsigned *pCount,
-                               tABC_Error *pError);
 
 tABC_CC ABC_AccountWalletLoad(tABC_SyncKeys *pKeys,
                               const char *szUUID,
