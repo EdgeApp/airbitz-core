@@ -11,6 +11,7 @@
 #include "../crypto/OtpKey.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
+#include <mutex>
 #include <string>
 
 namespace abcd {
@@ -42,7 +43,7 @@ public:
      * The string will be empty if the directory does not exist.
      */
     const std::string &
-    dir() const { return dir_; }
+    dir() const;
 
     /**
      * Creates a directory for the account if one does not already exist.
@@ -89,6 +90,7 @@ public:
     fixUsername(std::string &result, const std::string &username);
 
 private:
+    mutable std::mutex mutex_;
     std::string username_;
     std::string dir_;
     DataChunk authId_;
@@ -98,6 +100,7 @@ private:
 
     /**
      * Writes the OTP key to disk, assuming the account has a directory.
+     * The caller must already be holding the mutex.
      */
     Status
     otpKeySave();
