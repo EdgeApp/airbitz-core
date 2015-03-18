@@ -201,7 +201,7 @@ fileLoad(DataChunk &result, const std::string &filename)
 
     FILE *fp = fopen(filename.c_str(), "rb");
     if (!fp)
-        return ABC_ERROR(ABC_CC_FileOpenError, "Could not open file for reading");
+        return ABC_ERROR(ABC_CC_FileOpenError, "Cannot open for reading: " + filename);
 
     fseek(fp, 0, SEEK_END);
     size_t size = ftell(fp);
@@ -211,7 +211,7 @@ fileLoad(DataChunk &result, const std::string &filename)
     if (fread(result.data(), 1, size, fp) != size)
     {
         fclose(fp);
-        return ABC_ERROR(ABC_CC_FileReadError, "Could not read from file");
+        return ABC_ERROR(ABC_CC_FileReadError, "Cannot read file: " + filename);
     }
 
     fclose(fp);
@@ -225,12 +225,12 @@ fileSave(DataSlice data, const std::string &filename)
 
     FILE *fp = fopen(filename.c_str(), "wb");
     if (!fp)
-        return ABC_ERROR(ABC_CC_FileOpenError, "Could not open file for writing");
+        return ABC_ERROR(ABC_CC_FileOpenError, "Cannot open for writing: " + filename);
 
     if (1 != fwrite(data.data(), data.size(), 1, fp))
     {
         fclose(fp);
-        return ABC_ERROR(ABC_CC_FileReadError, "Could not write to file");
+        return ABC_ERROR(ABC_CC_FileReadError, "Cannot write file: " + filename);
     }
 
     fclose(fp);
