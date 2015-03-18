@@ -32,6 +32,9 @@ Login::init(tABC_LoginPackage *package)
     AutoString syncKey;
     ABC_CHECK_OLD(ABC_LoginPackageGetSyncKey(package, toU08Buf(dataKey_), &syncKey.get(), &error));
     syncKey_ = syncKey.get();
+
+    // Ensure that the directories are in place:
+    ABC_CHECK(lobby_->dirCreate());
     ABC_CHECK(syncDirCreate());
     return Status();
 }
@@ -124,7 +127,6 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     ABC_CHECK_RET(ABC_LoginServerActivate(toU08Buf(lobby->authId()), LP1, pError));
 
     // Set up the on-disk login:
-    ABC_CHECK_NEW(lobby->dirCreate(), pError);
     ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
 
     // Create the Login object:
