@@ -2,9 +2,11 @@
  *  Copyright (c) 2015, AirBitz, Inc.
  *  All rights reserved.
  */
-#include "Status.hpp"
 
+#include "Status.hpp"
+#include "Debug.hpp"
 #include <string.h>
+#include <sstream>
 
 namespace abcd {
 
@@ -26,6 +28,10 @@ Status::Status(tABC_CC value, std::string message,
 
 void Status::toError(tABC_Error &error)
 {
+    std::stringstream s;
+    s << *this;
+    ABC_DebugLog("%s", s.str().c_str());
+
     error.code = value_;
     strncpy(error.szDescription, message_.c_str(), ABC_MAX_STRING_LENGTH);
     strncpy(error.szSourceFunc, function_, ABC_MAX_STRING_LENGTH);
