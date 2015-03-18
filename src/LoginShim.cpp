@@ -103,9 +103,6 @@ cacheLoginPassword(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        if (!szPassword)
-            return ABC_ERROR(ABC_CC_NULLPtr, "Not logged in");
-
         ABC_CHECK_OLD(ABC_LoginPassword(gLoginCache, lobby, szPassword, &error));
     }
 
@@ -149,6 +146,25 @@ cacheLoginPin(std::shared_ptr<Login> &result,
     return Status();
 }
 
+Status
+cacheLogin(std::shared_ptr<Login> &result, const char *szUserName)
+{
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+
+    // Get the real username:
+    if (!szUserName)
+        return ABC_ERROR(ABC_CC_NULLPtr, "No user name");
+    std::string fixed;
+    ABC_CHECK(Lobby::fixUsername(fixed, szUserName));
+
+    // Ensure the user is still logged in:
+    if (!gLoginCache || !gLobbyCache || gLobbyCache->username() != fixed)
+        return ABC_ERROR(ABC_CC_AccountDoesNotExist, "Not logged in");
+
+    result = gLoginCache;
+    return Status();
+}
+
 /**
  * Obtains the information needed to access the server for a given account.
  *
@@ -160,7 +176,6 @@ cacheLoginPin(std::shared_ptr<Login> &result,
  */
 
 tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
-                                   const char *szPassword,
                                    tABC_U08Buf *pL1,
                                    tABC_U08Buf *pLP1,
                                    tABC_Error *pError)
@@ -168,7 +183,7 @@ tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     std::shared_ptr<Login> login;
 
-    ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
+    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
     ABC_CHECK_RET(ABC_LoginGetServerKeys(*login, pL1, pLP1, pError));
 
 exit:
