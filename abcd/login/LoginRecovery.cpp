@@ -95,7 +95,6 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
 
     // Set up the on-disk login:
-    ABC_CHECK_NEW(lobby->dirCreate(), pError);
     ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
 
     // Assign the final output:
