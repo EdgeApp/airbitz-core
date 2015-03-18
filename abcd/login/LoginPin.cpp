@@ -168,6 +168,11 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, loginPackage, pError));
     ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &L1, &LP1, pError));
 
+    // Set up DID:
+    if (!local.load(login.lobby().dir() + PIN_FILENAME) ||
+        !local.pinAuthIdDecode(pinAuthId))
+        ABC_CHECK_NEW(randomData(pinAuthId, KEY_LENGTH), pError);
+
     // Put dataKey in a box:
     ABC_CHECK_NEW(randomData(pinKey, KEY_LENGTH), pError);
     ABC_CHECK_NEW(pinBox.encrypt(login.dataKey(), pinKey), pError);
@@ -175,9 +180,6 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     // Put pinKey in a box:
     ABC_CHECK_NEW(carePackage.snrp2().hash(pinKeyKey, LPIN), pError);
     ABC_CHECK_NEW(pinKeyBox.encrypt(pinKey, pinKeyKey), pError);
-
-    // Set up DID:
-    ABC_CHECK_NEW(randomData(pinAuthId, KEY_LENGTH), pError);
 
     // Set up the server:
     ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN), pError);
