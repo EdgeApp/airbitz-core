@@ -126,12 +126,14 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     // Latch the account:
     ABC_CHECK_RET(ABC_LoginServerActivate(toU08Buf(lobby->authId()), LP1, pError));
 
-    // Set up the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
-
     // Create the Login object:
     login.reset(new Login(lobby, dataKey));
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
+
+    // Set up the on-disk login:
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
+
+    // Assign the result:
     result.reset(login.release());
 
 exit:
