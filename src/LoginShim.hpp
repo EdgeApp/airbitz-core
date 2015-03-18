@@ -64,8 +64,13 @@ Status
 cacheLoginPin(std::shared_ptr<Login> &result,
     const char *szUserName, const char *szPin);
 
+/**
+ * Retrieves the cached login, assuming the username still matches.
+ */
+Status
+cacheLogin(std::shared_ptr<Login> &result, const char *szUserName);
+
 tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
-                                   const char *szPassword,
                                    tABC_U08Buf *pL1,
                                    tABC_U08Buf *pLP1,
                                    tABC_Error *pError);
