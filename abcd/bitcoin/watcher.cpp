@@ -382,6 +382,11 @@ bool watcher::command(uint8_t* data, size_t size)
             bc::satoshi_load(serial.iterator(), data + size, tx);
             if (connection_)
                 connection_->txu.send(tx);
+            else
+            {
+                db_.insert(tx, tx_state::unsent);
+                on_add(tx);
+            }
         }
         return true;
     }
