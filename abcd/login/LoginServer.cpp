@@ -963,7 +963,7 @@ tABC_CC checkResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *
         }
         else if (ABC_Server_Code_PinExpired == statusCode)
         {
-            ABC_RET_ERROR(ABC_CC_PinExpired, "Invalid password on server");
+            ABC_RET_ERROR(ABC_CC_PinExpired, "PIN expired");
         }
         else if (ABC_Server_Code_InvalidOTP == statusCode)
         {

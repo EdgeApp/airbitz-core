@@ -205,22 +205,6 @@ exit:
 }
 
 /**
- * Determines whether or not a file exists in the account directory.
- */
-tABC_CC ABC_LoginDirFileDelete(const std::string &directory,
-                               const char *szFile,
-                               tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    std::string filename = directory + szFile;
-    ABC_CHECK_RET(ABC_FileIODeleteFile(filename.c_str(), pError));
-
-exit:
-    return cc;
-}
-
-/**
  * Loads the login and care packages from disk.
  */
 tABC_CC ABC_LoginDirLoadPackages(const std::string &directory,

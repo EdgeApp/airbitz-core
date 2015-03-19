@@ -25,7 +25,7 @@ tABC_CC ABC_LoginPinExists(const char *szUserName,
                            bool *pbExists,
                            tABC_Error *pError);
 
-tABC_CC ABC_LoginPinDelete(const char *szUserName,
+tABC_CC ABC_LoginPinDelete(const Lobby &lobby,
                            tABC_Error *pError);
 
 tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,

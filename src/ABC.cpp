@@ -1010,7 +1010,11 @@ tABC_CC ABC_PinLoginDelete(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_RET(ABC_LoginPinDelete(szUserName, pError));
+    {
+        std::shared_ptr<Lobby> lobby;
+        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_CHECK_RET(ABC_LoginPinDelete(*lobby, pError));
+    }
 
 exit:
     return cc;

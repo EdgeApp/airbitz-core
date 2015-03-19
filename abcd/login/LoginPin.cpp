@@ -14,6 +14,7 @@
 #include "../crypto/Random.hpp"
 #include "../json/JsonBox.hpp"
 #include "../json/JsonObject.hpp"
+#include "../util/FileIO.hpp"
 #include "../util/Json.hpp"
 #include "../util/Util.hpp"
 
@@ -68,17 +69,16 @@ exit:
 /**
  * Deletes the local copy of the PIN-based login data.
  */
-tABC_CC ABC_LoginPinDelete(const char *szUserName,
+tABC_CC ABC_LoginPinDelete(const Lobby &lobby,
                            tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    std::string fixed;
-    std::string directory;
 
-    ABC_CHECK_NEW(Lobby::fixUsername(fixed, szUserName), pError);
-    directory = loginDirFind(szUserName);
-    if (!directory.empty())
-        ABC_CHECK_RET(ABC_LoginDirFileDelete(directory, PIN_FILENAME, pError));
+    if (!lobby.dir().empty())
+    {
+        std::string filename = lobby.dir() + PIN_FILENAME;
+        ABC_CHECK_RET(ABC_FileIODeleteFile(filename.c_str(), pError));
+    }
 
 exit:
     return cc;
@@ -134,7 +134,7 @@ exit:
     if (ABC_CC_PinExpired == cc)
     {
         tABC_Error error;
-        ABC_LoginPinDelete(lobby->username().c_str(), &error);
+        ABC_LoginPinDelete(*lobby, &error);
     }
 
     return cc;
