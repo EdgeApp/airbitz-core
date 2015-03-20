@@ -27,7 +27,7 @@ struct PluginDataFile:
 static std::string
 pluginsDirectory(const Login &login)
 {
-    return login.syncDir() + "/Plugins/";
+    return login.syncDir() + "Plugins/";
 }
 
 static std::string
