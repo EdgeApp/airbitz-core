@@ -5,96 +5,68 @@
  * See the LICENSE file for more information.
  */
 
-#include "Commands.hpp"
-#include "Otp.hpp"
-#include "Plugin.hpp"
-#include "../abcd/util/Util.hpp"
-#include <stdio.h>
+#include "Command.hpp"
+#include "../src/LoginShim.hpp"
 #include <iostream>
-#include <string>
 
 using namespace abcd;
 
 #define CA_CERT "./cli/ca-certificates.crt"
-
-static Status
-showVersion()
-{
-    AutoString version;
-    ABC_CHECK_OLD(ABC_Version(&version.get(), &error));
-    std::cout << "ABC version: " << version.get() << std::endl;
-    return Status();
-}
 
 /**
  * The main program body.
  */
 static Status run(int argc, char *argv[])
 {
-    std::string program = argv[0];
-    if (argc == 1)
-        return showVersion();
-    if (argc < 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: " + program + " <dir> <command> ...\n");
+    if (argc < 2)
+    {
+        CommandRegistry::print();
+        return Status();
+    }
 
-    unsigned char seed[] = {1, 2, 3};
-    ABC_CHECK_OLD(ABC_Initialize(argv[1], CA_CERT, seed, sizeof(seed), &error));
+    // Find the command:
+    Command *command = CommandRegistry::find(argv[1]);
+    if (!command)
+        return ABC_ERROR(ABC_CC_Error, "unknown command " + std::string(argv[1]));
 
-    std::string command = argv[2];
-    ABC_CHECK(
-        // Command.cpp:
-        command == "account-available"  ? accountAvailable(argc-3, argv+3) :
-        command == "account-decrypt"    ? accountDecrypt(argc-3, argv+3) :
-        command == "account-encrypt"    ? accountEncrypt(argc-3, argv+3) :
-        command == "add-category"       ? addCategory(argc-3, argv+3) :
-        command == "change-password"    ? changePassword(argc-3, argv+3) :
-        command == "check-password"     ? checkPassword(argc-3, argv+3) :
-        command == "check-recovery-answers" ? checkRecoveryAnswers(argc-3, argv+3) :
-        command == "create-account"     ? createAccount(argc-3, argv+3) :
-        command == "create-wallet"      ? createWallet(argc-3, argv+3) :
-        command == "data-sync"          ? dataSync(argc-3, argv+3) :
-        command == "generate-addresses" ? generateAddresses(argc-3, argv+3) :
-        command == "get-bitcoin-seed"   ? getBitcoinSeed(argc-3, argv+3) :
-        command == "get-categories"     ? getCategories(argc-3, argv+3) :
-        command == "get-exchange-rate"  ? getExchangeRate(argc-3, argv+3) :
-        command == "get-question-choices" ? getQuestionChoices(argc-3, argv+3) :
-        command == "get-questions"      ? getQuestions(argc-3, argv+3) :
-        command == "get-settings"       ? getSettings(argc-3, argv+3) :
-        command == "get-wallet-info"    ? getWalletInfo(argc-3, argv+3) :
-        command == "list-accounts"      ? listAccounts(argc-3, argv+3) :
-        command == "list-wallets"       ? listWallets(argc-3, argv+3) :
-        command == "pin-login"          ? pinLogin(argc-3, argv+3) :
-        command == "pin-login-setup"    ? pinLoginSetup(argc-3, argv+3) :
-        command == "recovery-reminder-set" ? recoveryReminderSet(argc-3, argv+3) :
-        command == "remove-category"    ? removeCategory(argc-3, argv+3) :
-        command == "search-bitcoin-seed" ? searchBitcoinSeed(argc-3, argv+3) :
-        command == "set-nickname"       ? setNickname(argc-3, argv+3) :
-        command == "sign-in"            ? signIn(argc-3, argv+3) :
-        command == "upload-logs"        ? uploadLogs(argc-3, argv+3) :
-        command == "wallet-archive"     ? walletArchive(argc-3, argv+3) :
-        command == "wallet-decrypt"     ? walletDecrypt(argc-3, argv+3) :
-        command == "wallet-encrypt"     ? walletEncrypt(argc-3, argv+3) :
-        command == "wallet-get-address" ? walletGetAddress(argc-3, argv+3) :
-        command == "wallet-order"       ? walletOrder(argc-3, argv+3) :
-        // Otp.cpp:
-        command == "otp-key-get"        ? otpKeyGet(argc-3, argv+3) :
-        command == "otp-key-set"        ? otpKeySet(argc-3, argv+3) :
-        command == "otp-key-remove"     ? otpKeyRemove(argc-3, argv+3) :
-        command == "otp-auth-get"       ? otpAuthGet(argc-3, argv+3) :
-        command == "otp-auth-set"       ? otpAuthSet(argc-3, argv+3) :
-        command == "otp-auth-remove"    ? otpAuthRemove(argc-3, argv+3) :
-        command == "otp-reset-get"      ? otpResetGet(argc-3, argv+3) :
-        command == "otp-reset-remove"   ? otpResetRemove(argc-3, argv+3) :
-        // Plugin.cpp:
-        command == "plugin-get"        ? pluginGet(argc-3, argv+3) :
-        command == "plugin-set"        ? pluginSet(argc-3, argv+3) :
-        command == "plugin-remove"     ? pluginRemove(argc-3, argv+3) :
-        command == "plugin-clear"      ? pluginClear(argc-3, argv+3) :
-        // Washer.cpp:
-        command == "washer"             ? washer(argc-3, argv+3) :
-        ABC_ERROR(ABC_CC_Error, "unknown command " + command));
+    // Populate the session up to the required level:
+    Session session;
+    if (InitLevel::context <= command->level())
+    {
+        if (argc < 3)
+            return ABC_ERROR(ABC_CC_Error, std::string("No working directory given"));
 
-    ABC_CHECK_OLD(ABC_ClearKeyCache(&error));
+        unsigned char seed[] = {1, 2, 3};
+        ABC_CHECK_OLD(ABC_Initialize(argv[2], CA_CERT, seed, sizeof(seed), &error));
+    }
+    if (InitLevel::lobby <= command->level())
+    {
+        if (argc < 4)
+            return ABC_ERROR(ABC_CC_Error, std::string("No username given"));
+
+        ABC_CHECK(cacheLobby(session.lobby, argv[3]));
+    }
+    if (InitLevel::login <= command->level())
+    {
+        if (argc < 5)
+            return ABC_ERROR(ABC_CC_Error, std::string("No password given"));
+
+        ABC_CHECK_OLD(ABC_SignIn(argv[3], argv[4], &error));
+        ABC_CHECK(cacheLogin(session.login, argv[3]));
+    }
+    if (InitLevel::wallet <= command->level())
+    {
+        if (argc < 6)
+            return ABC_ERROR(ABC_CC_Error, std::string("No wallet name given"));
+
+        session.uuid = argv[5];
+    }
+
+    // Invoke the command:
+    ABC_CHECK((*command)(session, argc-3, argv+3));
+
+    // Clean up:
+    ABC_Terminate();
     return Status();
 }
 

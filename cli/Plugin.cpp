@@ -5,14 +5,14 @@
  * See the LICENSE file for more information.
  */
 
-#include "Commands.hpp"
+#include "Command.hpp"
 #include "../abcd/util/Util.hpp"
 #include "../src/ABC.h"
 #include <iostream>
 
 using namespace abcd;
 
-Status pluginGet(int argc, char *argv[])
+COMMAND(InitLevel::account, PluginGet, "plugin-get")
 {
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... plugin-get <user> <pass> <plugin> <key>");
@@ -22,7 +22,7 @@ Status pluginGet(int argc, char *argv[])
     return Status();
 }
 
-Status pluginSet(int argc, char *argv[])
+COMMAND(InitLevel::account, PluginSet, "plugin-set")
 {
     if (argc != 5)
         return ABC_ERROR(ABC_CC_Error, "usage: ... plugin-set <user> <pass> <plugin> <key> <value>");
@@ -30,7 +30,7 @@ Status pluginSet(int argc, char *argv[])
     return Status();
 }
 
-Status pluginRemove(int argc, char *argv[])
+COMMAND(InitLevel::account, PluginRemove, "plugin-remove")
 {
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... plugin-remove <user> <pass> <plugin> <key>");
@@ -38,7 +38,7 @@ Status pluginRemove(int argc, char *argv[])
     return Status();
 }
 
-Status pluginClear(int argc, char *argv[])
+COMMAND(InitLevel::account, PluginClear, "plugin-clear")
 {
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... plugin-clear <user> <pass> <plugin>");

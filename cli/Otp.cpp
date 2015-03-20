@@ -5,15 +5,14 @@
  * See the LICENSE file for more information.
  */
 
-#include "Otp.hpp"
+#include "Command.hpp"
 #include "../abcd/util/Util.hpp"
 #include "../src/ABC.h"
 #include <iostream>
 
 using namespace abcd;
 
-Status
-otpKeyGet(int argc, char *argv[])
+COMMAND(InitLevel::lobby, OtpKeyGet, "otp-key-get")
 {
     if (argc != 1)
         return ABC_ERROR(ABC_CC_Error, "usage: ... otp-key-get <user>");
@@ -25,8 +24,7 @@ otpKeyGet(int argc, char *argv[])
     return Status();
 }
 
-Status
-otpKeySet(int argc, char *argv[])
+COMMAND(InitLevel::lobby, OtpKeySet, "otp-key-set")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... otp-key-set <user> <key>");
@@ -36,8 +34,7 @@ otpKeySet(int argc, char *argv[])
     return Status();
 }
 
-Status
-otpKeyRemove(int argc, char *argv[])
+COMMAND(InitLevel::lobby, OtpKeyRemove, "otp-key-remove")
 {
     if (argc != 1)
         return ABC_ERROR(ABC_CC_Error, "usage: ... otp-key-remove <user>");
@@ -47,8 +44,7 @@ otpKeyRemove(int argc, char *argv[])
     return Status();
 }
 
-Status
-otpAuthGet(int argc, char *argv[])
+COMMAND(InitLevel::login, OtpAuthGet, "otp-auth-get")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... otp-auth-get <user> <pass>");
@@ -64,8 +60,7 @@ otpAuthGet(int argc, char *argv[])
     return Status();
 }
 
-Status
-otpAuthSet(int argc, char *argv[])
+COMMAND(InitLevel::login, OtpAuthSet, "otp-auth-set")
 {
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... otp-auth-set <user> <pass> <timeout-sec>");
@@ -75,8 +70,7 @@ otpAuthSet(int argc, char *argv[])
     return Status();
 }
 
-Status
-otpAuthRemove(int argc, char *argv[])
+COMMAND(InitLevel::login, OtpAuthRemove, "otp-auth-remove")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... otp-auth-remove <user> <pass>");
@@ -87,8 +81,7 @@ otpAuthRemove(int argc, char *argv[])
     return Status();
 }
 
-Status
-otpResetGet(int argc, char *argv[])
+COMMAND(InitLevel::context, OtpResetGet, "otp-reset-get")
 {
     if (argc != 0)
         return ABC_ERROR(ABC_CC_Error, "usage: ... otp-reset-get");
@@ -100,8 +93,7 @@ otpResetGet(int argc, char *argv[])
     return Status();
 }
 
-Status
-otpResetRemove(int argc, char *argv[])
+COMMAND(InitLevel::login, OtpResetRemove, "otp-reset-remove")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... otp-reset-remove <user> <pass>");
