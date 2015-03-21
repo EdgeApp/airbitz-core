@@ -46,7 +46,8 @@ otpAuthRemove(Login &login);
  * Returns the reset status for a group of accounts.
  */
 Status
-otpResetGet(std::list<DataChunk> authIds, std::list<bool> &result);
+otpResetGet(std::list<std::string> &result,
+    const std::list<std::string> &usernames);
 
 /**
  * Launches an OTP reset timer on the server,
