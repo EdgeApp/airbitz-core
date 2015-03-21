@@ -37,7 +37,7 @@ extern std::shared_ptr<Lobby> gLobbyCache;
 
 struct AccountAvailableJson: public JsonObject
 {
-    ABC_JSON_STRING(L1, "l1", nullptr)
+    ABC_JSON_STRING(authId, "l1", nullptr)
 };
 
 static std::string gOtpResetAuth;
@@ -185,7 +185,7 @@ tABC_CC ABC_LoginServerAvailable(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(L1);
 
     // create the json
-    ABC_CHECK_NEW(json.setL1(base64Encode(L1).c_str()), pError);
+    ABC_CHECK_NEW(json.authIdSet(base64Encode(L1).c_str()), pError);
     ABC_CHECK_NEW(json.encode(get), pError);
     ABC_DebugLog("Server URL: %s, Data: %.50s", url.c_str(), get.c_str());
 

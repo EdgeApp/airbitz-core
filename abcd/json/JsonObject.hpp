@@ -22,19 +22,7 @@ class JsonObject:
 public:
     ABC_JSON_CONSTRUCTORS(JsonObject, JsonPtr)
 
-    /**
-     * Returns true if the object contains a key with the given type.
-     */
-    Status
-    hasValue(const char *key, json_type type) const;
-
-    /**
-     * Reads a JSON key-value pair from the object.
-     * @return nullptr if there is no value with that key. Do not free.
-     */
-    json_t *
-    getValue(const char *key) const;
-
+protected:
     /**
      * Writes a key-value pair to the root object,
      * creating the root if necessary.
@@ -58,30 +46,29 @@ public:
 
 // Helper macros for implementing JsonObject child classes:
 
-#define ABC_JSON_VALUE(name, key, type) \
-    abcd::Status has##name() const              { return hasValue(key, type); } \
-    json_t *get##name() const                   { return getValue(key); } \
-    abcd::Status set##name(json_t *value)       { return setValue(key, value); }
+#define ABC_JSON_VALUE(name, key, Type) \
+    Type name() const                           { return Type(json_incref(json_object_get(root_, key))); } \
+    abcd::Status name##Set(const JsonPtr &value){ return setValue(key, json_incref(value.get())); }
 
 #define ABC_JSON_STRING(name, key, fallback) \
-    abcd::Status has##name() const              { return hasString(key); } \
-    const char *get##name() const               { return getString(key, fallback); } \
-    abcd::Status set##name(const char *value)   { return setValue(key, json_string(value)); }
+    const char *name() const                    { return getString(key, fallback); } \
+    abcd::Status name##Ok() const               { return hasString(key); } \
+    abcd::Status name##Set(const char *value)   { return setValue(key, json_string(value)); }
 
 #define ABC_JSON_NUMBER(name, key, fallback) \
-    abcd::Status has##name() const              { return hasNumber(key); } \
-    double get##name() const                    { return getNumber(key, fallback); } \
-    abcd::Status set##name(double value)        { return setValue(key, json_real(value)); }
+    double name() const                         { return getNumber(key, fallback); } \
+    abcd::Status name##Ok() const               { return hasNumber(key); } \
+    abcd::Status name##Set(double value)        { return setValue(key, json_real(value)); }
 
 #define ABC_JSON_BOOLEAN(name, key, fallback) \
-    abcd::Status has##name() const              { return hasBoolean(key); } \
-    bool get##name() const                      { return getBoolean(key, fallback); } \
-    abcd::Status set##name(bool value)          { return setValue(key, json_boolean(value)); }
+    bool name() const                           { return getBoolean(key, fallback); } \
+    abcd::Status name##Ok() const               { return hasBoolean(key); } \
+    abcd::Status name##Set(bool value)          { return setValue(key, json_boolean(value)); }
 
 #define ABC_JSON_INTEGER(name, key, fallback) \
-    abcd::Status has##name() const              { return hasInteger(key); } \
-    json_int_t get##name() const                { return getInteger(key, fallback); } \
-    abcd::Status set##name(json_int_t value)    { return setValue(key, json_integer(value)); }
+    json_int_t name() const                     { return getInteger(key, fallback); } \
+    abcd::Status name##Ok() const               { return hasInteger(key); } \
+    abcd::Status name##Set(json_int_t value)    { return setValue(key, json_integer(value)); }
 
 } // namespace abcd
 

@@ -9,31 +9,11 @@
 
 namespace abcd {
 
-#define IMPLEMENT_HAS(test) \
-    json_t *value = json_object_get(root_, key); \
-    if (!value) \
-        return ABC_ERROR(ABC_CC_JSONError, "Bad JSON value for " + std::string(key)); \
-    if (!(test)) \
-        return ABC_ERROR(ABC_CC_JSONError, "Bad JSON value for " + std::string(key)); \
-    return Status();
-
-Status
-JsonObject::hasValue(const char *key, json_type type) const
-{
-    IMPLEMENT_HAS(json_typeof(value) == type)
-}
-
-json_t *
-JsonObject::getValue(const char *key) const
-{
-    return json_object_get(root_, key);
-}
-
 Status
 JsonObject::setValue(const char *key, json_t *value)
 {
-    if (!root_)
-        root_ = json_object();
+    if (!json_is_object(root_))
+        reset(json_object());
     if (!root_)
         return ABC_ERROR(ABC_CC_JSONError, "Cannot create root object.");
     if (json_object_set_new(root_, key, value) < 0)
@@ -41,14 +21,20 @@ JsonObject::setValue(const char *key, json_t *value)
     return Status();
 }
 
+#define IMPLEMENT_HAS(test) \
+    json_t *value = json_object_get(root_, key); \
+    if (!value || !(test)) \
+        return ABC_ERROR(ABC_CC_JSONError, "Bad JSON value for " + std::string(key)); \
+    return Status();
+
 Status
-JsonObject::hasString (const char *key) const
+JsonObject::hasString(const char *key) const
 {
     IMPLEMENT_HAS(json_is_string(value))
 }
 
 Status
-JsonObject::hasNumber (const char *key) const
+JsonObject::hasNumber(const char *key) const
 {
     IMPLEMENT_HAS(json_is_number(value))
 }

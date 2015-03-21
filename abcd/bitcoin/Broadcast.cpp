@@ -28,7 +28,7 @@ curlWriteData(void *data, size_t memberSize, size_t numMembers, void *userData)
 
 struct ChainPost: public JsonObject
 {
-    ABC_JSON_STRING(Hex, "hex", nullptr);
+    ABC_JSON_STRING(hex, "hex", nullptr);
 };
 
 static Status
@@ -39,7 +39,7 @@ chainPostTx(DataSlice tx)
         "https://api.chain.com/v1/bitcoin/transactions";
 
     ChainPost object;
-    object.setHex(base16Encode(tx).c_str());
+    object.hexSet(base16Encode(tx).c_str());
     std::string body;
     ABC_CHECK(object.encode(body));
 

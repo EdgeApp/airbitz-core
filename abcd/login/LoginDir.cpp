@@ -20,7 +20,7 @@ namespace abcd {
 struct UsernameFile:
     public JsonObject
 {
-    ABC_JSON_STRING(Username, "userName", nullptr)
+    ABC_JSON_STRING(username, "userName", nullptr)
 };
 
 #define ACCOUNT_DIR                             "Accounts"
@@ -48,9 +48,9 @@ readUsername(const std::string &directory, std::string &result)
 {
     UsernameFile f;
     ABC_CHECK(f.load(directory + ACCOUNT_NAME_FILENAME));
-    ABC_CHECK(f.hasUsername());
+    ABC_CHECK(f.usernameOk());
 
-    result = f.getUsername();
+    result = f.username();
     return Status();
 }
 
@@ -162,7 +162,7 @@ tABC_CC ABC_LoginDirCreate(std::string &directory,
     ABC_CHECK_NEW(fileEnsureDir(directory), pError);
 
     // Write user name:
-    ABC_CHECK_NEW(f.setUsername(szUserName), pError);
+    ABC_CHECK_NEW(f.usernameSet(szUserName), pError);
     ABC_CHECK_NEW(f.save(directory + ACCOUNT_NAME_FILENAME), pError);
 
 exit:
