@@ -9,10 +9,9 @@
 #include "../abcd/Wallet.hpp"
 #include "../abcd/account/Account.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
-#include "../abcd/crypto/Crypto.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/exchange/Exchange.hpp"
-#include "../abcd/json/JsonPtr.hpp"
+#include "../abcd/json/JsonBox.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Util.hpp"
@@ -35,13 +34,12 @@ COMMAND(InitLevel::account, AccountDecrypt, "account-decrypt")
         return ABC_ERROR(ABC_CC_Error, "usage: ... account-decrypt <user> <pass> <filename>\n"
             "note: The filename is account-relative.");
 
-    std::string file = session.login->syncDir() + argv[2];
+    JsonBox box;
+    ABC_CHECK(box.load(session.login->syncDir() + argv[2]));
 
-    AutoU08Buf data;
-    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(file.c_str(),
-        toU08Buf(session.login->dataKey()), &data, &error));
-    fwrite(data.p, data.end - data.p, 1, stdout);
-    printf("\n");
+    DataChunk data;
+    ABC_CHECK(box.decrypt(data, session.login->dataKey()));
+    std::cout << toString(data) << std::endl;
 
     return Status();
 }
@@ -55,13 +53,11 @@ COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt")
     DataChunk contents;
     ABC_CHECK(fileLoad(contents, session.login->syncDir() + argv[2]));
 
-    json_t *encrypted;
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents),
-        toU08Buf(session.login->dataKey()), ABC_CryptoType_AES256,
-        &encrypted, &error));
+    JsonBox box;
+    ABC_CHECK(box.encrypt(contents, session.login->dataKey()));
 
     std::string str;
-    ABC_CHECK(JsonPtr(encrypted).encode(str));
+    ABC_CHECK(box.encode(str));
     std::cout << str << std::endl;
 
     return Status();
@@ -344,23 +340,19 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
         &uuids.data, &uuids.size, &error));
     for (unsigned i = 0; i < uuids.size; ++i)
     {
-        // Print the UUID:
-        printf("%s: ", uuids.data[i]);
-
-        // Get wallet name filename:
         AutoString szDir;
         ABC_CHECK_OLD(ABC_WalletGetDirName(&szDir.get(), uuids.data[i], &error));
-        std::string filename = szDir.get();
-        filename += "/sync/WalletName.json";
 
-        // Print wallet name:
-        AutoU08Buf data;
+        JsonBox box;
+        ABC_CHECK(box.load(std::string(szDir.get()) + "/sync/WalletName.json"));
+
         AutoAccountWalletInfo info;
         ABC_CHECK_OLD(ABC_AccountWalletLoad(*session.login, uuids.data[i], &info, &error));
-        ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(filename.c_str(),
-            info.MK, &data, &error));
-        fwrite(data.p, data.end - data.p, 1, stdout);
-        printf("\n");
+
+        DataChunk data;
+        ABC_CHECK(box.decrypt(data, info.MK));
+
+        std::cout << uuids.data[i] << ": " << toString(data) << std::endl;
     }
 
     return Status();
@@ -523,9 +515,12 @@ COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
     AutoAccountWalletInfo info;
     ABC_CHECK_OLD(ABC_AccountWalletLoad(*session.login, argv[2], &info, &error));
 
-    AutoU08Buf data;
-    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(argv[3], info.MK, &data, &error));
-    fwrite(data.p, data.end - data.p, 1, stdout);
+    JsonBox box;
+    ABC_CHECK(box.load(argv[3]));
+
+    DataChunk data;
+    ABC_CHECK(box.decrypt(data, info.MK));
+    std::cout << toString(data) << std::endl;
     printf("\n");
 
     return Status();
@@ -542,12 +537,11 @@ COMMAND(InitLevel::wallet, WalletEncrypt, "wallet-encrypt")
     DataChunk contents;
     ABC_CHECK(fileLoad(contents, argv[3]));
 
-    json_t *encrypted;
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents), info.MK,
-        ABC_CryptoType_AES256, &encrypted, &error));
+    JsonBox box;
+    ABC_CHECK(box.encrypt(contents, info.MK));
 
     std::string str;
-    ABC_CHECK(JsonPtr(encrypted).encode(str));
+    ABC_CHECK(box.encode(str));
     std::cout << str << std::endl;
 
     return Status();

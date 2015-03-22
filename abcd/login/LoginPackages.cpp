@@ -6,8 +6,8 @@
  */
 
 #include "LoginPackages.hpp"
-#include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
+#include "../json/JsonBox.hpp"
 #include "../util/Json.hpp"
 #include "../util/Util.hpp"
 
@@ -285,10 +285,12 @@ tABC_CC ABC_LoginPackageGetSyncKey(tABC_LoginPackage *pSelf,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoU08Buf SyncKey;
 
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pSelf->ESyncKey, MK, &SyncKey, pError));
-    ABC_STRDUP(*pszSyncKey, base16Encode(U08Buf(SyncKey)).c_str());
+    DataChunk syncKey;
+
+    JsonBox box(pSelf->ESyncKey);
+    ABC_CHECK_NEW(box.decrypt(syncKey, MK), pError);
+    ABC_STRDUP(*pszSyncKey, base16Encode(syncKey).c_str());
 
 exit:
     return cc;

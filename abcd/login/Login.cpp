@@ -9,9 +9,9 @@
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
+#include "../json/JsonBox.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Sync.hpp"
 #include "../util/Util.hpp"
@@ -89,8 +89,9 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     AutoU08Buf           LP;
     AutoU08Buf           LP1;
     AutoU08Buf           LP2;
-    DataChunk dataKey;
+    DataChunk dataKey;          // Unlocks the account
     DataChunk syncKey;
+    JsonBox box;
 
     // Set up packages:
     ABC_CHECK_RET(ABC_CarePackageNew(&pCarePackage, pError));
@@ -107,17 +108,17 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
 
     // Set up EMK_LP2:
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(dataKey), LP2,
-        ABC_CryptoType_AES256, &pLoginPackage->EMK_LP2, pError));
+    ABC_CHECK_NEW(box.encrypt(dataKey, U08Buf(LP2)), pError);
+    pLoginPackage->EMK_LP2 = json_incref(box.get());
 
     // Set up ESyncKey:
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(syncKey), toU08Buf(dataKey),
-        ABC_CryptoType_AES256, &pLoginPackage->ESyncKey, pError));
+    ABC_CHECK_NEW(box.encrypt(syncKey, dataKey), pError);
+    pLoginPackage->ESyncKey = json_incref(box.get());
 
     // Set up ELP1:
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP1, &LP1, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LP1, toU08Buf(dataKey),
-        ABC_CryptoType_AES256, &pLoginPackage->ELP1, pError));
+    ABC_CHECK_NEW(box.encrypt(U08Buf(LP1), dataKey), pError);
+    pLoginPackage->ELP1 = json_incref(box.get());
 
     // Create the account and repo on server:
     ABC_CHECK_RET(ABC_LoginServerCreate(toU08Buf(lobby->authId()), LP1,
@@ -155,11 +156,13 @@ tABC_CC ABC_LoginGetServerKeys(Login &login,
     tABC_CC cc = ABC_CC_Ok;
     tABC_CarePackage *pCarePackage = NULL;
     tABC_LoginPackage *pLoginPackage = NULL;
+    DataChunk authKey;          // Unlocks the server
 
     ABC_BUF_DUP(*pL1, toU08Buf(login.lobby().authId()));
 
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLoginPackage->ELP1, toU08Buf(login.dataKey()), pLP1, pError));
+    ABC_CHECK_NEW(JsonBox(json_incref(pLoginPackage->ELP1)).decrypt(authKey, login.dataKey()), pError);
+    ABC_BUF_DUP(*pLP1, toU08Buf(authKey));
 
 exit:
     ABC_CarePackageFree(pCarePackage);

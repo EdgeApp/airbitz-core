@@ -10,9 +10,9 @@
 #include "Login.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
+#include "../json/JsonBox.hpp"
 #include "../util/Json.hpp"
 #include "../util/Util.hpp"
 #include <jansson.h>
@@ -156,19 +156,18 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    json_error_t je;
 
     std::unique_ptr<Login> login;
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
     tABC_PinLocal       *pLocal         = NULL;
-    json_t              *pEPINK         = NULL;
     char *              szEPINK         = NULL;
     AutoU08Buf          LPIN;
     AutoU08Buf          LPIN1;
     AutoU08Buf          LPIN2;
-    AutoU08Buf          PINK;
-    AutoU08Buf          MK;
+    DataChunk pinKey;           // Unlocks dataKey
+    DataChunk dataKey;          // Unlocks the account
+    JsonBox pinKeyBox;          // Holds pinKey
 
     // Load the packages:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), &pCarePackage, &pLoginPackage, pError));
@@ -181,16 +180,14 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
 
     // Get EPINK from the server:
     ABC_CHECK_RET(ABC_LoginServerGetPinPackage(toU08Buf(pLocal->DID), LPIN1, &szEPINK, pError));
-    pEPINK = json_loads(szEPINK, 0, &je);
-    ABC_CHECK_ASSERT(pEPINK != NULL && json_is_object(pEPINK),
-        ABC_CC_JSONError, "Error parsing EPINK JSON");
+    ABC_CHECK_NEW(pinKeyBox.decode(szEPINK), pError);
 
     // Decrypt MK:
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pEPINK, LPIN2, &PINK, pError));
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLocal->pEMK_PINK, PINK, &MK, pError));
+    ABC_CHECK_NEW(pinKeyBox.decrypt(pinKey, U08Buf(LPIN2)), pError);
+    ABC_CHECK_NEW(JsonBox(json_incref(pLocal->pEMK_PINK)).decrypt(dataKey, pinKey), pError);
 
     // Create the Login object:
-    login.reset(new Login(lobby, static_cast<U08Buf>(MK)));
+    login.reset(new Login(lobby, dataKey));
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
     result.reset(login.release());
 
@@ -198,7 +195,6 @@ exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
     ABC_LoginPinLocalFree(pLocal);
-    if (pEPINK)         json_decref(pEPINK);
     ABC_FREE_STR(szEPINK);
 
     if (ABC_CC_PinExpired == cc)
@@ -222,18 +218,18 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
-    json_t              *pEMK_PINK      = NULL;
-    json_t              *pEPINK         = NULL;
     json_t              *pLocal         = NULL;
-    char *              szEPINK         = NULL;
     char *              szLocal         = NULL;
     AutoU08Buf          L1;
     AutoU08Buf          LP1;
     AutoU08Buf          LPIN;
     AutoU08Buf          LPIN1;
     AutoU08Buf          LPIN2;
-    DataChunk PINK;
-    DataChunk DID;
+    DataChunk pinAuthId;
+    DataChunk pinKey;           // Unlocks dataKey
+    JsonBox pinKeyBox;          // Holds pinKey
+    JsonBox pinBox;             // Holds dataKey
+    std::string str;
 
     // Get login stuff:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
@@ -245,28 +241,25 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LPIN, pCarePackage->pSNRP2, &LPIN2, pError));
 
     // Set up PINK stuff:
-    ABC_CHECK_NEW(randomData(PINK, KEY_LENGTH), pError);
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.dataKey()), toU08Buf(PINK),
-        ABC_CryptoType_AES256, &pEMK_PINK, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(PINK), LPIN2,
-        ABC_CryptoType_AES256, &pEPINK, pError));
-    szEPINK = ABC_UtilStringFromJSONObject(pEPINK, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-    ABC_CHECK_NULL(szEPINK);
+    ABC_CHECK_NEW(randomData(pinKey, KEY_LENGTH), pError);
+    ABC_CHECK_NEW(pinBox.encrypt(login.dataKey(), pinKey), pError);
+    ABC_CHECK_NEW(pinKeyBox.encrypt(pinKey, U08Buf(LPIN2)), pError);
 
     // Set up DID:
-    ABC_CHECK_NEW(randomData(DID, KEY_LENGTH), pError);
+    ABC_CHECK_NEW(randomData(pinAuthId, KEY_LENGTH), pError);
 
     // Set up the local file:
     pLocal = json_pack("{s:O, s:s, s:I}",
-        JSON_LOCAL_EMK_PINK_FIELD, pEMK_PINK,
-        JSON_LOCAL_DID_FIELD, base64Encode(DID).c_str(),
+        JSON_LOCAL_EMK_PINK_FIELD, pinBox.get(),
+        JSON_LOCAL_DID_FIELD, base64Encode(pinAuthId).c_str(),
         JSON_LOCAL_EXPIRES_FIELD, (json_int_t)expires);
     ABC_CHECK_NULL(pLocal);
     szLocal = ABC_UtilStringFromJSONObject(pLocal, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
     ABC_CHECK_NULL(szLocal);
 
     // Set up the server:
-    ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(L1, LP1, toU08Buf(DID), LPIN1, szEPINK, expires, pError));
+    ABC_CHECK_NEW(pinKeyBox.encode(str), pError);
+    ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(L1, LP1, toU08Buf(pinAuthId), LPIN1, str, expires, pError));
 
     // Save the local file
     ABC_CHECK_RET(ABC_LoginDirFileSave(szLocal, login.lobby().dir(), PIN_FILENAME, pError));
@@ -274,10 +267,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 exit:
     ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
-    if (pEMK_PINK)      json_decref(pEMK_PINK);
-    if (pEPINK)         json_decref(pEPINK);
     if (pLocal)         json_decref(pLocal);
-    ABC_FREE_STR(szEPINK);
     ABC_FREE_STR(szLocal);
 
     return cc;

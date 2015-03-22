@@ -63,7 +63,7 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
                                         tABC_U08Buf LP1,
                                         tABC_U08Buf DID,
                                         tABC_U08Buf LPIN1,
-                                        char *szPinPackage,
+                                        const std::string &pinPackage,
                                         time_t ali,
                                         tABC_Error *pError);
 /**

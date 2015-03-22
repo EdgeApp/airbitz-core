@@ -10,7 +10,7 @@
 #include "Login.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "../crypto/Crypto.hpp"
+#include "../json/JsonBox.hpp"
 #include "../util/Util.hpp"
 
 namespace abcd {
@@ -28,7 +28,7 @@ tABC_CC ABC_LoginGetRQ(Lobby &lobby,
 
     tABC_CarePackage *pCarePackage = NULL;
     AutoU08Buf L4;
-    AutoU08Buf RQ;
+    DataChunk questions;
 
     // Load CarePackage:
     ABC_CHECK_RET(ABC_LoginServerGetCarePackage(toU08Buf(lobby.authId()), &pCarePackage, pError));
@@ -40,10 +40,9 @@ tABC_CC ABC_LoginGetRQ(Lobby &lobby,
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(toU08Buf(lobby.username()), pCarePackage->pSNRP4, &L4, pError));
 
     // Decrypt:
-    cc = ABC_CryptoDecryptJSONObject(pCarePackage->ERQ, L4, &RQ, pError);
-    if (ABC_CC_Ok == cc)
+    if (JsonBox(json_incref(pCarePackage->ERQ)).decrypt(questions, U08Buf(L4)))
     {
-        ABC_STRDUP(*pszRecoveryQuestions, (char *)ABC_BUF_PTR(RQ));
+        ABC_STRDUP(*pszRecoveryQuestions, toString(questions).c_str());
     }
     else
     {
@@ -74,7 +73,7 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     AutoU08Buf          LRA;
     AutoU08Buf          LRA1;
     AutoU08Buf          LRA3;
-    AutoU08Buf          MK;
+    DataChunk dataKey;          // Unlocks the account
 
     // Get the CarePackage:
     ABC_CHECK_RET(ABC_LoginServerGetCarePackage(toU08Buf(lobby->authId()), &pCarePackage, pError));
@@ -88,10 +87,10 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
 
     // Decrypt MK:
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pCarePackage->pSNRP3, &LRA3, pError));
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLoginPackage->EMK_LRA3, LRA3, &MK, pError));
+    ABC_CHECK_NEW(JsonBox(json_incref(pLoginPackage->EMK_LRA3)).decrypt(dataKey, U08Buf(LRA3)), pError);
 
     // Decrypt SyncKey:
-    login.reset(new Login(lobby, static_cast<U08Buf>(MK)));
+    login.reset(new Login(lobby, dataKey));
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
 
     // Set up the on-disk login:
@@ -126,6 +125,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     AutoU08Buf LRA;
     AutoU08Buf LRA1;
     AutoU08Buf LRA3;
+    JsonBox box;
 
     // Load the packages:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
@@ -145,25 +145,25 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(toU08Buf(login.lobby().username()), pCarePackage->pSNRP4, &L4, pError));
 
     // Update ERQ:
-    if (pCarePackage->ERQ) json_decref(pCarePackage->ERQ);
     ABC_BUF_DUP_PTR(RQ, (unsigned char *)szRecoveryQuestions, strlen(szRecoveryQuestions) + 1);
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(RQ, L4,
-        ABC_CryptoType_AES256, &pCarePackage->ERQ, pError));
+    ABC_CHECK_NEW(box.encrypt(U08Buf(RQ), U08Buf(L4)), pError);
+    if (pCarePackage->ERQ) json_decref(pCarePackage->ERQ);
+    pCarePackage->ERQ = json_incref(box.get());
 
     // LRA = L + RA:
     ABC_BUF_STRCAT(LRA, login.lobby().username().c_str(), szRecoveryAnswers);
 
     // Update EMK_LRA3:
-    if (pLoginPackage->EMK_LRA3) json_decref(pLoginPackage->EMK_LRA3);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pCarePackage->pSNRP3, &LRA3, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(login.dataKey()), LRA3,
-        ABC_CryptoType_AES256, &pLoginPackage->EMK_LRA3, pError));
+    ABC_CHECK_NEW(box.encrypt(login.dataKey(), U08Buf(LRA3)), pError);
+    if (pLoginPackage->EMK_LRA3) json_decref(pLoginPackage->EMK_LRA3);
+    pLoginPackage->EMK_LRA3 = json_incref(box.get());
 
     // Update ELRA1:
-    if (pLoginPackage->ELRA1) json_decref(pLoginPackage->ELRA1);
     ABC_CHECK_RET(ABC_CryptoScryptSNRP(LRA, pCarePackage->pSNRP1, &LRA1, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LRA1, toU08Buf(login.dataKey()),
-        ABC_CryptoType_AES256, &pLoginPackage->ELRA1, pError));
+    ABC_CHECK_NEW(box.encrypt(U08Buf(LRA1), login.dataKey()), pError);
+    if (pLoginPackage->ELRA1) json_decref(pLoginPackage->ELRA1);
+    pLoginPackage->ELRA1 = json_incref(box.get());
 
     // Change the server login:
     ABC_CHECK_RET(ABC_LoginServerChangePassword(oldL1, oldLP1,

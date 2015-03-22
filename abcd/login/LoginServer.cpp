@@ -252,7 +252,7 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     ABC_CHECK_NULL(pJSON_Root);
 
     // set up the recovery, if any:
-    if (ABC_BUF_PTR(newLRA1))
+    if (ABC_BUF_SIZE(newLRA1))
     {
         pJSON_NewLRA1 = json_string(base64Encode(newLRA1).c_str());
         json_object_set(pJSON_Root, ABC_SERVER_JSON_NEW_LRA1_FIELD, pJSON_NewLRA1);
@@ -470,7 +470,7 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
                                         tABC_U08Buf LP1,
                                         tABC_U08Buf DID,
                                         tABC_U08Buf LPIN1,
-                                        char *szPinPackage,
+                                        const std::string &pinPackage,
                                         time_t ali,
                                         tABC_Error *pError)
 {
@@ -500,7 +500,7 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
         ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
         ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1).c_str(),
-        JSON_ACCT_PIN_PACKAGE, szPinPackage,
+        JSON_ACCT_PIN_PACKAGE, pinPackage.c_str(),
         ABC_SERVER_JSON_ALI_FIELD, szALI);
     ABC_CHECK_NULL(pJSON_Root);
 
