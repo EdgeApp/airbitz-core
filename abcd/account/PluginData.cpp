@@ -53,6 +53,9 @@ pluginDataGet(const Login &login, const std::string &plugin,
     ABC_CHECK(json.keyOk());
     ABC_CHECK(json.dataOk());
 
+    if (json.key() != key)
+        return ABC_ERROR(ABC_CC_JSONError, "Plugin filename does not match contents");
+
     data = json.data();
     return Status();
 }
