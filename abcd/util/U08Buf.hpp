@@ -74,14 +74,6 @@ struct AutoU08Buf:
                                                     memcpy((dst).p, (src).p, __abc_buf_dup_size__); \
                                                 } \
                                             }
-#define ABC_BUF_STRCAT(dst, a, b)           { \
-                                                unsigned long __abc_buf_a_size__ = strlen(a); \
-                                                unsigned long __abc_buf_b_size__ = strlen(b); \
-                                                (dst).p = (unsigned char*)malloc(__abc_buf_a_size__ + __abc_buf_b_size__); \
-                                                (dst).end = (dst).p + __abc_buf_a_size__ + __abc_buf_b_size__; \
-                                                memcpy((dst).p, (a), __abc_buf_a_size__); \
-                                                memcpy((dst).p + __abc_buf_a_size__, (b), __abc_buf_b_size__); \
-                                            }
 #define ABC_BUF_DUP_PTR(buf, ptr, size)     { \
                                                 unsigned long __abc_buf_dup_size__ = (int) size; \
                                                 (buf).p = (unsigned char*)malloc(__abc_buf_dup_size__); \

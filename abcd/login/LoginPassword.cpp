@@ -18,7 +18,7 @@ namespace abcd {
 static
 tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
                               std::shared_ptr<Lobby> lobby,
-                              tABC_U08Buf LP,
+                              const char *szPassword,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -26,15 +26,16 @@ tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
     std::unique_ptr<Login> login;
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
-    AutoU08Buf          LP2;
+    DataChunk passwordKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
+    std::string LP = lobby->username() + szPassword;
 
     // Load the packages:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), &pCarePackage, &pLoginPackage, pError));
 
     // Decrypt MK:
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
-    ABC_CHECK_NEW(JsonBox(json_incref(pLoginPackage->EMK_LP2)).decrypt(dataKey, U08Buf(LP2)), pError);
+    ABC_CHECK_NEW(pCarePackage->snrp2.hash(passwordKey, LP), pError);
+    ABC_CHECK_NEW(JsonBox(json_incref(pLoginPackage->EMK_LP2)).decrypt(dataKey, passwordKey), pError);
 
     // Decrypt SyncKey:
     login.reset(new Login(lobby, dataKey));
@@ -51,7 +52,7 @@ exit:
 static
 tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
                                 std::shared_ptr<Lobby> lobby,
-                                tABC_U08Buf LP,
+                                const char *szPassword,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -60,20 +61,23 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
     tABC_U08Buf         LRA1            = ABC_BUF_NULL; // Do not free
-    AutoU08Buf          LP1;
-    AutoU08Buf          LP2;
+    DataChunk authKey;          // Unlocks the server
+    DataChunk passwordKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
+    std::string LP = lobby->username() + szPassword;
 
     // Get the CarePackage:
     ABC_CHECK_RET(ABC_LoginServerGetCarePackage(toU08Buf(lobby->authId()), &pCarePackage, pError));
 
     // Get the LoginPackage:
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP1, &LP1, pError));
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(toU08Buf(lobby->authId()), LP1, LRA1, &pLoginPackage, pError));
+    ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP), pError);
+    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(
+        toU08Buf(lobby->authId()), toU08Buf(authKey), LRA1,
+        &pLoginPackage, pError));
 
     // Decrypt MK:
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
-    ABC_CHECK_NEW(JsonBox(json_incref(pLoginPackage->EMK_LP2)).decrypt(dataKey, U08Buf(LP2)), pError);
+    ABC_CHECK_NEW(pCarePackage->snrp2.hash(passwordKey, LP), pError);
+    ABC_CHECK_NEW(JsonBox(json_incref(pLoginPackage->EMK_LP2)).decrypt(dataKey, passwordKey), pError);
 
     // Decrypt SyncKey:
     login.reset(new Login(lobby, dataKey));
@@ -105,15 +109,11 @@ tABC_CC ABC_LoginPassword(std::shared_ptr<Login> &result,
     tABC_CC cc = ABC_CC_Ok;
     tABC_Error error;
 
-    // LP = L + P:
-    AutoU08Buf LP;
-    ABC_BUF_STRCAT(LP, lobby->username().c_str(), szPassword);
-
     // Try the login both ways:
-    cc = ABC_LoginPasswordDisk(result, lobby, LP, &error);
+    cc = ABC_LoginPasswordDisk(result, lobby, szPassword, &error);
     if (ABC_CC_Ok != cc)
     {
-        ABC_CHECK_RET(ABC_LoginPasswordServer(result, lobby, LP, pError));
+        ABC_CHECK_RET(ABC_LoginPasswordServer(result, lobby, szPassword, pError));
     }
 
 exit:
@@ -135,10 +135,10 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     AutoU08Buf oldL1;
     AutoU08Buf oldLP1;
     DataChunk oldLRA1;
-    AutoU08Buf LP;
-    AutoU08Buf LP1;
-    AutoU08Buf LP2;
+    DataChunk authKey;          // Unlocks the server
+    DataChunk passwordKey;      // Unlocks dataKey
     JsonBox box;
+    std::string LP = login.lobby().username() + szPassword;
 
     // Load the packages:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
@@ -151,28 +151,23 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     }
 
     // Update SNRP2:
-    ABC_CryptoFreeSNRP(pCarePackage->pSNRP2);
-    pCarePackage->pSNRP2 = nullptr;
-    ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pCarePackage->pSNRP2, pError));
-
-    // LP = L + P:
-    ABC_BUF_STRCAT(LP, login.lobby().username().c_str(), szPassword);
+    ABC_CHECK_NEW(pCarePackage->snrp2.create(), pError);
 
     // Update EMK_LP2:
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
-    ABC_CHECK_NEW(box.encrypt(login.dataKey(), U08Buf(LP2)), pError);
+    ABC_CHECK_NEW(pCarePackage->snrp2.hash(passwordKey, LP), pError);
+    ABC_CHECK_NEW(box.encrypt(login.dataKey(), passwordKey), pError);
     json_decref(pLoginPackage->EMK_LP2);
     pLoginPackage->EMK_LP2 = json_incref(box.get());
 
     // Update ELP1:
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP1, &LP1, pError));
-    ABC_CHECK_NEW(box.encrypt(U08Buf(LP1), login.dataKey()), pError);
+    ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP), pError);
+    ABC_CHECK_NEW(box.encrypt(authKey, login.dataKey()), pError);
     json_decref(pLoginPackage->ELP1);
     pLoginPackage->ELP1 = json_incref(box.get());
 
     // Change the server login:
     ABC_CHECK_RET(ABC_LoginServerChangePassword(oldL1, oldLP1,
-        LP1, toU08Buf(oldLRA1), pCarePackage, pLoginPackage, pError));
+        toU08Buf(authKey), toU08Buf(oldLRA1), pCarePackage, pLoginPackage, pError));
 
     // Change the on-disk login:
     ABC_CHECK_RET(ABC_LoginDirSavePackages(login.lobby().dir(), pCarePackage, pLoginPackage, pError));
@@ -200,21 +195,18 @@ tABC_CC ABC_LoginPasswordOk(Login &login,
 
     tABC_CarePackage *pCarePackage = NULL;
     tABC_LoginPackage *pLoginPackage = NULL;
-    AutoU08Buf LP;
-    AutoU08Buf LP2;
+    DataChunk passwordKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
+    std::string LP = login.lobby().username() + szPassword;
 
     *pOk = false;
 
     // Load the packages:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
 
-    // LP = L + P:
-    ABC_BUF_STRCAT(LP, login.lobby().username().c_str(), szPassword);
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
-
     // Try to decrypt MK:
-    if (JsonBox(json_incref(pLoginPackage->EMK_LP2)).decrypt(dataKey, U08Buf(LP2)))
+    ABC_CHECK_NEW(pCarePackage->snrp2.hash(passwordKey, LP), pError);
+    if (JsonBox(json_incref(pLoginPackage->EMK_LP2)).decrypt(dataKey, passwordKey))
     {
         *pOk = true;
     }

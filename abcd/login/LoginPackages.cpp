@@ -35,13 +35,8 @@ void ABC_CarePackageFree(tABC_CarePackage *pSelf)
 {
     if (pSelf)
     {
-        ABC_CryptoFreeSNRP(pSelf->pSNRP1);
-        ABC_CryptoFreeSNRP(pSelf->pSNRP2);
-        ABC_CryptoFreeSNRP(pSelf->pSNRP3);
-        ABC_CryptoFreeSNRP(pSelf->pSNRP4);
         if (pSelf->ERQ)     json_decref(pSelf->ERQ);
-
-        ABC_CLEAR_FREE(pSelf, sizeof(tABC_CarePackage));
+        delete pSelf;
     }
 }
 
@@ -52,16 +47,14 @@ tABC_CC ABC_CarePackageNew(tABC_CarePackage **ppSelf,
                            tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_CarePackage *pSelf = NULL;
+    tABC_CarePackage *pSelf = new tABC_CarePackage;
 
-    // Allocate self:
-    ABC_NEW(pSelf, tABC_CarePackage);
+    pSelf->ERQ = nullptr;
 
     // Generate SNRP's:
-    ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSelf->pSNRP1, pError));
-    ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pSelf->pSNRP2, pError));
-    ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pSelf->pSNRP3, pError));
-    ABC_CHECK_RET(ABC_CryptoCreateSNRPForClient(&pSelf->pSNRP4, pError));
+    ABC_CHECK_NEW(pSelf->snrp2.create(), pError);
+    ABC_CHECK_NEW(pSelf->snrp3.create(), pError);
+    ABC_CHECK_NEW(pSelf->snrp4.create(), pError);
 
     *ppSelf = pSelf;
     pSelf = NULL;
@@ -80,15 +73,14 @@ tABC_CC ABC_CarePackageDecode(tABC_CarePackage **ppSelf,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_CarePackage *pSelf = NULL;
+    tABC_CarePackage *pSelf = new tABC_CarePackage;
     json_t  *pJSON_Root     = NULL;
     json_t  *pJSON_SNRP2    = NULL;
     json_t  *pJSON_SNRP3    = NULL;
     json_t  *pJSON_SNRP4    = NULL;
     int     e;
 
-    // Allocate self:
-    ABC_NEW(pSelf, tABC_CarePackage);
+    pSelf->ERQ = nullptr;
 
     // Parse the JSON:
     json_error_t error;
@@ -105,10 +97,9 @@ tABC_CC ABC_CarePackageDecode(tABC_CarePackage **ppSelf,
     ABC_CHECK_SYS(!e, "Error parsing CarePackage JSON");
 
     // Decode SNRP's:
-    ABC_CHECK_RET(ABC_CryptoCreateSNRPForServer(&pSelf->pSNRP1, pError));
-    ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP2, &pSelf->pSNRP2, pError));
-    ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP3, &pSelf->pSNRP3, pError));
-    ABC_CHECK_RET(ABC_CryptoDecodeJSONObjectSNRP(pJSON_SNRP4, &pSelf->pSNRP4, pError));
+    ABC_CHECK_NEW(JsonSnrp(json_incref(pJSON_SNRP2)).snrpGet(pSelf->snrp2), pError);
+    ABC_CHECK_NEW(JsonSnrp(json_incref(pJSON_SNRP3)).snrpGet(pSelf->snrp3), pError);
+    ABC_CHECK_NEW(JsonSnrp(json_incref(pJSON_SNRP4)).snrpGet(pSelf->snrp4), pError);
 
     // Save everything:
     if (pSelf->ERQ)         json_incref(pSelf->ERQ);
@@ -131,20 +122,20 @@ tABC_CC ABC_CarePackageEncode(tABC_CarePackage *pSelf,
 {
     tABC_CC cc = ABC_CC_Ok;
     json_t *pJSON_Root  = NULL;
-    json_t *pJSON_SNRP2 = NULL;
-    json_t *pJSON_SNRP3 = NULL;
-    json_t *pJSON_SNRP4 = NULL;
+    JsonSnrp snrp2;
+    JsonSnrp snrp3;
+    JsonSnrp snrp4;
 
     // Build the SNRP's:
-    ABC_CHECK_RET(ABC_CryptoCreateJSONObjectSNRP(pSelf->pSNRP2, &pJSON_SNRP2, pError));
-    ABC_CHECK_RET(ABC_CryptoCreateJSONObjectSNRP(pSelf->pSNRP3, &pJSON_SNRP3, pError));
-    ABC_CHECK_RET(ABC_CryptoCreateJSONObjectSNRP(pSelf->pSNRP4, &pJSON_SNRP4, pError));
+    ABC_CHECK_NEW(snrp2.snrpSet(pSelf->snrp2), pError);
+    ABC_CHECK_NEW(snrp3.snrpSet(pSelf->snrp3), pError);
+    ABC_CHECK_NEW(snrp4.snrpSet(pSelf->snrp4), pError);
 
     // Build the main body:
     pJSON_Root = json_pack("{s:O, s:O, s:O}",
-        JSON_ACCT_SNRP2_FIELD, pJSON_SNRP2,
-        JSON_ACCT_SNRP3_FIELD, pJSON_SNRP3,
-        JSON_ACCT_SNRP4_FIELD, pJSON_SNRP4);
+        JSON_ACCT_SNRP2_FIELD, snrp2.get(),
+        JSON_ACCT_SNRP3_FIELD, snrp3.get(),
+        JSON_ACCT_SNRP4_FIELD, snrp4.get());
     ABC_CHECK_NULL(pJSON_Root);
 
     // Build the ERQ, if any:
@@ -159,9 +150,6 @@ tABC_CC ABC_CarePackageEncode(tABC_CarePackage *pSelf,
 
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
-    if (pJSON_SNRP2)    json_decref(pJSON_SNRP2);
-    if (pJSON_SNRP3)    json_decref(pJSON_SNRP3);
-    if (pJSON_SNRP4)    json_decref(pJSON_SNRP4);
 
     return cc;
 }

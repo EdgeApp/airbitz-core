@@ -99,31 +99,28 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     tABC_LoginPackage   *pLoginPackage  = NULL;
     PinLocal local;
     char *              szEPINK         = NULL;
-    AutoU08Buf          LPIN;
-    AutoU08Buf          LPIN1;
-    AutoU08Buf          LPIN2;
     DataChunk pinAuthId;
+    DataChunk pinAuthKey;       // Unlocks the server
+    DataChunk pinKeyKey;        // Unlocks pinKey
     DataChunk pinKey;           // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
     JsonBox pinKeyBox;          // Holds pinKey
+    std::string LPIN = lobby->username() + szPin;
 
     // Load the packages:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), &pCarePackage, &pLoginPackage, pError));
     ABC_CHECK_NEW(local.load(lobby->dir() + PIN_FILENAME), pError);
     ABC_CHECK_NEW(local.pinAuthIdDecode(pinAuthId), pError);
 
-    // LPIN = L + PIN:
-    ABC_BUF_STRCAT(LPIN, lobby->username().c_str(), szPin);
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LPIN, pCarePackage->pSNRP1, &LPIN1, pError));
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LPIN, pCarePackage->pSNRP2, &LPIN2, pError));
-
     // Get EPINK from the server:
+    ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN), pError);
     ABC_CHECK_RET(ABC_LoginServerGetPinPackage(
-        toU08Buf(pinAuthId), LPIN1, &szEPINK, pError));
+        toU08Buf(pinAuthId), toU08Buf(pinAuthKey), &szEPINK, pError));
     ABC_CHECK_NEW(pinKeyBox.decode(szEPINK), pError);
 
     // Decrypt MK:
-    ABC_CHECK_NEW(pinKeyBox.decrypt(pinKey, U08Buf(LPIN2)), pError);
+    ABC_CHECK_NEW(pCarePackage->snrp2.hash(pinKeyKey, LPIN), pError);
+    ABC_CHECK_NEW(pinKeyBox.decrypt(pinKey, pinKeyKey), pError);
     ABC_CHECK_NEW(local.pinBox().decrypt(dataKey, pinKey), pError);
 
     // Create the Login object:
@@ -160,36 +157,35 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     PinLocal local;
     AutoU08Buf          L1;
     AutoU08Buf          LP1;
-    AutoU08Buf          LPIN;
-    AutoU08Buf          LPIN1;
-    AutoU08Buf          LPIN2;
     DataChunk pinAuthId;
+    DataChunk pinAuthKey;       // Unlocks the server
+    DataChunk pinKeyKey;        // Unlocks pinKey
     DataChunk pinKey;           // Unlocks dataKey
     JsonBox pinKeyBox;          // Holds pinKey
     JsonBox pinBox;             // Holds dataKey
+    std::string LPIN = login.lobby().username() + szPin;
     std::string str;
 
     // Get login stuff:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
     ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &L1, &LP1, pError));
 
-    // LPIN = L + PIN:
-    ABC_BUF_STRCAT(LPIN, login.lobby().username().c_str(), szPin);
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LPIN, pCarePackage->pSNRP1, &LPIN1, pError));
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LPIN, pCarePackage->pSNRP2, &LPIN2, pError));
-
-    // Set up PINK stuff:
+    // Put dataKey in a box:
     ABC_CHECK_NEW(randomData(pinKey, KEY_LENGTH), pError);
     ABC_CHECK_NEW(pinBox.encrypt(login.dataKey(), pinKey), pError);
-    ABC_CHECK_NEW(pinKeyBox.encrypt(pinKey, U08Buf(LPIN2)), pError);
+
+    // Put pinKey in a box:
+    ABC_CHECK_NEW(pCarePackage->snrp2.hash(pinKeyKey, LPIN), pError);
+    ABC_CHECK_NEW(pinKeyBox.encrypt(pinKey, pinKeyKey), pError);
 
     // Set up DID:
     ABC_CHECK_NEW(randomData(pinAuthId, KEY_LENGTH), pError);
 
     // Set up the server:
+    ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN), pError);
     ABC_CHECK_NEW(pinKeyBox.encode(str), pError);
     ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(L1, LP1,
-        toU08Buf(pinAuthId), LPIN1, str, expires, pError));
+        toU08Buf(pinAuthId), toU08Buf(pinAuthKey), str, expires, pError));
 
     // Save the local file:
     ABC_CHECK_NEW(local.pinBoxSet(pinBox), pError);

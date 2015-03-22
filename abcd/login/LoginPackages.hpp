@@ -23,10 +23,9 @@ namespace abcd {
  */
 typedef struct sABC_CarePackage
 {
-    tABC_CryptoSNRP *pSNRP1;
-    tABC_CryptoSNRP *pSNRP2;
-    tABC_CryptoSNRP *pSNRP3;
-    tABC_CryptoSNRP *pSNRP4;
+    ScryptSnrp snrp2;
+    ScryptSnrp snrp3;
+    ScryptSnrp snrp4;
     json_t          *ERQ;       // Optional
 } tABC_CarePackage;
 

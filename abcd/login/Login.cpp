@@ -86,12 +86,12 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     std::unique_ptr<Login> login;
     tABC_CarePackage    *pCarePackage   = NULL;
     tABC_LoginPackage   *pLoginPackage  = NULL;
-    AutoU08Buf           LP;
-    AutoU08Buf           LP1;
-    AutoU08Buf           LP2;
+    DataChunk authKey;          // Unlocks the server
+    DataChunk passwordKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
     DataChunk syncKey;
     JsonBox box;
+    std::string LP = lobby->username() + szPassword;
 
     // Set up packages:
     ABC_CHECK_RET(ABC_CarePackageNew(&pCarePackage, pError));
@@ -103,12 +103,9 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     // Generate SyncKey:
     ABC_CHECK_NEW(randomData(syncKey, SYNC_KEY_LENGTH), pError);
 
-    // LP = L + P:
-    ABC_BUF_STRCAT(LP, lobby->username().c_str(), szPassword);
-
     // Set up EMK_LP2:
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
-    ABC_CHECK_NEW(box.encrypt(dataKey, U08Buf(LP2)), pError);
+    ABC_CHECK_NEW(pCarePackage->snrp2.hash(passwordKey, LP), pError);
+    ABC_CHECK_NEW(box.encrypt(dataKey, passwordKey), pError);
     pLoginPackage->EMK_LP2 = json_incref(box.get());
 
     // Set up ESyncKey:
@@ -116,16 +113,16 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     pLoginPackage->ESyncKey = json_incref(box.get());
 
     // Set up ELP1:
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP1, &LP1, pError));
-    ABC_CHECK_NEW(box.encrypt(U08Buf(LP1), dataKey), pError);
+    ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP), pError);
+    ABC_CHECK_NEW(box.encrypt(authKey, dataKey), pError);
     pLoginPackage->ELP1 = json_incref(box.get());
 
     // Create the account and repo on server:
-    ABC_CHECK_RET(ABC_LoginServerCreate(toU08Buf(lobby->authId()), LP1,
+    ABC_CHECK_RET(ABC_LoginServerCreate(toU08Buf(lobby->authId()), toU08Buf(authKey),
         pCarePackage, pLoginPackage, base16Encode(syncKey).c_str(), pError));
 
     // Latch the account:
-    ABC_CHECK_RET(ABC_LoginServerActivate(toU08Buf(lobby->authId()), LP1, pError));
+    ABC_CHECK_RET(ABC_LoginServerActivate(toU08Buf(lobby->authId()), toU08Buf(authKey), pError));
 
     // Create the Login object:
     login.reset(new Login(lobby, dataKey));
