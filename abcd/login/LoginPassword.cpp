@@ -24,17 +24,17 @@ tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
     tABC_CC cc = ABC_CC_Ok;
 
     std::unique_ptr<Login> login;
-    tABC_CarePackage    *pCarePackage   = NULL;
+    CarePackage carePackage;
     tABC_LoginPackage   *pLoginPackage  = NULL;
     DataChunk passwordKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
     std::string LP = lobby->username() + szPassword;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), carePackage, &pLoginPackage, pError));
 
     // Decrypt MK:
-    ABC_CHECK_NEW(pCarePackage->snrp2.hash(passwordKey, LP), pError);
+    ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);
     ABC_CHECK_NEW(JsonBox(json_incref(pLoginPackage->EMK_LP2)).decrypt(dataKey, passwordKey), pError);
 
     // Decrypt SyncKey:
@@ -43,7 +43,6 @@ tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
     result.reset(login.release());
 
 exit:
-    ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
 
     return cc;
@@ -58,7 +57,7 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     tABC_CC cc = ABC_CC_Ok;
 
     std::unique_ptr<Login> login;
-    tABC_CarePackage    *pCarePackage   = NULL;
+    CarePackage carePackage;
     tABC_LoginPackage   *pLoginPackage  = NULL;
     tABC_U08Buf         LRA1            = ABC_BUF_NULL; // Do not free
     DataChunk authKey;          // Unlocks the server
@@ -67,7 +66,7 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     std::string LP = lobby->username() + szPassword;
 
     // Get the CarePackage:
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(toU08Buf(lobby->authId()), &pCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(toU08Buf(lobby->authId()), carePackage, pError));
 
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP), pError);
@@ -76,7 +75,7 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
         &pLoginPackage, pError));
 
     // Decrypt MK:
-    ABC_CHECK_NEW(pCarePackage->snrp2.hash(passwordKey, LP), pError);
+    ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);
     ABC_CHECK_NEW(JsonBox(json_incref(pLoginPackage->EMK_LP2)).decrypt(dataKey, passwordKey), pError);
 
     // Decrypt SyncKey:
@@ -84,13 +83,12 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(login->init(pLoginPackage), pError);
 
     // Set up the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), carePackage, pLoginPackage, pError));
 
     // Assign the result:
     result.reset(login.release());
 
 exit:
-    ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
 
     return cc;
@@ -130,7 +128,7 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_CarePackage *pCarePackage = NULL;
+    CarePackage carePackage;
     tABC_LoginPackage *pLoginPackage = NULL;
     AutoU08Buf oldL1;
     AutoU08Buf oldLP1;
@@ -138,10 +136,11 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     DataChunk authKey;          // Unlocks the server
     DataChunk passwordKey;      // Unlocks dataKey
     JsonBox box;
+    JsonSnrp snrp;
     std::string LP = login.lobby().username() + szPassword;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, &pLoginPackage, pError));
 
     // Load the old keys:
     ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &oldL1, &oldLP1, pError));
@@ -151,10 +150,11 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     }
 
     // Update SNRP2:
-    ABC_CHECK_NEW(pCarePackage->snrp2.create(), pError);
+    ABC_CHECK_NEW(snrp.create(), pError);
+    ABC_CHECK_NEW(carePackage.snrp2Set(snrp), pError);
 
     // Update EMK_LP2:
-    ABC_CHECK_NEW(pCarePackage->snrp2.hash(passwordKey, LP), pError);
+    ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);
     ABC_CHECK_NEW(box.encrypt(login.dataKey(), passwordKey), pError);
     json_decref(pLoginPackage->EMK_LP2);
     pLoginPackage->EMK_LP2 = json_incref(box.get());
@@ -167,13 +167,12 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
 
     // Change the server login:
     ABC_CHECK_RET(ABC_LoginServerChangePassword(oldL1, oldLP1,
-        toU08Buf(authKey), toU08Buf(oldLRA1), pCarePackage, pLoginPackage, pError));
+        toU08Buf(authKey), toU08Buf(oldLRA1), carePackage, pLoginPackage, pError));
 
     // Change the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(login.lobby().dir(), pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(login.lobby().dir(), carePackage, pLoginPackage, pError));
 
 exit:
-    ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
 
     return cc;
@@ -193,7 +192,7 @@ tABC_CC ABC_LoginPasswordOk(Login &login,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_CarePackage *pCarePackage = NULL;
+    CarePackage carePackage;
     tABC_LoginPackage *pLoginPackage = NULL;
     DataChunk passwordKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
@@ -202,17 +201,16 @@ tABC_CC ABC_LoginPasswordOk(Login &login,
     *pOk = false;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, &pLoginPackage, pError));
 
     // Try to decrypt MK:
-    ABC_CHECK_NEW(pCarePackage->snrp2.hash(passwordKey, LP), pError);
+    ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);
     if (JsonBox(json_incref(pLoginPackage->EMK_LP2)).decrypt(dataKey, passwordKey))
     {
         *pOk = true;
     }
 
 exit:
-    ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
 
     return cc;

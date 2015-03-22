@@ -68,7 +68,7 @@ tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1, tABC_U08Buf LP1,
  */
 tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
                               tABC_U08Buf LP1,
-                              tABC_CarePackage *pCarePackage,
+                              const CarePackage &carePackage,
                               tABC_LoginPackage *pLoginPackage,
                               const char *szRepoAcctKey,
                               tABC_Error *pError)
@@ -78,7 +78,7 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
     char *szURL     = NULL;
     char *szResults = NULL;
     char *szPost    = NULL;
-    char *szCarePackage     = NULL;
+    std::string carePackageStr;
     char *szLoginPackage    = NULL;
     json_t *pJSON_Root = NULL;
 
@@ -89,14 +89,14 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
     ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_ACCOUNT_CREATE_PATH);
 
-    ABC_CHECK_RET(ABC_CarePackageEncode(pCarePackage, &szCarePackage, pError));
+    ABC_CHECK_NEW(carePackage.encode(carePackageStr), pError);
     ABC_CHECK_RET(ABC_LoginPackageEncode(pLoginPackage, &szLoginPackage, pError));
 
     // create the post data
     pJSON_Root = json_pack("{ssssssssss}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
-        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage,
+        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, carePackageStr.c_str(),
         ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage,
         ABC_SERVER_JSON_REPO_FIELD, szRepoAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
@@ -112,7 +112,6 @@ exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szCarePackage);
     ABC_FREE_STR(szLoginPackage);
     if (pJSON_Root)     json_decref(pJSON_Root);
 
@@ -216,7 +215,7 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
                                       tABC_U08Buf oldLP1,
                                       tABC_U08Buf newLP1,
                                       tABC_U08Buf newLRA1,
-                                      tABC_CarePackage *pCarePackage,
+                                      const CarePackage &carePackage,
                                       tABC_LoginPackage *pLoginPackage,
                                       tABC_Error *pError)
 {
@@ -225,7 +224,7 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     char *szURL     = NULL;
     char *szResults = NULL;
     char *szPost    = NULL;
-    char *szCarePackage     = NULL;
+    std::string carePackageStr;
     char *szLoginPackage    = NULL;
     json_t *pJSON_OldLRA1   = NULL;
     json_t *pJSON_NewLRA1   = NULL;
@@ -239,7 +238,7 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_CHANGE_PASSWORD_PATH);
 
-    ABC_CHECK_RET(ABC_CarePackageEncode(pCarePackage, &szCarePackage, pError));
+    ABC_CHECK_NEW(carePackage.encode(carePackageStr), pError);
     ABC_CHECK_RET(ABC_LoginPackageEncode(pLoginPackage, &szLoginPackage, pError));
 
     // Encode those:
@@ -247,7 +246,7 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
         ABC_SERVER_JSON_L1_FIELD,      base64Encode(L1).c_str(),
         ABC_SERVER_JSON_LP1_FIELD,     base64Encode(oldLP1).c_str(),
         ABC_SERVER_JSON_NEW_LP1_FIELD, base64Encode(newLP1).c_str(),
-        ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  szCarePackage,
+        ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  carePackageStr.c_str(),
         ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
     ABC_CHECK_NULL(pJSON_Root);
 
@@ -271,7 +270,6 @@ exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szCarePackage);
     ABC_FREE_STR(szLoginPackage);
     if (pJSON_OldLRA1)  json_decref(pJSON_OldLRA1);
     if (pJSON_NewLRA1)  json_decref(pJSON_NewLRA1);
@@ -281,7 +279,7 @@ exit:
 }
 
 tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
-                                      tABC_CarePackage **ppCarePackage,
+                                      CarePackage &result,
                                       tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -297,7 +295,7 @@ tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_CARE_PACKAGE_PATH);
 
     ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1_NULL, LRA1, szURL, JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
-    ABC_CHECK_RET(ABC_CarePackageDecode(ppCarePackage, szCarePackage, pError));
+    ABC_CHECK_NEW(result.decode(szCarePackage), pError);
 
 exit:
     ABC_FREE_STR(szURL);

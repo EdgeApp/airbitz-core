@@ -95,7 +95,7 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     tABC_CC cc = ABC_CC_Ok;
 
     std::unique_ptr<Login> login;
-    tABC_CarePackage    *pCarePackage   = NULL;
+    CarePackage carePackage;
     tABC_LoginPackage   *pLoginPackage  = NULL;
     PinLocal local;
     char *              szEPINK         = NULL;
@@ -108,7 +108,7 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     std::string LPIN = lobby->username() + szPin;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), carePackage, &pLoginPackage, pError));
     ABC_CHECK_NEW(local.load(lobby->dir() + PIN_FILENAME), pError);
     ABC_CHECK_NEW(local.pinAuthIdDecode(pinAuthId), pError);
 
@@ -119,7 +119,7 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(pinKeyBox.decode(szEPINK), pError);
 
     // Decrypt MK:
-    ABC_CHECK_NEW(pCarePackage->snrp2.hash(pinKeyKey, LPIN), pError);
+    ABC_CHECK_NEW(carePackage.snrp2().hash(pinKeyKey, LPIN), pError);
     ABC_CHECK_NEW(pinKeyBox.decrypt(pinKey, pinKeyKey), pError);
     ABC_CHECK_NEW(local.pinBox().decrypt(dataKey, pinKey), pError);
 
@@ -129,7 +129,6 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     result.reset(login.release());
 
 exit:
-    ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
     ABC_FREE_STR(szEPINK);
 
@@ -152,7 +151,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_CarePackage    *pCarePackage   = NULL;
+    CarePackage carePackage;
     tABC_LoginPackage   *pLoginPackage  = NULL;
     PinLocal local;
     AutoU08Buf          L1;
@@ -167,7 +166,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     std::string str;
 
     // Get login stuff:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, &pLoginPackage, pError));
     ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &L1, &LP1, pError));
 
     // Put dataKey in a box:
@@ -175,7 +174,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     ABC_CHECK_NEW(pinBox.encrypt(login.dataKey(), pinKey), pError);
 
     // Put pinKey in a box:
-    ABC_CHECK_NEW(pCarePackage->snrp2.hash(pinKeyKey, LPIN), pError);
+    ABC_CHECK_NEW(carePackage.snrp2().hash(pinKeyKey, LPIN), pError);
     ABC_CHECK_NEW(pinKeyBox.encrypt(pinKey, pinKeyKey), pError);
 
     // Set up DID:
@@ -194,7 +193,6 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     ABC_CHECK_NEW(local.save(login.lobby().dir() + PIN_FILENAME), pError);
 
 exit:
-    ABC_CarePackageFree(pCarePackage);
     ABC_LoginPackageFree(pLoginPackage);
 
     return cc;

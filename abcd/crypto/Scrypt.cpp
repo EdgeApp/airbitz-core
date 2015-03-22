@@ -178,4 +178,22 @@ JsonSnrp::snrpSet(const ScryptSnrp &snrp)
     return Status();
 }
 
+Status
+JsonSnrp::create()
+{
+    ScryptSnrp snrp;
+    ABC_CHECK(snrp.create());
+    ABC_CHECK(snrpSet(snrp));
+    return Status();
+}
+
+Status
+JsonSnrp::hash(DataChunk &result, DataSlice data) const
+{
+    ScryptSnrp snrp;
+    ABC_CHECK(snrpGet(snrp));
+    ABC_CHECK(snrp.hash(result, data));
+    return Status();
+}
+
 } // namespace abcd

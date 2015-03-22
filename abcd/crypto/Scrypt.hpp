@@ -69,6 +69,12 @@ struct JsonSnrp:
 
     Status
     snrpSet(const ScryptSnrp &snrp);
+
+    Status
+    create();
+
+    Status
+    hash(DataChunk &result, DataSlice data) const;
 };
 
 } // namespace abcd

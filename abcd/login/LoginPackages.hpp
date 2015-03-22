@@ -13,34 +13,21 @@
 #define ABCD_LOGIN_LOGIN_PACKAGES_HPP
 
 #include "../crypto/Scrypt.hpp"
-#include "../../src/ABC.h"
-#include <jansson.h>
+#include "../json/JsonBox.hpp"
 
 namespace abcd {
 
 /**
  * A round-trippable representation of the AirBitz CarePackage file.
  */
-typedef struct sABC_CarePackage
+struct CarePackage:
+    public JsonObject
 {
-    ScryptSnrp snrp2;
-    ScryptSnrp snrp3;
-    ScryptSnrp snrp4;
-    json_t          *ERQ;       // Optional
-} tABC_CarePackage;
-
-void ABC_CarePackageFree(tABC_CarePackage *pSelf);
-
-tABC_CC ABC_CarePackageNew(tABC_CarePackage **ppSelf,
-                           tABC_Error *pError);
-
-tABC_CC ABC_CarePackageDecode(tABC_CarePackage **ppSelf,
-                              char *szCarePackage,
-                              tABC_Error *pError);
-
-tABC_CC ABC_CarePackageEncode(tABC_CarePackage *pSelf,
-                              char **pszCarePackage,
-                              tABC_Error *pError);
+    ABC_JSON_VALUE(snrp2,       "SNRP2",    JsonSnrp)
+    ABC_JSON_VALUE(snrp3,       "SNRP3",    JsonSnrp)
+    ABC_JSON_VALUE(snrp4,       "SNRP4",    JsonSnrp)
+    ABC_JSON_VALUE(questionBox, "ERQ",      JsonBox) // Optional
+};
 
 /**
  * A round-trippable representation of the AirBitz LoginPackage file.

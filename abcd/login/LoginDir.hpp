@@ -51,12 +51,12 @@ tABC_CC ABC_LoginDirFileDelete(const std::string &directory,
                                tABC_Error *pError);
 
 tABC_CC ABC_LoginDirLoadPackages(const std::string &directory,
-                                 tABC_CarePackage **ppCarePackage,
+                                 CarePackage &carePackage,
                                  tABC_LoginPackage **ppLoginPackage,
                                  tABC_Error *pError);
 
 tABC_CC ABC_LoginDirSavePackages(const std::string &directory,
-                                 tABC_CarePackage *pCarePackage,
+                                 const CarePackage &carePackage,
                                  tABC_LoginPackage *pLoginPackage,
                                  tABC_Error *pError);
 

@@ -24,7 +24,7 @@ class Login;
 
 tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
                               tABC_U08Buf LP1,
-                              tABC_CarePackage *pCarePackage,
+                              const CarePackage &carePackage,
                               tABC_LoginPackage *pLoginPackage,
                               const char *szRepoAcctKey,
                               tABC_Error *pError);
@@ -40,12 +40,12 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
                                       tABC_U08Buf oldLP1,
                                       tABC_U08Buf newLP1,
                                       tABC_U08Buf newLRA1,
-                                      tABC_CarePackage *pCarePackage,
+                                      const CarePackage &carePackage,
                                       tABC_LoginPackage *pLoginPackage,
                                       tABC_Error *pError);
 
 tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
-                                      tABC_CarePackage **ppCarePackage,
+                                      CarePackage &result,
                                       tABC_Error *pError);
 
 tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
