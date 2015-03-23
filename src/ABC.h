@@ -545,6 +545,8 @@ typedef struct sABC_AccountSettings
     int64_t                     spendRequirePinSatoshis;
     /** should PIN re-login be disabled */
     bool                        bDisablePINLogin;
+    /** Count of successful pin logins */
+    int                         pinLoginCount;
 } tABC_AccountSettings;
 
 /**
