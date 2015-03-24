@@ -11,11 +11,20 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 
+#include <map>
+
 namespace abcd {
 
 #define BITSTAMP_RATE_URL "https://www.bitstamp.net/api/ticker/"
 #define COINBASE_RATE_URL "https://coinbase.com/api/v1/currencies/exchange_rates"
-#define BNC_RATE_URL      "http://api.bravenewcoin.com/ticker/"
+#define BNC_GLOBAL_PRICE  "http://api.bravenewcoin.com/ticker/bnc_ticker_btc.json"
+#define BNC_GLOBAL_RATE   "http://api.bravenewcoin.com/rates.json"
+
+#define BNC_TIMEOUT 60
+
+static time_t bncFetched = 0;
+static std::map<std::string, std::string> bncRateCache;
+static double bncGlobalPrice = 0.0;
 
 static
 tABC_CC ABC_ExchangeCoinBaseMap(int currencyNum, std::string& field, tABC_Error *pError)
@@ -55,47 +64,6 @@ tABC_CC ABC_ExchangeCoinBaseMap(int currencyNum, std::string& field, tABC_Error 
             break;
         case CURRENCY_NUM_NZD:
             field = "btc_to_nzd";
-            break;
-        default:
-            ABC_CHECK_ASSERT(false, ABC_CC_Error, "Unsupported currency");
-    }
-exit:
-    return cc;
-}
-
-static
-tABC_CC ABC_ExchangeBncMap(int currencyNum, std::string& url, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    url += BNC_RATE_URL;
-    switch (currencyNum) {
-        case CURRENCY_NUM_USD:
-            url += "bnc_ticker_btc_usd.json";
-            break;
-        case CURRENCY_NUM_AUD:
-            url += "bnc_ticker_btc_aud.json";
-            break;
-        case CURRENCY_NUM_CAD:
-            url += "bnc_ticker_btc_cad.json";
-            break;
-        case CURRENCY_NUM_CNY:
-            url += "bnc_ticker_btc_cny.json";
-            break;
-        case CURRENCY_NUM_HKD:
-            url += "bnc_ticker_btc_hkd.json";
-            break;
-        case CURRENCY_NUM_MXN:
-            url += "bnc_ticker_btc_mxn.json";
-            break;
-        case CURRENCY_NUM_NZD:
-            url += "bnc_ticker_btc_nzd.json";
-            break;
-        case CURRENCY_NUM_GBP:
-            url += "bnc_ticker_btc_gbp.json";
-            break;
-        case CURRENCY_NUM_EUR:
-            url += "bnc_ticker_btc_eur.json";
             break;
         default:
             ABC_CHECK_ASSERT(false, ABC_CC_Error, "Unsupported currency");
@@ -205,6 +173,89 @@ exit:
     return cc;
 }
 
+static
+tABC_CC ABC_ExchangeBncCachePrices(tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    json_error_t error;
+    json_t *pJSON_Root = NULL, *pJSON_Object, *pJSON_Row, *jsonVal;
+    size_t rateCount = 0;
+    AutoString szBncRateCache;
+    AutoString szBncGlobalCache;
+
+    // Fetch rates relative to USD
+    ABC_CHECK_RET(ABC_ExchangeGetString(BNC_GLOBAL_RATE, &szBncRateCache.get(), pError));
+
+    pJSON_Root = json_loads(szBncRateCache, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    pJSON_Object = json_object_get(pJSON_Root, "rates");
+    ABC_CHECK_ASSERT(pJSON_Object != NULL, ABC_CC_JSONError, "Error parsing JSON");
+    ABC_CHECK_ASSERT(json_is_array(pJSON_Object), ABC_CC_JSONError, "Error parsing JSON");
+
+    rateCount = (size_t) json_array_size(pJSON_Object);
+    for (unsigned i = 0; i < rateCount; i++)
+    {
+        pJSON_Row = json_array_get(pJSON_Object, i);
+        ABC_CHECK_ASSERT((pJSON_Row && json_is_object(pJSON_Row)), ABC_CC_JSONError, "Error parsing JSON array element object");
+
+        jsonVal = json_object_get(pJSON_Row, "id_currency");
+        ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON");
+        std::string symbol(json_string_value(jsonVal));
+
+        jsonVal = json_object_get(pJSON_Row, "rate");
+        ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON");
+        bncRateCache[symbol] = std::string(json_string_value(jsonVal));
+    }
+    if (pJSON_Root) json_decref(pJSON_Root);
+
+    // Fetch the global price index
+    ABC_CHECK_RET(ABC_ExchangeGetString(BNC_GLOBAL_PRICE, &szBncGlobalCache.get(), pError));
+
+    pJSON_Root = json_loads(szBncGlobalCache, 0, &error);
+    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
+
+    pJSON_Object = json_object_get(pJSON_Root, "ticker");
+    ABC_CHECK_ASSERT(pJSON_Object != NULL, ABC_CC_JSONError, "Error parsing JSON");
+    ABC_CHECK_ASSERT(json_is_object(pJSON_Object), ABC_CC_JSONError, "Error parsing JSON");
+
+    jsonVal = json_object_get(pJSON_Object, "bnc_price_index_usd");
+    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON");
+    bncGlobalPrice = strtod(json_string_value(jsonVal), nullptr);
+
+    // Update cache time
+    bncFetched = time(NULL);
+
+exit:
+    if (pJSON_Root) json_decref(pJSON_Root);
+
+    return cc;
+}
+
+static
+tABC_CC ABC_ExchangeBncGlobalPrice(const char *symbol, double &rate, tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+    double rateValue = 0.0;
+
+    if ((time(NULL) - bncFetched) > BNC_TIMEOUT)
+        ABC_CHECK_RET(ABC_ExchangeBncCachePrices(pError));
+
+    if (bncRateCache.find(symbol) != bncRateCache.end())
+        rateValue = strtod(bncRateCache[symbol].c_str(), nullptr);
+
+    if (rateValue != 0.0)
+        rate = (bncGlobalPrice * (1.0 / rateValue));
+
+    ABC_DebugLog("Exchange Response: %s = %f\n", symbol, rate);
+exit:
+
+    return cc;
+}
+
+
 tABC_CC ABC_ExchangeBitStampRate(int currencyNum, double &rate, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -256,24 +307,38 @@ exit:
 tABC_CC ABC_ExchangeBncRates(int currencyNum, double &rate, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    json_error_t error;
-    json_t *pJSON_Root = NULL;
-    char *szResponse = NULL;
-
-    std::string url;
-    ABC_CHECK_RET(ABC_ExchangeBncMap(currencyNum, url, pError));
-    ABC_CHECK_RET(ABC_ExchangeGetString(url.c_str(), &szResponse, pError));
-
-    // Parse the json
-    pJSON_Root = json_loads(szResponse, 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-
-    ABC_ExchangeExtract(pJSON_Root, "last_price", currencyNum, rate, pError);
+    switch (currencyNum) {
+        case CURRENCY_NUM_USD:
+            ABC_ExchangeBncGlobalPrice("USD", rate, pError);
+            break;
+        case CURRENCY_NUM_AUD:
+            ABC_ExchangeBncGlobalPrice("AUD", rate, pError);
+            break;
+        case CURRENCY_NUM_CAD:
+            ABC_ExchangeBncGlobalPrice("CAD", rate, pError);
+            break;
+        case CURRENCY_NUM_CNY:
+            ABC_ExchangeBncGlobalPrice("CNY", rate, pError);
+            break;
+        case CURRENCY_NUM_HKD:
+            ABC_ExchangeBncGlobalPrice("HKD", rate, pError);
+            break;
+        case CURRENCY_NUM_MXN:
+            ABC_ExchangeBncGlobalPrice("MXN", rate, pError);
+            break;
+        case CURRENCY_NUM_NZD:
+            ABC_ExchangeBncGlobalPrice("NZD", rate, pError);
+            break;
+        case CURRENCY_NUM_GBP:
+            ABC_ExchangeBncGlobalPrice("GBP", rate, pError);
+            break;
+        case CURRENCY_NUM_EUR:
+            ABC_ExchangeBncGlobalPrice("EUR", rate, pError);
+            break;
+        default:
+            ABC_CHECK_ASSERT(false, ABC_CC_Error, "Unsupported currency");
+    }
 exit:
-    ABC_FREE_STR(szResponse);
-    if (pJSON_Root) json_decref(pJSON_Root);
-
     return cc;
 }
 
