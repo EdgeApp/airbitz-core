@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_JSON_JSON_FILE_HPP
-#define ABCD_JSON_JSON_FILE_HPP
+#ifndef ABCD_JSON_JSON_PTR_HPP
+#define ABCD_JSON_JSON_PTR_HPP
 
 #include "../util/Status.hpp"
 #include <jansson.h>
@@ -17,19 +17,19 @@ namespace abcd {
 /**
  * A base class for implementing JSON-based files.
  */
-class JsonFile
+class JsonPtr
 {
 public:
-    ~JsonFile();
-    JsonFile();
-    JsonFile(JsonFile &copy);
-    JsonFile &operator=(JsonFile &copy);
+    ~JsonPtr();
+    JsonPtr();
+    JsonPtr(JsonPtr &copy);
+    JsonPtr &operator=(JsonPtr &copy);
 
     /**
      * Accepts a JSON value for use as the file root.
      * Takes ownership of the passed-in value.
      */
-    JsonFile(json_t *root);
+    JsonPtr(json_t *root);
 
     /**
      * Obtains the root JSON node. Do not free.

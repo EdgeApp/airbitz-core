@@ -8,15 +8,15 @@
 #include "../abcd/json/JsonObject.hpp"
 #include "../minilibs/catch/catch.hpp"
 
-TEST_CASE("JsonFile copy constructor", "[util][json]")
+TEST_CASE("JsonPtr copy constructor", "[util][json]")
 {
-    abcd::JsonFile a, b;
+    abcd::JsonPtr a, b;
     REQUIRE(a.decode("{\"x\": 1}"));
     REQUIRE(b.decode("[2]"));
     REQUIRE(json_is_object(a.root()));
     REQUIRE(json_is_array(b.root()));
 
-    abcd::JsonFile c(a);
+    abcd::JsonPtr c(a);
     REQUIRE(json_is_object(c.root()));
 
     c = b;

@@ -8,16 +8,16 @@
 #ifndef ABCD_JSON_JSON_OBJECT_HPP
 #define ABCD_JSON_JSON_OBJECT_HPP
 
-#include "JsonFile.hpp"
+#include "JsonPtr.hpp"
 
 namespace abcd {
 
 /**
- * A JsonFile with an object (key-value pair) as it's root element.
+ * A JsonPtr with an object (key-value pair) as it's root element.
  * This allows all sorts of member lookups.
  */
 class JsonObject:
-    public JsonFile
+    public JsonPtr
 {
 public:
     JsonObject() {}

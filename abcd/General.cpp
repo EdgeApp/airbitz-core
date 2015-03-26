@@ -108,7 +108,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    JsonFile file;
+    JsonPtr file;
     json_t  *pJSON_Root             = NULL;
     json_t  *pJSON_Value            = NULL;
     char    *szInfoFilename         = NULL;
@@ -341,7 +341,7 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
         pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
         ABC_CHECK_ASSERT((pJSON_Value && json_is_object(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON info results");
         {
-            JsonFile json(json_incref(pJSON_Value));
+            JsonPtr json(json_incref(pJSON_Value));
             ABC_CHECK_NEW(json.save(szInfoFilename), pError);
         }
     }

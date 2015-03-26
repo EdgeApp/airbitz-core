@@ -10,7 +10,7 @@
 namespace abcd {
 
 JsonObject::JsonObject(json_t *root):
-    JsonFile(root)
+    JsonPtr(root)
 {
     if (!json_is_object(root_))
         reset();

@@ -12,7 +12,7 @@
 #include "../abcd/crypto/Crypto.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/exchange/Exchange.hpp"
-#include "../abcd/json/JsonFile.hpp"
+#include "../abcd/json/JsonPtr.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Util.hpp"
@@ -61,7 +61,7 @@ COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt")
         &encrypted, &error));
 
     std::string str;
-    ABC_CHECK(JsonFile(encrypted).encode(str));
+    ABC_CHECK(JsonPtr(encrypted).encode(str));
     std::cout << str << std::endl;
 
     return Status();
@@ -547,7 +547,7 @@ COMMAND(InitLevel::wallet, WalletEncrypt, "wallet-encrypt")
         ABC_CryptoType_AES256, &encrypted, &error));
 
     std::string str;
-    ABC_CHECK(JsonFile(encrypted).encode(str));
+    ABC_CHECK(JsonPtr(encrypted).encode(str));
     std::cout << str << std::endl;
 
     return Status();
