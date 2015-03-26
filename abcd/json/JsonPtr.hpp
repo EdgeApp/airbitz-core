@@ -15,15 +15,16 @@
 namespace abcd {
 
 /**
- * A base class for implementing JSON-based files.
+ * A json_t smart pointer.
  */
 class JsonPtr
 {
 public:
     ~JsonPtr();
     JsonPtr();
-    JsonPtr(JsonPtr &copy);
-    JsonPtr &operator=(JsonPtr &copy);
+    JsonPtr(JsonPtr &&move);
+    JsonPtr(const JsonPtr &copy);
+    JsonPtr &operator=(const JsonPtr &copy);
 
     /**
      * Accepts a JSON value for use as the file root.
@@ -32,10 +33,17 @@ public:
     JsonPtr(json_t *root);
 
     /**
+     * Frees the JSON root value and replaces it with a new one.
+     * Takes ownership of the passed-in value.
+     */
+    void
+    reset(json_t *root=nullptr);
+
+    /**
      * Obtains the root JSON node. Do not free.
      */
-    json_t *root() { return root_; }
-    const json_t *root() const { return root_; }
+    json_t *get() const { return root_; }
+    explicit operator bool() const { return root_; }
 
     /**
      * Loads the JSON object from disk.
@@ -62,15 +70,16 @@ public:
     encode(std::string &result) const;
 
 protected:
-    /**
-     * Frees the JSON root object and replaces it with a new one.
-     * Takes ownership of the passed-in value.
-     */
-    void
-    reset(json_t *root=nullptr);
-
     json_t *root_;
 };
+
+/**
+ * Adds the standard constructors to JsonPtr child classes.
+ */
+#define ABC_JSON_CONSTRUCTORS(This, Base) \
+    This() {} \
+    This(JsonPtr &&move): Base(std::move(move)) {} \
+    This(const JsonPtr &copy): Base(copy) {}
 
 } // namespace abcd
 

@@ -45,7 +45,7 @@ TEST_CASE("Decryption", "[crypto][encryption]")
 
     abcd::AutoU08Buf data;
     CHECK(ABC_CC_Ok == ABC_CryptoDecryptJSONObject(
-        package.root(), abcd::toU08Buf(key), &data, &error));
+        package.get(), abcd::toU08Buf(key), &data, &error));
     CHECK(abcd::toString(abcd::U08Buf(data)) == "payload");
 }
 

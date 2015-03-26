@@ -134,7 +134,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
 
     // load the json
     ABC_CHECK_NEW(file.load(szInfoFilename), pError);
-    pJSON_Root = file.root();
+    pJSON_Root = file.get();
 
     // allocate the struct
     ABC_NEW(pInfo, tABC_GeneralInfo);

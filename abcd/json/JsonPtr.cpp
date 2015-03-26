@@ -23,20 +23,34 @@ JsonPtr::JsonPtr():
     root_(nullptr)
 {}
 
-JsonPtr::JsonPtr(JsonPtr &copy):
-    root_(json_incref(copy.root()))
+JsonPtr::JsonPtr(JsonPtr &&move):
+    root_(move.root_)
+{
+    move.root_ = nullptr;
+}
+
+JsonPtr::JsonPtr(const JsonPtr &copy):
+    root_(json_incref(copy.root_))
 {}
 
 JsonPtr &
-JsonPtr::operator=(JsonPtr &copy)
+JsonPtr::operator=(const JsonPtr &copy)
 {
-    reset(json_incref(copy.root()));
+    reset(json_incref(copy.root_));
     return *this;
 }
 
 JsonPtr::JsonPtr(json_t *root):
-    root_(json_incref(root))
+    root_(root)
 {}
+
+void
+JsonPtr::reset(json_t *root)
+{
+    if (root_)
+        json_decref(root_);
+    root_ = root;
+}
 
 Status
 JsonPtr::load(const std::string &filename)
@@ -77,14 +91,6 @@ JsonPtr::encode(std::string &result) const
     result = raw;
     ABC_UtilJanssonSecureFree(raw);
     return Status();
-}
-
-void
-JsonPtr::reset(json_t *root)
-{
-    if (root_)
-        json_decref(root_);
-    root_ = root;
 }
 
 } // namespace abcd

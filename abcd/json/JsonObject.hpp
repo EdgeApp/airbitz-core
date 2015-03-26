@@ -20,13 +20,7 @@ class JsonObject:
     public JsonPtr
 {
 public:
-    JsonObject() {}
-
-    /**
-     * Accepts a JSON object for use as the file root.
-     * Takes ownership of the passed-in value.
-     */
-    JsonObject(json_t *root);
+    ABC_JSON_CONSTRUCTORS(JsonObject, JsonPtr)
 
     /**
      * Returns true if the object contains a key with the given type.

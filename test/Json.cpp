@@ -8,22 +8,38 @@
 #include "../abcd/json/JsonObject.hpp"
 #include "../minilibs/catch/catch.hpp"
 
-TEST_CASE("JsonPtr copy constructor", "[util][json]")
+TEST_CASE("JsonPtr lifetime", "[util][json]")
 {
-    abcd::JsonPtr a, b;
-    REQUIRE(a.decode("{\"x\": 1}"));
-    REQUIRE(b.decode("[2]"));
-    REQUIRE(json_is_object(a.root()));
-    REQUIRE(json_is_array(b.root()));
+    abcd::JsonPtr a(json_integer(42));
+    REQUIRE(1 == a.get()->refcount);
+    REQUIRE(json_is_integer(a.get()));
 
-    abcd::JsonPtr c(a);
-    REQUIRE(json_is_object(c.root()));
+    SECTION("move constructor")
+    {
+        abcd::JsonPtr b(std::move(a));
+        REQUIRE(1 == b.get()->refcount);
+        REQUIRE(json_is_integer(b.get()));
+        REQUIRE(!a.get());
+    }
+    SECTION("copy constructor")
+    {
+        abcd::JsonPtr b(a);
+        REQUIRE(2 == b.get()->refcount);
+        REQUIRE(json_is_integer(b.get()));
+        REQUIRE(json_is_integer(a.get()));
+    }
+    SECTION("assignment operator")
+    {
+        abcd::JsonPtr b;
+        b = a;
+        REQUIRE(2 == b.get()->refcount);
+        REQUIRE(json_is_integer(b.get()));
+        REQUIRE(json_is_integer(a.get()));
 
-    c = b;
-    REQUIRE(json_is_array(c.root()));
-
-    REQUIRE(json_is_object(a.root()));
-    REQUIRE(json_is_array(b.root()));
+        b = nullptr;
+        REQUIRE(!b.get());
+        REQUIRE(1 == a.get()->refcount);
+    }
 }
 
 TEST_CASE("JsonObject manipulation", "[util][json]")

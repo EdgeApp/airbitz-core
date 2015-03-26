@@ -242,7 +242,7 @@ tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
     ABC_CHECK_NULL(pData);
 
     ABC_CHECK_NEW(json.load(szFilename), pError);
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(json.root(), Key, pData, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(json.get(), Key, pData, pError));
 
 exit:
     return cc;
@@ -272,7 +272,7 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
 
     ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, Key, &Data, pError));
     ABC_CHECK_NEW(file.decode(toString(U08Buf(Data))), pError);
-    *ppJSON_Data = json_incref(file.root());
+    *ppJSON_Data = json_incref(file.get());
 
 exit:
     return cc;

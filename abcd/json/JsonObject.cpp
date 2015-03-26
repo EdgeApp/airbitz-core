@@ -9,13 +9,6 @@
 
 namespace abcd {
 
-JsonObject::JsonObject(json_t *root):
-    JsonPtr(root)
-{
-    if (!json_is_object(root_))
-        reset();
-}
-
 #define IMPLEMENT_HAS(test) \
     json_t *value = json_object_get(root_, key); \
     if (!value) \

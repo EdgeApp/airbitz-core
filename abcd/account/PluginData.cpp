@@ -17,8 +17,7 @@ namespace abcd {
 struct PluginDataFile:
     public JsonObject
 {
-    PluginDataFile() {}
-    PluginDataFile(json_t *root): JsonObject(root) {}
+    ABC_JSON_CONSTRUCTORS(PluginDataFile, JsonObject)
 
     ABC_JSON_STRING(Key,  "key",  nullptr)
     ABC_JSON_STRING(Data, "data", nullptr)
@@ -72,7 +71,7 @@ pluginDataSet(const Login &login, const std::string &plugin,
     PluginDataFile json;
     json.setKey(key.c_str());
     json.setData(data.c_str());
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(json.root(),
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(json.get(),
         toU08Buf(login.dataKey()), ABC_CryptoType_AES256,
         keyFilename(login, plugin, key).c_str(), &error));
 
