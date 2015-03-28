@@ -40,6 +40,7 @@ namespace abcd {
 #define JSON_ACCT_SPEND_REQUIRE_PIN_ENABLED     "spendRequirePinEnabled"
 #define JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS    "spendRequirePinSatoshis"
 #define JSON_ACCT_DISABLE_PIN_LOGIN             "disablePINLogin"
+#define JSON_ACCT_PIN_LOGIN_COUNT               "pinLoginCount"
 
 #define DEF_REQUIRE_PIN_SATOSHIS 5000000
 
@@ -251,6 +252,18 @@ tABC_CC ABC_AccountSettingsLoad(const Login &login,
         {
             // Default to PIN login allowed
             pSettings->bDisablePINLogin = false;
+        }
+
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_PIN_LOGIN_COUNT);
+        if (pJSON_Value)
+        {
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON pin login count");
+            pSettings->pinLoginCount = json_integer_value(pJSON_Value);
+        }
+        else
+        {
+            // Default to PIN login allowed
+            pSettings->pinLoginCount = 0;
         }
 
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS);
@@ -520,6 +533,9 @@ tABC_CC ABC_AccountSettingsSave(const Login &login,
 
     retVal = json_object_set_new(pJSON_Root, JSON_ACCT_DISABLE_PIN_LOGIN, json_boolean(pSettings->bDisablePINLogin));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_PIN_LOGIN_COUNT, json_integer(pSettings->pinLoginCount));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode pinLoginCount as JSON value");
 
     // create the denomination section
     pJSON_Denom = json_object();
