@@ -94,8 +94,8 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
         ABC_STRDUP(aSources[i]->szSource, EXCHANGE_DEFAULTS[i].szDefaultExchange);
     }
 
-    pSettings->bitcoinDenomination.denominationType = ABC_DENOMINATION_MBTC;
-    pSettings->bitcoinDenomination.satoshi = 100000;
+    pSettings->bitcoinDenomination.denominationType = ABC_DENOMINATION_UBTC;
+    pSettings->bitcoinDenomination.satoshi = 100;
 
     // assign final settings
     *ppSettings = pSettings;
