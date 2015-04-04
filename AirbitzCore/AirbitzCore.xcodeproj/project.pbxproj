@@ -20,6 +20,7 @@
 		3464415B5D5BF7001FE63417 /* Exchange.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Exchange.cpp; sourceTree = "<group>"; };
 		346441BAC7886E0CD9D820CD /* Testnet.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Testnet.cpp; sourceTree = "<group>"; };
 		346441D6EAF0EC88E663B614 /* LoginPackages.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoginPackages.cpp; sourceTree = "<group>"; };
+		346441E304705F3C3A9C7D11 /* ABC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ABC.h; sourceTree = "<group>"; };
 		346441FAD9DE8883DA28441E /* Wallet.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Wallet.hpp; sourceTree = "<group>"; };
 		3464424F45337D6C58FD94C9 /* Json.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Json.hpp; sourceTree = "<group>"; };
 		346442A2F5D8B0F906E4EB0F /* AccountCategories.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AccountCategories.cpp; sourceTree = "<group>"; };
@@ -46,6 +47,7 @@
 		3464463D16FF7E907D5161FA /* Pin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Pin.cpp; sourceTree = "<group>"; };
 		3464465AB18294AE539F5FBA /* LoginPackages.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LoginPackages.hpp; sourceTree = "<group>"; };
 		3464465ABD86D6A0D9D87EC9 /* Otp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Otp.cpp; sourceTree = "<group>"; };
+		346446815D4D42C145C393FA /* LoginShim.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LoginShim.hpp; sourceTree = "<group>"; };
 		3464468CD3523786B7EE8A91 /* Sync.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Sync.cpp; sourceTree = "<group>"; };
 		346446B9D702A5F487819D22 /* Util.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Util.hpp; sourceTree = "<group>"; };
 		346446D1C1A55064D57CB57B /* watcher.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = watcher.cpp; sourceTree = "<group>"; };
@@ -56,6 +58,7 @@
 		3464472D54EE7B19EFE5C535 /* scope_settings.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = scope_settings.xml; sourceTree = "<group>"; };
 		3464477AD172D167F40C7B4B /* JsonFile.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = JsonFile.hpp; sourceTree = "<group>"; };
 		346447CA1AD6D3A0B5EF2082 /* U08Buf.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = U08Buf.hpp; sourceTree = "<group>"; };
+		346447F2BA074C999E73D965 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = file.gitignore; path = .gitignore; sourceTree = "<group>"; };
 		346447FFF4485F3F6B7214FB /* workspace.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = workspace.xml; sourceTree = "<group>"; };
 		3464481463E30882EF93B751 /* encodings.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = encodings.xml; sourceTree = "<group>"; };
 		3464483409A46B76987977C7 /* Debug.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Debug.hpp; sourceTree = "<group>"; };
@@ -80,6 +83,7 @@
 		34644BF3ED8C3321ABB15D75 /* LoginServer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LoginServer.hpp; sourceTree = "<group>"; };
 		34644C14899C9AB509B1C56A /* OtpKey.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = OtpKey.hpp; sourceTree = "<group>"; };
 		34644C6635308E7C343CF77C /* Mutex.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Mutex.hpp; sourceTree = "<group>"; };
+		34644C6F249DFEE63B7F5CF1 /* LoginShim.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoginShim.cpp; sourceTree = "<group>"; };
 		34644C7315BEA9E0D2A19C4D /* URL.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = URL.hpp; sourceTree = "<group>"; };
 		34644C7B6E5E678AC94D7C53 /* LoginPassword.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LoginPassword.hpp; sourceTree = "<group>"; };
 		34644C7BDA57BFE341279043 /* config.h.example */ = {isa = PBXFileReference; lastKnownFileType = file.example; path = config.h.example; sourceTree = "<group>"; };
@@ -113,6 +117,7 @@
 		34644F7858CA743352364C10 /* LoginServer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoginServer.cpp; sourceTree = "<group>"; };
 		34644F9978F51376EA69A832 /* Exchange.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Exchange.hpp; sourceTree = "<group>"; };
 		34644FB25CF28DEF5FA17F51 /* FileIO.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = FileIO.hpp; sourceTree = "<group>"; };
+		34644FD62A10A245A463531C /* ABC.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ABC.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -128,6 +133,7 @@
 			children = (
 				34644142A7C80E532B4647F4 /* Products */,
 				346441E3AB0465823DFE8E60 /* abcd */,
+				3464443FCF30782BFE5A6F0D /* src */,
 			);
 			sourceTree = "<group>";
 		};
@@ -169,6 +175,19 @@
 			);
 			name = abcd;
 			path = ../abcd;
+			sourceTree = "<group>";
+		};
+		3464443FCF30782BFE5A6F0D /* src */ = {
+			isa = PBXGroup;
+			children = (
+				346441E304705F3C3A9C7D11 /* ABC.h */,
+				34644FD62A10A245A463531C /* ABC.cpp */,
+				346447F2BA074C999E73D965 /* .gitignore */,
+				34644C6F249DFEE63B7F5CF1 /* LoginShim.cpp */,
+				346446815D4D42C145C393FA /* LoginShim.hpp */,
+			);
+			name = src;
+			path = ../src;
 			sourceTree = "<group>";
 		};
 		346445647D6D8B418167F99F /* .idea */ = {

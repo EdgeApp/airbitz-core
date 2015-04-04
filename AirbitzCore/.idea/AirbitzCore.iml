@@ -5,6 +5,9 @@
     <content url="file://$MODULE_DIR$/../abcd">
       <sourceFolder url="file://$MODULE_DIR$/../abcd" isTestSource="false" />
     </content>
+    <content url="file://$MODULE_DIR$/../src">
+      <sourceFolder url="file://$MODULE_DIR$/../src" isTestSource="false" />
+    </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
