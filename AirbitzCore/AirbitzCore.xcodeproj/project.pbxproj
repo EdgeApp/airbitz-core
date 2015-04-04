@@ -1,0 +1,393 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXFileReference section */
+		3464401FE4985BCA252E86D4 /* Tx.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Tx.cpp; sourceTree = "<group>"; };
+		3464402781E8096881B2C08C /* Otp.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Otp.hpp; sourceTree = "<group>"; };
+		3464402ED1746206A99CC626 /* LoginRecovery.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LoginRecovery.hpp; sourceTree = "<group>"; };
+		346440532326B35D94667E9F /* General.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = General.cpp; sourceTree = "<group>"; };
+		34644053E48F613A19588443 /* AccountCategories.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = AccountCategories.hpp; sourceTree = "<group>"; };
+		346440654C0FB74C949B7CF2 /* FileIO.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileIO.cpp; sourceTree = "<group>"; };
+		346440DDC26ABE4448112818 /* workspace.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = workspace.xml; sourceTree = "<group>"; };
+		346440EC6E84761834E66F21 /* Crypto.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Crypto.cpp; sourceTree = "<group>"; };
+		346441200D9F9B6523AFE04E /* watcher.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = watcher.hpp; sourceTree = "<group>"; };
+		3464412E82A232309493DF42 /* Lobby.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Lobby.hpp; sourceTree = "<group>"; };
+		3464415B5D5BF7001FE63417 /* Exchange.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Exchange.cpp; sourceTree = "<group>"; };
+		346441BAC7886E0CD9D820CD /* Testnet.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Testnet.cpp; sourceTree = "<group>"; };
+		346441D6EAF0EC88E663B614 /* LoginPackages.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoginPackages.cpp; sourceTree = "<group>"; };
+		346441FAD9DE8883DA28441E /* Wallet.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Wallet.hpp; sourceTree = "<group>"; };
+		3464424F45337D6C58FD94C9 /* Json.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Json.hpp; sourceTree = "<group>"; };
+		346442A2F5D8B0F906E4EB0F /* AccountCategories.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AccountCategories.cpp; sourceTree = "<group>"; };
+		346442B982E66BA275F76005 /* Data.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Data.cpp; sourceTree = "<group>"; };
+		346442F18DBB3F00D67B78B3 /* JsonObject.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = JsonObject.hpp; sourceTree = "<group>"; };
+		3464430F14A247C92DEDDE46 /* Status.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Status.hpp; sourceTree = "<group>"; };
+		3464431C60E460A5E61070B5 /* Debug.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Debug.cpp; sourceTree = "<group>"; };
+		3464433BD37EA8707EC6DDB1 /* JsonFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JsonFile.cpp; sourceTree = "<group>"; };
+		3464436CE31C959F783C7825 /* ExchangeCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ExchangeCache.cpp; sourceTree = "<group>"; };
+		34644378C9A2864BF762785C /* Text.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Text.cpp; sourceTree = "<group>"; };
+		346443D14E58241E3914F80B /* WatcherBridge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WatcherBridge.cpp; sourceTree = "<group>"; };
+		346444057CE9731EE074EC56 /* ExchangeServers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ExchangeServers.cpp; sourceTree = "<group>"; };
+		3464443E069A39DE295C4B69 /* ExchangeCache.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ExchangeCache.hpp; sourceTree = "<group>"; };
+		3464448C2FDAA1E570247B5C /* AutoFree.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = AutoFree.hpp; sourceTree = "<group>"; };
+		3464449E2E7366567E511C60 /* Login.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Login.hpp; sourceTree = "<group>"; };
+		346444C987EA4A075C8A6C6A /* vcs.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = vcs.xml; sourceTree = "<group>"; };
+		346444E944D51218805BBB83 /* Export.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Export.cpp; sourceTree = "<group>"; };
+		34644521C9C3BBC405CCC730 /* Lobby.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Lobby.cpp; sourceTree = "<group>"; };
+		34644548026A8331262307DA /* AccountSettings.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AccountSettings.cpp; sourceTree = "<group>"; };
+		3464459DCB4D3C3A1FB89CB9 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		346445BFA2246F2D9168A8E9 /* General.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = General.hpp; sourceTree = "<group>"; };
+		346445F62EAF6233943ABE75 /* U08Buf.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = U08Buf.cpp; sourceTree = "<group>"; };
+		3464461746E053937F987924 /* LoginPin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoginPin.cpp; sourceTree = "<group>"; };
+		3464463D16FF7E907D5161FA /* Pin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Pin.cpp; sourceTree = "<group>"; };
+		3464465AB18294AE539F5FBA /* LoginPackages.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LoginPackages.hpp; sourceTree = "<group>"; };
+		3464465ABD86D6A0D9D87EC9 /* Otp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Otp.cpp; sourceTree = "<group>"; };
+		3464468CD3523786B7EE8A91 /* Sync.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Sync.cpp; sourceTree = "<group>"; };
+		346446B9D702A5F487819D22 /* Util.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Util.hpp; sourceTree = "<group>"; };
+		346446D1C1A55064D57CB57B /* watcher.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = watcher.cpp; sourceTree = "<group>"; };
+		34644705AEBE747581BDCBC7 /* .name */ = {isa = PBXFileReference; lastKnownFileType = file.name; path = .name; sourceTree = "<group>"; };
+		3464470D841608AB3CA8A2F9 /* picker.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = picker.hpp; sourceTree = "<group>"; };
+		3464471E20E985190B9D6EAB /* Account.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Account.cpp; sourceTree = "<group>"; };
+		3464471E2DD1175BAF1FF492 /* Encoding.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Encoding.cpp; sourceTree = "<group>"; };
+		3464472D54EE7B19EFE5C535 /* scope_settings.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = scope_settings.xml; sourceTree = "<group>"; };
+		3464477AD172D167F40C7B4B /* JsonFile.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = JsonFile.hpp; sourceTree = "<group>"; };
+		346447CA1AD6D3A0B5EF2082 /* U08Buf.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = U08Buf.hpp; sourceTree = "<group>"; };
+		346447FFF4485F3F6B7214FB /* workspace.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = workspace.xml; sourceTree = "<group>"; };
+		3464481463E30882EF93B751 /* encodings.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = encodings.xml; sourceTree = "<group>"; };
+		3464483409A46B76987977C7 /* Debug.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Debug.hpp; sourceTree = "<group>"; };
+		346448395665A1CF8AF0BD82 /* Wallet.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Wallet.cpp; sourceTree = "<group>"; };
+		346448B0817FE894C32A7F98 /* AccountSettings.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = AccountSettings.hpp; sourceTree = "<group>"; };
+		34644936841ED2B89C986B3F /* LoginDir.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LoginDir.hpp; sourceTree = "<group>"; };
+		3464495768FD975F6F67C7E4 /* ExchangeServers.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ExchangeServers.hpp; sourceTree = "<group>"; };
+		3464496E722C20519BA37D4D /* LoginDir.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoginDir.cpp; sourceTree = "<group>"; };
+		3464497AC43361602678F1DB /* Pin.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Pin.hpp; sourceTree = "<group>"; };
+		346449C6CF4A1562549B9544 /* scope_settings.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = scope_settings.xml; sourceTree = "<group>"; };
+		34644A2640346E37BB110F23 /* modules.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = modules.xml; sourceTree = "<group>"; };
+		34644A4B31ED66657A9926CA /* Broadcast.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Broadcast.hpp; sourceTree = "<group>"; };
+		34644A68F1769AC0D6A35F21 /* PluginData.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = PluginData.hpp; sourceTree = "<group>"; };
+		34644B292222A684E82086BC /* Data.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Data.hpp; sourceTree = "<group>"; };
+		34644B8915D3146AC564F1B6 /* vcs.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = vcs.xml; sourceTree = "<group>"; };
+		34644B93707B0104D7926C40 /* Scrypt.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Scrypt.hpp; sourceTree = "<group>"; };
+		34644B9F46FB4FBABC5CFED2 /* xcode.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = xcode.xml; sourceTree = "<group>"; };
+		34644BA18D6C1B1FFC8C6FEC /* Mutex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Mutex.cpp; sourceTree = "<group>"; };
+		34644BA2C1D562337395D37F /* Status.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Status.cpp; sourceTree = "<group>"; };
+		34644BC5464B42E056B315A4 /* Login.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Login.cpp; sourceTree = "<group>"; };
+		34644BD4CBE8F684BD93BAE8 /* PluginData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginData.cpp; sourceTree = "<group>"; };
+		34644BF3ED8C3321ABB15D75 /* LoginServer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LoginServer.hpp; sourceTree = "<group>"; };
+		34644C14899C9AB509B1C56A /* OtpKey.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = OtpKey.hpp; sourceTree = "<group>"; };
+		34644C6635308E7C343CF77C /* Mutex.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Mutex.hpp; sourceTree = "<group>"; };
+		34644C7315BEA9E0D2A19C4D /* URL.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = URL.hpp; sourceTree = "<group>"; };
+		34644C7B6E5E678AC94D7C53 /* LoginPassword.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LoginPassword.hpp; sourceTree = "<group>"; };
+		34644C7BDA57BFE341279043 /* config.h.example */ = {isa = PBXFileReference; lastKnownFileType = file.example; path = config.h.example; sourceTree = "<group>"; };
+		34644CA3F4DD70006EA92FB8 /* misc.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = misc.xml; sourceTree = "<group>"; };
+		34644CD38CF43D8A420F3390 /* Random.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Random.cpp; sourceTree = "<group>"; };
+		34644CD9B3A24C4AA09A354A /* Testnet.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Testnet.hpp; sourceTree = "<group>"; };
+		34644CE868D261318EC06CA9 /* LoginPin.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LoginPin.hpp; sourceTree = "<group>"; };
+		34644CEC513A5E24B47126A7 /* Broadcast.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Broadcast.cpp; sourceTree = "<group>"; };
+		34644CEEC2E9110C38B38F7C /* Util.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Util.cpp; sourceTree = "<group>"; };
+		34644D01E0F01B6C1A8C1187 /* Scrypt.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Scrypt.cpp; sourceTree = "<group>"; };
+		34644D047B8D087A56804379 /* WatcherBridge.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = WatcherBridge.hpp; sourceTree = "<group>"; };
+		34644D09F5D2ADBA9BB946DD /* Text.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Text.hpp; sourceTree = "<group>"; };
+		34644D1FA2A916BD565851E7 /* Random.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Random.hpp; sourceTree = "<group>"; };
+		34644D3C7C5A68D2E2115FEF /* Export.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Export.hpp; sourceTree = "<group>"; };
+		34644D5CD91AD93EAEF742DB /* Json.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Json.cpp; sourceTree = "<group>"; };
+		34644D5F2037AD424BE7220C /* LoginPassword.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoginPassword.cpp; sourceTree = "<group>"; };
+		34644D6BD02D61F6A37177ED /* ServerDefs.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ServerDefs.hpp; sourceTree = "<group>"; };
+		34644D7349238EBA7A1A073E /* Account.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Account.hpp; sourceTree = "<group>"; };
+		34644DA30B90711596040344 /* OtpKey.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OtpKey.cpp; sourceTree = "<group>"; };
+		34644DA682AA3D9F6D5AB228 /* picker.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = picker.cpp; sourceTree = "<group>"; };
+		34644DF6151C13CD8C2CFEB2 /* Sync.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Sync.hpp; sourceTree = "<group>"; };
+		34644DF95D9E8C5C4F18AC33 /* Airbitz_Core.iml */ = {isa = PBXFileReference; lastKnownFileType = file.iml; path = Airbitz_Core.iml; sourceTree = "<group>"; };
+		34644E032E7CDABCF21BB5B3 /* encodings.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = encodings.xml; sourceTree = "<group>"; };
+		34644E315B583E9898AEA236 /* modules.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = modules.xml; sourceTree = "<group>"; };
+		34644E4D8509AA0CB62CB386 /* Tx.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Tx.hpp; sourceTree = "<group>"; };
+		34644E7EB6C34458B96AE8F2 /* LoginRecovery.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoginRecovery.cpp; sourceTree = "<group>"; };
+		34644EB66D8E1EA0166935AB /* URL.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = URL.cpp; sourceTree = "<group>"; };
+		34644EBB98363FCF84D01684 /* Crypto.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Crypto.hpp; sourceTree = "<group>"; };
+		34644F4F88EDD3A0779A2F63 /* Encoding.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Encoding.hpp; sourceTree = "<group>"; };
+		34644F6D8756D81C689F782F /* JsonObject.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JsonObject.cpp; sourceTree = "<group>"; };
+		34644F7858CA743352364C10 /* LoginServer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LoginServer.cpp; sourceTree = "<group>"; };
+		34644F9978F51376EA69A832 /* Exchange.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Exchange.hpp; sourceTree = "<group>"; };
+		34644FB25CF28DEF5FA17F51 /* FileIO.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = FileIO.hpp; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		34644142A7C80E532B4647F4 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3464416E26EBA00A80402D77 = {
+			isa = PBXGroup;
+			children = (
+				34644142A7C80E532B4647F4 /* Products */,
+				346441E3AB0465823DFE8E60 /* abcd */,
+			);
+			sourceTree = "<group>";
+		};
+		346441C73D31121BB5068C17 /* .idea */ = {
+			isa = PBXGroup;
+			children = (
+				346449A616D1DD06712B3A3B /* scopes */,
+				346444C987EA4A075C8A6C6A /* vcs.xml */,
+				34644CA3F4DD70006EA92FB8 /* misc.xml */,
+				34644E315B583E9898AEA236 /* modules.xml */,
+				34644E032E7CDABCF21BB5B3 /* encodings.xml */,
+				346447FFF4485F3F6B7214FB /* workspace.xml */,
+			);
+			path = .idea;
+			sourceTree = "<group>";
+		};
+		346441E3AB0465823DFE8E60 /* abcd */ = {
+			isa = PBXGroup;
+			children = (
+				34644A47F3F5985981E23D65 /* json */,
+				34644D3E06503BA4FD03A945 /* util */,
+				346441C73D31121BB5068C17 /* .idea */,
+				346447389873E3927684967B /* login */,
+				34644663DB4024BAB1C08FF6 /* crypto */,
+				3464401FE4985BCA252E86D4 /* Tx.cpp */,
+				34644E4D8509AA0CB62CB386 /* Tx.hpp */,
+				34644E573E5F6F1228326CDF /* account */,
+				34644FC1D4C2E63C87442C9B /* bitcoin */,
+				3464459DCB4D3C3A1FB89CB9 /* config.h */,
+				346447169AC7A7131FA2F8CA /* exchange */,
+				346444E944D51218805BBB83 /* Export.cpp */,
+				34644D3C7C5A68D2E2115FEF /* Export.hpp */,
+				346448395665A1CF8AF0BD82 /* Wallet.cpp */,
+				346441FAD9DE8883DA28441E /* Wallet.hpp */,
+				346440532326B35D94667E9F /* General.cpp */,
+				346445BFA2246F2D9168A8E9 /* General.hpp */,
+				3464466656F545EAAFB26754 /* Airbitz_Core */,
+				34644C7BDA57BFE341279043 /* config.h.example */,
+			);
+			name = abcd;
+			path = ../abcd;
+			sourceTree = "<group>";
+		};
+		346445647D6D8B418167F99F /* .idea */ = {
+			isa = PBXGroup;
+			children = (
+				34644705AEBE747581BDCBC7 /* .name */,
+				34644FA0EFEC8D3BA80A4B7D /* scopes */,
+				34644B8915D3146AC564F1B6 /* vcs.xml */,
+				34644B9F46FB4FBABC5CFED2 /* xcode.xml */,
+				34644A2640346E37BB110F23 /* modules.xml */,
+				3464481463E30882EF93B751 /* encodings.xml */,
+				346440DDC26ABE4448112818 /* workspace.xml */,
+				34644DF95D9E8C5C4F18AC33 /* Airbitz_Core.iml */,
+			);
+			path = .idea;
+			sourceTree = "<group>";
+		};
+		34644663DB4024BAB1C08FF6 /* crypto */ = {
+			isa = PBXGroup;
+			children = (
+				346440EC6E84761834E66F21 /* Crypto.cpp */,
+				34644EBB98363FCF84D01684 /* Crypto.hpp */,
+				34644DA30B90711596040344 /* OtpKey.cpp */,
+				34644C14899C9AB509B1C56A /* OtpKey.hpp */,
+				34644CD38CF43D8A420F3390 /* Random.cpp */,
+				34644D1FA2A916BD565851E7 /* Random.hpp */,
+				34644D01E0F01B6C1A8C1187 /* Scrypt.cpp */,
+				34644B93707B0104D7926C40 /* Scrypt.hpp */,
+				3464471E2DD1175BAF1FF492 /* Encoding.cpp */,
+				34644F4F88EDD3A0779A2F63 /* Encoding.hpp */,
+			);
+			path = crypto;
+			sourceTree = "<group>";
+		};
+		3464466656F545EAAFB26754 /* Airbitz_Core */ = {
+			isa = PBXGroup;
+			children = (
+				346445647D6D8B418167F99F /* .idea */,
+			);
+			path = Airbitz_Core;
+			sourceTree = "<group>";
+		};
+		346447169AC7A7131FA2F8CA /* exchange */ = {
+			isa = PBXGroup;
+			children = (
+				3464415B5D5BF7001FE63417 /* Exchange.cpp */,
+				34644F9978F51376EA69A832 /* Exchange.hpp */,
+				3464436CE31C959F783C7825 /* ExchangeCache.cpp */,
+				3464443E069A39DE295C4B69 /* ExchangeCache.hpp */,
+				346444057CE9731EE074EC56 /* ExchangeServers.cpp */,
+				3464495768FD975F6F67C7E4 /* ExchangeServers.hpp */,
+			);
+			path = exchange;
+			sourceTree = "<group>";
+		};
+		346447389873E3927684967B /* login */ = {
+			isa = PBXGroup;
+			children = (
+				3464465ABD86D6A0D9D87EC9 /* Otp.cpp */,
+				3464402781E8096881B2C08C /* Otp.hpp */,
+				34644521C9C3BBC405CCC730 /* Lobby.cpp */,
+				3464412E82A232309493DF42 /* Lobby.hpp */,
+				34644BC5464B42E056B315A4 /* Login.cpp */,
+				3464449E2E7366567E511C60 /* Login.hpp */,
+				3464496E722C20519BA37D4D /* LoginDir.cpp */,
+				34644936841ED2B89C986B3F /* LoginDir.hpp */,
+				3464461746E053937F987924 /* LoginPin.cpp */,
+				34644CE868D261318EC06CA9 /* LoginPin.hpp */,
+				34644D6BD02D61F6A37177ED /* ServerDefs.hpp */,
+				34644F7858CA743352364C10 /* LoginServer.cpp */,
+				34644BF3ED8C3321ABB15D75 /* LoginServer.hpp */,
+				346441D6EAF0EC88E663B614 /* LoginPackages.cpp */,
+				3464465AB18294AE539F5FBA /* LoginPackages.hpp */,
+				34644D5F2037AD424BE7220C /* LoginPassword.cpp */,
+				34644C7B6E5E678AC94D7C53 /* LoginPassword.hpp */,
+				34644E7EB6C34458B96AE8F2 /* LoginRecovery.cpp */,
+				3464402ED1746206A99CC626 /* LoginRecovery.hpp */,
+			);
+			path = login;
+			sourceTree = "<group>";
+		};
+		346449A616D1DD06712B3A3B /* scopes */ = {
+			isa = PBXGroup;
+			children = (
+				3464472D54EE7B19EFE5C535 /* scope_settings.xml */,
+			);
+			path = scopes;
+			sourceTree = "<group>";
+		};
+		34644A47F3F5985981E23D65 /* json */ = {
+			isa = PBXGroup;
+			children = (
+				3464433BD37EA8707EC6DDB1 /* JsonFile.cpp */,
+				3464477AD172D167F40C7B4B /* JsonFile.hpp */,
+				34644F6D8756D81C689F782F /* JsonObject.cpp */,
+				346442F18DBB3F00D67B78B3 /* JsonObject.hpp */,
+			);
+			path = json;
+			sourceTree = "<group>";
+		};
+		34644D3E06503BA4FD03A945 /* util */ = {
+			isa = PBXGroup;
+			children = (
+				3464463D16FF7E907D5161FA /* Pin.cpp */,
+				3464497AC43361602678F1DB /* Pin.hpp */,
+				34644EB66D8E1EA0166935AB /* URL.cpp */,
+				34644C7315BEA9E0D2A19C4D /* URL.hpp */,
+				346442B982E66BA275F76005 /* Data.cpp */,
+				34644B292222A684E82086BC /* Data.hpp */,
+				34644D5CD91AD93EAEF742DB /* Json.cpp */,
+				3464424F45337D6C58FD94C9 /* Json.hpp */,
+				3464468CD3523786B7EE8A91 /* Sync.cpp */,
+				34644DF6151C13CD8C2CFEB2 /* Sync.hpp */,
+				34644CEEC2E9110C38B38F7C /* Util.cpp */,
+				346446B9D702A5F487819D22 /* Util.hpp */,
+				3464431C60E460A5E61070B5 /* Debug.cpp */,
+				3464483409A46B76987977C7 /* Debug.hpp */,
+				34644BA18D6C1B1FFC8C6FEC /* Mutex.cpp */,
+				34644C6635308E7C343CF77C /* Mutex.hpp */,
+				346440654C0FB74C949B7CF2 /* FileIO.cpp */,
+				34644FB25CF28DEF5FA17F51 /* FileIO.hpp */,
+				34644BA2C1D562337395D37F /* Status.cpp */,
+				3464430F14A247C92DEDDE46 /* Status.hpp */,
+				346445F62EAF6233943ABE75 /* U08Buf.cpp */,
+				346447CA1AD6D3A0B5EF2082 /* U08Buf.hpp */,
+				3464448C2FDAA1E570247B5C /* AutoFree.hpp */,
+			);
+			path = util;
+			sourceTree = "<group>";
+		};
+		34644E573E5F6F1228326CDF /* account */ = {
+			isa = PBXGroup;
+			children = (
+				3464471E20E985190B9D6EAB /* Account.cpp */,
+				34644D7349238EBA7A1A073E /* Account.hpp */,
+				34644BD4CBE8F684BD93BAE8 /* PluginData.cpp */,
+				34644A68F1769AC0D6A35F21 /* PluginData.hpp */,
+				34644548026A8331262307DA /* AccountSettings.cpp */,
+				346448B0817FE894C32A7F98 /* AccountSettings.hpp */,
+				346442A2F5D8B0F906E4EB0F /* AccountCategories.cpp */,
+				34644053E48F613A19588443 /* AccountCategories.hpp */,
+			);
+			path = account;
+			sourceTree = "<group>";
+		};
+		34644FA0EFEC8D3BA80A4B7D /* scopes */ = {
+			isa = PBXGroup;
+			children = (
+				346449C6CF4A1562549B9544 /* scope_settings.xml */,
+			);
+			path = scopes;
+			sourceTree = "<group>";
+		};
+		34644FC1D4C2E63C87442C9B /* bitcoin */ = {
+			isa = PBXGroup;
+			children = (
+				34644378C9A2864BF762785C /* Text.cpp */,
+				34644D09F5D2ADBA9BB946DD /* Text.hpp */,
+				34644DA682AA3D9F6D5AB228 /* picker.cpp */,
+				3464470D841608AB3CA8A2F9 /* picker.hpp */,
+				346441BAC7886E0CD9D820CD /* Testnet.cpp */,
+				34644CD9B3A24C4AA09A354A /* Testnet.hpp */,
+				346446D1C1A55064D57CB57B /* watcher.cpp */,
+				346441200D9F9B6523AFE04E /* watcher.hpp */,
+				34644CEC513A5E24B47126A7 /* Broadcast.cpp */,
+				34644A4B31ED66657A9926CA /* Broadcast.hpp */,
+				346443D14E58241E3914F80B /* WatcherBridge.cpp */,
+				34644D047B8D087A56804379 /* WatcherBridge.hpp */,
+			);
+			path = bitcoin;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXProject section */
+		3464477AA73E8662AE5D3874 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 34644CD32B20F1BE7858A7A9 /* Build configuration list for PBXProject "AirbitzCore" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 3464416E26EBA00A80402D77;
+			productRefGroup = 34644142A7C80E532B4647F4 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		346441F5B065446E5B80A90E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		34644F5A098A79F7C68CEE55 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		34644CD32B20F1BE7858A7A9 /* Build configuration list for PBXProject "AirbitzCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				346441F5B065446E5B80A90E /* Debug */,
+				34644F5A098A79F7C68CEE55 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3464477AA73E8662AE5D3874 /* Project object */;
+}
