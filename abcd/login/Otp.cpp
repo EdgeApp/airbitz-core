@@ -55,9 +55,34 @@ otpAuthRemove(Login &login)
 }
 
 Status
-otpResetGet(std::list<DataChunk> authIds, std::list<bool> &result)
+otpResetGet(std::list<std::string> &result,
+    const std::list<std::string> &usernames)
 {
-    ABC_CHECK_OLD(ABC_LoginServerOtpPending(authIds, result, &error));
+    // List the users:
+    std::list<DataChunk> authIds;
+    for (const auto &i: usernames)
+    {
+        Lobby lobby;
+        ABC_CHECK(lobby.init(i));
+        auto authId = lobby.authId();
+        authIds.emplace_back(authId.begin(), authId.end());
+    }
+
+    // Make the request:
+    std::list<bool> flags;
+    ABC_CHECK_OLD(ABC_LoginServerOtpPending(authIds, flags, &error));
+
+    // Smush the results:
+    result.clear();
+    auto i = flags.begin();
+    auto j = usernames.begin();
+    while (i != flags.end() && j != usernames.end())
+    {
+        if (*i)
+            result.push_back(*j);
+        ++i; ++j;
+    }
+
     return Status();
 }
 

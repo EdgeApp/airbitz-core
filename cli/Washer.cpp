@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "Commands.hpp"
+#include "Command.hpp"
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -140,7 +140,7 @@ void main_loop()
     }
 }
 
-Status washer(int argc, char *argv[])
+COMMAND(InitLevel::login, Washer, "washer")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... washer <user> <pass>");

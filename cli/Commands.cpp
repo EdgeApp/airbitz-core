@@ -5,8 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "Commands.hpp"
-#include "../src/LoginShim.hpp"
+#include "Command.hpp"
 #include "../abcd/Wallet.hpp"
 #include "../abcd/account/Account.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
@@ -22,7 +21,7 @@
 
 using namespace abcd;
 
-Status accountAvailable(int argc, char *argv[])
+COMMAND(InitLevel::context, AccountAvailable, "account-available")
 {
     if (argc != 1)
         return ABC_ERROR(ABC_CC_Error, "usage: ... account-available <user>");
@@ -30,41 +29,36 @@ Status accountAvailable(int argc, char *argv[])
     return Status();
 }
 
-Status accountDecrypt(int argc, char *argv[])
+COMMAND(InitLevel::account, AccountDecrypt, "account-decrypt")
 {
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... account-decrypt <user> <pass> <filename>\n"
             "note: The filename is account-relative.");
 
-    std::shared_ptr<Login> login;
-    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
-
-    std::string file = login->syncDir() + argv[2];
+    std::string file = session.login->syncDir() + argv[2];
 
     AutoU08Buf data;
-    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(file.c_str(), toU08Buf(login->dataKey()), &data, &error));
+    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(file.c_str(),
+        toU08Buf(session.login->dataKey()), &data, &error));
     fwrite(data.p, data.end - data.p, 1, stdout);
     printf("\n");
 
     return Status();
 }
 
-Status accountEncrypt(int argc, char *argv[])
+COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt")
 {
-
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... account-encrypt <user> <pass> <filename>\n"
             "note: The filename is account-relative.");
 
-    std::shared_ptr<Login> login;
-    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
-
     DataChunk contents;
-    ABC_CHECK(fileLoad(contents, login->syncDir() + argv[2]));
+    ABC_CHECK(fileLoad(contents, session.login->syncDir() + argv[2]));
 
     json_t *encrypted;
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents), toU08Buf(login->dataKey()),
-        ABC_CryptoType_AES256, &encrypted, &error));
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(contents),
+        toU08Buf(session.login->dataKey()), ABC_CryptoType_AES256,
+        &encrypted, &error));
 
     std::string str;
     ABC_CHECK(JsonFile(encrypted).encode(str));
@@ -73,7 +67,7 @@ Status accountEncrypt(int argc, char *argv[])
     return Status();
 }
 
-Status addCategory(int argc, char *argv[])
+COMMAND(InitLevel::account, AddCategory, "add-category")
 {
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... add-category <user> <pass> <category>");
@@ -83,20 +77,27 @@ Status addCategory(int argc, char *argv[])
     return Status();
 }
 
-Status changePassword(int argc, char *argv[])
+COMMAND(InitLevel::login, ChangePassword, "change-password")
 {
     if (argc != 4)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... change-password <pw|ra> <user> <pass|ra> <new-pass>");
+        return ABC_ERROR(ABC_CC_Error, "usage: ... change-password <user> <pass> <new-pass>");
 
-    if (strncmp(argv[0], "pw", 2) == 0)
-        ABC_CHECK_OLD(ABC_ChangePassword(argv[1], argv[2], argv[3], &error));
-    else
-        ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(argv[1], argv[2], argv[3], &error));
+    ABC_CHECK_OLD(ABC_ChangePassword(argv[0], argv[1], argv[2], &error));
 
     return Status();
 }
 
-Status checkPassword(int argc, char *argv[])
+COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery")
+{
+    if (argc != 4)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... change-password-recovery <user> <ra> <new-pass>");
+
+    ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(argv[0], argv[1], argv[2], &error));
+
+    return Status();
+}
+
+COMMAND(InitLevel::none, CheckPassword, "check-password")
 {
     if (argc != 1)
         return ABC_ERROR(ABC_CC_Error, "usage: ... check-password <pass>");
@@ -116,7 +117,7 @@ Status checkPassword(int argc, char *argv[])
     return Status();
 }
 
-Status checkRecoveryAnswers(int argc, char *argv[])
+COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... check-recovery-answers <user> <ras>");
@@ -132,7 +133,7 @@ Status checkRecoveryAnswers(int argc, char *argv[])
     return Status();
 }
 
-Status createAccount(int argc, char *argv[])
+COMMAND(InitLevel::context, CreateAccount, "create-account")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... create-account <user> <pass>");
@@ -143,7 +144,7 @@ Status createAccount(int argc, char *argv[])
     return Status();
 }
 
-Status createWallet(int argc, char *argv[])
+COMMAND(InitLevel::account, CreateWallet, "create-wallet")
 {
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... create-wallet <user> <pass> <wallet-name>");
@@ -156,27 +157,24 @@ Status createWallet(int argc, char *argv[])
     return Status();
 }
 
-Status dataSync(int argc, char *argv[])
+COMMAND(InitLevel::login, DataSync, "data-sync")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... data-sync <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_SignIn(argv[0], argv[1], &error));
     ABC_CHECK_OLD(ABC_DataSyncAll(argv[0], argv[1], NULL, NULL, &error));
 
     return Status();
 }
 
-Status generateAddresses(int argc, char *argv[])
+COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
 {
+    auto wallet = ABC_WalletID(*session.login, session.uuid.c_str());
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... generate-addresses <user> <pass> <wallet-name> <count>");
 
-    std::shared_ptr<Login> login;
-    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
-
     tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(*login, argv[2]), &data, &error));
+    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(wallet, &data, &error));
 
     libbitcoin::data_chunk seed(data.p, data.end);
     libwallet::hd_private_key m(seed);
@@ -192,22 +190,20 @@ Status generateAddresses(int argc, char *argv[])
     return Status();
 }
 
-Status getBitcoinSeed(int argc, char *argv[])
+COMMAND(InitLevel::wallet, GetBitcoinSeed, "get-bitcoin-seed")
 {
+    auto wallet = ABC_WalletID(*session.login, session.uuid.c_str());
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-bitcoin-seed <user> <pass> <wallet-name>");
 
-    std::shared_ptr<Login> login;
-    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
-
     tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(*login, argv[2]), &data, &error));
+    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(wallet, &data, &error));
     std::cout << base16Encode(data) << std::endl;
 
     return Status();
 }
 
-Status getCategories(int argc, char *argv[])
+COMMAND(InitLevel::account, GetCategories, "get-categories")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-categories <user> <pass>");
@@ -224,7 +220,7 @@ Status getCategories(int argc, char *argv[])
     return Status();
 }
 
-Status getExchangeRate(int argc, char *argv[])
+COMMAND(InitLevel::account, GetExchangeRate, "get-exchange-rate")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-exchange-rate <user> <pass>");
@@ -245,7 +241,7 @@ Status getExchangeRate(int argc, char *argv[])
     return Status();
 }
 
-Status getQuestionChoices(int argc, char *argv[])
+COMMAND(InitLevel::context, GetQuestionChoices, "get-question-choices")
 {
     if (argc != 0)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-question-choices");
@@ -264,7 +260,7 @@ Status getQuestionChoices(int argc, char *argv[])
     return Status();
 }
 
-Status getQuestions(int argc, char *argv[])
+COMMAND(InitLevel::lobby, GetQuestions, "get-questions")
 {
     if (argc != 1)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-questions <user>");
@@ -276,7 +272,7 @@ Status getQuestions(int argc, char *argv[])
     return Status();
 }
 
-Status getSettings(int argc, char *argv[])
+COMMAND(InitLevel::login, GetSettings, "get-settings")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-settings <user> <pass>");
@@ -310,7 +306,7 @@ Status getSettings(int argc, char *argv[])
     return Status();
 }
 
-Status getWalletInfo(int argc, char *argv[])
+COMMAND(InitLevel::wallet, GetWalletInfo, "get-wallet-info")
 {
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-wallet-info <user> <pass> <wallet-name>");
@@ -322,7 +318,7 @@ Status getWalletInfo(int argc, char *argv[])
     return Status();
 }
 
-Status listAccounts(int argc, char *argv[])
+COMMAND(InitLevel::context, ListAccounts, "list-accounts")
 {
     if (argc != 0)
         return ABC_ERROR(ABC_CC_Error, "usage: ... list-accounts");
@@ -334,14 +330,12 @@ Status listAccounts(int argc, char *argv[])
     return Status();
 }
 
-Status listWallets(int argc, char *argv[])
+COMMAND(InitLevel::account, ListWallets, "list-wallets")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... list-wallets <user> <pass>");
 
     // Setup:
-    std::shared_ptr<Login> login;
-    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
     ABC_CHECK_OLD(ABC_DataSyncAll(argv[0], argv[1], NULL, NULL, &error));
 
     // Iterate over wallets:
@@ -362,7 +356,7 @@ Status listWallets(int argc, char *argv[])
         // Print wallet name:
         AutoU08Buf data;
         AutoAccountWalletInfo info;
-        ABC_CHECK_OLD(ABC_AccountWalletLoad(*login, uuids.data[i], &info, &error));
+        ABC_CHECK_OLD(ABC_AccountWalletLoad(*session.login, uuids.data[i], &info, &error));
         ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(filename.c_str(),
             info.MK, &data, &error));
         fwrite(data.p, data.end - data.p, 1, stdout);
@@ -372,7 +366,7 @@ Status listWallets(int argc, char *argv[])
     return Status();
 }
 
-Status pinLogin(int argc, char *argv[])
+COMMAND(InitLevel::lobby, PinLogin, "pin-login")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... pin-login <user> <pin>");
@@ -392,7 +386,7 @@ Status pinLogin(int argc, char *argv[])
 }
 
 
-Status pinLoginSetup(int argc, char *argv[])
+COMMAND(InitLevel::account, PinLoginSetup, "pin-login-setup")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... pin-login-setup <user> <pass>");
@@ -402,7 +396,7 @@ Status pinLoginSetup(int argc, char *argv[])
     return Status();
 }
 
-Status recoveryReminderSet(int argc, char *argv[])
+COMMAND(InitLevel::login, RecoveryReminderSet, "recovery-reminder-set")
 {
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... recovery-reminder-set <user> <pass> <n>");
@@ -417,7 +411,7 @@ Status recoveryReminderSet(int argc, char *argv[])
     return Status();
 }
 
-Status removeCategory(int argc, char *argv[])
+COMMAND(InitLevel::account, RemoveCategory, "remove-category")
 {
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... remove-category <user> <pass> <category>");
@@ -427,8 +421,9 @@ Status removeCategory(int argc, char *argv[])
     return Status();
 }
 
-Status searchBitcoinSeed(int argc, char *argv[])
+COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed")
 {
+    auto wallet = ABC_WalletID(*session.login, session.uuid.c_str());
     if (argc != 6)
         return ABC_ERROR(ABC_CC_Error, "usage: ... search-bitcoin-seed <user> <pass> <wallet-name> <addr> <start> <end>");
 
@@ -436,11 +431,8 @@ Status searchBitcoinSeed(int argc, char *argv[])
     long end = strtol(argv[5], 0, 10);
     char *szMatchAddr = argv[3];
 
-    std::shared_ptr<Login> login;
-    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
-
     tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(*login, argv[2]), &data, &error));
+    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(wallet, &data, &error));
 
     libbitcoin::data_chunk seed(data.p, data.end);
     libwallet::hd_private_key m(seed);
@@ -465,7 +457,7 @@ Status searchBitcoinSeed(int argc, char *argv[])
     return Status();
 }
 
-Status setNickname(int argc, char *argv[])
+COMMAND(InitLevel::account, SetNickname, "set-nickname")
 {
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... set-nickname <user> <pass> <name>");
@@ -479,7 +471,7 @@ Status setNickname(int argc, char *argv[])
     return Status();
 }
 
-Status signIn(int argc, char *argv[])
+COMMAND(InitLevel::lobby, SignIn, "sign-in")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... sign-in <user> <pass>");
@@ -495,7 +487,7 @@ Status signIn(int argc, char *argv[])
     return Status();
 }
 
-Status uploadLogs(int argc, char *argv[])
+COMMAND(InitLevel::account, UploadLogs, "upload-logs")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... upload-logs <user> <pass>");
@@ -506,7 +498,15 @@ Status uploadLogs(int argc, char *argv[])
     return Status();
 }
 
-Status walletArchive(int argc, char *argv[])
+COMMAND(InitLevel::none, Version, "version")
+{
+    AutoString version;
+    ABC_CHECK_OLD(ABC_Version(&version.get(), &error));
+    std::cout << "ABC version: " << version.get() << std::endl;
+    return Status();
+}
+
+COMMAND(InitLevel::wallet, WalletArchive, "wallet-archive")
 {
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-archive <user> <pass> <wallet-name> 1|0");
@@ -515,16 +515,13 @@ Status walletArchive(int argc, char *argv[])
     return Status();
 }
 
-Status walletDecrypt(int argc, char *argv[])
+COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
 {
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-decrypt <user> <pass> <wallet-name> <file>");
 
-    std::shared_ptr<Login> login;
-    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
-
     AutoAccountWalletInfo info;
-    ABC_CHECK_OLD(ABC_AccountWalletLoad(*login, argv[2], &info, &error));
+    ABC_CHECK_OLD(ABC_AccountWalletLoad(*session.login, argv[2], &info, &error));
 
     AutoU08Buf data;
     ABC_CHECK_OLD(ABC_CryptoDecryptJSONFile(argv[3], info.MK, &data, &error));
@@ -534,16 +531,13 @@ Status walletDecrypt(int argc, char *argv[])
     return Status();
 }
 
-Status walletEncrypt(int argc, char *argv[])
+COMMAND(InitLevel::wallet, WalletEncrypt, "wallet-encrypt")
 {
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-encrypt <user> <pass> <wallet-name> <file>");
 
-    std::shared_ptr<Login> login;
-    ABC_CHECK(cacheLoginPassword(login, argv[0], argv[1]));
-
     AutoAccountWalletInfo info;
-    ABC_CHECK_OLD(ABC_AccountWalletLoad(*login, argv[2], &info, &error));
+    ABC_CHECK_OLD(ABC_AccountWalletLoad(*session.login, argv[2], &info, &error));
 
     DataChunk contents;
     ABC_CHECK(fileLoad(contents, argv[3]));
@@ -559,7 +553,7 @@ Status walletEncrypt(int argc, char *argv[])
     return Status();
 }
 
-Status walletGetAddress(int argc, char *argv[])
+COMMAND(InitLevel::wallet, WalletGetAddress, "wallet-get-address")
 {
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-get-address <user> <pass> <wallet-name>");
@@ -598,10 +592,10 @@ Status walletGetAddress(int argc, char *argv[])
     return Status();
 }
 
-Status walletOrder(int argc, char *argv[])
+COMMAND(InitLevel::account, WalletOrder, "wallet-order")
 {
     if (argc < 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-get-address <user> <pass> <wallet-names>...");
+        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-order <user> <pass> <wallet-names>...");
 
     std::string ids;
     size_t count = argc - 2;

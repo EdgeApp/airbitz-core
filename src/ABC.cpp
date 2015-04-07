@@ -510,34 +510,14 @@ tABC_CC ABC_OtpResetGet(char **pszUsernames,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    auto usernames = loginDirList();
-    std::list<DataChunk> authIds;
-    std::list<bool> results;
+    std::list<std::string> result;
     std::string out;
 
     ABC_CHECK_NULL(pszUsernames);
 
-    // Make the request:
-    for (const auto &i: usernames)
-    {
-        Lobby lobby;
-        ABC_CHECK_NEW(lobby.init(i), pError);
-        auto authId = lobby.authId();
-        authIds.emplace_back(authId.begin(), authId.end());
-    }
-    ABC_CHECK_NEW(otpResetGet(authIds, results), pError);
-
-    // Smush the results:
-    {
-        auto i = results.begin();
-        auto j = usernames.begin();
-        while (i != results.end() && j != usernames.end())
-        {
-            if (*i)
-                out += *j + "\n";
-            ++i; ++j;
-        }
-    }
+    ABC_CHECK_NEW(otpResetGet(result, loginDirList()), pError);
+    for (auto i: result)
+        out += i + "\n";
     ABC_STRDUP(*pszUsernames, out.c_str());
 
 exit:

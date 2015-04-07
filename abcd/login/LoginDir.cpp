@@ -207,23 +207,6 @@ exit:
 /**
  * Determines whether or not a file exists in the account directory.
  */
-tABC_CC ABC_LoginDirFileExists(bool *pbExists,
-                               const std::string &directory,
-                               const char *szFile,
-                               tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    std::string filename = directory + szFile;
-    ABC_CHECK_RET(ABC_FileIOFileExists(filename.c_str(), pbExists, pError));
-
-exit:
-    return cc;
-}
-
-/**
- * Determines whether or not a file exists in the account directory.
- */
 tABC_CC ABC_LoginDirFileDelete(const std::string &directory,
                                const char *szFile,
                                tABC_Error *pError)
