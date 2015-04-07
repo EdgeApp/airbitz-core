@@ -32,7 +32,7 @@
 #include "Crypto.hpp"
 #include "Encoding.hpp"
 #include "Random.hpp"
-#include "../json/JsonFile.hpp"
+#include "../json/JsonPtr.hpp"
 #include "../util/Util.hpp"
 #include <bitcoin/bitcoin.hpp> // wow! such slow, very compile time
 #include <openssl/evp.h>
@@ -147,7 +147,7 @@ tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
     ABC_CHECK_NULL(szFilename);
 
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(Data, Key, cryptoType, &root, pError));
-    ABC_CHECK_NEW(JsonFile(root).save(szFilename), pError);
+    ABC_CHECK_NEW(JsonPtr(root).save(szFilename), pError);
 
 exit:
     return cc;
@@ -171,7 +171,7 @@ tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(pJSON_Data);
 
-    ABC_CHECK_NEW(JsonFile(json_incref(pJSON_Data)).encode(data), pError);
+    ABC_CHECK_NEW(JsonPtr(json_incref(pJSON_Data)).encode(data), pError);
      // Downstream decoders often forget to null-terminate their input.
      // This is a bug, but we can save the app from crashing by
      // including a null byte in the encrypted data.
@@ -235,14 +235,14 @@ tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    JsonFile json;
+    JsonPtr json;
 
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(pData);
 
     ABC_CHECK_NEW(json.load(szFilename), pError);
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(json.root(), Key, pData, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(json.get(), Key, pData, pError));
 
 exit:
     return cc;
@@ -263,7 +263,7 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     AutoU08Buf Data;
-    JsonFile file;
+    JsonPtr file;
 
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL_BUF(Key);
@@ -272,7 +272,7 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
 
     ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, Key, &Data, pError));
     ABC_CHECK_NEW(file.decode(toString(U08Buf(Data))), pError);
-    *ppJSON_Data = json_incref(file.root());
+    *ppJSON_Data = json_incref(file.get());
 
 exit:
     return cc;

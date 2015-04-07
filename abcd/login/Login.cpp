@@ -9,9 +9,9 @@
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
-#include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
+#include "../json/JsonBox.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Sync.hpp"
 #include "../util/Util.hpp"
@@ -27,11 +27,11 @@ Login::Login(std::shared_ptr<Lobby> lobby, DataSlice dataKey):
 {}
 
 Status
-Login::init(tABC_LoginPackage *package)
+Login::init(const LoginPackage &loginPackage)
 {
-    AutoString syncKey;
-    ABC_CHECK_OLD(ABC_LoginPackageGetSyncKey(package, toU08Buf(dataKey_), &syncKey.get(), &error));
-    syncKey_ = syncKey.get();
+    DataChunk syncKey;
+    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey, dataKey_));
+    syncKey_ = base16Encode(syncKey);
 
     // Ensure that the directories are in place:
     ABC_CHECK(lobby_->dirCreate());
@@ -84,17 +84,19 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     tABC_CC cc = ABC_CC_Ok;
 
     std::unique_ptr<Login> login;
-    tABC_CarePackage    *pCarePackage   = NULL;
-    tABC_LoginPackage   *pLoginPackage  = NULL;
-    AutoU08Buf           LP;
-    AutoU08Buf           LP1;
-    AutoU08Buf           LP2;
-    DataChunk dataKey;
+    CarePackage carePackage;
+    LoginPackage loginPackage;
+    DataChunk authKey;          // Unlocks the server
+    DataChunk passwordKey;      // Unlocks dataKey
+    DataChunk dataKey;          // Unlocks the account
     DataChunk syncKey;
+    JsonBox box;
+    JsonSnrp snrp;
+    std::string LP = lobby->username() + szPassword;
 
     // Set up packages:
-    ABC_CHECK_RET(ABC_CarePackageNew(&pCarePackage, pError));
-    ABC_NEW(pLoginPackage, tABC_LoginPackage);
+    ABC_CHECK_NEW(snrp.create(), pError);
+    ABC_CHECK_NEW(carePackage.snrp2Set(snrp), pError);
 
     // Generate MK:
     ABC_CHECK_NEW(randomData(dataKey, ACCOUNT_MK_LENGTH), pError);
@@ -102,43 +104,38 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     // Generate SyncKey:
     ABC_CHECK_NEW(randomData(syncKey, SYNC_KEY_LENGTH), pError);
 
-    // LP = L + P:
-    ABC_BUF_STRCAT(LP, lobby->username().c_str(), szPassword);
-
     // Set up EMK_LP2:
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP2, &LP2, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(dataKey), LP2,
-        ABC_CryptoType_AES256, &pLoginPackage->EMK_LP2, pError));
+    ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);
+    ABC_CHECK_NEW(box.encrypt(dataKey, passwordKey), pError);
+    ABC_CHECK_NEW(loginPackage.passwordBoxSet(box), pError);
 
     // Set up ESyncKey:
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(toU08Buf(syncKey), toU08Buf(dataKey),
-        ABC_CryptoType_AES256, &pLoginPackage->ESyncKey, pError));
+    ABC_CHECK_NEW(box.encrypt(syncKey, dataKey), pError);
+    ABC_CHECK_NEW(loginPackage.syncKeyBoxSet(box), pError);
 
     // Set up ELP1:
-    ABC_CHECK_RET(ABC_CryptoScryptSNRP(LP, pCarePackage->pSNRP1, &LP1, pError));
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(LP1, toU08Buf(dataKey),
-        ABC_CryptoType_AES256, &pLoginPackage->ELP1, pError));
+    ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP), pError);
+    ABC_CHECK_NEW(box.encrypt(authKey, dataKey), pError);
+    ABC_CHECK_NEW(loginPackage.authKeyBoxSet(box), pError);
 
     // Create the account and repo on server:
-    ABC_CHECK_RET(ABC_LoginServerCreate(toU08Buf(lobby->authId()), LP1,
-        pCarePackage, pLoginPackage, base16Encode(syncKey).c_str(), pError));
+    ABC_CHECK_RET(ABC_LoginServerCreate(toU08Buf(lobby->authId()), toU08Buf(authKey),
+        carePackage, loginPackage, base16Encode(syncKey).c_str(), pError));
 
     // Latch the account:
-    ABC_CHECK_RET(ABC_LoginServerActivate(toU08Buf(lobby->authId()), LP1, pError));
+    ABC_CHECK_RET(ABC_LoginServerActivate(toU08Buf(lobby->authId()), toU08Buf(authKey), pError));
 
     // Create the Login object:
     login.reset(new Login(lobby, dataKey));
-    ABC_CHECK_NEW(login->init(pLoginPackage), pError);
+    ABC_CHECK_NEW(login->init(loginPackage), pError);
 
     // Set up the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), pCarePackage, pLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), carePackage, loginPackage, pError));
 
     // Assign the result:
     result.reset(login.release());
 
 exit:
-    ABC_CarePackageFree(pCarePackage);
-    ABC_LoginPackageFree(pLoginPackage);
     return cc;
 }
 
@@ -153,18 +150,17 @@ tABC_CC ABC_LoginGetServerKeys(Login &login,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_CarePackage *pCarePackage = NULL;
-    tABC_LoginPackage *pLoginPackage = NULL;
+    CarePackage carePackage;
+    LoginPackage loginPackage;
+    DataChunk authKey;          // Unlocks the server
 
     ABC_BUF_DUP(*pL1, toU08Buf(login.lobby().authId()));
 
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), &pCarePackage, &pLoginPackage, pError));
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(pLoginPackage->ELP1, toU08Buf(login.dataKey()), pLP1, pError));
+    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(loginPackage.authKeyBox().decrypt(authKey, login.dataKey()), pError);
+    ABC_BUF_DUP(*pLP1, toU08Buf(authKey));
 
 exit:
-    ABC_CarePackageFree(pCarePackage);
-    ABC_LoginPackageFree(pLoginPackage);
-
     return cc;
 }
 

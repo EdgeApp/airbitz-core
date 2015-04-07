@@ -7,7 +7,7 @@
 
 #include "../abcd/crypto/Crypto.hpp"
 #include "../abcd/crypto/Encoding.hpp"
-#include "../abcd/json/JsonFile.hpp"
+#include "../abcd/json/JsonPtr.hpp"
 #include "../minilibs/catch/catch.hpp"
 
 // sha256("Satoshi"):
@@ -27,7 +27,7 @@ TEST_CASE("Decryption", "[crypto][encryption]")
     tABC_Error error;
     abcd::DataChunk key;
     abcd::base16Decode(key, keyHex);
-    abcd::JsonFile package;
+    abcd::JsonPtr package;
     package.decode(
         "{"
         "\"data_base64\": "
@@ -45,7 +45,7 @@ TEST_CASE("Decryption", "[crypto][encryption]")
 
     abcd::AutoU08Buf data;
     CHECK(ABC_CC_Ok == ABC_CryptoDecryptJSONObject(
-        package.root(), abcd::toU08Buf(key), &data, &error));
+        package.get(), abcd::toU08Buf(key), &data, &error));
     CHECK(abcd::toString(abcd::U08Buf(data)) == "payload");
 }
 

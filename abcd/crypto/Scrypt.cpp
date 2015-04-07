@@ -11,13 +11,9 @@
 #include "../bitcoin/Testnet.hpp"
 #include "../../minilibs/scrypt/crypto_scrypt.h"
 #include <sys/time.h>
+#include <memory>
 
 namespace abcd {
-
-#define JSON_ENC_SALT_FIELD     "salt_hex"
-#define JSON_ENC_N_FIELD        "n"
-#define JSON_ENC_R_FIELD        "r"
-#define JSON_ENC_P_FIELD        "p"
 
 #define SCRYPT_DEFAULT_SERVER_N    16384    // can't change as server uses this as well
 #define SCRYPT_DEFAULT_SERVER_R    1        // can't change as server uses this as well
@@ -40,15 +36,6 @@ namespace abcd {
 unsigned int g_timedScryptN = SCRYPT_DEFAULT_CLIENT_N;
 unsigned int g_timedScryptR = SCRYPT_DEFAULT_CLIENT_R;
 
-static unsigned char gaS1[] = { 0xb5, 0x86, 0x5f, 0xfb, 0x9f, 0xa7, 0xb3, 0xbf, 0xe4, 0xb2, 0x38, 0x4d, 0x47, 0xce, 0x83, 0x1e, 0xe2, 0x2a, 0x4a, 0x9d, 0x5c, 0x34, 0xc7, 0xef, 0x7d, 0x21, 0x46, 0x7c, 0xc7, 0x58, 0xf8, 0x1b };
-
-// Testnet salt. Just has to be different from mainnet salt so we can create users
-// with same login that exist on both testnet and mainnet and don't conflict
-static unsigned char gaS1_testnet[] = { 0xa5, 0x96, 0x3f, 0x3b, 0x9c, 0xa6, 0xb3, 0xbf, 0xe4, 0xb2, 0x36, 0x42, 0x37, 0xfe, 0x87, 0x1e, 0xf2, 0x2a, 0x4a, 0x9d, 0x4c, 0x34, 0xa7, 0xef, 0x3d, 0x21, 0x47, 0x8c, 0xc7, 0x58, 0xf8, 0x1b };
-
-/*
- * Initializes Scrypt paramenters by benchmarking device
- */
 tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -56,29 +43,18 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
     struct timeval timerStart;
     struct timeval timerEnd;
     int totalTime;
-    tABC_U08Buf Salt; // Do not free
-    AutoU08Buf temp;
+    DataChunk temp;
 
     ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    if (isTestnet())
-    {
-        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1));
-    }
-    else
-    {
-        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
-    }
+    ScryptSnrp snrp = usernameSnrp();
+    snrp.n = SCRYPT_DEFAULT_CLIENT_N,
+    snrp.r = SCRYPT_DEFAULT_CLIENT_R,
+    snrp.p = SCRYPT_DEFAULT_CLIENT_P,
+
     gettimeofday(&timerStart, NULL);
-    ABC_CHECK_RET(ABC_CryptoScrypt(Salt,
-                                   Salt,
-                                   SCRYPT_DEFAULT_CLIENT_N,
-                                   SCRYPT_DEFAULT_CLIENT_R,
-                                   SCRYPT_DEFAULT_CLIENT_P,
-                                   SCRYPT_DEFAULT_LENGTH,
-                                   &temp,
-                                   pError));
+    ABC_CHECK_NEW(snrp.hash(temp, snrp.salt), pError);
     gettimeofday(&timerEnd, NULL);
 
     // Totaltime is in uSec
@@ -119,255 +95,105 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
     ABC_DebugLog("Scrypt R = %d\n",g_timedScryptR);
 
 exit:
-
     return cc;
 }
 
-/**
- * Allocate and generate scrypt from an SNRP
- */
-tABC_CC ABC_CryptoScryptSNRP(const tABC_U08Buf     Data,
-                             const tABC_CryptoSNRP *pSNRP,
-                             tABC_U08Buf           *pScryptData,
-                             tABC_Error            *pError)
+Status
+ScryptSnrp::create()
 {
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(pSNRP);
-    ABC_CHECK_NULL(pScryptData);
-
-    ABC_CHECK_RET(ABC_CryptoScrypt(Data,
-                                   pSNRP->Salt,
-                                   pSNRP->N,
-                                   pSNRP->r,
-                                   pSNRP->p,
-                                   SCRYPT_DEFAULT_LENGTH,
-                                   pScryptData,
-                                   pError));
-
-exit:
-
-    return cc;
+    ABC_CHECK(randomData(salt, SCRYPT_DEFAULT_SALT_LENGTH));
+    n = g_timedScryptN;
+    r = g_timedScryptR;
+    p = SCRYPT_DEFAULT_CLIENT_P;
+    return Status();
 }
 
-/**
- * Allocate and generate scrypt data given all vars
- */
-tABC_CC ABC_CryptoScrypt(const tABC_U08Buf Data,
-                         const tABC_U08Buf Salt,
-                         unsigned long     N,
-                         unsigned long     r,
-                         unsigned long     p,
-                         unsigned int      scryptDataLength,
-                         tABC_U08Buf       *pScryptData,
-                         tABC_Error        *pError)
+Status
+ScryptSnrp::hash(DataChunk &result, DataSlice data, size_t size) const
 {
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    DataChunk out(size);
 
-    ABC_CHECK_NULL_BUF(Data);
-    ABC_CHECK_NULL_BUF(Salt);
-    ABC_CHECK_NULL(pScryptData);
+    int rc = crypto_scrypt(data.data(), data.size(),
+        salt.data(), salt.size(), n, r, p, out.data(), size);
+    if (rc)
+        return ABC_ERROR(ABC_CC_ScryptError, "Error calculating Scrypt hash");
 
-    ABC_BUF_NEW(*pScryptData, scryptDataLength);
+    result = std::move(out);
+    return Status();
+}
 
-    int rc;
-    if ((rc = crypto_scrypt(ABC_BUF_PTR(Data), ABC_BUF_SIZE(Data), ABC_BUF_PTR(Salt), ABC_BUF_SIZE(Salt), N, (uint32_t) r, (uint32_t) p, ABC_BUF_PTR(*pScryptData), scryptDataLength)) != 0)
+const ScryptSnrp &
+usernameSnrp()
+{
+    static const ScryptSnrp mainnet =
     {
-        ABC_BUF_FREE(*pScryptData);
-        ABC_RET_ERROR(ABC_CC_ScryptError, "Error generating Scrypt data");
-    }
-
-exit:
-
-    return cc;
-}
-
-/**
- * Allocates an SNRP struct and fills it in with the info given to be used on the client side
- * Note: the Salt buffer is copied
- */
-tABC_CC ABC_CryptoCreateSNRPForClient(tABC_CryptoSNRP   **ppSNRP,
-                                      tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    DataChunk salt;
-
-    ABC_CHECK_NULL(ppSNRP);
-
-    // gen some salt
-    ABC_CHECK_NEW(randomData(salt, SCRYPT_DEFAULT_SALT_LENGTH), pError);
-
-    ABC_CHECK_RET(ABC_CryptoCreateSNRP(toU08Buf(salt),
-                                       g_timedScryptN,
-                                       g_timedScryptR,
-                                       SCRYPT_DEFAULT_CLIENT_P,
-                                       ppSNRP,
-                                       pError));
-exit:
-    return cc;
-}
-
-/**
- * Allocates an SNRP struct and fills it in with the info given to be used on the server side
- * Note: the Salt buffer is copied from the global server salt
- */
-tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
-                                      tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    tABC_U08Buf Salt = ABC_BUF_NULL; // Do not free
-
-    ABC_CHECK_NULL(ppSNRP);
-
-    // get the server salt
-    if (isTestnet())
+        {
+            0xb5, 0x86, 0x5f, 0xfb, 0x9f, 0xa7, 0xb3, 0xbf,
+            0xe4, 0xb2, 0x38, 0x4d, 0x47, 0xce, 0x83, 0x1e,
+            0xe2, 0x2a, 0x4a, 0x9d, 0x5c, 0x34, 0xc7, 0xef,
+            0x7d, 0x21, 0x46, 0x7c, 0xc7, 0x58, 0xf8, 0x1b
+        },
+        SCRYPT_DEFAULT_SERVER_N,
+        SCRYPT_DEFAULT_SERVER_R,
+        SCRYPT_DEFAULT_SERVER_P
+    };
+    static const ScryptSnrp testnet =
     {
-        ABC_BUF_SET_PTR(Salt, gaS1_testnet, sizeof(gaS1));
-    }
-    else
-    {
-        ABC_BUF_SET_PTR(Salt, gaS1, sizeof(gaS1));
-    }
+        {
+            0xa5, 0x96, 0x3f, 0x3b, 0x9c, 0xa6, 0xb3, 0xbf,
+            0xe4, 0xb2, 0x36, 0x42, 0x37, 0xfe, 0x87, 0x1e,
+            0xf2, 0x2a, 0x4a, 0x9d, 0x4c, 0x34, 0xa7, 0xef,
+            0x3d, 0x21, 0x47, 0x8c, 0xc7, 0x58, 0xf8, 0x1b
+        },
+        SCRYPT_DEFAULT_SERVER_N,
+        SCRYPT_DEFAULT_SERVER_R,
+        SCRYPT_DEFAULT_SERVER_P
+    };
 
-    ABC_CHECK_RET(ABC_CryptoCreateSNRP(Salt,
-                                       SCRYPT_DEFAULT_SERVER_N,
-                                       SCRYPT_DEFAULT_SERVER_R,
-                                       SCRYPT_DEFAULT_SERVER_P,
-                                       ppSNRP,
-                                       pError));
-exit:
-
-    return cc;
+    return isTestnet() ? testnet : mainnet;
 }
 
-/**
- * Allocates an SNRP struct and fills it in with the info given
- * Note: the Salt buffer is copied
- */
-tABC_CC ABC_CryptoCreateSNRP(const tABC_U08Buf Salt,
-                             unsigned long     N,
-                             unsigned long     r,
-                             unsigned long     p,
-                             tABC_CryptoSNRP   **ppSNRP,
-                             tABC_Error        *pError)
+Status
+JsonSnrp::snrpGet(ScryptSnrp &result) const
 {
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    ABC_CHECK(saltOk());
+    ABC_CHECK(nOk());
+    ABC_CHECK(rOk());
+    ABC_CHECK(pOk());
 
-    tABC_CryptoSNRP *pSNRP = NULL;
-
-    ABC_CHECK_NULL_BUF(Salt);
-
-    ABC_NEW(pSNRP, tABC_CryptoSNRP);
-
-    // create a copy of the salt
-    ABC_BUF_DUP(pSNRP->Salt, Salt);
-    pSNRP->N = N;
-    pSNRP->r = r;
-    pSNRP->p = p;
-
-    *ppSNRP = pSNRP;
-
-exit:
-
-    return cc;
+    ABC_CHECK(base16Decode(result.salt, salt()));
+    result.n = n();
+    result.r = r();
+    result.p = p();
+    return Status();
 }
 
-/**
- * Creates a jansson object for SNRP
- */
-tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
-                                       json_t                 **ppJSON_SNRP,
-                                       tABC_Error             *pError)
+Status
+JsonSnrp::snrpSet(const ScryptSnrp &snrp)
 {
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_NULL(pSNRP);
-    ABC_CHECK_NULL(ppJSON_SNRP);
-
-    // create the jansson object
-    *ppJSON_SNRP = json_pack("{sssisisi}",
-        JSON_ENC_SALT_FIELD, base16Encode(pSNRP->Salt).c_str(),
-        JSON_ENC_N_FIELD, pSNRP->N,
-        JSON_ENC_R_FIELD, pSNRP->r,
-        JSON_ENC_P_FIELD, pSNRP->p);
-
-exit:
-    return cc;
+    ABC_CHECK(saltSet(base16Encode(snrp.salt).c_str()));
+    ABC_CHECK(nSet(snrp.n));
+    ABC_CHECK(rSet(snrp.r));
+    ABC_CHECK(pSet(snrp.p));
+    return Status();
 }
 
-/**
- * Takes a jansson object representing an SNRP, decodes it and allocates a SNRP struct
- */
-tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
-                                       tABC_CryptoSNRP   **ppSNRP,
-                                       tABC_Error        *pError)
+Status
+JsonSnrp::create()
 {
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    DataChunk salt;
-    tABC_CryptoSNRP *pSNRP = NULL;
-    const char *szSaltHex = NULL;
-    unsigned long N, r, p;
-
-    ABC_CHECK_NULL(pJSON_SNRP);
-    ABC_CHECK_NULL(ppSNRP);
-
-    json_t *jsonVal;
-
-    // get the salt
-    jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_SALT_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON SNRP - missing salt");
-    szSaltHex = json_string_value(jsonVal);
-
-    // decrypt the salt
-    ABC_CHECK_NEW(base16Decode(salt, szSaltHex), pError);
-
-    // get n
-    jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_N_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON SNRP - missing N");
-    N = (unsigned long) json_integer_value(jsonVal);
-
-    // get r
-    jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_R_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON SNRP - missing r");
-    r = (unsigned long) json_integer_value(jsonVal);
-
-    // get p
-    jsonVal = json_object_get(pJSON_SNRP, JSON_ENC_P_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON SNRP - missing p");
-    p = (unsigned long) json_integer_value(jsonVal);
-
-    // store final values
-    ABC_NEW(pSNRP, tABC_CryptoSNRP);
-    ABC_BUF_DUP(pSNRP->Salt, toU08Buf(salt));
-    pSNRP->N = N;
-    pSNRP->r = r;
-    pSNRP->p = p;
-    *ppSNRP = pSNRP;
-
-exit:
-    return cc;
+    ScryptSnrp snrp;
+    ABC_CHECK(snrp.create());
+    ABC_CHECK(snrpSet(snrp));
+    return Status();
 }
 
-/**
- * Deep free's an SNRP object including the Seed data
- */
-void ABC_CryptoFreeSNRP(tABC_CryptoSNRP *pSNRP)
+Status
+JsonSnrp::hash(DataChunk &result, DataSlice data) const
 {
-    if (pSNRP)
-    {
-        ABC_BUF_FREE(pSNRP->Salt);
-        ABC_CLEAR_FREE(pSNRP, sizeof(tABC_CryptoSNRP));
-    }
+    ScryptSnrp snrp;
+    ABC_CHECK(snrpGet(snrp));
+    ABC_CHECK(snrp.hash(result, data));
+    return Status();
 }
 
 } // namespace abcd

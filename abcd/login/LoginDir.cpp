@@ -20,7 +20,7 @@ namespace abcd {
 struct UsernameFile:
     public JsonObject
 {
-    ABC_JSON_STRING(Username, "userName", nullptr)
+    ABC_JSON_STRING(username, "userName", nullptr)
 };
 
 #define ACCOUNT_DIR                             "Accounts"
@@ -48,9 +48,9 @@ readUsername(const std::string &directory, std::string &result)
 {
     UsernameFile f;
     ABC_CHECK(f.load(directory + ACCOUNT_NAME_FILENAME));
-    ABC_CHECK(f.hasUsername());
+    ABC_CHECK(f.usernameOk());
 
-    result = f.getUsername();
+    result = f.username();
     return Status();
 }
 
@@ -162,7 +162,7 @@ tABC_CC ABC_LoginDirCreate(std::string &directory,
     ABC_CHECK_NEW(fileEnsureDir(directory), pError);
 
     // Write user name:
-    ABC_CHECK_NEW(f.setUsername(szUserName), pError);
+    ABC_CHECK_NEW(f.usernameSet(szUserName), pError);
     ABC_CHECK_NEW(f.save(directory + ACCOUNT_NAME_FILENAME), pError);
 
 exit:
@@ -224,26 +224,16 @@ exit:
  * Loads the login and care packages from disk.
  */
 tABC_CC ABC_LoginDirLoadPackages(const std::string &directory,
-                                 tABC_CarePackage **ppCarePackage,
-                                 tABC_LoginPackage **ppLoginPackage,
+                                 CarePackage &carePackage,
+                                 LoginPackage &loginPackage,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szCarePackage = NULL;
-    char *szLoginPackage = NULL;
-
-    ABC_CHECK_RET(ABC_LoginDirFileLoad(&szCarePackage, directory,
-        ACCOUNT_CARE_PACKAGE_FILENAME, pError));
-    ABC_CHECK_RET(ABC_LoginDirFileLoad(&szLoginPackage, directory,
-        ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
-
-    ABC_CHECK_RET(ABC_CarePackageDecode(ppCarePackage, szCarePackage, pError));
-    ABC_CHECK_RET(ABC_LoginPackageDecode(ppLoginPackage, szLoginPackage, pError));
+    ABC_CHECK_NEW(carePackage.load(directory + ACCOUNT_CARE_PACKAGE_FILENAME), pError);
+    ABC_CHECK_NEW(loginPackage.load(directory + ACCOUNT_LOGIN_PACKAGE_FILENAME), pError);
 
 exit:
-    if (szCarePackage)  ABC_FREE_STR(szCarePackage);
-    if (szLoginPackage) ABC_FREE_STR(szLoginPackage);
     return cc;
 }
 
@@ -251,26 +241,16 @@ exit:
  * Writes the login and care packages to disk.
  */
 tABC_CC ABC_LoginDirSavePackages(const std::string &directory,
-                                 tABC_CarePackage *pCarePackage,
-                                 tABC_LoginPackage *pLoginPackage,
+                                 const CarePackage &carePackage,
+                                 const LoginPackage &loginPackage,
                                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szCarePackage = NULL;
-    char *szLoginPackage = NULL;
-
-    ABC_CHECK_RET(ABC_CarePackageEncode(pCarePackage, &szCarePackage, pError));
-    ABC_CHECK_RET(ABC_LoginPackageEncode(pLoginPackage, &szLoginPackage, pError));
-
-    ABC_CHECK_RET(ABC_LoginDirFileSave(szCarePackage, directory,
-        ACCOUNT_CARE_PACKAGE_FILENAME, pError));
-    ABC_CHECK_RET(ABC_LoginDirFileSave(szLoginPackage, directory,
-        ACCOUNT_LOGIN_PACKAGE_FILENAME, pError));
+    ABC_CHECK_NEW(carePackage.save(directory + ACCOUNT_CARE_PACKAGE_FILENAME), pError);
+    ABC_CHECK_NEW(loginPackage.save(directory + ACCOUNT_LOGIN_PACKAGE_FILENAME), pError);
 
 exit:
-    if (szCarePackage)  ABC_FREE_STR(szCarePackage);
-    if (szLoginPackage) ABC_FREE_STR(szLoginPackage);
     return cc;
 }
 

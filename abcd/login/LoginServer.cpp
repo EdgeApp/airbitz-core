@@ -37,7 +37,7 @@ extern std::shared_ptr<Lobby> gLobbyCache;
 
 struct AccountAvailableJson: public JsonObject
 {
-    ABC_JSON_STRING(L1, "l1", nullptr)
+    ABC_JSON_STRING(authId, "l1", nullptr)
 };
 
 static std::string gOtpResetAuth;
@@ -68,8 +68,8 @@ tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1, tABC_U08Buf LP1,
  */
 tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
                               tABC_U08Buf LP1,
-                              tABC_CarePackage *pCarePackage,
-                              tABC_LoginPackage *pLoginPackage,
+                              const CarePackage &carePackage,
+                              const LoginPackage &loginPackage,
                               const char *szRepoAcctKey,
                               tABC_Error *pError)
 {
@@ -78,8 +78,8 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
     char *szURL     = NULL;
     char *szResults = NULL;
     char *szPost    = NULL;
-    char *szCarePackage     = NULL;
-    char *szLoginPackage    = NULL;
+    std::string carePackageStr;
+    std::string loginPackageStr;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
@@ -89,15 +89,15 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
     ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_ACCOUNT_CREATE_PATH);
 
-    ABC_CHECK_RET(ABC_CarePackageEncode(pCarePackage, &szCarePackage, pError));
-    ABC_CHECK_RET(ABC_LoginPackageEncode(pLoginPackage, &szLoginPackage, pError));
+    ABC_CHECK_NEW(carePackage.encode(carePackageStr), pError);
+    ABC_CHECK_NEW(loginPackage.encode(loginPackageStr), pError);
 
     // create the post data
     pJSON_Root = json_pack("{ssssssssss}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
-        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, szCarePackage,
-        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage,
+        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, carePackageStr.c_str(),
+        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackageStr.c_str(),
         ABC_SERVER_JSON_REPO_FIELD, szRepoAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
@@ -112,8 +112,6 @@ exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szCarePackage);
-    ABC_FREE_STR(szLoginPackage);
     if (pJSON_Root)     json_decref(pJSON_Root);
 
     return cc;
@@ -185,7 +183,7 @@ tABC_CC ABC_LoginServerAvailable(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(L1);
 
     // create the json
-    ABC_CHECK_NEW(json.setL1(base64Encode(L1).c_str()), pError);
+    ABC_CHECK_NEW(json.authIdSet(base64Encode(L1).c_str()), pError);
     ABC_CHECK_NEW(json.encode(get), pError);
     ABC_DebugLog("Server URL: %s, Data: %.50s", url.c_str(), get.c_str());
 
@@ -216,8 +214,8 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
                                       tABC_U08Buf oldLP1,
                                       tABC_U08Buf newLP1,
                                       tABC_U08Buf newLRA1,
-                                      tABC_CarePackage *pCarePackage,
-                                      tABC_LoginPackage *pLoginPackage,
+                                      const CarePackage &carePackage,
+                                      const LoginPackage &loginPackage,
                                       tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -225,8 +223,8 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     char *szURL     = NULL;
     char *szResults = NULL;
     char *szPost    = NULL;
-    char *szCarePackage     = NULL;
-    char *szLoginPackage    = NULL;
+    std::string carePackageStr;
+    std::string loginPackageStr;
     json_t *pJSON_OldLRA1   = NULL;
     json_t *pJSON_NewLRA1   = NULL;
     json_t *pJSON_Root = NULL;
@@ -239,20 +237,20 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_CHANGE_PASSWORD_PATH);
 
-    ABC_CHECK_RET(ABC_CarePackageEncode(pCarePackage, &szCarePackage, pError));
-    ABC_CHECK_RET(ABC_LoginPackageEncode(pLoginPackage, &szLoginPackage, pError));
+    ABC_CHECK_NEW(carePackage.encode(carePackageStr), pError);
+    ABC_CHECK_NEW(loginPackage.encode(loginPackageStr), pError);
 
     // Encode those:
     pJSON_Root = json_pack("{ss, ss, ss, ss, ss}",
         ABC_SERVER_JSON_L1_FIELD,      base64Encode(L1).c_str(),
         ABC_SERVER_JSON_LP1_FIELD,     base64Encode(oldLP1).c_str(),
         ABC_SERVER_JSON_NEW_LP1_FIELD, base64Encode(newLP1).c_str(),
-        ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  szCarePackage,
-        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, szLoginPackage);
+        ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  carePackageStr.c_str(),
+        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackageStr.c_str());
     ABC_CHECK_NULL(pJSON_Root);
 
     // set up the recovery, if any:
-    if (ABC_BUF_PTR(newLRA1))
+    if (ABC_BUF_SIZE(newLRA1))
     {
         pJSON_NewLRA1 = json_string(base64Encode(newLRA1).c_str());
         json_object_set(pJSON_Root, ABC_SERVER_JSON_NEW_LRA1_FIELD, pJSON_NewLRA1);
@@ -271,8 +269,6 @@ exit:
     ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
-    ABC_FREE_STR(szCarePackage);
-    ABC_FREE_STR(szLoginPackage);
     if (pJSON_OldLRA1)  json_decref(pJSON_OldLRA1);
     if (pJSON_NewLRA1)  json_decref(pJSON_NewLRA1);
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -281,7 +277,7 @@ exit:
 }
 
 tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
-                                      tABC_CarePackage **ppCarePackage,
+                                      CarePackage &result,
                                       tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -297,7 +293,7 @@ tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_CARE_PACKAGE_PATH);
 
     ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1_NULL, LRA1, szURL, JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
-    ABC_CHECK_RET(ABC_CarePackageDecode(ppCarePackage, szCarePackage, pError));
+    ABC_CHECK_NEW(result.decode(szCarePackage), pError);
 
 exit:
     ABC_FREE_STR(szURL);
@@ -309,7 +305,7 @@ exit:
 tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
                                        tABC_U08Buf LP1,
                                        tABC_U08Buf LRA1,
-                                       tABC_LoginPackage **ppLoginPackage,
+                                       LoginPackage &result,
                                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -322,7 +318,7 @@ tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
     sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_LOGIN_PACK_GET_PATH);
 
     ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1, LRA1, szURL, JSON_ACCT_LOGIN_PACKAGE, &szLoginPackage, pError));
-    ABC_CHECK_RET(ABC_LoginPackageDecode(ppLoginPackage, szLoginPackage, pError));
+    ABC_CHECK_NEW(result.decode(szLoginPackage), pError);
 
 exit:
     ABC_FREE_STR(szURL);
@@ -470,7 +466,7 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
                                         tABC_U08Buf LP1,
                                         tABC_U08Buf DID,
                                         tABC_U08Buf LPIN1,
-                                        char *szPinPackage,
+                                        const std::string &pinPackage,
                                         time_t ali,
                                         tABC_Error *pError)
 {
@@ -500,7 +496,7 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
         ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
         ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1).c_str(),
-        JSON_ACCT_PIN_PACKAGE, szPinPackage,
+        JSON_ACCT_PIN_PACKAGE, pinPackage.c_str(),
         ABC_SERVER_JSON_ALI_FIELD, szALI);
     ABC_CHECK_NULL(pJSON_Root);
 

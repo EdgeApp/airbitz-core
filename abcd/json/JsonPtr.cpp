@@ -5,7 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#include "JsonFile.hpp"
+#include "JsonPtr.hpp"
+#include "../crypto/Crypto.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Json.hpp"
 
@@ -14,32 +15,46 @@ namespace abcd {
 constexpr size_t loadFlags = 0;
 constexpr size_t saveFlags = JSON_INDENT(4) | JSON_SORT_KEYS;
 
-JsonFile::~JsonFile()
+JsonPtr::~JsonPtr()
 {
     reset();
 }
 
-JsonFile::JsonFile():
+JsonPtr::JsonPtr():
     root_(nullptr)
 {}
 
-JsonFile::JsonFile(JsonFile &copy):
-    root_(json_incref(copy.root()))
+JsonPtr::JsonPtr(JsonPtr &&move):
+    root_(move.root_)
+{
+    move.root_ = nullptr;
+}
+
+JsonPtr::JsonPtr(const JsonPtr &copy):
+    root_(json_incref(copy.root_))
 {}
 
-JsonFile &
-JsonFile::operator=(JsonFile &copy)
+JsonPtr &
+JsonPtr::operator=(const JsonPtr &copy)
 {
-    reset(json_incref(copy.root()));
+    reset(json_incref(copy.root_));
     return *this;
 }
 
-JsonFile::JsonFile(json_t *root):
-    root_(json_incref(root))
+JsonPtr::JsonPtr(json_t *root):
+    root_(root)
 {}
 
+void
+JsonPtr::reset(json_t *root)
+{
+    if (root_)
+        json_decref(root_);
+    root_ = root;
+}
+
 Status
-JsonFile::load(const std::string &filename)
+JsonPtr::load(const std::string &filename)
 {
     json_error_t error;
     json_t *root = json_load_file(filename.c_str(), loadFlags, &error);
@@ -50,7 +65,17 @@ JsonFile::load(const std::string &filename)
 }
 
 Status
-JsonFile::decode(const std::string &data)
+JsonPtr::load(const std::string &filename, DataSlice dataKey)
+{
+    json_t *root = nullptr;
+    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
+        toU08Buf(dataKey), &root, &error));
+    reset(root);
+    return Status();
+}
+
+Status
+JsonPtr::decode(const std::string &data)
 {
     json_error_t error;
     json_t *root = json_loadb(data.data(), data.size(), loadFlags, &error);
@@ -61,7 +86,7 @@ JsonFile::decode(const std::string &data)
 }
 
 Status
-JsonFile::save(const std::string &filename) const
+JsonPtr::save(const std::string &filename) const
 {
     if (json_dump_file(root_, filename.c_str(), saveFlags))
         return ABC_ERROR(ABC_CC_JSONError, "Cannot write JSON file " + filename);
@@ -69,7 +94,16 @@ JsonFile::save(const std::string &filename) const
 }
 
 Status
-JsonFile::encode(std::string &result) const
+JsonPtr::save(const std::string &filename, DataSlice dataKey) const
+{
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(root_,
+        toU08Buf(dataKey), ABC_CryptoType_AES256,
+        filename.c_str(), &error));
+    return Status();
+}
+
+Status
+JsonPtr::encode(std::string &result) const
 {
     char *raw = json_dumps(root_, saveFlags);
     if (!raw)
@@ -77,14 +111,6 @@ JsonFile::encode(std::string &result) const
     result = raw;
     ABC_UtilJanssonSecureFree(raw);
     return Status();
-}
-
-void
-JsonFile::reset(json_t *root)
-{
-    if (root_)
-        json_decref(root_);
-    root_ = root;
 }
 
 } // namespace abcd

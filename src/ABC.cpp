@@ -2752,13 +2752,13 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
     // Has the password changed?
     {
         tABC_Error error;
-        AutoFree<tABC_LoginPackage, ABC_LoginPackageFree> pLoginPackage;
+        LoginPackage loginPackage;
         tABC_U08Buf LRA1 = ABC_BUF_NULL; // Do not free
         AutoU08Buf L1;
         AutoU08Buf LP1;
 
         ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, &L1, &LP1, pError));
-        cc = ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, &pLoginPackage.get(), &error);
+        cc = ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, loginPackage, &error);
 
         if (cc == ABC_CC_InvalidOTP)
         {

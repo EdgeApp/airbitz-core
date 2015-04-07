@@ -47,7 +47,7 @@ namespace abcd {
 struct QuestionsFile:
     public JsonObject
 {
-    ABC_JSON_VALUE(Questions, "questions", JSON_ARRAY);
+    ABC_JSON_VALUE(questions, "questions", JsonPtr);
 };
 
 static tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename, tABC_Error *pError);
@@ -108,7 +108,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    JsonFile file;
+    JsonPtr file;
     json_t  *pJSON_Root             = NULL;
     json_t  *pJSON_Value            = NULL;
     char    *szInfoFilename         = NULL;
@@ -134,7 +134,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
 
     // load the json
     ABC_CHECK_NEW(file.load(szInfoFilename), pError);
-    pJSON_Root = file.root();
+    pJSON_Root = file.get();
 
     // allocate the struct
     ABC_NEW(pInfo, tABC_GeneralInfo);
@@ -341,7 +341,7 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
         pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
         ABC_CHECK_ASSERT((pJSON_Value && json_is_object(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON info results");
         {
-            JsonFile json(json_incref(pJSON_Value));
+            JsonPtr json(json_incref(pJSON_Value));
             ABC_CHECK_NEW(json.save(szInfoFilename), pError);
         }
     }
@@ -438,8 +438,9 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
 
     // Read in the recovery question choices json object
     ABC_CHECK_NEW(file.load(filename), pError);
-    ABC_CHECK_NEW(file.hasQuestions(), pError);
-    pJSON_Value = file.getQuestions();
+    pJSON_Value = file.questions().get();
+    if (!json_is_array(pJSON_Value))
+        ABC_RET_ERROR(ABC_CC_JSONError, "No questions in the recovery question choices file")
 
     // get the number of elements in the array
     count = (unsigned int) json_array_size(pJSON_Value);
@@ -502,7 +503,7 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
 
     // get the questions from the server
     ABC_CHECK_RET(ABC_GeneralServerGetQuestions(&pJSON_Q, pError));
-    ABC_CHECK_NEW(file.setQuestions(pJSON_Q), pError);
+    ABC_CHECK_NEW(file.questionsSet(pJSON_Q), pError);
     ABC_CHECK_NEW(file.save(getRootDir() + GENERAL_QUESTIONS_FILENAME), pError);
 
 exit:

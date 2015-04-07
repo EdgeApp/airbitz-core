@@ -24,8 +24,8 @@ class Login;
 
 tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
                               tABC_U08Buf LP1,
-                              tABC_CarePackage *pCarePackage,
-                              tABC_LoginPackage *pLoginPackage,
+                              const CarePackage &carePackage,
+                              const LoginPackage &loginPackage,
                               const char *szRepoAcctKey,
                               tABC_Error *pError);
 
@@ -40,18 +40,18 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
                                       tABC_U08Buf oldLP1,
                                       tABC_U08Buf newLP1,
                                       tABC_U08Buf newLRA1,
-                                      tABC_CarePackage *pCarePackage,
-                                      tABC_LoginPackage *pLoginPackage,
+                                      const CarePackage &carePackage,
+                                      const LoginPackage &loginPackage,
                                       tABC_Error *pError);
 
 tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
-                                      tABC_CarePackage **ppCarePackage,
+                                      CarePackage &result,
                                       tABC_Error *pError);
 
 tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
                                        tABC_U08Buf LP1,
                                        tABC_U08Buf LRA1,
-                                       tABC_LoginPackage **ppLoginPackage,
+                                       LoginPackage &result,
                                        tABC_Error *pError);
 
 tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
@@ -63,7 +63,7 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
                                         tABC_U08Buf LP1,
                                         tABC_U08Buf DID,
                                         tABC_U08Buf LPIN1,
-                                        char *szPinPackage,
+                                        const std::string &pinPackage,
                                         time_t ali,
                                         tABC_Error *pError);
 /**

@@ -17,11 +17,10 @@ namespace abcd {
 struct PluginDataFile:
     public JsonObject
 {
-    PluginDataFile() {}
-    PluginDataFile(json_t *root): JsonObject(root) {}
+    ABC_JSON_CONSTRUCTORS(PluginDataFile, JsonObject)
 
-    ABC_JSON_STRING(Key,  "key",  nullptr)
-    ABC_JSON_STRING(Data, "data", nullptr)
+    ABC_JSON_STRING(key,  "key",  nullptr)
+    ABC_JSON_STRING(data, "data", nullptr)
 };
 
 static std::string
@@ -49,16 +48,12 @@ Status
 pluginDataGet(const Login &login, const std::string &plugin,
     const std::string &key, std::string &data)
 {
-    std::string filename = keyFilename(login, plugin, key);
+    PluginDataFile json;
+    ABC_CHECK(json.load(keyFilename(login, plugin, key), login.dataKey()));
+    ABC_CHECK(json.keyOk());
+    ABC_CHECK(json.dataOk());
 
-    json_t *temp;
-    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
-        toU08Buf(login.dataKey()), &temp, &error));
-    PluginDataFile json(temp);
-    ABC_CHECK(json.hasKey());
-    ABC_CHECK(json.hasData());
-    data = json.getData();
-
+    data = json.data();
     return Status();
 }
 
@@ -70,11 +65,9 @@ pluginDataSet(const Login &login, const std::string &plugin,
     ABC_CHECK(fileEnsureDir(pluginDirectory(login, plugin)));
 
     PluginDataFile json;
-    json.setKey(key.c_str());
-    json.setData(data.c_str());
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(json.root(),
-        toU08Buf(login.dataKey()), ABC_CryptoType_AES256,
-        keyFilename(login, plugin, key).c_str(), &error));
+    json.keySet(key.c_str());
+    json.dataSet(data.c_str());
+    ABC_CHECK(json.save(keyFilename(login, plugin, key), login.dataKey()));
 
     return Status();
 }
