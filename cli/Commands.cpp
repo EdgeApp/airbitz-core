@@ -346,11 +346,12 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
         JsonBox box;
         ABC_CHECK(box.load(std::string(szDir.get()) + "/sync/WalletName.json"));
 
-        AutoAccountWalletInfo info;
-        ABC_CHECK_OLD(ABC_AccountWalletLoad(*session.login, uuids.data[i], &info, &error));
+        auto wallet = ABC_WalletID(*session.login, uuids.data[i]);
+        U08Buf dataKey;
+        ABC_CHECK_OLD(ABC_WalletGetMK(wallet, &dataKey, &error));
 
         DataChunk data;
-        ABC_CHECK(box.decrypt(data, info.MK));
+        ABC_CHECK(box.decrypt(data, dataKey));
 
         std::cout << uuids.data[i] << ": " << toString(data) << std::endl;
     }
@@ -509,17 +510,18 @@ COMMAND(InitLevel::wallet, WalletArchive, "wallet-archive")
 
 COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
 {
+    auto wallet = ABC_WalletID(*session.login, session.uuid.c_str());
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-decrypt <user> <pass> <wallet-name> <file>");
 
-    AutoAccountWalletInfo info;
-    ABC_CHECK_OLD(ABC_AccountWalletLoad(*session.login, argv[2], &info, &error));
+    U08Buf dataKey;
+    ABC_CHECK_OLD(ABC_WalletGetMK(wallet, &dataKey, &error));
 
     JsonBox box;
     ABC_CHECK(box.load(argv[3]));
 
     DataChunk data;
-    ABC_CHECK(box.decrypt(data, info.MK));
+    ABC_CHECK(box.decrypt(data, dataKey));
     std::cout << toString(data) << std::endl;
     printf("\n");
 
@@ -528,17 +530,18 @@ COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
 
 COMMAND(InitLevel::wallet, WalletEncrypt, "wallet-encrypt")
 {
+    auto wallet = ABC_WalletID(*session.login, session.uuid.c_str());
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-encrypt <user> <pass> <wallet-name> <file>");
 
-    AutoAccountWalletInfo info;
-    ABC_CHECK_OLD(ABC_AccountWalletLoad(*session.login, argv[2], &info, &error));
+    U08Buf dataKey;
+    ABC_CHECK_OLD(ABC_WalletGetMK(wallet, &dataKey, &error));
 
     DataChunk contents;
     ABC_CHECK(fileLoad(contents, argv[3]));
 
     JsonBox box;
-    ABC_CHECK(box.encrypt(contents, info.MK));
+    ABC_CHECK(box.encrypt(contents, dataKey));
 
     std::string str;
     ABC_CHECK(box.encode(str));
