@@ -20,11 +20,10 @@ Status syncAll(Account &account)
     ABC_CHECK(account.sync(dirty));
 
     // Sync the wallets:
-    AutoStringArray uuids;
-    ABC_CHECK_OLD(ABC_AccountWalletList(account.login(), &uuids.data, &uuids.size, &error));
-    for (size_t i = 0; i < uuids.size; ++i)
+    auto uuids = account.wallets.list();
+    for (const auto &i: uuids)
     {
-        auto wallet = ABC_WalletID(account, uuids.data[i]);
+        auto wallet = ABC_WalletID(account, i.id.c_str());
         ABC_CHECK_OLD(ABC_WalletSyncData(wallet, dirty, &error));
     }
 

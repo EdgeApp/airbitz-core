@@ -69,6 +69,16 @@ namespace abcd {
 #define JSON_WALLET_CURRENCY_NUM_FIELD          "num"
 #define JSON_WALLET_ACCOUNTS_FIELD              "accounts"
 
+struct WalletJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(WalletJson, JsonObject)
+    ABC_JSON_STRING(dataKey,    "MK",           nullptr)
+    ABC_JSON_STRING(syncKey,    "SyncKey",      nullptr)
+    ABC_JSON_STRING(bitcoinKey, "BitcoinSeed",  nullptr)
+    // There are other fields, but the WalletList handles those.
+};
+
 // holds wallet data (including keys) for a given wallet
 typedef struct sWalletData
 {
@@ -82,7 +92,6 @@ typedef struct sWalletData
     char            **aszAccounts;
     tABC_U08Buf     MK;
     tABC_U08Buf     BitcoinPrivateSeed;
-    unsigned        archived;
     bool            balanceDirty;
     int64_t         balance;
 } tWalletData;
@@ -165,7 +174,7 @@ tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
     DataChunk bitcoinKey;
     bool dirty = false;
     AutoU08Buf LP1;
-    tABC_AccountWalletInfo info; // Do not free
+    WalletJson json;
     tABC_WalletID wallet;
 
     tWalletData *pData = NULL;
@@ -175,7 +184,6 @@ tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
 
     // create a new wallet data struct
     ABC_NEW(pData, tWalletData);
-    pData->archived = 0;
 
     // create wallet guid
     ABC_CHECK_NEW(randomUuid(uuid), pError);
@@ -234,13 +242,10 @@ tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
     ABC_CHECK_NEW(LoginServerWalletActivate(account->login().lobby(), LP1, pData->szWalletAcctKey), pError);
 
     // If everything worked, add the wallet to the account:
-    info.szUUID = pData->szUUID;
-    info.MK = pData->MK;
-    info.BitcoinSeed = pData->BitcoinPrivateSeed;
-    info.SyncKey = toU08Buf(syncKey);
-    info.archived = 0;
-    ABC_CHECK_RET(ABC_AccountWalletList(account->login(), NULL, &info.sortIndex, pError));
-    ABC_CHECK_RET(ABC_AccountWalletSave(account->login(), &info, pError));
+    ABC_CHECK_NEW(json.dataKeySet(base16Encode(dataKey).c_str()), pError);
+    ABC_CHECK_NEW(json.syncKeySet(base16Encode(syncKey).c_str()), pError);
+    ABC_CHECK_NEW(json.bitcoinKeySet(base16Encode(bitcoinKey).c_str()), pError);
+    ABC_CHECK_NEW(account->wallets.insert(uuid, json), pError);
 
     // Now the wallet is written to disk, generate some addresses
     ABC_CHECK_RET(ABC_TxCreateInitialAddresses(wallet, pError));
@@ -594,8 +599,8 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
 
     tWalletData *pData = NULL;
     char *szFilename = NULL;
-    AutoAccountWalletInfo info;
-    memset(&info, 0, sizeof(tABC_AccountWalletInfo));
+    WalletJson json;
+    DataChunk dataKey, bitcoinKey;
 
     // see if it is already in the cache
     ABC_CHECK_RET(ABC_WalletGetFromCacheByUUID(self.szUUID, &pData, pError));
@@ -620,19 +625,18 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
         ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), self.szUUID, pError));
 
         // Get the wallet info from the account:
-        ABC_CHECK_RET(ABC_AccountWalletLoad(self.account->login(), self.szUUID, &info, pError));
-        pData->archived = info.archived;
+        ABC_CHECK_NEW(self.account->wallets.json(json, self.szUUID), pError);
 
-        // Steal the wallet info into our struct:
-        pData->MK = info.MK;
-        info.MK = U08Buf();
+        ABC_CHECK_NEW(json.dataKeyOk(), pError);
+        ABC_CHECK_NEW(base16Decode(dataKey, json.dataKey()), pError);
+        ABC_BUF_DUP(pData->MK, toU08Buf(dataKey));
 
-        // Steal the bitcoin seed into our struct:
-        pData->BitcoinPrivateSeed = info.BitcoinSeed;
-        info.BitcoinSeed = U08Buf();
+        ABC_CHECK_NEW(json.bitcoinKeyOk(), pError);
+        ABC_CHECK_NEW(base16Decode(bitcoinKey, json.bitcoinKey()), pError);
+        ABC_BUF_DUP(pData->BitcoinPrivateSeed, toU08Buf(bitcoinKey));
 
-        // Encode the sync key into our struct:
-        ABC_STRDUP(pData->szWalletAcctKey, base16Encode(info.SyncKey).c_str());
+        ABC_CHECK_NEW(json.syncKeyOk(), pError);
+        ABC_STRDUP(pData->szWalletAcctKey, json.syncKey());
 
         // make sure this wallet exists, if it doesn't leave fields empty
         bool bExists = false;
@@ -871,7 +875,6 @@ void ABC_WalletFreeData(tWalletData *pData)
 
         ABC_FREE_STR(pData->szWalletSyncDir);
 
-        pData->archived = 0;
         pData->currencyNum = -1;
 
         ABC_UtilFreeStringArray(pData->aszAccounts, pData->numAccounts);
@@ -931,7 +934,15 @@ tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
         ABC_STRDUP(pInfo->szName, pData->szName);
     }
     pInfo->currencyNum = pData->currencyNum;
-    pInfo->archived  = pData->archived;
+    {
+        // This is mainly here for legacy reasons.
+        // The WalletList should be exposed through the ABC API,
+        // removing the need to handle archiving at this level.
+        auto list = self.account->wallets.list();
+        for (auto &i: list)
+            if (i.id == self.szUUID)
+                pInfo->archived = i.archived;
+    }
 
     if (pData->balanceDirty == true)
     {
@@ -1031,12 +1042,11 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self, tABC_U08Buf *pSe
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    AutoAccountWalletInfo info;
-
-    ABC_CHECK_RET(ABC_AccountWalletLoad(self.account->login(), self.szUUID, &info, pError));
-
-    // assign the address
-    ABC_BUF_DUP(*pSeed, info.BitcoinSeed);
+    WalletJson json;
+    DataChunk bitcoinKey;
+    ABC_CHECK_NEW(self.account->wallets.json(json, self.szUUID), pError);
+    ABC_CHECK_NEW(base16Decode(bitcoinKey, json.bitcoinKey()), pError);
+    ABC_BUF_DUP(*pSeed, toU08Buf(bitcoinKey));
 
 exit:
     return cc;

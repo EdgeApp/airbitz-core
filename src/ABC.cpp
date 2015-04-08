@@ -870,15 +870,11 @@ exit:
 /**
  * Sets (or unsets) the archive bit on a wallet.
  *
- * @param szUserName            UserName for the account associated with this wallet
- * @param szPassword            Password for the account associated with this wallet
- * @param szUUID                UUID of the wallet
  * @param archived              True if the archive bit should be set
- * @param pError                A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_SetWalletArchived(const char *szUserName,
                               const char *szPassword,
-                              const char *szUUID,
+                              const char *szWalletUUID,
                               unsigned int archived,
                               tABC_Error *pError)
 {
@@ -887,17 +883,14 @@ tABC_CC ABC_SetWalletArchived(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-    AutoAccountWalletInfo info;
-    memset(&info, 0, sizeof(tABC_AccountWalletInfo));
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountWalletLoad(*login, szUUID, &info, pError));
-    info.archived = !!archived;
-    ABC_CHECK_RET(ABC_AccountWalletSave(*login, &info, pError));
-    ABC_CHECK_RET(ABC_WalletRemoveFromCache(szUUID, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        ABC_CHECK_NEW(account->wallets.archive(szWalletUUID, archived), pError);
+    }
+
 exit:
     return cc;
 }
@@ -1083,11 +1076,7 @@ exit:
  * This function allocates and fills in a wallet info structure with the information
  * associated with the given wallet UUID
  *
- * @param szUserName            UserName for the account associated with this wallet
- * @param szPassword            Password for the account associated with this wallet
- * @param szUUID                UUID of the wallet
  * @param ppWalletInfo          Pointer to store the pointer of the allocated wallet info struct
- * @param pError                A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_GetWalletInfo(const char *szUserName,
                           const char *szPassword,
@@ -1178,12 +1167,21 @@ tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountWalletList(*login, paWalletUUID, pCount, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto list = account->wallets.list();
+
+        ABC_ARRAY_NEW(*paWalletUUID, list.size(), char*);
+        int n = 0;
+        for (const auto &i: list)
+        {
+            ABC_STRDUP((*paWalletUUID)[n++], i.id.c_str());
+        }
+        *pCount = list.size();
+    }
 
 exit:
     return cc;
@@ -1218,30 +1216,29 @@ tABC_CC ABC_GetWallets(const char *szUserName,
     ABC_CHECK_NULL(pCount);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    // Return an empty list by default:
-    *paWalletInfo = NULL;
-    *pCount = 0;
-
     {
         std::shared_ptr<Account> account;
         ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
 
-        AutoStringArray uuids;
-        ABC_CHECK_RET(ABC_AccountWalletList(account->login(), &uuids.data, &uuids.size, pError));
+        // Return an empty list by default:
+        *paWalletInfo = nullptr;
+        *pCount = 0;
 
         // Only build a list if we have stuff to put inside:
-        if (uuids.size > 0)
+        auto uuids = account->wallets.list();
+        if (0 < uuids.size())
         {
-            ABC_ARRAY_NEW(aWalletInfo, uuids.size, tABC_WalletInfo*);
+            ABC_ARRAY_NEW(aWalletInfo, uuids.size(), tABC_WalletInfo*);
 
-            for (unsigned i = 0; i < uuids.size; i++)
+            unsigned n = 0;
+            for (const auto &i: uuids)
             {
-                auto wallet = ABC_WalletID(*account, uuids.data[i]);
-                ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &aWalletInfo[i], pError));
+                auto wallet = ABC_WalletID(*account, i.id.c_str());
+                ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &aWalletInfo[n++], pError));
             }
 
             *paWalletInfo = aWalletInfo;
-            *pCount = uuids.size;
+            *pCount = uuids.size();
             aWalletInfo = NULL;
         }
     }
@@ -1298,12 +1295,26 @@ tABC_CC ABC_SetWalletOrder(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountWalletReorder(*login, szUUIDs, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        // Make a mutable copy of the input:
+        AutoString temp;
+        ABC_STRDUP(temp.get(), szUUIDs);
+
+        // Break apart the text:
+        unsigned i = 0;
+        char *uuid, *brkt;
+        for (uuid = strtok_r(temp, "\n", &brkt);
+             uuid;
+             uuid = strtok_r(nullptr, "\n", &brkt))
+        {
+            ABC_CHECK_NEW(account->wallets.reorder(uuid, i++), pError);
+        }
+    }
 
 exit:
     return cc;
@@ -3290,12 +3301,14 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_LoginServerUploadLogs(*login, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        ABC_CHECK_RET(ABC_LoginServerUploadLogs(*account, pError));
+    }
 
 exit:
     return cc;
