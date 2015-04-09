@@ -11,6 +11,7 @@
 #include "../abcd/account/Account.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
+#include "../src/LoginShim.hpp"
 #include <iostream>
 
 using namespace abcd;
@@ -25,8 +26,10 @@ Status syncAll(Account &account)
     auto ids = account.wallets.list();
     for (const auto &id: ids)
     {
-        auto wallet = ABC_WalletID(account, id.c_str());
-        ABC_CHECK_OLD(ABC_WalletSyncData(wallet, dirty, &error));
+        std::shared_ptr<Wallet> wallet;
+        ABC_CHECK(cacheWallet(wallet, nullptr, id.c_str()));
+
+        ABC_CHECK_OLD(ABC_WalletSyncData(*wallet, dirty, &error));
     }
 
     return Status();

@@ -16,6 +16,7 @@
 #include "../../abcd/login/Login.hpp"
 #include "../../abcd/util/FileIO.hpp"
 #include "../../abcd/util/Util.hpp"
+#include "../../src/LoginShim.hpp"
 #include <wallet/wallet.hpp>
 #include <iostream>
 
@@ -166,12 +167,11 @@ COMMAND(InitLevel::account, DataSync, "data-sync")
 
 COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... generate-addresses <user> <pass> <wallet-name> <count>");
 
     tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(wallet, &data, &error));
+    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(*session.wallet, &data, &error));
 
     libbitcoin::data_chunk seed(data.begin(), data.end());
     libwallet::hd_private_key m(seed);
@@ -189,12 +189,11 @@ COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
 
 COMMAND(InitLevel::wallet, GetBitcoinSeed, "get-bitcoin-seed")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-bitcoin-seed <user> <pass> <wallet-name>");
 
     tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(wallet, &data, &error));
+    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(*session.wallet, &data, &error));
     std::cout << base16Encode(data) << std::endl;
 
     return Status();
@@ -322,9 +321,10 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
         JsonBox box;
         ABC_CHECK(box.load(walletSyncDir(id) + "WalletName.json"));
 
-        auto wallet = ABC_WalletID(*session.account, id.c_str());
+        std::shared_ptr<Wallet> wallet;
+        ABC_CHECK(cacheWallet(wallet, nullptr, id.c_str()));
         U08Buf dataKey;
-        ABC_CHECK_OLD(ABC_WalletGetMK(wallet, &dataKey, &error));
+        ABC_CHECK_OLD(ABC_WalletGetMK(*wallet, &dataKey, &error));
 
         DataChunk data;
         ABC_CHECK(box.decrypt(data, dataKey));
@@ -392,7 +392,6 @@ COMMAND(InitLevel::account, RemoveCategory, "remove-category")
 
 COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 6)
         return ABC_ERROR(ABC_CC_Error, "usage: ... search-bitcoin-seed <user> <pass> <wallet-name> <addr> <start> <end>");
 
@@ -401,7 +400,7 @@ COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed")
     char *szMatchAddr = argv[3];
 
     tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(wallet, &data, &error));
+    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(*session.wallet, &data, &error));
 
     libbitcoin::data_chunk seed(data.begin(), data.end());
     libwallet::hd_private_key m(seed);
@@ -490,12 +489,11 @@ COMMAND(InitLevel::wallet, WalletArchive, "wallet-archive")
 
 COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-decrypt <user> <pass> <wallet-name> <file>");
 
     U08Buf dataKey;
-    ABC_CHECK_OLD(ABC_WalletGetMK(wallet, &dataKey, &error));
+    ABC_CHECK_OLD(ABC_WalletGetMK(*session.wallet, &dataKey, &error));
 
     JsonBox box;
     ABC_CHECK(box.load(argv[3]));
@@ -510,12 +508,11 @@ COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
 
 COMMAND(InitLevel::wallet, WalletEncrypt, "wallet-encrypt")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-encrypt <user> <pass> <wallet-name> <file>");
 
     U08Buf dataKey;
-    ABC_CHECK_OLD(ABC_WalletGetMK(wallet, &dataKey, &error));
+    ABC_CHECK_OLD(ABC_WalletGetMK(*session.wallet, &dataKey, &error));
 
     DataChunk contents;
     ABC_CHECK(fileLoad(contents, argv[3]));

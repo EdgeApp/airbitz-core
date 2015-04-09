@@ -116,8 +116,6 @@ SendInfo::~SendInfo()
     ABC_FREE_STR(szDestAddress);
     delete paymentRequest;
     ABC_TxFreeDetails(pDetails);
-    if (bTransfer)
-        ABC_WalletIDFree(walletDest);
 }
 
 SendInfo::SendInfo()

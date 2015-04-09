@@ -41,6 +41,7 @@
 #include "../spend/Spend.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
+#include "../wallet/Wallet.hpp"
 #include <algorithm>
 #include <list>
 #include <memory>
@@ -63,15 +64,10 @@ struct PendingSweep
 
 struct WatcherInfo
 {
-    ~WatcherInfo()
+    WatcherInfo(Wallet &wallet):
+        wallet(wallet),
+        parent_(wallet.shared_from_this())
     {
-        ABC_WalletIDFree(wallet);
-    }
-
-    WatcherInfo()
-    {
-        wallet.account = nullptr;
-        wallet.szUUID = nullptr;
     }
 
     Watcher watcher;
@@ -82,6 +78,9 @@ struct WatcherInfo
     // Callback:
     tABC_BitCoin_Event_Callback fAsyncCallback;
     void *pData;
+
+private:
+    std::shared_ptr<Wallet> parent_;
 };
 
 static std::map<std::string, std::unique_ptr<WatcherInfo>> watchers_;
@@ -97,7 +96,7 @@ static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitco
 static Status
 watcherFind(WatcherInfo *&result, tABC_WalletID self)
 {
-    std::string id = self.szUUID;
+    std::string id = self.id();
     auto row = watchers_.find(id);
     if (row == watchers_.end())
         return ABC_ERROR(ABC_CC_Synchronizing, "Cannot find watcher for " + id);
@@ -123,7 +122,7 @@ watcherLoad(tABC_WalletID self)
     ABC_CHECK(watcherFind(watcher, self));
 
     DataChunk data;
-    ABC_CHECK(fileLoad(data, watcherPath(self.szUUID)));
+    ABC_CHECK(fileLoad(data, watcherPath(self.id())));
     if (!watcher->load(data))
         return ABC_ERROR(ABC_CC_Error, "Unable to load serialized watcher");
 
@@ -137,7 +136,7 @@ watcherSave(tABC_WalletID self)
     ABC_CHECK(watcherFind(watcher, self));
 
     auto data = watcher->serialize();;
-    ABC_CHECK(fileSave(data, watcherPath(self.szUUID)));
+    ABC_CHECK(fileSave(data, watcherPath(self.id())));
 
     return Status();
 }
@@ -189,13 +188,12 @@ tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::string id = self.szUUID;
+    std::string id = self.id();
 
     if (watchers_.end() != watchers_.find(id))
         ABC_RET_ERROR(ABC_CC_Error, ("Watcher already exists for " + id).c_str());
 
-    watchers_[id].reset(new WatcherInfo());
-    ABC_CHECK_RET(ABC_WalletIDCopy(&watchers_[id]->wallet, self, pError));
+    watchers_[id].reset(new WatcherInfo(self));
 
     watcherLoad(self); // Failure is not fatal
 
@@ -277,7 +275,7 @@ tABC_CC ABC_BridgeWatcherConnect(tABC_WalletID self, tABC_Error *pError)
     }
 
     // Connect:
-    ABC_DebugLog("WalletID:%s Connecting to %s\n", self.szUUID, szServer);
+    ABC_DebugLog("Wallet %s connecting to %s", self.id().c_str(), szServer);
     watcher->connect(szServer);
 
 exit:
@@ -291,7 +289,7 @@ tABC_CC ABC_BridgeWatchAddr(tABC_WalletID self,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_DebugLog("Watching %s for %s\n", pubAddress, self.szUUID);
+    ABC_DebugLog("Watching %s for %s", pubAddress, self.id().c_str());
     bc::payment_address addr;
 
     WatcherInfo *watcherInfo = nullptr;
@@ -368,7 +366,7 @@ tABC_CC ABC_BridgeWatcherDelete(tABC_WalletID self, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     watcherSave(self); // Failure is not fatal
-    watchers_.erase(self.szUUID);
+    watchers_.erase(self.id());
 
     return cc;
 }

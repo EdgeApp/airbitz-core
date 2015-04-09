@@ -27,7 +27,7 @@ struct SendInfo
 
     // Transfer from one wallet to another:
     bool                    bTransfer;
-    tABC_WalletID           walletDest;
+    Wallet                  *walletDest;
 
 };
 
