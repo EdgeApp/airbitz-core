@@ -120,7 +120,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     setRootDir(szRootDir);
 
     // initialize logging
-    ABC_CHECK_RET(ABC_DebugInitialize(szRootDir, pError));
+    ABC_CHECK_RET(ABC_DebugInitialize(pError));
 
     // override the alloc and free of janson so we can have a secure method
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
