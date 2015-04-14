@@ -105,6 +105,8 @@ void ABC_DebugLog(const char *format, ...)
     char temp[1];
     int size = vsnprintf(temp, sizeof(temp), format, args);
     va_end(args);
+    if (size < 0)
+        return;
 
     // Format the message:
     va_start(args, format);
