@@ -2691,53 +2691,6 @@ void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings)
     ABC_AccountSettingsFree(pSettings);
 }
 
-/**
- * Run sync on all directories
- *
- * @param szUserName UserName for the account
- * @param szPassword Password for the account
- */
-tABC_CC ABC_DataSyncAll(const char *szUserName,
-                        const char *szPassword,
-                        tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                        void *pData,
-                        tABC_Error *pError)
-{
-    ABC_DebugLog("%s called", __FUNCTION__);
-
-    tABC_CC cc = ABC_CC_Ok;
-    int walletDirty = 0;
-    std::shared_ptr<Login> login;
-    AutoStringArray uuids;
-
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
-
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_DataSyncAccount(szUserName, szPassword, fAsyncBitCoinEventCallback, pData, pError));
-
-    // Sync the wallets:
-    ABC_CHECK_RET(ABC_AccountWalletList(*login, &uuids.data, &uuids.size, pError));
-    for (size_t i = 0; i < uuids.size; ++i)
-    {
-        int dirty = 0;
-        ABC_CHECK_RET(ABC_WalletSyncData(ABC_WalletID(*login, uuids.data[i]), &dirty, pError));
-        walletDirty |= dirty;
-    }
-
-    if (walletDirty && fAsyncBitCoinEventCallback)
-    {
-        tABC_AsyncBitCoinInfo info;
-        info.eventType = ABC_AsyncEventType_DataSyncUpdate;
-        info.pData = pData;
-        ABC_STRDUP(info.szDescription, "Data Updated");
-        fAsyncBitCoinEventCallback(&info);
-        ABC_FREE_STR(info.szDescription);
-    }
-exit:
-    return cc;
-}
-
 tABC_CC ABC_DataSyncAccount(const char *szUserName,
                             const char *szPassword,
                             tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,

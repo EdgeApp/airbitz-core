@@ -6,6 +6,7 @@
  */
 
 #include "Command.hpp"
+#include "Util.hpp"
 #include "../abcd/Wallet.hpp"
 #include "../abcd/account/Account.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
@@ -158,7 +159,7 @@ COMMAND(InitLevel::login, DataSync, "data-sync")
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... data-sync <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_DataSyncAll(argv[0], argv[1], NULL, NULL, &error));
+    ABC_CHECK(syncAll(*session.login));
 
     return Status();
 }
@@ -332,7 +333,7 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
         return ABC_ERROR(ABC_CC_Error, "usage: ... list-wallets <user> <pass>");
 
     // Setup:
-    ABC_CHECK_OLD(ABC_DataSyncAll(argv[0], argv[1], NULL, NULL, &error));
+    ABC_CHECK(syncAll(*session.login));
 
     // Iterate over wallets:
     AutoStringArray uuids;

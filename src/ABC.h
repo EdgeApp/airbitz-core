@@ -587,12 +587,6 @@ tABC_CC ABC_IsTestNet(bool *pResult, tABC_Error *pError);
 /* === All data at once: === */
 tABC_CC ABC_ClearKeyCache(tABC_Error *pError);
 
-tABC_CC ABC_DataSyncAll(const char *szUserName,
-                        const char *szPassword,
-                        tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                        void *pData,
-                        tABC_Error *pError);
-
 /* === General info: === */
 
 /**

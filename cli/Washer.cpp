@@ -6,6 +6,7 @@
  */
 
 #include "Command.hpp"
+#include "Util.hpp"
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -57,9 +58,9 @@ void *watcher_loop(void *pData)
 
 void *data_loop(void *pData)
 {
-    tABC_Error error;
+    Login *login = static_cast<Login *>(pData);
     while (running) {
-        ABC_DataSyncAll(gszUserName, gszPassword, NULL, NULL, &error);
+        syncAll(*login);
         sleep(5);
     }
 
@@ -154,7 +155,7 @@ COMMAND(InitLevel::login, Washer, "washer")
     signal(SIGINT, sig_handler);
 
     pthread_t data_thread;
-    if (!pthread_create(&data_thread, NULL, data_loop, NULL))
+    if (!pthread_create(&data_thread, NULL, data_loop, session.login.get()))
     {
         pthread_detach(data_thread);
     }
