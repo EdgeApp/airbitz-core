@@ -2753,15 +2753,35 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
-    // Has the password changed?
     {
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+
+        // Sync the account data:
+        int accountDirty = 0;
+        ABC_CHECK_RET(ABC_SyncRepo(login->syncDir().c_str(), login->syncKey().c_str(), &accountDirty, pError));
+        if (accountDirty && fAsyncBitCoinEventCallback)
+        {
+            // Try to clear the wallet cache in case the Wallets list changed
+            ABC_WalletClearCache();
+
+            tABC_AsyncBitCoinInfo info;
+            info.eventType = ABC_AsyncEventType_DataSyncUpdate;
+            info.pData = pData;
+            ABC_STRDUP(info.szDescription, "Account Updated");
+            fAsyncBitCoinEventCallback(&info);
+            ABC_FREE_STR(info.szDescription);
+        }
+
+        // Get the server keys:
+        AutoU08Buf L1;
+        AutoU08Buf LP1;
+        ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, &L1, &LP1, pError));
+
+        // Has the password changed?
         tABC_Error error;
         LoginPackage loginPackage;
         tABC_U08Buf LRA1 = ABC_BUF_NULL; // Do not free
-        AutoU08Buf L1;
-        AutoU08Buf LP1;
-
-        ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, &L1, &LP1, pError));
         cc = ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, loginPackage, &error);
 
         if (cc == ABC_CC_InvalidOTP)
@@ -2780,28 +2800,6 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
                 ABC_FREE_STR(info.szDescription);
             }
             goto exit;
-        }
-    }
-
-    // Actually do the sync:
-    {
-        std::shared_ptr<Login> login;
-        int accountDirty = 0;
-
-        // Sync the account data
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-        ABC_CHECK_RET(ABC_SyncRepo(login->syncDir().c_str(), login->syncKey().c_str(), &accountDirty, pError));
-        if (accountDirty && fAsyncBitCoinEventCallback)
-        {
-            // Try to clear the wallet cache in case the Wallets list changed
-            ABC_WalletClearCache();
-
-            tABC_AsyncBitCoinInfo info;
-            info.eventType = ABC_AsyncEventType_DataSyncUpdate;
-            info.pData = pData;
-            ABC_STRDUP(info.szDescription, "Account Updated");
-            fAsyncBitCoinEventCallback(&info);
-            ABC_FREE_STR(info.szDescription);
         }
     }
 
