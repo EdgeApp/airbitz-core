@@ -46,15 +46,6 @@ namespace abcd {
 #define TESTNET_OBELISK "tcp://obelisk-testnet.airbitz.co:9091"
 #define NO_AB_FEES
 
-#define AB_MIN(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
-#define AB_MAX(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
-
 struct PendingSweep
 {
     bc::payment_address address;
@@ -600,7 +591,7 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
                                       addresses.data, addresses.size,
                                       changeAddr, &utx, pError);
         }
-        *pMaxSatoshi = AB_MAX(Details.amountSatoshi, 0);
+        *pMaxSatoshi = std::max<int64_t>(Details.amountSatoshi, 0);
     }
     else
     {
@@ -1197,8 +1188,8 @@ uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo)
     uint64_t abFees =
         (uint64_t) ((double) amount *
                     (pInfo->pAirBitzFee->percentage * 0.01));
-    abFees = AB_MAX(pInfo->pAirBitzFee->minSatoshi, abFees);
-    abFees = AB_MIN(pInfo->pAirBitzFee->maxSatoshi, abFees);
+    abFees = std::max(pInfo->pAirBitzFee->minSatoshi, abFees);
+    abFees = std::min(pInfo->pAirBitzFee->maxSatoshi, abFees);
 
     return abFees;
 #endif
