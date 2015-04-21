@@ -40,7 +40,20 @@ struct AccountAvailableJson: public JsonObject
     ABC_JSON_STRING(authId, "l1", nullptr)
 };
 
+/**
+ * The server puts these fields in the results object
+ * if there is an OTP authorization problem.
+ */
+struct OtpErrorResult:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(OtpErrorResult, JsonObject)
+    ABC_JSON_STRING(resetAuth, "otp_reset_auth", nullptr)
+    ABC_JSON_STRING(resetDate, "otp_timeout_date", nullptr)
+};
+
 static std::string gOtpResetAuth;
+std::string gOtpResetDate;
 
 static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, const char *szURL, const char *szField, char **szResponse, tABC_Error *pError);
 static tABC_CC checkResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError);
@@ -967,12 +980,14 @@ tABC_CC checkResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *
         }
         else if (ABC_Server_Code_InvalidOTP == statusCode)
         {
-            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
-            ABC_CHECK_ASSERT((pJSON_Value && json_is_object(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON object value");
+            OtpErrorResult result(json_incref(
+                json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD)));
 
-            pJSON_Value = json_object_get(pJSON_Value, ABC_SERVER_JSON_OTP_RESET_AUTH);
-            ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            gOtpResetAuth = json_string_value(pJSON_Value);
+            ABC_CHECK_NEW(result.resetAuthOk(), pError);
+            gOtpResetAuth = result.resetAuth();
+
+            if (result.resetDateOk())
+                gOtpResetDate = result.resetDate();
 
             ABC_RET_ERROR(ABC_CC_InvalidOTP, "Invalid OTP");
         }

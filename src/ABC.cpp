@@ -524,6 +524,20 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_OtpResetDate(char **pszDate,
+                         tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    ABC_STRDUP(*pszDate, gOtpResetDate.c_str());
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_OtpResetSet(const char *szUserName,
                         tABC_Error *pError)
 {

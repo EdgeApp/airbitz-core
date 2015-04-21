@@ -22,6 +22,9 @@ namespace abcd {
 
 class Login;
 
+// We need a better way to get this data out than writing to globals:
+extern std::string gOtpResetDate;
+
 tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
                               tABC_U08Buf LP1,
                               const CarePackage &carePackage,

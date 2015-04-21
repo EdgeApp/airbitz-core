@@ -474,6 +474,10 @@ COMMAND(InitLevel::lobby, SignIn, "sign-in")
     tABC_CC cc = ABC_SignIn(argv[0], argv[1], &error);
     if (ABC_CC_InvalidOTP == cc)
     {
+        AutoString date;
+        ABC_CHECK_OLD(ABC_OtpResetDate(&date.get(), &error));
+        if (strlen(date))
+            std::cout << "Pending OTP reset ends at " << date.get() << std::endl;
         std::cout << "No OTP token, resetting account 2-factor auth." << std::endl;
         ABC_CHECK_OLD(ABC_OtpResetSet(argv[0], &error));
     }

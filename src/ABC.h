@@ -761,6 +761,13 @@ tABC_CC ABC_OtpResetGet(char **szUsernames,
                         tABC_Error *pError);
 
 /**
+ * Returns the OTP reset date for the last account that failed to log in,
+ * if any. Returns an empty string otherwise.
+ */
+tABC_CC ABC_OtpResetDate(char **pszDate,
+                         tABC_Error *pError);
+
+/**
  * Launches an OTP reset timer on the server,
  * which will disable the OTP authentication requirement when it expires.
  *
