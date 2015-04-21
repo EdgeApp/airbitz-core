@@ -50,11 +50,8 @@ cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName)
 {
     std::lock_guard<std::mutex> lock(gLoginMutex);
 
-    if (!szUserName)
-        return ABC_ERROR(ABC_CC_NULLPtr, "No user name");
-
     // Clear the cache if the username has changed:
-    if (gLobbyCache)
+    if (szUserName && gLobbyCache)
     {
         std::string fixed;
         ABC_CHECK(Lobby::fixUsername(fixed, szUserName));
@@ -65,6 +62,8 @@ cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName)
     // Load the new lobby, if necessary:
     if (!gLobbyCache)
     {
+        if (!szUserName)
+            return ABC_ERROR(ABC_CC_NULLPtr, "No user name");
         std::unique_ptr<Lobby> lobby(new Lobby());
         ABC_CHECK(lobby->init(szUserName));
         gLobbyCache.reset(lobby.release());
@@ -149,16 +148,12 @@ cacheLoginPin(std::shared_ptr<Login> &result,
 Status
 cacheLogin(std::shared_ptr<Login> &result, const char *szUserName)
 {
+    std::shared_ptr<Lobby> lobby;
+    ABC_CHECK(cacheLobby(lobby, szUserName));
+
+    // Verify that the user is logged in:
     std::lock_guard<std::mutex> lock(gLoginMutex);
-
-    // Get the real username:
-    if (!szUserName)
-        return ABC_ERROR(ABC_CC_NULLPtr, "No user name");
-    std::string fixed;
-    ABC_CHECK(Lobby::fixUsername(fixed, szUserName));
-
-    // Ensure the user is still logged in:
-    if (!gLoginCache || !gLobbyCache || gLobbyCache->username() != fixed)
+    if (!gLoginCache)
         return ABC_ERROR(ABC_CC_AccountDoesNotExist, "Not logged in");
 
     result = gLoginCache;

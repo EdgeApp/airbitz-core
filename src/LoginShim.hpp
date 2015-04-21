@@ -32,6 +32,7 @@ cacheLogout();
 
 /**
  * Loads the lobby for the given user into the cache.
+ * If the username is null, the function returns whatever is cached.
  */
 Status
 cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName);
