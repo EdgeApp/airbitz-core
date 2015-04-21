@@ -602,7 +602,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
 
     // get account keys:
     ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, &L1, &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKeys(*login, &L1, &LP1, pError));
 
     ABC_CHECK_RET(ABC_WalletCreate(*login, L1, LP1, szWalletName,
         currencyNum, pszUuid, pError));
@@ -2776,7 +2776,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         // Get the server keys:
         AutoU08Buf L1;
         AutoU08Buf LP1;
-        ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, &L1, &LP1, pError));
+        ABC_CHECK_RET(ABC_LoginGetServerKeys(*login, &L1, &LP1, pError));
 
         // Has the password changed?
         tABC_Error error;
@@ -3280,7 +3280,7 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, &L1, &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKeys(*login, &L1, &LP1, pError));
     ABC_CHECK_RET(ABC_LoginServerUploadLogs(L1, LP1, *login, pError));
 
 exit:

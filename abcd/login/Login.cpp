@@ -144,7 +144,7 @@ exit:
  * @param pL1       The hashed user name. The caller must free this.
  * @param pLP1      The hashed user name & password. The caller must free this.
  */
-tABC_CC ABC_LoginGetServerKeys(Login &login,
+tABC_CC ABC_LoginGetServerKeys(const Login &login,
                                tABC_U08Buf *pL1,
                                tABC_U08Buf *pLP1,
                                tABC_Error *pError)

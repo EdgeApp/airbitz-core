@@ -70,11 +70,6 @@ cacheLoginPin(std::shared_ptr<Login> &result,
 Status
 cacheLogin(std::shared_ptr<Login> &result, const char *szUserName);
 
-tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
-                                   tABC_U08Buf *pL1,
-                                   tABC_U08Buf *pLP1,
-                                   tABC_Error *pError);
-
 } // namespace abcd
 
 #endif

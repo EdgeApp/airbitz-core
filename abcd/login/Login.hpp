@@ -77,7 +77,7 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
                         tABC_Error *pError);
 
 // Read accessors:
-tABC_CC ABC_LoginGetServerKeys(Login &login,
+tABC_CC ABC_LoginGetServerKeys(const Login &login,
                                tABC_U08Buf *pL1,
                                tABC_U08Buf *pLP1,
                                tABC_Error *pError);

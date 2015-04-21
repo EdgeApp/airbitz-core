@@ -165,29 +165,4 @@ cacheLogin(std::shared_ptr<Login> &result, const char *szUserName)
     return Status();
 }
 
-/**
- * Obtains the information needed to access the server for a given account.
- *
- * @param szUserName UserName for the account to access
- * @param szPassword Password for the account to access
- * @param pL1        A buffer to receive L1. The caller must free this.
- * @param pLP1       A buffer to receive LP1. The caller must free this.
- * @param pError     A pointer to the location to store the error if there is one
- */
-
-tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
-                                   tABC_U08Buf *pL1,
-                                   tABC_U08Buf *pLP1,
-                                   tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    std::shared_ptr<Login> login;
-
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(*login, pL1, pLP1, pError));
-
-exit:
-    return cc;
-}
-
 } // namespace abcd
