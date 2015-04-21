@@ -44,6 +44,7 @@
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
+#include "../abcd/exchange/Currency.hpp"
 #include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
@@ -71,21 +72,8 @@ using namespace abcd;
 
 static bool gbInitialized = false;
 
-static tABC_Currency gaCurrencies[] = {
-    { "AUD", 36, "Australian Dollar", " Australia, Christmas Island (CX), Cocos (Keeling) Islands (CC), Heard and McDonald Islands (HM), Kiribati (KI), Nauru (NR), Norfolk Island (NF), Tuvalu (TV), and Australian Antarctic Territory" },
-    { "CAD", 124, "Canadian dollar", "Canada, Saint Pierre and Miquelon" },
-    { "CNY", 156, "Chinese yuan", "China" },
-    { "CUP", 192, "Cuban peso", "Cuba" },
-    { "EUR", 978, "Euro", "Andorra, Austria, Belgium, Cyprus, Estonia, Finland, France, Germany, Greece, Ireland, Italy, Kosovo, Latvia, Luxembourg, Malta, Monaco, Montenegro, Netherlands, Portugal, San Marino, Slovakia, Slovenia, Spain, Vatican City; see eurozone" },
-    { "GBP", 826, "Pound sterling", "United Kingdom, British Crown dependencies" },
-    { "HKD", 344, "Hong Kong Dollar", "Hong Kong, Macao (MO)" },
-    { "MXN", 484, "Mexican peso", "Mexico" },
-    { "NZD", 554, "New Zealand Dollar", "New Zealand, Cook Islands (CK), Niue (NU), Pitcairn (PN; see also Pitcairn Islands dollar), Tokelau (TK), Ross Dependency" },
-    { "PHP", 608, "Philippine peso", "Philippines" },
-    { "USD", 840, "United States dollar", "American Samoa, Barbados (as well as Barbados Dollar), Bermuda (as well as Bermudian Dollar), British Indian Ocean Territory, British Virgin Islands, Caribbean Netherlands, Ecuador, El Salvador, Guam, Haiti, Marshall Islands, Federated States of Micronesia, Northern Mariana Islands, Palau, Panama, Puerto Rico, Timor-Leste, Turks and Caicos Islands, United States, U.S. Virgin Islands, Zimbabwe" },
-};
-
-#define CURRENCY_ARRAY_COUNT ((int) (sizeof(gaCurrencies) / sizeof(gaCurrencies[0])))
+/** Helper macro for ABC_GetCurrencies. */
+#define CURRENCY_GUI_ROW(code, number, name) {#code, number, name, ""},
 
 /**
  * Initialize the AirBitz Core library.
@@ -667,12 +655,17 @@ tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    static tABC_Currency aCurrencies[] =
+    {
+        ABC_CURRENCY_LIST(CURRENCY_GUI_ROW)
+    };
+
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(paCurrencyArray);
     ABC_CHECK_NULL(pCount);
 
-    *paCurrencyArray = gaCurrencies;
-    *pCount = CURRENCY_ARRAY_COUNT;
+    *paCurrencyArray = aCurrencies;
+    *pCount = std::end(aCurrencies) - std::begin(aCurrencies);
 
 exit:
 

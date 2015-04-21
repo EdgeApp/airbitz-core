@@ -597,7 +597,7 @@ tABC_CC ABC_GeneralInfoUpdate(tABC_Error *pError);
 
 tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
                           int *pCount,
-                         tABC_Error *pError);
+                          tABC_Error *pError);
 
 tABC_CC ABC_GetQuestionChoices(tABC_QuestionChoices **pOut,
                                tABC_Error *pError);
