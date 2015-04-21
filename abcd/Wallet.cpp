@@ -36,6 +36,7 @@
 #include "crypto/Crypto.hpp"
 #include "crypto/Encoding.hpp"
 #include "crypto/Random.hpp"
+#include "login/Lobby.hpp"
 #include "login/Login.hpp"
 #include "login/LoginServer.hpp"
 #include "util/FileIO.hpp"
@@ -148,7 +149,6 @@ void ABC_WalletIDFree(tABC_WalletID in)
 tABC_CC ABC_WalletCreate(const Login &login,
                          tABC_U08Buf L1,
                          tABC_U08Buf LP1,
-                         const char *szUserName,
                          const char *szWalletName,
                          int  currencyNum,
                          char                  **pszUUID,
@@ -217,7 +217,8 @@ tABC_CC ABC_WalletCreate(const Login &login,
     ABC_CHECK_NEW(LoginServerWalletCreate(L1, LP1, pData->szWalletAcctKey), pError);
 
     // set this account for the wallet's first account
-    ABC_CHECK_RET(ABC_WalletAddAccount(ABC_WalletID(login, pData->szUUID), szUserName, pError));
+    ABC_CHECK_RET(ABC_WalletAddAccount(ABC_WalletID(login, pData->szUUID),
+        login.lobby().username().c_str(), pError));
 
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 

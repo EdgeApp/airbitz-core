@@ -604,7 +604,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
     ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, &L1, &LP1, pError));
 
-    ABC_CHECK_RET(ABC_WalletCreate(*login, L1, LP1, szUserName, szWalletName,
+    ABC_CHECK_RET(ABC_WalletCreate(*login, L1, LP1, szWalletName,
         currencyNum, pszUuid, pError));
 
 exit:
