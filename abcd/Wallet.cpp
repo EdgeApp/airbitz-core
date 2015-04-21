@@ -104,11 +104,11 @@ static void    ABC_WalletFreeData(tWalletData *pData);
 /**
  * Initializes the members of a tABC_WalletID structure.
  */
-tABC_WalletID ABC_WalletID(const Login &login,
+tABC_WalletID ABC_WalletID(const Account &account,
                            const char *szUUID)
 {
     tABC_WalletID out;
-    out.login = &login;
+    out.account = &account;
     out.szUUID = szUUID;
     return out;
 }
@@ -122,7 +122,7 @@ tABC_CC ABC_WalletIDCopy(tABC_WalletID *out,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    out->login = in.login;
+    out->account = in.account;
     ABC_STRDUP(out->szUUID, in.szUUID);
 
 exit:
@@ -181,7 +181,7 @@ tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
     ABC_CHECK_NEW(randomUuid(uuid), pError);
     ABC_STRDUP(pData->szUUID, uuid.c_str());
     ABC_STRDUP(*pszUUID, uuid.c_str());
-    wallet = ABC_WalletID(account->login(), pData->szUUID);
+    wallet = ABC_WalletID(*account, pData->szUUID);
 
     // generate the master key for this wallet - MK_<Wallet_GUID1>
     ABC_CHECK_NEW(randomData(dataKey, WALLET_KEY_LENGTH), pError);
@@ -620,7 +620,7 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
         ABC_CHECK_RET(ABC_WalletGetSyncDirName(&(pData->szWalletSyncDir), self.szUUID, pError));
 
         // Get the wallet info from the account:
-        ABC_CHECK_RET(ABC_AccountWalletLoad(*self.login, self.szUUID, &info, pError));
+        ABC_CHECK_RET(ABC_AccountWalletLoad(self.account->login(), self.szUUID, &info, pError));
         pData->archived = info.archived;
 
         // Steal the wallet info into our struct:
@@ -1033,7 +1033,7 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self, tABC_U08Buf *pSe
 
     AutoAccountWalletInfo info;
 
-    ABC_CHECK_RET(ABC_AccountWalletLoad(*self.login, self.szUUID, &info, pError));
+    ABC_CHECK_RET(ABC_AccountWalletLoad(self.account->login(), self.szUUID, &info, pError));
 
     // assign the address
     ABC_BUF_DUP(*pSeed, info.BitcoinSeed);

@@ -583,7 +583,6 @@ exit:
     return cc;
 }
 
-
 /**
  * Clear cached keys.
  *
@@ -798,7 +797,6 @@ exit:
     return cc;
 }
 
-
 /**
  * Remove a category from an account.
  *
@@ -836,18 +834,12 @@ exit:
  * Renames a wallet.
  *
  * This function renames the wallet of a given UUID.
- * If there is more than one category with this name, all categories by this name are removed.
- * If the category does not exist, no error is returned.
  *
- * @param szUserName            UserName for the account associated with this wallet
- * @param szPassword            Password for the account associated with this wallet
- * @param szUUID                UUID of the wallet
  * @param szNewWalletName       New name for the wallet
- * @param pError                A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_RenameWallet(const char *szUserName,
                          const char *szPassword,
-                         const char *szUUID,
+                         const char *szWalletUUID,
                          const char *szNewWalletName,
                          tABC_Error *pError)
 {
@@ -856,12 +848,15 @@ tABC_CC ABC_RenameWallet(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_WalletSetName(ABC_WalletID(*login, szUUID), szNewWalletName, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_WalletSetName(wallet, szNewWalletName, pError));
+    }
 
 exit:
     return cc;
@@ -1090,7 +1085,7 @@ exit:
  */
 tABC_CC ABC_GetWalletInfo(const char *szUserName,
                           const char *szPassword,
-                          const char *szUUID,
+                          const char *szWalletUUID,
                           tABC_WalletInfo **ppWalletInfo,
                           tABC_Error *pError)
 {
@@ -1099,12 +1094,15 @@ tABC_CC ABC_GetWalletInfo(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(*login, szUUID), ppWalletInfo, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_WalletGetInfo(wallet, ppWalletInfo, pError));
+    }
 
 exit:
     return cc;
@@ -1118,7 +1116,6 @@ exit:
  * @param pWalletInfo   Wallet info to be free'd
  */
 void ABC_FreeWalletInfo(tABC_WalletInfo *pWalletInfo)
-
 {
     ABC_DebugLog("%s called", __FUNCTION__);
 
@@ -1131,7 +1128,7 @@ void ABC_FreeWalletInfo(tABC_WalletInfo *pWalletInfo)
  */
 tABC_CC ABC_ExportWalletSeed(const char *szUserName,
                              const char *szPassword,
-                             const char *szUUID,
+                             const char *szWalletUUID,
                              char **pszWalletSeed,
                              tABC_Error *pError)
 {
@@ -1140,14 +1137,17 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-    U08Buf seedBuf; // Do not free
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(*login, szUUID), &seedBuf, pError));
-    ABC_STRDUP(*pszWalletSeed, base16Encode(seedBuf).c_str());
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        U08Buf seedBuf; // Do not free
+        ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(wallet, &seedBuf, pError));
+        ABC_STRDUP(*pszWalletSeed, base16Encode(seedBuf).c_str());
+    }
 
 exit:
     return cc;
@@ -1206,7 +1206,6 @@ tABC_CC ABC_GetWallets(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
     tABC_WalletInfo **aWalletInfo = NULL;
 
     ABC_CHECK_NULL(paWalletInfo);
@@ -1217,10 +1216,12 @@ tABC_CC ABC_GetWallets(const char *szUserName,
     *paWalletInfo = NULL;
     *pCount = 0;
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
     {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
         AutoStringArray uuids;
-        ABC_CHECK_RET(ABC_AccountWalletList(*login, &uuids.data, &uuids.size, pError));
+        ABC_CHECK_RET(ABC_AccountWalletList(account->login(), &uuids.data, &uuids.size, pError));
 
         // Only build a list if we have stuff to put inside:
         if (uuids.size > 0)
@@ -1229,8 +1230,8 @@ tABC_CC ABC_GetWallets(const char *szUserName,
 
             for (unsigned i = 0; i < uuids.size; i++)
             {
-                ABC_CHECK_RET(ABC_WalletGetInfo(ABC_WalletID(*login, uuids.data[i]),
-                    &aWalletInfo[i], pError));
+                auto wallet = ABC_WalletID(*account, uuids.data[i]);
+                ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &aWalletInfo[i], pError));
             }
 
             *paWalletInfo = aWalletInfo;
@@ -1550,7 +1551,6 @@ exit:
     return cc;
 }
 
-
 /**
  * Parses a Bitcoin amount string to an integer.
  * @param the amount to parse, in bitcoins
@@ -1616,12 +1616,15 @@ tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(ABC_WalletID(*login, szWalletUUID), pDetails, pszRequestID, false, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(wallet, pDetails, pszRequestID, false, pError));
+    }
 
 exit:
     return cc;
@@ -1651,12 +1654,15 @@ tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxModifyReceiveRequest(ABC_WalletID(*login, szWalletUUID), szRequestID, pDetails, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxModifyReceiveRequest(wallet, szRequestID, pDetails, pError));
+    }
 
 exit:
     return cc;
@@ -1682,12 +1688,15 @@ tABC_CC ABC_FinalizeReceiveRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxFinalizeReceiveRequest(ABC_WalletID(*login, szWalletUUID), szRequestID, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxFinalizeReceiveRequest(wallet, szRequestID, pError));
+    }
 
 exit:
     return cc;
@@ -1713,12 +1722,15 @@ tABC_CC ABC_CancelReceiveRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxCancelReceiveRequest(ABC_WalletID(*login, szWalletUUID), szRequestID, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxCancelReceiveRequest(wallet, szRequestID, pError));
+    }
 
 exit:
     return cc;
@@ -1750,12 +1762,15 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxGenerateRequestQRCode(ABC_WalletID(*login, szWalletUUID), szRequestID, pszURI, paData, pWidth, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxGenerateRequestQRCode(wallet, szRequestID, pszURI, paData, pWidth, pError));
+    }
 
 exit:
     return cc;
@@ -1790,22 +1805,25 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_TxSendInfo *pTxSendInfo = NULL;
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet name provided");
     ABC_CHECK_NULL(pDetails);
     ABC_CHECK_NULL(pszTxId);
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
-                                      ABC_WalletID(*login, szWalletUUID),
-                                      szDestAddress,
-                                      pDetails,
-                                      pError));
-    cc = ABC_TxSend(pTxSendInfo, pszTxId, pError);
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        AutoFree<tABC_TxSendInfo, ABC_TxSendInfoFree> pTxSendInfo;
+        ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo.get(),
+                                          wallet,
+                                          szDestAddress,
+                                          pDetails,
+                                          pError));
+        ABC_CHECK_RET(ABC_TxSend(pTxSendInfo, pszTxId, pError));
+    }
 
 exit:
     return cc;
@@ -1839,11 +1857,6 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_TxSendInfo *pTxSendInfo = NULL;
-    std::shared_ptr<Login> login;
-
-    char *szRequestId = NULL;
-    char *szRequestAddress = NULL;
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(pTransfer->szSrcWalletUUID);
     ABC_CHECK_ASSERT(strlen(pTransfer->szSrcWalletUUID) > 0, ABC_CC_Error, "No wallet name provided");
@@ -1852,32 +1865,34 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
     ABC_CHECK_NULL(pDetails);
     ABC_CHECK_NULL(pszTxId);
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(ABC_WalletID(*login,
-                                             pTransfer->szDestWalletUUID), pDetails,
-                                             &szRequestId, true, pError));
-    ABC_CHECK_RET(ABC_GetRequestAddress(szUserName, szPassword,
-                                        pTransfer->szDestWalletUUID, szRequestId,
-                                        &szRequestAddress, pError));
-    ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
-                                      ABC_WalletID(*login,
-                                          pTransfer->szSrcWalletUUID),
-                                      szRequestAddress,
-                                      pDetails,
-                                      pError));
-    pTxSendInfo->bTransfer = true;
-    ABC_CHECK_RET(ABC_WalletIDCopy(&pTxSendInfo->walletDest,
-        ABC_WalletID(*login, pTransfer->szDestWalletUUID), pError));
-    ABC_STRDUP(pTxSendInfo->szDestName, pTransfer->szDestName);
-    ABC_STRDUP(pTxSendInfo->szDestCategory, pTransfer->szDestCategory);
-    ABC_STRDUP(pTxSendInfo->szSrcName, pTransfer->szSrcName);
-    ABC_STRDUP(pTxSendInfo->szSrcCategory, pTransfer->szSrcCategory);
-    cc = ABC_TxSend(pTxSendInfo, pszTxId, pError);
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto source = ABC_WalletID(*account, pTransfer->szSrcWalletUUID);
+        auto dest = ABC_WalletID(*account, pTransfer->szDestWalletUUID);
+
+        AutoString szRequestId;
+        AutoString szRequestAddress;
+        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(dest, pDetails, &szRequestId.get(), true, pError));
+        ABC_CHECK_RET(ABC_TxGetRequestAddress(dest, szRequestId, &szRequestAddress.get(), pError));
+
+        AutoFree<tABC_TxSendInfo, ABC_TxSendInfoFree> pTxSendInfo;
+        ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo.get(),
+                                          source,
+                                          szRequestAddress,
+                                          pDetails,
+                                          pError));
+
+        pTxSendInfo->bTransfer = true;
+        ABC_CHECK_RET(ABC_WalletIDCopy(&pTxSendInfo->walletDest, dest, pError));
+        ABC_STRDUP(pTxSendInfo->szDestName, pTransfer->szDestName);
+        ABC_STRDUP(pTxSendInfo->szDestCategory, pTransfer->szDestCategory);
+        ABC_STRDUP(pTxSendInfo->szSrcName, pTransfer->szSrcName);
+        ABC_STRDUP(pTxSendInfo->szSrcCategory, pTransfer->szSrcCategory);
+        ABC_CHECK_RET(ABC_TxSend(pTxSendInfo, pszTxId, pError));
+    }
 
 exit:
-    ABC_FREE_STR(szRequestId);
-    ABC_FREE_STR(szRequestAddress);
-
     return cc;
 }
 
@@ -1895,45 +1910,43 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    char *szRequestId = NULL;
-    char *szRequestAddress = NULL;
-    tABC_TxSendInfo *pTxSendInfo = NULL;
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet name provided");
     ABC_CHECK_NULL(pDetails);
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo,
-                                      ABC_WalletID(*login, szWalletUUID),
-                                      szDestAddress,
-                                      pDetails,
-                                      pError));
-    pTxSendInfo->bTransfer = bTransfer;
-    if (bTransfer)
     {
-        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(ABC_WalletID(*login,
-                                                 pTxSendInfo->szDestAddress), pDetails,
-                                                 &szRequestId, true, pError));
-        ABC_CHECK_RET(ABC_GetRequestAddress(szUserName, szPassword,
-                                            pTxSendInfo->szDestAddress, szRequestId,
-                                            &szRequestAddress, pError));
-        ABC_FREE_STR(pTxSendInfo->szDestAddress);
-        ABC_STRDUP(pTxSendInfo->szDestAddress, szRequestAddress);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        AutoFree<tABC_TxSendInfo, ABC_TxSendInfoFree> pTxSendInfo;
+        ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo.get(),
+                                          wallet,
+                                          szDestAddress,
+                                          pDetails,
+                                          pError));
+        pTxSendInfo->bTransfer = bTransfer;
+        if (bTransfer)
+        {
+            auto dest = ABC_WalletID(*account, pTxSendInfo->szDestAddress);
+
+            AutoString szRequestId;
+            AutoString szRequestAddress;
+            ABC_CHECK_RET(ABC_TxCreateReceiveRequest(dest, pDetails, &szRequestId.get(), true, pError));
+            ABC_CHECK_RET(ABC_TxGetRequestAddress(dest, szRequestId, &szRequestAddress.get(), pError));
+            ABC_FREE_STR(pTxSendInfo->szDestAddress);
+            ABC_STRDUP(pTxSendInfo->szDestAddress, szRequestAddress);
+        }
+
+        ABC_CHECK_RET(ABC_TxDupDetails(&(pTxSendInfo->pDetails), pDetails, pError));
+        ABC_CHECK_RET(ABC_TxCalcSendFees(pTxSendInfo, pTotalFees, pError));
+
+        pDetails->amountFeesAirbitzSatoshi = pTxSendInfo->pDetails->amountFeesAirbitzSatoshi;
+        pDetails->amountFeesMinersSatoshi = pTxSendInfo->pDetails->amountFeesMinersSatoshi;
     }
 
-    ABC_CHECK_RET(ABC_TxDupDetails(&(pTxSendInfo->pDetails), pDetails, pError));
-    ABC_CHECK_RET(ABC_TxCalcSendFees(pTxSendInfo, pTotalFees, pError));
-
-    pDetails->amountFeesAirbitzSatoshi = pTxSendInfo->pDetails->amountFeesAirbitzSatoshi;
-    pDetails->amountFeesMinersSatoshi = pTxSendInfo->pDetails->amountFeesMinersSatoshi;
-
 exit:
-    ABC_FREE_STR(szRequestId);
-    ABC_FREE_STR(szRequestAddress);
-    ABC_TxSendInfoFree(pTxSendInfo);
     return cc;
 }
 
@@ -1950,12 +1963,14 @@ tABC_CC ABC_MaxSpendable(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(
-        ABC_BridgeMaxSpendable(ABC_WalletID(*login, szWalletUUID),
-                               szDestAddress, bTransfer, pMaxSatoshi, pError));
+        ABC_CHECK_RET(ABC_BridgeMaxSpendable(wallet, szDestAddress, bTransfer, pMaxSatoshi, pError));
+    }
+
 exit:
     return cc;
 }
@@ -1971,7 +1986,7 @@ exit:
  * @param fCallback         Called when the sweep is done.
  * @param pData             Closure parameter for the callback.
  */
-tABC_CC ABC_SweepKey(const char *szUsername,
+tABC_CC ABC_SweepKey(const char *szUserName,
                      const char *szPassword,
                      const char *szWalletUUID,
                      const char *szKey,
@@ -1985,15 +2000,17 @@ tABC_CC ABC_SweepKey(const char *szUsername,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-    AutoU08Buf key;
-    bool bCompressed;
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
-    ABC_CHECK_RET(ABC_BridgeDecodeWIF(szKey, &key, &bCompressed, pszAddress, pError));
+        AutoU08Buf key;
+        bool bCompressed;
+        ABC_CHECK_RET(ABC_BridgeDecodeWIF(szKey, &key, &bCompressed, pszAddress, pError));
 
-    ABC_CHECK_NEW(cacheLogin(login, szUsername), pError);
-    ABC_CHECK_RET(ABC_BridgeSweepKey(ABC_WalletID(*login, szWalletUUID),
-        key, bCompressed, fCallback, pData, pError));
+        ABC_CHECK_RET(ABC_BridgeSweepKey(wallet, key, bCompressed, fCallback, pData, pError));
+    }
 
 exit:
     return cc;
@@ -2022,12 +2039,15 @@ tABC_CC ABC_GetTransaction(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxGetTransaction(ABC_WalletID(*login, szWalletUUID), szID, ppTransaction, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxGetTransaction(wallet, szID, ppTransaction, pError));
+    }
 
 exit:
     return cc;
@@ -2060,9 +2080,9 @@ tABC_CC ABC_GetTransactions(const char *szUserName,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-        auto wallet = ABC_WalletID(*login, szWalletUUID);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
         ABC_CHECK_RET(ABC_TxGetTransactions(wallet, startTime, endTime, paTransactions, pCount, pError));
         ABC_CHECK_RET(ABC_BridgeFilterTransactions(wallet, *paTransactions, pCount, pError));
@@ -2096,15 +2116,16 @@ tABC_CC ABC_SearchTransactions(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(
-            ABC_TxSearchTransactions(ABC_WalletID(*login, szWalletUUID),
-                                     szQuery, paTransactions,
-                                     pCount, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxSearchTransactions(wallet, szQuery, paTransactions, pCount, pError));
+    }
+
 exit:
     return cc;
 }
@@ -2127,9 +2148,9 @@ tABC_CC ABC_GetRawTransaction(const char *szUserName,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-        auto wallet = ABC_WalletID(*login, szWalletUUID);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
         AutoFree<tABC_TxInfo, ABC_FreeTransaction> info;
         ABC_CHECK_RET(ABC_TxGetTransaction(wallet, szID, &info.get(), pError));
@@ -2191,12 +2212,15 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxSetTransactionDetails(ABC_WalletID(*login, szWalletUUID), szID, pDetails, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxSetTransactionDetails(wallet, szID, pDetails, pError));
+    }
 
 exit:
     return cc;
@@ -2225,12 +2249,15 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxGetTransactionDetails(ABC_WalletID(*login, szWalletUUID), szID, ppDetails, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxGetTransactionDetails(wallet, szID, ppDetails, pError));
+    }
 
 exit:
     return cc;
@@ -2258,12 +2285,15 @@ tABC_CC ABC_GetRequestAddress(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxGetRequestAddress(ABC_WalletID(*login, szWalletUUID), szRequestID, pszAddress, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxGetRequestAddress(wallet, szRequestID, pszAddress, pError));
+    }
 
 exit:
     return cc;
@@ -2291,12 +2321,15 @@ tABC_CC ABC_GetPendingRequests(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxGetPendingRequests(ABC_WalletID(*login, szWalletUUID), paRequests, pCount, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxGetPendingRequests(wallet, paRequests, pCount, pError));
+    }
 
 exit:
     return cc;
@@ -2733,11 +2766,12 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
     ABC_CHECK_NULL(fAsyncBitCoinEventCallback);
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
         bool dirty = false;
-        ABC_CHECK_RET(ABC_WalletSyncData(ABC_WalletID(*login, szWalletUUID), dirty, pError));
+        ABC_CHECK_RET(ABC_WalletSyncData(wallet, dirty, pError));
         if (dirty)
         {
             tABC_AsyncBitCoinInfo info;
@@ -2770,12 +2804,15 @@ tABC_CC ABC_WatcherStart(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_BridgeWatcherStart(ABC_WalletID(*login, szWalletUUID), pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_BridgeWatcherStart(wallet, pError));
+    }
 
 exit:
     return cc;
@@ -2801,9 +2838,9 @@ tABC_CC ABC_WatcherLoop(const char *szWalletUUID,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, nullptr), pError);
-        auto wallet = ABC_WalletID(*login, szWalletUUID);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
         ABC_CHECK_RET(ABC_BridgeWatcherLoop(wallet, fAsyncBitCoinEventCallback, pData, pError));
     }
@@ -2822,9 +2859,9 @@ tABC_CC ABC_WatcherConnect(const char *szWalletUUID, tABC_Error *pError)
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, nullptr), pError);
-        auto wallet = ABC_WalletID(*login, szWalletUUID);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
         ABC_CHECK_RET(ABC_BridgeWatcherConnect(wallet, pError));
     }
@@ -2848,12 +2885,15 @@ tABC_CC ABC_WatchAddresses(const char *szUserName, const char *szPassword,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_TxWatchAddresses(ABC_WalletID(*login, szWalletUUID), pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxWatchAddresses(wallet, pError));
+    }
 
 exit:
     return cc;
@@ -2879,9 +2919,9 @@ tABC_CC ABC_PrioritizeAddress(const char *szUserName, const char *szPassword,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-        auto wallet = ABC_WalletID(*login, szWalletUUID);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
         ABC_CHECK_RET(ABC_BridgePrioritizeAddress(wallet, szAddress, pError));
     }
@@ -2905,9 +2945,9 @@ tABC_CC ABC_WatcherDisconnect(const char *szWalletUUID, tABC_Error *pError)
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, nullptr), pError);
-        auto wallet = ABC_WalletID(*login, szWalletUUID);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
         ABC_CHECK_RET(ABC_BridgeWatcherDisconnect(wallet, pError));
     }
@@ -2931,9 +2971,9 @@ tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError)
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, nullptr), pError);
-        auto wallet = ABC_WalletID(*login, szWalletUUID);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
         ABC_CHECK_RET(ABC_BridgeWatcherStop(wallet, pError));
     }
@@ -2958,9 +2998,9 @@ tABC_CC ABC_WatcherDelete(const char *szWalletUUID, tABC_Error *pError)
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, nullptr), pError);
-        auto wallet = ABC_WalletID(*login, szWalletUUID);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
         ABC_CHECK_RET(ABC_BridgeWatcherDelete(wallet, pError));
     }
@@ -2992,9 +3032,9 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
     ABC_CHECK_ASSERT(strlen(szTxId) > 0, ABC_CC_Error, "No tx id provided");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, nullptr), pError);
-        auto wallet = ABC_WalletID(*login, szWalletUUID);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
         ABC_CHECK_RET(ABC_BridgeTxHeight(wallet, szTxId, height, pError));
     }
@@ -3022,9 +3062,9 @@ tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Err
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, nullptr), pError);
-        auto wallet = ABC_WalletID(*login, szWalletUUID);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
 
         ABC_CHECK_RET(ABC_BridgeTxBlockHeight(wallet, height, pError));
     }
