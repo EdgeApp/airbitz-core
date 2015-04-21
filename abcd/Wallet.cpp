@@ -938,7 +938,7 @@ tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
             ABC_TxGetTransactions(self,
                                   ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
                                   &aTransactions, &nTxCount, pError));
-        ABC_CHECK_RET(ABC_BridgeFilterTransactions(self.szUUID, aTransactions, &nTxCount, pError));
+        ABC_CHECK_RET(ABC_BridgeFilterTransactions(self, aTransactions, &nTxCount, pError));
         pData->balance = 0;
         for (unsigned i = 0; i < nTxCount; i++)
         {

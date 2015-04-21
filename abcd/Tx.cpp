@@ -627,9 +627,7 @@ tABC_CC ABC_TxWatchAddresses(tABC_WalletID self,
     for (unsigned i = 0; i < countAddresses; i++)
     {
         const tABC_TxAddress *a = aAddresses[i];
-        ABC_CHECK_RET(
-            ABC_BridgeWatchAddr(self.szUUID,
-                                a->szPubAddress, pError));
+        ABC_CHECK_RET(ABC_BridgeWatchAddr(self, a->szPubAddress, pError));
     }
 exit:
     ABC_TxFreeAddresses(aAddresses, countAddresses);
@@ -2607,7 +2605,7 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
 
     // get advanced details
     ABC_CHECK_RET(
-        ABC_BridgeTxDetails(self.szUUID, pTx->pStateInfo->szMalleableTxId,
+        ABC_BridgeTxDetails(self, pTx->pStateInfo->szMalleableTxId,
                             &(pTx->aOutputs), &(pTx->countOutputs),
                             &(pTx->pDetails->amountSatoshi),
                             &(pTx->pDetails->amountFeesMinersSatoshi),
