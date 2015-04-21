@@ -94,7 +94,7 @@ COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery")
     return Status();
 }
 
-COMMAND(InitLevel::none, CheckPassword, "check-password")
+COMMAND(InitLevel::context, CheckPassword, "check-password")
 {
     if (argc != 1)
         return ABC_ERROR(ABC_CC_Error, "usage: ... check-password <pass>");
