@@ -83,6 +83,7 @@ static std::map<WalletUUID, WatcherInfo*> watchers_;
 // The last obelisk server we connected to:
 static unsigned gLastObelisk = 0;
 
+static tABC_CC     ABC_BridgeTxDetailsSplit(const char *szWalletUUID, const char *szTxID, tABC_TxOutput ***iarr, unsigned int *pInCount, tABC_TxOutput ***oarr, unsigned int *pOutCount, int64_t *pAmount, int64_t *pFees, tABC_Error *pError);
 static tABC_CC     ABC_BridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep& sweep, tABC_Error *pError);
 static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
