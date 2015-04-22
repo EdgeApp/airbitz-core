@@ -5,6 +5,7 @@
  * See the LICENSE file for more information.
  */
 
+#include "../abcd/json/JsonArray.hpp"
 #include "../abcd/json/JsonObject.hpp"
 #include "../minilibs/catch/catch.hpp"
 
@@ -40,6 +41,20 @@ TEST_CASE("JsonPtr lifetime", "[util][json]")
         REQUIRE(!b.get());
         REQUIRE(1 == a.get()->refcount);
     }
+}
+
+TEST_CASE("JsonArray manipulation", "[util][json]")
+{
+    abcd::JsonArray a;
+    REQUIRE_FALSE(a.get());
+
+    abcd::JsonPtr temp(json_integer(42));
+    REQUIRE(a.append(temp));
+
+    REQUIRE(a.get());
+    REQUIRE(1 == a.size());
+    REQUIRE(json_is_integer(a[0].get()));
+    REQUIRE(42 == json_integer_value(a[0].get()));
 }
 
 TEST_CASE("JsonObject manipulation", "[util][json]")
