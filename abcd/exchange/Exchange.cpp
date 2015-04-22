@@ -33,13 +33,15 @@
 #include "ExchangeCache.hpp"
 #include "ExchangeServers.hpp"
 #include "../util/FileIO.hpp"
-#include <sstream>
+#include <memory>
+#include <mutex>
 
 namespace abcd {
 
 #define SATOSHI_PER_BITCOIN                     100000000
 
-#define EXCHANGE_RATE_DIRECTORY "Exchanges/"
+static std::mutex exchangeMutex;
+static std::unique_ptr<ExchangeCache> exchangeCache;
 
 #define ABC_BITSTAMP "Bitstamp"
 #define ABC_COINBASE "Coinbase"
@@ -63,49 +65,41 @@ const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[] =
 const size_t EXCHANGE_DEFAULTS_SIZE = sizeof(EXCHANGE_DEFAULTS)
                                     / sizeof(tABC_ExchangeDefaults);
 
-static tABC_CC ABC_ExchangeNeedsUpdate(int currencyNum, bool *bUpdateRequired, double *szRate, tABC_Error *pError);
-static tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeRateSources &sources, int currencyNum, char **szSource, tABC_Error *pError);
 
 /**
- * Fetches the current rate and requests a new value if the current value is old.
+ * Loads the exchange cache from disk if it hasn't been done yet.
  */
-tABC_CC ABC_ExchangeCurrentRate(int currencyNum, double *pRate, tABC_Error *pError)
+static Status
+exchangeCacheLoad()
 {
-    tABC_CC cc = ABC_CC_Ok;
-
-    double rate;
-    time_t lastUpdated;
-    if (exchangeCacheGet(currencyNum, rate, lastUpdated))
+    if (!exchangeCache)
     {
-        *pRate = rate;
+        exchangeCache.reset(new ExchangeCache(getRootDir()));
+        exchangeCache->load(); // Nothing bad happens if this fails
     }
-    else
-    {
-        bool bUpdateRequired = true; // Ignored
-        ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(currencyNum, &bUpdateRequired, pRate, pError));
-    }
-
-exit:
-    return cc;
+    return Status();
 }
 
 tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    char *szSource = NULL;
-    double rate = 0;
-    bool bUpdateRequired = true;
 
-    ABC_CHECK_RET(ABC_ExchangeNeedsUpdate(currencyNum, &bUpdateRequired, &rate, pError));
-    if (bUpdateRequired)
+    auto currency = static_cast<Currency>(currencyNum);
+    time_t now = time(nullptr);
+
+    std::lock_guard<std::mutex> lock(exchangeMutex);
+    ABC_CHECK_NEW(exchangeCacheLoad(), pError);
+
+    // Only update if the current entry is missing or old:
+    if (!exchangeCache->fresh(currency, now))
     {
-        ABC_CHECK_RET(ABC_ExchangeExtractSource(sources, currencyNum, &szSource, pError));
+        double rate = 0;
+        AutoString szSource;
+        ABC_CHECK_RET(ABC_ExchangeExtractSource(sources, currencyNum, &szSource.get(), pError));
+
         if (szSource)
         {
-            std::stringstream rateStr;
-            AutoString szFilename;
-
             if (strcmp(ABC_BITSTAMP, szSource) == 0)
             {
                 ABC_CHECK_RET(ABC_ExchangeBitStampRate(currencyNum, rate, pError));
@@ -118,88 +112,11 @@ tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, t
             {
                 ABC_CHECK_RET(ABC_ExchangeBncRates(currencyNum, rate, pError));
             }
-            rateStr.precision(10);
-            rateStr << rate << '\n';
 
-            // Right changes to disk
-            ABC_CHECK_RET(ABC_ExchangeGetFilename(&szFilename.get(), currencyNum, pError));
-            ABC_CHECK_NEW(fileSave(rateStr.str(), szFilename.get()), pError);
-
-            // Update the cache
-            ABC_CHECK_NEW(exchangeCacheSet(currencyNum, rate), pError);
+            ABC_CHECK_NEW(exchangeCache->update(currency, rate, now), pError);
+            ABC_CHECK_NEW(exchangeCache->save(), pError);
         }
     }
-exit:
-    return cc;
-}
-
-static
-tABC_CC ABC_ExchangeNeedsUpdate(int currencyNum, bool *bUpdateRequired, double *pRate, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    char *szFilename = NULL;
-    time_t timeNow = time(NULL);
-    bool bExists = false;
-
-    double rate;
-    time_t lastUpdated;
-    if (exchangeCacheGet(currencyNum, rate, lastUpdated))
-    {
-        if ((timeNow - lastUpdated) < ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS)
-        {
-            *bUpdateRequired = false;
-        }
-        *pRate = rate;
-    }
-    else
-    {
-        ABC_CHECK_RET(ABC_ExchangeGetFilename(&szFilename, currencyNum, pError));
-        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-        if (true == bExists)
-        {
-            DataChunk data;
-            ABC_CHECK_NEW(fileLoad(data, szFilename), pError);
-            // Set the exchange rate
-            *pRate = strtod(toString(data).c_str(), NULL);
-            // get the time the file was last changed
-            time_t timeFileMod;
-            ABC_CHECK_RET(ABC_FileIOFileModTime(szFilename, &timeFileMod, pError));
-
-            // if it isn't too old then don't update
-            if ((timeNow - timeFileMod) < ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS)
-            {
-                *bUpdateRequired = false;
-            }
-        }
-        else
-        {
-            *bUpdateRequired = true;
-            *pRate = 0.0;
-        }
-
-        ABC_CHECK_NEW(exchangeCacheSet(currencyNum, *pRate), pError);
-    }
-exit:
-    ABC_FREE_STR(szFilename);
-    return cc;
-}
-
-static
-tABC_CC ABC_ExchangeGetFilename(char **pszFilename, int currencyNum, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    std::string rateDir = getRootDir() + EXCHANGE_RATE_DIRECTORY;
-    std::stringstream filename;
-
-    ABC_CHECK_NULL(pszFilename);
-    *pszFilename = NULL;
-
-    ABC_CHECK_NEW(fileEnsureDir(rateDir), pError);
-
-    filename << rateDir << currencyNum << ".txt";
-    ABC_STRDUP(*pszFilename, filename.str().c_str());
 
 exit:
     return cc;
@@ -257,8 +174,11 @@ exchangeSatoshiToCurrency(double &result, int64_t in, Currency currency)
 {
     result = 0.0;
 
+    std::lock_guard<std::mutex> lock(exchangeMutex);
+    ABC_CHECK(exchangeCacheLoad());
+
     double rate;
-    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(static_cast<int>(currency), &rate, &error));
+    ABC_CHECK(exchangeCache->rate(rate, currency));
 
     result = in * (rate / SATOSHI_PER_BITCOIN);
     return Status();
@@ -269,8 +189,11 @@ exchangeCurrencyToSatoshi(int64_t &result, double in, Currency currency)
 {
     result = 0;
 
+    std::lock_guard<std::mutex> lock(exchangeMutex);
+    ABC_CHECK(exchangeCacheLoad());
+
     double rate;
-    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(static_cast<int>(currency), &rate, &error));
+    ABC_CHECK(exchangeCache->rate(rate, currency));
 
     result = static_cast<int64_t>(in * (SATOSHI_PER_BITCOIN / rate));
     return Status();
