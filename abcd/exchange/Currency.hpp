@@ -9,6 +9,7 @@
 #define ABCD_EXCHANGE_CURRENCY_HPP
 
 #include "../util/Status.hpp"
+#include <set>
 
 namespace abcd {
 
@@ -210,6 +211,8 @@ enum class Currency
 {
     ABC_CURRENCY_LIST(ABC_CURRENCY_ENUM_ROW)
 };
+
+typedef std::set<Currency> Currencies;
 
 /**
  * Looks up the number for an ISO 4217 currency code.
