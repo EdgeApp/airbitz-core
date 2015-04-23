@@ -42,28 +42,6 @@ namespace abcd {
 static std::mutex exchangeMutex;
 static std::unique_ptr<ExchangeCache> exchangeCache;
 
-#define ABC_BITSTAMP "Bitstamp"
-#define ABC_COINBASE "Coinbase"
-#define ABC_BNC      "BraveNewCoin"
-
-const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[] =
-{
-    {CURRENCY_NUM_AUD, ABC_BNC},
-    {CURRENCY_NUM_CAD, ABC_BNC},
-    {CURRENCY_NUM_CNY, ABC_BNC},
-    {CURRENCY_NUM_CUP, ABC_COINBASE},
-    {CURRENCY_NUM_HKD, ABC_BNC},
-    {CURRENCY_NUM_MXN, ABC_BNC},
-    {CURRENCY_NUM_NZD, ABC_BNC},
-    {CURRENCY_NUM_PHP, ABC_COINBASE},
-    {CURRENCY_NUM_GBP, ABC_BNC},
-    {CURRENCY_NUM_USD, ABC_BITSTAMP},
-    {CURRENCY_NUM_EUR, ABC_BNC},
-};
-
-const size_t EXCHANGE_DEFAULTS_SIZE = sizeof(EXCHANGE_DEFAULTS)
-                                    / sizeof(tABC_ExchangeDefaults);
-
 /**
  * Loads the exchange cache from disk if it hasn't been done yet.
  */

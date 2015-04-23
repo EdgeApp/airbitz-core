@@ -3147,7 +3147,19 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
 
         std::set<Currency> currencies;
         currencies.insert(static_cast<Currency>(currencyNum));
-        ABC_CHECK_NEW(exchangeUpdate(currencies, exchangeSources), pError);
+
+        // Find the user's exchange-rate preference:
+        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
+        ABC_CHECK_RET(ABC_AccountSettingsLoad(*login, &settings.get(), pError));
+        std::string preference = settings->szExchangeRateSource;
+
+        // Move the user's preference to the front of the list:
+        ExchangeSources sources = exchangeSources;
+        sources.remove(preference);
+        sources.push_front(preference);
+
+        // Do the update:
+        ABC_CHECK_NEW(exchangeUpdate(currencies, sources), pError);
     }
 
 exit:

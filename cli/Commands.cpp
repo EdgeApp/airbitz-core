@@ -271,13 +271,7 @@ COMMAND(InitLevel::login, GetSettings, "get-settings")
     printf("Daily Spend Limit: %ld\n", (long) pSettings->dailySpendLimitSatoshis);
     printf("PIN Spend Enabled: %d\n", pSettings->bSpendRequirePin);
     printf("PIN Spend Limit: %ld\n", (long) pSettings->spendRequirePinSatoshis);
-    printf("Exchange rate sources:\n");
-    for (unsigned i = 0; i < pSettings->exchangeRateSources.numSources; i++)
-    {
-        printf("\tcurrency: %d\tsource: %s\n",
-            pSettings->exchangeRateSources.aSources[i]->currencyNum,
-            pSettings->exchangeRateSources.aSources[i]->szSource);
-    }
+    printf("Exchange rate source: %s\n", pSettings->szExchangeRateSource );
 
     return Status();
 }
