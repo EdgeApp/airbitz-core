@@ -220,10 +220,11 @@ tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *p
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoSyncLock lock(gSyncMutex);
-    AutoU08Buf URL;
+    std::string url;
 
     ABC_CHECK_NULL(szRepoKey);
 
+    // Get a server:
     if (!gszCurrSyncServer)
     {
         ABC_CHECK_RET(ABC_SyncServerRot(pError));
@@ -231,19 +232,13 @@ tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *p
     ABC_CHECK_ASSERT(gszCurrSyncServer != NULL,
         ABC_CC_SysError, "Unable to find a sync server");
 
-    ABC_BUF_DUP_PTR(URL, gszCurrSyncServer, strlen(gszCurrSyncServer));
+    // Build the URL:
+    url = gszCurrSyncServer;
+    if (url.back() != '/')
+        url += '/';
+    url += szRepoKey;
 
-    // Do we have a trailing slash?
-    if (URL.p[URL.end - URL.p - 1] != '/')
-    {
-        ABC_BUF_APPEND_PTR(URL, "/", 1);
-    }
-    ABC_BUF_APPEND_PTR(URL, szRepoKey, strlen(szRepoKey));
-    ABC_BUF_APPEND_PTR(URL, "", 1);
-
-    *pszServer = (char *)ABC_BUF_PTR(URL);
-    ABC_BUF_CLEAR(URL);
-
+    ABC_STRDUP(*pszServer, url.c_str());
     ABC_DebugLog("Syncing to: %s\n", *pszServer);
 
 exit:
