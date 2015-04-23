@@ -36,13 +36,10 @@
 #ifndef ABCD_EXCHANGE_EXCHANGE_H
 #define ABCD_EXCHANGE_EXCHANGE_H
 
-#include "../util/Status.hpp"
-#include "../../src/ABC.h"
-#include <stddef.h>
+#include "Currency.hpp"
+#include "ExchangeSource.hpp"
 
 namespace abcd {
-
-enum class Currency;
 
 #define CURRENCY_NUM_AUD                 36
 #define CURRENCY_NUM_CAD                124
@@ -68,7 +65,11 @@ typedef struct sABC_ExchangeDefaults {
 extern const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[];
 extern const size_t EXCHANGE_DEFAULTS_SIZE;
 
-tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, tABC_Error *pError);
+/**
+ * Updates the exchange rates, trying the sources in the given order.
+ */
+Status
+exchangeUpdate(Currencies currencies, const ExchangeSources &sources);
 
 Status
 exchangeSatoshiToCurrency(double &result, int64_t in, Currency currency);

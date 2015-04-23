@@ -6,7 +6,6 @@
  */
 
 #include "ExchangeCache.hpp"
-#include "Currency.hpp"
 #include "../json/JsonArray.hpp"
 #include "../json/JsonObject.hpp"
 
@@ -99,13 +98,16 @@ ExchangeCache::update(Currency currency, double rate, time_t now)
 }
 
 bool
-ExchangeCache::fresh(Currency currency, time_t now)
+ExchangeCache::fresh(const Currencies &currencies, time_t now)
 {
-    auto i = cache_.find(currency);
-    if (cache_.end() == i)
-        return false;
-    if (i->second.timestamp + ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS < now)
-        return false;
+    for (auto currency: currencies)
+    {
+        auto i = cache_.find(currency);
+        if (cache_.end() == i)
+            return false;
+        if (i->second.timestamp + ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS < now)
+            return false;
+    }
     return true;
 }
 

@@ -8,13 +8,11 @@
 #ifndef ABCD_EXCHANGE_EXCHANGE_CACHE_H
 #define ABCD_EXCHANGE_EXCHANGE_CACHE_H
 
-#include "../util/Status.hpp"
+#include "Currency.hpp"
 #include <time.h>
 #include <map>
 
 namespace abcd {
-
-enum class Currency;
 
 /**
  * A cache for Bitcoin rates.
@@ -49,10 +47,10 @@ public:
     update(Currency currency, double rate, time_t now);
 
     /**
-     * Returns true if the rate is fresh in the cache.
+     * Returns true if all the listed rates are fresh in the cache.
      */
     bool
-    fresh(Currency currency, time_t now);
+    fresh(const Currencies &currencies, time_t now);
 
 private:
     const std::string dir_;

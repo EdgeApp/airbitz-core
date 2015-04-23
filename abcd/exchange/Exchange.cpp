@@ -31,7 +31,6 @@
 
 #include "Exchange.hpp"
 #include "ExchangeCache.hpp"
-#include "ExchangeServers.hpp"
 #include "../util/FileIO.hpp"
 #include <memory>
 #include <mutex>
@@ -65,8 +64,6 @@ const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[] =
 const size_t EXCHANGE_DEFAULTS_SIZE = sizeof(EXCHANGE_DEFAULTS)
                                     / sizeof(tABC_ExchangeDefaults);
 
-static tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeRateSources &sources, int currencyNum, char **szSource, tABC_Error *pError);
-
 /**
  * Loads the exchange cache from disk if it hasn't been done yet.
  */
@@ -81,92 +78,47 @@ exchangeCacheLoad()
     return Status();
 }
 
-tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, tABC_Error *pError)
+Status
+exchangeUpdate(Currencies currencies, const ExchangeSources &sources)
 {
-    tABC_CC cc = ABC_CC_Ok;
-
-    auto currency = static_cast<Currency>(currencyNum);
-    time_t now = time(nullptr);
-
     std::lock_guard<std::mutex> lock(exchangeMutex);
-    ABC_CHECK_NEW(exchangeCacheLoad(), pError);
+    ABC_CHECK(exchangeCacheLoad());
 
-    // Only update if the current entry is missing or old:
-    if (!exchangeCache->fresh(currency, now))
+    time_t now = time(nullptr);
+    if (exchangeCache->fresh(currencies, now))
+        return Status();
+
+    ExchangeRates allRates;
+    for (auto source: sources)
     {
-        double rate = 0;
-        AutoString szSource;
-        ABC_CHECK_RET(ABC_ExchangeExtractSource(sources, currencyNum, &szSource.get(), pError));
-
-        if (szSource)
-        {
-            if (strcmp(ABC_BITSTAMP, szSource) == 0)
-            {
-                ABC_CHECK_RET(ABC_ExchangeBitStampRate(currencyNum, rate, pError));
-            }
-            else if (strcmp(ABC_COINBASE, szSource) == 0)
-            {
-                ABC_CHECK_RET(ABC_ExchangeCoinBaseRates(currencyNum, rate, pError));
-            }
-            else if (strcmp(ABC_BNC, szSource) == 0)
-            {
-                ABC_CHECK_RET(ABC_ExchangeBncRates(currencyNum, rate, pError));
-            }
-
-            ABC_CHECK_NEW(exchangeCache->update(currency, rate, now), pError);
-            ABC_CHECK_NEW(exchangeCache->save(), pError);
-        }
-    }
-
-exit:
-    return cc;
-}
-
-static
-tABC_CC ABC_ExchangeExtractSource(tABC_ExchangeRateSources &sources, int currencyNum,
-                                  char **szSource, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    *szSource = NULL;
-    for (unsigned i = 0; i < sources.numSources; i++)
-    {
-        if (sources.aSources[i]->currencyNum == currencyNum)
-        {
-            ABC_STRDUP(*szSource, sources.aSources[i]->szSource);
+        // Stop if the todo list is empty:
+        if (currencies.empty())
             break;
-        }
-    }
-    if (!(*szSource))
-    {
-        // If the settings are not populated, defaults
-        switch (currencyNum)
+
+        // Grab the rates from the server:
+        ExchangeRates rates;
+        if (!exchangeSourceFetch(rates, source))
+            continue; // Just skip the failed ones
+
+        // Remove any new rates from the todo list:
+        for (auto rate: rates)
         {
-            case CURRENCY_NUM_USD:
-                ABC_STRDUP(*szSource, ABC_BITSTAMP);
-                break;
-            case CURRENCY_NUM_CAD:
-            case CURRENCY_NUM_CNY:
-            case CURRENCY_NUM_EUR:
-            case CURRENCY_NUM_GBP:
-            case CURRENCY_NUM_MXN:
-            case CURRENCY_NUM_AUD:
-            case CURRENCY_NUM_HKD:
-            case CURRENCY_NUM_NZD:
-                ABC_STRDUP(*szSource, ABC_BNC);
-                break;
-            case CURRENCY_NUM_CUP:
-            case CURRENCY_NUM_PHP:
-                ABC_STRDUP(*szSource, ABC_COINBASE);
-                break;
-            default:
-                ABC_STRDUP(*szSource, ABC_BITSTAMP);
-                break;
+            auto i = currencies.find(rate.first);
+            if (currencies.end() != i)
+                currencies.erase(i);
         }
+
+        // Add any new rates to the allRates list:
+        rates.insert(allRates.begin(), allRates.end());
+        allRates = std::move(rates);
     }
 
-exit:
-    return cc;
+    // Add the rates to the cache:
+    for (auto rate: allRates)
+        ABC_CHECK(exchangeCache->update(rate.first, rate.second, now));
+    ABC_CHECK(exchangeCache->save());
+
+    return Status();
 }
 
 Status

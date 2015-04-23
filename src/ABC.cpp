@@ -44,7 +44,6 @@
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
-#include "../abcd/exchange/Currency.hpp"
 #include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
@@ -3138,16 +3137,18 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-    AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(*login, &settings.get(), pError));
-    cc = ABC_ExchangeUpdate(settings->exchangeRateSources, currencyNum, pError);
+    {
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+
+        std::set<Currency> currencies;
+        currencies.insert(static_cast<Currency>(currencyNum));
+        ABC_CHECK_NEW(exchangeUpdate(currencies, exchangeSources), pError);
+    }
 
 exit:
     return cc;

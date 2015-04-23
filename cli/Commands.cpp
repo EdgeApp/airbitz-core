@@ -11,7 +11,7 @@
 #include "../abcd/account/Account.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
-#include "../abcd/exchange/Exchange.hpp"
+#include "../abcd/exchange/Currency.hpp"
 #include "../abcd/json/JsonBox.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/util/FileIO.hpp"
@@ -148,7 +148,7 @@ COMMAND(InitLevel::account, CreateWallet, "create-wallet")
 
     AutoString uuid;
     ABC_CHECK_OLD(ABC_CreateWallet(argv[0], argv[1], argv[2],
-        CURRENCY_NUM_USD, &uuid.get(), &error));
+        static_cast<int>(Currency::USD), &uuid.get(), &error));
     std::cout << "Created wallet " << uuid.get() << std::endl;
 
     return Status();
@@ -213,27 +213,6 @@ COMMAND(InitLevel::account, GetCategories, "get-categories")
     {
         printf("\t%s\n", categories.data[i]);
     }
-
-    return Status();
-}
-
-COMMAND(InitLevel::account, GetExchangeRate, "get-exchange-rate")
-{
-    if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... get-exchange-rate <user> <pass>");
-
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_USD, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_AUD, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CAD, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CNY, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_CUP, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_HKD, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_MXN, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_NZD, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_PHP, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_GBP, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_USD, &error));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], CURRENCY_NUM_EUR, &error));
 
     return Status();
 }
