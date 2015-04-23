@@ -391,7 +391,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
     bool bFound = false;
     tABC_WalletInfo *pWallet = NULL;
     tABC_WalletInfo *pDestWallet = NULL;
-    double Currency;
+    double currency;
 
     // Start watching all addresses incuding new change addres
     ABC_CHECK_RET(ABC_TxWatchAddresses(pInfo->wallet, pError));
@@ -426,8 +426,8 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
     }
 
     ABC_CHECK_RET(ABC_TxCalcCurrency(
-        pInfo->wallet, pTx->pDetails->amountSatoshi, &Currency, pError));
-    pTx->pDetails->amountCurrency = Currency;
+        pInfo->wallet, pTx->pDetails->amountSatoshi, &currency, pError));
+    pTx->pDetails->amountCurrency = currency;
 
     if (pTx->pDetails->amountSatoshi > 0)
         pTx->pDetails->amountSatoshi *= -1;
@@ -460,9 +460,9 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
 
         ABC_CHECK_RET(ABC_WalletGetInfo(pInfo->walletDest, &pDestWallet, pError));
         ABC_CHECK_NEW(exchangeSatoshiToCurrency(
-                        pReceiveTx->pDetails->amountSatoshi, Currency,
+                        pReceiveTx->pDetails->amountSatoshi, currency,
                         pDestWallet->currencyNum), pError);
-        pReceiveTx->pDetails->amountCurrency = Currency;
+        pReceiveTx->pDetails->amountCurrency = currency;
 
         if (pReceiveTx->pDetails->amountSatoshi < 0)
             pReceiveTx->pDetails->amountSatoshi *= -1;
@@ -731,13 +731,13 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
     tABC_Tx *pTx = NULL;
-    double Currency = 0.0;
+    double currency = 0.0;
 
     // Does the transaction already exist?
     ABC_TxTransactionExists(self, szTxId, &pTx, pError);
     if (pTx == NULL)
     {
-        ABC_CHECK_RET(ABC_TxCalcCurrency(self, amountSatoshi, &Currency, pError));
+        ABC_CHECK_RET(ABC_TxCalcCurrency(self, amountSatoshi, &currency, pError));
 
         // create a transaction
         ABC_NEW(pTx, tABC_Tx);
@@ -747,7 +747,7 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
         ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, szMalTxId);
         pTx->pStateInfo->timeCreation = time(NULL);
         pTx->pDetails->amountSatoshi = amountSatoshi;
-        pTx->pDetails->amountCurrency = Currency;
+        pTx->pDetails->amountCurrency = currency;
         pTx->pDetails->amountFeesMinersSatoshi = feeSatoshi;
 
         ABC_STRDUP(pTx->pDetails->szName, "");
@@ -930,14 +930,14 @@ tABC_CC ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi,
                            double *pCurrency, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    double Currency = 0.0;
+    double currency = 0.0;
     tABC_WalletInfo *pWallet = NULL;
 
     ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet, pError));
     ABC_CHECK_NEW(exchangeSatoshiToCurrency(
-        amountSatoshi, Currency, pWallet->currencyNum), pError);
+        amountSatoshi, currency, pWallet->currencyNum), pError);
 
-    *pCurrency = Currency;
+    *pCurrency = currency;
 exit:
     ABC_WalletFreeInfo(pWallet);
 
