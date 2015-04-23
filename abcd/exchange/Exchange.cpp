@@ -253,26 +253,26 @@ exit:
 }
 
 Status
-exchangeSatoshiToCurrency(int64_t satoshi, double &currency, int currencyNum)
+exchangeSatoshiToCurrency(double &result, int64_t in, Currency currency)
 {
-    currency = 0.0;
+    result = 0.0;
 
     double rate;
-    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(currencyNum, &rate, &error));
-    currency = satoshi * (rate / SATOSHI_PER_BITCOIN);
+    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(static_cast<int>(currency), &rate, &error));
 
+    result = in * (rate / SATOSHI_PER_BITCOIN);
     return Status();
 }
 
 Status
-exchangeCurrencyToSatoshi(double currency, int64_t &satoshi, int currencyNum)
+exchangeCurrencyToSatoshi(int64_t &result, double in, Currency currency)
 {
-    satoshi = 0;
+    result = 0;
 
     double rate;
-    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(currencyNum, &rate, &error));
-    satoshi = static_cast<int64_t>(currency * (SATOSHI_PER_BITCOIN / rate));
+    ABC_CHECK_OLD(ABC_ExchangeCurrentRate(static_cast<int>(currency), &rate, &error));
 
+    result = static_cast<int64_t>(in * (SATOSHI_PER_BITCOIN / rate));
     return Status();
 }
 

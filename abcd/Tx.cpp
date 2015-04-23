@@ -460,8 +460,8 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
 
         ABC_CHECK_RET(ABC_WalletGetInfo(pInfo->walletDest, &pDestWallet, pError));
         ABC_CHECK_NEW(exchangeSatoshiToCurrency(
-                        pReceiveTx->pDetails->amountSatoshi, currency,
-                        pDestWallet->currencyNum), pError);
+            currency, pReceiveTx->pDetails->amountSatoshi,
+            static_cast<Currency>(pDestWallet->currencyNum)), pError);
         pReceiveTx->pDetails->amountCurrency = currency;
 
         if (pReceiveTx->pDetails->amountSatoshi < 0)
@@ -935,7 +935,7 @@ tABC_CC ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi,
 
     ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet, pError));
     ABC_CHECK_NEW(exchangeSatoshiToCurrency(
-        amountSatoshi, currency, pWallet->currencyNum), pError);
+        currency, amountSatoshi, static_cast<Currency>(pWallet->currencyNum)), pError);
 
     *pCurrency = currency;
 exit:
@@ -2510,8 +2510,8 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
 
     ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWalletInfo, pError));
     ABC_CHECK_NEW(exchangeSatoshiToCurrency(
-                    pTx->pDetails->amountSatoshi, currency,
-                    pWalletInfo->currencyNum), pError);
+        currency, pTx->pDetails->amountSatoshi,
+        static_cast<Currency>(pWalletInfo->currencyNum)), pError);
     pTx->pDetails->amountCurrency = currency;
 
     // save the transaction

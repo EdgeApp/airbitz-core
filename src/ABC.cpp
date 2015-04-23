@@ -1550,7 +1550,8 @@ tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(exchangeSatoshiToCurrency(satoshi, *pCurrency, currencyNum), pError);
+    ABC_CHECK_NEW(exchangeSatoshiToCurrency(*pCurrency, satoshi,
+        static_cast<Currency>(currencyNum)), pError);
 
 exit:
     return cc;
@@ -1578,7 +1579,8 @@ tABC_CC ABC_CurrencyToSatoshi(const char *szUserName,
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(exchangeCurrencyToSatoshi(currency, *pSatoshi, currencyNum), pError);
+    ABC_CHECK_NEW(exchangeCurrencyToSatoshi(*pSatoshi, currency,
+        static_cast<Currency>(currencyNum)), pError);
 
 exit:
     return cc;

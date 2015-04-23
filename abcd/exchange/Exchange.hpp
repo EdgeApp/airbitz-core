@@ -42,6 +42,8 @@
 
 namespace abcd {
 
+enum class Currency;
+
 #define CURRENCY_NUM_AUD                 36
 #define CURRENCY_NUM_CAD                124
 #define CURRENCY_NUM_CNY                156
@@ -69,10 +71,10 @@ extern const size_t EXCHANGE_DEFAULTS_SIZE;
 tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, tABC_Error *pError);
 
 Status
-exchangeSatoshiToCurrency(int64_t satoshi, double &currency, int currencyNum);
+exchangeSatoshiToCurrency(double &result, int64_t in, Currency currency);
 
 Status
-exchangeCurrencyToSatoshi(double currency, int64_t &satoshi, int currencyNum);
+exchangeCurrencyToSatoshi(int64_t &result, double in, Currency currency);
 
 } // namespace abcd
 
