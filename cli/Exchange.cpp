@@ -31,3 +31,44 @@ COMMAND(InitLevel::context, ExchangeFetch, "exchange-fetch")
 
     return Status();
 }
+
+#define CURRENCY_SET_ROW(code, number, name) Currency::code,
+
+/**
+ * Verifies that all the currencies have sources.
+ */
+COMMAND(InitLevel::context, ExchangeValidate, "exchange-validate")
+{
+    Currencies currencies
+    {
+        ABC_CURRENCY_LIST(CURRENCY_SET_ROW)
+    };
+
+    // Eliminate any currencies the exchange sources provide:
+    for (const auto &source: exchangeSources)
+    {
+        ExchangeRates rates;
+        ABC_CHECK(exchangeSourceFetch(rates, source));
+
+        for (auto &rate: rates)
+        {
+            auto i = currencies.find(rate.first);
+            if (currencies.end() != i)
+                currencies.erase(i);
+        }
+    }
+
+    // Print an message if there is anything left:
+    if (currencies.size())
+    {
+        std::cout << "The following currencies have no sources:" << std::endl;
+        for (auto &currency: currencies)
+        {
+            std::string code;
+            ABC_CHECK(currencyCode(code, currency));
+            std::cout << code << std::endl;
+        }
+    }
+
+    return Status();
+}

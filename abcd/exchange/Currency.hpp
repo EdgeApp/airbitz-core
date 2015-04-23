@@ -19,6 +19,12 @@ namespace abcd {
  * how to format each list item for the C++ compiler.
  *
  * Taken from https://en.wikipedia.org/wiki/ISO_4217 on 2015-04-21
+ *
+ * Currencies without exchange-rate sources are commented out
+ * (see the exchange-validate cli command).
+ *
+ * Besides these currencies, BraveNewCoin returns some obsolete currencies
+ * (EEK, LTL, LVL, MTL, RUR, SVC, ZMK) and one unofficial curency (JEP).
  */
 #define ABC_CURRENCY_LIST(_) \
     _(AED, 784, "United Arab Emirates dirham") \
@@ -40,7 +46,7 @@ namespace abcd {
     _(BMD,  60, "Bermudian dollar") \
     _(BND,  96, "Brunei dollar") \
     _(BOB,  68, "Boliviano") \
-    _(BOV, 984, "Bolivian Mvdol (funds code)") \
+    /*_(BOV, 984, "Bolivian Mvdol (funds code)")*/ \
     _(BRL, 986, "Brazilian real") \
     _(BSD,  44, "Bahamian dollar") \
     _(BTN,  64, "Bhutanese ngultrum") \
@@ -49,14 +55,14 @@ namespace abcd {
     _(BZD,  84, "Belize dollar") \
     _(CAD, 124, "Canadian dollar") \
     _(CDF, 976, "Congolese franc") \
-    _(CHE, 947, "WIR Euro (complementary currency)") \
+    /*_(CHE, 947, "WIR Euro (complementary currency)")*/ \
     _(CHF, 756, "Swiss franc") \
-    _(CHW, 948, "WIR Franc (complementary currency)") \
+    /*_(CHW, 948, "WIR Franc (complementary currency)")*/ \
     _(CLF, 990, "Unidad de Fomento (funds code)") \
     _(CLP, 152, "Chilean peso") \
     _(CNY, 156, "Chinese yuan") \
     _(COP, 170, "Colombian peso") \
-    _(COU, 970, "Unidad de Valor Real (UVR) (funds code)") \
+    /*_(COU, 970, "Unidad de Valor Real (UVR) (funds code)")*/ \
     _(CRC, 188, "Costa Rican colon") \
     _(CUC, 931, "Cuban convertible peso") \
     _(CUP, 192, "Cuban peso") \
@@ -121,7 +127,7 @@ namespace abcd {
     _(MVR, 462, "Maldivian rufiyaa") \
     _(MWK, 454, "Malawian kwacha") \
     _(MXN, 484, "Mexican peso") \
-    _(MXV, 979, "Mexican Unidad de Inversion (UDI) (funds code)") \
+    /*_(MXV, 979, "Mexican Unidad de Inversion (UDI) (funds code)")*/ \
     _(MYR, 458, "Malaysian ringgit") \
     _(MZN, 943, "Mozambican metical") \
     _(NAD, 516, "Namibian dollar") \
@@ -153,7 +159,7 @@ namespace abcd {
     _(SLL, 694, "Sierra Leonean leone") \
     _(SOS, 706, "Somali shilling") \
     _(SRD, 968, "Surinamese dollar") \
-    _(SSP, 728, "South Sudanese pound") \
+    /*_(SSP, 728, "South Sudanese pound")*/ \
     _(STD, 678, "São Tomé and Príncipe dobra") \
     _(SYP, 760, "Syrian pound") \
     _(SZL, 748, "Swazi lilangeni") \
@@ -169,9 +175,9 @@ namespace abcd {
     _(UAH, 980, "Ukrainian hryvnia") \
     _(UGX, 800, "Ugandan shilling") \
     _(USD, 840, "United States dollar") \
-    _(USN, 997, "United States dollar (next day) (funds code)") \
-    _(USS, 998, "United States dollar (same day) (funds code)") \
-    _(UYI, 940, "Uruguay Peso en Unidades Indexadas (URUIURUI) (funds code)") \
+    /*_(USN, 997, "United States dollar (next day) (funds code)")*/ \
+    /*_(USS, 998, "United States dollar (same day) (funds code)")*/ \
+    /*_(UYI, 940, "Uruguay Peso en Unidades Indexadas (URUIURUI) (funds code)")*/ \
     _(UYU, 858, "Uruguayan peso") \
     _(UZS, 860, "Uzbekistan som") \
     _(VEF, 937, "Venezuelan bolívar") \
@@ -181,21 +187,21 @@ namespace abcd {
     _(XAF, 950, "CFA franc BEAC") \
     _(XAG, 961, "Silver (one troy ounce)") \
     _(XAU, 959, "Gold (one troy ounce)") \
-    _(XBA, 955, "European Composite Unit (EURCO) (bond market unit)") \
-    _(XBB, 956, "European Monetary Unit (E.M.U.-6) (bond market unit)") \
-    _(XBC, 957, "European Unit of Account 9 (E.U.A.-9) (bond market unit)") \
-    _(XBD, 958, "European Unit of Account 17 (E.U.A.-17) (bond market unit)") \
+    /*_(XBA, 955, "European Composite Unit (EURCO) (bond market unit)")*/ \
+    /*_(XBB, 956, "European Monetary Unit (E.M.U.-6) (bond market unit)")*/ \
+    /*_(XBC, 957, "European Unit of Account 9 (E.U.A.-9) (bond market unit)")*/ \
+    /*_(XBD, 958, "European Unit of Account 17 (E.U.A.-17) (bond market unit)")*/ \
     _(XCD, 951, "East Caribbean dollar") \
     _(XDR, 960, "Special drawing rights") \
-    _(XFU,   0, "UIC franc (special settlement currency)") \
+    /*_(XFU,   0, "UIC franc (special settlement currency)")*/ \
     _(XOF, 952, "CFA franc BCEAO") \
-    _(XPD, 964, "Palladium (one troy ounce)") \
+    /*_(XPD, 964, "Palladium (one troy ounce)")*/ \
     _(XPF, 953, "CFP franc (franc Pacifique)") \
-    _(XPT, 962, "Platinum (one troy ounce)") \
-    _(XSU, 994, "SUCRE") \
-    _(XTS, 963, "Code reserved for testing purposes") \
-    _(XUA, 965, "ADB Unit of Account") \
-    _(XXX, 999, "No currency") \
+    /*_(XPT, 962, "Platinum (one troy ounce)")*/ \
+    /*_(XSU, 994, "SUCRE")*/ \
+    /*_(XTS, 963, "Code reserved for testing purposes")*/ \
+    /*_(XUA, 965, "ADB Unit of Account")*/ \
+    /*_(XXX, 999, "No currency")*/ \
     _(YER, 886, "Yemeni rial") \
     _(ZAR, 710, "South African rand") \
     _(ZMW, 967, "Zambian kwacha") \
