@@ -11,10 +11,10 @@ namespace abcd {
 
 void U08BufFree(U08Buf &self)
 {
-    if (self.p)
+    if (self.data())
     {
-        ABC_UtilGuaranteedMemset(self.p, 0, ABC_BUF_SIZE(self));
-        free(self.p);
+        ABC_UtilGuaranteedMemset(self.data(), 0, self.size());
+        free(self.data());
     }
     self = U08Buf();
 }

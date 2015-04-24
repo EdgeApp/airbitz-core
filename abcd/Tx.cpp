@@ -207,7 +207,7 @@ ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    libbitcoin::data_chunk seed(PrivateSeed.p, PrivateSeed.end);
+    libbitcoin::data_chunk seed(PrivateSeed.begin(), PrivateSeed.end());
     libwallet::hd_private_key m(seed);
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);
@@ -234,7 +234,7 @@ ABC_BridgeGetBitcoinPrivAddress(char **pszPrivAddress,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    libbitcoin::data_chunk seed(PrivateSeed.p, PrivateSeed.end);
+    libbitcoin::data_chunk seed(PrivateSeed.begin(), PrivateSeed.end());
     libwallet::hd_private_key m(seed);
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);

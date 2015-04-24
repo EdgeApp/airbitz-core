@@ -40,10 +40,6 @@ public:
         end_(reinterpret_cast<const uint8_t *>(s.data()) + s.size())
     {}
 
-    DataSlice(U08Buf buf):
-        begin_(buf.p), end_(buf.end)
-    {}
-
     // STL-sytle accessors:
     bool empty()            const { return end_ == begin_; }
     std::size_t size()      const { return end_ - begin_; }

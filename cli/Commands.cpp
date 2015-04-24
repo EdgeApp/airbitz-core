@@ -173,7 +173,7 @@ COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
     tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(wallet, &data, &error));
 
-    libbitcoin::data_chunk seed(data.p, data.end);
+    libbitcoin::data_chunk seed(data.begin(), data.end());
     libwallet::hd_private_key m(seed);
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);
@@ -428,7 +428,7 @@ COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed")
     tABC_U08Buf data; // Do not free
     ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(wallet, &data, &error));
 
-    libbitcoin::data_chunk seed(data.p, data.end);
+    libbitcoin::data_chunk seed(data.begin(), data.end());
     libwallet::hd_private_key m(seed);
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);

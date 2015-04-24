@@ -110,9 +110,9 @@ tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
     watcherInfo = row->second;
 
     // Decode key and address:
-    ABC_CHECK_ASSERT(ABC_BUF_SIZE(key) == ec_key.size(),
+    ABC_CHECK_ASSERT(key.size() == ec_key.size(),
         ABC_CC_Error, "Bad key size");
-    std::copy(key.p, key.end, ec_key.data());
+    std::copy(key.begin(), key.end(), ec_key.data());
     ec_addr = bc::secret_to_public_key(ec_key, compressed);
     address.set(pubkeyVersion(), bc::bitcoin_short_hash(ec_addr));
 

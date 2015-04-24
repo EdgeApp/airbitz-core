@@ -29,7 +29,7 @@ JsonBox::decrypt(DataChunk &result, DataSlice key)
         return ABC_ERROR(ABC_CC_DecryptError, "No encrypted data");
     ABC_CHECK_OLD(ABC_CryptoDecryptJSONObject(root_,
         toU08Buf(key), &data, &error));
-    result = DataChunk(data.p, data.end);
+    result = DataChunk(data.begin(), data.end());
     return Status();
 }
 

@@ -249,7 +249,7 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     ABC_CHECK_NULL(pJSON_Root);
 
     // set up the recovery, if any:
-    if (ABC_BUF_SIZE(newLRA1))
+    if (newLRA1.size())
     {
         pJSON_NewLRA1 = json_string(base64Encode(newLRA1).c_str());
         json_object_set(pJSON_Root, ABC_SERVER_JSON_NEW_LRA1_FIELD, pJSON_NewLRA1);
@@ -333,14 +333,14 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LR
     ABC_CHECK_NULL_BUF(L1);
 
     // create the post data with or without LP1
-    if (ABC_BUF_PTR(LP1) == NULL && ABC_BUF_PTR(LRA1) == NULL)
+    if (LP1.data() == NULL && LRA1.data() == NULL)
     {
         pJSON_Root = json_pack("{ss}",
             ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str());
     }
     else
     {
-        if (ABC_BUF_PTR(LP1) == NULL)
+        if (LP1.data() == NULL)
         {
             pJSON_Root = json_pack("{ssss}",
                 ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
@@ -628,7 +628,7 @@ tABC_CC ABC_LoginServerOtpRequest(const char *szUrl,
     pJSON_Root = json_pack("{ss}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str());
     // If there is a LP1 provided
-    if (ABC_BUF_PTR(LP1))
+    if (LP1.data())
     {
         json_object_set_new(pJSON_Root, ABC_SERVER_JSON_LP1_FIELD,
             json_string(base64Encode(LP1).c_str()));
