@@ -130,13 +130,6 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
 
 exit:
     ABC_FREE_STR(szEPINK);
-
-    if (ABC_CC_PinExpired == cc)
-    {
-        tABC_Error error;
-        ABC_LoginPinDelete(*lobby, &error);
-    }
-
     return cc;
 }
 
