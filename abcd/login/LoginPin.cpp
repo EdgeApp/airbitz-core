@@ -146,7 +146,6 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     CarePackage carePackage;
     LoginPackage loginPackage;
     PinLocal local;
-    AutoU08Buf          L1;
     AutoU08Buf          LP1;
     DataChunk pinAuthId;
     DataChunk pinAuthKey;       // Unlocks the server
@@ -159,7 +158,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 
     // Get login stuff:
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, loginPackage, pError));
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &L1, &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKey(login, &LP1, pError));
 
     // Set up DID:
     if (!local.load(login.lobby().dir() + PIN_FILENAME) ||
@@ -177,7 +176,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     // Set up the server:
     ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN), pError);
     ABC_CHECK_NEW(pinKeyBox.encode(str), pError);
-    ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(L1, LP1,
+    ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(login.lobby(), LP1,
         toU08Buf(pinAuthId), toU08Buf(pinAuthKey), str, expires, pError));
 
     // Save the local file:

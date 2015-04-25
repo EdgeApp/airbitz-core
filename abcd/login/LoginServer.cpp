@@ -7,6 +7,8 @@
 
 #include "LoginServer.hpp"
 #include "ServerDefs.hpp"
+#include "Lobby.hpp"
+#include "Login.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/Json.hpp"
@@ -19,14 +21,7 @@
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/FileIO.hpp"
 
-// For OTP token hack:
-#include "Lobby.hpp"
-#include <memory>
-
 namespace abcd {
-
-// hack: Reaching into the LoginShim is very bad on multiple levels...
-extern std::shared_ptr<Lobby> gLobbyCache;
 
 // Server strings:
 #define JSON_ACCT_CARE_PACKAGE                  "care_package"
@@ -55,18 +50,17 @@ struct OtpErrorResult:
 static std::string gOtpResetAuth;
 std::string gOtpResetDate;
 
-static tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1, const char *szURL, const char *szField, char **szResponse, tABC_Error *pError);
+static tABC_CC ABC_LoginServerGetString(const Lobby &lobby, tABC_U08Buf LP1, tABC_U08Buf LRA1, const char *szURL, const char *szField, char **szResponse, tABC_Error *pError);
 static tABC_CC checkResults(const char *szResults, json_t **ppJSON_Result, tABC_Error *pError);
-static tABC_CC ABC_LoginServerOtpRequest(const char *szUrl, tABC_U08Buf L1, tABC_U08Buf LP1, json_t **pJSON_Results, tABC_Error *pError);
+static tABC_CC ABC_LoginServerOtpRequest(const char *szUrl, const Lobby &lobby, tABC_U08Buf LP1, json_t **pJSON_Results, tABC_Error *pError);
 
 /**
  * Creates an git repo on the server.
  *
- * @param L1   Login hash for the account
  * @param LP1  Password hash for the account
  */
 static
-tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1, tABC_U08Buf LP1,
+tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby, tABC_U08Buf LP1,
     const char *szWalletAcctKey, const char *szPath, tABC_Error *pError);
 
 /**
@@ -76,10 +70,9 @@ tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1, tABC_U08Buf LP1,
  * If the account was created, ABC_CC_Ok is returned.
  * If the account already exists, ABC_CC_AccountAlreadyExists is returned.
  *
- * @param L1   Login hash for the account
  * @param LP1  Password hash for the account
  */
-tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
+tABC_CC ABC_LoginServerCreate(const Lobby &lobby,
                               tABC_U08Buf LP1,
                               const CarePackage &carePackage,
                               const LoginPackage &loginPackage,
@@ -95,7 +88,6 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
     std::string loginPackageStr;
     json_t *pJSON_Root = NULL;
 
-    ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL_BUF(LP1);
 
     ABC_CHECK_NEW(carePackage.encode(carePackageStr), pError);
@@ -103,7 +95,7 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
 
     // create the post data
     pJSON_Root = json_pack("{ssssssssss}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
         ABC_SERVER_JSON_CARE_PACKAGE_FIELD, carePackageStr.c_str(),
         ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackageStr.c_str(),
@@ -128,10 +120,9 @@ exit:
 /**
  * Activate an account on the server.
  *
- * @param L1   Login hash for the account
  * @param LP1  Password hash for the account
  */
-tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1,
+tABC_CC ABC_LoginServerActivate(const Lobby &lobby,
                                 tABC_U08Buf LP1,
                                 tABC_Error *pError)
 {
@@ -143,12 +134,9 @@ tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1,
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
 
-    ABC_CHECK_NULL_BUF(L1);
-    ABC_CHECK_NULL_BUF(LP1);
-
     // create the post data
     pJSON_Root = json_pack("{ssss}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str());
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
@@ -172,7 +160,7 @@ exit:
 /**
  * Queries the server to determine if a username is available.
  */
-tABC_CC ABC_LoginServerAvailable(tABC_U08Buf L1,
+tABC_CC ABC_LoginServerAvailable(const Lobby &lobby,
                                  tABC_Error *pError)
 {
 
@@ -183,10 +171,8 @@ tABC_CC ABC_LoginServerAvailable(tABC_U08Buf L1,
     AccountAvailableJson json;
     char *szResults = NULL;
 
-    ABC_CHECK_NULL_BUF(L1);
-
     // create the json
-    ABC_CHECK_NEW(json.authIdSet(base64Encode(L1).c_str()), pError);
+    ABC_CHECK_NEW(json.authIdSet(base64Encode(lobby.authId()).c_str()), pError);
     ABC_CHECK_NEW(json.encode(get), pError);
     ABC_DebugLog("Server URL: %s, Data: %.50s", url.c_str(), get.c_str());
 
@@ -209,11 +195,10 @@ exit:
  * This function sends information to the server to change the password for an account.
  * Either the old LP1 or LRA1 can be used for authentication.
  *
- * @param L1     Login hash for the account
  * @param oldLP1 Old password hash for the account (if this is empty, LRA1 is used instead)
  * @param LRA1   LRA1 for the account (used if oldP1 is empty)
  */
-tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
+tABC_CC ABC_LoginServerChangePassword(const Lobby &lobby,
                                       tABC_U08Buf oldLP1,
                                       tABC_U08Buf newLP1,
                                       tABC_U08Buf newLRA1,
@@ -232,7 +217,6 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     json_t *pJSON_NewLRA1   = NULL;
     json_t *pJSON_Root = NULL;
 
-    ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL_BUF(oldLP1);
     ABC_CHECK_NULL_BUF(newLP1);
 
@@ -241,7 +225,7 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
 
     // Encode those:
     pJSON_Root = json_pack("{ss, ss, ss, ss, ss}",
-        ABC_SERVER_JSON_L1_FIELD,      base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_L1_FIELD,      base64Encode(lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD,     base64Encode(oldLP1).c_str(),
         ABC_SERVER_JSON_NEW_LP1_FIELD, base64Encode(newLP1).c_str(),
         ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  carePackageStr.c_str(),
@@ -274,7 +258,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
+tABC_CC ABC_LoginServerGetCarePackage(const Lobby &lobby,
                                       CarePackage &result,
                                       tABC_Error *pError)
 {
@@ -283,9 +267,7 @@ tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
     std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_CARE_PACKAGE_PATH;
     char *szCarePackage = NULL;
 
-    ABC_CHECK_NULL_BUF(L1);
-
-    ABC_CHECK_RET(ABC_LoginServerGetString(L1, U08Buf(), U08Buf(), url.c_str(), JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(lobby, U08Buf(), U08Buf(), url.c_str(), JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
     ABC_CHECK_NEW(result.decode(szCarePackage), pError);
 
 exit:
@@ -294,7 +276,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
+tABC_CC ABC_LoginServerGetLoginPackage(const Lobby &lobby,
                                        tABC_U08Buf LP1,
                                        tABC_U08Buf LRA1,
                                        LoginPackage &result,
@@ -305,9 +287,7 @@ tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
     std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_LOGIN_PACK_GET_PATH;
     char *szLoginPackage = NULL;
 
-    ABC_CHECK_NULL_BUF(L1);
-
-    ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1, LRA1, url.c_str(), JSON_ACCT_LOGIN_PACKAGE, &szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(lobby, LP1, LRA1, url.c_str(), JSON_ACCT_LOGIN_PACKAGE, &szLoginPackage, pError));
     ABC_CHECK_NEW(result.decode(szLoginPackage), pError);
 
 exit:
@@ -320,7 +300,7 @@ exit:
  * Helper function for getting CarePackage or LoginPackage.
  */
 static
-tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LRA1,
+tABC_CC ABC_LoginServerGetString(const Lobby &lobby, tABC_U08Buf LP1, tABC_U08Buf LRA1,
                                  const char *szURL, const char *szField, char **szResponse, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -330,32 +310,29 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LR
     char    *szPost         = NULL;
     char    *szResults      = NULL;
 
-    ABC_CHECK_NULL_BUF(L1);
-
     // create the post data with or without LP1
     if (LP1.data() == NULL && LRA1.data() == NULL)
     {
         pJSON_Root = json_pack("{ss}",
-            ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str());
+            ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str());
     }
     else
     {
         if (LP1.data() == NULL)
         {
             pJSON_Root = json_pack("{ssss}",
-                ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+                ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
                 ABC_SERVER_JSON_LRA1_FIELD, base64Encode(LRA1).c_str());
         }
         else
         {
             pJSON_Root = json_pack("{ssss}",
-                ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+                ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
                 ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str());
         }
     }
     {
-        // No mutex or cache load! We might segfault...
-        auto key = gLobbyCache->otpKey();
+        auto key = lobby.otpKey();
         if (key)
             json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_FIELD, json_string(key->totp().c_str()));
     }
@@ -440,14 +417,13 @@ exit:
 /**
  * Uploads the pin package.
  *
- * @param L1            Login hash for the account
  * @param LP1           Login + Password hash
  * @param DID           Device Id
  * @param LPIN1         Hashed pin
  * @param szPinPackage  Pin package
  * @param szAli         auto-logout interval
  */
-tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
+tABC_CC ABC_LoginServerUpdatePinPackage(const Lobby &lobby,
                                         tABC_U08Buf LP1,
                                         tABC_U08Buf DID,
                                         tABC_U08Buf LPIN1,
@@ -463,7 +439,6 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
     json_t *pJSON_Root   = NULL;
     char szALI[DATETIME_LENGTH];
 
-    ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL_BUF(LP1);
     ABC_CHECK_NULL_BUF(DID);
     ABC_CHECK_NULL_BUF(LPIN1);
@@ -473,7 +448,7 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
 
     // Encode those:
     pJSON_Root = json_pack("{ss, ss, ss, ss, ss, ss}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
         ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
         ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1).c_str(),
@@ -499,23 +474,23 @@ exit:
 }
 
 Status
-LoginServerWalletCreate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey)
+LoginServerWalletCreate(const Lobby &lobby, tABC_U08Buf LP1, const char *syncKey)
 {
-    ABC_CHECK_OLD(ABC_WalletServerRepoPost(L1, LP1, syncKey,
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(lobby, LP1, syncKey,
         ABC_SERVER_WALLET_CREATE_PATH, &error));
     return Status();
 }
 
 Status
-LoginServerWalletActivate(tABC_U08Buf L1, tABC_U08Buf LP1, const char *syncKey)
+LoginServerWalletActivate(const Lobby &lobby, tABC_U08Buf LP1, const char *syncKey)
 {
-    ABC_CHECK_OLD(ABC_WalletServerRepoPost(L1, LP1, syncKey,
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(lobby, LP1, syncKey,
         ABC_SERVER_WALLET_ACTIVATE_PATH, &error));
     return Status();
 }
 
 static
-tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
+tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby,
                                  tABC_U08Buf LP1,
                                  const char *szWalletAcctKey,
                                  const char *szPath,
@@ -528,12 +503,11 @@ tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
 
-    ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL_BUF(LP1);
 
     // create the post data
     pJSON_Root = json_pack("{ssssss}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
         ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
@@ -557,11 +531,10 @@ exit:
 /**
  * Enables 2 Factor authentication
  *
- * @param L1   Login hash for the account
  * @param LP1  Password hash for the account
  * @param timeout Amount of time needed for a reset to complete
  */
-tABC_CC ABC_LoginServerOtpEnable(tABC_U08Buf L1,
+tABC_CC ABC_LoginServerOtpEnable(const Lobby &lobby,
                                  tABC_U08Buf LP1,
                                  const char *szOtpSecret,
                                  const long timeout,
@@ -576,18 +549,16 @@ tABC_CC ABC_LoginServerOtpEnable(tABC_U08Buf L1,
     std::string url(ABC_SERVER_ROOT);
     url += "/otp/on";
 
-    ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL_BUF(LP1);
 
     // create the post data
     pJSON_Root = json_pack("{sssssssi}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
         ABC_SERVER_JSON_OTP_SECRET_FIELD, szOtpSecret,
         ABC_SERVER_JSON_OTP_TIMEOUT, timeout);
     {
-        // No mutex or cache load! We might segfault...
-        auto key = gLobbyCache->otpKey();
+        auto key = lobby.otpKey();
         if (key)
             json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_FIELD, json_string(key->totp().c_str()));
     }
@@ -611,7 +582,7 @@ exit:
 }
 
 tABC_CC ABC_LoginServerOtpRequest(const char *szUrl,
-                                  tABC_U08Buf L1,
+                                  const Lobby &lobby,
                                   tABC_U08Buf LP1,
                                   json_t **pJSON_Results,
                                   tABC_Error *pError)
@@ -622,11 +593,9 @@ tABC_CC ABC_LoginServerOtpRequest(const char *szUrl,
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
 
-    ABC_CHECK_NULL_BUF(L1);
-
     // create the post data
     pJSON_Root = json_pack("{ss}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str());
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str());
     // If there is a LP1 provided
     if (LP1.data())
     {
@@ -634,8 +603,7 @@ tABC_CC ABC_LoginServerOtpRequest(const char *szUrl,
             json_string(base64Encode(LP1).c_str()));
     }
     {
-        // No mutex or cache load! We might segfault...
-        auto key = gLobbyCache->otpKey();
+        auto key = lobby.otpKey();
         if (key)
             json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_FIELD, json_string(key->totp().c_str()));
     }
@@ -664,22 +632,21 @@ exit:
 /**
  * Disable 2 Factor authentication
  *
- * @param L1   Login hash for the account
  * @param LP1  Password hash for the account
  */
-tABC_CC ABC_LoginServerOtpDisable(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError)
+tABC_CC ABC_LoginServerOtpDisable(const Lobby &lobby, tABC_U08Buf LP1, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     std::string url(ABC_SERVER_ROOT);
     url += "/otp/off";
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, LP1, NULL, pError));
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), lobby, LP1, NULL, pError));
 
 exit:
     return cc;
 }
 
-tABC_CC ABC_LoginServerOtpStatus(tABC_U08Buf L1, tABC_U08Buf LP1,
+tABC_CC ABC_LoginServerOtpStatus(const Lobby &lobby, tABC_U08Buf LP1,
     bool *on, long *timeout, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -690,7 +657,7 @@ tABC_CC ABC_LoginServerOtpStatus(tABC_U08Buf L1, tABC_U08Buf LP1,
     std::string url(ABC_SERVER_ROOT);
     url += "/otp/status";
 
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, LP1, &pJSON_Root, pError));
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), lobby, LP1, &pJSON_Root, pError));
 
     pJSON_Root = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
     ABC_CHECK_ASSERT((pJSON_Root && json_is_object(pJSON_Root)), ABC_CC_JSONError, "Error parsing server JSON care package results");
@@ -715,15 +682,14 @@ exit:
 /**
  * Request Reset 2 Factor authentication
  *
- * @param L1   Login hash for the account
  * @param LP1  Password hash for the account
  */
-tABC_CC ABC_LoginServerOtpReset(tABC_U08Buf L1, tABC_Error *pError)
+tABC_CC ABC_LoginServerOtpReset(const Lobby &lobby, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     std::string url(ABC_SERVER_ROOT);
     url += "/otp/reset";
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, U08Buf(), NULL, pError));
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), lobby, U08Buf(), NULL, pError));
 
 exit:
     return cc;
@@ -807,15 +773,14 @@ exit:
 /**
  * Request Reset 2 Factor authentication
  *
- * @param L1   Login hash for the account
  * @param LP1  Password hash for the account
  */
-tABC_CC ABC_LoginServerOtpResetCancelPending(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_Error *pError)
+tABC_CC ABC_LoginServerOtpResetCancelPending(const Lobby &lobby, tABC_U08Buf LP1, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     std::string url(ABC_SERVER_ROOT);
     url += "/otp/pending/cancel";
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, LP1, NULL, pError));
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), lobby, LP1, NULL, pError));
 
 exit:
     return cc;
@@ -829,9 +794,7 @@ exit:
  * @param szPassword    Password for the account associated with the settings
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
-                                  tABC_U08Buf LP1,
-                                  const Login &login,
+tABC_CC ABC_LoginServerUploadLogs(const Login &login,
                                   tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -849,6 +812,9 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     DataChunk watchData;
     AutoStringArray uuids;
     json_t *pJSON_array = NULL;
+
+    AutoU08Buf LP1;
+    ABC_CHECK_RET(ABC_LoginGetServerKey(login, &LP1, pError));
 
     ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
     ABC_CHECK_NEW(fileLoad(logData, szLogFilename), pError);
@@ -868,7 +834,7 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     }
 
     pJSON_Root = json_pack("{ss, ss, ss}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(login.lobby().authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
         "log", base64Encode(logData).c_str());
     json_object_set(pJSON_Root, "watchers", pJSON_array);

@@ -85,14 +85,6 @@ Lobby::otpKeyRemove()
 }
 
 Status
-Lobby::available() const
-{
-    // No lock needed.
-    ABC_CHECK_OLD(ABC_LoginServerAvailable(toU08Buf(authId()), &error));
-    return Status();
-}
-
-Status
 Lobby::fixUsername(std::string &result, const std::string &username)
 {
     std::string out;

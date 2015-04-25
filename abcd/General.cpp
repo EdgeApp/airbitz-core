@@ -514,7 +514,6 @@ exit:
  * This function gets the recovery question choices from the server in
  * the form of a JSON object which is an array of the choices
  *
- * @param L1            Login hash for the account
  * @param ppJSON_Q      Pointer to store allocated json object
  *                      (it is the responsibility of the caller to free the ref)
  */

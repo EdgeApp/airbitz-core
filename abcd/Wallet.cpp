@@ -147,8 +147,6 @@ void ABC_WalletIDFree(tABC_WalletID in)
  * @param pszUUID Pointer to hold allocated pointer to UUID string
  */
 tABC_CC ABC_WalletCreate(const Login &login,
-                         tABC_U08Buf L1,
-                         tABC_U08Buf LP1,
                          const char *szWalletName,
                          int  currencyNum,
                          char                  **pszUUID,
@@ -165,11 +163,13 @@ tABC_CC ABC_WalletCreate(const Login &login,
     DataChunk dataKey;
     DataChunk syncKey;
     DataChunk bitcoinKey;
+    AutoU08Buf LP1;
     tABC_AccountWalletInfo info; // Do not free
 
     tWalletData *pData = NULL;
 
     ABC_CHECK_NULL(pszUUID);
+    ABC_CHECK_RET(ABC_LoginGetServerKey(login, &LP1, pError));
 
     // create a new wallet data struct
     ABC_NEW(pData, tWalletData);
@@ -215,7 +215,7 @@ tABC_CC ABC_WalletCreate(const Login &login,
     ABC_CHECK_RET(ABC_WalletSetCurrencyNum(ABC_WalletID(login, pData->szUUID), currencyNum, pError));
 
     // Request remote wallet repo
-    ABC_CHECK_NEW(LoginServerWalletCreate(L1, LP1, pData->szWalletAcctKey), pError);
+    ABC_CHECK_NEW(LoginServerWalletCreate(login.lobby(), LP1, pData->szWalletAcctKey), pError);
 
     // set this account for the wallet's first account
     ABC_CHECK_RET(ABC_WalletAddAccount(ABC_WalletID(login, pData->szUUID),
@@ -229,7 +229,7 @@ tABC_CC ABC_WalletCreate(const Login &login,
     ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, &dirty, pError));
 
     // Actiate the remote wallet
-    ABC_CHECK_NEW(LoginServerWalletActivate(L1, LP1, pData->szWalletAcctKey), pError);
+    ABC_CHECK_NEW(LoginServerWalletActivate(login.lobby(), LP1, pData->szWalletAcctKey), pError);
 
     // If everything worked, add the wallet to the account:
     info.szUUID = pData->szUUID;

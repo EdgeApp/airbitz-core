@@ -77,12 +77,6 @@ public:
     otpKeyRemove();
 
     /**
-     * Queries the server to determine if this username is available.
-     */
-    Status
-    available() const;
-
-    /**
      * Re-formats a username to all-lowercase,
      * checking for disallowed characters and collapsing spaces.
      */

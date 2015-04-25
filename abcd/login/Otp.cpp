@@ -15,10 +15,9 @@ namespace abcd {
 Status
 otpAuthGet(Login &login, bool &enabled, long &timeout)
 {
-    AutoU08Buf L1;
     AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKeys(login, &L1, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpStatus(L1, LP1, &enabled, &timeout, &error));
+    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
+    ABC_CHECK_OLD(ABC_LoginServerOtpStatus(login.lobby(), LP1, &enabled, &timeout, &error));
 
     return Status();
 }
@@ -34,10 +33,9 @@ otpAuthSet(Login &login, long timeout)
         login.lobby().otpKeySet(random);
     }
 
-    AutoU08Buf L1;
     AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKeys(login, &L1, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpEnable(L1, LP1,
+    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
+    ABC_CHECK_OLD(ABC_LoginServerOtpEnable(login.lobby(), LP1,
         login.lobby().otpKey()->encodeBase32().c_str(), timeout, &error));
 
     return Status();
@@ -46,10 +44,9 @@ otpAuthSet(Login &login, long timeout)
 Status
 otpAuthRemove(Login &login)
 {
-    AutoU08Buf L1;
     AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKeys(login, &L1, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpDisable(L1, LP1, &error));
+    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
+    ABC_CHECK_OLD(ABC_LoginServerOtpDisable(login.lobby(), LP1, &error));
 
     return Status();
 }
@@ -89,7 +86,7 @@ otpResetGet(std::list<std::string> &result,
 Status
 otpResetSet(Lobby &lobby)
 {
-    ABC_CHECK_OLD(ABC_LoginServerOtpReset(toU08Buf(lobby.authId()), &error));
+    ABC_CHECK_OLD(ABC_LoginServerOtpReset(lobby, &error));
 
     return Status();
 }
@@ -97,10 +94,9 @@ otpResetSet(Lobby &lobby)
 Status
 otpResetRemove(Login &login)
 {
-    AutoU08Buf L1;
     AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKeys(login, &L1, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpResetCancelPending(L1, LP1, &error));
+    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
+    ABC_CHECK_OLD(ABC_LoginServerOtpResetCancelPending(login.lobby(), LP1, &error));
 
     return Status();
 }

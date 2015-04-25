@@ -31,7 +31,7 @@ tABC_CC ABC_LoginGetRQ(Lobby &lobby,
     DataChunk questions;
 
     // Load CarePackage:
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(toU08Buf(lobby.authId()), carePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(lobby, carePackage, pError));
 
     // Verify that the questions exist:
     ABC_CHECK_ASSERT(carePackage.questionBox(), ABC_CC_NoRecoveryQuestions, "No recovery questions");
@@ -73,13 +73,12 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     std::string LRA = lobby->username() + szRecoveryAnswers;
 
     // Get the CarePackage:
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(toU08Buf(lobby->authId()), carePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(*lobby, carePackage, pError));
 
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(recoveryAuthKey, LRA), pError);
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(
-        toU08Buf(lobby->authId()), U08Buf(), toU08Buf(recoveryAuthKey),
-        loginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(*lobby,
+        U08Buf(), toU08Buf(recoveryAuthKey), loginPackage, pError));
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp3().hash(recoveryKey, LRA), pError);
@@ -111,7 +110,6 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
 
     CarePackage carePackage;
     LoginPackage loginPackage;
-    AutoU08Buf oldL1;
     AutoU08Buf oldLP1;
     DataChunk questionKey;      // Unlocks questions
     DataChunk recoveryAuthKey;  // Unlocks the server
@@ -124,7 +122,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, loginPackage, pError));
 
     // Load the old keys:
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(login, &oldL1, &oldLP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKey(login, &oldLP1, pError));
 
     // Update scrypt parameters:
     ABC_CHECK_NEW(snrp.create(), pError);
@@ -150,7 +148,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_NEW(loginPackage.ELRA1Set(box), pError);
 
     // Change the server login:
-    ABC_CHECK_RET(ABC_LoginServerChangePassword(oldL1, oldLP1,
+    ABC_CHECK_RET(ABC_LoginServerChangePassword(login.lobby(), oldLP1,
         oldLP1, toU08Buf(recoveryAuthKey), carePackage, loginPackage, pError));
 
     // Change the on-disk login:

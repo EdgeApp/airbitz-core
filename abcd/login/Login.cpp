@@ -119,15 +119,15 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(loginPackage.authKeyBoxSet(box), pError);
 
     // Create the account and repo on server:
-    ABC_CHECK_RET(ABC_LoginServerCreate(toU08Buf(lobby->authId()), toU08Buf(authKey),
+    ABC_CHECK_RET(ABC_LoginServerCreate(*lobby, toU08Buf(authKey),
         carePackage, loginPackage, base16Encode(syncKey).c_str(), pError));
-
-    // Latch the account:
-    ABC_CHECK_RET(ABC_LoginServerActivate(toU08Buf(lobby->authId()), toU08Buf(authKey), pError));
 
     // Create the Login object:
     login.reset(new Login(lobby, dataKey));
     ABC_CHECK_NEW(login->init(loginPackage), pError);
+
+    // Latch the account:
+    ABC_CHECK_RET(ABC_LoginServerActivate(*lobby, toU08Buf(authKey), pError));
 
     // Set up the on-disk login:
     ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), carePackage, loginPackage, pError));
@@ -140,12 +140,10 @@ exit:
 }
 
 /**
- * Obtains an account object's user name.
- * @param pL1       The hashed user name. The caller must free this.
+ * Obtains the account's server authentication key.
  * @param pLP1      The hashed user name & password. The caller must free this.
  */
-tABC_CC ABC_LoginGetServerKeys(const Login &login,
-                               tABC_U08Buf *pL1,
+tABC_CC ABC_LoginGetServerKey(const Login &login,
                                tABC_U08Buf *pLP1,
                                tABC_Error *pError)
 {
@@ -153,8 +151,6 @@ tABC_CC ABC_LoginGetServerKeys(const Login &login,
     CarePackage carePackage;
     LoginPackage loginPackage;
     DataChunk authKey;          // Unlocks the server
-
-    ABC_BUF_DUP(*pL1, toU08Buf(login.lobby().authId()));
 
     ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, loginPackage, pError));
     ABC_CHECK_NEW(loginPackage.authKeyBox().decrypt(authKey, login.dataKey()), pError);

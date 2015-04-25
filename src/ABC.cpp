@@ -216,7 +216,7 @@ tABC_CC ABC_AccountAvailable(const char *szUserName,
     {
         std::shared_ptr<Lobby> lobby;
         ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
-        ABC_CHECK_NEW(lobby->available(), pError);
+        ABC_CHECK_RET(ABC_LoginServerAvailable(*lobby, pError));
     }
 
 exit:
@@ -603,8 +603,6 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     std::shared_ptr<Login> login;
-    AutoU08Buf L1;
-    AutoU08Buf LP1;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
@@ -614,9 +612,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
 
     // get account keys:
     ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(*login, &L1, &LP1, pError));
-
-    ABC_CHECK_RET(ABC_WalletCreate(*login, L1, LP1, szWalletName,
+    ABC_CHECK_RET(ABC_WalletCreate(*login, szWalletName,
         currencyNum, pszUuid, pError));
 
 exit:
@@ -2734,14 +2730,13 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         }
 
         // Get the server keys:
-        AutoU08Buf L1;
         AutoU08Buf LP1;
-        ABC_CHECK_RET(ABC_LoginGetServerKeys(*login, &L1, &LP1, pError));
+        ABC_CHECK_RET(ABC_LoginGetServerKey(*login, &LP1, pError));
 
         // Has the password changed?
         tABC_Error error;
         LoginPackage loginPackage;
-        cc = ABC_LoginServerGetLoginPackage(L1, LP1, U08Buf(), loginPackage, &error);
+        cc = ABC_LoginServerGetLoginPackage(login->lobby(), LP1, U08Buf(), loginPackage, &error);
 
         if (cc == ABC_CC_InvalidOTP)
         {
@@ -3231,16 +3226,13 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     std::shared_ptr<Login> login;
-    AutoU08Buf L1;
-    AutoU08Buf LP1;
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
 
     ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(*login, &L1, &LP1, pError));
-    ABC_CHECK_RET(ABC_LoginServerUploadLogs(L1, LP1, *login, pError));
+    ABC_CHECK_RET(ABC_LoginServerUploadLogs(*login, pError));
 
 exit:
     return cc;
