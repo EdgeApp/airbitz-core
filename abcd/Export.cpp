@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <time.h>
+#include <string>
 
 namespace abcd {
 
@@ -305,24 +306,21 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szCurrRec;
-    AutoU08Buf buff;
-
-    ABC_BUF_NEW(buff, ABC_CSV_MAX_REC_SZ);
-
-    ABC_CHECK_RET(ABC_ExportGenerateHeader(&szCurrRec, pError));
-    ABC_BUF_SET_PTR(buff, (unsigned char *) szCurrRec, strlen(szCurrRec));
+    std::string out;
+    {
+        AutoString szCurrRec;
+        ABC_CHECK_RET(ABC_ExportGenerateHeader(&szCurrRec.get(), pError));
+        out += szCurrRec;
+    }
 
     for (unsigned i=0; i < iTransactionCount; i++)
     {
-        ABC_CHECK_RET(ABC_ExportGenerateRecord(pTransactions[i], &szCurrRec, pError));
-        ABC_BUF_APPEND_PTR(buff, szCurrRec, strlen(szCurrRec));
+        AutoString szCurrRec;
+        ABC_CHECK_RET(ABC_ExportGenerateRecord(pTransactions[i], &szCurrRec.get(), pError));
+        out += szCurrRec;
     }
 
-    ABC_BUF_APPEND_PTR(buff, "\0", 1);
-
-    *szCsvData = reinterpret_cast<char*>(buff.p);
-    ABC_BUF_CLEAR(buff);
+    ABC_STRDUP(*szCsvData, out.c_str());
 
 exit:
     return cc;

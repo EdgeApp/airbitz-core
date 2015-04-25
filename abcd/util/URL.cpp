@@ -49,7 +49,20 @@ static bool gbInitialized = false;
 std::recursive_mutex gCurlMutex;
 
 static CURLcode ABC_URLSSLCallback(CURL *curl, void *ssl_ctx, void *userptr);
-static size_t   ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData);
+
+/**
+ * Curl data-storage callback.
+ */
+static size_t
+curlWriteData(void *data, size_t memberSize, size_t numMembers, void *userData)
+{
+    auto size = numMembers * memberSize;
+
+    auto string = static_cast<std::string *>(userData);
+    string->append(static_cast<char *>(data), size);
+
+    return size;
+}
 
 /**
  * Initialize the URL system
@@ -101,20 +114,18 @@ void ABC_URLTerminate()
  * @param szURL         The request URL.
  * @param pData         The location to store the results. The caller is responsible for free'ing this.
  */
-tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError)
+tABC_CC ABC_URLRequest(const char *szURL, std::string &reply, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCurlLock lock(gCurlMutex);
 
     CURLcode curlCode = CURLE_OK;
-    AutoU08Buf Data;
     CURL *pCurlHandle = NULL;
 
     ABC_CHECK_NULL(szURL);
-    ABC_CHECK_NULL(pData);
 
     // start with no data
-    ABC_BUF_CLEAR(*pData);
+    reply.clear();
 
     ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_CAINFO, gszCaCertPath)) == 0,
@@ -126,13 +137,13 @@ tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
-    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, ABC_URLCurlWriteData)) != 0)
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, curlWriteData)) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
-    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, static_cast<U08Buf*>(&Data))) != 0)
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &reply)) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
@@ -143,10 +154,6 @@ tABC_CC ABC_URLRequest(const char *szURL, tABC_U08Buf *pData, tABC_Error *pError
         ABC_DebugLog("Curl easy perform failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy perform failed");
     }
-
-    // store the data in the user's buffer
-    ABC_BUF_SET(*pData, Data);
-    ABC_BUF_CLEAR(Data);
 
 exit:
     curl_easy_cleanup(pCurlHandle);
@@ -167,20 +174,16 @@ tABC_CC ABC_URLRequestString(const char *szURL,
     tABC_CC cc = ABC_CC_Ok;
     AutoCurlLock lock(gCurlMutex);
 
-    AutoU08Buf Data;
+    std::string reply;
 
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(pszResults);
 
     // make the request
-    ABC_CHECK_RET(ABC_URLRequest(szURL, &Data, pError));
-
-    // add the null
-    ABC_BUF_APPEND_PTR(Data, "", 1);
+    ABC_CHECK_RET(ABC_URLRequest(szURL, reply, pError));
 
     // assign the results
-    *pszResults = (char *)ABC_BUF_PTR(Data);
-    ABC_BUF_CLEAR(Data);
+    ABC_STRDUP(*pszResults, reply.c_str());
 
 exit:
     return cc;
@@ -204,22 +207,20 @@ CURLcode ABC_URLSSLCallback(CURL *curl, void *ssl_ctx, void *userptr)
  * @param szPostData    The data to be posted in the request
  * @param pData         The location to store the results. The caller is responsible for free'ing this.
  */
-tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pData, tABC_Error *pError)
+tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, std::string &reply, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCurlLock lock(gCurlMutex);
 
-    AutoU08Buf Data;
     CURL *pCurlHandle = NULL;
     struct curl_slist *slist = NULL;
     CURLcode curlCode = CURLE_OK;
 
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(szPostData);
-    ABC_CHECK_NULL(pData);
 
     // start with no data
-    ABC_BUF_CLEAR(*pData);
+    reply.clear();
 
     ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
 
@@ -237,14 +238,14 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
     }
 
     // set the callback function for data that comes back
-    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, ABC_URLCurlWriteData)) != 0)
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, curlWriteData)) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
     }
 
     // set the user data pointer that will be in the callback function
-    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, static_cast<U08Buf*>(&Data))) != 0)
+    if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &reply)) != 0)
     {
         ABC_DebugLog("Curl easy setopt failed: %d\n", curlCode);
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy setopt failed");
@@ -273,10 +274,6 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, tABC_U08Buf *pDat
         ABC_RET_ERROR(ABC_CC_URLError, "Curl easy perform failed");
     }
 
-    // store the data in the user's buffer
-    ABC_BUF_SET(*pData, Data);
-    ABC_BUF_CLEAR(Data);
-
 exit:
     curl_easy_cleanup(pCurlHandle);
     curl_slist_free_all(slist);
@@ -299,21 +296,17 @@ tABC_CC ABC_URLPostString(const char *szURL,
     tABC_CC cc = ABC_CC_Ok;
     AutoCurlLock lock(gCurlMutex);
 
-    AutoU08Buf Data;
+    std::string reply;
 
     ABC_CHECK_NULL(szURL);
     ABC_CHECK_NULL(szPostData);
     ABC_CHECK_NULL(pszResults);
 
     // make the request
-    ABC_CHECK_RET(ABC_URLPost(szURL, szPostData, &Data, pError));
-
-    // add the null
-    ABC_BUF_APPEND_PTR(Data, "", 1);
+    ABC_CHECK_RET(ABC_URLPost(szURL, szPostData, reply, pError));
 
     // assign the results
-    *pszResults = (char *)ABC_BUF_PTR(Data);
-    ABC_BUF_CLEAR(Data);
+    ABC_STRDUP(*pszResults, reply.c_str());
 
 exit:
     return cc;
@@ -340,38 +333,6 @@ tABC_CC ABC_URLCurlHandleInit(CURL **ppCurlHandle, tABC_Error *pError)
     *ppCurlHandle = pCurlHandle;
 exit:
     return cc;
-}
-
-
-/**
- * This is the function that gets called by CURL when it has data to be saved from a request.
- * @param pBuffer Pointer to incoming data
- * @param memberSize Size of the members
- * @param numMembers Number of members in the buffer
- * @param pUserData  User data specified initial calls
- */
-static
-size_t ABC_URLCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData)
-{
-    tABC_U08Buf *pCurlBuffer = (tABC_U08Buf *)pUserData;
-    unsigned int dataAvailLength = (unsigned int) numMembers * (unsigned int) memberSize;
-    size_t amountWritten = 0;
-
-    if (pCurlBuffer)
-    {
-        // if we don't have any buffer allocated yet
-        if (ABC_BUF_PTR(*pCurlBuffer) == NULL)
-        {
-            ABC_BUF_DUP_PTR(*pCurlBuffer, pBuffer, dataAvailLength);
-        }
-        else
-        {
-            ABC_BUF_APPEND_PTR(*pCurlBuffer, pBuffer, dataAvailLength);
-        }
-        amountWritten = dataAvailLength;
-    }
-
-    return amountWritten;
 }
 
 } // namespace abcd

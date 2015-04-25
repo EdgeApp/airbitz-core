@@ -52,7 +52,7 @@ tABC_CC ABC_URLInitialize(const char *szCaCertPath, tABC_Error *pError);
 void ABC_URLTerminate();
 
 tABC_CC ABC_URLRequest(const char *szURL,
-                       tABC_U08Buf *pData,
+                       std::string &reply,
                        tABC_Error *pError);
 
 tABC_CC ABC_URLRequestString(const char *szURL,
@@ -61,7 +61,7 @@ tABC_CC ABC_URLRequestString(const char *szURL,
 
 tABC_CC ABC_URLPost(const char *szURL,
                     const char *szPostData,
-                    tABC_U08Buf *pData,
+                    std::string &reply,
                     tABC_Error *pError);
 
 tABC_CC ABC_URLPostString(const char *szURL,

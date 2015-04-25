@@ -2421,28 +2421,19 @@ tABC_CC ABC_TxBuildFromLabel(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_AccountSettings *pSettings = NULL;
-    AutoU08Buf Label;
+    AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
 
     ABC_CHECK_NULL(pszLabel);
     *pszLabel = NULL;
 
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(*self.login, &pSettings, pError));
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(*self.login, &pSettings.get(), pError));
 
     if (pSettings->bNameOnPayments && pSettings->szFullName)
     {
-        ABC_BUF_DUP_PTR(Label, pSettings->szFullName, strlen(pSettings->szFullName));
+        ABC_STRDUP(*pszLabel, pSettings->szFullName);
     }
 
-    if (ABC_BUF_PTR(Label) != NULL)
-    {
-        // Append null byte
-        ABC_BUF_APPEND_PTR(Label, "", 1);
-        *pszLabel = (char *) ABC_BUF_PTR(Label);
-        ABC_BUF_CLEAR(Label);
-    }
 exit:
-    ABC_FreeAccountSettings(pSettings);
     return cc;
 }
 

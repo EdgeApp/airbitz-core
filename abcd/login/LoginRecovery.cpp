@@ -114,7 +114,6 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     LoginPackage loginPackage;
     AutoU08Buf oldL1;
     AutoU08Buf oldLP1;
-    AutoU08Buf RQ;
     DataChunk questionKey;      // Unlocks questions
     DataChunk recoveryAuthKey;  // Unlocks the server
     DataChunk recoveryKey;      // Unlocks dataKey
@@ -138,8 +137,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_NEW(carePackage.snrp4().hash(questionKey, login.lobby().username()), pError);
 
     // Update ERQ:
-    ABC_BUF_DUP_PTR(RQ, (unsigned char *)szRecoveryQuestions, strlen(szRecoveryQuestions) + 1);
-    ABC_CHECK_NEW(box.encrypt(U08Buf(RQ), questionKey), pError);
+    ABC_CHECK_NEW(box.encrypt(std::string(szRecoveryQuestions), questionKey), pError);
     ABC_CHECK_NEW(carePackage.questionBoxSet(box), pError);
 
     // Update EMK_LRA3:
