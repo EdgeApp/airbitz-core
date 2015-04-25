@@ -670,24 +670,22 @@ tABC_CC ABC_GetPIN(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-    tABC_AccountSettings *pSettings = NULL;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(pszPin);
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(*login, &pSettings, pError));
-
-    *pszPin = NULL;
-    if (pSettings->szPIN)
     {
-        ABC_STRDUP(*pszPin, pSettings->szPIN);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
+        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
+
+        *pszPin = nullptr;
+        if (settings->szPIN)
+            ABC_STRDUP(*pszPin, settings->szPIN);
     }
 
 exit:
-    if (pSettings)      ABC_AccountSettingsFree(pSettings);
-
     return cc;
 }
 
@@ -712,22 +710,23 @@ tABC_CC ABC_SetPIN(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-    tABC_AccountSettings *pSettings = NULL;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szPin);
     ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "Pin is too short");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(*login, &pSettings, pError));
-    ABC_FREE_STR(pSettings->szPIN);
-    ABC_STRDUP(pSettings->szPIN, szPin);
-    ABC_CHECK_RET(ABC_AccountSettingsSave(*login, pSettings, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
+        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
+
+        ABC_FREE_STR(settings->szPIN);
+        ABC_STRDUP(settings->szPIN, szPin);
+        ABC_CHECK_RET(ABC_AccountSettingsSave(*account, settings, pError));
+    }
 
 exit:
-    if (pSettings)      ABC_AccountSettingsFree(pSettings);
-
     return cc;
 }
 
@@ -754,12 +753,14 @@ tABC_CC ABC_GetCategories(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountCategoriesLoad(*login, paszCategories, pCount, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        ABC_CHECK_RET(ABC_AccountCategoriesLoad(*account, paszCategories, pCount, pError));
+    }
 
 exit:
     return cc;
@@ -785,13 +786,15 @@ tABC_CC ABC_AddCategory(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szCategory);
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountCategoriesAdd(*login, szCategory, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        ABC_CHECK_RET(ABC_AccountCategoriesAdd(*account, szCategory, pError));
+    }
 
 exit:
     return cc;
@@ -818,13 +821,15 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szCategory);
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountCategoriesRemove(*login, szCategory, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        ABC_CHECK_RET(ABC_AccountCategoriesRemove(*account, szCategory, pError));
+    }
 
 exit:
     return cc;
@@ -1025,23 +1030,24 @@ tABC_CC ABC_PinSetup(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-    tABC_AccountSettings *pSettings = NULL;
-    time_t expires;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(*login, &pSettings, pError));
-    ABC_CHECK_NULL(pSettings->szPIN);
+    {
+        std::shared_ptr<Login> login;
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
 
-    expires = time(NULL);
-    expires += 60 * pSettings->minutesAutoLogout;
-    ABC_CHECK_RET(ABC_LoginPinSetup(*login, pSettings->szPIN, expires, pError));
+        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
+        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
+        ABC_CHECK_NULL(settings->szPIN);
+
+        time_t expires = time(nullptr);
+        expires += 60 * settings->minutesAutoLogout;
+        ABC_CHECK_RET(ABC_LoginPinSetup(*login, settings->szPIN, expires, pError));
+    }
 
 exit:
-    if (pSettings)      ABC_AccountSettingsFree(pSettings);
-
     return cc;
 }
 
@@ -2633,12 +2639,14 @@ tABC_CC ABC_LoadAccountSettings(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(*login, ppSettings, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, ppSettings, pError));
+    }
 
 exit:
     return cc;
@@ -2662,12 +2670,14 @@ tABC_CC ABC_UpdateAccountSettings(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_AccountSettingsSave(*login, pSettings, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        ABC_CHECK_RET(ABC_AccountSettingsSave(*account, pSettings, pError));
+    }
 
 exit:
     return cc;
@@ -3085,14 +3095,16 @@ tABC_CC ABC_PluginDataGet(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-    std::string data;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_NEW(pluginDataGet(*login, szPlugin, szKey, data), pError);
-    ABC_STRDUP(*pszData, data.c_str());
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        std::string data;
+        ABC_CHECK_NEW(pluginDataGet(*account, szPlugin, szKey, data), pError);
+        ABC_STRDUP(*pszData, data.c_str());
+    }
 
 exit:
     return cc;
@@ -3110,12 +3122,14 @@ tABC_CC ABC_PluginDataSet(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_NEW(pluginDataSet(*login, szPlugin, szKey, szData), pError);
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        ABC_CHECK_NEW(pluginDataSet(*account, szPlugin, szKey, szData), pError);
+    }
 
 exit:
     return cc;
@@ -3132,12 +3146,14 @@ tABC_CC ABC_PluginDataRemove(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_NEW(pluginDataRemove(*login, szPlugin, szKey), pError);
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        ABC_CHECK_NEW(pluginDataRemove(*account, szPlugin, szKey), pError);
+    }
 
 exit:
     return cc;
@@ -3153,12 +3169,14 @@ tABC_CC ABC_PluginDataClear(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_NEW(pluginDataClear(*login, szPlugin), pError);
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        ABC_CHECK_NEW(pluginDataClear(*account, szPlugin), pError);
+    }
 
 exit:
     return cc;
@@ -3181,15 +3199,15 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
 
         std::set<Currency> currencies;
         currencies.insert(static_cast<Currency>(currencyNum));
 
         // Find the user's exchange-rate preference:
         AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
-        ABC_CHECK_RET(ABC_AccountSettingsLoad(*login, &settings.get(), pError));
+        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
         std::string preference = settings->szExchangeRateSource;
 
         // Move the user's preference to the front of the list:

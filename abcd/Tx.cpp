@@ -2423,7 +2423,7 @@ tABC_CC ABC_TxBuildFromLabel(tABC_WalletID self,
     ABC_CHECK_NULL(pszLabel);
     *pszLabel = NULL;
 
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(self.account->login(), &pSettings.get(), pError));
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(*self.account, &pSettings.get(), pError));
 
     if (pSettings->bNameOnPayments && pSettings->szFullName)
     {

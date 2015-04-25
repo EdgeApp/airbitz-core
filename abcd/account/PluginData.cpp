@@ -6,6 +6,7 @@
  */
 
 #include "PluginData.hpp"
+#include "Account.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
 #include "../login/Login.hpp"
@@ -24,32 +25,32 @@ struct PluginDataFile:
 };
 
 static std::string
-pluginsDirectory(const Login &login)
+pluginsDirectory(const Account &account)
 {
-    return login.syncDir() + "Plugins/";
+    return account.dir() + "Plugins/";
 }
 
 static std::string
-pluginDirectory(const Login &login, const std::string &plugin)
+pluginDirectory(const Account &account, const std::string &plugin)
 {
-    return pluginsDirectory(login) +
-        cryptoFilename(login.dataKey(), plugin) + "/";
+    return pluginsDirectory(account) +
+        cryptoFilename(account.login().dataKey(), plugin) + "/";
 }
 
 static std::string
-keyFilename(const Login &login, const std::string &plugin,
+keyFilename(const Account &account, const std::string &plugin,
     const std::string &key)
 {
-    return pluginDirectory(login, plugin) +
-        cryptoFilename(login.dataKey(), key) + ".json";
+    return pluginDirectory(account, plugin) +
+        cryptoFilename(account.login().dataKey(), key) + ".json";
 }
 
 Status
-pluginDataGet(const Login &login, const std::string &plugin,
+pluginDataGet(const Account &account, const std::string &plugin,
     const std::string &key, std::string &data)
 {
     PluginDataFile json;
-    ABC_CHECK(json.load(keyFilename(login, plugin, key), login.dataKey()));
+    ABC_CHECK(json.load(keyFilename(account, plugin, key), account.login().dataKey()));
     ABC_CHECK(json.keyOk());
     ABC_CHECK(json.dataOk());
 
@@ -61,25 +62,25 @@ pluginDataGet(const Login &login, const std::string &plugin,
 }
 
 Status
-pluginDataSet(const Login &login, const std::string &plugin,
+pluginDataSet(const Account &account, const std::string &plugin,
     const std::string &key, const std::string &data)
 {
-    ABC_CHECK(fileEnsureDir(pluginsDirectory(login)));
-    ABC_CHECK(fileEnsureDir(pluginDirectory(login, plugin)));
+    ABC_CHECK(fileEnsureDir(pluginsDirectory(account)));
+    ABC_CHECK(fileEnsureDir(pluginDirectory(account, plugin)));
 
     PluginDataFile json;
     json.keySet(key.c_str());
     json.dataSet(data.c_str());
-    ABC_CHECK(json.save(keyFilename(login, plugin, key), login.dataKey()));
+    ABC_CHECK(json.save(keyFilename(account, plugin, key), account.login().dataKey()));
 
     return Status();
 }
 
 Status
-pluginDataRemove(const Login &login, const std::string &plugin,
+pluginDataRemove(const Account &account, const std::string &plugin,
     const std::string &key)
 {
-    std::string filename = keyFilename(login, plugin, key);
+    std::string filename = keyFilename(account, plugin, key);
 
     bool exists;
     ABC_CHECK_OLD(ABC_FileIOFileExists(filename.c_str(), &exists, &error));
@@ -90,9 +91,9 @@ pluginDataRemove(const Login &login, const std::string &plugin,
 }
 
 Status
-pluginDataClear(const Login &login, const std::string &plugin)
+pluginDataClear(const Account &account, const std::string &plugin)
 {
-    std::string directory = pluginDirectory(login, plugin);
+    std::string directory = pluginDirectory(account, plugin);
 
     bool exists;
     ABC_CHECK_OLD(ABC_FileIOFileExists(directory.c_str(), &exists, &error));
