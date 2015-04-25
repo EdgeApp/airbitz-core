@@ -63,9 +63,7 @@ private:
 inline U08Buf
 toU08Buf(DataSlice slice)
 {
-    U08Buf out;
-    ABC_BUF_SET_PTR(out, const_cast<uint8_t *>(slice.data()), slice.size());
-    return out;
+    return U08Buf(const_cast<uint8_t *>(slice.data()), slice.size());
 }
 
 /**

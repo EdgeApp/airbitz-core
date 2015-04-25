@@ -21,6 +21,13 @@ namespace abcd {
  */
 struct U08Buf
 {
+    U08Buf():
+        p(nullptr), end(nullptr)
+    {}
+    U08Buf(unsigned char *data, size_t size):
+        p(data), end(data + size)
+    {}
+
     unsigned char *p;
     unsigned char *end;
 };
@@ -40,20 +47,9 @@ struct AutoU08Buf:
     {
         U08BufFree(*this);
     }
-
-    AutoU08Buf()
-    {
-        p = nullptr;
-        end = nullptr;
-    }
 };
 
 #define ABC_BUF_SIZE(x)                     ((unsigned int) (((x).end)-((x).p)))
-#define ABC_BUF_CLEAR(x)                    {  \
-                                                (x).p = NULL;  \
-                                                (x).end = NULL;  \
-                                            }
-#define ABC_BUF_NULL                        { NULL, NULL }
 #define ABC_BUF_NEW(buf, count)             { \
                                                 (buf).p = (unsigned char*)calloc(count, sizeof(*((buf).p))); \
                                                 (buf).end = (buf).p + (sizeof(*((buf).p)) * count); \
@@ -74,14 +70,6 @@ struct AutoU08Buf:
                                                     memcpy((dst).p, (src).p, __abc_buf_dup_size__); \
                                                 } \
                                             }
-#define ABC_BUF_DUP_PTR(buf, ptr, size)     { \
-                                                unsigned long __abc_buf_dup_size__ = (int) size; \
-                                                (buf).p = (unsigned char*)malloc(__abc_buf_dup_size__); \
-                                                (buf).end = (buf).p + __abc_buf_dup_size__; \
-                                                memcpy((buf).p, ptr, __abc_buf_dup_size__); \
-                                            }
-#define ABC_BUF_SET(dst, src)               { (dst).p = (src).p; (dst).end = (src).end; }
-#define ABC_BUF_SET_PTR(buf, ptr, size)     { (buf).p = ptr; (buf).end = ptr + size; }
 #define ABC_CHECK_NULL_BUF(arg)             { ABC_CHECK_ASSERT(ABC_BUF_PTR(arg) != NULL, ABC_CC_NULLPtr, "NULL ABC_Buf pointer"); }
 
 /* example usage

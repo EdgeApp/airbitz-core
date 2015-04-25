@@ -16,8 +16,7 @@ void U08BufFree(U08Buf &self)
         ABC_UtilGuaranteedMemset(self.p, 0, ABC_BUF_SIZE(self));
         free(self.p);
     }
-    self.p = nullptr;
-    self.end = nullptr;
+    self = U08Buf();
 }
 
 } // namespace abcd

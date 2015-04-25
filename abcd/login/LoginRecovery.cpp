@@ -67,7 +67,6 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     std::unique_ptr<Login> login;
     CarePackage carePackage;
     LoginPackage loginPackage;
-    tABC_U08Buf         LP1             = ABC_BUF_NULL; // Do not free
     DataChunk recoveryAuthKey;  // Unlocks the server
     DataChunk recoveryKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
@@ -79,7 +78,7 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(recoveryAuthKey, LRA), pError);
     ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(
-        toU08Buf(lobby->authId()), LP1, toU08Buf(recoveryAuthKey),
+        toU08Buf(lobby->authId()), U08Buf(), toU08Buf(recoveryAuthKey),
         loginPackage, pError));
 
     // Decrypt MK:

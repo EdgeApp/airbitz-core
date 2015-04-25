@@ -553,7 +553,7 @@ tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
     EVP_EncryptFinal_ex(&e_ctx, pTmpEncData + c_len, &f_len);
 
     // set final values
-    ABC_BUF_SET_PTR(*pEncData, pTmpEncData, c_len + f_len);
+    *pEncData = U08Buf(pTmpEncData, c_len + f_len);
 
     EVP_CIPHER_CTX_cleanup(&e_ctx);
 
@@ -623,7 +623,7 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
     EVP_CIPHER_CTX_cleanup(&d_ctx);
 
     // set final values
-    ABC_BUF_SET_PTR(*pData, pTmpData, p_len + f_len);
+    *pData = U08Buf(pTmpData, p_len + f_len);
 
 exit:
     return cc;

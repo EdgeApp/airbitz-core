@@ -165,6 +165,7 @@ tABC_CC ABC_WalletCreate(const Login &login,
     DataChunk dataKey;
     DataChunk syncKey;
     DataChunk bitcoinKey;
+    tABC_AccountWalletInfo info; // Do not free
 
     tWalletData *pData = NULL;
 
@@ -231,7 +232,6 @@ tABC_CC ABC_WalletCreate(const Login &login,
     ABC_CHECK_NEW(LoginServerWalletActivate(L1, LP1, pData->szWalletAcctKey), pError);
 
     // If everything worked, add the wallet to the account:
-    tABC_AccountWalletInfo info; // No need to free this
     info.szUUID = pData->szUUID;
     info.MK = pData->MK;
     info.BitcoinSeed = pData->BitcoinPrivateSeed;
@@ -347,9 +347,9 @@ tABC_CC ABC_WalletSetName(tABC_WalletID self, const char *szName, tABC_Error *pE
     // write the name out to the file
     ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_NAME_FILENAME);
-    tABC_U08Buf Data; // Do not free
-    ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(Data, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(
+        U08Buf((unsigned char *)szJSON, strlen(szJSON) + 1),
+        pData->MK, ABC_CryptoType_AES256, szFilename, pError));
 
 exit:
     ABC_FREE_STR(szFilename);
@@ -383,9 +383,9 @@ tABC_CC ABC_WalletSetCurrencyNum(tABC_WalletID self, int currencyNum, tABC_Error
     // write the name out to the file
     ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH);
     sprintf(szFilename, "%s/%s", pData->szWalletSyncDir, WALLET_CURRENCY_FILENAME);
-    tABC_U08Buf Data; // Do not free
-    ABC_BUF_SET_PTR(Data, (unsigned char *)szJSON, strlen(szJSON) + 1);
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(Data, pData->MK, ABC_CryptoType_AES256, szFilename, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(
+        U08Buf((unsigned char *)szJSON, strlen(szJSON) + 1),
+        pData->MK, ABC_CryptoType_AES256, szFilename, pError));
 
 exit:
     ABC_FREE_STR(szFilename);
@@ -624,11 +624,11 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
 
         // Steal the wallet info into our struct:
         pData->MK = info.MK;
-        info.MK.p = NULL;
+        info.MK = U08Buf();
 
         // Steal the bitcoin seed into our struct:
         pData->BitcoinPrivateSeed = info.BitcoinSeed;
-        info.BitcoinSeed.p = NULL;
+        info.BitcoinSeed = U08Buf();
 
         // Encode the sync key into our struct:
         ABC_STRDUP(pData->szWalletAcctKey, base16Encode(info.SyncKey).c_str());
@@ -996,7 +996,7 @@ tABC_CC ABC_WalletGetMK(tABC_WalletID self, tABC_U08Buf *pMK, tABC_Error *pError
     ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
 
     // assign the address
-    ABC_BUF_SET(*pMK, pData->MK);
+    *pMK = pData->MK;
 
 exit:
     return cc;
@@ -1019,7 +1019,7 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeed(tABC_WalletID self, tABC_U08Buf *pSeed, 
     ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
 
     // assign the address
-    ABC_BUF_SET(*pSeed, pData->BitcoinPrivateSeed);
+    *pSeed = pData->BitcoinPrivateSeed;
 
 exit:
     return cc;

@@ -281,13 +281,11 @@ tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
     tABC_CC cc = ABC_CC_Ok;
 
     std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_CARE_PACKAGE_PATH;
-    tABC_U08Buf LP1_NULL = ABC_BUF_NULL; // Do not free
-    tABC_U08Buf LRA1 = ABC_BUF_NULL; // Do not free
     char *szCarePackage = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
 
-    ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1_NULL, LRA1, url.c_str(), JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(L1, U08Buf(), U08Buf(), url.c_str(), JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
     ABC_CHECK_NEW(result.decode(szCarePackage), pError);
 
 exit:
@@ -723,10 +721,9 @@ exit:
 tABC_CC ABC_LoginServerOtpReset(tABC_U08Buf L1, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_U08Buf LP1 = ABC_BUF_NULL;
     std::string url(ABC_SERVER_ROOT);
     url += "/otp/reset";
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, LP1, NULL, pError));
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, U08Buf(), NULL, pError));
 
 exit:
     return cc;

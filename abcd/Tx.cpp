@@ -323,7 +323,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     AutoCoreLock lock(gCoreMutex);
 
     char *szPrivSeed = NULL;
-    tABC_U08Buf privSeed = ABC_BUF_NULL; // Do not free
+    U08Buf privSeed; // Do not free
     tABC_UnsignedTx *pUtx = NULL;
     AutoStringArray addresses;
     AutoStringArray keys;
@@ -2535,7 +2535,7 @@ tABC_CC ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const cha
     tABC_CC cc = ABC_CC_Ok;
 
     char *szTxDir = NULL;
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     std::string hash;
 
     *pszFilename = NULL;
@@ -2571,7 +2571,7 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     json_t *pJSON_Root = NULL;
     tABC_Tx *pTx = NULL;
     bool bExists = false;
@@ -2820,7 +2820,7 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
     AutoCoreLock lock(gCoreMutex);
     int e;
 
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_OutputArray = NULL;
@@ -3099,7 +3099,7 @@ tABC_CC ABC_TxLoadAddressFile(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     json_t *pJSON_Root = NULL;
     tABC_TxAddress *pAddress = NULL;
     bool bExists = false;
@@ -3252,7 +3252,7 @@ tABC_CC ABC_TxSaveAddress(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
 
@@ -3386,7 +3386,7 @@ tABC_CC ABC_TxCreateAddressFilename(tABC_WalletID self, char **pszFilename, cons
     tABC_CC cc = ABC_CC_Ok;
 
     char *szAddrDir = NULL;
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     std::string hash;
 
     *pszFilename = NULL;

@@ -111,7 +111,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoU08Buf Seed;
+    DataSlice Seed(pSeedData, pSeedData + seedLength);
 
     ABC_CHECK_NULL(szRootDir);
     ABC_CHECK_NULL(pSeedData);
@@ -130,12 +130,10 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
     // initialize Crypto perf checks to determine hashing power
     ABC_CHECK_RET(ABC_InitializeCrypto(pError));
+    ABC_CHECK_RET(ABC_CryptoSetRandomSeed(toU08Buf(Seed), pError));
 
     // initialize sync
     ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
-
-    ABC_BUF_DUP_PTR(Seed, pSeedData, seedLength);
-    ABC_CHECK_RET(ABC_CryptoSetRandomSeed(Seed, pError));
 
     gbInitialized = true;
 
@@ -1184,15 +1182,10 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     std::shared_ptr<Login> login;
-    tABC_U08Buf seedBuf = ABC_BUF_NULL; // Do not free
+    U08Buf seedBuf; // Do not free
 
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    //
-    // ** IMPORTANT **
-    // DO NOT free pSeedBuf
-    // This points to an internal struct in the wallet cache
-    //
     ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
     ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(ABC_WalletID(*login, szUUID), &seedBuf, pError));
     ABC_STRDUP(*pszWalletSeed, base16Encode(seedBuf).c_str());
@@ -2748,8 +2741,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         // Has the password changed?
         tABC_Error error;
         LoginPackage loginPackage;
-        tABC_U08Buf LRA1 = ABC_BUF_NULL; // Do not free
-        cc = ABC_LoginServerGetLoginPackage(L1, LP1, LRA1, loginPackage, &error);
+        cc = ABC_LoginServerGetLoginPackage(L1, LP1, U08Buf(), loginPackage, &error);
 
         if (cc == ABC_CC_InvalidOTP)
         {
