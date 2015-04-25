@@ -124,7 +124,7 @@ tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
     ABC_STRDUP(szAddress, address.encoded().c_str());
 
     // Write out:
-    ABC_BUF_DUP_PTR(*pOut, secret.data(), secret.size());
+    ABC_BUF_DUP(*pOut, U08Buf(secret.data(), secret.size()));
     *pbCompressed = bCompressed;
     *pszAddress = szAddress;
     szAddress = NULL;

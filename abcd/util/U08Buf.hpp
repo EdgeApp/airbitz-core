@@ -21,8 +21,20 @@ namespace abcd {
  */
 struct U08Buf
 {
-    unsigned char *p;
-    unsigned char *end;
+    U08Buf():
+        p_(nullptr), end_(nullptr)
+    {}
+    U08Buf(unsigned char *data, size_t size):
+        p_(data), end_(data + size)
+    {}
+
+    size_t size() const { return end_ - p_; }
+    unsigned char *data() const { return p_; }
+    unsigned char *begin() const { return p_; }
+    unsigned char *end() const { return end_; }
+
+    unsigned char *p_;
+    unsigned char *end_;
 };
 
 /**
@@ -40,55 +52,33 @@ struct AutoU08Buf:
     {
         U08BufFree(*this);
     }
-
-    AutoU08Buf()
-    {
-        p = nullptr;
-        end = nullptr;
-    }
 };
 
-#define ABC_BUF_SIZE(x)                     ((unsigned int) (((x).end)-((x).p)))
-#define ABC_BUF_CLEAR(x)                    {  \
-                                                (x).p = NULL;  \
-                                                (x).end = NULL;  \
-                                            }
-#define ABC_BUF_NULL                        { NULL, NULL }
 #define ABC_BUF_NEW(buf, count)             { \
-                                                (buf).p = (unsigned char*)calloc(count, sizeof(*((buf).p))); \
-                                                (buf).end = (buf).p + (sizeof(*((buf).p)) * count); \
+                                                (buf).p_ = (unsigned char*)calloc(count, 1); \
+                                                (buf).end_ = (buf).p_ + count; \
                                             }
-#define ABC_BUF_PTR(x)                      ((x).p)
 #define ABC_BUF_APPEND_PTR(buf, ptr, count) { \
-                                                unsigned long __abc_buf_append_resize__ = (unsigned long) (((buf).end)-((buf).p)) + (sizeof(*((buf).p)) * count); \
-                                                (buf).p = (unsigned char*)realloc((buf).p, __abc_buf_append_resize__); \
-                                                (buf).end = (buf).p +      __abc_buf_append_resize__; \
-                                                memcpy((buf).end - count, ptr, count); \
+                                                auto total = (buf).size() + count; \
+                                                (buf).p_ = (unsigned char*)realloc((buf).p_, total); \
+                                                (buf).end_ = (buf).p_ + total; \
+                                                memcpy((buf).end_ - count, ptr, count); \
                                             }
 #define ABC_BUF_DUP(dst, src)               { \
-                                                unsigned long __abc_buf_dup_size__ = (int) (((src).end)-((src).p)); \
-                                                if (__abc_buf_dup_size__ > 0) \
+                                                if (0 < (src).size()) \
                                                 { \
-                                                    (dst).p = (unsigned char*)malloc(__abc_buf_dup_size__); \
-                                                    (dst).end = (dst).p + __abc_buf_dup_size__; \
-                                                    memcpy((dst).p, (src).p, __abc_buf_dup_size__); \
+                                                    (dst).p_ = (unsigned char*)malloc((src).size()); \
+                                                    (dst).end_ = (dst).p_ + (src).size(); \
+                                                    memcpy((dst).p_, (src).data(), (src).size()); \
                                                 } \
                                             }
-#define ABC_BUF_DUP_PTR(buf, ptr, size)     { \
-                                                unsigned long __abc_buf_dup_size__ = (int) size; \
-                                                (buf).p = (unsigned char*)malloc(__abc_buf_dup_size__); \
-                                                (buf).end = (buf).p + __abc_buf_dup_size__; \
-                                                memcpy((buf).p, ptr, __abc_buf_dup_size__); \
-                                            }
-#define ABC_BUF_SET(dst, src)               { (dst).p = (src).p; (dst).end = (src).end; }
-#define ABC_BUF_SET_PTR(buf, ptr, size)     { (buf).p = ptr; (buf).end = ptr + size; }
-#define ABC_CHECK_NULL_BUF(arg)             { ABC_CHECK_ASSERT(ABC_BUF_PTR(arg) != NULL, ABC_CC_NULLPtr, "NULL ABC_Buf pointer"); }
+#define ABC_CHECK_NULL_BUF(arg)             { ABC_CHECK_ASSERT(arg.data() != NULL, ABC_CC_NULLPtr, "NULL ABC_Buf pointer"); }
 
 /* example usage
 {
     AutoU08Buf mybuf;                 // declares buf and inits pointers to NULL
     ABC_BUF_NEW(mybuf, 10);           // allocates buffer with 10 elements
-    int count = ABC_BUF_SIZE(myBuf);  // returns the count of elements in the buffer
+    int count = myBuf.size();         // returns the count of elements in the buffer
 }
 */
 

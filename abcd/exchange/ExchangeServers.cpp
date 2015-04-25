@@ -72,31 +72,22 @@ exit:
     return cc;
 }
 
-static
-size_t ABC_ExchangeCurlWriteData(void *pBuffer, size_t memberSize, size_t numMembers, void *pUserData)
+/**
+ * Curl data-storage callback.
+ */
+static size_t
+curlWriteData(void *data, size_t memberSize, size_t numMembers, void *userData)
 {
-    tABC_U08Buf *pCurlBuffer = (tABC_U08Buf *)pUserData;
-    unsigned int dataAvailLength = (unsigned int) numMembers * (unsigned int) memberSize;
-    size_t amountWritten = 0;
+    auto size = numMembers * memberSize;
 
-    if (pCurlBuffer)
-    {
-        // if we don't have any buffer allocated yet
-        if (ABC_BUF_PTR(*pCurlBuffer) == NULL)
-        {
-            ABC_BUF_DUP_PTR(*pCurlBuffer, pBuffer, dataAvailLength);
-        }
-        else
-        {
-            ABC_BUF_APPEND_PTR(*pCurlBuffer, pBuffer, dataAvailLength);
-        }
-        amountWritten = dataAvailLength;
-    }
-    return amountWritten;
+    auto string = static_cast<std::string *>(userData);
+    string->append(static_cast<char *>(data), size);
+
+    return size;
 }
 
 static
-tABC_CC ABC_ExchangeGet(const char *szUrl, tABC_U08Buf *pData, tABC_Error *pError)
+tABC_CC ABC_ExchangeGet(const char *szUrl, std::string &reply, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCurlLock lock(gCurlMutex);
@@ -104,50 +95,27 @@ tABC_CC ABC_ExchangeGet(const char *szUrl, tABC_U08Buf *pData, tABC_Error *pErro
     CURLcode curlCode;
     long resCode;
 
+    ABC_CHECK_NULL(szUrl);
+
     ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_SSL_VERIFYPEER, 1L)) == 0,
         ABC_CC_Error, "Unable to verify servers cert");
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, szUrl)) == 0,
         ABC_CC_Error, "Curl failed to set URL\n");
-    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, pData)) == 0,
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEDATA, &reply)) == 0,
         ABC_CC_Error, "Curl failed to set data\n");
-    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, ABC_ExchangeCurlWriteData)) == 0,
+    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_WRITEFUNCTION, curlWriteData)) == 0,
         ABC_CC_Error, "Curl failed to set callback\n");
     ABC_CHECK_ASSERT((curlCode = curl_easy_perform(pCurlHandle)) == 0,
         ABC_CC_Error, "Curl failed to perform\n");
     ABC_CHECK_ASSERT((curlCode = curl_easy_getinfo(pCurlHandle, CURLINFO_RESPONSE_CODE, &resCode)) == 0,
         ABC_CC_Error, "Curl failed to retrieve response info\n");
     ABC_CHECK_ASSERT(resCode == 200, ABC_CC_Error, "Response code should be 200");
-exit:
 
+exit:
     if (pCurlHandle != NULL)
         curl_easy_cleanup(pCurlHandle);
 
-    return cc;
-}
-
-static
-tABC_CC ABC_ExchangeGetString(const char *szURL, char **pszResults, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoCurlLock lock(gCurlMutex);
-
-    AutoU08Buf Data;
-
-    ABC_CHECK_NULL(szURL);
-    ABC_CHECK_NULL(pszResults);
-
-    // make the request
-    ABC_CHECK_RET(ABC_ExchangeGet(szURL, &Data, pError));
-
-    // add the null
-    ABC_BUF_APPEND_PTR(Data, "", 1);
-
-    // assign the results
-    *pszResults = (char *)ABC_BUF_PTR(Data);
-    ABC_BUF_CLEAR(Data);
-
-exit:
     return cc;
 }
 
@@ -180,13 +148,13 @@ tABC_CC ABC_ExchangeBncCachePrices(tABC_Error *pError)
     json_error_t error;
     json_t *pJSON_Root = NULL, *pJSON_Object, *pJSON_Row, *jsonVal;
     size_t rateCount = 0;
-    AutoString szBncRateCache;
-    AutoString szBncGlobalCache;
+    std::string bncRateReply;
+    std::string bncGlobalReply;
 
     // Fetch rates relative to USD
-    ABC_CHECK_RET(ABC_ExchangeGetString(BNC_GLOBAL_RATE, &szBncRateCache.get(), pError));
+    ABC_CHECK_RET(ABC_ExchangeGet(BNC_GLOBAL_RATE, bncRateReply, pError));
 
-    pJSON_Root = json_loads(szBncRateCache, 0, &error);
+    pJSON_Root = json_loads(bncRateReply.c_str(), 0, &error);
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
 
@@ -211,9 +179,9 @@ tABC_CC ABC_ExchangeBncCachePrices(tABC_Error *pError)
     if (pJSON_Root) json_decref(pJSON_Root);
 
     // Fetch the global price index
-    ABC_CHECK_RET(ABC_ExchangeGetString(BNC_GLOBAL_PRICE, &szBncGlobalCache.get(), pError));
+    ABC_CHECK_RET(ABC_ExchangeGet(BNC_GLOBAL_PRICE, bncGlobalReply, pError));
 
-    pJSON_Root = json_loads(szBncGlobalCache, 0, &error);
+    pJSON_Root = json_loads(bncGlobalReply.c_str(), 0, &error);
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
 
@@ -261,20 +229,19 @@ tABC_CC ABC_ExchangeBitStampRate(int currencyNum, double &rate, tABC_Error *pErr
     tABC_CC cc = ABC_CC_Ok;
     json_error_t error;
     json_t *pJSON_Root = NULL;
-    char *szResponse = NULL;
+    std::string reply;
 
     // Fetch exchanges from bitstamp
-    ABC_CHECK_RET(ABC_ExchangeGetString(BITSTAMP_RATE_URL, &szResponse, pError));
+    ABC_CHECK_RET(ABC_ExchangeGet(BITSTAMP_RATE_URL, reply, pError));
 
     // Parse the json
-    pJSON_Root = json_loads(szResponse, 0, &error);
+    pJSON_Root = json_loads(reply.c_str(), 0, &error);
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
 
     // USD
     ABC_ExchangeExtract(pJSON_Root, "last", CURRENCY_NUM_USD, rate, pError);
 exit:
-    ABC_FREE_STR(szResponse);
     if (pJSON_Root) json_decref(pJSON_Root);
     return cc;
 }
@@ -284,21 +251,20 @@ tABC_CC ABC_ExchangeCoinBaseRates(int currencyNum, double &rate, tABC_Error *pEr
     tABC_CC cc = ABC_CC_Ok;
     json_error_t error;
     json_t *pJSON_Root = NULL;
-    char *szResponse = NULL;
+    std::string reply;
     std::string field;
 
     // Fetch exchanges from coinbase
-    ABC_CHECK_RET(ABC_ExchangeGetString(COINBASE_RATE_URL, &szResponse, pError));
+    ABC_CHECK_RET(ABC_ExchangeGet(COINBASE_RATE_URL, reply, pError));
 
     // Parse the json
-    pJSON_Root = json_loads(szResponse, 0, &error);
+    pJSON_Root = json_loads(reply.c_str(), 0, &error);
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
 
     ABC_CHECK_RET(ABC_ExchangeCoinBaseMap(currencyNum, field, pError));
     ABC_ExchangeExtract(pJSON_Root, field.c_str(), currencyNum, rate, pError);
 exit:
-    ABC_FREE_STR(szResponse);
     if (pJSON_Root) json_decref(pJSON_Root);
 
     return cc;

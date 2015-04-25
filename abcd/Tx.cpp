@@ -207,7 +207,7 @@ ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    libbitcoin::data_chunk seed(PrivateSeed.p, PrivateSeed.end);
+    libbitcoin::data_chunk seed(PrivateSeed.begin(), PrivateSeed.end());
     libwallet::hd_private_key m(seed);
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);
@@ -234,7 +234,7 @@ ABC_BridgeGetBitcoinPrivAddress(char **pszPrivAddress,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    libbitcoin::data_chunk seed(PrivateSeed.p, PrivateSeed.end);
+    libbitcoin::data_chunk seed(PrivateSeed.begin(), PrivateSeed.end());
     libwallet::hd_private_key m(seed);
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);
@@ -323,7 +323,7 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
     AutoCoreLock lock(gCoreMutex);
 
     char *szPrivSeed = NULL;
-    tABC_U08Buf privSeed = ABC_BUF_NULL; // Do not free
+    U08Buf privSeed; // Do not free
     tABC_UnsignedTx *pUtx = NULL;
     AutoStringArray addresses;
     AutoStringArray keys;
@@ -2421,28 +2421,19 @@ tABC_CC ABC_TxBuildFromLabel(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_AccountSettings *pSettings = NULL;
-    AutoU08Buf Label;
+    AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
 
     ABC_CHECK_NULL(pszLabel);
     *pszLabel = NULL;
 
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(*self.login, &pSettings, pError));
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(*self.login, &pSettings.get(), pError));
 
     if (pSettings->bNameOnPayments && pSettings->szFullName)
     {
-        ABC_BUF_DUP_PTR(Label, pSettings->szFullName, strlen(pSettings->szFullName));
+        ABC_STRDUP(*pszLabel, pSettings->szFullName);
     }
 
-    if (ABC_BUF_PTR(Label) != NULL)
-    {
-        // Append null byte
-        ABC_BUF_APPEND_PTR(Label, "", 1);
-        *pszLabel = (char *) ABC_BUF_PTR(Label);
-        ABC_BUF_CLEAR(Label);
-    }
 exit:
-    ABC_FreeAccountSettings(pSettings);
     return cc;
 }
 
@@ -2544,7 +2535,7 @@ tABC_CC ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const cha
     tABC_CC cc = ABC_CC_Ok;
 
     char *szTxDir = NULL;
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     std::string hash;
 
     *pszFilename = NULL;
@@ -2580,7 +2571,7 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     json_t *pJSON_Root = NULL;
     tABC_Tx *pTx = NULL;
     bool bExists = false;
@@ -2829,7 +2820,7 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
     AutoCoreLock lock(gCoreMutex);
     int e;
 
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_OutputArray = NULL;
@@ -3108,7 +3099,7 @@ tABC_CC ABC_TxLoadAddressFile(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     json_t *pJSON_Root = NULL;
     tABC_TxAddress *pAddress = NULL;
     bool bExists = false;
@@ -3261,7 +3252,7 @@ tABC_CC ABC_TxSaveAddress(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
 
@@ -3395,7 +3386,7 @@ tABC_CC ABC_TxCreateAddressFilename(tABC_WalletID self, char **pszFilename, cons
     tABC_CC cc = ABC_CC_Ok;
 
     char *szAddrDir = NULL;
-    tABC_U08Buf MK = ABC_BUF_NULL; // Do not free
+    U08Buf MK; // Do not free
     std::string hash;
 
     *pszFilename = NULL;

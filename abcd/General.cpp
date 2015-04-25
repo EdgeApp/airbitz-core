@@ -274,7 +274,6 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     json_t  *pJSON_Root     = NULL;
-    char    *szURL          = NULL;
     char    *szResults      = NULL;
     char    *szInfoFilename = NULL;
     char    *szJSON         = NULL;
@@ -307,12 +306,10 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     // if we need to update
     if (bUpdateRequired)
     {
-        // create the URL
-        ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
-        sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_INFO_PATH);
+        std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_INFO_PATH;
 
         // send the command
-        ABC_CHECK_RET(ABC_URLPostString(szURL, "", &szResults, pError));
+        ABC_CHECK_RET(ABC_URLPostString(url.c_str(), "", &szResults, pError));
         ABC_DebugLog("Server results: %s", szResults);
 
         // decode the result
@@ -349,7 +346,6 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
 exit:
 
     if (pJSON_Root)     json_decref(pJSON_Root);
-    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szInfoFilename);
     ABC_FREE_STR(szJSON);
@@ -527,20 +523,17 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_QUESTIONS_PATH;
     json_t  *pJSON_Root     = NULL;
-    char    *szURL          = NULL;
     char    *szResults      = NULL;
     json_t  *pJSON_Value    = NULL;
     json_error_t error;
     int statusCode = 0;
 
     ABC_CHECK_NULL(ppJSON_Q);
-    // create the URL
-    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_QUESTIONS_PATH);
 
     // send the command
-    ABC_CHECK_RET(ABC_URLPostString(szURL, "", &szResults, pError));
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), "", &szResults, pError));
     ABC_DebugLog("Server results: %s", szResults);
 
     // decode the result
@@ -578,7 +571,6 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
 
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
-    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
 
     return cc;

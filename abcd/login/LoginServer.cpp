@@ -88,7 +88,7 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szURL     = NULL;
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_ACCOUNT_CREATE_PATH;
     char *szResults = NULL;
     char *szPost    = NULL;
     std::string carePackageStr;
@@ -97,10 +97,6 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
 
     ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL_BUF(LP1);
-
-    // create the URL
-    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_ACCOUNT_CREATE_PATH);
 
     ABC_CHECK_NEW(carePackage.encode(carePackageStr), pError);
     ABC_CHECK_NEW(loginPackage.encode(loginPackageStr), pError);
@@ -113,16 +109,15 @@ tABC_CC ABC_LoginServerCreate(tABC_U08Buf L1,
         ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackageStr.c_str(),
         ABC_SERVER_JSON_REPO_FIELD, szRepoAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
-    ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
+    ABC_DebugLog("Server URL: %s, Data: %.50s", url.c_str(), szPost);
 
     // send the command
-    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), szPost, &szResults, pError));
     ABC_DebugLog("Server results: %.50s", szResults);
 
     // decode the result
     ABC_CHECK_RET(checkResults(szResults, NULL, pError));
 exit:
-    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -143,17 +138,13 @@ tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1,
 
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szURL     = NULL;
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_ACCOUNT_ACTIVATE;
     char *szResults = NULL;
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL_BUF(LP1);
-
-    // create the URL
-    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_ACCOUNT_ACTIVATE);
 
     // create the post data
     pJSON_Root = json_pack("{ssss}",
@@ -162,16 +153,15 @@ tABC_CC ABC_LoginServerActivate(tABC_U08Buf L1,
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
-    ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
+    ABC_DebugLog("Server URL: %s, Data: %.50s", url.c_str(), szPost);
 
     // send the command
-    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), szPost, &szResults, pError));
     ABC_DebugLog("Server results: %.50s", szResults);
 
     // decode the result
     ABC_CHECK_RET(checkResults(szResults, NULL, pError));
 exit:
-    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -233,7 +223,7 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szURL     = NULL;
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_CHANGE_PASSWORD_PATH;
     char *szResults = NULL;
     char *szPost    = NULL;
     std::string carePackageStr;
@@ -245,10 +235,6 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL_BUF(oldLP1);
     ABC_CHECK_NULL_BUF(newLP1);
-
-    // create the URL
-    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_CHANGE_PASSWORD_PATH);
 
     ABC_CHECK_NEW(carePackage.encode(carePackageStr), pError);
     ABC_CHECK_NEW(loginPackage.encode(loginPackageStr), pError);
@@ -263,7 +249,7 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
     ABC_CHECK_NULL(pJSON_Root);
 
     // set up the recovery, if any:
-    if (ABC_BUF_SIZE(newLRA1))
+    if (newLRA1.size())
     {
         pJSON_NewLRA1 = json_string(base64Encode(newLRA1).c_str());
         json_object_set(pJSON_Root, ABC_SERVER_JSON_NEW_LRA1_FIELD, pJSON_NewLRA1);
@@ -271,15 +257,14 @@ tABC_CC ABC_LoginServerChangePassword(tABC_U08Buf L1,
 
     // create the post data
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
-    ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
+    ABC_DebugLog("Server URL: %s, Data: %.50s", url.c_str(), szPost);
 
     // send the command
-    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), szPost, &szResults, pError));
     ABC_DebugLog("Server results: %.50s", szResults);
 
     ABC_CHECK_RET(checkResults(szResults, NULL, pError));
 exit:
-    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
     if (pJSON_OldLRA1)  json_decref(pJSON_OldLRA1);
@@ -294,22 +279,16 @@ tABC_CC ABC_LoginServerGetCarePackage(tABC_U08Buf L1,
                                       tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    char *szURL = NULL;
-    tABC_U08Buf LP1_NULL = ABC_BUF_NULL; // Do not free
-    tABC_U08Buf LRA1 = ABC_BUF_NULL; // Do not free
+
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_CARE_PACKAGE_PATH;
     char *szCarePackage = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
 
-    // create the URL
-    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_GET_CARE_PACKAGE_PATH);
-
-    ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1_NULL, LRA1, szURL, JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(L1, U08Buf(), U08Buf(), url.c_str(), JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
     ABC_CHECK_NEW(result.decode(szCarePackage), pError);
 
 exit:
-    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szCarePackage);
 
     return cc;
@@ -322,19 +301,16 @@ tABC_CC ABC_LoginServerGetLoginPackage(tABC_U08Buf L1,
                                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    char *szURL = NULL;
+
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_LOGIN_PACK_GET_PATH;
     char *szLoginPackage = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
 
-    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_LOGIN_PACK_GET_PATH);
-
-    ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1, LRA1, szURL, JSON_ACCT_LOGIN_PACKAGE, &szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(L1, LP1, LRA1, url.c_str(), JSON_ACCT_LOGIN_PACKAGE, &szLoginPackage, pError));
     ABC_CHECK_NEW(result.decode(szLoginPackage), pError);
 
 exit:
-    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szLoginPackage);
 
     return cc;
@@ -357,14 +333,14 @@ tABC_CC ABC_LoginServerGetString(tABC_U08Buf L1, tABC_U08Buf LP1, tABC_U08Buf LR
     ABC_CHECK_NULL_BUF(L1);
 
     // create the post data with or without LP1
-    if (ABC_BUF_PTR(LP1) == NULL && ABC_BUF_PTR(LRA1) == NULL)
+    if (LP1.data() == NULL && LRA1.data() == NULL)
     {
         pJSON_Root = json_pack("{ss}",
             ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str());
     }
     else
     {
-        if (ABC_BUF_PTR(LP1) == NULL)
+        if (LP1.data() == NULL)
         {
             pJSON_Root = json_pack("{ssss}",
                 ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str(),
@@ -417,18 +393,15 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_PIN_PACK_GET_PATH;
     json_t  *pJSON_Value    = NULL;
     json_t  *pJSON_Root     = NULL;
-    char    *szURL          = NULL;
 
     char    *szPost         = NULL;
     char    *szResults      = NULL;
 
     ABC_CHECK_NULL_BUF(DID);
     ABC_CHECK_NULL_BUF(LPIN1);
-
-    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_PIN_PACK_GET_PATH);
 
     pJSON_Root = json_pack("{ss, ss}",
         ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
@@ -437,10 +410,10 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
-    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+    ABC_DebugLog("Server URL: %s, Data: %s", url.c_str(), szPost);
 
     // send the command
-    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), szPost, &szResults, pError));
     ABC_DebugLog("Server results: %s", szResults);
 
     // Check the result
@@ -458,7 +431,6 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     ABC_STRDUP(*szPinPackage, json_string_value(pJSON_Value));
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
-    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szPost);
     ABC_FREE_STR(szResults);
 
@@ -485,7 +457,7 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szURL          = NULL;
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_PIN_PACK_UPDATE_PATH;
     char *szResults      = NULL;
     char *szPost         = NULL;
     json_t *pJSON_Root   = NULL;
@@ -495,10 +467,6 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
     ABC_CHECK_NULL_BUF(LP1);
     ABC_CHECK_NULL_BUF(DID);
     ABC_CHECK_NULL_BUF(LPIN1);
-
-    // create the URL
-    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_PIN_PACK_UPDATE_PATH);
 
     // format the ali
     strftime(szALI, DATETIME_LENGTH, "%Y-%m-%dT%H:%M:%S", gmtime(&ali));
@@ -515,15 +483,14 @@ tABC_CC ABC_LoginServerUpdatePinPackage(tABC_U08Buf L1,
 
     // create the post data
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
-    ABC_DebugLog("Server URL: %s, Data: %.50s", szURL, szPost);
+    ABC_DebugLog("Server URL: %s, Data: %.50s", url.c_str(), szPost);
 
     // send the command
-    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), szPost, &szResults, pError));
     ABC_DebugLog("Server results: %.50s", szResults);
 
     ABC_CHECK_RET(checkResults(szResults, NULL, pError));
 exit:
-    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -556,17 +523,13 @@ tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szURL     = NULL;
+    std::string url = ABC_SERVER_ROOT "/" + std::string(szPath);
     char *szResults = NULL;
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL_BUF(L1);
     ABC_CHECK_NULL_BUF(LP1);
-
-    // create the URL
-    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, szPath);
 
     // create the post data
     pJSON_Root = json_pack("{ssssss}",
@@ -576,15 +539,14 @@ tABC_CC ABC_WalletServerRepoPost(tABC_U08Buf L1,
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
     json_decref(pJSON_Root);
     pJSON_Root = NULL;
-    ABC_DebugLog("Server URL: %s, Data: %s", szURL, szPost);
+    ABC_DebugLog("Server URL: %s, Data: %s", url.c_str(), szPost);
 
     // send the command
-    ABC_CHECK_RET(ABC_URLPostString(szURL, szPost, &szResults, pError));
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), szPost, &szResults, pError));
     ABC_DebugLog("Server results: %s", szResults);
 
     ABC_CHECK_RET(checkResults(szResults, NULL, pError));
 exit:
-    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szPost);
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -666,7 +628,7 @@ tABC_CC ABC_LoginServerOtpRequest(const char *szUrl,
     pJSON_Root = json_pack("{ss}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(L1).c_str());
     // If there is a LP1 provided
-    if (ABC_BUF_PTR(LP1))
+    if (LP1.data())
     {
         json_object_set_new(pJSON_Root, ABC_SERVER_JSON_LP1_FIELD,
             json_string(base64Encode(LP1).c_str()));
@@ -759,10 +721,9 @@ exit:
 tABC_CC ABC_LoginServerOtpReset(tABC_U08Buf L1, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_U08Buf LP1 = ABC_BUF_NULL;
     std::string url(ABC_SERVER_ROOT);
     url += "/otp/reset";
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, LP1, NULL, pError));
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), L1, U08Buf(), NULL, pError));
 
 exit:
     return cc;
@@ -878,9 +839,9 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_DEBUG_PATH;
     char *szPost          = NULL;
     char *szResults       = NULL;
-    char *szURL           = NULL;
     char *szLogFilename   = NULL;
     char *szWatchFilename = NULL;
     json_t *pJSON_Root    = NULL;
@@ -888,10 +849,6 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
     DataChunk watchData;
     AutoStringArray uuids;
     json_t *pJSON_array = NULL;
-
-    // create the URL
-    ABC_STR_NEW(szURL, ABC_URL_MAX_PATH_LENGTH);
-    sprintf(szURL, "%s/%s", ABC_SERVER_ROOT, ABC_SERVER_DEBUG_PATH);
 
     ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
     ABC_CHECK_NEW(fileLoad(logData, szLogFilename), pError);
@@ -918,13 +875,12 @@ tABC_CC ABC_LoginServerUploadLogs(tABC_U08Buf L1,
 
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
-    ABC_CHECK_RET(ABC_URLPostString(
-        szURL, szPost, &szResults, pError));
+    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), szPost, &szResults, pError));
     ABC_DebugLog("%s\n", szResults);
+
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
     if (pJSON_array) json_decref(pJSON_array);
-    ABC_FREE_STR(szURL);
     ABC_FREE_STR(szPost);
     ABC_FREE_STR(szResults);
     ABC_FREE_STR(szLogFilename);

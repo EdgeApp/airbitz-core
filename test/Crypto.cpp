@@ -46,7 +46,7 @@ TEST_CASE("Decryption", "[crypto][encryption]")
     abcd::AutoU08Buf data;
     CHECK(ABC_CC_Ok == ABC_CryptoDecryptJSONObject(
         package.get(), abcd::toU08Buf(key), &data, &error));
-    CHECK(abcd::toString(abcd::U08Buf(data)) == "payload");
+    CHECK(abcd::toString(data) == "payload");
 }
 
 TEST_CASE("Encryption round-trip", "[crypto][encryption]")
@@ -64,7 +64,7 @@ TEST_CASE("Encryption round-trip", "[crypto][encryption]")
     abcd::AutoU08Buf data;
     CHECK(ABC_CC_Ok == ABC_CryptoDecryptJSONObject(
         json, abcd::toU08Buf(key), &data, &error));
-    CHECK(abcd::toString(abcd::U08Buf(data)) == payload);
+    CHECK(abcd::toString(data) == payload);
 
     if (json)
         json_decref(json);

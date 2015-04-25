@@ -67,7 +67,6 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     std::unique_ptr<Login> login;
     CarePackage carePackage;
     LoginPackage loginPackage;
-    tABC_U08Buf         LP1             = ABC_BUF_NULL; // Do not free
     DataChunk recoveryAuthKey;  // Unlocks the server
     DataChunk recoveryKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
@@ -79,7 +78,7 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(recoveryAuthKey, LRA), pError);
     ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(
-        toU08Buf(lobby->authId()), LP1, toU08Buf(recoveryAuthKey),
+        toU08Buf(lobby->authId()), U08Buf(), toU08Buf(recoveryAuthKey),
         loginPackage, pError));
 
     // Decrypt MK:
@@ -114,7 +113,6 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     LoginPackage loginPackage;
     AutoU08Buf oldL1;
     AutoU08Buf oldLP1;
-    AutoU08Buf RQ;
     DataChunk questionKey;      // Unlocks questions
     DataChunk recoveryAuthKey;  // Unlocks the server
     DataChunk recoveryKey;      // Unlocks dataKey
@@ -138,8 +136,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_NEW(carePackage.snrp4().hash(questionKey, login.lobby().username()), pError);
 
     // Update ERQ:
-    ABC_BUF_DUP_PTR(RQ, (unsigned char *)szRecoveryQuestions, strlen(szRecoveryQuestions) + 1);
-    ABC_CHECK_NEW(box.encrypt(U08Buf(RQ), questionKey), pError);
+    ABC_CHECK_NEW(box.encrypt(std::string(szRecoveryQuestions), questionKey), pError);
     ABC_CHECK_NEW(carePackage.questionBoxSet(box), pError);
 
     // Update EMK_LRA3:

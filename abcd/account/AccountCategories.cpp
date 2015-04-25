@@ -46,7 +46,7 @@ tABC_CC ABC_AccountCategoriesLoad(const Login &login,
     {
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(filename.c_str(),
             toU08Buf(login.dataKey()), &data, pError));
-        ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)data.p, JSON_ACCT_CATEGORIES_FIELD, paszCategories, pCount, pError));
+        ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)data.data(), JSON_ACCT_CATEGORIES_FIELD, paszCategories, pCount, pError));
     }
 
 exit:

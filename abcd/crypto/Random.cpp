@@ -82,7 +82,7 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     // TODO: add more random seed data here
 
     // seed it
-    RAND_seed(ABC_BUF_PTR(NewSeed), ABC_BUF_SIZE(NewSeed));
+    RAND_seed(NewSeed.data(), NewSeed.size());
 
 exit:
     ABC_FREE_STR(szFileIORootDir);
