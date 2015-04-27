@@ -6,43 +6,109 @@
  */
 
 #include "ExchangeCache.hpp"
-#include "../util/Util.hpp"
-#include <map>
-#include <mutex>
+#include "../json/JsonArray.hpp"
+#include "../json/JsonObject.hpp"
 
 namespace abcd {
 
-struct ExchangeCache
+#define FILENAME "Exchange.json"
+
+struct CacheJson:
+    public JsonObject
 {
-    double rate;
-    time_t lastUpdate;
+    ABC_JSON_VALUE(rates, "rates", JsonArray)
 };
-std::map<int, ExchangeCache> gExchangeCache;
-std::mutex gExchangeMutex;
 
-bool
-exchangeCacheGet(int currencyNum, double &rate, time_t &lastUpdate)
+struct CacheJsonRow:
+    public JsonObject
 {
-    std::lock_guard<std::mutex> lock(gExchangeMutex);
+    ABC_JSON_CONSTRUCTORS(CacheJsonRow, JsonObject)
+    ABC_JSON_STRING(code, "code", nullptr)
+    ABC_JSON_NUMBER(rate, "rate", 1)
+    ABC_JSON_INTEGER(timestamp, "timestamp", 0)
+};
 
-    auto i = gExchangeCache.find(currencyNum);
-    if (i != gExchangeCache.end())
+ExchangeCache::ExchangeCache(const std::string &dir):
+    dir_(dir)
+{}
+
+Status
+ExchangeCache::load()
+{
+    CacheJson json;
+    ABC_CHECK(json.load(dir_ + FILENAME));
+    auto rates = json.rates();
+
+    auto size = rates.size();
+    for (size_t i = 0; i < size; i++)
     {
-        rate = i->second.rate;
-        lastUpdate = i->second.lastUpdate;
-        return true;
+        CacheJsonRow row(rates[i]);
+        ABC_CHECK(row.codeOk());
+        ABC_CHECK(row.rateOk());
+        ABC_CHECK(row.timestampOk());
+
+        Currency currency;
+        ABC_CHECK(currencyNumber(currency, row.code()));
+        cache_[currency] =
+            CacheRow{row.rate(), static_cast<time_t>(row.timestamp())};
     }
-    return false;
+
+    return Status();
 }
 
 Status
-exchangeCacheSet(int currencyNum, double rate)
+ExchangeCache::save()
 {
-    std::lock_guard<std::mutex> lock(gExchangeMutex);
+    JsonArray rates;
+    for (const auto &i: cache_)
+    {
+        std::string code;
+        ABC_CHECK(currencyCode(code, i.first));
 
-    gExchangeCache[currencyNum] = ExchangeCache{rate, time(nullptr)};
+        CacheJsonRow row;
+        ABC_CHECK(row.codeSet(code.c_str()));
+        ABC_CHECK(row.rateSet(i.second.rate));
+        ABC_CHECK(row.timestampSet(i.second.timestamp));
+        ABC_CHECK(rates.append(row));
+    }
+
+    CacheJson json;
+    ABC_CHECK(json.ratesSet(rates));
+    ABC_CHECK(json.save(dir_ + FILENAME));
 
     return Status();
+}
+
+Status
+ExchangeCache::rate(double &result, Currency currency)
+{
+    const auto &i = cache_.find(currency);
+    if (cache_.end() == i)
+        return ABC_ERROR(ABC_CC_Error, "Currency not in cache");
+
+    result = i->second.rate;
+    return Status();
+}
+
+Status
+ExchangeCache::update(Currency currency, double rate, time_t now)
+{
+    cache_[currency] = CacheRow{rate, now};
+    return Status();
+}
+
+bool
+ExchangeCache::fresh(const Currencies &currencies, time_t now)
+{
+    for (auto currency: currencies)
+    {
+        auto i = cache_.find(currency);
+        if (cache_.end() == i)
+            return false;
+        if (i->second.timestamp + ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS < now)
+            return false;
+    }
+    return true;
 }
 
 } // namespace abcd

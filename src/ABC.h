@@ -456,36 +456,6 @@ typedef struct sABC_RequestInfo
 } tABC_RequestInfo;
 
 /**
- * AirBitz Exchange Rate Source
- *
- * This structure contains the exchange rate
- * source to use for a currencies.
- *
- */
-typedef struct sABC_ExchangeRateSource
-{
-    /** ISO 4217 currency code */
-    int                         currencyNum;
-    /** exchange rate source */
-    char                        *szSource;
-} tABC_ExchangeRateSource;
-
-/**
- * AirBitz Exchange Rate Sources
- *
- * This structure contains the exchange rate
- * sources to use for different currencies.
- *
- */
-typedef struct sABC_ExchangeRateSources
-{
-    /** number of sources */
-    unsigned int numSources;
-    /** array of exchange rate sources */
-    tABC_ExchangeRateSource **aSources;
-} tABC_ExchangeRateSources;
-
-/**
  * AirBitz Bitcoin Denomination
  *
  * This structure contains the method for
@@ -527,8 +497,8 @@ typedef struct sABC_AccountSettings
     char                        *szLanguage;
     /** default ISO 4217 currency code */
     int                         currencyNum;
-    /** bitcoin exchange rate sources */
-    tABC_ExchangeRateSources    exchangeRateSources;
+    /** bitcoin exchange rate source */
+    char                        *szExchangeRateSource;
     /** how to display bitcoin denomination */
     tABC_BitcoinDenomination    bitcoinDenomination;
     /** use advanced features (e.g., allow offline wallet creation) */
@@ -597,7 +567,7 @@ tABC_CC ABC_GeneralInfoUpdate(tABC_Error *pError);
 
 tABC_CC ABC_GetCurrencies(tABC_Currency **paCurrencyArray,
                           int *pCount,
-                         tABC_Error *pError);
+                          tABC_Error *pError);
 
 tABC_CC ABC_GetQuestionChoices(tABC_QuestionChoices **pOut,
                                tABC_Error *pError);
