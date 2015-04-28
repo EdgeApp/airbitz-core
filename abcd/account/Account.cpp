@@ -11,6 +11,7 @@
 #include "../login/Login.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Mutex.hpp"
+#include "../util/Sync.hpp"
 #include "../util/Util.hpp"
 
 namespace abcd {
@@ -34,6 +35,13 @@ Account::Account(std::shared_ptr<Login> login):
     login_(login),
     dir_(login->syncDir())
 {}
+
+Status
+Account::sync(bool &dirty)
+{
+    ABC_CHECK_OLD(ABC_SyncRepo(dir().c_str(), login().syncKey().c_str(), dirty, &error));
+    return Status();
+}
 
 /**
  * Releases the members of a tABC_AccountWalletInfo structure. Unlike most

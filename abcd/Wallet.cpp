@@ -146,7 +146,7 @@ void ABC_WalletIDFree(tABC_WalletID in)
  *
  * @param pszUUID Pointer to hold allocated pointer to UUID string
  */
-tABC_CC ABC_WalletCreate(const Login &login,
+tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
                          const char *szWalletName,
                          int  currencyNum,
                          char                  **pszUUID,
@@ -166,11 +166,12 @@ tABC_CC ABC_WalletCreate(const Login &login,
     bool dirty = false;
     AutoU08Buf LP1;
     tABC_AccountWalletInfo info; // Do not free
+    tABC_WalletID wallet;
 
     tWalletData *pData = NULL;
 
     ABC_CHECK_NULL(pszUUID);
-    ABC_CHECK_RET(ABC_LoginGetServerKey(login, &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKey(account->login(), &LP1, pError));
 
     // create a new wallet data struct
     ABC_NEW(pData, tWalletData);
@@ -180,6 +181,7 @@ tABC_CC ABC_WalletCreate(const Login &login,
     ABC_CHECK_NEW(randomUuid(uuid), pError);
     ABC_STRDUP(pData->szUUID, uuid.c_str());
     ABC_STRDUP(*pszUUID, uuid.c_str());
+    wallet = ABC_WalletID(account->login(), pData->szUUID);
 
     // generate the master key for this wallet - MK_<Wallet_GUID1>
     ABC_CHECK_NEW(randomData(dataKey, WALLET_KEY_LENGTH), pError);
@@ -210,17 +212,17 @@ tABC_CC ABC_WalletCreate(const Login &login,
 
     // all the functions below assume the wallet is in the cache or can be loaded into the cache
     // set the wallet name
-    ABC_CHECK_RET(ABC_WalletSetName(ABC_WalletID(login, pData->szUUID), szWalletName, pError));
+    ABC_CHECK_RET(ABC_WalletSetName(wallet, szWalletName, pError));
 
     // set the currency
-    ABC_CHECK_RET(ABC_WalletSetCurrencyNum(ABC_WalletID(login, pData->szUUID), currencyNum, pError));
+    ABC_CHECK_RET(ABC_WalletSetCurrencyNum(wallet, currencyNum, pError));
 
     // Request remote wallet repo
-    ABC_CHECK_NEW(LoginServerWalletCreate(login.lobby(), LP1, pData->szWalletAcctKey), pError);
+    ABC_CHECK_NEW(LoginServerWalletCreate(account->login().lobby(), LP1, pData->szWalletAcctKey), pError);
 
     // set this account for the wallet's first account
-    ABC_CHECK_RET(ABC_WalletAddAccount(ABC_WalletID(login, pData->szUUID),
-        login.lobby().username().c_str(), pError));
+    ABC_CHECK_RET(ABC_WalletAddAccount(wallet,
+        account->login().lobby().username().c_str(), pError));
 
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
@@ -229,7 +231,7 @@ tABC_CC ABC_WalletCreate(const Login &login,
     ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, dirty, pError));
 
     // Actiate the remote wallet
-    ABC_CHECK_NEW(LoginServerWalletActivate(login.lobby(), LP1, pData->szWalletAcctKey), pError);
+    ABC_CHECK_NEW(LoginServerWalletActivate(account->login().lobby(), LP1, pData->szWalletAcctKey), pError);
 
     // If everything worked, add the wallet to the account:
     info.szUUID = pData->szUUID;
@@ -237,15 +239,14 @@ tABC_CC ABC_WalletCreate(const Login &login,
     info.BitcoinSeed = pData->BitcoinPrivateSeed;
     info.SyncKey = toU08Buf(syncKey);
     info.archived = 0;
-    ABC_CHECK_RET(ABC_AccountWalletList(login, NULL, &info.sortIndex, pError));
-    ABC_CHECK_RET(ABC_AccountWalletSave(login, &info, pError));
+    ABC_CHECK_RET(ABC_AccountWalletList(account->login(), NULL, &info.sortIndex, pError));
+    ABC_CHECK_RET(ABC_AccountWalletSave(account->login(), &info, pError));
 
     // Now the wallet is written to disk, generate some addresses
-    ABC_CHECK_RET(ABC_TxCreateInitialAddresses(ABC_WalletID(login, pData->szUUID), pError));
+    ABC_CHECK_RET(ABC_TxCreateInitialAddresses(wallet, pError));
 
-    // After wallet is created, sync the account, ignoring any errors
-    tABC_Error Error;
-    ABC_CHECK_RET(ABC_SyncRepo(login.syncDir().c_str(), login.syncKey().c_str(), dirty, &Error));
+    // After wallet is created, sync the account:
+    ABC_CHECK_NEW(account->sync(dirty), pError);
 
     pData = NULL; // so we don't free what we just added to the cache
 exit:

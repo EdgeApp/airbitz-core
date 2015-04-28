@@ -37,7 +37,7 @@
 #define ABC_Account_h
 
 #include "../util/Data.hpp"
-#include "../../src/ABC.h"
+#include "../util/Status.hpp"
 #include <memory>
 
 namespace abcd {
@@ -54,6 +54,13 @@ public:
 
     const Login &login() const { return *login_; }
     const std::string &dir() const { return dir_; }
+
+    /**
+     * Syncs the account with the file server.
+     * This is a blocking network operation.
+     */
+    Status
+    sync(bool &dirty);
 
 private:
     const std::shared_ptr<Login> login_;

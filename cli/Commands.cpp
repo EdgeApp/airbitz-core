@@ -154,12 +154,12 @@ COMMAND(InitLevel::account, CreateWallet, "create-wallet")
     return Status();
 }
 
-COMMAND(InitLevel::login, DataSync, "data-sync")
+COMMAND(InitLevel::account, DataSync, "data-sync")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... data-sync <user> <pass>");
 
-    ABC_CHECK(syncAll(*session.login));
+    ABC_CHECK(syncAll(*session.account));
 
     return Status();
 }
@@ -306,7 +306,7 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
         return ABC_ERROR(ABC_CC_Error, "usage: ... list-wallets <user> <pass>");
 
     // Setup:
-    ABC_CHECK(syncAll(*session.login));
+    ABC_CHECK(syncAll(*session.account));
 
     // Iterate over wallets:
     AutoStringArray uuids;

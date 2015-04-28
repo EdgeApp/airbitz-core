@@ -568,16 +568,16 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::shared_ptr<Login> login;
-
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(szWalletName);
     ABC_CHECK_ASSERT(strlen(szWalletName) > 0, ABC_CC_Error, "No wallet name provided");
 
-    // get account keys:
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_WalletCreate(*login, szWalletName,
-        currencyNum, pszUuid, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+
+        ABC_CHECK_RET(ABC_WalletCreate(account, szWalletName, currencyNum, pszUuid, pError));
+    }
 
 exit:
     return cc;
@@ -2666,12 +2666,12 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
 
         // Sync the account data:
         bool dirty = false;
-        ABC_CHECK_RET(ABC_SyncRepo(login->syncDir().c_str(), login->syncKey().c_str(), dirty, pError));
+        ABC_CHECK_NEW(account->sync(dirty), pError);
         if (dirty && fAsyncBitCoinEventCallback)
         {
             // Try to clear the wallet cache in case the Wallets list changed
@@ -2687,12 +2687,12 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
 
         // Get the server keys:
         AutoU08Buf LP1;
-        ABC_CHECK_RET(ABC_LoginGetServerKey(*login, &LP1, pError));
+        ABC_CHECK_RET(ABC_LoginGetServerKey(account->login(), &LP1, pError));
 
         // Has the password changed?
         tABC_Error error;
         LoginPackage loginPackage;
-        cc = ABC_LoginServerGetLoginPackage(login->lobby(), LP1, U08Buf(), loginPackage, &error);
+        cc = ABC_LoginServerGetLoginPackage(account->login().lobby(), LP1, U08Buf(), loginPackage, &error);
 
         if (cc == ABC_CC_InvalidOTP)
         {
