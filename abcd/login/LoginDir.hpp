@@ -36,16 +36,6 @@ tABC_CC ABC_LoginDirCreate(std::string &directory,
                            const char *szUserName,
                            tABC_Error *pError);
 
-tABC_CC ABC_LoginDirFileLoad(char **pszData,
-                             const std::string &directory,
-                             const char *szFile,
-                             tABC_Error *pError);
-
-tABC_CC ABC_LoginDirFileSave(const char *szData,
-                             const std::string &directory,
-                             const char *szFile,
-                             tABC_Error *pError);
-
 tABC_CC ABC_LoginDirLoadPackages(const std::string &directory,
                                  CarePackage &carePackage,
                                  LoginPackage &loginPackage,

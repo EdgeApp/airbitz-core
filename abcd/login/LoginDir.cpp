@@ -170,41 +170,6 @@ exit:
 }
 
 /**
- * Reads a file from the account directory.
- */
-tABC_CC ABC_LoginDirFileLoad(char **pszData,
-                             const std::string &directory,
-                             const char *szFile,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    DataChunk out;
-    ABC_CHECK_NEW(fileLoad(out, directory + szFile), pError);
-    ABC_STRDUP(*pszData, toString(out).c_str());
-
-exit:
-    return cc;
-}
-
-/**
- * Writes a file to the account directory.
- */
-tABC_CC ABC_LoginDirFileSave(const char *szData,
-                             const std::string &directory,
-                             const char *szFile,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_NEW(fileSave(std::string(szData) + '\n',
-        directory + szFile), pError);
-
-exit:
-    return cc;
-}
-
-/**
  * Loads the login and care packages from disk.
  */
 tABC_CC ABC_LoginDirLoadPackages(const std::string &directory,
