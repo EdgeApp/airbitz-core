@@ -36,7 +36,7 @@ COMMAND(InitLevel::account, AccountDecrypt, "account-decrypt")
             "note: The filename is account-relative.");
 
     JsonBox box;
-    ABC_CHECK(box.load(session.login->syncDir() + argv[2]));
+    ABC_CHECK(box.load(session.account->dir() + argv[2]));
 
     DataChunk data;
     ABC_CHECK(box.decrypt(data, session.login->dataKey()));
@@ -52,7 +52,7 @@ COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt")
             "note: The filename is account-relative.");
 
     DataChunk contents;
-    ABC_CHECK(fileLoad(contents, session.login->syncDir() + argv[2]));
+    ABC_CHECK(fileLoad(contents, session.account->dir() + argv[2]));
 
     JsonBox box;
     ABC_CHECK(box.encrypt(contents, session.login->dataKey()));

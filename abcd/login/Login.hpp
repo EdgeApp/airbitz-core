@@ -49,18 +49,6 @@ public:
     const std::string &
     syncKey() const { return syncKey_; }
 
-    /**
-     * Returns the account's sync directory name.
-     */
-    std::string
-    syncDir() const;
-
-    /**
-     * If the sync dir doesn't exist, create and sync it.
-     */
-    Status
-    syncDirCreate() const;
-
 private:
     // No mutex, since all members are immutable after init.
     // The lobby mutex can cover disk-based things like logging in and

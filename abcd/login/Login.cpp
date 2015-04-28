@@ -33,39 +33,8 @@ Login::init(const LoginPackage &loginPackage)
     ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey, dataKey_));
     syncKey_ = base16Encode(syncKey);
 
-    // Ensure that the directories are in place:
+    // Ensure that the directory is in place:
     ABC_CHECK(lobby_->dirCreate());
-    ABC_CHECK(syncDirCreate());
-    return Status();
-}
-
-std::string
-Login::syncDir() const
-{
-    return lobby_->dir() + "sync/";
-}
-
-Status
-Login::syncDirCreate() const
-{
-    // Locate the sync dir:
-    bool exists = false;
-    ABC_CHECK_OLD(ABC_FileIOFileExists(syncDir().c_str(), &exists, &error));
-
-    // If it doesn't exist, create it:
-    if (!exists)
-    {
-        bool dirty = false;
-        std::string tempName = lobby_->dir() + "tmp/";
-        ABC_CHECK_OLD(ABC_FileIOFileExists(tempName.c_str(), &exists, &error));
-        if (exists)
-            ABC_CHECK_OLD(ABC_FileIODeleteRecursive(tempName.c_str(), &error));
-        ABC_CHECK_OLD(ABC_SyncMakeRepo(tempName.c_str(), &error));
-        ABC_CHECK_OLD(ABC_SyncRepo(tempName.c_str(), syncKey_.c_str(), dirty, &error));
-        if (rename(tempName.c_str(), syncDir().c_str()))
-            return ABC_ERROR(ABC_CC_SysError, "rename failed");
-    }
-
     return Status();
 }
 
