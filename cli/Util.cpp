@@ -24,8 +24,8 @@ Status syncAll(const Login &login)
     ABC_CHECK_OLD(ABC_AccountWalletList(login, &uuids.data, &uuids.size, &error));
     for (size_t i = 0; i < uuids.size; ++i)
     {
-        int dirty = 0;
-        ABC_CHECK_OLD(ABC_WalletSyncData(ABC_WalletID(login, uuids.data[i]), &dirty, &error));
+        bool dirty = false;
+        ABC_CHECK_OLD(ABC_WalletSyncData(ABC_WalletID(login, uuids.data[i]), dirty, &error));
     }
 
     return Status();

@@ -27,7 +27,7 @@ tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
 
 tABC_CC ABC_SyncRepo(const char *szRepoPath,
                      const char *szRepoKey,
-                     int *pDirty,
+                     bool &dirty,
                      tABC_Error *pError);
 
 } // namespace abcd

@@ -110,7 +110,7 @@ tABC_CC ABC_WalletCreate(const Login &login,
                          tABC_Error *pError);
 
 tABC_CC ABC_WalletSyncData(tABC_WalletID self,
-                           int *pDirty,
+                           bool &dirty,
                            tABC_Error *pError);
 
 } // namespace abcd

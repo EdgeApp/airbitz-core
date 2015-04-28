@@ -163,6 +163,7 @@ tABC_CC ABC_WalletCreate(const Login &login,
     DataChunk dataKey;
     DataChunk syncKey;
     DataChunk bitcoinKey;
+    bool dirty = false;
     AutoU08Buf LP1;
     tABC_AccountWalletInfo info; // Do not free
 
@@ -224,9 +225,8 @@ tABC_CC ABC_WalletCreate(const Login &login,
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
     // Init the git repo and sync it
-    int dirty;
     ABC_CHECK_RET(ABC_SyncMakeRepo(pData->szWalletSyncDir, pError));
-    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, &dirty, pError));
+    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, dirty, pError));
 
     // Actiate the remote wallet
     ABC_CHECK_NEW(LoginServerWalletActivate(login.lobby(), LP1, pData->szWalletAcctKey), pError);
@@ -245,7 +245,7 @@ tABC_CC ABC_WalletCreate(const Login &login,
 
     // After wallet is created, sync the account, ignoring any errors
     tABC_Error Error;
-    ABC_CHECK_RET(ABC_SyncRepo(login.syncDir().c_str(), login.syncKey().c_str(), &dirty, &Error));
+    ABC_CHECK_RET(ABC_SyncRepo(login.syncDir().c_str(), login.syncKey().c_str(), dirty, &Error));
 
     pData = NULL; // so we don't free what we just added to the cache
 exit:
@@ -273,7 +273,7 @@ exit:
 /**
  * Sync the wallet's data
  */
-tABC_CC ABC_WalletSyncData(tABC_WalletID self, int *pDirty, tABC_Error *pError)
+tABC_CC ABC_WalletSyncData(tABC_WalletID self, bool &dirty, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -309,10 +309,10 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, int *pDirty, tABC_Error *pError)
     ABC_CHECK_ASSERT(NULL != pData->szWalletAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
 
     // Sync
-    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, pDirty, pError));
-    if (*pDirty || bNew)
+    ABC_CHECK_RET(ABC_SyncRepo(pData->szWalletSyncDir, pData->szWalletAcctKey, dirty, pError));
+    if (dirty || bNew)
     {
-        *pDirty = 1;
+        dirty = true;
         ABC_WalletClearCache();
     }
 exit:

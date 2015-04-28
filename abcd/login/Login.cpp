@@ -55,13 +55,13 @@ Login::syncDirCreate() const
     // If it doesn't exist, create it:
     if (!exists)
     {
-        int dirty = 0;
+        bool dirty = false;
         std::string tempName = lobby_->dir() + "tmp/";
         ABC_CHECK_OLD(ABC_FileIOFileExists(tempName.c_str(), &exists, &error));
         if (exists)
             ABC_CHECK_OLD(ABC_FileIODeleteRecursive(tempName.c_str(), &error));
         ABC_CHECK_OLD(ABC_SyncMakeRepo(tempName.c_str(), &error));
-        ABC_CHECK_OLD(ABC_SyncRepo(tempName.c_str(), syncKey_.c_str(), &dirty, &error));
+        ABC_CHECK_OLD(ABC_SyncRepo(tempName.c_str(), syncKey_.c_str(), dirty, &error));
         if (rename(tempName.c_str(), syncDir().c_str()))
             return ABC_ERROR(ABC_CC_SysError, "rename failed");
     }

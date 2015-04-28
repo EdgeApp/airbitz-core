@@ -132,7 +132,7 @@ exit:
  */
 tABC_CC ABC_SyncRepo(const char *szRepoPath,
                      const char *szRepoKey,
-                     int *pDirty,
+                     bool &dirty,
                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -141,7 +141,7 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
     char *szServer = NULL;
 
     git_repository *repo = NULL;
-    int dirty, need_push;
+    int files_changed, need_push;
 
     ABC_CHECK_RET(ABC_SyncGetServer(szRepoKey, &szServer, pError));
 
@@ -153,7 +153,7 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
 
     {
         AutoCoreLock lock(gCoreMutex);
-        e = sync_master(repo, &dirty, &need_push);
+        e = sync_master(repo, &files_changed, &need_push);
     }
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_master failed");
 
@@ -163,7 +163,7 @@ tABC_CC ABC_SyncRepo(const char *szRepoPath,
         ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_push failed");
     }
 
-    *pDirty = dirty;
+    dirty = !!files_changed;
 
 exit:
     if (e < 0) SyncLogGitError(e);

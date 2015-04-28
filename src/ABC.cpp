@@ -2708,9 +2708,9 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
 
         // Sync the account data:
-        int accountDirty = 0;
-        ABC_CHECK_RET(ABC_SyncRepo(login->syncDir().c_str(), login->syncKey().c_str(), &accountDirty, pError));
-        if (accountDirty && fAsyncBitCoinEventCallback)
+        bool dirty = false;
+        ABC_CHECK_RET(ABC_SyncRepo(login->syncDir().c_str(), login->syncKey().c_str(), dirty, pError));
+        if (dirty && fAsyncBitCoinEventCallback)
         {
             // Try to clear the wallet cache in case the Wallets list changed
             ABC_WalletClearCache();
@@ -2765,25 +2765,28 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
     ABC_DebugLog("%s called", __FUNCTION__);
 
     tABC_CC cc = ABC_CC_Ok;
-    int dirty = 0;
-    std::shared_ptr<Login> login;
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
     ABC_CHECK_NULL(fAsyncBitCoinEventCallback);
 
-        // Sync the account data
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_WalletSyncData(ABC_WalletID(*login, szWalletUUID), &dirty, pError));
-    if (dirty)
     {
-        tABC_AsyncBitCoinInfo info;
-        info.eventType = ABC_AsyncEventType_DataSyncUpdate;
-        info.pData = pData;
-        ABC_STRDUP(info.szDescription, "Wallet Updated");
-        fAsyncBitCoinEventCallback(&info);
-        ABC_FREE_STR(info.szDescription);
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+
+        bool dirty = false;
+        ABC_CHECK_RET(ABC_WalletSyncData(ABC_WalletID(*login, szWalletUUID), dirty, pError));
+        if (dirty)
+        {
+            tABC_AsyncBitCoinInfo info;
+            info.eventType = ABC_AsyncEventType_DataSyncUpdate;
+            info.pData = pData;
+            ABC_STRDUP(info.szDescription, "Wallet Updated");
+            fAsyncBitCoinEventCallback(&info);
+            ABC_FREE_STR(info.szDescription);
+        }
     }
+
 exit:
     return cc;
 }
