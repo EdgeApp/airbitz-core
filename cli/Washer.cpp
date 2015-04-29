@@ -58,9 +58,9 @@ void *watcher_loop(void *pData)
 
 void *data_loop(void *pData)
 {
-    Login *login = static_cast<Login *>(pData);
+    auto account = static_cast<Account *>(pData);
     while (running) {
-        syncAll(*login);
+        syncAll(*account);
         sleep(5);
     }
 
@@ -141,7 +141,7 @@ void main_loop()
     }
 }
 
-COMMAND(InitLevel::login, Washer, "washer")
+COMMAND(InitLevel::account, Washer, "washer")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... washer <user> <pass>");
@@ -155,7 +155,7 @@ COMMAND(InitLevel::login, Washer, "washer")
     signal(SIGINT, sig_handler);
 
     pthread_t data_thread;
-    if (!pthread_create(&data_thread, NULL, data_loop, session.login.get()))
+    if (!pthread_create(&data_thread, NULL, data_loop, session.account.get()))
     {
         pthread_detach(data_thread);
     }

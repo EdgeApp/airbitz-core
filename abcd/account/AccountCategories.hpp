@@ -12,18 +12,18 @@
 
 namespace abcd {
 
-class Login;
+class Account;
 
-tABC_CC ABC_AccountCategoriesLoad(const Login &login,
+tABC_CC ABC_AccountCategoriesLoad(const Account &account,
                                   char ***paszCategories,
                                   unsigned int *pCount,
                                   tABC_Error *pError);
 
-tABC_CC ABC_AccountCategoriesAdd(const Login &login,
+tABC_CC ABC_AccountCategoriesAdd(const Account &account,
                                  char *szCategory,
                                  tABC_Error *pError);
 
-tABC_CC ABC_AccountCategoriesRemove(const Login &login,
+tABC_CC ABC_AccountCategoriesRemove(const Account &account,
                                     char *szCategory,
                                     tABC_Error *pError);
 

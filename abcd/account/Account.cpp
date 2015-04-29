@@ -1,336 +1,59 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2015, AirBitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
  */
 
 #include "Account.hpp"
-#include "../crypto/Crypto.hpp"
-#include "../crypto/Encoding.hpp"
+#include "../login/Lobby.hpp"
 #include "../login/Login.hpp"
 #include "../util/FileIO.hpp"
-#include "../util/Mutex.hpp"
-#include "../util/Util.hpp"
+#include "../util/Sync.hpp"
 
 namespace abcd {
 
-#define ACCOUNT_WALLET_DIRNAME                  "Wallets"
-#define ACCOUNT_WALLET_FILENAME                 "%s/Wallets/%s.json"
+Account::Account(std::shared_ptr<Login> login):
+    login_(login),
+    dir_(login->lobby().dir() + "sync/"),
+    wallets(*this)
+{}
 
-// Wallet JSON fields:
-#define JSON_ACCT_WALLET_MK_FIELD               "MK"
-#define JSON_ACCT_WALLET_BPS_FIELD              "BitcoinSeed"
-#define JSON_ACCT_WALLET_SYNC_KEY_FIELD         "SyncKey"
-#define JSON_ACCT_WALLET_ARCHIVE_FIELD          "Archived"
-#define JSON_ACCT_WALLET_SORT_FIELD             "SortIndex"
-
-static void ABC_AccountWalletInfoFreeArray(tABC_AccountWalletInfo *aInfo, unsigned count);
-static tABC_CC ABC_AccountWalletGetDir(const Login &login, char **pszWalletDir, tABC_Error *pError);
-static int ABC_AccountWalletCompare(const void *a, const void *b);
-static tABC_CC ABC_AccountWalletsLoad(const Login &login, tABC_AccountWalletInfo **paInfo, unsigned *pCount, tABC_Error *pError);
-
-/**
- * Releases the members of a tABC_AccountWalletInfo structure. Unlike most
- * types in the ABC, this does *not* free the structure itself. This allows
- * the structure to be allocated on the stack, or as part of an array.
- */
-void ABC_AccountWalletInfoFree(tABC_AccountWalletInfo *pInfo)
+Status
+Account::init()
 {
-    if (pInfo)
+    // Locate the sync dir:
+    bool exists = false;
+    ABC_CHECK_OLD(ABC_FileIOFileExists(dir().c_str(), &exists, &error));
+
+    // If it doesn't exist, create it:
+    if (!exists)
     {
-        ABC_FREE_STR(pInfo->szUUID);
-        ABC_BUF_FREE(pInfo->BitcoinSeed);
-        ABC_BUF_FREE(pInfo->SyncKey);
-        ABC_BUF_FREE(pInfo->MK);
-    }
-}
-
-/**
- * Releases an array of tABC_AccountWalletInfo structures and their
- * contained members.
- */
-void ABC_AccountWalletInfoFreeArray(tABC_AccountWalletInfo *aInfo,
-                                    unsigned count)
-{
-    if (aInfo)
-    {
-        for (unsigned i = 0; i < count; ++i)
-        {
-            ABC_AccountWalletInfoFree(aInfo + i);
-        }
-        ABC_CLEAR_FREE(aInfo, count*sizeof(tABC_AccountWalletInfo));
-    }
-}
-
-/**
- * Returns the name of the wallet directory, creating it if necessary.
- */
-static
-tABC_CC ABC_AccountWalletGetDir(const Login &login,
-                                char **pszWalletDir,
-                                tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    // Get the name:
-    auto out = login.syncDir() + "/" ACCOUNT_WALLET_DIRNAME;
-
-    // Create if neccessary:
-    ABC_CHECK_NEW(fileEnsureDir(out), pError);
-
-    // Output:
-    if (pszWalletDir)
-        ABC_STRDUP(*pszWalletDir, out.c_str());
-
-exit:
-    return cc;
-}
-
-/**
- * Helper function for qsort.
- */
-static int ABC_AccountWalletCompare(const void *a, const void *b)
-{
-    const tABC_AccountWalletInfo *pA = (const tABC_AccountWalletInfo*)a;
-    const tABC_AccountWalletInfo *pB = (const tABC_AccountWalletInfo*)b;
-
-    return pA->sortIndex - pB->sortIndex;
-}
-
-/**
- * Lists the wallets in the account. This function loads and decrypts
- * all the wallets to determine the sort order, so it is rather expensive.
- * @param aszUUID   Returned array of pointers to wallet ID's. This can
- *                  be null if the caller doesn't care. The caller frees
- *                  the result if not.
- * @param pCount    The returned number of wallets. Must not be null.
- */
-tABC_CC ABC_AccountWalletList(const Login &login,
-                              char ***paszUUID,
-                              unsigned *pCount,
-                              tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    tABC_AccountWalletInfo *aInfo = NULL;
-    unsigned count = 0;
-
-    ABC_CHECK_RET(ABC_AccountWalletsLoad(login, &aInfo, &count, pError));
-
-    if (paszUUID)
-    {
-        char **aszUUID;
-        ABC_ARRAY_NEW(aszUUID, count, char*);
-        for (unsigned i = 0; i < count; ++i)
-        {
-            aszUUID[i] = aInfo[i].szUUID;
-            aInfo[i].szUUID = NULL;
-        }
-        *paszUUID = aszUUID;
-    }
-    *pCount = count;
-
-exit:
-    ABC_AccountWalletInfoFreeArray(aInfo, count);
-
-    return cc;
-}
-
-/**
- * Loads all the wallets contained in the account.
- * @param paInfo The output list of wallets. The caller frees this.
- * @param pCount The number of returned wallets.
- */
-tABC_CC ABC_AccountWalletsLoad(const Login &login,
-                               tABC_AccountWalletInfo **paInfo,
-                               unsigned *pCount,
-                               tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szWalletDir = NULL;
-    tABC_FileIOList *pFileList = NULL;
-    unsigned entries = 0;
-    unsigned count = 0;
-    tABC_AccountWalletInfo *aInfo = NULL;
-    char *szUUID = NULL;
-
-    // List the wallet directory:
-    ABC_CHECK_RET(ABC_AccountWalletGetDir(login, &szWalletDir, pError));
-    ABC_CHECK_RET(ABC_FileIOCreateFileList(&pFileList, szWalletDir, pError));
-    for (int i = 0; i < pFileList->nCount; i++)
-    {
-        size_t len = strlen(pFileList->apFiles[i]->szName);
-        if (5 <= len &&
-            !strcmp(pFileList->apFiles[i]->szName + len - 5, ".json"))
-        {
-            ++entries;
-        }
+        bool dirty = false;
+        std::string tempName = login().lobby().dir() + "tmp/";
+        ABC_CHECK_OLD(ABC_FileIOFileExists(tempName.c_str(), &exists, &error));
+        if (exists)
+            ABC_CHECK_OLD(ABC_FileIODeleteRecursive(tempName.c_str(), &error));
+        ABC_CHECK_OLD(ABC_SyncMakeRepo(tempName.c_str(), &error));
+        ABC_CHECK_OLD(ABC_SyncRepo(tempName.c_str(), login().syncKey().c_str(), dirty, &error));
+        if (rename(tempName.c_str(), dir().c_str()))
+            return ABC_ERROR(ABC_CC_SysError, "rename failed");
     }
 
-    // Load the wallets into the array:
-    ABC_ARRAY_NEW(aInfo, entries, tABC_AccountWalletInfo);
-    for (int i = 0; i < pFileList->nCount; ++i)
-    {
-        size_t len = strlen(pFileList->apFiles[i]->szName);
-        if (5 <= len &&
-            !strcmp(pFileList->apFiles[i]->szName + len - 5, ".json"))
-        {
-            char *szUUID = strndup(pFileList->apFiles[i]->szName, len - 5);
-            ABC_CHECK_NULL(szUUID);
+    ABC_CHECK(wallets.load());
+    return Status();
+}
 
-            ABC_CHECK_RET(ABC_AccountWalletLoad(login, szUUID, aInfo + count, pError));
-            ABC_FREE_STR(szUUID);
-            ++count;
-        }
+Status
+Account::sync(bool &dirty)
+{
+    ABC_CHECK_OLD(ABC_SyncRepo(dir().c_str(), login().syncKey().c_str(), dirty, &error));
+    if (dirty)
+    {
+        ABC_CHECK(wallets.load());
     }
 
-    // Sort the array:
-    qsort(aInfo, count, sizeof(tABC_AccountWalletInfo),
-          ABC_AccountWalletCompare);
-
-    // Save the output:
-    *paInfo = aInfo;
-    *pCount = count;
-    aInfo = NULL;
-
-exit:
-    ABC_FREE_STR(szWalletDir);
-    ABC_FileIOFreeFileList(pFileList);
-    ABC_AccountWalletInfoFreeArray(aInfo, count);
-    ABC_FREE_STR(szUUID);
-
-    return cc;
-}
-
-/**
- * Loads the info file for a single wallet in the account.
- * @param szUUID    The wallet to access
- * @param ppInfo    The returned wallet info. Unlike most types in ABC, the
- *                  caller must allocate this structure. This function merely
- *                  fills in the fields. This allows the structure to be a
- *                  part of an array.
- */
-tABC_CC ABC_AccountWalletLoad(const Login &login,
-                              const char *szUUID,
-                              tABC_AccountWalletInfo *pInfo,
-                              tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    int e;
-
-    json_t *pJSON = NULL;
-    const char *szSyncKey = NULL;
-    const char *szMK = NULL;
-    const char *szBPS = NULL;
-    DataChunk syncKey, dataKey, bitcoinKey;
-    auto filename = login.syncDir() + "/Wallets/" + szUUID + ".json";
-
-    // Load and decrypt:
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
-        toU08Buf(login.dataKey()), &pJSON, pError));
-
-    // Wallet name:
-    ABC_STRDUP(pInfo->szUUID, szUUID);
-
-    // JSON-decode everything:
-    e = json_unpack(pJSON, "{ss, ss, ss, si, sb}",
-                    JSON_ACCT_WALLET_SYNC_KEY_FIELD, &szSyncKey,
-                    JSON_ACCT_WALLET_MK_FIELD, &szMK,
-                    JSON_ACCT_WALLET_BPS_FIELD, &szBPS,
-                    JSON_ACCT_WALLET_SORT_FIELD, &pInfo->sortIndex,
-                    JSON_ACCT_WALLET_ARCHIVE_FIELD, &pInfo->archived);
-    ABC_CHECK_SYS(!e, "json_unpack(account wallet data)");
-
-    // Decode hex strings:
-    ABC_CHECK_NEW(base16Decode(syncKey, szSyncKey), pError);
-    ABC_CHECK_NEW(base16Decode(dataKey, szMK), pError);
-    ABC_CHECK_NEW(base16Decode(bitcoinKey, szBPS), pError);
-
-    // Write out:
-    ABC_BUF_DUP(pInfo->SyncKey, toU08Buf(syncKey));
-    ABC_BUF_DUP(pInfo->MK, toU08Buf(dataKey));
-    ABC_BUF_DUP(pInfo->BitcoinSeed, toU08Buf(bitcoinKey));
-
-    // Success, so do not free the members:
-    pInfo = NULL;
-
-exit:
-    ABC_AccountWalletInfoFree(pInfo);
-    if (pJSON) json_decref(pJSON);
-
-    return cc;
-}
-
-/**
- * Writes the info file for a single wallet in the account.
- */
-tABC_CC ABC_AccountWalletSave(const Login &login,
-                              tABC_AccountWalletInfo *pInfo,
-                              tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
-
-    json_t *pJSON = NULL;
-    auto filename = login.syncDir() + "/Wallets/" + pInfo->szUUID + ".json";
-
-    // JSON-encode everything:
-    pJSON = json_pack("{ss, ss, ss, si, sb}",
-        JSON_ACCT_WALLET_SYNC_KEY_FIELD, base16Encode(pInfo->SyncKey).c_str(),
-        JSON_ACCT_WALLET_MK_FIELD, base16Encode(pInfo->MK).c_str(),
-        JSON_ACCT_WALLET_BPS_FIELD, base16Encode(pInfo->BitcoinSeed).c_str(),
-        JSON_ACCT_WALLET_SORT_FIELD, pInfo->sortIndex,
-        JSON_ACCT_WALLET_ARCHIVE_FIELD, pInfo->archived);
-
-    // Ensure the directory exists:
-    ABC_CHECK_RET(ABC_AccountWalletGetDir(login, NULL, pError));
-
-    // Write out:
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON,
-        toU08Buf(login.dataKey()), ABC_CryptoType_AES256,
-        filename.c_str(), pError));
-
-exit:
-    if (pJSON) json_decref(pJSON);
-
-    return cc;
-}
-
-/**
- * Sets the sort order for the wallets in the account.
- * @param aszUUID   An array containing the wallet UUID's in the desired order.
- * @param count     The number of items in the array.
- */
-tABC_CC ABC_AccountWalletReorder(const Login &login,
-                                 const char *szUUIDs,
-                                 tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
-
-    char *uuid, *brkt;
-    unsigned int i = 0;
-
-    AutoString uuids;
-    ABC_STRDUP(uuids.get(), szUUIDs);
-
-    for (uuid = strtok_r(uuids, "\n", &brkt);
-         uuid;
-         uuid = strtok_r(NULL, "\n", &brkt), i++)
-    {
-        AutoAccountWalletInfo info;
-        ABC_CHECK_RET(ABC_AccountWalletLoad(login, uuid, &info, pError));
-        if (info.sortIndex != i)
-        {
-            info.sortIndex = i;
-            ABC_CHECK_RET(ABC_AccountWalletSave(login, &info, pError));
-        }
-    }
-
-exit:
-    return cc;
+    return Status();
 }
 
 } // namespace abcd

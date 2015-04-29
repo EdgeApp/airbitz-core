@@ -22,6 +22,7 @@ namespace abcd {
 
 class Lobby;
 class Login;
+class Account;
 
 // We need a better way to get this data out than writing to globals:
 extern std::string gOtpResetDate;
@@ -89,7 +90,7 @@ tABC_CC ABC_LoginServerOtpReset(const Lobby &lobby, tABC_Error *pError);
 tABC_CC ABC_LoginServerOtpPending(std::list<DataChunk> users, std::list<bool> &isPending, tABC_Error *pError);
 tABC_CC ABC_LoginServerOtpResetCancelPending(const Lobby &lobby, tABC_U08Buf LP1, tABC_Error *pError);
 
-tABC_CC ABC_LoginServerUploadLogs(const Login &login,
+tABC_CC ABC_LoginServerUploadLogs(const Account &account,
                                   tABC_Error *pError);
 
 } // namespace abcd

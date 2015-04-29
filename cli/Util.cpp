@@ -13,19 +13,18 @@
 
 using namespace abcd;
 
-Status syncAll(const Login &login)
+Status syncAll(Account &account)
 {
     // Sync the account:
-    ABC_CHECK_OLD(ABC_DataSyncAccount(login.lobby().username().c_str(),
-        nullptr, nullptr, nullptr, &error));
+    bool dirty = false;
+    ABC_CHECK(account.sync(dirty));
 
     // Sync the wallets:
-    AutoStringArray uuids;
-    ABC_CHECK_OLD(ABC_AccountWalletList(login, &uuids.data, &uuids.size, &error));
-    for (size_t i = 0; i < uuids.size; ++i)
+    auto uuids = account.wallets.list();
+    for (const auto &i: uuids)
     {
-        bool dirty = false;
-        ABC_CHECK_OLD(ABC_WalletSyncData(ABC_WalletID(login, uuids.data[i]), dirty, &error));
+        auto wallet = ABC_WalletID(account, i.id.c_str());
+        ABC_CHECK_OLD(ABC_WalletSyncData(wallet, dirty, &error));
     }
 
     return Status();

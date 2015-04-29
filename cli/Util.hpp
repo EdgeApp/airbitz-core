@@ -15,13 +15,13 @@
 #include "../abcd/util/Status.hpp"
 
 namespace abcd {
-    class Login;
+    class Account;
 }
 
 /**
  * Syncs the
  */
 abcd::Status
-syncAll(const abcd::Login &login);
+syncAll(abcd::Account &account);
 
 #endif

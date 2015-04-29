@@ -36,7 +36,7 @@ COMMAND(InitLevel::account, AccountDecrypt, "account-decrypt")
             "note: The filename is account-relative.");
 
     JsonBox box;
-    ABC_CHECK(box.load(session.login->syncDir() + argv[2]));
+    ABC_CHECK(box.load(session.account->dir() + argv[2]));
 
     DataChunk data;
     ABC_CHECK(box.decrypt(data, session.login->dataKey()));
@@ -52,7 +52,7 @@ COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt")
             "note: The filename is account-relative.");
 
     DataChunk contents;
-    ABC_CHECK(fileLoad(contents, session.login->syncDir() + argv[2]));
+    ABC_CHECK(fileLoad(contents, session.account->dir() + argv[2]));
 
     JsonBox box;
     ABC_CHECK(box.encrypt(contents, session.login->dataKey()));
@@ -154,19 +154,19 @@ COMMAND(InitLevel::account, CreateWallet, "create-wallet")
     return Status();
 }
 
-COMMAND(InitLevel::login, DataSync, "data-sync")
+COMMAND(InitLevel::account, DataSync, "data-sync")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... data-sync <user> <pass>");
 
-    ABC_CHECK(syncAll(*session.login));
+    ABC_CHECK(syncAll(*session.account));
 
     return Status();
 }
 
 COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
 {
-    auto wallet = ABC_WalletID(*session.login, session.uuid.c_str());
+    auto wallet = ABC_WalletID(*session.account, session.uuid.c_str());
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... generate-addresses <user> <pass> <wallet-name> <count>");
 
@@ -189,7 +189,7 @@ COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
 
 COMMAND(InitLevel::wallet, GetBitcoinSeed, "get-bitcoin-seed")
 {
-    auto wallet = ABC_WalletID(*session.login, session.uuid.c_str());
+    auto wallet = ABC_WalletID(*session.account, session.uuid.c_str());
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-bitcoin-seed <user> <pass> <wallet-name>");
 
@@ -306,7 +306,7 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
         return ABC_ERROR(ABC_CC_Error, "usage: ... list-wallets <user> <pass>");
 
     // Setup:
-    ABC_CHECK(syncAll(*session.login));
+    ABC_CHECK(syncAll(*session.account));
 
     // Iterate over wallets:
     AutoStringArray uuids;
@@ -320,7 +320,7 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
         JsonBox box;
         ABC_CHECK(box.load(std::string(szDir.get()) + "/sync/WalletName.json"));
 
-        auto wallet = ABC_WalletID(*session.login, uuids.data[i]);
+        auto wallet = ABC_WalletID(*session.account, uuids.data[i]);
         U08Buf dataKey;
         ABC_CHECK_OLD(ABC_WalletGetMK(wallet, &dataKey, &error));
 
@@ -390,7 +390,7 @@ COMMAND(InitLevel::account, RemoveCategory, "remove-category")
 
 COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed")
 {
-    auto wallet = ABC_WalletID(*session.login, session.uuid.c_str());
+    auto wallet = ABC_WalletID(*session.account, session.uuid.c_str());
     if (argc != 6)
         return ABC_ERROR(ABC_CC_Error, "usage: ... search-bitcoin-seed <user> <pass> <wallet-name> <addr> <start> <end>");
 
@@ -488,7 +488,7 @@ COMMAND(InitLevel::wallet, WalletArchive, "wallet-archive")
 
 COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
 {
-    auto wallet = ABC_WalletID(*session.login, session.uuid.c_str());
+    auto wallet = ABC_WalletID(*session.account, session.uuid.c_str());
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-decrypt <user> <pass> <wallet-name> <file>");
 
@@ -508,7 +508,7 @@ COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
 
 COMMAND(InitLevel::wallet, WalletEncrypt, "wallet-encrypt")
 {
-    auto wallet = ABC_WalletID(*session.login, session.uuid.c_str());
+    auto wallet = ABC_WalletID(*session.account, session.uuid.c_str());
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-encrypt <user> <pass> <wallet-name> <file>");
 

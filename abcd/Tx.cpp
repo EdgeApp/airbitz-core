@@ -372,7 +372,6 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 exit:
     ABC_FREE(szPrivSeed);
     ABC_TxFreeAddress(pChangeAddr);
-    ABC_TxSendInfoFree(pInfo);
     ABC_TxFreeOutputs(pUtx->aOutputs, pUtx->countOutputs);
     ABC_FREE(pUtx->data);
     ABC_FREE(pUtx);
@@ -627,9 +626,7 @@ tABC_CC ABC_TxWatchAddresses(tABC_WalletID self,
     for (unsigned i = 0; i < countAddresses; i++)
     {
         const tABC_TxAddress *a = aAddresses[i];
-        ABC_CHECK_RET(
-            ABC_BridgeWatchAddr(self.szUUID,
-                                a->szPubAddress, pError));
+        ABC_CHECK_RET(ABC_BridgeWatchAddr(self, a->szPubAddress, pError));
     }
 exit:
     ABC_TxFreeAddresses(aAddresses, countAddresses);
@@ -2426,7 +2423,7 @@ tABC_CC ABC_TxBuildFromLabel(tABC_WalletID self,
     ABC_CHECK_NULL(pszLabel);
     *pszLabel = NULL;
 
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(*self.login, &pSettings.get(), pError));
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(*self.account, &pSettings.get(), pError));
 
     if (pSettings->bNameOnPayments && pSettings->szFullName)
     {
@@ -2607,7 +2604,7 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
 
     // get advanced details
     ABC_CHECK_RET(
-        ABC_BridgeTxDetails(self.szUUID, pTx->pStateInfo->szMalleableTxId,
+        ABC_BridgeTxDetails(self, pTx->pStateInfo->szMalleableTxId,
                             &(pTx->aOutputs), &(pTx->countOutputs),
                             &(pTx->pDetails->amountSatoshi),
                             &(pTx->pDetails->amountFeesMinersSatoshi),

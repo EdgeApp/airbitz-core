@@ -12,7 +12,7 @@
 
 namespace abcd {
 
-class Login;
+class Account;
 
 /**
  * Retreives an item from the plugin key/value store.
@@ -23,28 +23,28 @@ class Login;
  * @param data The value stored with the key.
  */
 Status
-pluginDataGet(const Login &login, const std::string &plugin,
+pluginDataGet(const Account &account, const std::string &plugin,
     const std::string &key, std::string &data);
 
 /**
  * Saves an item to the plugin key/value store.
  */
 Status
-pluginDataSet(const Login &login, const std::string &plugin,
+pluginDataSet(const Account &account, const std::string &plugin,
     const std::string &key, const std::string &data);
 
 /**
  * Deletes an item from the plugin key/value store.
  */
 Status
-pluginDataRemove(const Login &login, const std::string &plugin,
+pluginDataRemove(const Account &account, const std::string &plugin,
     const std::string &key);
 
 /**
  * Removes the entire key/value store for a particular plugin.
  */
 Status
-pluginDataClear(const Login &login, const std::string &plugin);
+pluginDataClear(const Account &account, const std::string &plugin);
 
 } // namespace abcd
 

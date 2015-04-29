@@ -794,7 +794,7 @@ exit:
  * @param szPassword    Password for the account associated with the settings
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_LoginServerUploadLogs(const Login &login,
+tABC_CC ABC_LoginServerUploadLogs(const Account &account,
                                   tABC_Error *pError)
 {
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -810,20 +810,19 @@ tABC_CC ABC_LoginServerUploadLogs(const Login &login,
     json_t *pJSON_Root    = NULL;
     DataChunk logData;
     DataChunk watchData;
-    AutoStringArray uuids;
+    auto uuids = account.wallets.list();
     json_t *pJSON_array = NULL;
 
     AutoU08Buf LP1;
-    ABC_CHECK_RET(ABC_LoginGetServerKey(login, &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKey(account.login(), &LP1, pError));
 
     ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
     ABC_CHECK_NEW(fileLoad(logData, szLogFilename), pError);
 
-    ABC_CHECK_RET(ABC_AccountWalletList(login, &uuids.data, &uuids.size, pError));
     pJSON_array = json_array();
-    for (unsigned i = 0; i < uuids.size; ++i)
+    for (const auto &i: uuids)
     {
-        ABC_CHECK_RET(ABC_BridgeWatchPath(uuids.data[i],
+        ABC_CHECK_RET(ABC_BridgeWatchPath(i.id.c_str(),
                                           &szWatchFilename, pError));
         ABC_CHECK_NEW(fileLoad(watchData, szWatchFilename), pError);
 
@@ -834,7 +833,7 @@ tABC_CC ABC_LoginServerUploadLogs(const Login &login,
     }
 
     pJSON_Root = json_pack("{ss, ss, ss}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(login.lobby().authId()).c_str(),
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(account.login().lobby().authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
         "log", base64Encode(logData).c_str());
     json_object_set(pJSON_Root, "watchers", pJSON_array);
