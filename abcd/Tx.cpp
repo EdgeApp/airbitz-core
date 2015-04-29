@@ -162,7 +162,6 @@ static tABC_CC  ABC_TxLoadTransaction(tABC_WalletID self, const char *szFilename
 static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError);
 static void     ABC_TxFreeTx(tABC_Tx *pTx);
-static tABC_CC  ABC_TxCreateTxDir(const char *szWalletUUID, tABC_Error *pError);
 static tABC_CC  ABC_TxSaveTransaction(tABC_WalletID self, const tABC_Tx *pTx, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError);
@@ -173,7 +172,6 @@ static tABC_CC  ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateI
 static tABC_CC  ABC_TxSaveAddress(tABC_WalletID self, const tABC_TxAddress *pAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateAddressFilename(tABC_WalletID self, char **pszFilename, const tABC_TxAddress *pAddress, tABC_Error *pError);
-static tABC_CC  ABC_TxCreateAddressDir(const char *szWalletUUID, tABC_Error *pError);
 static void     ABC_TxFreeAddress(tABC_TxAddress *pAddress);
 static void     ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo);
 static void     ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count);
@@ -1191,23 +1189,16 @@ tABC_CC ABC_TxModifyReceiveRequest(tABC_WalletID self,
     AutoCoreLock lock(gCoreMutex);
 
     char *szFile = NULL;
-    char *szAddrDir = NULL;
-    char *szFilename = NULL;
+    std::string path;
     tABC_TxAddress *pAddress = NULL;
     tABC_TxDetails *pNewDetails = NULL;
 
     // get the filename for this request (note: interally requests are addresses)
     ABC_CHECK_RET(ABC_GetAddressFilename(self.szUUID, szRequestID, &szFile, pError));
-
-    // get the directory name
-    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, self.szUUID, pError));
-
-    // create the full filename
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
-    sprintf(szFilename, "%s/%s", szAddrDir, szFile);
+    path = walletAddressDir(self.szUUID) + szFile;
 
     // load the request address
-    ABC_CHECK_RET(ABC_TxLoadAddressFile(self, szFilename, &pAddress, pError));
+    ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), &pAddress, pError));
 
     // copy the new details
     ABC_CHECK_RET(ABC_TxDupDetails(&pNewDetails, pDetails, pError));
@@ -1224,8 +1215,6 @@ tABC_CC ABC_TxModifyReceiveRequest(tABC_WalletID self,
 
 exit:
     ABC_FREE_STR(szFile);
-    ABC_FREE_STR(szAddrDir);
-    ABC_FREE_STR(szFilename);
     ABC_TxFreeAddress(pAddress);
     ABC_TxFreeDetails(pNewDetails);
 
@@ -1249,7 +1238,7 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
     tABC_CC cc = ABC_CC_Ok;
     AutoFileLock lock(gFileMutex); // We are iterating over the filesystem
 
-    char *szAddrDir = NULL;
+    std::string addressDir = walletAddressDir(szWalletUUID);
     tABC_FileIOList *pFileList = NULL;
     bool bExists = false;
     char *szID = NULL;
@@ -1261,15 +1250,12 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
     ABC_CHECK_NULL(pszFilename);
     *pszFilename = NULL;
 
-    // get the directory name
-    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
-
     // Make sure there is an addresses directory
-    ABC_CHECK_RET(ABC_FileIOFileExists(szAddrDir, &bExists, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(addressDir.c_str(), &bExists, pError));
     ABC_CHECK_ASSERT(bExists == true, ABC_CC_Error, "No existing requests/addresses");
 
     // get all the files in the address directory
-    ABC_FileIOCreateFileList(&pFileList, szAddrDir, NULL);
+    ABC_FileIOCreateFileList(&pFileList, addressDir.c_str(), NULL);
     for (int i = 0; i < pFileList->nCount; i++)
     {
         // if this file is a normal file
@@ -1290,7 +1276,6 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
     }
 
 exit:
-    ABC_FREE_STR(szAddrDir);
     ABC_FREE_STR(szID);
     ABC_FileIOFreeFileList(pFileList);
 
@@ -1426,24 +1411,17 @@ tABC_CC ABC_TxSetAddressRecycle(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
+    std::string path;
     char *szFile = NULL;
-    char *szAddrDir = NULL;
-    char *szFilename = NULL;
     tABC_TxAddress *pAddress = NULL;
     tABC_TxDetails *pNewDetails = NULL;
 
     // get the filename for this address
     ABC_CHECK_RET(ABC_GetAddressFilename(self.szUUID, szAddress, &szFile, pError));
-
-    // get the directory name
-    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, self.szUUID, pError));
-
-    // create the full filename
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
-    sprintf(szFilename, "%s/%s", szAddrDir, szFile);
+    path = walletAddressDir(self.szUUID) + szFile;
 
     // load the request address
-    ABC_CHECK_RET(ABC_TxLoadAddressFile(self, szFilename, &pAddress, pError));
+    ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), &pAddress, pError));
     ABC_CHECK_NULL(pAddress->pStateInfo);
 
     // if it isn't already set as required
@@ -1459,8 +1437,6 @@ tABC_CC ABC_TxSetAddressRecycle(tABC_WalletID self,
 
 exit:
     ABC_FREE_STR(szFile);
-    ABC_FREE_STR(szAddrDir);
-    ABC_FREE_STR(szFilename);
     ABC_TxFreeAddress(pAddress);
     ABC_TxFreeDetails(pNewDetails);
 
@@ -1618,9 +1594,8 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
     AutoCoreLock lock(gCoreMutex);
     AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
 
-    char *szTxDir = NULL;
+    std::string txDir = walletTxDir(self.szUUID);
     tABC_FileIOList *pFileList = NULL;
-    char *szFilename = NULL;
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
     bool bExists = false;
@@ -1628,29 +1603,23 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
     *paTransactions = NULL;
     *pCount = 0;
 
-    // get the directory name
-    ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, self.szUUID, pError));
-
     // if there is a transaction directory
-    ABC_CHECK_RET(ABC_FileIOFileExists(szTxDir, &bExists, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(txDir.c_str(), &bExists, pError));
 
     if (bExists == true)
     {
-        ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
-
         // get all the files in the transaction directory
-        ABC_FileIOCreateFileList(&pFileList, szTxDir, NULL);
+        ABC_FileIOCreateFileList(&pFileList, txDir.c_str(), NULL);
         for (int i = 0; i < pFileList->nCount; i++)
         {
             // if this file is a normal file
             if (pFileList->apFiles[i]->type == ABC_FileIOFileType_Regular)
             {
-                // create the filename for this transaction
-                sprintf(szFilename, "%s/%s", szTxDir, pFileList->apFiles[i]->szName);
+                auto path = txDir + pFileList->apFiles[i]->szName;
 
                 // get the transaction type
                 tTxType type = TxType_None;
-                ABC_CHECK_RET(ABC_TxGetTxTypeAndBasename(szFilename, &type, NULL, pError));
+                ABC_CHECK_RET(ABC_TxGetTxTypeAndBasename(path.c_str(), &type, NULL, pError));
 
                 // if this is a transaction file (based upon name)
                 if (type != TxType_None)
@@ -1661,7 +1630,7 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
                     if (type == TxType_External)
                     {
                         // check if it has an internal equivalent and, if so, delete the external
-                        ABC_CHECK_RET(ABC_TxCheckForInternalEquivalent(szFilename, &bHasInternalEquivalent, pError));
+                        ABC_CHECK_RET(ABC_TxCheckForInternalEquivalent(path.c_str(), &bHasInternalEquivalent, pError));
                     }
 
                     // if this doesn't not have an internal equivalent (or is an internal itself)
@@ -1672,7 +1641,7 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
                         ABC_CHECK_RET(ABC_TxLoadTxAndAppendToArray(self,
                                                                    startTime,
                                                                    endTime,
-                                                                   szFilename,
+                                                                   path.c_str(),
                                                                    &aTransactions,
                                                                    &count,
                                                                    pError));
@@ -1696,8 +1665,6 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
     count = 0;
 
 exit:
-    ABC_FREE_STR(szTxDir);
-    ABC_FREE_STR(szFilename);
     ABC_FileIOFreeFileList(pFileList);
     ABC_TxFreeTransactions(aTransactions, count);
 
@@ -1806,7 +1773,6 @@ tABC_CC ABC_TxCheckForInternalEquivalent(const char *szFilename,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     char *szBasename = NULL;
-    char *szFilenameInt = NULL;
     tTxType type = TxType_None;
 
     ABC_CHECK_NULL(szFilename);
@@ -1819,19 +1785,17 @@ tABC_CC ABC_TxCheckForInternalEquivalent(const char *szFilename,
     // if this is an external
     if (type == TxType_External)
     {
-        // create the internal version of the filename
-        ABC_STR_NEW(szFilenameInt, ABC_FILEIO_MAX_PATH_LENGTH + 1);
-        sprintf(szFilenameInt, "%s%s", szBasename, TX_INTERNAL_SUFFIX);
+        std::string name = std::string(szBasename) + TX_INTERNAL_SUFFIX;
 
         // check if this internal version of the file exists
         bool bExists = false;
-        ABC_CHECK_RET(ABC_FileIOFileExists(szFilenameInt, &bExists, pError));
+        ABC_CHECK_RET(ABC_FileIOFileExists(name.c_str(), &bExists, pError));
 
         // if the internal version exists
         if (bExists)
         {
             // delete the external version (this one)
-            ABC_CHECK_RET(ABC_FileIODeleteFile(szFilename, pError));
+            ABC_CHECK_RET(ABC_FileIODeleteFile(name.c_str(), pError));
 
             *pbEquivalent = true;
         }
@@ -1839,7 +1803,6 @@ tABC_CC ABC_TxCheckForInternalEquivalent(const char *szFilename,
 
 exit:
     ABC_FREE_STR(szBasename);
-    ABC_FREE_STR(szFilenameInt);
 
     return cc;
 }
@@ -2531,25 +2494,20 @@ tABC_CC ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const cha
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szTxDir = NULL;
     U08Buf MK; // Do not free
-    std::string hash;
+    std::string path;
 
     *pszFilename = NULL;
 
     // Get the master key we will need to encode the filename
     // (note that this will also make sure the account and wallet exist)
     ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
-    hash = cryptoFilename(MK, szTxID);
 
-    ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, self.szUUID, pError));
-
-    ABC_STR_NEW(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszFilename, "%s/%s%s", szTxDir, hash.c_str(), (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX));
+    path = walletTxDir(self.szUUID) + cryptoFilename(MK, szTxID) +
+        (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX);
+    ABC_STRDUP(*pszFilename, path.c_str());
 
 exit:
-    ABC_FREE_STR(szTxDir);
-
     return cc;
 }
 
@@ -2782,28 +2740,6 @@ void ABC_TxFreeTx(tABC_Tx *pTx)
 }
 
 /**
- * Creates the transaction directory if needed
- */
-static
-tABC_CC ABC_TxCreateTxDir(const char *szWalletUUID, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szTxDir = NULL;
-
-    // get the transaction directory
-    ABC_CHECK_RET(ABC_WalletGetTxDirName(&szTxDir, szWalletUUID, pError));
-
-    // if transaction dir doesn't exist, create it
-    ABC_CHECK_NEW(fileEnsureDir(szTxDir), pError);
-
-exit:
-    ABC_FREE_STR(szTxDir);
-
-    return cc;
-}
-
-/**
  * Saves a transaction to disk
  *
  * @param pTx  Pointer to transaction data
@@ -2881,7 +2817,7 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
     ABC_CHECK_ASSERT(e == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // create the transaction directory if needed
-    ABC_CHECK_RET(ABC_TxCreateTxDir(self.szUUID, pError));
+    ABC_CHECK_NEW(fileEnsureDir(walletTxDir(self.szUUID)), pError);
 
     // get the filename for this transaction
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, pTx->szID, pTx->pStateInfo->bInternal, pError));
@@ -3057,26 +2993,17 @@ tABC_CC ABC_TxLoadAddress(tABC_WalletID self,
     AutoCoreLock lock(gCoreMutex);
 
     char *szFile = NULL;
-    char *szAddrDir = NULL;
-    char *szFilename = NULL;
+    std::string path;
 
     // get the filename for this address
     ABC_CHECK_RET(ABC_GetAddressFilename(self.szUUID, szAddressID, &szFile, pError));
-
-    // get the directory name
-    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, self.szUUID, pError));
-
-    // create the full filename
-    ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
-    sprintf(szFilename, "%s/%s", szAddrDir, szFile);
+    path = walletAddressDir(self.szUUID) + szFile;
 
     // load the request address
-    ABC_CHECK_RET(ABC_TxLoadAddressFile(self, szFilename, ppAddress, pError));
+    ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), ppAddress, pError));
 
 exit:
     ABC_FREE_STR(szFile);
-    ABC_FREE_STR(szAddrDir);
-    ABC_FREE_STR(szFilename);
 
     return cc;
 }
@@ -3278,7 +3205,7 @@ tABC_CC ABC_TxSaveAddress(tABC_WalletID self,
     ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pAddress->pDetails, pError));
 
     // create the address directory if needed
-    ABC_CHECK_RET(ABC_TxCreateAddressDir(self.szUUID, pError));
+    ABC_CHECK_NEW(fileEnsureDir(walletAddressDir(self.szUUID)), pError);
 
     // create the filename for this transaction
     ABC_CHECK_RET(ABC_TxCreateAddressFilename(self, &szFilename, pAddress, pError));
@@ -3382,48 +3309,21 @@ tABC_CC ABC_TxCreateAddressFilename(tABC_WalletID self, char **pszFilename, cons
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    char *szAddrDir = NULL;
     U08Buf MK; // Do not free
-    std::string hash;
+    std::string path;
 
     *pszFilename = NULL;
 
     // Get the master key we will need to encode the filename
     // (note that this will also make sure the account and wallet exist)
     ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
-    hash = cryptoFilename(MK, pAddress->szPubAddress);
 
-    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, self.szUUID, pError));
-
-    // create the filename
-    ABC_STR_NEW(*pszFilename, ABC_FILEIO_MAX_PATH_LENGTH);
-    sprintf(*pszFilename, "%s/%u-%s.json", szAddrDir, pAddress->seq, hash.c_str());
+    path = walletAddressDir(self.szUUID) +
+        std::to_string(pAddress->seq) + "-" +
+        cryptoFilename(MK, pAddress->szPubAddress) + ".json";
+    ABC_STRDUP(*pszFilename, path.c_str());
 
 exit:
-    ABC_FREE_STR(szAddrDir);
-
-    return cc;
-}
-
-/**
- * Creates the address directory if needed
- */
-static
-tABC_CC ABC_TxCreateAddressDir(const char *szWalletUUID, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    char *szAddrDir = NULL;
-
-    // get the address directory
-    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, szWalletUUID, pError));
-
-    // if transaction dir doesn't exist, create it
-    ABC_CHECK_NEW(fileEnsureDir(szAddrDir), pError);
-
-exit:
-    ABC_FREE_STR(szAddrDir);
-
     return cc;
 }
 
@@ -3520,9 +3420,8 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
     AutoCoreLock lock(gCoreMutex);
     AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
 
-    char *szAddrDir = NULL;
+    std::string addressDir = walletAddressDir(self.szUUID);
     tABC_FileIOList *pFileList = NULL;
-    char *szFilename = NULL;
     tABC_TxAddress **aAddresses = NULL;
     unsigned int count = 0;
     bool bExists = false;
@@ -3530,28 +3429,22 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
     *paAddresses = NULL;
     *pCount = 0;
 
-    // get the directory name
-    ABC_CHECK_RET(ABC_WalletGetAddressDirName(&szAddrDir, self.szUUID, pError));
-
     // if there is a address directory
-    ABC_CHECK_RET(ABC_FileIOFileExists(szAddrDir, &bExists, pError));
+    ABC_CHECK_RET(ABC_FileIOFileExists(addressDir.c_str(), &bExists, pError));
 
     if (bExists == true)
     {
-        ABC_STR_NEW(szFilename, ABC_FILEIO_MAX_PATH_LENGTH + 1);
-
         // get all the files in the address directory
-        ABC_FileIOCreateFileList(&pFileList, szAddrDir, NULL);
+        ABC_FileIOCreateFileList(&pFileList, addressDir.c_str(), NULL);
         for (int i = 0; i < pFileList->nCount; i++)
         {
             // if this file is a normal file
             if (pFileList->apFiles[i]->type == ABC_FileIOFileType_Regular)
             {
-                // create the filename for this address
-                sprintf(szFilename, "%s/%s", szAddrDir, pFileList->apFiles[i]->szName);
+                std::string path = addressDir + pFileList->apFiles[i]->szName;
 
                 // add this address to the array
-                ABC_CHECK_RET(ABC_TxLoadAddressAndAppendToArray(self, szFilename, &aAddresses, &count, pError));
+                ABC_CHECK_RET(ABC_TxLoadAddressAndAppendToArray(self, path.c_str(), &aAddresses, &count, pError));
             }
         }
     }
@@ -3570,8 +3463,6 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
     count = 0;
 
 exit:
-    ABC_FREE_STR(szAddrDir);
-    ABC_FREE_STR(szFilename);
     ABC_FileIOFreeFileList(pFileList);
     ABC_TxFreeAddresses(aAddresses, count);
 

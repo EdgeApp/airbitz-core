@@ -1193,14 +1193,7 @@ uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64
 static
 std::string ABC_BridgeWatcherFile(const char *szWalletUUID)
 {
-    char *szDirName = NULL;
-    tABC_Error error;
-    ABC_WalletGetDirName(&szDirName, szWalletUUID, &error);
-
-    std::string filepath;
-    filepath.append(std::string(szDirName));
-    filepath.append("/watcher.ser");
-    return filepath;
+    return walletDir(szWalletUUID) + "watcher.ser";
 }
 
 static

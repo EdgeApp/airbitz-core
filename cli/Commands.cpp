@@ -314,11 +314,8 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
         &uuids.data, &uuids.size, &error));
     for (unsigned i = 0; i < uuids.size; ++i)
     {
-        AutoString szDir;
-        ABC_CHECK_OLD(ABC_WalletGetDirName(&szDir.get(), uuids.data[i], &error));
-
         JsonBox box;
-        ABC_CHECK(box.load(std::string(szDir.get()) + "/sync/WalletName.json"));
+        ABC_CHECK(box.load(walletSyncDir(uuids.data[i]) + "WalletName.json"));
 
         auto wallet = ABC_WalletID(*session.account, uuids.data[i]);
         U08Buf dataKey;

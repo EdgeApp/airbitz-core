@@ -45,6 +45,11 @@ namespace abcd {
 
 class Account;
 
+std::string walletDir(const std::string &id);
+std::string walletSyncDir(const std::string &id);
+std::string walletAddressDir(const std::string &id);
+std::string walletTxDir(const std::string &id);
+
 /* Temporary struct to bundle wallet identification. This will become
  * an opaque pointer to the wallet itself at some point. */
 typedef struct sABC_WalletID
@@ -90,18 +95,6 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeed(tABC_WalletID self,
 tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self,
                                             tABC_U08Buf *pSeed,
                                             tABC_Error *pError);
-
-tABC_CC ABC_WalletGetDirName(char **pszDir,
-                             const char *szWalletUUID,
-                             tABC_Error *pError);
-
-tABC_CC ABC_WalletGetTxDirName(char **pszDir,
-                               const char *szWalletUUID,
-                               tABC_Error *pError);
-
-tABC_CC ABC_WalletGetAddressDirName(char **pszDir,
-                                    const char *szWalletUUID,
-                                    tABC_Error *pError);
 
 // Blocking functions:
 tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,

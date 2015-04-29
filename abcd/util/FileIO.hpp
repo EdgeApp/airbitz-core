@@ -48,8 +48,6 @@ namespace abcd {
 extern std::recursive_mutex gFileMutex;
 typedef std::lock_guard<std::recursive_mutex> AutoFileLock;
 
-#define ABC_FILEIO_MAX_PATH_LENGTH 2048
-
 typedef enum eABC_FileIOFileType
 {
     ABC_FileIOFileType_Unknown,
