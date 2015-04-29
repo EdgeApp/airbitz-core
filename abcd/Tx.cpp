@@ -189,6 +189,7 @@ static tABC_CC  ABC_TxWalletOwnsAddress(tABC_WalletID self, const char *szAddres
 static tABC_CC  ABC_TxGetPrivAddresses(tABC_WalletID self, tABC_U08Buf seed, char ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxTrashAddresses(tABC_WalletID self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
 static tABC_CC  ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
+static tABC_CC  ABC_TxSendComplete(tABC_TxSendInfo *pInfo, tABC_UnsignedTx *utx, tABC_Error *pError);
 
 /**
  * Calculates a public address for the HD wallet main external chain.
@@ -3381,23 +3382,19 @@ void ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count)
     }
 }
 
-void ABC_TxFreeOutput(tABC_TxOutput *pOutput)
-{
-    if (pOutput)
-    {
-        ABC_FREE_STR(pOutput->szAddress);
-        ABC_FREE_STR(pOutput->szTxId);
-        ABC_CLEAR_FREE(pOutput, sizeof(tABC_TxOutput));
-    }
-}
-
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count)
 {
     if ((aOutputs != NULL) && (count > 0))
     {
         for (unsigned i = 0; i < count; i++)
         {
-            ABC_TxFreeOutput(aOutputs[i]);
+            tABC_TxOutput *pOutput = aOutputs[i];
+            if (pOutput)
+            {
+                ABC_FREE_STR(pOutput->szAddress);
+                ABC_FREE_STR(pOutput->szTxId);
+                ABC_CLEAR_FREE(pOutput, sizeof(tABC_TxOutput));
+            }
         }
         ABC_CLEAR_FREE(aOutputs, sizeof(tABC_TxOutput *) * count);
     }

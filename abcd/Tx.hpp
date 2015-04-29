@@ -62,9 +62,6 @@ typedef struct sABC_TxSendInfo
     char                    *szSrcCategory;
 
     tABC_TxDetails          *pDetails;
-
-    /** information the error if there was a failure */
-    tABC_Error  errorInfo;
 } tABC_TxSendInfo;
 
 
@@ -73,7 +70,6 @@ tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
                          tABC_Error *pError);
 
 void ABC_TxFreeDetails(tABC_TxDetails *pDetails);
-void ABC_TxFreeOutput(tABC_TxOutput *pOutputs);
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
 tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
@@ -84,10 +80,6 @@ tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
 
 
 void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo);
-
-double ABC_TxSatoshiToBitcoin(int64_t satoshi);
-
-int64_t ABC_TxBitcoinToSatoshi(double bitcoin);
 
 tABC_CC ABC_TxBlockHeightUpdate(uint64_t height,
                                 tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
@@ -189,10 +181,6 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
 tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo,
                     char **pszUUID,
                     tABC_Error *pError);
-
-tABC_CC ABC_TxSendComplete(tABC_TxSendInfo *pInfo,
-                           tABC_UnsignedTx *utx,
-                           tABC_Error *pError);
 
 tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo,
                             int64_t *pTotalFees,
