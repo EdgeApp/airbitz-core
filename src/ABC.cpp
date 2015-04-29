@@ -209,12 +209,7 @@ exit:
 /**
  * Create a new account.
  *
- * This function kicks off a thread to create a new account. The callback will be called when it has finished.
- *
- * @param szUserName                UserName for the account
- * @param szPassword                Password for the account
- * @param szPin                     PIN for the account
- * @param pError                    A pointer to the location to store the error if there is one
+ * @param szPassword May be null, in which case the account has no password.
  */
 tABC_CC ABC_CreateAccount(const char *szUserName,
                           const char *szPassword,
@@ -223,8 +218,6 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_PROLOG();
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_ASSERT(strlen(szUserName) >= ABC_MIN_USERNAME_LENGTH, ABC_CC_Error, "Username too short");
-    ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
 
     {
         std::shared_ptr<Login> login;

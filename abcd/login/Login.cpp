@@ -61,9 +61,8 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     DataChunk syncKey;
     JsonBox box;
     JsonSnrp snrp;
-    std::string LP = lobby->username() + szPassword;
 
-    // Set up packages:
+    // Generate SNRP2:
     ABC_CHECK_NEW(snrp.create(), pError);
     ABC_CHECK_NEW(carePackage.snrp2Set(snrp), pError);
 
@@ -73,19 +72,31 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     // Generate SyncKey:
     ABC_CHECK_NEW(randomData(syncKey, SYNC_KEY_LENGTH), pError);
 
-    // Set up EMK_LP2:
-    ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);
-    ABC_CHECK_NEW(box.encrypt(dataKey, passwordKey), pError);
-    ABC_CHECK_NEW(loginPackage.passwordBoxSet(box), pError);
+    if (szPassword)
+    {
+        std::string LP = lobby->username() + szPassword;
+
+        // Generate authKey:
+        ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP), pError);
+
+        // Set up EMK_LP2:
+        ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);
+        ABC_CHECK_NEW(box.encrypt(dataKey, passwordKey), pError);
+        ABC_CHECK_NEW(loginPackage.passwordBoxSet(box), pError);
+    }
+    else
+    {
+        // Generate authKey:
+        ABC_CHECK_NEW(randomData(authKey, scryptDefaultSize), pError);
+    }
+
+    // Encrypt authKey:
+    ABC_CHECK_NEW(box.encrypt(authKey, dataKey), pError);
+    ABC_CHECK_NEW(loginPackage.authKeyBoxSet(box), pError);
 
     // Set up ESyncKey:
     ABC_CHECK_NEW(box.encrypt(syncKey, dataKey), pError);
     ABC_CHECK_NEW(loginPackage.syncKeyBoxSet(box), pError);
-
-    // Set up ELP1:
-    ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP), pError);
-    ABC_CHECK_NEW(box.encrypt(authKey, dataKey), pError);
-    ABC_CHECK_NEW(loginPackage.authKeyBoxSet(box), pError);
 
     // Create the account and repo on server:
     ABC_CHECK_RET(ABC_LoginServerCreate(*lobby, toU08Buf(authKey),
