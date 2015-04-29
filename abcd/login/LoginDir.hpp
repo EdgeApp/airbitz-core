@@ -36,16 +36,6 @@ tABC_CC ABC_LoginDirCreate(std::string &directory,
                            const char *szUserName,
                            tABC_Error *pError);
 
-tABC_CC ABC_LoginDirLoadPackages(const std::string &directory,
-                                 CarePackage &carePackage,
-                                 LoginPackage &loginPackage,
-                                 tABC_Error *pError);
-
-tABC_CC ABC_LoginDirSavePackages(const std::string &directory,
-                                 const CarePackage &carePackage,
-                                 const LoginPackage &loginPackage,
-                                 tABC_Error *pError);
-
 } // namespace abcd
 
 #endif

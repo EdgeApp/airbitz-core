@@ -45,6 +45,9 @@ public:
     const std::string &
     dir() const;
 
+    std::string carePackageName() { return dir() + "CarePackage.json"; }
+    std::string loginPackageName() { return dir() + "LoginPackage.json"; }
+
     /**
      * Creates a directory for the account if one does not already exist.
      */

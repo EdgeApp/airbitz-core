@@ -89,7 +89,8 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(login->init(loginPackage), pError);
 
     // Set up the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(carePackage.save(lobby->carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.save(lobby->loginPackageName()), pError);
 
     // Assign the final output:
     result.reset(login.release());
@@ -119,7 +120,8 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     std::string LRA = login.lobby().username() + szRecoveryAnswers;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(carePackage.load(login.lobby().carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(login.lobby().loginPackageName()), pError);
 
     // Load the old keys:
     ABC_CHECK_RET(ABC_LoginGetServerKey(login, &oldLP1, pError));
@@ -152,7 +154,8 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
         oldLP1, toU08Buf(recoveryAuthKey), carePackage, loginPackage, pError));
 
     // Change the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(login.lobby().dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(carePackage.save(login.lobby().carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.save(login.lobby().loginPackageName()), pError);
 
 exit:
     return cc;

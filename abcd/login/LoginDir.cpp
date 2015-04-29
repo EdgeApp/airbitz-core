@@ -169,38 +169,4 @@ exit:
     return cc;
 }
 
-/**
- * Loads the login and care packages from disk.
- */
-tABC_CC ABC_LoginDirLoadPackages(const std::string &directory,
-                                 CarePackage &carePackage,
-                                 LoginPackage &loginPackage,
-                                 tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_NEW(carePackage.load(directory + ACCOUNT_CARE_PACKAGE_FILENAME), pError);
-    ABC_CHECK_NEW(loginPackage.load(directory + ACCOUNT_LOGIN_PACKAGE_FILENAME), pError);
-
-exit:
-    return cc;
-}
-
-/**
- * Writes the login and care packages to disk.
- */
-tABC_CC ABC_LoginDirSavePackages(const std::string &directory,
-                                 const CarePackage &carePackage,
-                                 const LoginPackage &loginPackage,
-                                 tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_NEW(carePackage.save(directory + ACCOUNT_CARE_PACKAGE_FILENAME), pError);
-    ABC_CHECK_NEW(loginPackage.save(directory + ACCOUNT_LOGIN_PACKAGE_FILENAME), pError);
-
-exit:
-    return cc;
-}
-
 } // namespace abcd

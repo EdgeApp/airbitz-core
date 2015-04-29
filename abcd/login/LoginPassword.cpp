@@ -31,7 +31,8 @@ tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
     std::string LP = lobby->username() + szPassword;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(carePackage.load(lobby->carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(lobby->loginPackageName()), pError);
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);
@@ -79,7 +80,8 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(login->init(loginPackage), pError);
 
     // Set up the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(carePackage.save(lobby->carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.save(lobby->loginPackageName()), pError);
 
     // Assign the result:
     result.reset(login.release());
@@ -133,7 +135,8 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     std::string LP = login.lobby().username() + szPassword;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(carePackage.load(login.lobby().carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(login.lobby().loginPackageName()), pError);
 
     // Load the old keys:
     ABC_CHECK_RET(ABC_LoginGetServerKey(login, &oldLP1, pError));
@@ -161,7 +164,8 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
         toU08Buf(authKey), toU08Buf(oldLRA1), carePackage, loginPackage, pError));
 
     // Change the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(login.lobby().dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(carePackage.save(login.lobby().carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.save(login.lobby().loginPackageName()), pError);
 
 exit:
     return cc;
@@ -190,7 +194,8 @@ tABC_CC ABC_LoginPasswordOk(Login &login,
     *pOk = false;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(carePackage.load(login.lobby().carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(login.lobby().loginPackageName()), pError);
 
     // Try to decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);

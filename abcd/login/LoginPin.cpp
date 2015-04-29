@@ -108,7 +108,8 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     std::string LPIN = lobby->username() + szPin;
 
     // Load the packages:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(lobby->dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(carePackage.load(lobby->carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(lobby->loginPackageName()), pError);
     ABC_CHECK_NEW(local.load(lobby->dir() + PIN_FILENAME), pError);
     ABC_CHECK_NEW(local.pinAuthIdDecode(pinAuthId), pError);
 
@@ -144,7 +145,6 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     tABC_CC cc = ABC_CC_Ok;
 
     CarePackage carePackage;
-    LoginPackage loginPackage;
     PinLocal local;
     AutoU08Buf          LP1;
     DataChunk pinAuthId;
@@ -157,7 +157,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     std::string str;
 
     // Get login stuff:
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(carePackage.load(login.lobby().carePackageName()), pError);
     ABC_CHECK_RET(ABC_LoginGetServerKey(login, &LP1, pError));
 
     // Set up DID:

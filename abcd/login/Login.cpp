@@ -99,7 +99,8 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     ABC_CHECK_RET(ABC_LoginServerActivate(*lobby, toU08Buf(authKey), pError));
 
     // Set up the on-disk login:
-    ABC_CHECK_RET(ABC_LoginDirSavePackages(lobby->dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(carePackage.save(lobby->carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.save(lobby->loginPackageName()), pError);
 
     // Assign the result:
     result.reset(login.release());
@@ -117,11 +118,10 @@ tABC_CC ABC_LoginGetServerKey(const Login &login,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    CarePackage carePackage;
     LoginPackage loginPackage;
     DataChunk authKey;          // Unlocks the server
 
-    ABC_CHECK_RET(ABC_LoginDirLoadPackages(login.lobby().dir(), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(loginPackage.load(login.lobby().loginPackageName()), pError);
     ABC_CHECK_NEW(loginPackage.authKeyBox().decrypt(authKey, login.dataKey()), pError);
     ABC_BUF_DUP(*pLP1, toU08Buf(authKey));
 
