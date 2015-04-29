@@ -27,6 +27,12 @@ class Account;
 // We need a better way to get this data out than writing to globals:
 extern std::string gOtpResetDate;
 
+Status
+loginServerGetGeneral(JsonPtr &result);
+
+Status
+loginServerGetQuestions(JsonPtr &result);
+
 tABC_CC ABC_LoginServerCreate(const Lobby &lobby,
                               tABC_U08Buf LP1,
                               const CarePackage &carePackage,

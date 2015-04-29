@@ -15,7 +15,7 @@
 
 #include "General.hpp"
 #include "http/AirbitzRequest.hpp"
-#include "login/ServerDefs.hpp"
+#include "login/LoginServer.hpp"
 #include "json/JsonObject.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"
@@ -44,6 +44,10 @@ namespace abcd {
 #define JSON_INFO_OBELISK_SERVERS_FIELD         "obeliskServers"
 #define JSON_INFO_SYNC_SERVERS_FIELD            "syncServers"
 
+#define ABC_SERVER_JSON_CATEGORY_FIELD      "category"
+#define ABC_SERVER_JSON_MIN_LENGTH_FIELD    "min_length"
+#define ABC_SERVER_JSON_QUESTION_FIELD      "question"
+
 struct QuestionsFile:
     public JsonObject
 {
@@ -51,7 +55,6 @@ struct QuestionsFile:
 };
 
 static tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename, tABC_Error *pError);
-static tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError);
 
 /**
  * Frees the general info struct.
@@ -305,40 +308,9 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     // if we need to update
     if (bUpdateRequired)
     {
-        HttpReply reply;
-        std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_INFO_PATH;
-
-        // send the command
-        ABC_CHECK_NEW(AirbitzRequest().post(reply, url), pError);
-
-        // decode the result
-        json_t *pJSON_Value = NULL;
-        json_error_t error;
-        pJSON_Root = json_loads(reply.body.c_str(), 0, &error);
-        ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
-        ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-
-        // get the status code
-        pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
-        int statusCode = (int) json_integer_value(pJSON_Value);
-
-        // if there was a failure
-        if (ABC_Server_Code_Success != statusCode)
-        {
-            // get the message
-            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
-            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
-        }
-
-        // get the info
-        pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Value && json_is_object(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON info results");
-        {
-            JsonPtr json(json_incref(pJSON_Value));
-            ABC_CHECK_NEW(json.save(szInfoFilename), pError);
-        }
+        JsonPtr infoJson;
+        ABC_CHECK_NEW(loginServerGetGeneral(infoJson), pError);
+        ABC_CHECK_NEW(infoJson.save(szInfoFilename), pError);
     }
 
 exit:
@@ -490,83 +462,15 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    json_t *pJSON_Q    = NULL;
+    JsonPtr resultsJson;
     QuestionsFile file;
 
     // get the questions from the server
-    ABC_CHECK_RET(ABC_GeneralServerGetQuestions(&pJSON_Q, pError));
-    ABC_CHECK_NEW(file.questionsSet(pJSON_Q), pError);
+    ABC_CHECK_NEW(loginServerGetQuestions(resultsJson), pError);
+    ABC_CHECK_NEW(file.questionsSet(resultsJson), pError);
     ABC_CHECK_NEW(file.save(getRootDir() + GENERAL_QUESTIONS_FILENAME), pError);
 
 exit:
-    if (pJSON_Q)        json_decref(pJSON_Q);
-
-    return cc;
-}
-
-/**
- * Gets the recovery question choices from the server.
- *
- * This function gets the recovery question choices from the server in
- * the form of a JSON object which is an array of the choices
- *
- * @param ppJSON_Q      Pointer to store allocated json object
- *                      (it is the responsibility of the caller to free the ref)
- */
-static
-tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_QUESTIONS_PATH;
-    json_t  *pJSON_Root     = NULL;
-    char    *szResults      = NULL;
-    json_t  *pJSON_Value    = NULL;
-    json_error_t error;
-    int statusCode = 0;
-
-    ABC_CHECK_NULL(ppJSON_Q);
-
-    // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url), pError);
-
-    // decode the result
-    pJSON_Root = json_loads(reply.body.c_str(), 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-
-    // get the status code
-    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_STATUS_CODE_FIELD);
-    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON status code");
-    statusCode = (int) json_integer_value(pJSON_Value);
-
-    // if there was a failure
-    if (ABC_Server_Code_Success != statusCode)
-    {
-        if (ABC_Server_Code_NoAccount == statusCode)
-        {
-            ABC_RET_ERROR(ABC_CC_AccountDoesNotExist, "Account does not exist on server");
-        }
-        else
-        {
-            // get the message
-            pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
-            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
-        }
-    }
-
-    // get the questions
-    pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_RESULTS_FIELD);
-    ABC_CHECK_ASSERT((pJSON_Value && json_is_array(pJSON_Value)), ABC_CC_JSONError, "Error parsing server JSON question results");
-    *ppJSON_Q = pJSON_Value;
-    json_incref(*ppJSON_Q);
-
-exit:
-    if (pJSON_Root)     json_decref(pJSON_Root);
-    ABC_FREE_STR(szResults);
-
     return cc;
 }
 

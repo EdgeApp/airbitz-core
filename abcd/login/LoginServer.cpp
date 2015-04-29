@@ -6,7 +6,6 @@
  */
 
 #include "LoginServer.hpp"
-#include "ServerDefs.hpp"
 #include "Lobby.hpp"
 #include "Login.hpp"
 #include "../crypto/Encoding.hpp"
@@ -24,12 +23,61 @@
 
 namespace abcd {
 
+#define DATETIME_LENGTH 20
+
 // Server strings:
 #define JSON_ACCT_CARE_PACKAGE                  "care_package"
 #define JSON_ACCT_LOGIN_PACKAGE                 "login_package"
 #define JSON_ACCT_PIN_PACKAGE                   "pin_package"
 
-#define DATETIME_LENGTH 20
+#define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api/v1"
+#define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
+#define ABC_SERVER_ACCOUNT_ACTIVATE         "account/activate"
+#define ABC_SERVER_ACCOUNT_AVAILABLE        "account/available"
+#define ABC_SERVER_CHANGE_PASSWORD_PATH     "account/password/update"
+#define ABC_SERVER_GET_CARE_PACKAGE_PATH    "account/carepackage/get"
+#define ABC_SERVER_LOGIN_PACK_GET_PATH      "account/loginpackage/get"
+#define ABC_SERVER_PIN_PACK_GET_PATH        "account/pinpackage/get"
+#define ABC_SERVER_PIN_PACK_UPDATE_PATH     "account/pinpackage/update"
+#define ABC_SERVER_DEBUG_PATH               "account/debug"
+#define ABC_SERVER_WALLET_CREATE_PATH       "wallet/create"
+#define ABC_SERVER_WALLET_ACTIVATE_PATH     "wallet/activate"
+#define ABC_SERVER_GET_QUESTIONS_PATH       "questions"
+#define ABC_SERVER_GET_INFO_PATH            "getinfo"
+
+#define ABC_SERVER_JSON_L1_FIELD            "l1"
+#define ABC_SERVER_JSON_LP1_FIELD           "lp1"
+#define ABC_SERVER_JSON_LRA1_FIELD          "lra1"
+#define ABC_SERVER_JSON_NEW_LP1_FIELD       "new_lp1"
+#define ABC_SERVER_JSON_NEW_LRA1_FIELD      "new_lra1"
+#define ABC_SERVER_JSON_REPO_FIELD          "repo_account_key"
+#define ABC_SERVER_JSON_CARE_PACKAGE_FIELD  "care_package"
+#define ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD "login_package"
+#define ABC_SERVER_JSON_DID_FIELD           "did"
+#define ABC_SERVER_JSON_LPIN1_FIELD         "lpin1"
+#define ABC_SERVER_JSON_ALI_FIELD           "ali"
+#define ABC_SERVER_JSON_OTP_FIELD           "otp"
+#define ABC_SERVER_JSON_OTP_SECRET_FIELD    "otp_secret"
+#define ABC_SERVER_JSON_OTP_TIMEOUT         "otp_timeout"
+#define ABC_SERVER_JSON_OTP_PENDING         "pending"
+#define ABC_SERVER_JSON_OTP_ON              "on"
+#define ABC_SERVER_JSON_OTP_RESET_AUTH      "otp_reset_auth"
+
+#define ABC_SERVER_JSON_REPO_WALLET_FIELD       "repo_wallet_key"
+#define ABC_SERVER_JSON_EREPO_WALLET_FIELD      "erepo_wallet_key"
+
+typedef enum eABC_Server_Code
+{
+    ABC_Server_Code_Success = 0,
+    ABC_Server_Code_Error = 1,
+    ABC_Server_Code_AccountExists = 2,
+    ABC_Server_Code_NoAccount = 3,
+    ABC_Server_Code_InvalidPassword = 4,
+    ABC_Server_Code_InvalidAnswers = 5,
+    ABC_Server_Code_InvalidApiKey = 6,
+    ABC_Server_Code_PinExpired = 7,
+    ABC_Server_Code_InvalidOTP = 8
+} tABC_Server_Code;
 
 struct AccountAvailableJson: public JsonObject
 {
@@ -104,6 +152,36 @@ ServerReplyJson::ok()
         return ABC_ERROR(ABC_CC_ServerError, message());
     }
 
+    return Status();
+}
+
+Status
+loginServerGetGeneral(JsonPtr &result)
+{
+    HttpReply reply;
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_INFO_PATH;
+    ABC_CHECK(AirbitzRequest().post(reply, url));
+
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply.body));
+    ABC_CHECK(replyJson.ok());
+
+    result = replyJson.results();
+    return Status();
+}
+
+Status
+loginServerGetQuestions(JsonPtr &result)
+{
+    HttpReply reply;
+    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_QUESTIONS_PATH;
+    ABC_CHECK(AirbitzRequest().post(reply, url));
+
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply.body));
+    ABC_CHECK(replyJson.ok());
+
+    result = replyJson.results();
     return Status();
 }
 
