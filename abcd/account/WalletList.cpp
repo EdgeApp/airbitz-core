@@ -143,6 +143,7 @@ WalletList::insert(const std::string &id, const JsonPtr &keys)
     WalletJson json(keys);
     ABC_CHECK(json.sortSet(wallets_.size()));
     ABC_CHECK(json.archivedSet(false));
+    ABC_CHECK(fileEnsureDir(dir_));
     ABC_CHECK(json.save(filename(id), account_.login().dataKey()));
 
     // TODO: Don't add the wallet until the sync has finished!
