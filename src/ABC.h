@@ -669,6 +669,10 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
                        bool *pOk,
                        tABC_Error *pError);
 
+tABC_CC ABC_PasswordExists(const char *szUserName,
+                           bool *pExists,
+                           tABC_Error *pError);
+
 /* === OTP authentication: === */
 
 /**

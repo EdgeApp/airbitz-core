@@ -208,4 +208,14 @@ exit:
     return cc;
 }
 
+Status
+passwordExists(bool &result, Login &login)
+{
+    LoginPackage loginPackage;
+    ABC_CHECK(loginPackage.load(login.lobby().loginPackageName()));
+
+    result = !!loginPackage.passwordBox().get();
+    return Status();
+}
+
 } // namespace abcd

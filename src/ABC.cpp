@@ -314,6 +314,28 @@ exit:
     return cc;
 }
 
+/**
+ * Returns true if the account has a password configured.
+ */
+tABC_CC ABC_PasswordExists(const char *szUserName,
+                           bool *pExists,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+
+    {
+        std::shared_ptr<Login> login;
+        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+
+        bool out;
+        ABC_CHECK_NEW(passwordExists(out, *login), pError);
+        *pExists = out;
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_OtpKeyGet(const char *szUserName,
                       char **pszKey,
                       tABC_Error *pError)
