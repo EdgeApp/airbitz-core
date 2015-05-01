@@ -23,9 +23,9 @@ tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
                             char **pszAddress,
                             tABC_Error *pError);
 
-tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
-                            tABC_BitcoinURIInfo **ppInfo,
-                            tABC_Error *pError);
+tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
+                                  tABC_BitcoinURIInfo **ppInfo,
+                                  tABC_Error *pError);
 
 void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo);
 

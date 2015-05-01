@@ -1327,7 +1327,11 @@ tABC_CC ABC_ParseBitcoinURI(const char *szURI,
                             tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szURI);
+    ABC_CHECK_ASSERT(strlen(szURI) > 0, ABC_CC_Error, "No URI provided");
+    ABC_CHECK_NULL(ppInfo);
 
+    *ppInfo = NULL;
     ABC_CHECK_RET(ABC_BridgeParseBitcoinURI(szURI, ppInfo, pError));
 
 exit:
