@@ -310,6 +310,10 @@ typedef struct sABC_BitcoinURIInfo
     char *szMessage;
     /** amount of bitcoins */
     int64_t amountSatoshi;
+    /** Airbitz category extension */
+    char *szCategory;
+    /** Airbitz ret extension for return URI */
+    char *szRet;
 } tABC_BitcoinURIInfo;
 
 /**

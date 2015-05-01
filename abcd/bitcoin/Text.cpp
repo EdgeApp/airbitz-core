@@ -135,6 +135,23 @@ exit:
     return cc;
 }
 
+struct CustomResult:
+    public libwallet::uri_parse_result
+{
+    optional_string category;
+    optional_string ret;
+
+protected:
+    virtual bool got_param(std::string& key, std::string& value)
+    {
+        if ("category" == key)
+            category.reset(value);
+        if ("ret" == key)
+            ret.reset(value);
+        return uri_parse_result::got_param(key, value);
+    }
+};
+
 /**
  * Parses a Bitcoin URI and creates an info struct with the data found in the URI.
  *
@@ -150,7 +167,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_BitcoinURIInfo *pInfo = NULL;
-    libwallet::uri_parse_result result;
+    CustomResult result;
 
     // Allow a double-slash in the "bitcoin:" URI schema
     // to work around limitations in email and SMS programs:
@@ -192,6 +209,17 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
         ABC_STRDUP(pInfo->szLabel, result.label.get().c_str());
     if (result.message)
         ABC_STRDUP(pInfo->szMessage, result.message.get().c_str());
+    if (result.category)
+    {
+        auto category = result.category.get();
+        if (0 == category.find("Expense:") ||
+            0 == category.find("Income:") ||
+            0 == category.find("Transfer:") ||
+            0 == category.find("Exchange:"))
+            ABC_STRDUP(pInfo->szCategory, category.c_str());
+    }
+    if (result.ret)
+        ABC_STRDUP(pInfo->szRet, result.ret.get().c_str());
 
     // assign created info struct
     *ppInfo = pInfo;
@@ -213,11 +241,10 @@ void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo)
     if (pInfo != NULL)
     {
         ABC_FREE_STR(pInfo->szLabel);
-
         ABC_FREE_STR(pInfo->szAddress);
-
         ABC_FREE_STR(pInfo->szMessage);
-
+        ABC_FREE_STR(pInfo->szCategory);
+        ABC_FREE_STR(pInfo->szRet);
         ABC_CLEAR_FREE(pInfo, sizeof(tABC_BitcoinURIInfo));
     }
 }
