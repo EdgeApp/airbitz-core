@@ -6,10 +6,9 @@
  */
 
 #include "ExchangeSource.hpp"
+#include "../http/HttpRequest.hpp"
 #include "../json/JsonArray.hpp"
 #include "../json/JsonObject.hpp"
-#include "../util/URL.hpp"
-#include <curl/curl.h>
 #include <stdlib.h>
 
 namespace abcd {
@@ -40,55 +39,6 @@ const ExchangeSources exchangeSources
     "BraveNewCoin", "Coinbase", "Bitstamp"
 };
 
-/**
- * Helper for exchangeSourceCurlGet.
- */
-static size_t
-curlWriteData(void *data, size_t memberSize, size_t numMembers, void *userData)
-{
-    auto size = numMembers * memberSize;
-
-    auto string = static_cast<std::string *>(userData);
-    string->append(static_cast<char *>(data), size);
-
-    return size;
-}
-
-/**
- * Does an HTTP GET request.
- */
-static Status
-exchangeSourceCurlGet(std::string &result, const char *url)
-{
-    std::string out;
-    AutoFree<CURL, curl_easy_cleanup> curlHandle;
-    ABC_CHECK_OLD(ABC_URLCurlHandleInit(&curlHandle.get(), &error));
-
-    // Set options:
-    if (curl_easy_setopt(curlHandle, CURLOPT_SSL_VERIFYPEER, 1L))
-        return ABC_ERROR(ABC_CC_Error, "Unable to verify servers cert");
-    if (curl_easy_setopt(curlHandle, CURLOPT_URL, url))
-        return ABC_ERROR(ABC_CC_Error, "Curl failed to set URL");
-    if (curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, &out))
-        return ABC_ERROR(ABC_CC_Error, "Curl failed to set data");
-    if (curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, curlWriteData))
-        return ABC_ERROR(ABC_CC_Error, "Curl failed to set callback");
-
-    // Do the GET:
-    if (curl_easy_perform(curlHandle))
-        return ABC_ERROR(ABC_CC_Error, "Curl failed to perform");
-
-    // Check the result:
-    long resCode;
-    if (curl_easy_getinfo(curlHandle, CURLINFO_RESPONSE_CODE, &resCode))
-        return ABC_ERROR(ABC_CC_Error, "Curl failed to retrieve response info");
-    if (resCode < 200 || 300 <= resCode)
-        return ABC_ERROR(ABC_CC_Error, "Bad HTTP response code");
-
-    result = std::move(out);
-    return Status();
-}
-
 static Status
 doubleDecode(double &result, const char *in)
 {
@@ -107,11 +57,11 @@ doubleDecode(double &result, const char *in)
 static Status
 fetchBitstamp(ExchangeRates &result)
 {
-    std::string raw;
-    ABC_CHECK(exchangeSourceCurlGet(raw, "https://www.bitstamp.net/api/ticker/"));
+    HttpReply reply;
+    ABC_CHECK(HttpRequest().get(reply, "https://www.bitstamp.net/api/ticker/"));
 
     BitstampJson json;
-    ABC_CHECK(json.decode(raw));
+    ABC_CHECK(json.decode(reply.body));
     ABC_CHECK(json.rateOk());
 
     double rate;
@@ -129,11 +79,11 @@ fetchBitstamp(ExchangeRates &result)
 static Status
 fetchBraveNewCoin(ExchangeRates &result)
 {
-    std::string raw;
-    ABC_CHECK(exchangeSourceCurlGet(raw, "http://api.bravenewcoin.com/rates.json"));
+    HttpReply reply;
+    ABC_CHECK(HttpRequest().get(reply, "http://api.bravenewcoin.com/rates.json"));
 
     BraveNewCoinJson json;
-    ABC_CHECK(json.decode(raw));
+    ABC_CHECK(json.decode(reply.body));
     auto rates = json.rates();
 
     // Break apart the array:
@@ -179,11 +129,11 @@ fetchBraveNewCoin(ExchangeRates &result)
 static Status
 fetchCoinbase(ExchangeRates &result)
 {
-    std::string raw;
-    ABC_CHECK(exchangeSourceCurlGet(raw, "https://coinbase.com/api/v1/currencies/exchange_rates"));
+    HttpReply reply;
+    ABC_CHECK(HttpRequest().get(reply, "https://coinbase.com/api/v1/currencies/exchange_rates"));
 
     JsonObject json;
-    ABC_CHECK(json.decode(raw));
+    ABC_CHECK(json.decode(reply.body));
 
     // Check for usable rates:
     ExchangeRates out;
