@@ -10,9 +10,9 @@
 #include "Lobby.hpp"
 #include "Login.hpp"
 #include "../crypto/Encoding.hpp"
+#include "../http/AirbitzRequest.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/Json.hpp"
-#include "../util/URL.hpp"
 #include "../util/Util.hpp"
 #include <map>
 

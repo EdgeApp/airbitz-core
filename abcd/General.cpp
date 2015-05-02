@@ -14,12 +14,12 @@
  */
 
 #include "General.hpp"
+#include "http/AirbitzRequest.hpp"
 #include "login/ServerDefs.hpp"
 #include "json/JsonObject.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"
 #include "util/Json.hpp"
-#include "util/URL.hpp"
 #include "util/Util.hpp"
 #include <stdio.h>
 #include <stdlib.h>

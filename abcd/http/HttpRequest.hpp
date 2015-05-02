@@ -54,9 +54,11 @@ public:
     put(HttpReply &result, const std::string &url,
         const std::string body="");
 
-private:
+protected:
     Status status_;
     CURL *handle_;
+
+private:
     struct curl_slist *headers_;
 
     Status init();
