@@ -45,7 +45,6 @@ namespace abcd {
 #define URL_CONN_TIMEOUT 10
 
 extern std::string gCertPath;
-std::recursive_mutex gCurlMutex;
 
 static CURLcode ABC_URLSSLCallback(CURL *curl, void *ssl_ctx, void *userptr);
 
@@ -71,7 +70,6 @@ curlWriteData(void *data, size_t memberSize, size_t numMembers, void *userData)
 tABC_CC ABC_URLRequest(const char *szURL, std::string &reply, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCurlLock lock(gCurlMutex);
 
     CURLcode curlCode = CURLE_OK;
     CURL *pCurlHandle = NULL;
@@ -124,7 +122,6 @@ tABC_CC ABC_URLRequestString(const char *szURL,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCurlLock lock(gCurlMutex);
 
     std::string reply;
 
@@ -162,7 +159,6 @@ CURLcode ABC_URLSSLCallback(CURL *curl, void *ssl_ctx, void *userptr)
 tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, std::string &reply, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCurlLock lock(gCurlMutex);
 
     CURL *pCurlHandle = NULL;
     struct curl_slist *slist = NULL;
@@ -244,7 +240,6 @@ tABC_CC ABC_URLPostString(const char *szURL,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCurlLock lock(gCurlMutex);
 
     std::string reply;
 

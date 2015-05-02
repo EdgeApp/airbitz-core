@@ -37,15 +37,10 @@
 #define ABC_URL_h
 
 #include "../../src/ABC.h"
-#include "U08Buf.hpp"
 #include <curl/curl.h>
-#include <jansson.h>
-#include <mutex>
+#include <string>
 
 namespace abcd {
-
-extern std::recursive_mutex gCurlMutex;
-typedef std::lock_guard<std::recursive_mutex> AutoCurlLock;
 
 tABC_CC ABC_URLRequest(const char *szURL,
                        std::string &reply,

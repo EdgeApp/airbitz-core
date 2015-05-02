@@ -60,8 +60,6 @@ curlWriteData(void *data, size_t memberSize, size_t numMembers, void *userData)
 static Status
 exchangeSourceCurlGet(std::string &result, const char *url)
 {
-    AutoCurlLock lock(gCurlMutex);
-
     std::string out;
     AutoFree<CURL, curl_easy_cleanup> curlHandle;
     ABC_CHECK_OLD(ABC_URLCurlHandleInit(&curlHandle.get(), &error));
