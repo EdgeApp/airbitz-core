@@ -45,6 +45,7 @@
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
 #include "../abcd/exchange/Exchange.hpp"
+#include "../abcd/http/Http.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/login/LoginDir.hpp"
@@ -57,7 +58,6 @@
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Json.hpp"
 #include "../abcd/util/Sync.hpp"
-#include "../abcd/util/URL.hpp"
 #include "../abcd/util/Util.hpp"
 #include <qrencode.h>
 #include <stdio.h>
@@ -120,7 +120,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
     // initialize URL system
-    ABC_CHECK_RET(ABC_URLInitialize(szCaCertPath, pError));
+    ABC_CHECK_NEW(httpInit(szCaCertPath), pError);
 
     // initialize Crypto perf checks to determine hashing power
     ABC_CHECK_RET(ABC_InitializeCrypto(pError));
@@ -148,8 +148,6 @@ void ABC_Terminate()
     if (gbInitialized == true)
     {
         ABC_ClearKeyCache(NULL);
-
-        ABC_URLTerminate();
 
         ABC_SyncTerminate();
 

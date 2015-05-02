@@ -47,10 +47,6 @@ namespace abcd {
 extern std::recursive_mutex gCurlMutex;
 typedef std::lock_guard<std::recursive_mutex> AutoCurlLock;
 
-tABC_CC ABC_URLInitialize(const char *szCaCertPath, tABC_Error *pError);
-
-void ABC_URLTerminate();
-
 tABC_CC ABC_URLRequest(const char *szURL,
                        std::string &reply,
                        tABC_Error *pError);

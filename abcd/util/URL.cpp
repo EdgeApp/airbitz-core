@@ -44,8 +44,7 @@ namespace abcd {
 
 #define URL_CONN_TIMEOUT 10
 
-static char *gszCaCertPath = NULL;
-static bool gbInitialized = false;
+extern std::string gCertPath;
 std::recursive_mutex gCurlMutex;
 
 static CURLcode ABC_URLSSLCallback(CURL *curl, void *ssl_ctx, void *userptr);
@@ -62,51 +61,6 @@ curlWriteData(void *data, size_t memberSize, size_t numMembers, void *userData)
     string->append(static_cast<char *>(data), size);
 
     return size;
-}
-
-/**
- * Initialize the URL system
- */
-tABC_CC ABC_URLInitialize(const char *szCaCertPath, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "ABC_URL has already been initalized");
-
-    // initialize curl
-    CURLcode curlCode;
-    if ((curlCode = curl_global_init(CURL_GLOBAL_ALL)) != 0)
-    {
-        ABC_DebugLog("Curl init failed: %d\n", curlCode);
-        ABC_RET_ERROR(ABC_CC_URLError, "Curl init failed");
-    }
-    if (szCaCertPath)
-    {
-        ABC_STRDUP(gszCaCertPath, szCaCertPath);
-    }
-
-    gbInitialized = true;
-
-exit:
-
-    return cc;
-}
-
-/**
- * Shut down the URL system
- */
-void ABC_URLTerminate()
-{
-    if (gbInitialized == true)
-    {
-        // cleanup curl
-        curl_global_cleanup();
-
-        ABC_FREE_STR(gszCaCertPath);
-
-        gbInitialized = false;
-    }
 }
 
 /**
@@ -128,8 +82,6 @@ tABC_CC ABC_URLRequest(const char *szURL, std::string &reply, tABC_Error *pError
     reply.clear();
 
     ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
-    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_CAINFO, gszCaCertPath)) == 0,
-        ABC_CC_Error, "Curl failed to set ca-certificates.crt");
 
     if ((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_URL, szURL)) != 0)
     {
@@ -225,8 +177,6 @@ tABC_CC ABC_URLPost(const char *szURL, const char *szPostData, std::string &repl
     ABC_CHECK_RET(ABC_URLCurlHandleInit(&pCurlHandle, pError))
 
     // Set the ca certificate
-    ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_CAINFO, gszCaCertPath)) == 0,
-        ABC_CC_Error, "Curl failed to set ca-certificates.crt");
     ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_SSL_CTX_FUNCTION, ABC_URLSSLCallback)) == 0,
         ABC_CC_Error, "Curl failed to set ssl callback");
 
@@ -319,9 +269,9 @@ tABC_CC ABC_URLCurlHandleInit(CURL **ppCurlHandle, tABC_Error *pError)
     CURL *pCurlHandle = NULL;
 
     pCurlHandle = curl_easy_init();
-    if (gszCaCertPath)
+    if (!gCertPath.empty())
     {
-        ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_CAINFO, gszCaCertPath)) == 0,
+        ABC_CHECK_ASSERT((curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_CAINFO, gCertPath.c_str())) == 0,
             ABC_CC_Error, "Curl failed to set ca-certificates.crt");
     }
     curlCode = curl_easy_setopt(pCurlHandle, CURLOPT_NOSIGNAL, 1);
