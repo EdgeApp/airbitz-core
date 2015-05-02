@@ -29,6 +29,12 @@ public:
     HttpRequest();
 
     /**
+     * Enables verbose debugging on the HTTP request.
+     */
+    HttpRequest &
+    debug();
+
+    /**
      * Adds a header to the HTTP request.
      */
     HttpRequest &

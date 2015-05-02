@@ -4,12 +4,36 @@
  */
 
 #include "HttpRequest.hpp"
+#include "../util/Debug.hpp"
 
 namespace abcd {
 
 #define TIMEOUT 10
 
 extern std::string gCertPath;
+
+static int
+curlDebugCallback(CURL *handle, curl_infotype type, char *data, size_t size, void *userp)
+{
+    std::string payload(data, size);
+    switch (type)
+    {
+    case CURLINFO_HEADER_OUT:
+        ABC_DebugLog("cURL header out: %s", payload.c_str());
+        return 0;
+    case CURLINFO_DATA_OUT:
+        ABC_DebugLog("cURL data out: %s", payload.c_str());
+        return 0;
+    case CURLINFO_HEADER_IN:
+        ABC_DebugLog("cURL header in: %s", payload.c_str());
+        return 0;
+    case CURLINFO_DATA_IN:
+        ABC_DebugLog("cURL data in: %s", payload.c_str());
+        return 0;
+    default:
+        return 0;
+    }
+}
 
 static size_t
 curlDataCallback(void *data, size_t memberSize, size_t numMembers, void *userData)
@@ -33,6 +57,19 @@ HttpRequest::HttpRequest():
     headers_(nullptr)
 {
     status_ = init();
+}
+
+HttpRequest &
+HttpRequest::debug()
+{
+    if (!status_)
+        return *this;
+
+    if (curl_easy_setopt(handle_, CURLOPT_DEBUGFUNCTION, curlDebugCallback) ||
+        curl_easy_setopt(handle_, CURLOPT_VERBOSE, 1L))
+        status_ = ABC_ERROR(ABC_CC_Error, "cURL failed to enable debug output");
+
+    return *this;
 }
 
 HttpRequest &
