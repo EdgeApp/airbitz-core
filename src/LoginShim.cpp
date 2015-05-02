@@ -24,10 +24,10 @@ namespace abcd {
 // The mutex only needs to be locked when updating the cache,
 // not when using the objects inside.
 // The cached objects must provide their own thread safety.
-std::mutex gLoginMutex;
-std::shared_ptr<Lobby> gLobbyCache;
-std::shared_ptr<Login> gLoginCache;
-std::shared_ptr<Account> gAccountCache;
+static std::mutex gLoginMutex;
+static std::shared_ptr<Lobby> gLobbyCache;
+static std::shared_ptr<Login> gLoginCache;
+static std::shared_ptr<Account> gAccountCache;
 
 /**
  * Clears the cached login.
