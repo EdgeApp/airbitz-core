@@ -358,12 +358,12 @@ void ABC_GeneralFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices)
             for (unsigned i = 0; i < pQuestionChoices->numChoices; i++)
             {
                 tABC_QuestionChoice *pChoice = pQuestionChoices->aChoices[i];
-
                 if (pChoice)
                 {
                     ABC_FREE_STR(pChoice->szQuestion);
                     ABC_FREE_STR(pChoice->szCategory);
                 }
+                ABC_CLEAR_FREE(pChoice, sizeof(tABC_QuestionChoice));
             }
 
             ABC_CLEAR_FREE(pQuestionChoices->aChoices, sizeof(tABC_QuestionChoice *) * pQuestionChoices->numChoices);
