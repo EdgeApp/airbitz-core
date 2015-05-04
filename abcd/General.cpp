@@ -274,7 +274,6 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     json_t  *pJSON_Root     = NULL;
-    char    *szResults      = NULL;
     char    *szInfoFilename = NULL;
     char    *szJSON         = NULL;
     bool    bUpdateRequired = true;
@@ -306,16 +305,17 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     // if we need to update
     if (bUpdateRequired)
     {
+        HttpReply reply;
         std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_INFO_PATH;
 
         // send the command
-        ABC_CHECK_RET(ABC_URLPostString(url.c_str(), "", &szResults, pError));
-        ABC_DebugLog("Server results: %s", szResults);
+        ABC_CHECK_NEW(AirbitzRequest().post(reply, url), pError);
+        ABC_DebugLog("Server results: %s", reply.body.c_str());
 
         // decode the result
         json_t *pJSON_Value = NULL;
         json_error_t error;
-        pJSON_Root = json_loads(szResults, 0, &error);
+        pJSON_Root = json_loads(reply.body.c_str(), 0, &error);
         ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
         ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
 
@@ -344,9 +344,7 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     }
 
 exit:
-
     if (pJSON_Root)     json_decref(pJSON_Root);
-    ABC_FREE_STR(szResults);
     ABC_FREE_STR(szInfoFilename);
     ABC_FREE_STR(szJSON);
 
@@ -522,6 +520,7 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    HttpReply reply;
     std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_QUESTIONS_PATH;
     json_t  *pJSON_Root     = NULL;
     char    *szResults      = NULL;
@@ -532,11 +531,11 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
     ABC_CHECK_NULL(ppJSON_Q);
 
     // send the command
-    ABC_CHECK_RET(ABC_URLPostString(url.c_str(), "", &szResults, pError));
-    ABC_DebugLog("Server results: %s", szResults);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url), pError);
+    ABC_DebugLog("Server results: %s", reply.body.c_str());
 
     // decode the result
-    pJSON_Root = json_loads(szResults, 0, &error);
+    pJSON_Root = json_loads(reply.body.c_str(), 0, &error);
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing server JSON");
     ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
 

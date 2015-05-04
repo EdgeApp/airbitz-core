@@ -30,33 +30,4 @@ AirbitzRequest::AirbitzRequest()
     header("Authorization", API_KEY_HEADER + 15);
 }
 
-/**
- * Makes a URL post request and returns results in a string.
- * @param szURL         The request URL.
- * @param szPostData    The data to be posted in the request
- * @param pszResults    The location to store the allocated string with results.
- *                      The caller is responsible for free'ing this.
- */
-tABC_CC ABC_URLPostString(const char *szURL,
-                          const char *szPostData,
-                          char **pszResults,
-                          tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    HttpReply reply;
-
-    ABC_CHECK_NULL(szURL);
-    ABC_CHECK_NULL(szPostData);
-    ABC_CHECK_NULL(pszResults);
-
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, szURL, szPostData), pError);
-
-    // assign the results
-    ABC_STRDUP(*pszResults, reply.body.c_str());
-
-exit:
-    return cc;
-}
-
 } // namespace abcd

@@ -21,12 +21,6 @@ public:
     AirbitzRequest();
 };
 
-// Legacy wrapper:
-tABC_CC ABC_URLPostString(const char *szURL,
-                          const char *szPostData,
-                          char **pszResults,
-                          tABC_Error *pError);
-
 } // namespace abcd
 
 #endif
