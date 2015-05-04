@@ -310,7 +310,6 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
 
         // send the command
         ABC_CHECK_NEW(AirbitzRequest().post(reply, url), pError);
-        ABC_DebugLog("Server results: %s", reply.body.c_str());
 
         // decode the result
         json_t *pJSON_Value = NULL;
@@ -330,7 +329,6 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
             // get the message
             pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
             ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
             ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
         }
 
@@ -532,7 +530,6 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
 
     // send the command
     ABC_CHECK_NEW(AirbitzRequest().post(reply, url), pError);
-    ABC_DebugLog("Server results: %s", reply.body.c_str());
 
     // decode the result
     pJSON_Root = json_loads(reply.body.c_str(), 0, &error);
@@ -556,7 +553,6 @@ tABC_CC ABC_GeneralServerGetQuestions(json_t **ppJSON_Q, tABC_Error *pError)
             // get the message
             pJSON_Value = json_object_get(pJSON_Root, ABC_SERVER_JSON_MESSAGE_FIELD);
             ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_DebugLog("Server message: %s", json_string_value(pJSON_Value));
             ABC_RET_ERROR(ABC_CC_ServerError, json_string_value(pJSON_Value));
         }
     }

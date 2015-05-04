@@ -37,7 +37,6 @@ chainPostTx(DataSlice tx)
     HttpReply reply;
     ABC_CHECK(HttpRequest().header("Authorization", auth).
         put(reply, url, body));
-    ABC_DebugLog("Chain response code: %d", reply.code);
 
     return Status();
 }
@@ -50,7 +49,6 @@ blockhainPostTx(DataSlice tx)
     HttpReply reply;
     ABC_CHECK(HttpRequest().
         post(reply, "https://blockchain.info/pushtx", body));
-    ABC_DebugLog("Blockchain response code: %d\n", reply.code);
 
     return Status();
 }
