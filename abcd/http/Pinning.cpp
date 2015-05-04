@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#include "Pin.hpp"
-#include "Util.hpp"
+#include "Pinning.hpp"
+#include "../util/Util.hpp"
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
 #include <openssl/err.h>
