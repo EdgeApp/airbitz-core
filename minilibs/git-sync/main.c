@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     int files_changed = 0;
     int need_push = 0;
 
-    if (git_threads_init() < 0)
+    if (git_libgit2_init() < 0)
     {
         fprintf(stderr, "error: git_threads_init failed\n");
         return 1;
@@ -62,6 +62,6 @@ int main(int argc, char *argv[])
 
 exit:
     if (repo)           git_repository_free(repo);
-    git_threads_shutdown();
+    git_libgit2_shutdown();
     return rv;
 }

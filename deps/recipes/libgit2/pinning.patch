@@ -1,10 +1,16 @@
-diff --git a/src/netops.c b/src/netops.c
-index 8a60299..716639e 100644
---- a/src/netops.c
-+++ b/src/netops.c
-@@ -260,6 +260,66 @@ static int check_host_name(const char *name, const char *host)
- 
- #ifdef GIT_SSL
+commit 611b2cf57668a6e58d9a587184411b3ef81cb318
+Author: William Swanson <swansontec@gmail.com>
+Date:   Thu Nov 5 16:08:03 2015 -0800
+
+    pinning.patch
+
+diff --git a/src/openssl_stream.c b/src/openssl_stream.c
+index 4df7c6b..94fcac1 100644
+--- a/src/openssl_stream.c
++++ b/src/openssl_stream.c
+@@ -31,6 +31,66 @@
+ #include <openssl/x509v3.h>
+ #include <openssl/bio.h>
  
 +const char *AB_AUTH_CERTIFICATE =
 +	"-----BEGIN CERTIFICATE-----\n"
@@ -66,10 +72,10 @@ index 8a60299..716639e 100644
 +	return ret;
 +}
 +
- static int verify_server_cert(gitno_ssl *ssl, const char *host)
+ static int bio_create(BIO *b)
  {
- 	X509 *cert;
-@@ -296,6 +356,11 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
+ 	b->init = 1;
+@@ -209,6 +269,11 @@ static int verify_server_cert(SSL *ssl, const char *host)
  		return -1;
  	}
  

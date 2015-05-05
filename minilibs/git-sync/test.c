@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     git_repository *repo_b = NULL;
     git_repository *server = NULL;
 
-    CHECK(git_threads_init());
+    CHECK(git_libgit2_init());
 
     CHECK(mkdir("test", S_IRWXU | S_IRWXG | S_IRWXO));
     CHECK(mkdir(REPO_A, S_IRWXU | S_IRWXG | S_IRWXO));
@@ -114,6 +114,7 @@ exit:
     if (repo_a) git_repository_free(repo_a);
     if (repo_b) git_repository_free(repo_b);
     if (server) git_repository_free(server);
+    git_libgit2_shutdown();
 
     return e;
 }
