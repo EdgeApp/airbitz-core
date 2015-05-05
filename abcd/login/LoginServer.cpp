@@ -75,7 +75,7 @@ typedef enum eABC_Server_Code
     ABC_Server_Code_InvalidPassword = 4,
     ABC_Server_Code_InvalidAnswers = 5,
     ABC_Server_Code_InvalidApiKey = 6,
-    ABC_Server_Code_PinExpired = 7,
+    // Removed ABC_Server_Code_PinExpired = 7,
     ABC_Server_Code_InvalidOTP = 8
 } tABC_Server_Code;
 
@@ -125,10 +125,17 @@ ServerReplyJson::ok()
         return ABC_ERROR(ABC_CC_AccountDoesNotExist, "Account does not exist on server");
 
     case ABC_Server_Code_InvalidPassword:
-        return ABC_ERROR(ABC_CC_BadPassword, "Invalid password on server");
+        {
+            struct ResultJson: public JsonObject
+            {
+                ABC_JSON_CONSTRUCTORS(ResultJson, JsonObject)
+                ABC_JSON_INTEGER(wait, "wait_seconds", 0)
+            } resultJson(results());
 
-    case ABC_Server_Code_PinExpired:
-        return ABC_ERROR(ABC_CC_PinExpired, "PIN expired");
+            if (resultJson.waitOk())
+                return ABC_ERROR(ABC_CC_InvalidPinWait, std::to_string(resultJson.wait()));
+        }
+        return ABC_ERROR(ABC_CC_BadPassword, "Invalid password on server");
 
     case ABC_Server_Code_InvalidOTP:
         {

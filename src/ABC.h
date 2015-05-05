@@ -150,8 +150,8 @@ typedef enum eABC_CC
     ABC_CC_NonNumericPin = 34,
     /** Unable to find an address */
     ABC_CC_NoAvailableAddress = 35,
-    /** Login PIN has expired */
-    ABC_CC_PinExpired = 36,
+    /** The user has entered a bad PIN, and must wait. */
+    ABC_CC_InvalidPinWait = 36, ABC_CC_PinExpired = 36,
      /** Two Factor required */
     ABC_CC_InvalidOTP = 37,
 } tABC_CC;
