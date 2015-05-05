@@ -404,27 +404,6 @@ typedef struct sABC_TxInfo
 } tABC_TxInfo;
 
 /**
- * AirBitz Unsigned Transaction
- *
- * Includes the approximate fees to send out this transaction
- */
-typedef struct sABC_UnsignedTx
-{
-    void *data;
-    /** Tx Id we use internally */
-    char *szTxId;
-    /** block chain tx id**/
-    char *szTxMalleableId;
-    /** Fees associated with the tx **/
-    uint64_t fees;
-    /** Number for outputs **/
-    unsigned int countOutputs;
-    /** The output information **/
-    tABC_TxOutput **aOutputs;
-} tABC_UnsignedTx;
-
-
-/**
  * AirBitz Password Rule
  *
  * This structure contains info for a password rule.
@@ -948,7 +927,7 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
                         void *pData,
                         tABC_Error *pError);
 
-/* === Addresses: === */
+/* === Receiving: === */
 tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
                                  const char *szPassword,
                                  const char *szWalletUUID,
@@ -984,21 +963,6 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
                                   unsigned int *pWidth,
                                   tABC_Error *pError);
 
-tABC_CC ABC_InitiateSendRequest(const char *szUserName,
-                                const char *szPassword,
-                                const char *szWalletUUID,
-                                const char *szDestAddress,
-                                tABC_TxDetails *pDetails,
-                                char **szTxId,
-                                tABC_Error *pError);
-
-tABC_CC ABC_InitiateTransfer(const char *szUserName,
-                             const char *szPassword,
-                             tABC_TransferDetails *pTransfer,
-                             tABC_TxDetails *pDetails,
-                             char **szTxId,
-                             tABC_Error *pError);
-
 tABC_CC ABC_GetRequestAddress(const char *szUserName,
                               const char *szPassword,
                               const char *szWalletUUID,
@@ -1015,6 +979,23 @@ tABC_CC ABC_GetPendingRequests(const char *szUserName,
 
 void ABC_FreeRequests(tABC_RequestInfo **aRequests,
                       unsigned int count);
+
+/* === Spending: === */
+
+tABC_CC ABC_InitiateSendRequest(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletUUID,
+                                const char *szDestAddress,
+                                tABC_TxDetails *pDetails,
+                                char **szTxId,
+                                tABC_Error *pError);
+
+tABC_CC ABC_InitiateTransfer(const char *szUserName,
+                             const char *szPassword,
+                             tABC_TransferDetails *pTransfer,
+                             tABC_TxDetails *pDetails,
+                             char **szTxId,
+                             tABC_Error *pError);
 
 tABC_CC ABC_CalcSendFees(const char *szUserName,
                          const char *szPassword,

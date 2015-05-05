@@ -64,6 +64,25 @@ typedef struct sABC_TxSendInfo
     tABC_TxDetails          *pDetails;
 } tABC_TxSendInfo;
 
+/**
+ * AirBitz Unsigned Transaction
+ *
+ * Includes the approximate fees to send out this transaction
+ */
+typedef struct sABC_UnsignedTx
+{
+    void *data;
+    /** Tx Id we use internally */
+    char *szTxId;
+    /** block chain tx id**/
+    char *szTxMalleableId;
+    /** Fees associated with the tx **/
+    uint64_t fees;
+    /** Number for outputs **/
+    unsigned int countOutputs;
+    /** The output information **/
+    tABC_TxOutput **aOutputs;
+} tABC_UnsignedTx;
 
 tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
                          const tABC_TxDetails *pOldDetails,
