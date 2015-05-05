@@ -121,7 +121,7 @@ HttpRequest::get(HttpReply &result, const std::string &url)
         return ABC_ERROR(ABC_CC_Error, "cURL failed to make HTTP request");
     if (curl_easy_getinfo(handle_, CURLINFO_RESPONSE_CODE, &result.code))
         return ABC_ERROR(ABC_CC_Error, "cURL failed to get response code");
-    ABC_DebugLog("%s (%d) -> %s", url.c_str(), result.code, result.body.c_str());
+    ABC_DebugLog("%s (%d)", url.c_str(), result.code);
 
     return Status();
 }
@@ -135,7 +135,6 @@ HttpRequest::post(HttpReply &result, const std::string &url,
     if (curl_easy_setopt(handle_, CURLOPT_POSTFIELDSIZE, body.size()) ||
         curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, body.c_str()))
         return ABC_ERROR(ABC_CC_Error, "cURL failed to set POST body");
-    ABC_DebugLog("%s <- %s", url.c_str(), body.c_str());
     return get(result, url);
 }
 
