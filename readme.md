@@ -16,11 +16,12 @@ host system:
 * git
 * libtool
 * pkgconfig
+* protobuf
 * wget
 
 To install these on the Mac, please use [Homebrew](http://brew.sh/):
 
-    brew install autoconf automake cmake git libtool pkgconfig wget
+    brew install autoconf automake cmake git libtool pkgconfig protobuf wget
 
 The 'wget' and 'cmake' that come from MacPorts are known to be broken.
 If you are building for iOS or Mac native, you also need a working installation
@@ -29,7 +30,7 @@ of the XCode command-line tools.
 For Linux native builds, you need the clang compiler.
 The following command will install the necessary dependencies on Ubuntu:
 
-    apt-get install autoconf automake cmake git libtool pkgconfig wget clang
+    apt-get install autoconf automake cmake git libtool pkgconfig protobuf-compiler wget clang
 
 Assuming your system has the necessary command-line tools installed, it should
 be possible to build an Android or iOS-compatible version of ABC by doing
