@@ -17,6 +17,12 @@ struct HttpReply
     int code;
     /** The returned message body. */
     std::string body;
+
+    /**
+     * Verifies that the response code is in the 200 range.
+     */
+    Status
+    codeOk();
 };
 
 /**

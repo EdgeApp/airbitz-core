@@ -46,6 +46,15 @@ curlDataCallback(void *data, size_t memberSize, size_t numMembers, void *userDat
     return size;
 }
 
+Status
+HttpReply::codeOk()
+{
+    if (code < 200 || 300 <= code)
+        return ABC_ERROR(ABC_CC_Error, "Bad HTTP status code " +
+            std::to_string(code));
+    return Status();
+}
+
 HttpRequest::~HttpRequest()
 {
     if (handle_) curl_easy_cleanup(handle_);
@@ -113,11 +122,6 @@ HttpRequest::get(HttpReply &result, const std::string &url)
     if (curl_easy_getinfo(handle_, CURLINFO_RESPONSE_CODE, &result.code))
         return ABC_ERROR(ABC_CC_Error, "cURL failed to get response code");
     ABC_DebugLog("%s (%d) -> %s", url.c_str(), result.code, result.body.c_str());
-
-    // Check the result:
-    if (result.code < 200 || 300 <= result.code)
-        return ABC_ERROR(ABC_CC_Error, "Bad HTTP response code " +
-            std::to_string(result.code));
 
     return Status();
 }

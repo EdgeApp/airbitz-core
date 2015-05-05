@@ -59,6 +59,7 @@ fetchBitstamp(ExchangeRates &result)
 {
     HttpReply reply;
     ABC_CHECK(HttpRequest().get(reply, "https://www.bitstamp.net/api/ticker/"));
+    ABC_CHECK(reply.codeOk());
 
     BitstampJson json;
     ABC_CHECK(json.decode(reply.body));
@@ -81,6 +82,7 @@ fetchBraveNewCoin(ExchangeRates &result)
 {
     HttpReply reply;
     ABC_CHECK(HttpRequest().get(reply, "http://api.bravenewcoin.com/rates.json"));
+    ABC_CHECK(reply.codeOk());
 
     BraveNewCoinJson json;
     ABC_CHECK(json.decode(reply.body));
@@ -131,6 +133,7 @@ fetchCoinbase(ExchangeRates &result)
 {
     HttpReply reply;
     ABC_CHECK(HttpRequest().get(reply, "https://coinbase.com/api/v1/currencies/exchange_rates"));
+    ABC_CHECK(reply.codeOk());
 
     JsonObject json;
     ABC_CHECK(json.decode(reply.body));
