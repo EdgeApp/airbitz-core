@@ -177,9 +177,6 @@ tABC_CC ABC_SignIn(const char *szUserName,
     {
         std::shared_ptr<Login> login;
         ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword), pError);
-
-        // Take this non-blocking opportunity to update the general info:
-        ABC_GeneralUpdateInfo(pError);
     }
 
 exit:
@@ -220,10 +217,6 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     {
         std::shared_ptr<Login> login;
         ABC_CHECK_NEW(cacheLoginNew(login, szUserName, szPassword), pError);
-
-        // Take this non-blocking opportunity to update the general info:
-        ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
-        ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
     }
 
 exit:
