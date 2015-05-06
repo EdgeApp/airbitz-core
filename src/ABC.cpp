@@ -242,6 +242,11 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szUserName) >= ABC_MIN_USERNAME_LENGTH, ABC_CC_Error, "Username too short");
 
     {
+        std::string username;
+        ABC_CHECK_NEW(Lobby::fixUsername(username, szUserName), pError);
+        if (username.size() < ABC_MIN_USERNAME_LENGTH)
+            ABC_RET_ERROR(ABC_CC_NotSupported, "Username is too short");
+
         std::shared_ptr<Login> login;
         ABC_CHECK_NEW(cacheLoginNew(login, szUserName, szPassword), pError);
     }
