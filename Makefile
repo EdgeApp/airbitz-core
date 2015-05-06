@@ -20,12 +20,15 @@ endif
 abc_sources = \
 	$(wildcard abcd/*.cpp abcd/*/*.cpp src/*.cpp) \
 	minilibs/scrypt/crypto_scrypt.c \
-	minilibs/git-sync/sync.c
+	minilibs/git-sync/sync.c \
+	codegen/paymentrequest.pb.cpp
 
 cli_sources = $(wildcard cli/*.cpp cli/*/*.cpp)
 test_sources = $(wildcard test/*.cpp)
 
-generated_headers = abcd/config.h
+generated_headers = \
+	abcd/config.h \
+	codegen/paymentrequest.pb.h
 
 # Objects:
 abc_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(abc_sources))))
@@ -59,14 +62,14 @@ check: $(WORK_DIR)/abc-test
 	$(RUN) $<
 
 clean:
-	$(RM) -r $(WORK_DIR)
+	$(RM) -r $(WORK_DIR) codegen
 
 # Automatic dependency rules:
-$(WORK_DIR)/%.o: %.c $(generated_headers)
+$(WORK_DIR)/%.o: %.c | $(generated_headers)
 	@mkdir -p $(dir $@)
 	$(RUN) $(CC) -c -MMD $(CFLAGS) -o $@ $<
 
-$(WORK_DIR)/%.o: %.cpp $(generated_headers)
+$(WORK_DIR)/%.o: %.cpp | $(generated_headers)
 	@mkdir -p $(dir $@)
 	$(RUN) $(CXX) -c -MMD $(CXXFLAGS) -o $@ $<
 
@@ -78,3 +81,11 @@ include $(wildcard $(WORK_DIR)/*/*.d $(WORK_DIR)/*/*/*.d)
 abcd/config.h:
 	@echo "error: Please copy abcd/config.h.example to abcd/config.h add you API keys."
 	@exit 1
+
+# Protobuf files:
+codegen/paymentrequest.pb.h codegen/paymentrequest.pb.cc: abcd/spend/paymentrequest.proto
+	@mkdir -p $(dir $@)
+	$(RUN) protoc --cpp_out=$(dir $@) --proto_path=$(dir $<) $<
+
+codegen/paymentrequest.pb.cpp: codegen/paymentrequest.pb.cc
+	@cp $^ $@
