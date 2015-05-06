@@ -11,6 +11,8 @@
 
 namespace abcd {
 
+class PaymentRequest;
+
 /**
  * AirBitz Core Send Tx Structure
  *
@@ -20,6 +22,7 @@ namespace abcd {
 typedef struct sABC_TxSendInfo
 {
     char                    *szDestAddress;
+    PaymentRequest          *paymentRequest;
     tABC_TxDetails          *pDetails;
 
     // Transfer from money from one wallet to another

@@ -54,6 +54,7 @@
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
 #include "../abcd/login/Otp.hpp"
+#include "../abcd/spend/PaymentProto.hpp"
 #include "../abcd/spend/Spend.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
@@ -128,6 +129,9 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
     // initialize sync
     ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
+
+    // initialize payment
+    ABC_CHECK_NEW(paymentInit(szCaCertPath), pError);
 
     gbInitialized = true;
 
@@ -1582,8 +1586,8 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
         // Parse the URI:
         AutoFree<tABC_BitcoinURIInfo, ABC_BridgeFreeURIInfo> pUri;
         ABC_CHECK_RET(ABC_BridgeParseBitcoinURI(szText, &pUri.get(), pError));
-        if (!pUri->szAddress)
-            ABC_RET_ERROR(ABC_CC_ParseError, "No address provided");
+        if (!pUri->szAddress && !pUri->szR)
+            ABC_RET_ERROR(ABC_CC_ParseError, "No address or payment request provided");
 
         // Build the payment details from the URI:
         AutoFree<tABC_TxDetails, ABC_TxFreeDetails> pDetails;
@@ -1594,18 +1598,53 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
         pDetails->amountSatoshi = (ABC_INVALID_AMOUNT != pUri->amountSatoshi) ?
             pUri->amountSatoshi : 0;
 
-        // Build the spend target:
-        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
-        ABC_NEW(pSpend.get(), tABC_SpendTarget);
-        pSpend->amount = pDetails->amountSatoshi;
-        pSpend->amountMutable = true;
-        ABC_STRDUP(pSpend->szName, pUri->szAddress);
-        if (pUri->szRet)
-            ABC_STRDUP(pSpend->szRet, pUri->szRet);
-
         // Build a tABC_TxSendInfo:
         AutoFree<tABC_TxSendInfo, ABC_TxSendInfoFree> pInfo;
         ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pInfo.get(), pUri->szAddress, pDetails, pError));
+
+        // Build the spend target:
+        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
+        ABC_NEW(pSpend.get(), tABC_SpendTarget);
+        if (pUri->szRet)
+            ABC_STRDUP(pSpend->szRet, pUri->szRet);
+
+        // If this is a payment request, fill those details in:
+        if (pUri->szR)
+        {
+            // Grab and verify the payment request:
+            PaymentRequest *request = new PaymentRequest();
+            ABC_CHECK_NEW(request->fetch(pUri->szR), pError);
+            ABC_CHECK_NEW(request->signatureOk(), pError);
+
+            // Update the spend target:
+            pSpend->amount = request->amount();
+            pSpend->amountMutable = false;
+            ABC_STRDUP(pSpend->szName, request->merchant().c_str());
+
+            // Update the details:
+            pDetails->amountSatoshi = pSpend->amount;
+            if (!request->merchant().empty() && ABC_STRLEN(pDetails->szName) == 0)
+            {
+                ABC_DebugLog("Merchant: %s", request->merchant().c_str());
+                ABC_FREE_STR(pDetails->szName);
+                ABC_STRDUP(pDetails->szName, request->merchant().c_str());
+            }
+            if (!request->memo().empty() && ABC_STRLEN(pDetails->szNotes) == 0)
+            {
+                ABC_DebugLog("Memo: %s", request->memo().c_str());
+                ABC_FREE_STR(pDetails->szNotes);
+                ABC_STRDUP(pDetails->szNotes, request->memo().c_str());
+            }
+
+            pInfo->paymentRequest = request;
+        }
+        else
+        {
+            pSpend->amount = pDetails->amountSatoshi;
+            pSpend->amountMutable = true;
+            ABC_STRDUP(pSpend->szName, pUri->szAddress);
+        }
+
         pSpend->pData = pInfo.get();
         pInfo.get() = nullptr;
 

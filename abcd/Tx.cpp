@@ -295,8 +295,10 @@ tABC_CC ABC_TxSendComplete(tABC_WalletID self,
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
     // Add in tx fees to the amount of the tx
 
-    ABC_CHECK_RET(ABC_TxWalletOwnsAddress(self, pInfo->szDestAddress,
-                                          &bFound, pError));
+    if (pInfo->szDestAddress)
+    {
+        ABC_CHECK_RET(ABC_TxWalletOwnsAddress(self, pInfo->szDestAddress, &bFound, pError));
+    }
     if (bFound)
     {
         pTx->pDetails->amountSatoshi = pInfo->pDetails->amountFeesAirbitzSatoshi

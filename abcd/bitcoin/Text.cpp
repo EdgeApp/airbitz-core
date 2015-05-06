@@ -218,6 +218,8 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
             0 == category.find("Exchange:"))
             ABC_STRDUP(pInfo->szCategory, category.c_str());
     }
+    if (result.r)
+        ABC_STRDUP(pInfo->szR, result.r.get().c_str());
     if (result.ret)
         ABC_STRDUP(pInfo->szRet, result.ret.get().c_str());
 
