@@ -441,6 +441,33 @@ typedef struct sABC_RequestInfo
 } tABC_RequestInfo;
 
 /**
+ * A work-in-progress spend.
+ *
+ * Somebody, somewhere, wants money.
+ * There are many ways they could make this request, such as by URL,
+ * address, private key, wallet-wallet transfer, &c..
+ * This structure encapsulates such a request,
+ * providing the GUI with appropriate meta-data to ask the user's approval.
+ */
+typedef struct sABC_SpendTarget
+{
+    /** The amount being requested. */
+    uint64_t amount;
+    /** True if the GUI can change the amount. */
+    bool amountMutable;
+    /** The destination to show to the user. This is often an address,
+     * but also could be something else like a wallet name. */
+    const char *szName;
+    /** Non-null if the payment request provides a URL
+     * to visit once the payment is done. */
+    const char *szRet;
+    /** The destination wallet if this is a transfer, otherwise NULL */
+    const char *szDestUUID;
+    /** Internal data used by the core. Don't touch. */
+    void *pData;
+} tABC_SpendTarget;
+
+/**
  * AirBitz Bitcoin Denomination
  *
  * This structure contains the method for
@@ -982,6 +1009,68 @@ void ABC_FreeRequests(tABC_RequestInfo **aRequests,
 
 /* === Spending: === */
 
+void ABC_SpendTargetFree(tABC_SpendTarget *pSpend);
+
+/**
+ * Creates a spend target from a piece of text.
+ * The text could be a URL, a payment address, or other things as well.
+ */
+tABC_CC ABC_SpendNewDecode(const char *szText,
+                           tABC_SpendTarget **ppSpend,
+                           tABC_Error *pError);
+
+/**
+ * Creates a spend target for a wallet-to-wallet transfer.
+ * @param szWalletUUID the destination wallet.
+ */
+tABC_CC ABC_SpendNewTransfer(const char *szUserName,
+                             const char *szWalletUUID,
+                             uint64_t amount,
+                             tABC_SpendTarget **ppSpend,
+                             tABC_Error *pError);
+
+/**
+ * Creates a spend target for an internal plugin send request.
+ */
+tABC_CC ABC_SpendNewInternal(const char *szAddress,
+                             const char *szName,
+                             const char *szCategory,
+                             const char *szNotes,
+                             uint64_t amount,
+                             tABC_SpendTarget **ppSpend,
+                             tABC_Error *pError);
+
+/**
+ * Calculate the fee needed to perform this spend.
+ * @param szWalletUUID the funds source.
+ * @return ABC_CC_InsufficientFunds if the source doesn't have enough money.
+ */
+tABC_CC ABC_SpendGetFee(const char *szUserName,
+                        const char *szWalletUUID,
+                        tABC_SpendTarget *pSpend,
+                        uint64_t *pFee,
+                        tABC_Error *pError);
+
+/**
+ * Finds the maximum amount that could be sent to this target.
+ * @param szWalletUUID the funds source.
+ */
+tABC_CC ABC_SpendGetMax(const char *szUserName,
+                        const char *szWalletUUID,
+                        tABC_SpendTarget *pSpend,
+                        uint64_t *pMax,
+                        tABC_Error *pError);
+
+/**
+ * Sends a payment.
+ * @param szWalletUUID the funds source.
+ */
+tABC_CC ABC_SpendApprove(const char *szUserName,
+                         const char *szWalletUUID,
+                         tABC_SpendTarget *pSpend,
+                         char **pszTxId,
+                         tABC_Error *pError);
+
 tABC_CC ABC_InitiateSendRequest(const char *szUserName,
                                 const char *szPassword,
                                 const char *szWalletUUID,
@@ -1003,7 +1092,7 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
                          const char *szDestAddress,
                          bool bTransfer,
                          tABC_TxDetails *pDetails,
-                         int64_t *pTotalFees,
+                         uint64_t *pTotalFees,
                          tABC_Error *pError);
 
 tABC_CC ABC_MaxSpendable(const char *szUsername,
