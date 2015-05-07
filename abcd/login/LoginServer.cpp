@@ -76,7 +76,9 @@ typedef enum eABC_Server_Code
     ABC_Server_Code_InvalidAnswers = 5,
     ABC_Server_Code_InvalidApiKey = 6,
     // Removed ABC_Server_Code_PinExpired = 7,
-    ABC_Server_Code_InvalidOTP = 8
+    ABC_Server_Code_InvalidOTP = 8,
+    /** The endpoint is obsolete, and the app needs to be upgraded. */
+    ABC_Server_Code_Obsolete = 1000
 } tABC_Server_Code;
 
 struct AccountAvailableJson: public JsonObject
@@ -152,6 +154,9 @@ ServerReplyJson::ok()
                 gOtpResetDate = resultJson.resetDate();
         }
         return ABC_ERROR(ABC_CC_InvalidOTP, "Invalid OTP");
+
+    case ABC_Server_Code_Obsolete:
+        return ABC_ERROR(ABC_CC_Obsolete, "Please upgrade Airbitz");
 
     case ABC_Server_Code_InvalidAnswers:
     case ABC_Server_Code_InvalidApiKey:

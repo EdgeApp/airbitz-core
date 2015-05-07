@@ -154,6 +154,8 @@ typedef enum eABC_CC
     ABC_CC_InvalidPinWait = 36, ABC_CC_PinExpired = 36,
      /** Two Factor required */
     ABC_CC_InvalidOTP = 37,
+    /** The server says app is obsolete and needs to be upgraded. */
+    ABC_CC_Obsolete = 1000
 } tABC_CC;
 
 /**
