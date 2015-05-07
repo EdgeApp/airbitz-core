@@ -50,7 +50,6 @@ namespace abcd {
  */
 typedef struct sABC_TxSendInfo
 {
-    tABC_WalletID           wallet;
     char                    *szDestAddress;
 
     // Transfer from money from one wallet to another
@@ -92,7 +91,6 @@ void ABC_TxFreeDetails(tABC_TxDetails *pDetails);
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
 tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
-                            tABC_WalletID self,
                             const char *szDestAddress,
                             const tABC_TxDetails *pDetails,
                             tABC_Error *pError);
@@ -197,11 +195,13 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
                                    tABC_Error *pError);
 
 // Blocking functions:
-tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo,
-                    char **pszUUID,
+tABC_CC  ABC_TxSend(tABC_WalletID self,
+                    tABC_TxSendInfo *pInfo,
+                    char **pszTxID,
                     tABC_Error *pError);
 
-tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo,
+tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self,
+                            tABC_TxSendInfo *pInfo,
                             int64_t *pTotalFees,
                             tABC_Error *pError);
 

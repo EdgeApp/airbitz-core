@@ -189,7 +189,7 @@ static tABC_CC  ABC_TxWalletOwnsAddress(tABC_WalletID self, const char *szAddres
 static tABC_CC  ABC_TxGetPrivAddresses(tABC_WalletID self, tABC_U08Buf seed, char ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxTrashAddresses(tABC_WalletID self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
 static tABC_CC  ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
-static tABC_CC  ABC_TxSendComplete(tABC_TxSendInfo *pInfo, tABC_UnsignedTx *utx, tABC_Error *pError);
+static tABC_CC  ABC_TxSendComplete(tABC_WalletID self, tABC_TxSendInfo *pInfo, tABC_UnsignedTx *utx, tABC_Error *pError);
 
 /**
  * Calculates a public address for the HD wallet main external chain.
@@ -256,7 +256,6 @@ exit:
  * Allocate a send info struct and populate it with the data given
  */
 tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
-                            tABC_WalletID self,
                             const char *szDestAddress,
                             const tABC_TxDetails *pDetails,
                             tABC_Error *pError)
@@ -271,7 +270,6 @@ tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
 
     ABC_NEW(pTxSendInfo, tABC_TxSendInfo);
 
-    ABC_CHECK_RET(ABC_WalletIDCopy(&pTxSendInfo->wallet, self, pError));
     ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
 
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTxSendInfo->pDetails), pDetails, pError));
@@ -292,7 +290,6 @@ void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo)
 {
     if (pTxSendInfo)
     {
-        ABC_WalletIDFree(pTxSendInfo->wallet);
         ABC_FREE_STR(pTxSendInfo->szDestAddress);
 
         ABC_WalletIDFree(pTxSendInfo->walletDest);
@@ -314,7 +311,8 @@ void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo)
  * @param pInfo Pointer to transaction information
  * @param pszTxID Pointer to hold allocated pointer to transaction ID string
  */
-tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
+tABC_CC ABC_TxSend(tABC_WalletID self,
+                   tABC_TxSendInfo  *pInfo,
                    char             **pszTxID,
                    tABC_Error       *pError)
 {
@@ -337,34 +335,34 @@ tABC_CC ABC_TxSend(tABC_TxSendInfo  *pInfo,
 
     // find/create a change address
     ABC_CHECK_RET(ABC_TxCreateNewAddress(
-                    pInfo->wallet, pInfo->pDetails,
+                    self, pInfo->pDetails,
                     &pChangeAddr, pError));
     // save out this address
-    ABC_CHECK_RET(ABC_TxSaveAddress(pInfo->wallet, pChangeAddr, pError));
+    ABC_CHECK_RET(ABC_TxSaveAddress(self, pChangeAddr, pError));
 
     // Fetch addresses for this wallet
     ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(pInfo->wallet, &addresses.data, &addresses.size, pError));
+        ABC_TxGetPubAddresses(self, &addresses.data, &addresses.size, pError));
     // Make an unsigned transaction
     ABC_CHECK_RET(
-        ABC_BridgeTxMake(pInfo, addresses.data, addresses.size,
+        ABC_BridgeTxMake(self, pInfo, addresses.data, addresses.size,
                          pChangeAddr->szPubAddress, pUtx, pError));
 
     // Fetch Private Seed
     ABC_CHECK_RET(
-        ABC_WalletGetBitcoinPrivateSeed(pInfo->wallet, &privSeed, pError));
+        ABC_WalletGetBitcoinPrivateSeed(self, &privSeed, pError));
     // Fetch the private addresses
     ABC_CHECK_RET(
-        ABC_TxGetPrivAddresses(pInfo->wallet, privSeed,
+        ABC_TxGetPrivAddresses(self, privSeed,
                                &keys.data, &keys.size,
                                pError));
     // Sign and send transaction
     ABC_CHECK_RET(
-        ABC_BridgeTxSignSend(pInfo, keys.data, keys.size,
+        ABC_BridgeTxSignSend(self, pInfo, keys.data, keys.size,
                              pUtx, pError));
 
     // Update the ABC db
-    ABC_CHECK_RET(ABC_TxSendComplete(pInfo, pUtx, pError));
+    ABC_CHECK_RET(ABC_TxSendComplete(self, pInfo, pUtx, pError));
 
     // return the new tx id
     ABC_STRDUP(*pszTxID, pUtx->szTxId);
@@ -378,7 +376,8 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
+tABC_CC ABC_TxSendComplete(tABC_WalletID self,
+                           tABC_TxSendInfo  *pInfo,
                            tABC_UnsignedTx  *pUtx,
                            tABC_Error       *pError)
 {
@@ -392,7 +391,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
     double currency;
 
     // Start watching all addresses incuding new change addres
-    ABC_CHECK_RET(ABC_TxWatchAddresses(pInfo->wallet, pError));
+    ABC_CHECK_RET(ABC_TxWatchAddresses(self, pError));
 
     // sucessfully sent, now create a transaction
     ABC_NEW(pTx, tABC_Tx);
@@ -408,7 +407,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
     // Add in tx fees to the amount of the tx
 
-    ABC_CHECK_RET(ABC_TxWalletOwnsAddress(pInfo->wallet, pInfo->szDestAddress,
+    ABC_CHECK_RET(ABC_TxWalletOwnsAddress(self, pInfo->szDestAddress,
                                           &bFound, pError));
     if (bFound)
     {
@@ -424,7 +423,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
     }
 
     ABC_CHECK_RET(ABC_TxCalcCurrency(
-        pInfo->wallet, pTx->pDetails->amountSatoshi, &currency, pError));
+        self, pTx->pDetails->amountSatoshi, &currency, pError));
     pTx->pDetails->amountCurrency = currency;
 
     if (pTx->pDetails->amountSatoshi > 0)
@@ -479,7 +478,7 @@ tABC_CC ABC_TxSendComplete(tABC_TxSendInfo  *pInfo,
 
     // save the transaction
     ABC_CHECK_RET(
-        ABC_TxSaveTransaction(pInfo->wallet, pTx, pError));
+        ABC_TxSaveTransaction(self, pTx, pError));
 exit:
     ABC_TxFreeTx(pTx);
     ABC_TxFreeTx(pReceiveTx);
@@ -488,7 +487,7 @@ exit:
     return cc;
 }
 
-tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo, int64_t *pTotalFees, tABC_Error *pError)
+tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, tABC_TxSendInfo *pInfo, int64_t *pTotalFees, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
@@ -503,15 +502,15 @@ tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo, int64_t *pTotalFees, tABC_Er
 
     // find/create a change address
     ABC_CHECK_RET(ABC_TxCreateNewAddress(
-                    pInfo->wallet, pInfo->pDetails,
+                    self, pInfo->pDetails,
                     &pChangeAddr, pError));
     // save out this address
-    ABC_CHECK_RET(ABC_TxSaveAddress(pInfo->wallet, pChangeAddr, pError));
+    ABC_CHECK_RET(ABC_TxSaveAddress(self, pChangeAddr, pError));
 
     // Fetch addresses for this wallet
     ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(pInfo->wallet, &addresses.data, &addresses.size, pError));
-    cc = ABC_BridgeTxMake(pInfo, addresses.data, addresses.size,
+        ABC_TxGetPubAddresses(self, &addresses.data, &addresses.size, pError));
+    cc = ABC_BridgeTxMake(self, pInfo, addresses.data, addresses.size,
                             pChangeAddr->szPubAddress, &utx, pError);
     *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
                 + pInfo->pDetails->amountFeesMinersSatoshi;

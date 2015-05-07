@@ -1629,11 +1629,10 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
 
         AutoFree<tABC_TxSendInfo, ABC_TxSendInfoFree> pTxSendInfo;
         ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo.get(),
-                                          wallet,
                                           szDestAddress,
                                           pDetails,
                                           pError));
-        ABC_CHECK_RET(ABC_TxSend(pTxSendInfo, pszTxId, pError));
+        ABC_CHECK_RET(ABC_TxSend(wallet, pTxSendInfo, pszTxId, pError));
     }
 
 exit:
@@ -1684,7 +1683,6 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
 
         AutoFree<tABC_TxSendInfo, ABC_TxSendInfoFree> pTxSendInfo;
         ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo.get(),
-                                          source,
                                           szRequestAddress,
                                           pDetails,
                                           pError));
@@ -1695,7 +1693,7 @@ tABC_CC ABC_InitiateTransfer(const char *szUserName,
         ABC_STRDUP(pTxSendInfo->szDestCategory, pTransfer->szDestCategory);
         ABC_STRDUP(pTxSendInfo->szSrcName, pTransfer->szSrcName);
         ABC_STRDUP(pTxSendInfo->szSrcCategory, pTransfer->szSrcCategory);
-        ABC_CHECK_RET(ABC_TxSend(pTxSendInfo, pszTxId, pError));
+        ABC_CHECK_RET(ABC_TxSend(source, pTxSendInfo, pszTxId, pError));
     }
 
 exit:
@@ -1723,7 +1721,6 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
 
         AutoFree<tABC_TxSendInfo, ABC_TxSendInfoFree> pTxSendInfo;
         ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pTxSendInfo.get(),
-                                          wallet,
                                           szDestAddress,
                                           pDetails,
                                           pError));
@@ -1741,7 +1738,7 @@ tABC_CC ABC_CalcSendFees(const char *szUserName,
         }
 
         ABC_CHECK_RET(ABC_TxDupDetails(&(pTxSendInfo->pDetails), pDetails, pError));
-        ABC_CHECK_RET(ABC_TxCalcSendFees(pTxSendInfo, pTotalFees, pError));
+        ABC_CHECK_RET(ABC_TxCalcSendFees(wallet, pTxSendInfo, pTotalFees, pError));
 
         pDetails->amountFeesAirbitzSatoshi = pTxSendInfo->pDetails->amountFeesAirbitzSatoshi;
         pDetails->amountFeesMinersSatoshi = pTxSendInfo->pDetails->amountFeesMinersSatoshi;

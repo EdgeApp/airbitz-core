@@ -362,7 +362,8 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
+tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
+                         tABC_TxSendInfo *pSendInfo,
                          char **addresses, int addressCount,
                          char *changeAddress,
                          tABC_UnsignedTx *pUtx,
@@ -378,7 +379,7 @@ tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
     std::vector<bc::payment_address> addresses_;
 
     WatcherInfo *watcherInfo = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcherInfo, pSendInfo->wallet), pError);
+    ABC_CHECK_NEW(watcherFind(watcherInfo, self), pError);
 
     // Alloc a new utx
     utx = new abcd::unsigned_transaction_type();
@@ -453,7 +454,8 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
+tABC_CC ABC_BridgeTxSignSend(tABC_WalletID self,
+                             tABC_TxSendInfo *pSendInfo,
                              char **paPrivKey,
                              unsigned int keyCount,
                              tABC_UnsignedTx *pUtx,
@@ -466,7 +468,7 @@ tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
     std::string txid, malleableId;
 
     WatcherInfo *watcherInfo = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcherInfo, pSendInfo->wallet), pError);
+    ABC_CHECK_NEW(watcherFind(watcherInfo, self), pError);
 
     for (unsigned i = 0; i < keyCount; ++i)
     {
@@ -509,7 +511,7 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_TxSendInfo SendInfo = {{0}};
+    tABC_TxSendInfo SendInfo = {0};
     tABC_TxDetails Details;
     tABC_GeneralInfo *ppInfo = NULL;
     tABC_UnsignedTx utx;
@@ -523,7 +525,6 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
     WatcherInfo *watcherInfo = nullptr;
     ABC_CHECK_NEW(watcherFind(watcherInfo, self), pError);
 
-    SendInfo.wallet = self;
     ABC_STRDUP(SendInfo.szDestAddress, szDestAddress);
 
     // Snag the latest general info
@@ -557,13 +558,13 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
         Details.amountSatoshi = total;
 
         // Ewwwwww, fix this to have minimal iterations
-        txResp = ABC_BridgeTxMake(&SendInfo,
+        txResp = ABC_BridgeTxMake(self, &SendInfo,
                                   addresses.data, addresses.size,
                                   changeAddr, &utx, pError);
         while (txResp == ABC_CC_InsufficientFunds && Details.amountSatoshi > 0)
         {
             Details.amountSatoshi -= 1;
-            txResp = ABC_BridgeTxMake(&SendInfo,
+            txResp = ABC_BridgeTxMake(self, &SendInfo,
                                       addresses.data, addresses.size,
                                       changeAddr, &utx, pError);
         }
