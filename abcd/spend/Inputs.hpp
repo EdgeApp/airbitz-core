@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_BITCOIN_PICKER_HPP
-#define ABCD_BITCOIN_PICKER_HPP
+#ifndef ABCD_BITCOIN_INPUTS_HPP
+#define ABCD_BITCOIN_INPUTS_HPP
 
 #include "../util/Status.hpp"
 #include <bitcoin/bitcoin.hpp>

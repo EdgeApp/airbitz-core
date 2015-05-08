@@ -30,11 +30,11 @@
  */
 
 #include "WatcherBridge.hpp"
-#include "Broadcast.hpp"
-#include "picker.hpp"
 #include "Testnet.hpp"
 #include "Watcher.hpp"
 #include "../General.hpp"
+#include "../spend/Broadcast.hpp"
+#include "../spend/Inputs.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack

@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#include "picker.hpp"
-#include "Watcher.hpp"
+#include "Inputs.hpp"
+#include "../bitcoin/Watcher.hpp"
 #include <unistd.h>
 #include <wallet/transaction.hpp>
 

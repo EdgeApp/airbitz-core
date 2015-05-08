@@ -6,7 +6,7 @@
  */
 
 #include "Broadcast.hpp"
-#include "Testnet.hpp"
+#include "../bitcoin/Testnet.hpp"
 #include "../config.h"
 #include "../crypto/Encoding.hpp"
 #include "../http/HttpRequest.hpp"
