@@ -296,29 +296,6 @@ typedef struct sABC_QuestionChoices
 } tABC_QuestionChoices;
 
 /**
- * AirBitz Bitcoin URI Elements
- *
- * This structure contains elements in
- * a Bitcoin URI
- *
- */
-typedef struct sABC_BitcoinURIInfo
-{
-    /** label for that address (e.g. name of receiver) */
-    char *szLabel;
-    /** bitcoin address (base58) */
-    char *szAddress;
-    /** message that shown to the user after scanning the QR code */
-    char *szMessage;
-    /** amount of bitcoins */
-    int64_t amountSatoshi;
-    /** Airbitz category extension */
-    char *szCategory;
-    /** Airbitz ret extension for return URI */
-    char *szRet;
-} tABC_BitcoinURIInfo;
-
-/**
  * AirBitz Transaction Details
  *
  * This structure contains details for transactions.
@@ -349,17 +326,6 @@ typedef struct sABC_TxDetails
     /** attributes for the transaction */
     unsigned int attributes;
 } tABC_TxDetails;
-
-typedef struct sABC_TransferDetails
-{
-    char *szSrcWalletUUID;
-    char *szSrcName;
-    char *szSrcCategory;
-
-    char *szDestWalletUUID;
-    char *szDestName;
-    char *szDestCategory;
-} tABC_TransferDetails;
 
 /**
  * AirBitz Output Info
@@ -587,12 +553,6 @@ tABC_CC ABC_GetQuestionChoices(tABC_QuestionChoices **pOut,
 void ABC_FreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices);
 
 /* === Tools: === */
-tABC_CC ABC_ParseBitcoinURI(const char *szURI,
-                            tABC_BitcoinURIInfo **ppInfo,
-                            tABC_Error *pError);
-
-void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo);
-
 tABC_CC ABC_ParseAmount(const char *szAmount,
                         uint64_t *pAmountOut,
                         unsigned decimalPlaces);
@@ -1069,38 +1029,6 @@ tABC_CC ABC_SpendApprove(const char *szUserName,
                          const char *szWalletUUID,
                          tABC_SpendTarget *pSpend,
                          char **pszTxId,
-                         tABC_Error *pError);
-
-tABC_CC ABC_InitiateSendRequest(const char *szUserName,
-                                const char *szPassword,
-                                const char *szWalletUUID,
-                                const char *szDestAddress,
-                                tABC_TxDetails *pDetails,
-                                char **szTxId,
-                                tABC_Error *pError);
-
-tABC_CC ABC_InitiateTransfer(const char *szUserName,
-                             const char *szPassword,
-                             tABC_TransferDetails *pTransfer,
-                             tABC_TxDetails *pDetails,
-                             char **szTxId,
-                             tABC_Error *pError);
-
-tABC_CC ABC_CalcSendFees(const char *szUserName,
-                         const char *szPassword,
-                         const char *szWalletUUID,
-                         const char *szDestAddress,
-                         bool bTransfer,
-                         tABC_TxDetails *pDetails,
-                         uint64_t *pTotalFees,
-                         tABC_Error *pError);
-
-tABC_CC ABC_MaxSpendable(const char *szUsername,
-                         const char *szPassword,
-                         const char *szWalletUUID,
-                         const char *szDestAddress,
-                         bool bTransfer,
-                         uint64_t *pMaxSatoshi,
                          tABC_Error *pError);
 
 tABC_CC ABC_SweepKey(const char *szUsername,
