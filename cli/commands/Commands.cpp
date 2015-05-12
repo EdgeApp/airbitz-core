@@ -5,17 +5,17 @@
  * See the LICENSE file for more information.
  */
 
-#include "Command.hpp"
-#include "Util.hpp"
-#include "../abcd/Wallet.hpp"
-#include "../abcd/account/Account.hpp"
-#include "../abcd/bitcoin/WatcherBridge.hpp"
-#include "../abcd/crypto/Encoding.hpp"
-#include "../abcd/exchange/Currency.hpp"
-#include "../abcd/json/JsonBox.hpp"
-#include "../abcd/login/Login.hpp"
-#include "../abcd/util/FileIO.hpp"
-#include "../abcd/util/Util.hpp"
+#include "../Command.hpp"
+#include "../Util.hpp"
+#include "../../abcd/Wallet.hpp"
+#include "../../abcd/account/Account.hpp"
+#include "../../abcd/bitcoin/WatcherBridge.hpp"
+#include "../../abcd/crypto/Encoding.hpp"
+#include "../../abcd/exchange/Currency.hpp"
+#include "../../abcd/json/JsonBox.hpp"
+#include "../../abcd/login/Login.hpp"
+#include "../../abcd/util/FileIO.hpp"
+#include "../../abcd/util/Util.hpp"
 #include <wallet/wallet.hpp>
 #include <iostream>
 

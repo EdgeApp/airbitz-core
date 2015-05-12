@@ -22,7 +22,7 @@ abc_sources = \
 	minilibs/scrypt/crypto_scrypt.c \
 	minilibs/git-sync/sync.c
 
-cli_sources = $(wildcard cli/*.cpp)
+cli_sources = $(wildcard cli/*.cpp cli/*/*.cpp)
 test_sources = $(wildcard test/*.cpp)
 
 generated_headers = abcd/config.h

@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#include "Command.hpp"
-#include "Util.hpp"
+#include "../Command.hpp"
+#include "../Util.hpp"
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
