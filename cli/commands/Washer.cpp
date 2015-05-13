@@ -27,8 +27,8 @@ typedef struct sThread
 #define MIN_BALANCE 10000
 
 static bool running = true;
-static char *gszUserName;
-static char *gszPassword;
+static const char *gszUserName;
+static const char *gszPassword;
 
 void sig_handler(int dummy)
 {
@@ -145,8 +145,8 @@ COMMAND(InitLevel::account, Washer, "washer")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... washer <user> <pass>");
-    gszUserName = argv[0];
-    gszPassword = argv[1];
+    gszUserName = session.username;
+    gszPassword = session.password;
 
     char **szUUIDs = NULL;
     unsigned int count = 0;
