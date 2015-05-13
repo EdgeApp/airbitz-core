@@ -376,6 +376,7 @@ tABC_CC ABC_AccountSettingsSave(const Account &account,
 
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Denom = NULL;
+    json_t *pJSON_SourcesArray = NULL;
     int retVal = 0;
     auto filename = account.dir() + ACCOUNT_SETTINGS_FILENAME;
 
@@ -480,6 +481,11 @@ tABC_CC ABC_AccountSettingsSave(const Account &account,
 
     // add the exchange source
     retVal = json_object_set_new(pJSON_Root, JSON_ACCT_EX_RATE_SOURCE_FIELD, json_string(pSettings->szExchangeRateSource));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // support old exchange array so older cores don't crash but leave it empty
+    pJSON_SourcesArray = json_array();
+    retVal = json_object_set(pJSON_Root, "exchangeRateSources", pJSON_SourcesArray);
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // encrypt and save json
