@@ -13,16 +13,34 @@
 #define CLI_UTIL_HPP
 
 #include "../abcd/util/Status.hpp"
+#include <thread>
 
+struct Session;
 namespace abcd
 {
     class Account;
 }
 
 /**
- * Syncs the
+ * Syncs the account and all its wallets.
  */
 abcd::Status
 syncAll(abcd::Account &account);
+
+/**
+ * Launches and runs a watcher thread.
+ */
+class WatcherThread
+{
+public:
+    ~WatcherThread();
+
+    abcd::Status
+    init(const Session &session);
+
+private:
+    std::string uuid_;
+    std::thread *thread_ = nullptr;
+};
 
 #endif
