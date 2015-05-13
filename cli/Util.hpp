@@ -14,7 +14,8 @@
 
 #include "../abcd/util/Status.hpp"
 
-namespace abcd {
+namespace abcd
+{
     class Account;
 }
 
