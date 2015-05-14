@@ -11,14 +11,32 @@
 #include "../crypto/Encoding.hpp"
 #include "../http/HttpRequest.hpp"
 #include "../json/JsonObject.hpp"
+#include <future>
 
 namespace abcd {
 
-struct ChainJson:
-    public JsonObject
+static Status
+blockcypherPostTx(DataSlice tx)
 {
-    ABC_JSON_STRING(hex, "hex", nullptr);
-};
+    const char *url = isTestnet() ?
+        "https://api.blockcypher.com/v1/btc/test3/txs/push":
+        "https://api.blockcypher.com/v1/btc/main/txs/push";
+
+    struct ChainJson: public JsonObject
+    {
+        ABC_JSON_STRING(tx, "tx", nullptr);
+    } json;
+    json.txSet(base16Encode(tx).c_str());
+    std::string body;
+    ABC_CHECK(json.encode(body));
+
+    HttpReply reply;
+    ABC_CHECK(HttpRequest().post(reply, url, body));
+    ABC_DebugLog(reply.body.c_str());
+    ABC_CHECK(reply.codeOk());
+
+    return Status();
+}
 
 static Status
 chainPostTx(DataSlice tx)
@@ -29,10 +47,13 @@ chainPostTx(DataSlice tx)
         "https://api.chain.com/v1/testnet3/transactions":
         "https://api.chain.com/v1/bitcoin/transactions";
 
-    ChainJson object;
-    object.hexSet(base16Encode(tx).c_str());
+    struct ChainJson: public JsonObject
+    {
+        ABC_JSON_STRING(hex, "hex", nullptr);
+    } json;
+    json.hexSet(base16Encode(tx).c_str());
     std::string body;
-    ABC_CHECK(object.encode(body));
+    ABC_CHECK(json.encode(body));
 
     HttpReply reply;
     ABC_CHECK(HttpRequest().header("Authorization", auth).
@@ -43,9 +64,11 @@ chainPostTx(DataSlice tx)
 }
 
 static Status
-blockhainPostTx(DataSlice tx)
+blockchainPostTx(DataSlice tx)
 {
     std::string body = "tx=" + base16Encode(tx);
+    if (isTestnet())
+        ABC_ERROR(ABC_CC_Error, "No blockchain.info testnet");
 
     HttpReply reply;
     ABC_CHECK(HttpRequest().
@@ -58,18 +81,17 @@ blockhainPostTx(DataSlice tx)
 Status
 broadcastTx(DataSlice rawTx)
 {
-    Status out = chainPostTx(rawTx);
+    auto f1 = std::async(std::launch::async, chainPostTx, rawTx);
+    auto f2 = std::async(std::launch::async, blockchainPostTx, rawTx);
+    auto f3 = std::async(std::launch::async, blockcypherPostTx, rawTx);
 
-    // Only try Blockchain when not on testnet:
-    if (!isTestnet())
-    {
-        if (out)
-            blockhainPostTx(rawTx);
-        else
-            out = blockhainPostTx(rawTx);
-    }
+    Status s1 = f1.get();
+    Status s2 = f2.get();
+    Status s3 = f3.get();
 
-    return out;
+    if (s1) return s1;
+    if (s2) return s2;
+    return s3;
 }
 
 } // namespace abcd
