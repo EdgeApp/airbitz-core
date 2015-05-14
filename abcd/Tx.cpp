@@ -33,6 +33,7 @@
 #include "Wallet.hpp"
 #include "account/Account.hpp"
 #include "account/AccountSettings.hpp"
+#include "bitcoin/picker.hpp"
 #include "bitcoin/Text.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"
@@ -370,7 +371,7 @@ exit:
     ABC_FREE(szPrivSeed);
     ABC_TxFreeAddress(pChangeAddr);
     ABC_TxFreeOutputs(pUtx->aOutputs, pUtx->countOutputs);
-    ABC_FREE(pUtx->data);
+    delete static_cast<abcd::unsigned_transaction_type*>(pUtx->data);
     ABC_FREE(pUtx);
 
     return cc;

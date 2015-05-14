@@ -34,6 +34,7 @@
 #include "picker.hpp"
 #include "Testnet.hpp"
 #include "../General.hpp"
+#include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
 #include <algorithm>
@@ -1201,29 +1202,14 @@ static
 tABC_CC ABC_BridgeWatcherLoad(WatcherInfo *watcherInfo, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    uint8_t *pData = NULL;
-    std::streampos size;
 
-    std::string filepath(
-            ABC_BridgeWatcherFile(watcherInfo->wallet.szUUID));
+    std::string path(ABC_BridgeWatcherFile(watcherInfo->wallet.szUUID));
+    DataChunk data;
+    ABC_CHECK_NEW(fileLoad(data, path), pError);
+    ABC_CHECK_ASSERT(watcherInfo->watcher->load(data) == true,
+        ABC_CC_Error, "Unable to load serialized state\n");
 
-    struct stat buffer;
-    if (stat(filepath.c_str(), &buffer) == 0)
-    {
-        std::ifstream file(filepath, std::ios::in | std::ios::binary | std::ios::ate);
-        ABC_CHECK_ASSERT(file.is_open() == true, ABC_CC_Error, "Unable to open file for loading");
-
-        size = file.tellg();
-        pData = new uint8_t[size];
-        file.seekg(0, std::ios::beg);
-        file.read(reinterpret_cast<char *>(pData), size);
-        file.close();
-
-        ABC_CHECK_ASSERT(watcherInfo->watcher->load(bc::data_chunk(pData, pData + size)) == true,
-            ABC_CC_Error, "Unable to load serialized state\n");
-    }
 exit:
-    ABC_FREE(pData);
     return cc;
 }
 
