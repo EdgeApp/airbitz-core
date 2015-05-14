@@ -5,10 +5,10 @@
  * See the LICENSE file for more information.
  */
 
-#include "Command.hpp"
-#include "../abcd/login/Lobby.hpp"
-#include "../abcd/login/LoginDir.hpp"
-#include "../abcd/login/Otp.hpp"
+#include "../Command.hpp"
+#include "../../abcd/login/Lobby.hpp"
+#include "../../abcd/login/LoginDir.hpp"
+#include "../../abcd/login/Otp.hpp"
 #include <iostream>
 
 using namespace abcd;

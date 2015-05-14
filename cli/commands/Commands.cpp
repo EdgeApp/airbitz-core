@@ -5,17 +5,17 @@
  * See the LICENSE file for more information.
  */
 
-#include "Command.hpp"
-#include "Util.hpp"
-#include "../abcd/Wallet.hpp"
-#include "../abcd/account/Account.hpp"
-#include "../abcd/bitcoin/WatcherBridge.hpp"
-#include "../abcd/crypto/Encoding.hpp"
-#include "../abcd/exchange/Currency.hpp"
-#include "../abcd/json/JsonBox.hpp"
-#include "../abcd/login/Login.hpp"
-#include "../abcd/util/FileIO.hpp"
-#include "../abcd/util/Util.hpp"
+#include "../Command.hpp"
+#include "../Util.hpp"
+#include "../../abcd/Wallet.hpp"
+#include "../../abcd/account/Account.hpp"
+#include "../../abcd/bitcoin/WatcherBridge.hpp"
+#include "../../abcd/crypto/Encoding.hpp"
+#include "../../abcd/exchange/Currency.hpp"
+#include "../../abcd/json/JsonBox.hpp"
+#include "../../abcd/login/Login.hpp"
+#include "../../abcd/util/FileIO.hpp"
+#include "../../abcd/util/Util.hpp"
 #include <wallet/wallet.hpp>
 #include <iostream>
 
@@ -69,7 +69,7 @@ COMMAND(InitLevel::account, AddCategory, "add-category")
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... add-category <user> <pass> <category>");
 
-    ABC_CHECK_OLD(ABC_AddCategory(argv[0], argv[1], argv[2], &error));
+    ABC_CHECK_OLD(ABC_AddCategory(session.username, session.password, argv[2], &error));
 
     return Status();
 }
@@ -79,7 +79,7 @@ COMMAND(InitLevel::login, ChangePassword, "change-password")
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... change-password <user> <pass> <new-pass>");
 
-    ABC_CHECK_OLD(ABC_ChangePassword(argv[0], argv[1], argv[2], &error));
+    ABC_CHECK_OLD(ABC_ChangePassword(session.username, session.password, argv[2], &error));
 
     return Status();
 }
@@ -89,7 +89,7 @@ COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery")
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... change-password-recovery <user> <ra> <new-pass>");
 
-    ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(argv[0], argv[1], argv[2], &error));
+    ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(session.username, argv[1], argv[2], &error));
 
     return Status();
 }
@@ -120,11 +120,11 @@ COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers")
         return ABC_ERROR(ABC_CC_Error, "usage: ... check-recovery-answers <user> <ras>");
 
     AutoString szQuestions;
-    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(argv[0], &szQuestions.get(), &error));
+    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(session.username, &szQuestions.get(), &error));
     printf("%s\n", szQuestions.get());
 
     bool bValid = false;
-    ABC_CHECK_OLD(ABC_CheckRecoveryAnswers(argv[0], argv[1], &bValid, &error));
+    ABC_CHECK_OLD(ABC_CheckRecoveryAnswers(session.username, argv[1], &bValid, &error));
     printf("%s\n", bValid ? "Valid!" : "Invalid!");
 
     return Status();
@@ -147,7 +147,7 @@ COMMAND(InitLevel::account, CreateWallet, "create-wallet")
         return ABC_ERROR(ABC_CC_Error, "usage: ... create-wallet <user> <pass> <wallet-name>");
 
     AutoString uuid;
-    ABC_CHECK_OLD(ABC_CreateWallet(argv[0], argv[1], argv[2],
+    ABC_CHECK_OLD(ABC_CreateWallet(session.username, session.password, argv[2],
         static_cast<int>(Currency::USD), &uuid.get(), &error));
     std::cout << "Created wallet " << uuid.get() << std::endl;
 
@@ -166,7 +166,7 @@ COMMAND(InitLevel::account, DataSync, "data-sync")
 
 COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid.c_str());
+    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... generate-addresses <user> <pass> <wallet-name> <count>");
 
@@ -189,7 +189,7 @@ COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
 
 COMMAND(InitLevel::wallet, GetBitcoinSeed, "get-bitcoin-seed")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid.c_str());
+    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-bitcoin-seed <user> <pass> <wallet-name>");
 
@@ -206,7 +206,7 @@ COMMAND(InitLevel::account, GetCategories, "get-categories")
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-categories <user> <pass>");
 
     AutoStringArray categories;
-    ABC_CHECK_OLD(ABC_GetCategories(argv[0], argv[1], &categories.data, &categories.size, &error));
+    ABC_CHECK_OLD(ABC_GetCategories(session.username, session.password, &categories.data, &categories.size, &error));
 
     printf("Categories:\n");
     for (unsigned i = 0; i < categories.size; ++i)
@@ -242,7 +242,7 @@ COMMAND(InitLevel::lobby, GetQuestions, "get-questions")
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-questions <user>");
 
     AutoString questions;
-    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(argv[0], &questions.get(), &error));
+    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(session.username, &questions.get(), &error));
     printf("Questions: %s\n", questions.get());
 
     return Status();
@@ -254,7 +254,7 @@ COMMAND(InitLevel::login, GetSettings, "get-settings")
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-settings <user> <pass>");
 
     AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(argv[0], argv[1], &pSettings.get(), &error));
+    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username, session.password, &pSettings.get(), &error));
 
     printf("First name: %s\n", pSettings->szFirstName ? pSettings->szFirstName : "(none)");
     printf("Last name: %s\n", pSettings->szLastName ? pSettings->szLastName : "(none)");
@@ -283,7 +283,7 @@ COMMAND(InitLevel::wallet, GetWalletInfo, "get-wallet-info")
 
     // TODO: This no longer works without a running watcher!
     AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pInfo;
-    ABC_CHECK_OLD(ABC_GetWalletInfo(argv[0], argv[1], argv[2], &pInfo.get(), &error));
+    ABC_CHECK_OLD(ABC_GetWalletInfo(session.username, session.password, session.uuid, &pInfo.get(), &error));
 
     return Status();
 }
@@ -310,7 +310,7 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
 
     // Iterate over wallets:
     AutoStringArray uuids;
-    ABC_CHECK_OLD(ABC_GetWalletUUIDs(argv[0], argv[1],
+    ABC_CHECK_OLD(ABC_GetWalletUUIDs(session.username, session.password,
         &uuids.data, &uuids.size, &error));
     for (unsigned i = 0; i < uuids.size; ++i)
     {
@@ -336,10 +336,10 @@ COMMAND(InitLevel::lobby, PinLogin, "pin-login")
         return ABC_ERROR(ABC_CC_Error, "usage: ... pin-login <user> <pin>");
 
     bool bExists;
-    ABC_CHECK_OLD(ABC_PinLoginExists(argv[0], &bExists, &error));
+    ABC_CHECK_OLD(ABC_PinLoginExists(session.username, &bExists, &error));
     if (bExists)
     {
-        ABC_CHECK_OLD(ABC_PinLogin(argv[0], argv[1], &error));
+        ABC_CHECK_OLD(ABC_PinLogin(session.username, argv[1], &error));
     }
     else
     {
@@ -355,7 +355,7 @@ COMMAND(InitLevel::account, PinLoginSetup, "pin-login-setup")
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... pin-login-setup <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_PinSetup(argv[0], argv[1], &error));
+    ABC_CHECK_OLD(ABC_PinSetup(session.username, session.password, &error));
 
     return Status();
 }
@@ -366,11 +366,11 @@ COMMAND(InitLevel::login, RecoveryReminderSet, "recovery-reminder-set")
         return ABC_ERROR(ABC_CC_Error, "usage: ... recovery-reminder-set <user> <pass> <n>");
 
     AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(argv[0], argv[1], &pSettings.get(), &error));
+    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username, session.password, &pSettings.get(), &error));
     printf("Old Reminder Count: %d\n", pSettings->recoveryReminderCount);
 
     pSettings->recoveryReminderCount = strtol(argv[2], 0, 10);
-    ABC_CHECK_OLD(ABC_UpdateAccountSettings(argv[0], argv[1], pSettings, &error));
+    ABC_CHECK_OLD(ABC_UpdateAccountSettings(session.username, session.password, pSettings, &error));
 
     return Status();
 }
@@ -380,14 +380,14 @@ COMMAND(InitLevel::account, RemoveCategory, "remove-category")
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... remove-category <user> <pass> <category>");
 
-    ABC_CHECK_OLD(ABC_RemoveCategory(argv[0], argv[1], argv[2], &error));
+    ABC_CHECK_OLD(ABC_RemoveCategory(session.username, session.password, argv[2], &error));
 
     return Status();
 }
 
 COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid.c_str());
+    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 6)
         return ABC_ERROR(ABC_CC_Error, "usage: ... search-bitcoin-seed <user> <pass> <wallet-name> <addr> <start> <end>");
 
@@ -427,10 +427,10 @@ COMMAND(InitLevel::account, SetNickname, "set-nickname")
         return ABC_ERROR(ABC_CC_Error, "usage: ... set-nickname <user> <pass> <name>");
 
     AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(argv[0], argv[1], &pSettings.get(), &error));
+    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username, session.password, &pSettings.get(), &error));
     free(pSettings->szNickname);
     pSettings->szNickname = strdup(argv[2]);
-    ABC_CHECK_OLD(ABC_UpdateAccountSettings(argv[0], argv[1], pSettings, &error));
+    ABC_CHECK_OLD(ABC_UpdateAccountSettings(session.username, session.password, pSettings, &error));
 
     return Status();
 }
@@ -441,7 +441,7 @@ COMMAND(InitLevel::lobby, SignIn, "sign-in")
         return ABC_ERROR(ABC_CC_Error, "usage: ... sign-in <user> <pass>");
 
     tABC_Error error;
-    tABC_CC cc = ABC_SignIn(argv[0], argv[1], &error);
+    tABC_CC cc = ABC_SignIn(session.username, argv[1], &error);
     if (ABC_CC_InvalidOTP == cc)
     {
         AutoString date;
@@ -449,7 +449,7 @@ COMMAND(InitLevel::lobby, SignIn, "sign-in")
         if (strlen(date))
             std::cout << "Pending OTP reset ends at " << date.get() << std::endl;
         std::cout << "No OTP token, resetting account 2-factor auth." << std::endl;
-        ABC_CHECK_OLD(ABC_OtpResetSet(argv[0], &error));
+        ABC_CHECK_OLD(ABC_OtpResetSet(session.username, &error));
     }
 
     return Status();
@@ -461,7 +461,7 @@ COMMAND(InitLevel::account, UploadLogs, "upload-logs")
         return ABC_ERROR(ABC_CC_Error, "usage: ... upload-logs <user> <pass>");
 
     // TODO: Command non-functional without a watcher thread!
-    ABC_CHECK_OLD(ABC_UploadLogs(argv[0], argv[1], &error));
+    ABC_CHECK_OLD(ABC_UploadLogs(session.username, session.password, &error));
 
     return Status();
 }
@@ -479,13 +479,13 @@ COMMAND(InitLevel::wallet, WalletArchive, "wallet-archive")
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-archive <user> <pass> <wallet-name> 1|0");
 
-    ABC_CHECK_OLD(ABC_SetWalletArchived(argv[0], argv[1], argv[2], atoi(argv[3]), &error));
+    ABC_CHECK_OLD(ABC_SetWalletArchived(session.username, session.password, session.uuid, atoi(argv[3]), &error));
     return Status();
 }
 
 COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid.c_str());
+    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-decrypt <user> <pass> <wallet-name> <file>");
 
@@ -505,7 +505,7 @@ COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
 
 COMMAND(InitLevel::wallet, WalletEncrypt, "wallet-encrypt")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid.c_str());
+    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-encrypt <user> <pass> <wallet-name> <file>");
 
@@ -549,13 +549,13 @@ COMMAND(InitLevel::wallet, WalletGetAddress, "wallet-get-address")
     unsigned char *szData = NULL;
     unsigned int width = 0;
     printf("starting...");
-    ABC_CHECK_OLD(ABC_CreateReceiveRequest(argv[0], argv[1], argv[2],
+    ABC_CHECK_OLD(ABC_CreateReceiveRequest(session.username, session.password, session.uuid,
         &details, &szRequestID.get(), &error));
 
-    ABC_CHECK_OLD(ABC_GenerateRequestQRCode(argv[0], argv[1], argv[2],
+    ABC_CHECK_OLD(ABC_GenerateRequestQRCode(session.username, session.password, session.uuid,
         szRequestID, &szURI.get(), &szData, &width, &error));
 
-    ABC_CHECK_OLD(ABC_GetRequestAddress(argv[0], argv[1], argv[2],
+    ABC_CHECK_OLD(ABC_GetRequestAddress(session.username, session.password, session.uuid,
         szRequestID, &szAddress.get(), &error));
 
     printf("URI: %s\n", szURI.get());
@@ -577,7 +577,7 @@ COMMAND(InitLevel::account, WalletOrder, "wallet-order")
         ids += "\n";
     }
 
-    ABC_CHECK_OLD(ABC_SetWalletOrder(argv[0], argv[1], ids.c_str(), &error));
+    ABC_CHECK_OLD(ABC_SetWalletOrder(session.username, session.password, ids.c_str(), &error));
 
     return Status();
 }

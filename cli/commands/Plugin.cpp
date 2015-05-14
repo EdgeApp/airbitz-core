@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#include "Command.hpp"
-#include "../abcd/account/PluginData.hpp"
+#include "../Command.hpp"
+#include "../../abcd/account/PluginData.hpp"
 #include <iostream>
 
 using namespace abcd;

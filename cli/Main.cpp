@@ -44,19 +44,21 @@ static Status run(int argc, char *argv[])
         if (argc < 4)
             return ABC_ERROR(ABC_CC_Error, std::string("No username given"));
 
-        ABC_CHECK(cacheLobby(session.lobby, argv[3]));
+        session.username = argv[3];
+        ABC_CHECK(cacheLobby(session.lobby, session.username));
     }
     if (InitLevel::login <= command->level())
     {
         if (argc < 5)
             return ABC_ERROR(ABC_CC_Error, std::string("No password given"));
 
-        ABC_CHECK_OLD(ABC_SignIn(argv[3], argv[4], &error));
-        ABC_CHECK(cacheLogin(session.login, argv[3]));
+        session.password = argv[4];
+        ABC_CHECK_OLD(ABC_SignIn(session.username, session.password, &error));
+        ABC_CHECK(cacheLogin(session.login, session.username));
     }
     if (InitLevel::account <= command->level())
     {
-        ABC_CHECK(cacheAccount(session.account, argv[3]));
+        ABC_CHECK(cacheAccount(session.account, session.username));
     }
     if (InitLevel::wallet <= command->level())
     {

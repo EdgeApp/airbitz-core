@@ -11,10 +11,11 @@
 #include "../abcd/util/Status.hpp"
 #include <memory>
 
-namespace abcd {
-class Lobby;
-class Login;
-class Account;
+namespace abcd
+{
+    class Lobby;
+    class Login;
+    class Account;
 }
 
 /**
@@ -39,7 +40,11 @@ struct Session
     std::shared_ptr<abcd::Lobby> lobby;
     std::shared_ptr<abcd::Login> login;
     std::shared_ptr<abcd::Account> account;
-    std::string uuid; // Wallet
+
+    // For legacy API:
+    const char *username;
+    const char *password;
+    const char *uuid;
 };
 
 /**

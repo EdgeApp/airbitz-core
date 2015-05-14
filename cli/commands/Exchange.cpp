@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#include "Command.hpp"
-#include "../abcd/exchange/Exchange.hpp"
+#include "../Command.hpp"
+#include "../../abcd/exchange/Exchange.hpp"
 #include <iostream>
 
 using namespace abcd;
