@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "watcher.hpp"
+#include "Watcher.hpp"
 #include <sstream>
 
 using namespace libbitcoin;
@@ -30,11 +30,11 @@ enum {
     msg_send
 };
 
-BC_API watcher::~watcher()
+Watcher::~Watcher()
 {
 }
 
-BC_API watcher::watcher()
+Watcher::Watcher()
   : socket_(ctx_, ZMQ_PAIR),
     connection_(nullptr)
 {
@@ -46,7 +46,7 @@ BC_API watcher::watcher()
     socket_.setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
 }
 
-BC_API void watcher::disconnect()
+void Watcher::disconnect()
 {
     send_disconnect();
 }
@@ -56,7 +56,7 @@ static bool is_valid(const payment_address& address)
     return address.version() != payment_address::invalid_version;
 }
 
-BC_API void watcher::connect(const std::string& server)
+void Watcher::connect(const std::string& server)
 {
     send_connect(server);
     for (auto& address: addresses_)
@@ -65,7 +65,7 @@ BC_API void watcher::connect(const std::string& server)
         send_watch_addr(priority_address_, priority_poll);
 }
 
-BC_API void watcher::send_tx(const transaction_type& tx)
+void Watcher::send_tx(const transaction_type& tx)
 {
     send_send(tx);
 }
@@ -73,17 +73,17 @@ BC_API void watcher::send_tx(const transaction_type& tx)
 /**
  * Serializes the database for storage while the app is off.
  */
-BC_API data_chunk watcher::serialize()
+data_chunk Watcher::serialize()
 {
     return db_.serialize();
 }
 
-BC_API bool watcher::load(const data_chunk& data)
+bool Watcher::load(const data_chunk& data)
 {
     return db_.load(data);
 }
 
-BC_API void watcher::watch_address(const payment_address& address, unsigned poll_ms)
+void Watcher::watch_address(const payment_address& address, unsigned poll_ms)
 {
     auto a = addresses_.find(address);
     if (a != addresses_.end() && a->second == poll_ms)
@@ -96,7 +96,7 @@ BC_API void watcher::watch_address(const payment_address& address, unsigned poll
  * Checks a particular address more frequently (every other poll). To go back
  * to normal mode, pass an empty address.
  */
-BC_API void watcher::prioritize_address(const payment_address& address)
+void Watcher::prioritize_address(const payment_address& address)
 {
     if (is_valid(priority_address_))
         send_watch_addr(priority_address_, default_poll);
@@ -105,7 +105,7 @@ BC_API void watcher::prioritize_address(const payment_address& address)
         send_watch_addr(priority_address_, priority_poll);
 }
 
-BC_API transaction_type watcher::find_tx(hash_digest txid)
+transaction_type Watcher::find_tx(hash_digest txid)
 {
     return db_.get_tx(txid);
 }
@@ -114,7 +114,7 @@ BC_API transaction_type watcher::find_tx(hash_digest txid)
  * Sets up the new-transaction callback. This callback will be called from
  * some random thread, so be sure to handle that with a mutex or such.
  */
-BC_API void watcher::set_tx_callback(tx_callback cb)
+void Watcher::set_tx_callback(tx_callback cb)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     cb_ = std::move(cb);
@@ -123,7 +123,7 @@ BC_API void watcher::set_tx_callback(tx_callback cb)
 /**
  * Sets up the change in block heightcallback.
  */
-BC_API void watcher::set_height_callback(block_height_callback cb)
+void Watcher::set_height_callback(block_height_callback cb)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     height_cb_ = std::move(cb);
@@ -132,7 +132,7 @@ BC_API void watcher::set_height_callback(block_height_callback cb)
 /**
  * Sets up the tx sent callback
  */
-BC_API void watcher::set_tx_sent_callback(tx_sent_callback cb)
+void Watcher::set_tx_sent_callback(tx_sent_callback cb)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     tx_send_cb_ = std::move(cb);
@@ -141,7 +141,7 @@ BC_API void watcher::set_tx_sent_callback(tx_sent_callback cb)
 /**
  * Sets up the server failure callback
  */
-BC_API void watcher::set_quiet_callback(quiet_callback cb)
+void Watcher::set_quiet_callback(quiet_callback cb)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     quiet_cb_ = std::move(cb);
@@ -150,7 +150,7 @@ BC_API void watcher::set_quiet_callback(quiet_callback cb)
 /**
  * Sets up the server failure callback
  */
-BC_API void watcher::set_fail_callback(fail_callback cb)
+void Watcher::set_fail_callback(fail_callback cb)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     fail_cb_ = std::move(cb);
@@ -160,7 +160,7 @@ BC_API void watcher::set_fail_callback(fail_callback cb)
  * Obtains a list of unspent outputs for an address. This is needed to spend
  * funds.
  */
-BC_API output_info_list watcher::get_utxos(const payment_address& address)
+output_info_list Watcher::get_utxos(const payment_address& address)
 {
     libwallet::address_set watching;
     watching.insert(address);
@@ -172,7 +172,7 @@ BC_API output_info_list watcher::get_utxos(const payment_address& address)
  * Returns all the unspent transaction outputs in the wallet.
  * @param filter true to filter out unconfirmed outputs.
  */
-BC_API output_info_list watcher::get_utxos(bool filter)
+output_info_list Watcher::get_utxos(bool filter)
 {
     libwallet::address_set addresses;
     for (auto& row: addresses_)
@@ -196,23 +196,23 @@ BC_API output_info_list watcher::get_utxos(bool filter)
     return utxos;
 }
 
-BC_API size_t watcher::get_last_block_height()
+size_t Watcher::get_last_block_height()
 {
     return db_.last_height();
 }
 
-BC_API bool watcher::get_tx_height(hash_digest txid, int& height)
+bool Watcher::get_tx_height(hash_digest txid, int& height)
 {
     height = db_.get_tx_height(txid);
     return db_.has_tx(txid);
 }
 
-void watcher::dump(std::ostream& out)
+void Watcher::dump(std::ostream& out)
 {
     db_.dump(out);
 }
 
-BC_API void watcher::stop()
+void Watcher::stop()
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
@@ -233,7 +233,7 @@ void throw_intr()
     throw 3;
 }
 
-BC_API void watcher::loop()
+void Watcher::loop()
 {
     zmq::socket_t socket(ctx_, ZMQ_PAIR);
     socket.connect(socket_name_.c_str());
@@ -278,7 +278,7 @@ BC_API void watcher::loop()
     delete connection_;
 }
 
-void watcher::send_disconnect()
+void Watcher::send_disconnect()
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
@@ -286,7 +286,7 @@ void watcher::send_disconnect()
     socket_.send(&req, 1);
 }
 
-void watcher::send_connect(std::string server)
+void Watcher::send_connect(std::string server)
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
@@ -298,7 +298,7 @@ void watcher::send_connect(std::string server)
     socket_.send(str.data(), str.size());
 }
 
-void watcher::send_watch_addr(payment_address address, unsigned poll_ms)
+void Watcher::send_watch_addr(payment_address address, unsigned poll_ms)
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
@@ -312,7 +312,7 @@ void watcher::send_watch_addr(payment_address address, unsigned poll_ms)
     socket_.send(str.data(), str.size());
 }
 
-void watcher::send_send(const transaction_type& tx)
+void Watcher::send_send(const transaction_type& tx)
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
@@ -324,7 +324,7 @@ void watcher::send_send(const transaction_type& tx)
     socket_.send(str.data(), str.size());
 }
 
-bool watcher::command(uint8_t* data, size_t size)
+bool Watcher::command(uint8_t* data, size_t size)
 {
     auto serial = bc::make_deserializer(data, data + size);
     switch (serial.read_byte())
@@ -359,7 +359,7 @@ bool watcher::command(uint8_t* data, size_t size)
             {
                 delete connection_;
                 connection_ = nullptr;
-                watcher::on_fail();
+                Watcher::on_fail();
                 return true;
             }
             connection_->txu.start();
@@ -393,42 +393,42 @@ bool watcher::command(uint8_t* data, size_t size)
     }
 }
 
-void watcher::on_add(const transaction_type& tx)
+void Watcher::on_add(const transaction_type& tx)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     if (cb_)
         cb_(tx);
 }
 
-void watcher::on_height(size_t height)
+void Watcher::on_height(size_t height)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     if (height_cb_)
         height_cb_(height);
 }
 
-void watcher::on_send(const std::error_code& error, const transaction_type& tx)
+void Watcher::on_send(const std::error_code& error, const transaction_type& tx)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     if (tx_send_cb_)
         tx_send_cb_(error, tx);
 }
 
-void watcher::on_quiet()
+void Watcher::on_quiet()
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     if (quiet_cb_)
         quiet_cb_();
 }
 
-void watcher::on_fail()
+void Watcher::on_fail()
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     if (fail_cb_)
         fail_cb_();
 }
 
-watcher::connection::~connection()
+Watcher::connection::~connection()
 {
 }
 
@@ -441,7 +441,7 @@ static void on_update_nop(const payment_address&,
 {
 }
 
-watcher::connection::connection(tx_db& db, void *ctx, tx_callbacks& cb)
+Watcher::connection::connection(tx_db& db, void *ctx, tx_callbacks& cb)
   : socket(ctx),
     codec(socket, on_update_nop, on_unknown_nop, std::chrono::seconds(10), 0),
     txu(db, codec, cb)

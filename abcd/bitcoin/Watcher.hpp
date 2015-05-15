@@ -20,57 +20,57 @@ namespace abcd {
  * Maintains a connection to an obelisk server, and uses that connection to
  * watch one or more bitcoin addresses for activity.
  */
-class BC_API watcher
-  : public libwallet::tx_callbacks
+class Watcher:
+    public libwallet::tx_callbacks
 {
 public:
-    BC_API ~watcher();
-    BC_API watcher();
+    ~Watcher();
+    Watcher();
 
     // - Server: -----------------------
-    BC_API void disconnect();
-    BC_API void connect(const std::string& server);
+    void disconnect();
+    void connect(const std::string& server);
 
     // - Serialization: ----------------
-    BC_API bc::data_chunk serialize();
-    BC_API bool load(const bc::data_chunk& data);
+    bc::data_chunk serialize();
+    bool load(const bc::data_chunk& data);
 
     // - Addresses: --------------------
-    BC_API void watch_address(const bc::payment_address& address, unsigned poll_ms=10000);
-    BC_API void prioritize_address(const bc::payment_address& address);
+    void watch_address(const bc::payment_address& address, unsigned poll_ms=10000);
+    void prioritize_address(const bc::payment_address& address);
 
     // - Transactions: -----------------
-    BC_API void send_tx(const bc::transaction_type& tx);
-    BC_API bc::transaction_type find_tx(bc::hash_digest txid);
-    BC_API bool get_tx_height(bc::hash_digest txid, int& height);
-    BC_API bc::output_info_list get_utxos(const bc::payment_address& address);
-    BC_API bc::output_info_list get_utxos(bool filter=false);
+    void send_tx(const bc::transaction_type& tx);
+    bc::transaction_type find_tx(bc::hash_digest txid);
+    bool get_tx_height(bc::hash_digest txid, int& height);
+    bc::output_info_list get_utxos(const bc::payment_address& address);
+    bc::output_info_list get_utxos(bool filter=false);
 
     // - Chain height: -----------------
-    BC_API size_t get_last_block_height();
+    size_t get_last_block_height();
 
     // - Callbacks: --------------------
     typedef std::function<void (const bc::transaction_type&)> tx_callback;
-    BC_API void set_tx_callback(tx_callback cb);
+    void set_tx_callback(tx_callback cb);
 
     typedef std::function<void (std::error_code, const bc::transaction_type&)> tx_sent_callback;
-    BC_API void set_tx_sent_callback(tx_sent_callback cb);
+    void set_tx_sent_callback(tx_sent_callback cb);
 
     typedef std::function<void (const size_t)> block_height_callback;
-    BC_API void set_height_callback(block_height_callback cb);
+    void set_height_callback(block_height_callback cb);
 
     typedef std::function<void ()> quiet_callback;
-    BC_API void set_quiet_callback(quiet_callback cb);
+    void set_quiet_callback(quiet_callback cb);
 
     typedef std::function<void ()> fail_callback;
-    BC_API void set_fail_callback(fail_callback cb);
+    void set_fail_callback(fail_callback cb);
 
     // - Thread implementation: --------
 
     /**
      * Tells the loop() method to return.
      */
-    BC_API void stop();
+    void stop();
 
     /**
      * Call this function from a separate thread. It will run for an
@@ -78,13 +78,13 @@ public:
      * in the watcher up-to-date with the network. The function will
      * eventually return when the watcher object is destroyed.
      */
-    BC_API void loop();
+    void loop();
 
-    watcher(const watcher& copy) = delete;
-    watcher& operator=(const watcher& copy) = delete;
+    Watcher(const Watcher& copy) = delete;
+    Watcher& operator=(const Watcher& copy) = delete;
 
     // Debugging code:
-    BC_API void dump(std::ostream& out=std::cout);
+    void dump(std::ostream& out=std::cout);
 
     /**
      * Accesses the real database.

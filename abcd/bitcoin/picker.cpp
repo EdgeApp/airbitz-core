@@ -6,9 +6,8 @@
  */
 
 #include "picker.hpp"
+#include "Watcher.hpp"
 #include <unistd.h>
-#include <iostream>
-#include <bitcoin/bitcoin.hpp>
 #include <wallet/transaction.hpp>
 
 namespace abcd {
@@ -22,7 +21,7 @@ static std::map<data_chunk, std::string> address_map;
 static operation create_data_operation(data_chunk& data);
 
 BC_API bool make_tx(
-             watcher& watcher,
+             Watcher& watcher,
              const std::vector<payment_address>& addresses,
              const payment_address& changeAddr,
              int64_t amountSatoshi,
@@ -79,7 +78,7 @@ BC_API bool make_tx(
     return true;
 }
 
-BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& keys, watcher& watcher)
+BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& keys, Watcher& watcher)
 {
     utx.code = ok;
 
@@ -175,7 +174,7 @@ static operation create_data_operation(data_chunk& data)
     return op;
 }
 
-bool gather_challenges(unsigned_transaction& utx, abcd::watcher& watcher)
+bool gather_challenges(unsigned_transaction& utx, Watcher& watcher)
 {
     utx.challenges.resize(utx.tx.inputs.size());
 

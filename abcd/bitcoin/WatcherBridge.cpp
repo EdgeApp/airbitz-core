@@ -33,6 +33,7 @@
 #include "Broadcast.hpp"
 #include "picker.hpp"
 #include "Testnet.hpp"
+#include "Watcher.hpp"
 #include "../General.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
@@ -59,7 +60,7 @@ struct PendingSweep
 
 struct WatcherInfo
 {
-    abcd::watcher *watcher;
+    Watcher *watcher;
     std::set<std::string> addresses;
     std::list<PendingSweep> sweeping;
 
@@ -78,7 +79,7 @@ static tABC_CC     ABC_BridgeTxDetailsSplit(tABC_WalletID self, const char *szTx
 static tABC_CC     ABC_BridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep& sweep, tABC_Error *pError);
 static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
-static tABC_CC     ABC_BridgeExtractOutputs(abcd::watcher *watcher, abcd::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
+static tABC_CC     ABC_BridgeExtractOutputs(Watcher *watcher, abcd::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
 static tABC_CC     ABC_BridgeTxErrorHandler(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr);
 static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash);
@@ -153,7 +154,7 @@ tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
     }
 
     watcherInfo = new WatcherInfo();
-    watcherInfo->watcher = new abcd::watcher();
+    watcherInfo->watcher = new Watcher();
 
     ABC_CHECK_RET(ABC_WalletIDCopy(&watcherInfo->wallet, self, pError));
 
@@ -169,11 +170,11 @@ tABC_CC ABC_BridgeWatcherLoop(tABC_WalletID self,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    abcd::watcher::block_height_callback heightCallback;
-    abcd::watcher::tx_callback txCallback;
-    abcd::watcher::tx_sent_callback sendCallback;
-    abcd::watcher::quiet_callback on_quiet;
-    abcd::watcher::fail_callback failCallback;
+    Watcher::block_height_callback heightCallback;
+    Watcher::tx_callback txCallback;
+    Watcher::tx_sent_callback sendCallback;
+    Watcher::quiet_callback on_quiet;
+    Watcher::fail_callback failCallback;
 
     WatcherInfo *watcherInfo = nullptr;
     ABC_CHECK_NEW(watcherFind(watcherInfo, self), pError);
@@ -1042,7 +1043,7 @@ exit:
 }
 
 static tABC_CC
-ABC_BridgeExtractOutputs(abcd::watcher *watcher, abcd::unsigned_transaction_type *utx,
+ABC_BridgeExtractOutputs(Watcher *watcher, abcd::unsigned_transaction_type *utx,
                          std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
