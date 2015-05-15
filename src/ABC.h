@@ -296,29 +296,6 @@ typedef struct sABC_QuestionChoices
 } tABC_QuestionChoices;
 
 /**
- * AirBitz Bitcoin URI Elements
- *
- * This structure contains elements in
- * a Bitcoin URI
- *
- */
-typedef struct sABC_BitcoinURIInfo
-{
-    /** label for that address (e.g. name of receiver) */
-    char *szLabel;
-    /** bitcoin address (base58) */
-    char *szAddress;
-    /** message that shown to the user after scanning the QR code */
-    char *szMessage;
-    /** amount of bitcoins */
-    int64_t amountSatoshi;
-    /** Airbitz category extension */
-    char *szCategory;
-    /** Airbitz ret extension for return URI */
-    char *szRet;
-} tABC_BitcoinURIInfo;
-
-/**
  * AirBitz Transaction Details
  *
  * This structure contains details for transactions.
@@ -349,17 +326,6 @@ typedef struct sABC_TxDetails
     /** attributes for the transaction */
     unsigned int attributes;
 } tABC_TxDetails;
-
-typedef struct sABC_TransferDetails
-{
-    char *szSrcWalletUUID;
-    char *szSrcName;
-    char *szSrcCategory;
-
-    char *szDestWalletUUID;
-    char *szDestName;
-    char *szDestCategory;
-} tABC_TransferDetails;
 
 /**
  * AirBitz Output Info
@@ -404,27 +370,6 @@ typedef struct sABC_TxInfo
 } tABC_TxInfo;
 
 /**
- * AirBitz Unsigned Transaction
- *
- * Includes the approximate fees to send out this transaction
- */
-typedef struct sABC_UnsignedTx
-{
-    void *data;
-    /** Tx Id we use internally */
-    char *szTxId;
-    /** block chain tx id**/
-    char *szTxMalleableId;
-    /** Fees associated with the tx **/
-    uint64_t fees;
-    /** Number for outputs **/
-    unsigned int countOutputs;
-    /** The output information **/
-    tABC_TxOutput **aOutputs;
-} tABC_UnsignedTx;
-
-
-/**
  * AirBitz Password Rule
  *
  * This structure contains info for a password rule.
@@ -460,6 +405,33 @@ typedef struct sABC_RequestInfo
     /** satoshi still owed */
     int64_t owedSatoshi;
 } tABC_RequestInfo;
+
+/**
+ * A work-in-progress spend.
+ *
+ * Somebody, somewhere, wants money.
+ * There are many ways they could make this request, such as by URL,
+ * address, private key, wallet-wallet transfer, &c..
+ * This structure encapsulates such a request,
+ * providing the GUI with appropriate meta-data to ask the user's approval.
+ */
+typedef struct sABC_SpendTarget
+{
+    /** The amount being requested. */
+    uint64_t amount;
+    /** True if the GUI can change the amount. */
+    bool amountMutable;
+    /** The destination to show to the user. This is often an address,
+     * but also could be something else like a wallet name. */
+    const char *szName;
+    /** Non-null if the payment request provides a URL
+     * to visit once the payment is done. */
+    const char *szRet;
+    /** The destination wallet if this is a transfer, otherwise NULL */
+    const char *szDestUUID;
+    /** Internal data used by the core. Don't touch. */
+    void *pData;
+} tABC_SpendTarget;
 
 /**
  * AirBitz Bitcoin Denomination
@@ -581,12 +553,6 @@ tABC_CC ABC_GetQuestionChoices(tABC_QuestionChoices **pOut,
 void ABC_FreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices);
 
 /* === Tools: === */
-tABC_CC ABC_ParseBitcoinURI(const char *szURI,
-                            tABC_BitcoinURIInfo **ppInfo,
-                            tABC_Error *pError);
-
-void ABC_FreeURIInfo(tABC_BitcoinURIInfo *pInfo);
-
 tABC_CC ABC_ParseAmount(const char *szAmount,
                         uint64_t *pAmountOut,
                         unsigned decimalPlaces);
@@ -948,7 +914,7 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
                         void *pData,
                         tABC_Error *pError);
 
-/* === Addresses: === */
+/* === Receiving: === */
 tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
                                  const char *szPassword,
                                  const char *szWalletUUID,
@@ -984,21 +950,6 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
                                   unsigned int *pWidth,
                                   tABC_Error *pError);
 
-tABC_CC ABC_InitiateSendRequest(const char *szUserName,
-                                const char *szPassword,
-                                const char *szWalletUUID,
-                                const char *szDestAddress,
-                                tABC_TxDetails *pDetails,
-                                char **szTxId,
-                                tABC_Error *pError);
-
-tABC_CC ABC_InitiateTransfer(const char *szUserName,
-                             const char *szPassword,
-                             tABC_TransferDetails *pTransfer,
-                             tABC_TxDetails *pDetails,
-                             char **szTxId,
-                             tABC_Error *pError);
-
 tABC_CC ABC_GetRequestAddress(const char *szUserName,
                               const char *szPassword,
                               const char *szWalletUUID,
@@ -1016,21 +967,68 @@ tABC_CC ABC_GetPendingRequests(const char *szUserName,
 void ABC_FreeRequests(tABC_RequestInfo **aRequests,
                       unsigned int count);
 
-tABC_CC ABC_CalcSendFees(const char *szUserName,
-                         const char *szPassword,
-                         const char *szWalletUUID,
-                         const char *szDestAddress,
-                         bool bTransfer,
-                         tABC_TxDetails *pDetails,
-                         int64_t *pTotalFees,
-                         tABC_Error *pError);
+/* === Spending: === */
 
-tABC_CC ABC_MaxSpendable(const char *szUsername,
-                         const char *szPassword,
+void ABC_SpendTargetFree(tABC_SpendTarget *pSpend);
+
+/**
+ * Creates a spend target from a piece of text.
+ * The text could be a URL, a payment address, or other things as well.
+ */
+tABC_CC ABC_SpendNewDecode(const char *szText,
+                           tABC_SpendTarget **ppSpend,
+                           tABC_Error *pError);
+
+/**
+ * Creates a spend target for a wallet-to-wallet transfer.
+ * @param szWalletUUID the destination wallet.
+ */
+tABC_CC ABC_SpendNewTransfer(const char *szUserName,
+                             const char *szWalletUUID,
+                             uint64_t amount,
+                             tABC_SpendTarget **ppSpend,
+                             tABC_Error *pError);
+
+/**
+ * Creates a spend target for an internal plugin send request.
+ */
+tABC_CC ABC_SpendNewInternal(const char *szAddress,
+                             const char *szName,
+                             const char *szCategory,
+                             const char *szNotes,
+                             uint64_t amount,
+                             tABC_SpendTarget **ppSpend,
+                             tABC_Error *pError);
+
+/**
+ * Calculate the fee needed to perform this spend.
+ * @param szWalletUUID the funds source.
+ * @return ABC_CC_InsufficientFunds if the source doesn't have enough money.
+ */
+tABC_CC ABC_SpendGetFee(const char *szUserName,
+                        const char *szWalletUUID,
+                        tABC_SpendTarget *pSpend,
+                        uint64_t *pFee,
+                        tABC_Error *pError);
+
+/**
+ * Finds the maximum amount that could be sent to this target.
+ * @param szWalletUUID the funds source.
+ */
+tABC_CC ABC_SpendGetMax(const char *szUserName,
+                        const char *szWalletUUID,
+                        tABC_SpendTarget *pSpend,
+                        uint64_t *pMax,
+                        tABC_Error *pError);
+
+/**
+ * Sends a payment.
+ * @param szWalletUUID the funds source.
+ */
+tABC_CC ABC_SpendApprove(const char *szUserName,
                          const char *szWalletUUID,
-                         const char *szDestAddress,
-                         bool bTransfer,
-                         uint64_t *pMaxSatoshi,
+                         tABC_SpendTarget *pSpend,
+                         char **pszTxId,
                          tABC_Error *pError);
 
 tABC_CC ABC_SweepKey(const char *szUsername,

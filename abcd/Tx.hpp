@@ -50,7 +50,6 @@ namespace abcd {
  */
 typedef struct sABC_TxSendInfo
 {
-    tABC_WalletID           wallet;
     char                    *szDestAddress;
 
     // Transfer from money from one wallet to another
@@ -64,6 +63,25 @@ typedef struct sABC_TxSendInfo
     tABC_TxDetails          *pDetails;
 } tABC_TxSendInfo;
 
+/**
+ * AirBitz Unsigned Transaction
+ *
+ * Includes the approximate fees to send out this transaction
+ */
+typedef struct sABC_UnsignedTx
+{
+    void *data;
+    /** Tx Id we use internally */
+    char *szTxId;
+    /** block chain tx id**/
+    char *szTxMalleableId;
+    /** Fees associated with the tx **/
+    uint64_t fees;
+    /** Number for outputs **/
+    unsigned int countOutputs;
+    /** The output information **/
+    tABC_TxOutput **aOutputs;
+} tABC_UnsignedTx;
 
 tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
                          const tABC_TxDetails *pOldDetails,
@@ -73,7 +91,6 @@ void ABC_TxFreeDetails(tABC_TxDetails *pDetails);
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
 tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
-                            tABC_WalletID self,
                             const char *szDestAddress,
                             const tABC_TxDetails *pDetails,
                             tABC_Error *pError);
@@ -178,12 +195,14 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
                                    tABC_Error *pError);
 
 // Blocking functions:
-tABC_CC  ABC_TxSend(tABC_TxSendInfo *pInfo,
-                    char **pszUUID,
+tABC_CC  ABC_TxSend(tABC_WalletID self,
+                    tABC_TxSendInfo *pInfo,
+                    char **pszTxID,
                     tABC_Error *pError);
 
-tABC_CC  ABC_TxCalcSendFees(tABC_TxSendInfo *pInfo,
-                            int64_t *pTotalFees,
+tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self,
+                            tABC_TxSendInfo *pInfo,
+                            uint64_t *pTotalFees,
                             tABC_Error *pError);
 
 tABC_CC ABC_TxGetPubAddresses(tABC_WalletID self,

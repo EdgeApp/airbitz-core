@@ -80,13 +80,15 @@ tABC_CC ABC_BridgePrioritizeAddress(tABC_WalletID self,
                                     const char *szAddress,
                                     tABC_Error *pError);
 
-tABC_CC ABC_BridgeTxMake(tABC_TxSendInfo *pSendInfo,
+tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
+                         tABC_TxSendInfo *pSendInfo,
                          char **addresses, int addressCount,
                          char *changeAddress,
                          tABC_UnsignedTx *pUtx,
                          tABC_Error *pError);
 
-tABC_CC ABC_BridgeTxSignSend(tABC_TxSendInfo *pSendInfo,
+tABC_CC ABC_BridgeTxSignSend(tABC_WalletID self,
+                             tABC_TxSendInfo *pSendInfo,
                              char **paPrivKey,
                              unsigned int keyCount,
                              tABC_UnsignedTx *pUtx,

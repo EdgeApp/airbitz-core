@@ -165,7 +165,7 @@ typedef AutoFree<char, StringFree> AutoString;
 
 #define ABC_FREE_STR(str) \
     { \
-        StringFree(str); \
+        StringFree(const_cast<char*>(str)); \
         str = nullptr; \
     }
 
