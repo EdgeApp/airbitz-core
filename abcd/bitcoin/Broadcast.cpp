@@ -11,7 +11,7 @@
 #include "../crypto/Encoding.hpp"
 #include "../http/HttpRequest.hpp"
 #include "../json/JsonObject.hpp"
-#include <future>
+#include <thread>
 
 namespace abcd {
 
@@ -78,16 +78,23 @@ blockchainPostTx(DataSlice tx)
     return Status();
 }
 
+template<Status (*f)(DataSlice tx)> void
+shim(Status *result, DataSlice tx)
+{
+    *result = f(tx);
+}
+
 Status
 broadcastTx(DataSlice rawTx)
 {
-    auto f1 = std::async(std::launch::async, chainPostTx, rawTx);
-    auto f2 = std::async(std::launch::async, blockchainPostTx, rawTx);
-    auto f3 = std::async(std::launch::async, blockcypherPostTx, rawTx);
+    Status s1, s2, s3;
+    auto t1 = std::thread(shim<chainPostTx>, &s1, rawTx);
+    auto t2 = std::thread(shim<blockchainPostTx>, &s2, rawTx);
+    auto t3 = std::thread(shim<blockcypherPostTx>, &s3, rawTx);
 
-    Status s1 = f1.get();
-    Status s2 = f2.get();
-    Status s3 = f3.get();
+    t1.join();
+    t2.join();
+    t3.join();
 
     if (s1) return s1;
     if (s2) return s2;
