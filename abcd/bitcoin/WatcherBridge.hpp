@@ -47,6 +47,9 @@
 
 namespace abcd {
 
+std::string
+watcherPath(const std::string &walletId);
+
 tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
                            tABC_U08Buf key,
                            bool compressed,
@@ -71,9 +74,6 @@ tABC_CC ABC_BridgeWatcherStop(tABC_WalletID self, tABC_Error *pError);
 tABC_CC ABC_BridgeWatcherDelete(tABC_WalletID self, tABC_Error *pError);
 
 tABC_CC ABC_BridgeWatchAddr(tABC_WalletID self, const char *address,
-                            tABC_Error *pError);
-
-tABC_CC ABC_BridgeWatchPath(const char *szWalletUUID, char **szPath,
                             tABC_Error *pError);
 
 tABC_CC ABC_BridgePrioritizeAddress(tABC_WalletID self,

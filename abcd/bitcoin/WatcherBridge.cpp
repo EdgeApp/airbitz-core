@@ -86,10 +86,6 @@ static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_h
 static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
 static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo);
 static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64_t amountSatoshi);
-static std::string ABC_BridgeWatcherFile(const char *szWalletUUID);
-static tABC_CC     ABC_BridgeWatcherLoad(WatcherInfo *watcherInfo, tABC_Error *pError);
-static void        ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo);
-static void        *ABC_BridgeWatcherSerialize(void *pData);
 static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx);
 
 static Status
@@ -102,6 +98,38 @@ watcherFind(WatcherInfo *&result, tABC_WalletID self)
 
     result = row->second;
     return Status();
+}
+
+static Status
+watcherLoad(tABC_WalletID self)
+{
+    WatcherInfo *watcherInfo = nullptr;
+    ABC_CHECK(watcherFind(watcherInfo, self));
+
+    DataChunk data;
+    ABC_CHECK(fileLoad(data, watcherPath(self.szUUID)));
+    if (!watcherInfo->watcher->load(data))
+        return ABC_ERROR(ABC_CC_Error, "Unable to load serialized watcher");
+
+    return Status();
+}
+
+static Status
+watcherSave(tABC_WalletID self)
+{
+    WatcherInfo *watcherInfo = nullptr;
+    ABC_CHECK(watcherFind(watcherInfo, self));
+
+    auto data = watcherInfo->watcher->serialize();;
+    ABC_CHECK(fileSave(data, watcherPath(self.szUUID)));
+
+    return Status();
+}
+
+std::string
+watcherPath(const std::string &walletId)
+{
+    return walletDir(walletId) + "watcher.ser";
 }
 
 tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
@@ -157,9 +185,10 @@ tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
     watcherInfo->watcher = new Watcher();
 
     ABC_CHECK_RET(ABC_WalletIDCopy(&watcherInfo->wallet, self, pError));
-
-    ABC_BridgeWatcherLoad(watcherInfo, pError);
     watchers_[self.szUUID] = watcherInfo;
+
+    watcherLoad(self); // Failure is not fatal
+
 exit:
     return cc;
 }
@@ -191,7 +220,7 @@ tABC_CC ABC_BridgeWatcherLoop(tABC_WalletID self,
     {
         tABC_Error error;
         ABC_TxBlockHeightUpdate(height, fAsyncCallback, pData, &error);
-        ABC_BridgeWatcherSerializeAsync(watcherInfo);
+        watcherSave(watcherInfo->wallet); // Failure is not fatal
     };
     watcherInfo->watcher->set_height_callback(heightCallback);
 
@@ -271,17 +300,6 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeWatchPath(const char *szWalletUUID, char **szPath,
-                            tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    std::string filepath(
-            ABC_BridgeWatcherFile(szWalletUUID));
-    ABC_STRDUP(*szPath, filepath.c_str());
-exit:
-    return cc;
-}
-
 tABC_CC ABC_BridgePrioritizeAddress(tABC_WalletID self,
                                     const char *szAddress,
                                     tABC_Error *pError)
@@ -344,11 +362,12 @@ tABC_CC ABC_BridgeWatcherDelete(tABC_WalletID self, tABC_Error *pError)
     WatcherInfo *watcherInfo = nullptr;
     ABC_CHECK_NEW(watcherFind(watcherInfo, self), pError);
 
+    watcherSave(self); // Failure is not fatal
+
     // Remove info from map:
     watchers_.erase(self.szUUID);
 
     // Delete watcher:
-    ABC_BridgeWatcherSerialize(watcherInfo);
     if (watcherInfo->watcher != NULL) {
         delete watcherInfo->watcher;
     }
@@ -499,7 +518,7 @@ tABC_CC ABC_BridgeTxSignSend(tABC_WalletID self,
     malleableId = bc::encode_hex(bc::hash_transaction(utx->tx));
     ABC_STRDUP(pUtx->szTxMalleableId, malleableId.c_str());
 
-    ABC_BridgeWatcherSerializeAsync(watcherInfo);
+    watcherSave(self); // Failure is not fatal
     ABC_BridgeExtractOutputs(watcherInfo->watcher, utx, malleableId, pUtx,pError);
 
 exit:
@@ -1036,7 +1055,8 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
             fAsyncBitCoinEventCallback,
             pData,
             &error));
-    ABC_BridgeWatcherSerializeAsync(watcherInfo);
+    watcherSave(watcherInfo->wallet); // Failure is not fatal
+
 exit:
     ABC_FREE(oarr);
     ABC_FREE(iarr);
@@ -1191,59 +1211,6 @@ uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64
 
     // Make the result an integer multiple of the minimum fee:
     return amountFee - amountFee % minFee;
-}
-
-static
-std::string ABC_BridgeWatcherFile(const char *szWalletUUID)
-{
-    return walletDir(szWalletUUID) + "watcher.ser";
-}
-
-static
-tABC_CC ABC_BridgeWatcherLoad(WatcherInfo *watcherInfo, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    std::string path(ABC_BridgeWatcherFile(watcherInfo->wallet.szUUID));
-    DataChunk data;
-    ABC_CHECK_NEW(fileLoad(data, path), pError);
-    ABC_CHECK_ASSERT(watcherInfo->watcher->load(data) == true,
-        ABC_CC_Error, "Unable to load serialized state\n");
-
-exit:
-    return cc;
-}
-
-static
-void ABC_BridgeWatcherSerializeAsync(WatcherInfo *watcherInfo)
-{
-    pthread_t handle;
-    if (!pthread_create(&handle, NULL, ABC_BridgeWatcherSerialize, watcherInfo))
-    {
-        pthread_detach(handle);
-    }
-}
-
-static
-void *ABC_BridgeWatcherSerialize(void *pData)
-{
-    bc::data_chunk db;
-    WatcherInfo *watcherInfo = (WatcherInfo *) pData;
-    std::string filepath(
-            ABC_BridgeWatcherFile(watcherInfo->wallet.szUUID));
-
-    std::ofstream file(filepath);
-    if (!file.is_open())
-    {
-        ABC_DebugLog("Unable to open file for serialization");
-    }
-    else
-    {
-        db = watcherInfo->watcher->serialize();
-        file.write(reinterpret_cast<const char *>(db.data()), db.size());
-        file.close();
-    }
-    return NULL;
 }
 
 /**
