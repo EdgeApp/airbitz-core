@@ -1275,6 +1275,7 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
             }
         }
     }
+    ABC_CHECK_ASSERT(*pszFilename, ABC_CC_Error, "Address not found");
 
 exit:
     ABC_FREE_STR(szID);
