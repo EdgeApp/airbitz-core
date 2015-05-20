@@ -185,7 +185,6 @@ static tABC_CC  ABC_TxTransactionExists(tABC_WalletID self, const char *szID, tA
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
 static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError);
-static tABC_CC  ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo, tABC_Tx *pTx, tABC_Tx *pReceiveTx, tABC_Error *pError);
 static tABC_CC  ABC_TxWalletOwnsAddress(tABC_WalletID self, const char *szAddress, bool *bFound, tABC_Error *pError);
 static tABC_CC  ABC_TxGetPrivAddresses(tABC_WalletID self, tABC_U08Buf seed, char ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxTrashAddresses(tABC_WalletID self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
@@ -292,15 +291,8 @@ void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo)
     if (pTxSendInfo)
     {
         ABC_FREE_STR(pTxSendInfo->szDestAddress);
-
-        ABC_WalletIDFree(pTxSendInfo->walletDest);
-        ABC_FREE_STR(pTxSendInfo->szDestName);
-        ABC_FREE_STR(pTxSendInfo->szDestCategory);
-
-        ABC_FREE_STR(pTxSendInfo->szSrcName);
-        ABC_FREE_STR(pTxSendInfo->szSrcCategory);
-
         ABC_TxFreeDetails(pTxSendInfo->pDetails);
+        ABC_WalletIDFree(pTxSendInfo->walletDest);
 
         ABC_CLEAR_FREE(pTxSendInfo, sizeof(tABC_TxSendInfo));
     }
@@ -384,8 +376,6 @@ tABC_CC ABC_TxSendComplete(tABC_WalletID self,
     tABC_Tx *pTx = NULL;
     tABC_Tx *pReceiveTx = NULL;
     bool bFound = false;
-    tABC_WalletInfo *pWallet = NULL;
-    tABC_WalletInfo *pDestWallet = NULL;
     double currency;
 
     // Start watching all addresses incuding new change addres
@@ -431,6 +421,10 @@ tABC_CC ABC_TxSendComplete(tABC_WalletID self,
 
     // Store transaction ID
     ABC_STRDUP(pTx->szID, pUtx->szTxId);
+
+    // Save the transaction:
+    ABC_CHECK_RET(ABC_TxSaveTransaction(self, pTx, pError));
+
     if (pInfo->bTransfer)
     {
         ABC_NEW(pReceiveTx, tABC_Tx);
@@ -445,6 +439,12 @@ tABC_CC ABC_TxSendComplete(tABC_WalletID self,
         // copy the details
         ABC_CHECK_RET(ABC_TxDupDetails(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
 
+        // Set the payee name:
+        AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pWallet;
+        ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet.get(), pError));
+        ABC_FREE_STR(pReceiveTx->pDetails->szName);
+        ABC_STRDUP(pReceiveTx->pDetails->szName, pWallet->szName);
+
         pReceiveTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi;
 
         //
@@ -453,11 +453,8 @@ tABC_CC ABC_TxSendComplete(tABC_WalletID self,
         //
         pReceiveTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
-        ABC_CHECK_RET(ABC_WalletGetInfo(pInfo->walletDest, &pDestWallet, pError));
-        ABC_CHECK_NEW(exchangeSatoshiToCurrency(
-            currency, pReceiveTx->pDetails->amountSatoshi,
-            static_cast<Currency>(pDestWallet->currencyNum)), pError);
-        pReceiveTx->pDetails->amountCurrency = currency;
+        ABC_CHECK_RET(ABC_TxCalcCurrency(pInfo->walletDest,
+            pReceiveTx->pDetails->amountSatoshi, &pReceiveTx->pDetails->amountCurrency, pError));
 
         if (pReceiveTx->pDetails->amountSatoshi < 0)
             pReceiveTx->pDetails->amountSatoshi *= -1;
@@ -467,21 +464,13 @@ tABC_CC ABC_TxSendComplete(tABC_WalletID self,
         // Store transaction ID
         ABC_STRDUP(pReceiveTx->szID, pUtx->szTxId);
 
-        // Set the payee and category for both txs
-        ABC_CHECK_RET(ABC_TxTransferPopulate(pInfo, pTx, pReceiveTx, pError));
-
         // save the transaction
         ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->walletDest, pReceiveTx, pError));
     }
 
-    // save the transaction
-    ABC_CHECK_RET(
-        ABC_TxSaveTransaction(self, pTx, pError));
 exit:
     ABC_TxFreeTx(pTx);
     ABC_TxFreeTx(pReceiveTx);
-    ABC_WalletFreeInfo(pWallet);
-    ABC_WalletFreeInfo(pDestWallet);
     return cc;
 }
 
@@ -3825,40 +3814,6 @@ ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_
             pTx->aOutputs[i]->input = aOutputs[i]->input;
             pTx->aOutputs[i]->value = aOutputs[i]->value;
         }
-    }
-exit:
-    return cc;
-}
-
-static
-tABC_CC ABC_TxTransferPopulate(tABC_TxSendInfo *pInfo,
-                               tABC_Tx *pTx, tABC_Tx *pReceiveTx,
-                               tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    // Populate Send Tx
-    if (pInfo->szSrcName)
-    {
-        ABC_FREE_STR(pTx->pDetails->szName);
-        ABC_STRDUP(pTx->pDetails->szName, pInfo->szSrcName);
-    }
-    if (pInfo->szSrcCategory)
-    {
-        ABC_FREE_STR(pTx->pDetails->szCategory);
-        ABC_STRDUP(pTx->pDetails->szCategory, pInfo->szSrcCategory);
-    }
-
-    // Populate Recv Tx
-    if (pInfo->szDestName)
-    {
-        ABC_FREE_STR(pReceiveTx->pDetails->szName);
-        ABC_STRDUP(pReceiveTx->pDetails->szName, pInfo->szDestName);
-    }
-
-    if (pInfo->szDestCategory)
-    {
-        ABC_FREE_STR(pReceiveTx->pDetails->szCategory);
-        ABC_STRDUP(pReceiveTx->pDetails->szCategory, pInfo->szDestCategory);
     }
 exit:
     return cc;

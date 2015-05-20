@@ -1636,7 +1636,7 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         // Build the payment details:
         AutoFree<tABC_TxDetails, ABC_TxFreeDetails> pDetails;
         ABC_NEW(pDetails.get(), tABC_TxDetails);
-        ABC_STRDUP(pDetails->szName, "");
+        ABC_STRDUP(pDetails->szName, pWallet->szName);
         ABC_STRDUP(pDetails->szCategory, "");
         ABC_STRDUP(pDetails->szNotes, "");
         pDetails->amountSatoshi = amount;
@@ -1652,9 +1652,6 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pInfo.get(), szRequestAddress, pDetails, pError));
         pInfo->bTransfer = true;
         ABC_CHECK_RET(ABC_WalletIDCopy(&pInfo->walletDest, wallet, pError));
-        ABC_STRDUP(pInfo->szSrcCategory, "");
-        ABC_STRDUP(pInfo->szDestCategory, "");
-        ABC_STRDUP(pInfo->szSrcName, pWallet->szName);
 
         // Build the spend target:
         AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
@@ -1780,10 +1777,6 @@ tABC_CC ABC_SpendApprove(const char *szUserName,
         auto pInfo = static_cast<tABC_TxSendInfo*>(pSpend->pData);
         if (pSpend->amountMutable)
             pInfo->pDetails->amountSatoshi = pSpend->amount;
-        AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pWallet;
-        ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWallet.get(), pError));
-        ABC_STRDUP(pInfo->szDestName, pWallet->szName);
-
         ABC_CHECK_RET(ABC_TxSend(wallet, pInfo, pszTxId, pError));
     }
 

@@ -46,21 +46,16 @@ namespace abcd {
  *
  * This structure contains the detailed information associated
  * with initiating a send.
- *
  */
 typedef struct sABC_TxSendInfo
 {
     char                    *szDestAddress;
+    tABC_TxDetails          *pDetails;
 
     // Transfer from money from one wallet to another
     bool                    bTransfer;
     tABC_WalletID           walletDest;
-    char                    *szDestName;
-    char                    *szDestCategory;
-    char                    *szSrcName;
-    char                    *szSrcCategory;
 
-    tABC_TxDetails          *pDetails;
 } tABC_TxSendInfo;
 
 /**
