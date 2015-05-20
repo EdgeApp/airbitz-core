@@ -379,7 +379,7 @@ tABC_CC ABC_BridgeWatcherDelete(tABC_WalletID self, tABC_Error *pError)
 
 tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
                          tABC_TxSendInfo *pSendInfo,
-                         char *changeAddress,
+                         const std::string &changeAddress,
                          libbitcoin::transaction_type &resultTx,
                          tABC_Error *pError)
 {

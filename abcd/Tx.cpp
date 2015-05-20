@@ -307,6 +307,21 @@ txKeyTableGet(KeyTable &result, tABC_WalletID self)
 }
 
 /**
+ * Gets the next unused change address from the wallet.
+ */
+static Status
+txNewChangeAddress(std::string &result, tABC_WalletID self,
+    tABC_TxDetails *pDetails)
+{
+    AutoFree<tABC_TxAddress, ABC_TxFreeAddress> pAddress;
+    ABC_CHECK_OLD(ABC_TxCreateNewAddress(self, pDetails, &pAddress.get(), &error));
+    ABC_CHECK_OLD(ABC_TxSaveAddress(self, pAddress, &error));
+
+    result = pAddress->szPubAddress;
+    return Status();
+}
+
+/**
  * Sends the transaction with the given info.
  *
  * @param pInfo Pointer to transaction information
@@ -320,21 +335,15 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
+    std::string changeAddress;
     bc::transaction_type tx;
-    tABC_TxAddress *pChangeAddr = NULL;
     AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> unsaved;
 
     ABC_CHECK_NULL(pInfo);
 
-    // find/create a change address
-    ABC_CHECK_RET(ABC_TxCreateNewAddress(
-                    self, pInfo->pDetails,
-                    &pChangeAddr, pError));
-    // save out this address
-    ABC_CHECK_RET(ABC_TxSaveAddress(self, pChangeAddr, pError));
-
-    // Make an unsigned transaction
-    ABC_CHECK_RET(ABC_BridgeTxMake(self, pInfo, pChangeAddr->szPubAddress, tx, pError));
+    // Make an unsigned transaction:
+    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails), pError);
+    ABC_CHECK_RET(ABC_BridgeTxMake(self, pInfo, changeAddress, tx, pError));
 
     // Sign and send transaction:
     {
@@ -364,8 +373,6 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     ABC_STRDUP(*pszTxID, unsaved->szTxId);
 
 exit:
-    ABC_TxFreeAddress(pChangeAddr);
-
     return cc;
 }
 
@@ -481,29 +488,23 @@ tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, tABC_TxSendInfo *pInfo, uint64_t
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
+    std::string changeAddress;
     bc::transaction_type tx;
-    tABC_TxAddress *pChangeAddr = NULL;
 
     ABC_CHECK_NULL(pInfo);
 
     pInfo->pDetails->amountFeesAirbitzSatoshi = 0;
     pInfo->pDetails->amountFeesMinersSatoshi = 0;
 
-    // find/create a change address
-    ABC_CHECK_RET(ABC_TxCreateNewAddress(
-                    self, pInfo->pDetails,
-                    &pChangeAddr, pError));
-    // save out this address
-    ABC_CHECK_RET(ABC_TxSaveAddress(self, pChangeAddr, pError));
-
     // Make an unsigned transaction
-    cc = ABC_BridgeTxMake(self, pInfo, pChangeAddr->szPubAddress, tx, pError);
+    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails), pError);
+    cc = ABC_BridgeTxMake(self, pInfo, changeAddress, tx, pError);
+
     *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
                 + pInfo->pDetails->amountFeesMinersSatoshi;
     ABC_CHECK_RET(cc);
 
 exit:
-    ABC_TxFreeAddress(pChangeAddr);
     return cc;
 }
 
