@@ -45,6 +45,11 @@
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 
+namespace libbitcoin
+{
+    struct transaction_type;
+}
+
 namespace abcd {
 
 std::string
@@ -83,14 +88,14 @@ tABC_CC ABC_BridgePrioritizeAddress(tABC_WalletID self,
 tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
                          tABC_TxSendInfo *pSendInfo,
                          char *changeAddress,
-                         tABC_UnsignedTx *pUtx,
+                         libbitcoin::transaction_type &resultTx,
                          tABC_Error *pError);
 
 tABC_CC ABC_BridgeTxSignSend(tABC_WalletID self,
                              tABC_TxSendInfo *pSendInfo,
                              char **paPrivKey,
                              unsigned int keyCount,
-                             tABC_UnsignedTx *pUtx,
+                             libbitcoin::transaction_type &tx,
                              tABC_Error *pError);
 
 tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
@@ -112,6 +117,14 @@ tABC_CC ABC_BridgeFilterTransactions(tABC_WalletID self,
                                      tABC_TxInfo **aTransactions,
                                      unsigned int *pCount,
                                      tABC_Error *pError);
+
+/**
+ * Fills in the tABC_UnsavedTx structure.
+ */
+tABC_CC
+ABC_BridgeExtractOutputs(tABC_WalletID self, tABC_UnsavedTx **ppUtx,
+                         const libbitcoin::transaction_type &tx,
+                         tABC_Error *pError);
 
 /**
  * Pulls a raw transaction out of the watcher database.

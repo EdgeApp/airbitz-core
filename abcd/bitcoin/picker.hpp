@@ -15,12 +15,6 @@ namespace abcd {
 
 class Watcher;
 
-// This will go away:
-struct unsigned_transaction_type
-{
-    bc::transaction_type tx;
-};
-
 /**
  * Select a utxo collection that will satisfy the outputs,
  * and build a transaction with those (including change, if needed).

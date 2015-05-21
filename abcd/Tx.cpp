@@ -33,7 +33,6 @@
 #include "Wallet.hpp"
 #include "account/Account.hpp"
 #include "account/AccountSettings.hpp"
-#include "bitcoin/picker.hpp"
 #include "bitcoin/Text.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"
@@ -189,7 +188,7 @@ static tABC_CC  ABC_TxWalletOwnsAddress(tABC_WalletID self, const char *szAddres
 static tABC_CC  ABC_TxGetPrivAddresses(tABC_WalletID self, tABC_U08Buf seed, char ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxTrashAddresses(tABC_WalletID self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
 static tABC_CC  ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
-static tABC_CC  ABC_TxSendComplete(tABC_WalletID self, tABC_TxSendInfo *pInfo, tABC_UnsignedTx *utx, tABC_Error *pError);
+static tABC_CC  ABC_TxSendComplete(tABC_WalletID self, tABC_TxSendInfo *pInfo, tABC_UnsavedTx *utx, tABC_Error *pError);
 
 /**
  * Calculates a public address for the HD wallet main external chain.
@@ -314,13 +313,12 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
 
     char *szPrivSeed = NULL;
     U08Buf privSeed; // Do not free
-    tABC_UnsignedTx *pUtx = NULL;
+    bc::transaction_type tx;
     AutoStringArray keys;
     tABC_TxAddress *pChangeAddr = NULL;
+    AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> unsaved;
 
     ABC_CHECK_NULL(pInfo);
-
-    ABC_NEW(pUtx, tABC_UnsignedTx);
 
     // find/create a change address
     ABC_CHECK_RET(ABC_TxCreateNewAddress(
@@ -330,7 +328,7 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     ABC_CHECK_RET(ABC_TxSaveAddress(self, pChangeAddr, pError));
 
     // Make an unsigned transaction
-    ABC_CHECK_RET(ABC_BridgeTxMake(self, pInfo, pChangeAddr->szPubAddress, pUtx, pError));
+    ABC_CHECK_RET(ABC_BridgeTxMake(self, pInfo, pChangeAddr->szPubAddress, tx, pError));
 
     // Fetch Private Seed
     ABC_CHECK_RET(
@@ -341,28 +339,26 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
                                &keys.data, &keys.size,
                                pError));
     // Sign and send transaction
-    ABC_CHECK_RET(
-        ABC_BridgeTxSignSend(self, pInfo, keys.data, keys.size,
-                             pUtx, pError));
+    ABC_CHECK_RET(ABC_BridgeTxSignSend(self, pInfo, keys.data, keys.size,
+        tx, pError));
 
     // Update the ABC db
-    ABC_CHECK_RET(ABC_TxSendComplete(self, pInfo, pUtx, pError));
+    ABC_CHECK_RET(ABC_BridgeExtractOutputs(self, &unsaved.get(), tx, pError));
+    ABC_CHECK_RET(ABC_TxSendComplete(self, pInfo, unsaved, pError));
 
     // return the new tx id
-    ABC_STRDUP(*pszTxID, pUtx->szTxId);
+    ABC_STRDUP(*pszTxID, unsaved->szTxId);
+
 exit:
     ABC_FREE(szPrivSeed);
     ABC_TxFreeAddress(pChangeAddr);
-    ABC_TxFreeOutputs(pUtx->aOutputs, pUtx->countOutputs);
-    delete static_cast<abcd::unsigned_transaction_type*>(pUtx->data);
-    ABC_FREE(pUtx);
 
     return cc;
 }
 
 tABC_CC ABC_TxSendComplete(tABC_WalletID self,
                            tABC_TxSendInfo  *pInfo,
-                           tABC_UnsignedTx  *pUtx,
+                           tABC_UnsavedTx   *pUtx,
                            tABC_Error       *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -472,7 +468,7 @@ tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, tABC_TxSendInfo *pInfo, uint64_t
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
-    tABC_UnsignedTx utx;
+    bc::transaction_type tx;
     tABC_TxAddress *pChangeAddr = NULL;
 
     ABC_CHECK_NULL(pInfo);
@@ -488,10 +484,11 @@ tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, tABC_TxSendInfo *pInfo, uint64_t
     ABC_CHECK_RET(ABC_TxSaveAddress(self, pChangeAddr, pError));
 
     // Make an unsigned transaction
-    cc = ABC_BridgeTxMake(self, pInfo, pChangeAddr->szPubAddress, &utx, pError);
+    cc = ABC_BridgeTxMake(self, pInfo, pChangeAddr->szPubAddress, tx, pError);
     *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
                 + pInfo->pDetails->amountFeesMinersSatoshi;
     ABC_CHECK_RET(cc);
+
 exit:
     ABC_TxFreeAddress(pChangeAddr);
     return cc;
@@ -609,7 +606,6 @@ exit:
 
     return cc;
 }
-
 
 /**
  * Duplicate a TX details struct
@@ -3356,6 +3352,18 @@ void ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count)
         }
 
         ABC_CLEAR_FREE(aAddresses, sizeof(tABC_TxAddress *) * count);
+    }
+}
+
+void ABC_UnsavedTxFree(tABC_UnsavedTx *pUtx)
+{
+    if (pUtx)
+    {
+        ABC_FREE_STR(pUtx->szTxId);
+        ABC_FREE_STR(pUtx->szTxMalleableId);
+        ABC_TxFreeOutputs(pUtx->aOutputs, pUtx->countOutputs);
+
+        ABC_CLEAR_FREE(pUtx, sizeof(tABC_UnsavedTx));
     }
 }
 

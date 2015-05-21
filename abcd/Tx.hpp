@@ -59,30 +59,27 @@ typedef struct sABC_TxSendInfo
 } tABC_TxSendInfo;
 
 /**
- * AirBitz Unsigned Transaction
- *
- * Includes the approximate fees to send out this transaction
+ * Information about a transaction that has been sent
+ * but not yet saved to the database.
  */
-typedef struct sABC_UnsignedTx
+typedef struct sABC_UnsavedTx
 {
-    void *data;
     /** Tx Id we use internally */
     char *szTxId;
     /** block chain tx id**/
     char *szTxMalleableId;
-    /** Fees associated with the tx **/
-    uint64_t fees;
     /** Number for outputs **/
     unsigned int countOutputs;
     /** The output information **/
     tABC_TxOutput **aOutputs;
-} tABC_UnsignedTx;
+} tABC_UnsavedTx;
 
 tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
                          const tABC_TxDetails *pOldDetails,
                          tABC_Error *pError);
 
 void ABC_TxFreeDetails(tABC_TxDetails *pDetails);
+void ABC_UnsavedTxFree(tABC_UnsavedTx *pUtx);
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
 tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
