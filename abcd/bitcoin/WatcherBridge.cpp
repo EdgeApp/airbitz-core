@@ -92,7 +92,6 @@ static tABC_CC     ABC_BridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep& swe
 static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
 static tABC_CC     ABC_BridgeExtractOutputs(Watcher *watcher, abcd::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
-static tABC_CC     ABC_BridgeTxErrorHandler(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
 static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr);
 static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash);
 static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
@@ -458,11 +457,9 @@ tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
                     change.encoded().c_str(),
                     pSendInfo->pDetails->amountSatoshi,
                     totalAmountSatoshi);
-    if (!abcd::make_tx(*watcher, addresses_, change,
-                            totalAmountSatoshi, schedule, outputs, *utx))
-    {
-        ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
-    }
+
+    ABC_CHECK_NEW(makeTx(utx->tx, *watcher, addresses_, change,
+        totalAmountSatoshi, schedule, outputs), pError);
 
     pUtx->data = (void *) utx;
 exit:
@@ -492,10 +489,7 @@ tABC_CC ABC_BridgeTxSignSend(tABC_WalletID self,
     }
 
     // Sign the transaction
-    if (!abcd::sign_tx(*utx, keys, *watcher))
-    {
-        ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
-    }
+    ABC_CHECK_NEW(signTx(utx->tx, *watcher, keys), pError);
 
     // Send to the network:
     {
@@ -1097,25 +1091,6 @@ ABC_BridgeExtractOutputs(Watcher *watcher, abcd::unsigned_transaction_type *utx,
 
         pUtx->aOutputs[i] = out;
         i++;
-    }
-exit:
-    return cc;
-}
-
-static
-tABC_CC ABC_BridgeTxErrorHandler(abcd::unsigned_transaction_type *utx, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    switch (utx->code)
-    {
-        case abcd::insufficent_funds:
-            ABC_RET_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds.");
-        case abcd::invalid_key:
-            ABC_RET_ERROR(ABC_CC_Error, "Invalid address.");
-        case abcd::invalid_sig:
-            ABC_RET_ERROR(ABC_CC_Error, "Unable to sign.");
-        default:
-            break;
     }
 exit:
     return cc;

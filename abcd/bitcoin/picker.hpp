@@ -8,24 +8,17 @@
 #ifndef ABCD_BITCOIN_PICKER_HPP
 #define ABCD_BITCOIN_PICKER_HPP
 
+#include "../util/Status.hpp"
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
 
 class Watcher;
 
-enum {
-    ok = 0,
-    insufficent_funds,
-    invalid_key,
-    invalid_sig
-};
-
 // This will go away:
 struct unsigned_transaction_type
 {
     bc::transaction_type tx;
-    int code;
 };
 
 struct fee_schedule
@@ -33,18 +26,21 @@ struct fee_schedule
     uint64_t satoshi_per_kb;
 };
 
-BC_API bool make_tx(
-             Watcher& watcher,
-             const std::vector<bc::payment_address>& addresses,
-             const bc::payment_address& changeAddr,
-             int64_t amountSatoshi,
-             fee_schedule& sched,
-             bc::transaction_output_list& outputs,
-             unsigned_transaction_type& utx);
+/**
+ * Select a utxo collection that will satisfy the outputs,
+ * and build a transaction with those (including change, if needed).
+ */
+Status
+makeTx(bc::transaction_type &result, Watcher &watcher,
+    const std::vector<bc::payment_address> &addresses,
+    const bc::payment_address &changeAddr,
+    int64_t amountSatoshi,
+    fee_schedule &sched,
+    bc::transaction_output_list &outputs);
 
-BC_API bool sign_tx(unsigned_transaction_type& utx,
-                    std::vector<std::string>& keys,
-                    Watcher& watcher);
+Status
+signTx(bc::transaction_type &result, Watcher &watcher,
+    std::vector<std::string> &keys);
 
 bc::script_type build_pubkey_hash_script(const bc::short_hash& pubkey_hash);
 

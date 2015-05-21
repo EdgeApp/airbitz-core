@@ -20,19 +20,19 @@ constexpr unsigned min_output = 5430;
 static std::map<data_chunk, std::string> address_map;
 static operation create_data_operation(data_chunk& data);
 
-BC_API bool make_tx(
-             Watcher& watcher,
-             const std::vector<payment_address>& addresses,
-             const payment_address& changeAddr,
-             int64_t amountSatoshi,
-             fee_schedule& sched,
-             transaction_output_list& outputs,
-             unsigned_transaction_type& utx)
+Status
+makeTx(bc::transaction_type &result, Watcher &watcher,
+    const std::vector<bc::payment_address> &addresses,
+    const bc::payment_address &changeAddr,
+    int64_t amountSatoshi,
+    fee_schedule &sched,
+    bc::transaction_output_list &outputs)
 {
-    utx.code = ok;
-    utx.tx.version = 1;
-    utx.tx.locktime = 0;
-    utx.tx.outputs = outputs;
+    bc::transaction_type out;
+
+    out.version = 1;
+    out.locktime = 0;
+    out.outputs = outputs;
 
     // Gather all the unspent outputs in the wallet:
     auto unspent = watcher.get_utxos(true);
@@ -40,10 +40,7 @@ BC_API bool make_tx(
     // Select a collection of outputs that satisfies our requirements:
     select_outputs_result utxos = select_outputs(unspent, amountSatoshi);
     if (utxos.points.size() <= 0)
-    {
-        utx.code = insufficent_funds;
-        return false;
-    }
+        return ABC_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds");
 
     // Build the transaction's input list:
     for (auto &point : utxos.points)
@@ -51,7 +48,7 @@ BC_API bool make_tx(
         transaction_input_type input;
         input.sequence = 4294967295;
         input.previous_output = point;
-        utx.tx.inputs.push_back(input);
+        out.inputs.push_back(input);
     }
 
     // If change is needed, add that to the output list:
@@ -60,32 +57,30 @@ BC_API bool make_tx(
         transaction_output_type change;
         change.value = utxos.change;
         change.script = build_pubkey_hash_script(changeAddr.hash());
-        utx.tx.outputs.push_back(change);
+        out.outputs.push_back(change);
     }
 
     // Remove any dust outputs, returning those funds to the miners:
-    auto last = std::remove_if(utx.tx.outputs.begin(), utx.tx.outputs.end(),
+    auto last = std::remove_if(out.outputs.begin(), out.outputs.end(),
         [](transaction_output_type &o){ return o.value < min_output; });
-    utx.tx.outputs.erase(last, utx.tx.outputs.end());
+    out.outputs.erase(last, out.outputs.end());
 
     // If all the outputs were dust, we can't send this transaction:
-    if (!utx.tx.outputs.size())
-    {
-        utx.code = insufficent_funds;
-        return false;
-    }
+    if (!out.outputs.size())
+        return ABC_ERROR(ABC_CC_InsufficientFunds, "No remaining outputs");
 
-    return true;
+    result = std::move(out);
+    return Status();
 }
 
-BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& keys, Watcher& watcher)
+Status
+signTx(bc::transaction_type &result, Watcher &watcher,
+    std::vector<std::string> &keys)
 {
-    utx.code = ok;
-
-    for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
+    for (size_t i = 0; i < result.inputs.size(); ++i)
     {
         // Find the utxo this input refers to:
-        bc::input_point& point = utx.tx.inputs[i].previous_output;
+        bc::input_point& point = result.inputs[i].previous_output;
         bc::transaction_type tx = watcher.find_tx(point.hash);
 
         // Find the address for that utxo:
@@ -93,10 +88,7 @@ BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& ke
         bc::script_type& script = tx.outputs[point.index].script;
         bc::extract(pa, script);
         if (payment_address::invalid_version == pa.version())
-        {
-            utx.code = invalid_key;
-            return false;
-        }
+            return ABC_ERROR(ABC_CC_Error, "Invalid address");
 
         // Find the elliptic curve key for this input:
         bool found = false;
@@ -116,10 +108,7 @@ BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& ke
             }
         }
         if (!found)
-        {
-            utx.code = invalid_key;
-            return false;
-        }
+            return ABC_ERROR(ABC_CC_Error, "Missing signing key");
 
         // Gererate the previous output's signature:
         // TODO: We already have this; process it and use it
@@ -127,12 +116,9 @@ BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& ke
 
         // Generate the signature for this input:
         hash_digest sig_hash =
-            script_type::generate_signature_hash(utx.tx, i, sig_script, 1);
+            script_type::generate_signature_hash(result, i, sig_script, 1);
         if (sig_hash == null_hash)
-        {
-            utx.code = invalid_sig;
-            return false;
-        }
+            return ABC_ERROR(ABC_CC_Error, "Unable to sign");
         data_chunk signature = sign(secret, sig_hash,
             create_nonce(secret, sig_hash));
         signature.push_back(0x01);
@@ -141,9 +127,10 @@ BC_API bool sign_tx(unsigned_transaction_type& utx, std::vector<std::string>& ke
         script_type scriptsig;
         scriptsig.push_operation(create_data_operation(signature));
         scriptsig.push_operation(create_data_operation(pubkey));
-        utx.tx.inputs[i].script = scriptsig;
+        result.inputs[i].script = scriptsig;
     }
-    return true;
+
+    return Status();
 }
 
 script_type build_pubkey_hash_script(const short_hash& pubkey_hash)
