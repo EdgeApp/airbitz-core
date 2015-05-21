@@ -32,7 +32,6 @@ blockcypherPostTx(DataSlice tx)
 
     HttpReply reply;
     ABC_CHECK(HttpRequest().post(reply, url, body));
-    ABC_DebugLog(reply.body.c_str());
     ABC_CHECK(reply.codeOk());
 
     return Status();
@@ -68,7 +67,7 @@ blockchainPostTx(DataSlice tx)
 {
     std::string body = "tx=" + base16Encode(tx);
     if (isTestnet())
-        ABC_ERROR(ABC_CC_Error, "No blockchain.info testnet");
+        return ABC_ERROR(ABC_CC_Error, "No blockchain.info testnet");
 
     HttpReply reply;
     ABC_CHECK(HttpRequest().
