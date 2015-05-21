@@ -8,11 +8,11 @@
 #ifndef ABCD_BITCOIN_PICKER_HPP
 #define ABCD_BITCOIN_PICKER_HPP
 
-#include "watcher.hpp"
 #include <bitcoin/bitcoin.hpp>
-#include <bitcoin/transaction.hpp>
 
 namespace abcd {
+
+class Watcher;
 
 enum {
     ok = 0,
@@ -34,7 +34,7 @@ struct fee_schedule
 };
 
 BC_API bool make_tx(
-             abcd::watcher& watcher,
+             Watcher& watcher,
              const std::vector<bc::payment_address>& addresses,
              const bc::payment_address& changeAddr,
              int64_t amountSatoshi,
@@ -44,7 +44,7 @@ BC_API bool make_tx(
 
 BC_API bool sign_tx(unsigned_transaction_type& utx,
                     std::vector<std::string>& keys,
-                    abcd::watcher& watcher);
+                    Watcher& watcher);
 
 bc::script_type build_pubkey_hash_script(const bc::short_hash& pubkey_hash);
 
@@ -77,7 +77,7 @@ typedef std::unordered_map<bc::payment_address, wif_key> key_table;
 /**
  * Finds the challenges for a set up utxos in the watcher database.
  */
-bool gather_challenges(unsigned_transaction& utx, abcd::watcher& watcher);
+bool gather_challenges(unsigned_transaction& utx, Watcher& watcher);
 
 /**
  * Signs as many transaction inputs as possible using the given keys.

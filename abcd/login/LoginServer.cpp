@@ -898,7 +898,6 @@ tABC_CC ABC_LoginServerUploadLogs(const Account &account,
     std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_DEBUG_PATH;
     char *szPost          = NULL;
     char *szLogFilename   = NULL;
-    char *szWatchFilename = NULL;
     json_t *pJSON_Root    = NULL;
     DataChunk logData;
     DataChunk watchData;
@@ -914,14 +913,10 @@ tABC_CC ABC_LoginServerUploadLogs(const Account &account,
     pJSON_array = json_array();
     for (const auto &i: uuids)
     {
-        ABC_CHECK_RET(ABC_BridgeWatchPath(i.id.c_str(),
-                                          &szWatchFilename, pError));
-        ABC_CHECK_NEW(fileLoad(watchData, szWatchFilename), pError);
+        ABC_CHECK_NEW(fileLoad(watchData, watcherPath(i.id)), pError);
 
         json_array_append_new(pJSON_array,
             json_string(base64Encode(watchData).c_str()));
-
-        ABC_FREE_STR(szWatchFilename);
     }
 
     pJSON_Root = json_pack("{ss, ss, ss}",
@@ -939,8 +934,6 @@ exit:
     if (pJSON_array) json_decref(pJSON_array);
     ABC_FREE_STR(szPost);
     ABC_FREE_STR(szLogFilename);
-
-    ABC_FREE_STR(szWatchFilename);
 
     return cc;
 }
