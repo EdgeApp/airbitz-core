@@ -1,0 +1,13 @@
+diff --git a/Makefile.am b/Makefile.am
+index 6c45db3..9889469 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I config
+ if BUILD_PGM
+ SUBDIRS = foreign/openpgm src doc perf tests tools
+ else
+-SUBDIRS = src doc perf tests tools
++SUBDIRS = src doc
+ endif
+ 
+ DIST_SUBDIRS = foreign/openpgm src doc perf tests tools builds/msvc
