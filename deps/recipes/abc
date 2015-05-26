@@ -3,6 +3,7 @@ inherit lib
 
 build() {
     cd $base_dir/..
+    export WORK_DIR=$work_dir
 
     case $target in
     android-*)  output=libabc.so ;;
@@ -15,7 +16,6 @@ build() {
     fi
 
     # Build:
-    export WORK_DIR=$work_dir
     make $output V=1
 
     # Run unit tests:
@@ -27,6 +27,12 @@ build() {
     mkdir -p $install_dir/lib
     cp $work_dir/$output $install_dir/lib
     cp src/ABC.h $install_dir/include
+}
+
+clean() {
+    cd $base_dir/..
+    export WORK_DIR=$work_dir
+    make clean
 }
 
 lib="lib/libabc.a"

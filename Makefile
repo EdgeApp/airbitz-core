@@ -59,7 +59,7 @@ check: $(WORK_DIR)/abc-test
 	$(RUN) $<
 
 clean:
-	$(RM) -r build
+	$(RM) -r $(WORK_DIR)
 
 # Automatic dependency rules:
 $(WORK_DIR)/%.o: %.c $(generated_headers)
