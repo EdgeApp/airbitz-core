@@ -2914,27 +2914,30 @@ exit:
 
 tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
                       const char *szPassword, /* DEPRECATED */
-                      const char *szUUID,
+                      const char *szWalletUUID,
                       int64_t startTime,
                       int64_t endTime,
                       char **szCsvData,
                       tABC_Error *pError)
 {
-    tABC_TxInfo **pTransactions = nullptr;
-    unsigned int iCount = 0;
+    tABC_TxInfo **paTransactions = nullptr;
+    unsigned int count = 0;
     ABC_PROLOG();
 
-    ABC_CHECK_RET(ABC_GetTransactions(szUserName,
-                                      szPassword,
-                                      szUUID,
-                                      startTime, endTime,
-                                      &pTransactions, &iCount, pError));
-    ABC_CHECK_ASSERT(iCount > 0,
-        ABC_CC_NoTransaction, "Unable to find any transactions with that date range");
-    ABC_CHECK_RET(ABC_ExportFormatCsv(pTransactions, iCount, szCsvData, pError));
+    {
+        std::shared_ptr<Account> account;
+        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        auto wallet = ABC_WalletID(*account, szWalletUUID);
+
+        ABC_CHECK_RET(ABC_TxGetTransactions(wallet, startTime, endTime, &paTransactions, &count, pError));
+        ABC_CHECK_ASSERT(0 != count, ABC_CC_NoTransaction, "No transactions to export");
+        ABC_CHECK_RET(ABC_BridgeFilterTransactions(wallet, paTransactions, &count, pError));
+
+        ABC_CHECK_RET(ABC_ExportFormatCsv(paTransactions, count, szCsvData, pError));
+    }
 
 exit:
-    ABC_FreeTransactions(pTransactions, iCount);
+    ABC_FreeTransactions(paTransactions, count);
     return cc;
 }
 

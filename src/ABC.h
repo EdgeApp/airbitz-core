@@ -136,6 +136,7 @@ typedef enum eABC_CC
     ABC_CC_MutexError = 27,
     /** Transaction not found */
     ABC_CC_NoTransaction = 28,
+    ABC_CC_Empty_Wallet = 28, /* Deprecated */
     /** Failed to parse input text */
     ABC_CC_ParseError = 29,
     /** Invalid wallet ID */
