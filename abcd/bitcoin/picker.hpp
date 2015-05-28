@@ -21,21 +21,14 @@ struct unsigned_transaction_type
     bc::transaction_type tx;
 };
 
-struct fee_schedule
-{
-    uint64_t satoshi_per_kb;
-};
-
 /**
  * Select a utxo collection that will satisfy the outputs,
  * and build a transaction with those (including change, if needed).
  */
 Status
 makeTx(bc::transaction_type &result, Watcher &watcher,
-    const std::vector<bc::payment_address> &addresses,
     const bc::payment_address &changeAddr,
     int64_t amountSatoshi,
-    fee_schedule &sched,
     bc::transaction_output_list &outputs);
 
 Status

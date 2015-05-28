@@ -82,7 +82,6 @@ tABC_CC ABC_BridgePrioritizeAddress(tABC_WalletID self,
 
 tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
                          tABC_TxSendInfo *pSendInfo,
-                         char **addresses, int addressCount,
                          char *changeAddress,
                          tABC_UnsignedTx *pUtx,
                          tABC_Error *pError);

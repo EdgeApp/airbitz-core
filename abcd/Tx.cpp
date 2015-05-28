@@ -315,7 +315,6 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     char *szPrivSeed = NULL;
     U08Buf privSeed; // Do not free
     tABC_UnsignedTx *pUtx = NULL;
-    AutoStringArray addresses;
     AutoStringArray keys;
     tABC_TxAddress *pChangeAddr = NULL;
 
@@ -330,13 +329,8 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     // save out this address
     ABC_CHECK_RET(ABC_TxSaveAddress(self, pChangeAddr, pError));
 
-    // Fetch addresses for this wallet
-    ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(self, &addresses.data, &addresses.size, pError));
     // Make an unsigned transaction
-    ABC_CHECK_RET(
-        ABC_BridgeTxMake(self, pInfo, addresses.data, addresses.size,
-                         pChangeAddr->szPubAddress, pUtx, pError));
+    ABC_CHECK_RET(ABC_BridgeTxMake(self, pInfo, pChangeAddr->szPubAddress, pUtx, pError));
 
     // Fetch Private Seed
     ABC_CHECK_RET(
@@ -480,7 +474,6 @@ tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, tABC_TxSendInfo *pInfo, uint64_t
     AutoCoreLock lock(gCoreMutex);
     tABC_UnsignedTx utx;
     tABC_TxAddress *pChangeAddr = NULL;
-    AutoStringArray addresses;
 
     ABC_CHECK_NULL(pInfo);
 
@@ -494,11 +487,8 @@ tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, tABC_TxSendInfo *pInfo, uint64_t
     // save out this address
     ABC_CHECK_RET(ABC_TxSaveAddress(self, pChangeAddr, pError));
 
-    // Fetch addresses for this wallet
-    ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(self, &addresses.data, &addresses.size, pError));
-    cc = ABC_BridgeTxMake(self, pInfo, addresses.data, addresses.size,
-                            pChangeAddr->szPubAddress, &utx, pError);
+    // Make an unsigned transaction
+    cc = ABC_BridgeTxMake(self, pInfo, pChangeAddr->szPubAddress, &utx, pError);
     *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
                 + pInfo->pDetails->amountFeesMinersSatoshi;
     ABC_CHECK_RET(cc);

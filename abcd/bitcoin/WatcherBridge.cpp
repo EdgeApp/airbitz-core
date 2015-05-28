@@ -380,7 +380,6 @@ tABC_CC ABC_BridgeWatcherDelete(tABC_WalletID self, tABC_Error *pError)
 
 tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
                          tABC_TxSendInfo *pSendInfo,
-                         char **addresses, int addressCount,
                          char *changeAddress,
                          tABC_UnsignedTx *pUtx,
                          tABC_Error *pError)
@@ -388,11 +387,9 @@ tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     tABC_GeneralInfo *ppInfo = NULL;
     bc::payment_address change, ab, dest;
-    abcd::fee_schedule schedule;
     abcd::unsigned_transaction_type *utx;
     bc::transaction_output_list outputs;
     uint64_t totalAmountSatoshi = 0, abFees = 0, minerFees = 0;
-    std::vector<bc::payment_address> addresses_;
 
     Watcher *watcher = nullptr;
     ABC_CHECK_NEW(watcherFind(watcher, self), pError);
@@ -405,16 +402,6 @@ tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
     // Fetch Info to calculate fees
     ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
 
-    // Create payment_addresses
-    ABC_CHECK_ASSERT(addressCount > 0,
-        ABC_CC_Error, "No addresses supplied");
-    for (int i = 0; i < addressCount; ++i)
-    {
-        bc::payment_address pa;
-        ABC_CHECK_ASSERT(true == pa.set_encoded(addresses[i]),
-            ABC_CC_Error, "Bad source address");
-        addresses_.push_back(pa);
-    }
     ABC_CHECK_ASSERT(true == change.set_encoded(changeAddress),
         ABC_CC_Error, "Bad change address");
     ABC_CHECK_ASSERT(true == dest.set_encoded(pSendInfo->szDestAddress),
@@ -422,7 +409,6 @@ tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
     ABC_CHECK_ASSERT(true == ab.set_encoded(ppInfo->pAirBitzFee->szAddresss),
         ABC_CC_Error, "Bad ABV address");
 
-    schedule.satoshi_per_kb = ppInfo->countMinersFees;
     totalAmountSatoshi = pSendInfo->pDetails->amountSatoshi;
 
     if (!pSendInfo->bTransfer)
@@ -458,8 +444,7 @@ tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
                     pSendInfo->pDetails->amountSatoshi,
                     totalAmountSatoshi);
 
-    ABC_CHECK_NEW(makeTx(utx->tx, *watcher, addresses_, change,
-        totalAmountSatoshi, schedule, outputs), pError);
+    ABC_CHECK_NEW(makeTx(utx->tx, *watcher, change, totalAmountSatoshi, outputs), pError);
 
     pUtx->data = (void *) utx;
 exit:
@@ -568,15 +553,11 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
         Details.amountSatoshi = total;
 
         // Ewwwwww, fix this to have minimal iterations
-        txResp = ABC_BridgeTxMake(self, &SendInfo,
-                                  addresses.data, addresses.size,
-                                  changeAddr, &utx, pError);
+        txResp = ABC_BridgeTxMake(self, &SendInfo, changeAddr, &utx, pError);
         while (txResp == ABC_CC_InsufficientFunds && Details.amountSatoshi > 0)
         {
             Details.amountSatoshi -= 1;
-            txResp = ABC_BridgeTxMake(self, &SendInfo,
-                                      addresses.data, addresses.size,
-                                      changeAddr, &utx, pError);
+            txResp = ABC_BridgeTxMake(self, &SendInfo, changeAddr, &utx, pError);
         }
         *pMaxSatoshi = std::max<int64_t>(Details.amountSatoshi, 0);
     }

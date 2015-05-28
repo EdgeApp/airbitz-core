@@ -22,10 +22,8 @@ static operation create_data_operation(data_chunk& data);
 
 Status
 makeTx(bc::transaction_type &result, Watcher &watcher,
-    const std::vector<bc::payment_address> &addresses,
     const bc::payment_address &changeAddr,
     int64_t amountSatoshi,
-    fee_schedule &sched,
     bc::transaction_output_list &outputs)
 {
     bc::transaction_type out;
