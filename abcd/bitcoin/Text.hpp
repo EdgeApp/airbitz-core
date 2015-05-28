@@ -30,6 +30,8 @@ typedef struct sABC_BitcoinURIInfo
     char *szMessage;
     /** amount of bitcoins */
     int64_t amountSatoshi;
+    /** Bip72 payment request r parameter */
+    char *szR;
     /** Airbitz category extension */
     char *szCategory;
     /** Airbitz ret extension for return URI */

@@ -7,6 +7,7 @@
 #include "Broadcast.hpp"
 #include "Inputs.hpp"
 #include "Outputs.hpp"
+#include "PaymentProto.hpp"
 #include "../Tx.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
@@ -117,6 +118,7 @@ void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo)
     if (pTxSendInfo)
     {
         ABC_FREE_STR(pTxSendInfo->szDestAddress);
+        delete pTxSendInfo->paymentRequest;
         ABC_TxFreeDetails(pTxSendInfo->pDetails);
         ABC_WalletIDFree(pTxSendInfo->walletDest);
 
@@ -137,13 +139,11 @@ tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
     tABC_TxSendInfo *pTxSendInfo = NULL;
 
     ABC_CHECK_NULL(ppTxSendInfo);
-    ABC_CHECK_NULL(szDestAddress);
     ABC_CHECK_NULL(pDetails);
 
     ABC_NEW(pTxSendInfo, tABC_TxSendInfo);
-
-    ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
-
+    if (szDestAddress)
+        ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTxSendInfo->pDetails), pDetails, pError));
 
     *ppTxSendInfo = pTxSendInfo;
@@ -255,6 +255,28 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
         bc::data_chunk rawTx(satoshi_raw_size(tx));
         bc::satoshi_save(tx, rawTx.begin());
         ABC_CHECK_NEW(broadcastTx(rawTx), pError);
+
+        // Let the merchant broadcast the transaction:
+        if (pInfo->paymentRequest)
+        {
+            // TODO: add something to the details about a refund
+            AutoFree<tABC_TxDetails, ABC_TxFreeDetails> pRefundDetails;
+            ABC_CHECK_RET(ABC_TxDupDetails(&pRefundDetails.get(), pInfo->pDetails, pError));
+
+            std::string refundAddress;
+            ABC_CHECK_NEW(txNewChangeAddress(refundAddress, self, pRefundDetails), pError);
+
+            bc::script_type refundScript;
+            ABC_CHECK_NEW(outputScriptForAddress(refundScript, refundAddress), pError);
+            DataChunk refund = save_script(refundScript);
+
+            PaymentReceipt receipt;
+            ABC_CHECK_NEW(pInfo->paymentRequest->pay(receipt, rawTx, refund), pError);
+
+            // TODO: make something happen with the memo???
+            if (receipt.ack.has_memo())
+                ABC_DebugLog("Memo: %s", receipt.ack.memo().c_str());
+        }
 
         // Mark the outputs as spent:
         watcher->send_tx(tx);

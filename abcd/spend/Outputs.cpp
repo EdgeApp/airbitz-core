@@ -4,6 +4,7 @@
  */
 
 #include "Outputs.hpp"
+#include "PaymentProto.hpp"
 #include "Spend.hpp"
 #include "../bitcoin/Testnet.hpp"
 
@@ -53,11 +54,25 @@ outputsForSendInfo(bc::transaction_output_list &result, sABC_TxSendInfo *pInfo)
 {
     bc::transaction_output_list out;
 
-    // The output being requested:
-    bc::transaction_output_type output;
-    output.value = pInfo->pDetails->amountSatoshi;
-    ABC_CHECK(outputScriptForAddress(output.script, pInfo->szDestAddress));
-    out.push_back(output);
+    if (pInfo->paymentRequest)
+    {
+        // Gather the outputs from the payment request, if any:
+        for (auto &a: pInfo->paymentRequest->outputs())
+        {
+            bc::transaction_output_type output;
+            output.value = a.amount;
+            output.script = bc::parse_script(bc::to_data_chunk(a.script));
+            out.push_back(output);
+        }
+    }
+    else
+    {
+        // Otherwise, make an output for the ordinary address:
+        bc::transaction_output_type output;
+        output.value = pInfo->pDetails->amountSatoshi;
+        ABC_CHECK(outputScriptForAddress(output.script, pInfo->szDestAddress));
+        out.push_back(output);
+    }
 
     // Handle the Airbitz fees:
     pInfo->pDetails->amountFeesAirbitzSatoshi = 0;
