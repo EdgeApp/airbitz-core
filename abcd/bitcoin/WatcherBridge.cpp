@@ -110,7 +110,7 @@ watcherFind(WatcherInfo *&result, tABC_WalletID self)
     return Status();
 }
 
-static Status
+Status
 watcherFind(Watcher *&result, tABC_WalletID self)
 {
     WatcherInfo *watcherInfo = nullptr;
@@ -134,7 +134,7 @@ watcherLoad(tABC_WalletID self)
     return Status();
 }
 
-static Status
+Status
 watcherSave(tABC_WalletID self)
 {
     Watcher *watcher = nullptr;
@@ -444,35 +444,6 @@ tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
 
 exit:
     ABC_GeneralFreeInfo(ppInfo);
-    return cc;
-}
-
-tABC_CC ABC_BridgeTxSignSend(tABC_WalletID self,
-                             tABC_TxSendInfo *pSendInfo,
-                             const KeyTable &keys,
-                             libbitcoin::transaction_type &tx,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
-
-    // Sign the transaction
-    ABC_CHECK_NEW(signTx(tx, *watcher, keys), pError);
-
-    // Send to the network:
-    {
-        bc::data_chunk raw_tx(satoshi_raw_size(tx));
-        bc::satoshi_save(tx, raw_tx.begin());
-        ABC_CHECK_NEW(broadcastTx(raw_tx), pError);
-    }
-
-    // This will mark the outputs as spent
-    watcher->send_tx(tx);
-    watcherSave(self); // Failure is not fatal
-
-exit:
     return cc;
 }
 

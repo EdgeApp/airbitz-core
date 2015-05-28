@@ -44,7 +44,6 @@
 #include "../Tx.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
-#include <map>
 
 namespace libbitcoin
 {
@@ -53,7 +52,13 @@ namespace libbitcoin
 
 namespace abcd {
 
-typedef std::map<const std::string, std::string> KeyTable;
+class Watcher;
+
+Status
+watcherFind(Watcher *&result, tABC_WalletID self);
+
+Status
+watcherSave(tABC_WalletID self);
 
 std::string
 watcherPath(const std::string &walletId);
@@ -93,12 +98,6 @@ tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
                          char *changeAddress,
                          libbitcoin::transaction_type &resultTx,
                          tABC_Error *pError);
-
-tABC_CC ABC_BridgeTxSignSend(tABC_WalletID self,
-                             tABC_TxSendInfo *pSendInfo,
-                             const KeyTable &keys,
-                             libbitcoin::transaction_type &tx,
-                             tABC_Error *pError);
 
 tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
                                const char *szDestAddress,

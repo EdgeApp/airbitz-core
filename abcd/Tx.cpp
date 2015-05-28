@@ -34,9 +34,12 @@
 #include "account/Account.hpp"
 #include "account/AccountSettings.hpp"
 #include "bitcoin/Text.hpp"
+#include "bitcoin/Watcher.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"
 #include "exchange/Exchange.hpp"
+#include "spend/Broadcast.hpp"
+#include "spend/Inputs.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"
 #include "util/Mutex.hpp"
@@ -319,7 +322,6 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
 
     bc::transaction_type tx;
     tABC_TxAddress *pChangeAddr = NULL;
-    KeyTable keys;
     AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> unsaved;
 
     ABC_CHECK_NULL(pInfo);
@@ -334,9 +336,25 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     // Make an unsigned transaction
     ABC_CHECK_RET(ABC_BridgeTxMake(self, pInfo, pChangeAddr->szPubAddress, tx, pError));
 
-    // Sign and send transaction
-    ABC_CHECK_NEW(txKeyTableGet(keys, self), pError);
-    ABC_CHECK_RET(ABC_BridgeTxSignSend(self, pInfo, keys, tx, pError));
+    // Sign and send transaction:
+    {
+        Watcher *watcher = nullptr;
+        ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+
+        // Sign the transaction:
+        KeyTable keys;
+        ABC_CHECK_NEW(txKeyTableGet(keys, self), pError);
+        ABC_CHECK_NEW(signTx(tx, *watcher, keys), pError);
+
+        // Send to the network:
+        bc::data_chunk rawTx(satoshi_raw_size(tx));
+        bc::satoshi_save(tx, rawTx.begin());
+        ABC_CHECK_NEW(broadcastTx(rawTx), pError);
+
+        // Mark the outputs as spent:
+        watcher->send_tx(tx);
+        watcherSave(self); // Failure is not fatal
+    }
 
     // Update the ABC db
     ABC_CHECK_RET(ABC_BridgeExtractOutputs(self, &unsaved.get(), tx, pError));
