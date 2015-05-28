@@ -36,6 +36,7 @@
 #include "../Tx.hpp"
 #include "../spend/Broadcast.hpp"
 #include "../spend/Inputs.hpp"
+#include "../spend/Outputs.hpp"
 #include "../spend/Spend.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
@@ -93,9 +94,6 @@ static tABC_CC     ABC_BridgeTxDetailsSplit(tABC_WalletID self, const char *szTx
 static tABC_CC     ABC_BridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep& sweep, tABC_Error *pError);
 static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
-static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr);
-static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash);
-static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
 static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo);
 static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64_t amountSatoshi);
 
@@ -386,60 +384,29 @@ tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_GeneralInfo *ppInfo = NULL;
-    bc::payment_address change, ab, dest;
     bc::transaction_type tx;
     bc::transaction_output_list outputs;
-    uint64_t totalAmountSatoshi = 0, abFees = 0, minerFees = 0;
+    uint64_t totalAmountSatoshi = 0, minerFees = 0;
 
     Watcher *watcher = nullptr;
     ABC_CHECK_NEW(watcherFind(watcher, self), pError);
 
+    ABC_CHECK_NEW(outputsForSendInfo(outputs, pSendInfo), pError);
+
     // Fetch Info to calculate fees
     ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
 
-    ABC_CHECK_ASSERT(true == change.set_encoded(changeAddress),
-        ABC_CC_Error, "Bad change address");
-    ABC_CHECK_ASSERT(true == dest.set_encoded(pSendInfo->szDestAddress),
-        ABC_CC_Error, "Bad destination address");
-    ABC_CHECK_ASSERT(true == ab.set_encoded(ppInfo->pAirBitzFee->szAddresss),
-        ABC_CC_Error, "Bad ABV address");
-
-    totalAmountSatoshi = pSendInfo->pDetails->amountSatoshi;
-
-    if (!pSendInfo->bTransfer)
-    {
-        // Calculate AB Fees
-        abFees = ABC_BridgeCalcAbFees(pSendInfo->pDetails->amountSatoshi, ppInfo);
-
-        // Add in miners fees
-        if (abFees > 0)
-        {
-            pSendInfo->pDetails->amountFeesAirbitzSatoshi = abFees;
-            // Output to Airbitz
-            ABC_BridgeAppendOutput(outputs, abFees, ab);
-            // Increment total tx amount to account for AB fees
-            totalAmountSatoshi += abFees;
-        }
-    }
-    // Output to  Destination Address
-    ABC_BridgeAppendOutput(outputs, pSendInfo->pDetails->amountSatoshi, dest);
-
+    // Calculate the miner fees:
     minerFees = ABC_BridgeCalcMinerFees(bc::satoshi_raw_size(tx), ppInfo, pSendInfo->pDetails->amountSatoshi);
-    if (minerFees > 0)
-    {
-        // If there are miner fees, increase totalSatoshi
-        pSendInfo->pDetails->amountFeesMinersSatoshi = minerFees;
-        totalAmountSatoshi += minerFees;
-    }
-    // Set the fees in the send details
-    pSendInfo->pDetails->amountFeesAirbitzSatoshi = abFees;
     pSendInfo->pDetails->amountFeesMinersSatoshi = minerFees;
+    totalAmountSatoshi = pSendInfo->pDetails->amountSatoshi + minerFees;
+
     ABC_DebugLog("Change: %s, Amount: %ld, Amount w/Fees %d\n",
-                    change.encoded().c_str(),
+                    changeAddress.c_str(),
                     pSendInfo->pDetails->amountSatoshi,
                     totalAmountSatoshi);
 
-    ABC_CHECK_NEW(makeTx(tx, *watcher, change, totalAmountSatoshi, outputs), pError);
+    ABC_CHECK_NEW(makeTx(tx, *watcher, changeAddress, totalAmountSatoshi, outputs), pError);
 
     resultTx = std::move(tx);
 
@@ -737,7 +704,6 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     tABC_CC cc = ABC_CC_Ok;
     char *szID = NULL;
     char *szAddress = NULL;
-    bc::payment_address to_address;
     uint64_t funds = 0;
     abcd::unsigned_transaction utx;
     bc::transaction_output_type output;
@@ -790,7 +756,6 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
         &details, &szID, false, pError));
     ABC_CHECK_RET(ABC_TxGetRequestAddress(watcherInfo->wallet, szID,
         &szAddress, pError));
-    to_address.set_encoded(szAddress);
 
     // Build a transaction:
     utx.tx.version = 1;
@@ -806,7 +771,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     ABC_CHECK_ASSERT(10500 <= funds, ABC_CC_InsufficientFunds, "Not enough funds");
     funds -= 10000;
     output.value = funds;
-    output.script = abcd::build_pubkey_hash_script(to_address.hash());
+    ABC_CHECK_NEW(outputScriptForAddress(output.script, szAddress), pError);
     utx.tx.outputs.push_back(output);
 
     // Now sign that:
@@ -980,45 +945,6 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
 exit:
     ABC_FREE(oarr);
     ABC_FREE(iarr);
-}
-
-static
-void ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr)
-{
-    bc::transaction_output_type output;
-    output.value = amount;
-    if (addr.version() == pubkeyVersion())
-    {
-        output.script = ABC_BridgeCreatePubKeyHash(addr.hash());
-    }
-    else if (addr.version() == scriptVersion())
-    {
-        output.script = ABC_BridgeCreateScriptHash(addr.hash());
-    }
-    outputs.push_back(output);
-}
-
-static
-bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash)
-{
-    bc::script_type result;
-    result.push_operation({bc::opcode::hash160, bc::data_chunk()});
-    result.push_operation({bc::opcode::special, bc::data_chunk(script_hash.begin(), script_hash.end())});
-    result.push_operation({bc::opcode::equal, bc::data_chunk()});
-    return result;
-}
-
-static
-bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash)
-{
-    bc::script_type result;
-    result.push_operation({bc::opcode::dup, bc::data_chunk()});
-    result.push_operation({bc::opcode::hash160, bc::data_chunk()});
-    result.push_operation({bc::opcode::special,
-        bc::data_chunk(pubkey_hash.begin(), pubkey_hash.end())});
-    result.push_operation({bc::opcode::equalverify, bc::data_chunk()});
-    result.push_operation({bc::opcode::checksig, bc::data_chunk()});
-    return result;
 }
 
 static

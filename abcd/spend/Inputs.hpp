@@ -26,14 +26,12 @@ typedef std::map<const std::string, std::string> KeyTable;
  */
 Status
 makeTx(bc::transaction_type &result, Watcher &watcher,
-    const bc::payment_address &changeAddr,
+    const std::string &changeAddress,
     int64_t amountSatoshi,
     bc::transaction_output_list &outputs);
 
 Status
 signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys);
-
-bc::script_type build_pubkey_hash_script(const bc::short_hash& pubkey_hash);
 
 /**
  * A fully-formed transaction, but possibly missing its signature scripts.

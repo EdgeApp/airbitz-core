@@ -6,6 +6,7 @@
  */
 
 #include "Inputs.hpp"
+#include "Outputs.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include <unistd.h>
 #include <wallet/wallet.hpp>
@@ -22,7 +23,7 @@ static operation create_data_operation(data_chunk& data);
 
 Status
 makeTx(bc::transaction_type &result, Watcher &watcher,
-    const bc::payment_address &changeAddr,
+    const std::string &changeAddress,
     int64_t amountSatoshi,
     bc::transaction_output_list &outputs)
 {
@@ -54,7 +55,7 @@ makeTx(bc::transaction_type &result, Watcher &watcher,
     {
         transaction_output_type change;
         change.value = utxos.change;
-        change.script = build_pubkey_hash_script(changeAddr.hash());
+        ABC_CHECK(outputScriptForAddress(change.script, changeAddress));
         out.outputs.push_back(change);
     }
 
@@ -97,7 +98,7 @@ signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys)
 
         // Gererate the previous output's signature:
         // TODO: We already have this; process it and use it
-        script_type sig_script = build_pubkey_hash_script(pa.hash());
+        script_type sig_script = outputScriptForPubkey(pa.hash());
 
         // Generate the signature for this input:
         hash_digest sig_hash =
@@ -116,18 +117,6 @@ signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys)
     }
 
     return Status();
-}
-
-script_type build_pubkey_hash_script(const short_hash& pubkey_hash)
-{
-    script_type result;
-    result.push_operation({opcode::dup, data_chunk()});
-    result.push_operation({opcode::hash160, data_chunk()});
-    result.push_operation({opcode::special,
-            data_chunk(pubkey_hash.begin(), pubkey_hash.end())});
-    result.push_operation({opcode::equalverify, data_chunk()});
-    result.push_operation({opcode::checksig, data_chunk()});
-    return result;
 }
 
 static operation create_data_operation(data_chunk& data)
