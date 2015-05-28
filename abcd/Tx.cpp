@@ -185,7 +185,6 @@ static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
 static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError);
 static tABC_CC  ABC_TxWalletOwnsAddress(tABC_WalletID self, const char *szAddress, bool *bFound, tABC_Error *pError);
-static tABC_CC  ABC_TxGetPrivAddresses(tABC_WalletID self, tABC_U08Buf seed, char ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxTrashAddresses(tABC_WalletID self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
 static tABC_CC  ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
 static tABC_CC  ABC_TxSendComplete(tABC_WalletID self, tABC_TxSendInfo *pInfo, tABC_UnsavedTx *utx, tABC_Error *pError);
@@ -218,33 +217,6 @@ ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
     else
     {
         *pszPubAddress = nullptr;
-    }
-
-exit:
-    return cc;
-}
-
-static tABC_CC
-ABC_BridgeGetBitcoinPrivAddress(char **pszPrivAddress,
-                                        tABC_U08Buf PrivateSeed,
-                                        int32_t N,
-                                        tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    libbitcoin::data_chunk seed(PrivateSeed.begin(), PrivateSeed.end());
-    libwallet::hd_private_key m(seed);
-    libwallet::hd_private_key m0 = m.generate_private_key(0);
-    libwallet::hd_private_key m00 = m0.generate_private_key(0);
-    libwallet::hd_private_key m00n = m00.generate_private_key(N);
-    if (m00n.valid())
-    {
-        std::string out = bc::encode_hex(m00n.private_key());
-        ABC_STRDUP(*pszPrivAddress, out.c_str());
-    }
-    else
-    {
-        *pszPrivAddress = nullptr;
     }
 
 exit:
@@ -298,6 +270,40 @@ void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo)
 }
 
 /**
+ * Calculates the private keys for a wallet.
+ */
+static Status
+txKeyTableGet(KeyTable &result, tABC_WalletID self)
+{
+    U08Buf seed; // Do not free
+    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(self, &seed, &error));
+    libwallet::hd_private_key m(DataChunk(seed.begin(), seed.end()));
+    libwallet::hd_private_key m0 = m.generate_private_key(0);
+    libwallet::hd_private_key m00 = m0.generate_private_key(0);
+
+    tABC_TxAddress **aAddresses = nullptr;
+    unsigned int countAddresses = 0;
+    ABC_CHECK_OLD(ABC_TxGetAddresses(self, &aAddresses, &countAddresses, &error));
+
+    KeyTable out;
+    for (unsigned i = 0; i < countAddresses; i++)
+    {
+        libwallet::hd_private_key m00n =
+            m00.generate_private_key(aAddresses[i]->seq);
+        if (!m00n.valid())
+            return ABC_ERROR(ABC_CC_NULLPtr, "Super-unlucky key derivation path!");
+
+        out[m00n.address().encoded()] =
+            libwallet::secret_to_wif(m00n.private_key());
+    }
+
+    ABC_TxFreeAddresses(aAddresses, countAddresses);
+
+    result = std::move(out);
+    return Status();
+}
+
+/**
  * Sends the transaction with the given info.
  *
  * @param pInfo Pointer to transaction information
@@ -311,11 +317,9 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    char *szPrivSeed = NULL;
-    U08Buf privSeed; // Do not free
     bc::transaction_type tx;
-    AutoStringArray keys;
     tABC_TxAddress *pChangeAddr = NULL;
+    KeyTable keys;
     AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> unsaved;
 
     ABC_CHECK_NULL(pInfo);
@@ -330,17 +334,9 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     // Make an unsigned transaction
     ABC_CHECK_RET(ABC_BridgeTxMake(self, pInfo, pChangeAddr->szPubAddress, tx, pError));
 
-    // Fetch Private Seed
-    ABC_CHECK_RET(
-        ABC_WalletGetBitcoinPrivateSeed(self, &privSeed, pError));
-    // Fetch the private addresses
-    ABC_CHECK_RET(
-        ABC_TxGetPrivAddresses(self, privSeed,
-                               &keys.data, &keys.size,
-                               pError));
     // Sign and send transaction
-    ABC_CHECK_RET(ABC_BridgeTxSignSend(self, pInfo, keys.data, keys.size,
-        tx, pError));
+    ABC_CHECK_NEW(txKeyTableGet(keys, self), pError);
+    ABC_CHECK_RET(ABC_BridgeTxSignSend(self, pInfo, keys, tx, pError));
 
     // Update the ABC db
     ABC_CHECK_RET(ABC_BridgeExtractOutputs(self, &unsaved.get(), tx, pError));
@@ -350,7 +346,6 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     ABC_STRDUP(*pszTxID, unsaved->szTxId);
 
 exit:
-    ABC_FREE(szPrivSeed);
     ABC_TxFreeAddress(pChangeAddr);
 
     return cc;
@@ -540,42 +535,6 @@ tABC_CC ABC_TxGetPubAddresses(tABC_WalletID self,
     {
         const char *s = aAddresses[i]->szPubAddress;
         ABC_STRDUP(sAddresses[i], s);
-    }
-    *pCount = countAddresses;
-    *paAddresses = sAddresses;
-exit:
-    ABC_TxFreeAddresses(aAddresses, countAddresses);
-    return cc;
-}
-
-/**
- * Gets the private keys with the given wallet.
- *
- * @param paAddresses       Pointer to string array of addresses
- * @param pCount            Pointer to store number of addresses
- * @param pError            A pointer to the location to store the error if there is one
- */
-static
-tABC_CC ABC_TxGetPrivAddresses(tABC_WalletID self,
-                               tABC_U08Buf seed,
-                               char ***paAddresses,
-                               unsigned int *pCount,
-                               tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_TxAddress **aAddresses = NULL;
-    char **sAddresses;
-    unsigned int countAddresses = 0;
-    ABC_CHECK_RET(
-        ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
-    ABC_ARRAY_NEW(sAddresses, countAddresses, char*);
-    for (unsigned i = 0; i < countAddresses; i++)
-    {
-        ABC_CHECK_RET(
-            ABC_BridgeGetBitcoinPrivAddress(&sAddresses[i],
-                                            seed,
-                                            aAddresses[i]->seq,
-                                            pError));
     }
     *pCount = countAddresses;
     *paAddresses = sAddresses;

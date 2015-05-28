@@ -8,7 +8,7 @@
 #include "Inputs.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include <unistd.h>
-#include <wallet/transaction.hpp>
+#include <wallet/wallet.hpp>
 
 namespace abcd {
 
@@ -72,8 +72,7 @@ makeTx(bc::transaction_type &result, Watcher &watcher,
 }
 
 Status
-signTx(bc::transaction_type &result, Watcher &watcher,
-    std::vector<std::string> &keys)
+signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys)
 {
     for (size_t i = 0; i < result.inputs.size(); ++i)
     {
@@ -89,24 +88,12 @@ signTx(bc::transaction_type &result, Watcher &watcher,
             return ABC_ERROR(ABC_CC_Error, "Invalid address");
 
         // Find the elliptic curve key for this input:
-        bool found = false;
-        bc::ec_secret secret;
-        bc::ec_point pubkey;
-        for (auto k : keys)
-        {
-            secret = bc::decode_hash(k);
-            pubkey = bc::secret_to_public_key(secret, true);
-
-            payment_address a;
-            set_public_key(a, pubkey);
-            if (a.encoded() == pa.encoded())
-            {
-                found = true;
-                break;
-            }
-        }
-        if (!found)
+        auto key = keys.find(pa.encoded());
+        if (key == keys.end())
             return ABC_ERROR(ABC_CC_Error, "Missing signing key");
+        bc::ec_secret secret = libwallet::wif_to_secret(key->second);
+        bc::ec_point pubkey = bc::secret_to_public_key(secret,
+            libwallet::is_wif_compressed(key->second));
 
         // Gererate the previous output's signature:
         // TODO: We already have this; process it and use it

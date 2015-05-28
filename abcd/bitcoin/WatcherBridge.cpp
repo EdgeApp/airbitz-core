@@ -449,22 +449,14 @@ exit:
 
 tABC_CC ABC_BridgeTxSignSend(tABC_WalletID self,
                              tABC_TxSendInfo *pSendInfo,
-                             char **paPrivKey,
-                             unsigned int keyCount,
+                             const KeyTable &keys,
                              libbitcoin::transaction_type &tx,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::vector<std::string> keys;
-
     Watcher *watcher = nullptr;
     ABC_CHECK_NEW(watcherFind(watcher, self), pError);
-
-    for (unsigned i = 0; i < keyCount; ++i)
-    {
-        keys.push_back(std::string(paPrivKey[i]));
-    }
 
     // Sign the transaction
     ABC_CHECK_NEW(signTx(tx, *watcher, keys), pError);

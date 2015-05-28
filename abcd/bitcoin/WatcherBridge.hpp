@@ -44,6 +44,7 @@
 #include "../Tx.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
+#include <map>
 
 namespace libbitcoin
 {
@@ -51,6 +52,8 @@ namespace libbitcoin
 }
 
 namespace abcd {
+
+typedef std::map<const std::string, std::string> KeyTable;
 
 std::string
 watcherPath(const std::string &walletId);
@@ -93,8 +96,7 @@ tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
 
 tABC_CC ABC_BridgeTxSignSend(tABC_WalletID self,
                              tABC_TxSendInfo *pSendInfo,
-                             char **paPrivKey,
-                             unsigned int keyCount,
+                             const KeyTable &keys,
                              libbitcoin::transaction_type &tx,
                              tABC_Error *pError);
 

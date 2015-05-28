@@ -16,6 +16,11 @@ namespace abcd {
 class Watcher;
 
 /**
+ * Maps from Bitcoin addresses to WIF-encoded private keys.
+ */
+typedef std::map<const std::string, std::string> KeyTable;
+
+/**
  * Select a utxo collection that will satisfy the outputs,
  * and build a transaction with those (including change, if needed).
  */
@@ -26,8 +31,7 @@ makeTx(bc::transaction_type &result, Watcher &watcher,
     bc::transaction_output_list &outputs);
 
 Status
-signTx(bc::transaction_type &result, Watcher &watcher,
-    std::vector<std::string> &keys);
+signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys);
 
 bc::script_type build_pubkey_hash_script(const bc::short_hash& pubkey_hash);
 
