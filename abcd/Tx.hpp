@@ -37,66 +37,55 @@
 #define ABC_Tx_h
 
 #include "Wallet.hpp"
-#include "../src/ABC.h"
+#include "util/Status.hpp"
+#include <map>
 
 namespace abcd {
 
-/**
- * AirBitz Core Send Tx Structure
- *
- * This structure contains the detailed information associated
- * with initiating a send.
- *
- */
-typedef struct sABC_TxSendInfo
-{
-    char                    *szDestAddress;
-
-    // Transfer from money from one wallet to another
-    bool                    bTransfer;
-    tABC_WalletID           walletDest;
-    char                    *szDestName;
-    char                    *szDestCategory;
-    char                    *szSrcName;
-    char                    *szSrcCategory;
-
-    tABC_TxDetails          *pDetails;
-} tABC_TxSendInfo;
+typedef struct sABC_TxSendInfo tABC_TxSendInfo;
+typedef std::map<const std::string, std::string> KeyTable;
 
 /**
- * AirBitz Unsigned Transaction
- *
- * Includes the approximate fees to send out this transaction
+ * Information about a transaction that has been sent
+ * but not yet saved to the database.
  */
-typedef struct sABC_UnsignedTx
+typedef struct sABC_UnsavedTx
 {
-    void *data;
     /** Tx Id we use internally */
     char *szTxId;
     /** block chain tx id**/
     char *szTxMalleableId;
-    /** Fees associated with the tx **/
-    uint64_t fees;
     /** Number for outputs **/
     unsigned int countOutputs;
     /** The output information **/
     tABC_TxOutput **aOutputs;
-} tABC_UnsignedTx;
+} tABC_UnsavedTx;
 
 tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
                          const tABC_TxDetails *pOldDetails,
                          tABC_Error *pError);
 
 void ABC_TxFreeDetails(tABC_TxDetails *pDetails);
+void ABC_UnsavedTxFree(tABC_UnsavedTx *pUtx);
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
-tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
-                            const char *szDestAddress,
-                            const tABC_TxDetails *pDetails,
-                            tABC_Error *pError);
+/**
+ * Calculates the private keys for a wallet.
+ */
+Status
+txKeyTableGet(KeyTable &result, tABC_WalletID self);
 
+/**
+ * Gets the next unused change address from the wallet.
+ */
+Status
+txNewChangeAddress(std::string &result, tABC_WalletID self,
+    tABC_TxDetails *pDetails);
 
-void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo);
+tABC_CC ABC_TxSendComplete(tABC_WalletID self,
+                           tABC_TxSendInfo  *pInfo,
+                           tABC_UnsavedTx   *pUtx,
+                           tABC_Error       *pError);
 
 tABC_CC ABC_TxBlockHeightUpdate(uint64_t height,
                                 tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
@@ -195,16 +184,6 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
                                    tABC_Error *pError);
 
 // Blocking functions:
-tABC_CC  ABC_TxSend(tABC_WalletID self,
-                    tABC_TxSendInfo *pInfo,
-                    char **pszTxID,
-                    tABC_Error *pError);
-
-tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self,
-                            tABC_TxSendInfo *pInfo,
-                            uint64_t *pTotalFees,
-                            tABC_Error *pError);
-
 tABC_CC ABC_TxGetPubAddresses(tABC_WalletID self,
                             char ***paAddresses,
                             unsigned int *pCount,

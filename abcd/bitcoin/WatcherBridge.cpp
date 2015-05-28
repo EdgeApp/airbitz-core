@@ -30,11 +30,14 @@
  */
 
 #include "WatcherBridge.hpp"
-#include "Broadcast.hpp"
-#include "picker.hpp"
 #include "Testnet.hpp"
 #include "Watcher.hpp"
 #include "../General.hpp"
+#include "../Tx.hpp"
+#include "../spend/Broadcast.hpp"
+#include "../spend/Inputs.hpp"
+#include "../spend/Outputs.hpp"
+#include "../spend/Spend.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
@@ -47,7 +50,6 @@ namespace abcd {
 
 #define FALLBACK_OBELISK "tcp://obelisk.airbitz.co:9091"
 #define TESTNET_OBELISK "tcp://obelisk-testnet.airbitz.co:9091"
-#define NO_AB_FEES
 
 struct PendingSweep
 {
@@ -91,14 +93,6 @@ static tABC_CC     ABC_BridgeTxDetailsSplit(tABC_WalletID self, const char *szTx
 static tABC_CC     ABC_BridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep& sweep, tABC_Error *pError);
 static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
-static tABC_CC     ABC_BridgeExtractOutputs(Watcher *watcher, abcd::unsigned_transaction_type *utx, std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError);
-static tABC_CC     ABC_BridgeTxErrorHandler(abcd::unsigned_transaction_type *utx, tABC_Error *pError);
-static void        ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr);
-static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash);
-static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
-static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo);
-static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64_t amountSatoshi);
-static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx);
 
 static Status
 watcherFind(WatcherInfo *&result, tABC_WalletID self)
@@ -112,7 +106,7 @@ watcherFind(WatcherInfo *&result, tABC_WalletID self)
     return Status();
 }
 
-static Status
+Status
 watcherFind(Watcher *&result, tABC_WalletID self)
 {
     WatcherInfo *watcherInfo = nullptr;
@@ -136,7 +130,7 @@ watcherLoad(tABC_WalletID self)
     return Status();
 }
 
-static Status
+Status
 watcherSave(tABC_WalletID self)
 {
     Watcher *watcher = nullptr;
@@ -379,224 +373,6 @@ tABC_CC ABC_BridgeWatcherDelete(tABC_WalletID self, tABC_Error *pError)
     return cc;
 }
 
-tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
-                         tABC_TxSendInfo *pSendInfo,
-                         char **addresses, int addressCount,
-                         char *changeAddress,
-                         tABC_UnsignedTx *pUtx,
-                         tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_GeneralInfo *ppInfo = NULL;
-    bc::payment_address change, ab, dest;
-    abcd::fee_schedule schedule;
-    abcd::unsigned_transaction_type *utx;
-    bc::transaction_output_list outputs;
-    uint64_t totalAmountSatoshi = 0, abFees = 0, minerFees = 0;
-    std::vector<bc::payment_address> addresses_;
-
-    Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
-
-    // Alloc a new utx
-    utx = new abcd::unsigned_transaction_type();
-    ABC_CHECK_ASSERT(utx != NULL,
-        ABC_CC_NULLPtr, "Unable alloc unsigned_transaction_type");
-
-    // Update general info before send
-    ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
-    // Fetch Info to calculate fees
-    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
-    // Create payment_addresses
-    ABC_CHECK_ASSERT(addressCount > 0,
-        ABC_CC_Error, "No addresses supplied");
-    for (int i = 0; i < addressCount; ++i)
-    {
-        bc::payment_address pa;
-        ABC_CHECK_ASSERT(true == pa.set_encoded(addresses[i]),
-            ABC_CC_Error, "Bad source address");
-        addresses_.push_back(pa);
-    }
-    ABC_CHECK_ASSERT(true == change.set_encoded(changeAddress),
-        ABC_CC_Error, "Bad change address");
-    ABC_CHECK_ASSERT(true == dest.set_encoded(pSendInfo->szDestAddress),
-        ABC_CC_Error, "Bad destination address");
-    ABC_CHECK_ASSERT(true == ab.set_encoded(ppInfo->pAirBitzFee->szAddresss),
-        ABC_CC_Error, "Bad ABV address");
-
-    schedule.satoshi_per_kb = ppInfo->countMinersFees;
-    totalAmountSatoshi = pSendInfo->pDetails->amountSatoshi;
-
-    if (!pSendInfo->bTransfer)
-    {
-        // Calculate AB Fees
-        abFees = ABC_BridgeCalcAbFees(pSendInfo->pDetails->amountSatoshi, ppInfo);
-
-        // Add in miners fees
-        if (abFees > 0)
-        {
-            pSendInfo->pDetails->amountFeesAirbitzSatoshi = abFees;
-            // Output to Airbitz
-            ABC_BridgeAppendOutput(outputs, abFees, ab);
-            // Increment total tx amount to account for AB fees
-            totalAmountSatoshi += abFees;
-        }
-    }
-    // Output to  Destination Address
-    ABC_BridgeAppendOutput(outputs, pSendInfo->pDetails->amountSatoshi, dest);
-
-    minerFees = ABC_BridgeCalcMinerFees(bc::satoshi_raw_size(utx->tx), ppInfo, pSendInfo->pDetails->amountSatoshi);
-    if (minerFees > 0)
-    {
-        // If there are miner fees, increase totalSatoshi
-        pSendInfo->pDetails->amountFeesMinersSatoshi = minerFees;
-        totalAmountSatoshi += minerFees;
-    }
-    // Set the fees in the send details
-    pSendInfo->pDetails->amountFeesAirbitzSatoshi = abFees;
-    pSendInfo->pDetails->amountFeesMinersSatoshi = minerFees;
-    ABC_DebugLog("Change: %s, Amount: %ld, Amount w/Fees %d\n",
-                    change.encoded().c_str(),
-                    pSendInfo->pDetails->amountSatoshi,
-                    totalAmountSatoshi);
-    if (!abcd::make_tx(*watcher, addresses_, change,
-                            totalAmountSatoshi, schedule, outputs, *utx))
-    {
-        ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
-    }
-
-    pUtx->data = (void *) utx;
-exit:
-    ABC_GeneralFreeInfo(ppInfo);
-    return cc;
-}
-
-tABC_CC ABC_BridgeTxSignSend(tABC_WalletID self,
-                             tABC_TxSendInfo *pSendInfo,
-                             char **paPrivKey,
-                             unsigned int keyCount,
-                             tABC_UnsignedTx *pUtx,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    auto utx = static_cast<abcd::unsigned_transaction_type *>(pUtx->data);
-    std::vector<std::string> keys;
-    std::string txid, malleableId;
-
-    Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
-
-    for (unsigned i = 0; i < keyCount; ++i)
-    {
-        keys.push_back(std::string(paPrivKey[i]));
-    }
-
-    // Sign the transaction
-    if (!abcd::sign_tx(*utx, keys, *watcher))
-    {
-        ABC_CHECK_RET(ABC_BridgeTxErrorHandler(utx, pError));
-    }
-
-    // Send to the network:
-    {
-        bc::data_chunk raw_tx(satoshi_raw_size(utx->tx));
-        bc::satoshi_save(utx->tx, raw_tx.begin());
-        ABC_CHECK_NEW(broadcastTx(raw_tx), pError);
-    }
-
-    // This will mark the outputs as spent
-    watcher->send_tx(utx->tx);
-
-    txid = ABC_BridgeNonMalleableTxId(utx->tx);
-    ABC_STRDUP(pUtx->szTxId, txid.c_str());
-
-    malleableId = bc::encode_hex(bc::hash_transaction(utx->tx));
-    ABC_STRDUP(pUtx->szTxMalleableId, malleableId.c_str());
-
-    watcherSave(self); // Failure is not fatal
-    ABC_BridgeExtractOutputs(watcher, utx, malleableId, pUtx,pError);
-
-exit:
-    return cc;
-}
-
-tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
-                               const char *szDestAddress,
-                               bool bTransfer,
-                               uint64_t *pMaxSatoshi,
-                               tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_TxSendInfo SendInfo = {0};
-    tABC_TxDetails Details;
-    tABC_GeneralInfo *ppInfo = NULL;
-    tABC_UnsignedTx utx;
-    tABC_CC txResp;
-
-    char *changeAddr = NULL;
-    AutoStringArray addresses;
-
-    uint64_t total = 0;
-
-    Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
-
-    ABC_STRDUP(SendInfo.szDestAddress, szDestAddress);
-
-    // Snag the latest general info
-    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
-    // Fetch all the payment addresses for this wallet
-    ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(self, &addresses.data, &addresses.size, pError));
-    if (addresses.size > 0)
-    {
-        // This is needed to pass to the ABC_BridgeTxMake
-        // It should never be used
-        changeAddr = addresses.data[0];
-
-        // Calculate total of utxos for these addresses
-        ABC_DebugLog("Get UTOXs for %d\n", addresses.size);
-        auto utxos = watcher->get_utxos(true);
-        for (const auto& utxo: utxos)
-        {
-            total += utxo.value;
-        }
-        if (!bTransfer)
-        {
-            // Subtract ab tx fee
-            total -= ABC_BridgeCalcAbFees(total, ppInfo);
-        }
-        // Subtract minimum tx fee
-        total -= ABC_BridgeCalcMinerFees(0, ppInfo, total);
-
-        SendInfo.pDetails = &Details;
-        SendInfo.bTransfer = bTransfer;
-        Details.amountSatoshi = total;
-
-        // Ewwwwww, fix this to have minimal iterations
-        txResp = ABC_BridgeTxMake(self, &SendInfo,
-                                  addresses.data, addresses.size,
-                                  changeAddr, &utx, pError);
-        while (txResp == ABC_CC_InsufficientFunds && Details.amountSatoshi > 0)
-        {
-            Details.amountSatoshi -= 1;
-            txResp = ABC_BridgeTxMake(self, &SendInfo,
-                                      addresses.data, addresses.size,
-                                      changeAddr, &utx, pError);
-        }
-        *pMaxSatoshi = std::max<int64_t>(Details.amountSatoshi, 0);
-    }
-    else
-    {
-        *pMaxSatoshi = 0;
-    }
-exit:
-    ABC_FREE_STR(SendInfo.szDestAddress);
-    ABC_GeneralFreeInfo(ppInfo);
-    return cc;
-}
-
 tABC_CC
 ABC_BridgeTxHeight(tABC_WalletID self, const char *szTxId, unsigned int *height, tABC_Error *pError)
 {
@@ -813,7 +589,6 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     tABC_CC cc = ABC_CC_Ok;
     char *szID = NULL;
     char *szAddress = NULL;
-    bc::payment_address to_address;
     uint64_t funds = 0;
     abcd::unsigned_transaction utx;
     bc::transaction_output_type output;
@@ -866,7 +641,6 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
         &details, &szID, false, pError));
     ABC_CHECK_RET(ABC_TxGetRequestAddress(watcherInfo->wallet, szID,
         &szAddress, pError));
-    to_address.set_encoded(szAddress);
 
     // Build a transaction:
     utx.tx.version = 1;
@@ -879,10 +653,10 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
         funds += utxo.value;
         utx.tx.inputs.push_back(input);
     }
-    ABC_CHECK_ASSERT(10500 <= funds, ABC_CC_InsufficientFunds, "Not enough funds");
+    ABC_CHECK_ASSERT(outputDust + 10000 <= funds, ABC_CC_InsufficientFunds, "Not enough funds");
     funds -= 10000;
     output.value = funds;
-    output.script = abcd::build_pubkey_hash_script(to_address.hash());
+    ABC_CHECK_NEW(outputScriptForAddress(output.script, szAddress), pError);
     utx.tx.outputs.push_back(output);
 
     // Now sign that:
@@ -1058,163 +832,8 @@ exit:
     ABC_FREE(iarr);
 }
 
-static tABC_CC
-ABC_BridgeExtractOutputs(Watcher *watcher, abcd::unsigned_transaction_type *utx,
-                         std::string malleableId, tABC_UnsignedTx *pUtx, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    pUtx->countOutputs = utx->tx.inputs.size() + utx->tx.outputs.size();
-    pUtx->aOutputs = (tABC_TxOutput **) malloc(sizeof(tABC_TxOutput) * pUtx->countOutputs);
-    int i = 0;
-    for (auto& input : utx->tx.inputs)
-    {
-        auto prev = input.previous_output;
-        bc::payment_address addr;
-        bc::extract(addr, input.script);
-
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = true;
-        ABC_STRDUP(out->szTxId, bc::encode_hex(prev.hash).c_str());
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
-
-        auto tx = watcher->find_tx(prev.hash);
-        if (prev.index < tx.outputs.size())
-        {
-            out->value = tx.outputs[prev.index].value;
-        }
-        pUtx->aOutputs[i] = out;
-        i++;
-    }
-    for (auto& output : utx->tx.outputs)
-    {
-        bc::payment_address addr;
-        bc::extract(addr, output.script);
-
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = false;
-        out->value = output.value;
-        ABC_STRDUP(out->szTxId, malleableId.c_str());
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
-
-        pUtx->aOutputs[i] = out;
-        i++;
-    }
-exit:
-    return cc;
-}
-
-static
-tABC_CC ABC_BridgeTxErrorHandler(abcd::unsigned_transaction_type *utx, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    switch (utx->code)
-    {
-        case abcd::insufficent_funds:
-            ABC_RET_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds.");
-        case abcd::invalid_key:
-            ABC_RET_ERROR(ABC_CC_Error, "Invalid address.");
-        case abcd::invalid_sig:
-            ABC_RET_ERROR(ABC_CC_Error, "Unable to sign.");
-        default:
-            break;
-    }
-exit:
-    return cc;
-}
-
-static
-void ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr)
-{
-    bc::transaction_output_type output;
-    output.value = amount;
-    if (addr.version() == pubkeyVersion())
-    {
-        output.script = ABC_BridgeCreatePubKeyHash(addr.hash());
-    }
-    else if (addr.version() == scriptVersion())
-    {
-        output.script = ABC_BridgeCreateScriptHash(addr.hash());
-    }
-    outputs.push_back(output);
-}
-
-static
-bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_hash)
-{
-    bc::script_type result;
-    result.push_operation({bc::opcode::hash160, bc::data_chunk()});
-    result.push_operation({bc::opcode::special, bc::data_chunk(script_hash.begin(), script_hash.end())});
-    result.push_operation({bc::opcode::equal, bc::data_chunk()});
-    return result;
-}
-
-static
-bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash)
-{
-    bc::script_type result;
-    result.push_operation({bc::opcode::dup, bc::data_chunk()});
-    result.push_operation({bc::opcode::hash160, bc::data_chunk()});
-    result.push_operation({bc::opcode::special,
-        bc::data_chunk(pubkey_hash.begin(), pubkey_hash.end())});
-    result.push_operation({bc::opcode::equalverify, bc::data_chunk()});
-    result.push_operation({bc::opcode::checksig, bc::data_chunk()});
-    return result;
-}
-
-static
-uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo)
-{
-
-#ifdef NO_AB_FEES
-    return 0;
-#else
-    uint64_t abFees =
-        (uint64_t) ((double) amount *
-                    (pInfo->pAirBitzFee->percentage * 0.01));
-    abFees = std::max(pInfo->pAirBitzFee->minSatoshi, abFees);
-    abFees = std::min(pInfo->pAirBitzFee->maxSatoshi, abFees);
-
-    return abFees;
-#endif
-}
-
-static
-uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64_t amountSatoshi)
-{
-    // Look up the size-based fees from the table:
-    uint64_t sizeFee = 0;
-    if (pInfo->countMinersFees > 0)
-    {
-        for (unsigned i = 0; i < pInfo->countMinersFees; ++i)
-        {
-            if (tx_size <= pInfo->aMinersFees[i]->sizeTransaction)
-            {
-                sizeFee = pInfo->aMinersFees[i]->amountSatoshi;
-                break;
-            }
-        }
-    }
-    if (!sizeFee)
-        return 0;
-
-    // The amount-based fee is 0.1% of total funds sent:
-    uint64_t amountFee = amountSatoshi / 1000;
-
-    // Clamp the amount fee between 10% and 100% of the size-based fee:
-    uint64_t minFee = sizeFee / 10;
-    amountFee = std::max(amountFee, minFee);
-    amountFee = std::min(amountFee, sizeFee);
-
-    // Make the result an integer multiple of the minimum fee:
-    return amountFee - amountFee % minFee;
-}
-
-/**
- * Create a non-malleable tx id
- *
- * @param tx    The transaction to hash in a non-malleable way
- */
-static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
+std::string
+ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
 {
     for (auto& input: tx.inputs)
         input.script = bc::script_type();

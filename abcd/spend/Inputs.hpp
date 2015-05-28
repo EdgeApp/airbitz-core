@@ -5,48 +5,24 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_BITCOIN_PICKER_HPP
-#define ABCD_BITCOIN_PICKER_HPP
+#ifndef ABCD_BITCOIN_INPUTS_HPP
+#define ABCD_BITCOIN_INPUTS_HPP
 
+#include "../util/Status.hpp"
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
 
 class Watcher;
+typedef struct sABC_GeneralInfo tABC_GeneralInfo;
 
-enum {
-    ok = 0,
-    insufficent_funds,
-    invalid_key,
-    invalid_sig
-};
+/**
+ * Maps from Bitcoin addresses to WIF-encoded private keys.
+ */
+typedef std::map<const std::string, std::string> KeyTable;
 
-// This will go away:
-struct unsigned_transaction_type
-{
-    bc::transaction_type tx;
-    int code;
-};
-
-struct fee_schedule
-{
-    uint64_t satoshi_per_kb;
-};
-
-BC_API bool make_tx(
-             Watcher& watcher,
-             const std::vector<bc::payment_address>& addresses,
-             const bc::payment_address& changeAddr,
-             int64_t amountSatoshi,
-             fee_schedule& sched,
-             bc::transaction_output_list& outputs,
-             unsigned_transaction_type& utx);
-
-BC_API bool sign_tx(unsigned_transaction_type& utx,
-                    std::vector<std::string>& keys,
-                    Watcher& watcher);
-
-bc::script_type build_pubkey_hash_script(const bc::short_hash& pubkey_hash);
+Status
+signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys);
 
 /**
  * A fully-formed transaction, but possibly missing its signature scripts.
@@ -84,6 +60,24 @@ bool gather_challenges(unsigned_transaction& utx, Watcher& watcher);
  * @return true if all inputs are now signed.
  */
 bool sign_tx(unsigned_transaction& utx, const key_table& keys);
+
+/**
+ * Select a utxo collection that will satisfy the outputs as best possible
+ * and calculate the resulting fees.
+ */
+Status
+inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
+    bc::transaction_type &tx, bc::output_info_list &utxos,
+    tABC_GeneralInfo *pFeeInfo);
+
+/**
+ * Populate the transaction's input list with all the utxo's in the wallet,
+ * and calculate the mining fee using the already-present outputs.
+ */
+Status
+inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
+    bc::transaction_type &tx, bc::output_info_list &utxos,
+    tABC_GeneralInfo *pFeeInfo);
 
 } // namespace abcd
 
