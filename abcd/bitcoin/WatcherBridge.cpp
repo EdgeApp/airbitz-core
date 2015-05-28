@@ -33,8 +33,10 @@
 #include "Testnet.hpp"
 #include "Watcher.hpp"
 #include "../General.hpp"
+#include "../Tx.hpp"
 #include "../spend/Broadcast.hpp"
 #include "../spend/Inputs.hpp"
+#include "../spend/Spend.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
 #include <bitcoin/watcher.hpp> // Includes the rest of the stack
@@ -96,7 +98,6 @@ static bc::script_type ABC_BridgeCreateScriptHash(const bc::short_hash &script_h
 static bc::script_type ABC_BridgeCreatePubKeyHash(const bc::short_hash &pubkey_hash);
 static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo);
 static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64_t amountSatoshi);
-static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx);
 
 static Status
 watcherFind(WatcherInfo *&result, tABC_WalletID self)
@@ -981,70 +982,6 @@ exit:
     ABC_FREE(iarr);
 }
 
-tABC_CC
-ABC_BridgeExtractOutputs(tABC_WalletID self, tABC_UnsavedTx **ppUtx,
-                         const libbitcoin::transaction_type &tx,
-                         tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    auto txid = bc::encode_hex(bc::hash_transaction(tx));
-    auto ntxid = ABC_BridgeNonMalleableTxId(tx);
-    int i = 0;
-    AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> pUtx;
-
-    Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
-
-    // Fill in tABC_UnsavedTx structure:
-    ABC_NEW(pUtx.get(), tABC_UnsavedTx);
-    ABC_STRDUP(pUtx->szTxId, ntxid.c_str());
-    ABC_STRDUP(pUtx->szTxMalleableId, txid.c_str());
-    pUtx->countOutputs = tx.inputs.size() + tx.outputs.size();
-    ABC_ARRAY_NEW(pUtx->aOutputs, pUtx->countOutputs, tABC_TxOutput*)
-
-    // Build output entries:
-    for (const auto &input: tx.inputs)
-    {
-        auto prev = input.previous_output;
-        bc::payment_address addr;
-        bc::extract(addr, input.script);
-
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = true;
-        ABC_STRDUP(out->szTxId, bc::encode_hex(prev.hash).c_str());
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
-
-        auto tx = watcher->find_tx(prev.hash);
-        if (prev.index < tx.outputs.size())
-        {
-            out->value = tx.outputs[prev.index].value;
-        }
-        pUtx->aOutputs[i] = out;
-        i++;
-    }
-    for (const auto &output: tx.outputs)
-    {
-        bc::payment_address addr;
-        bc::extract(addr, output.script);
-
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = false;
-        out->value = output.value;
-        ABC_STRDUP(out->szTxId, txid.c_str());
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
-
-        pUtx->aOutputs[i] = out;
-        i++;
-    }
-
-    *ppUtx = pUtx.get();
-    pUtx.get() = 0;
-
-exit:
-    return cc;
-}
-
 static
 void ABC_BridgeAppendOutput(bc::transaction_output_list& outputs, uint64_t amount, const bc::payment_address &addr)
 {
@@ -1132,12 +1069,8 @@ uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64
     return amountFee - amountFee % minFee;
 }
 
-/**
- * Create a non-malleable tx id
- *
- * @param tx    The transaction to hash in a non-malleable way
- */
-static std::string ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
+std::string
+ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
 {
     for (auto& input: tx.inputs)
         input.script = bc::script_type();

@@ -41,7 +41,7 @@
 #ifndef ABC_Bridge_h
 #define ABC_Bridge_h
 
-#include "../Tx.hpp"
+#include "../Wallet.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 
@@ -53,6 +53,7 @@ namespace libbitcoin
 namespace abcd {
 
 class Watcher;
+typedef struct sABC_TxSendInfo tABC_TxSendInfo;
 
 Status
 watcherFind(Watcher *&result, tABC_WalletID self);
@@ -119,13 +120,8 @@ tABC_CC ABC_BridgeFilterTransactions(tABC_WalletID self,
                                      unsigned int *pCount,
                                      tABC_Error *pError);
 
-/**
- * Fills in the tABC_UnsavedTx structure.
- */
-tABC_CC
-ABC_BridgeExtractOutputs(tABC_WalletID self, tABC_UnsavedTx **ppUtx,
-                         const libbitcoin::transaction_type &tx,
-                         tABC_Error *pError);
+std::string
+ABC_BridgeNonMalleableTxId(libbitcoin::transaction_type tx);
 
 /**
  * Pulls a raw transaction out of the watcher database.

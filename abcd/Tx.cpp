@@ -34,12 +34,10 @@
 #include "account/Account.hpp"
 #include "account/AccountSettings.hpp"
 #include "bitcoin/Text.hpp"
-#include "bitcoin/Watcher.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"
 #include "exchange/Exchange.hpp"
-#include "spend/Broadcast.hpp"
-#include "spend/Inputs.hpp"
+#include "spend/Spend.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"
 #include "util/Mutex.hpp"
@@ -190,7 +188,6 @@ static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int cou
 static tABC_CC  ABC_TxWalletOwnsAddress(tABC_WalletID self, const char *szAddress, bool *bFound, tABC_Error *pError);
 static tABC_CC  ABC_TxTrashAddresses(tABC_WalletID self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
 static tABC_CC  ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
-static tABC_CC  ABC_TxSendComplete(tABC_WalletID self, tABC_TxSendInfo *pInfo, tABC_UnsavedTx *utx, tABC_Error *pError);
 
 /**
  * Calculates a public address for the HD wallet main external chain.
@@ -226,56 +223,7 @@ exit:
     return cc;
 }
 
-/**
- * Allocate a send info struct and populate it with the data given
- */
-tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
-                            const char *szDestAddress,
-                            const tABC_TxDetails *pDetails,
-                            tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    tABC_TxSendInfo *pTxSendInfo = NULL;
-
-    ABC_CHECK_NULL(ppTxSendInfo);
-    ABC_CHECK_NULL(szDestAddress);
-    ABC_CHECK_NULL(pDetails);
-
-    ABC_NEW(pTxSendInfo, tABC_TxSendInfo);
-
-    ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
-
-    ABC_CHECK_RET(ABC_TxDupDetails(&(pTxSendInfo->pDetails), pDetails, pError));
-
-    *ppTxSendInfo = pTxSendInfo;
-    pTxSendInfo = NULL;
-
-exit:
-    ABC_TxSendInfoFree(pTxSendInfo);
-
-    return cc;
-}
-
-/**
- * Free a send info struct
- */
-void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo)
-{
-    if (pTxSendInfo)
-    {
-        ABC_FREE_STR(pTxSendInfo->szDestAddress);
-        ABC_TxFreeDetails(pTxSendInfo->pDetails);
-        ABC_WalletIDFree(pTxSendInfo->walletDest);
-
-        ABC_CLEAR_FREE(pTxSendInfo, sizeof(tABC_TxSendInfo));
-    }
-}
-
-/**
- * Calculates the private keys for a wallet.
- */
-static Status
+Status
 txKeyTableGet(KeyTable &result, tABC_WalletID self)
 {
     U08Buf seed; // Do not free
@@ -306,10 +254,7 @@ txKeyTableGet(KeyTable &result, tABC_WalletID self)
     return Status();
 }
 
-/**
- * Gets the next unused change address from the wallet.
- */
-static Status
+Status
 txNewChangeAddress(std::string &result, tABC_WalletID self,
     tABC_TxDetails *pDetails)
 {
@@ -319,61 +264,6 @@ txNewChangeAddress(std::string &result, tABC_WalletID self,
 
     result = pAddress->szPubAddress;
     return Status();
-}
-
-/**
- * Sends the transaction with the given info.
- *
- * @param pInfo Pointer to transaction information
- * @param pszTxID Pointer to hold allocated pointer to transaction ID string
- */
-tABC_CC ABC_TxSend(tABC_WalletID self,
-                   tABC_TxSendInfo  *pInfo,
-                   char             **pszTxID,
-                   tABC_Error       *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
-
-    std::string changeAddress;
-    bc::transaction_type tx;
-    AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> unsaved;
-
-    ABC_CHECK_NULL(pInfo);
-
-    // Make an unsigned transaction:
-    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails), pError);
-    ABC_CHECK_RET(ABC_BridgeTxMake(self, pInfo, changeAddress, tx, pError));
-
-    // Sign and send transaction:
-    {
-        Watcher *watcher = nullptr;
-        ABC_CHECK_NEW(watcherFind(watcher, self), pError);
-
-        // Sign the transaction:
-        KeyTable keys;
-        ABC_CHECK_NEW(txKeyTableGet(keys, self), pError);
-        ABC_CHECK_NEW(signTx(tx, *watcher, keys), pError);
-
-        // Send to the network:
-        bc::data_chunk rawTx(satoshi_raw_size(tx));
-        bc::satoshi_save(tx, rawTx.begin());
-        ABC_CHECK_NEW(broadcastTx(rawTx), pError);
-
-        // Mark the outputs as spent:
-        watcher->send_tx(tx);
-        watcherSave(self); // Failure is not fatal
-    }
-
-    // Update the ABC db
-    ABC_CHECK_RET(ABC_BridgeExtractOutputs(self, &unsaved.get(), tx, pError));
-    ABC_CHECK_RET(ABC_TxSendComplete(self, pInfo, unsaved, pError));
-
-    // return the new tx id
-    ABC_STRDUP(*pszTxID, unsaved->szTxId);
-
-exit:
-    return cc;
 }
 
 tABC_CC ABC_TxSendComplete(tABC_WalletID self,
@@ -481,30 +371,6 @@ tABC_CC ABC_TxSendComplete(tABC_WalletID self,
 exit:
     ABC_TxFreeTx(pTx);
     ABC_TxFreeTx(pReceiveTx);
-    return cc;
-}
-
-tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, tABC_TxSendInfo *pInfo, uint64_t *pTotalFees, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
-    std::string changeAddress;
-    bc::transaction_type tx;
-
-    ABC_CHECK_NULL(pInfo);
-
-    pInfo->pDetails->amountFeesAirbitzSatoshi = 0;
-    pInfo->pDetails->amountFeesMinersSatoshi = 0;
-
-    // Make an unsigned transaction
-    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails), pError);
-    cc = ABC_BridgeTxMake(self, pInfo, changeAddress, tx, pError);
-
-    *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
-                + pInfo->pDetails->amountFeesMinersSatoshi;
-    ABC_CHECK_RET(cc);
-
-exit:
     return cc;
 }
 
