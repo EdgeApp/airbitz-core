@@ -403,10 +403,9 @@ tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
     ABC_CHECK_ASSERT(utx != NULL,
         ABC_CC_NULLPtr, "Unable alloc unsigned_transaction_type");
 
-    // Update general info before send
-    ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
     // Fetch Info to calculate fees
     ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
+
     // Create payment_addresses
     ABC_CHECK_ASSERT(addressCount > 0,
         ABC_CC_Error, "No addresses supplied");

@@ -329,9 +329,6 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
 
     ABC_CHECK_NULL(pInfo);
 
-    // take this non-blocking opportunity to update the info from the server if needed
-    ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
-
     ABC_NEW(pUtx, tABC_UnsignedTx);
 
     // find/create a change address

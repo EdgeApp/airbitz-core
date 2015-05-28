@@ -2493,6 +2493,9 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
             }
             goto exit;
         }
+
+        // Non-critical general information update:
+        ABC_GeneralUpdateInfo(&error);
     }
 
 exit:
