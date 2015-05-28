@@ -50,7 +50,6 @@ namespace abcd {
 
 #define FALLBACK_OBELISK "tcp://obelisk.airbitz.co:9091"
 #define TESTNET_OBELISK "tcp://obelisk-testnet.airbitz.co:9091"
-#define NO_AB_FEES
 
 struct PendingSweep
 {
@@ -94,8 +93,6 @@ static tABC_CC     ABC_BridgeTxDetailsSplit(tABC_WalletID self, const char *szTx
 static tABC_CC     ABC_BridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep& sweep, tABC_Error *pError);
 static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
-static uint64_t    ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo);
-static uint64_t    ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64_t amountSatoshi);
 
 static Status
 watcherFind(WatcherInfo *&result, tABC_WalletID self)
@@ -373,118 +370,6 @@ tABC_CC ABC_BridgeWatcherDelete(tABC_WalletID self, tABC_Error *pError)
     watcherSave(self); // Failure is not fatal
     watchers_.erase(self.szUUID);
 
-    return cc;
-}
-
-tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
-                         tABC_TxSendInfo *pSendInfo,
-                         const std::string &changeAddress,
-                         libbitcoin::transaction_type &resultTx,
-                         tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_GeneralInfo *ppInfo = NULL;
-    bc::transaction_type tx;
-    bc::transaction_output_list outputs;
-    uint64_t totalAmountSatoshi = 0, minerFees = 0;
-
-    Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
-
-    ABC_CHECK_NEW(outputsForSendInfo(outputs, pSendInfo), pError);
-
-    // Fetch Info to calculate fees
-    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
-
-    // Calculate the miner fees:
-    minerFees = ABC_BridgeCalcMinerFees(bc::satoshi_raw_size(tx), ppInfo, pSendInfo->pDetails->amountSatoshi);
-    pSendInfo->pDetails->amountFeesMinersSatoshi = minerFees;
-    totalAmountSatoshi = pSendInfo->pDetails->amountSatoshi + minerFees;
-
-    ABC_DebugLog("Change: %s, Amount: %ld, Amount w/Fees %d\n",
-                    changeAddress.c_str(),
-                    pSendInfo->pDetails->amountSatoshi,
-                    totalAmountSatoshi);
-
-    ABC_CHECK_NEW(makeTx(tx, *watcher, changeAddress, totalAmountSatoshi, outputs), pError);
-
-    resultTx = std::move(tx);
-
-exit:
-    ABC_GeneralFreeInfo(ppInfo);
-    return cc;
-}
-
-tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
-                               const char *szDestAddress,
-                               bool bTransfer,
-                               uint64_t *pMaxSatoshi,
-                               tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_TxSendInfo SendInfo = {0};
-    tABC_TxDetails Details;
-    tABC_GeneralInfo *ppInfo = NULL;
-    bc::transaction_type tx;
-    tABC_CC txResp;
-
-    char *changeAddr = NULL;
-    AutoStringArray addresses;
-
-    uint64_t total = 0;
-
-    Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
-
-    ABC_STRDUP(SendInfo.szDestAddress, szDestAddress);
-
-    // Snag the latest general info
-    ABC_CHECK_RET(ABC_GeneralGetInfo(&ppInfo, pError));
-    // Fetch all the payment addresses for this wallet
-    ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(self, &addresses.data, &addresses.size, pError));
-    if (addresses.size > 0)
-    {
-        // This is needed to pass to the ABC_BridgeTxMake
-        // It should never be used
-        changeAddr = addresses.data[0];
-
-        // Calculate total of utxos for these addresses
-        ABC_DebugLog("Get UTOXs for %d\n", addresses.size);
-        auto utxos = watcher->get_utxos(true);
-        for (const auto& utxo: utxos)
-        {
-            total += utxo.value;
-        }
-        if (!bTransfer)
-        {
-            // Subtract ab tx fee
-            total -= ABC_BridgeCalcAbFees(total, ppInfo);
-        }
-        // Subtract minimum tx fee
-        total -= ABC_BridgeCalcMinerFees(0, ppInfo, total);
-
-        SendInfo.pDetails = &Details;
-        SendInfo.bTransfer = bTransfer;
-        Details.amountSatoshi = total;
-
-        // Ewwwwww, fix this to have minimal iterations
-        txResp = ABC_BridgeTxMake(self, &SendInfo, changeAddr, tx, pError);
-        while (txResp == ABC_CC_InsufficientFunds && Details.amountSatoshi > 0)
-        {
-            Details.amountSatoshi -= 1;
-            txResp = ABC_BridgeTxMake(self, &SendInfo, changeAddr, tx, pError);
-        }
-        *pMaxSatoshi = std::max<int64_t>(Details.amountSatoshi, 0);
-    }
-    else
-    {
-        *pMaxSatoshi = 0;
-    }
-
-exit:
-    ABC_FREE_STR(SendInfo.szDestAddress);
-    ABC_GeneralFreeInfo(ppInfo);
     return cc;
 }
 
@@ -768,7 +653,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
         funds += utxo.value;
         utx.tx.inputs.push_back(input);
     }
-    ABC_CHECK_ASSERT(10500 <= funds, ABC_CC_InsufficientFunds, "Not enough funds");
+    ABC_CHECK_ASSERT(outputDust + 10000 <= funds, ABC_CC_InsufficientFunds, "Not enough funds");
     funds -= 10000;
     output.value = funds;
     ABC_CHECK_NEW(outputScriptForAddress(output.script, szAddress), pError);
@@ -945,54 +830,6 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
 exit:
     ABC_FREE(oarr);
     ABC_FREE(iarr);
-}
-
-static
-uint64_t ABC_BridgeCalcAbFees(uint64_t amount, tABC_GeneralInfo *pInfo)
-{
-
-#ifdef NO_AB_FEES
-    return 0;
-#else
-    uint64_t abFees =
-        (uint64_t) ((double) amount *
-                    (pInfo->pAirBitzFee->percentage * 0.01));
-    abFees = std::max(pInfo->pAirBitzFee->minSatoshi, abFees);
-    abFees = std::min(pInfo->pAirBitzFee->maxSatoshi, abFees);
-
-    return abFees;
-#endif
-}
-
-static
-uint64_t ABC_BridgeCalcMinerFees(size_t tx_size, tABC_GeneralInfo *pInfo, uint64_t amountSatoshi)
-{
-    // Look up the size-based fees from the table:
-    uint64_t sizeFee = 0;
-    if (pInfo->countMinersFees > 0)
-    {
-        for (unsigned i = 0; i < pInfo->countMinersFees; ++i)
-        {
-            if (tx_size <= pInfo->aMinersFees[i]->sizeTransaction)
-            {
-                sizeFee = pInfo->aMinersFees[i]->amountSatoshi;
-                break;
-            }
-        }
-    }
-    if (!sizeFee)
-        return 0;
-
-    // The amount-based fee is 0.1% of total funds sent:
-    uint64_t amountFee = amountSatoshi / 1000;
-
-    // Clamp the amount fee between 10% and 100% of the size-based fee:
-    uint64_t minFee = sizeFee / 10;
-    amountFee = std::max(amountFee, minFee);
-    amountFee = std::min(amountFee, sizeFee);
-
-    // Make the result an integer multiple of the minimum fee:
-    return amountFee - amountFee % minFee;
 }
 
 std::string

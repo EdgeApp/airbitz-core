@@ -94,18 +94,6 @@ tABC_CC ABC_BridgePrioritizeAddress(tABC_WalletID self,
                                     const char *szAddress,
                                     tABC_Error *pError);
 
-tABC_CC ABC_BridgeTxMake(tABC_WalletID self,
-                         tABC_TxSendInfo *pSendInfo,
-                         const std::string &changeAddress,
-                         libbitcoin::transaction_type &resultTx,
-                         tABC_Error *pError);
-
-tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
-                               const char *szDestAddress,
-                               bool bTransfer,
-                               uint64_t *pMaxSatoshi,
-                               tABC_Error *pError);
-
 tABC_CC ABC_BridgeTxHeight(tABC_WalletID self, const char *szTxId, unsigned int *height, tABC_Error *pError);
 
 tABC_CC ABC_BridgeTxBlockHeight(tABC_WalletID self, unsigned int *height, tABC_Error *pError);

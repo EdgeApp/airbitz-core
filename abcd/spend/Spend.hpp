@@ -40,6 +40,11 @@ tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self,
                             uint64_t *pTotalFees,
                             tABC_Error *pError);
 
+tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
+                               tABC_TxSendInfo *pInfo,
+                               uint64_t *pMaxSatoshi,
+                               tABC_Error *pError);
+
 tABC_CC  ABC_TxSend(tABC_WalletID self,
                     tABC_TxSendInfo *pInfo,
                     char **pszTxID,

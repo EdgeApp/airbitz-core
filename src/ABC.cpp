@@ -1754,7 +1754,7 @@ tABC_CC ABC_SpendGetMax(const char *szUserName,
         auto pInfo = static_cast<tABC_TxSendInfo*>(pSpend->pData);
         if (pSpend->amountMutable)
             pInfo->pDetails->amountSatoshi = pSpend->amount;
-        ABC_CHECK_RET(ABC_BridgeMaxSpendable(wallet, pInfo->szDestAddress, pInfo->bTransfer, pMax, pError));
+        ABC_CHECK_RET(ABC_BridgeMaxSpendable(wallet, pInfo, pMax, pError));
     }
 
 exit:

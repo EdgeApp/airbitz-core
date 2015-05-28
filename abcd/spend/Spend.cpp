@@ -6,6 +6,7 @@
 #include "Spend.hpp"
 #include "Broadcast.hpp"
 #include "Inputs.hpp"
+#include "Outputs.hpp"
 #include "../Tx.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
@@ -13,6 +14,33 @@
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
+
+#define NO_AB_FEES
+
+static Status
+spendMakeTx(libbitcoin::transaction_type &result, tABC_WalletID self,
+    tABC_TxSendInfo *pInfo, const std::string &changeAddress)
+{
+    Watcher *watcher = nullptr;
+    ABC_CHECK(watcherFind(watcher, self));
+    auto utxos = watcher->get_utxos(true);
+
+    AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> pFeeInfo;
+    ABC_CHECK_OLD(ABC_GeneralGetInfo(&pFeeInfo.get(), &error));
+
+    bc::transaction_type tx;
+    tx.version = 1;
+    tx.locktime = 0;
+    ABC_CHECK(outputsForSendInfo(tx.outputs, pInfo));
+
+    uint64_t fee, change;
+    ABC_CHECK(inputsPickOptimal(fee, change, tx, utxos, pFeeInfo));
+    ABC_CHECK(outputsFinalize(tx.outputs, change, changeAddress));
+    pInfo->pDetails->amountFeesMinersSatoshi = fee;
+
+    result = std::move(tx);
+    return Status();
+}
 
 /**
  * Fills in the tABC_UnsavedTx structure.
@@ -141,11 +169,45 @@ tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, tABC_TxSendInfo *pInfo, uint64_t
 
     // Make an unsigned transaction
     ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails), pError);
-    cc = ABC_BridgeTxMake(self, pInfo, changeAddress, tx, pError);
+    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress), pError);
 
     *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
                 + pInfo->pDetails->amountFeesMinersSatoshi;
-    ABC_CHECK_RET(cc);
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
+                               tABC_TxSendInfo *pInfo,
+                               uint64_t *pMaxSatoshi,
+                               tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    {
+        Watcher *watcher = nullptr;
+        ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+        auto utxos = watcher->get_utxos(true);
+
+        AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> pFeeInfo;
+        ABC_CHECK_RET(ABC_GeneralGetInfo(&pFeeInfo.get(), pError));
+
+        bc::transaction_type tx;
+        tx.version = 1;
+        tx.locktime = 0;
+
+        auto oldAmount = pInfo->pDetails->amountSatoshi;
+        pInfo->pDetails->amountSatoshi = 0;
+        ABC_CHECK_NEW(outputsForSendInfo(tx.outputs, pInfo), pError);
+        pInfo->pDetails->amountSatoshi = oldAmount;
+
+        uint64_t fee, change;
+        if (inputsPickMaximum(fee, change, tx, utxos, pFeeInfo))
+            *pMaxSatoshi = change;
+        else
+            *pMaxSatoshi = 0;
+    }
 
 exit:
     return cc;
@@ -173,7 +235,7 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
 
     // Make an unsigned transaction:
     ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails), pError);
-    ABC_CHECK_RET(ABC_BridgeTxMake(self, pInfo, changeAddress, tx, pError));
+    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress), pError);
 
     // Sign and send transaction:
     {
@@ -184,6 +246,10 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
         KeyTable keys;
         ABC_CHECK_NEW(txKeyTableGet(keys, self), pError);
         ABC_CHECK_NEW(signTx(tx, *watcher, keys), pError);
+
+        ABC_DebugLog("Change: %s, Amount: %ld, Contents: %s",
+            changeAddress.c_str(), pInfo->pDetails->amountSatoshi,
+            bc::pretty(tx).c_str());
 
         // Send to the network:
         bc::data_chunk rawTx(satoshi_raw_size(tx));

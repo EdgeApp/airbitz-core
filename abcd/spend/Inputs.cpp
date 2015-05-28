@@ -7,6 +7,7 @@
 
 #include "Inputs.hpp"
 #include "Outputs.hpp"
+#include "../General.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include <unistd.h>
 #include <wallet/wallet.hpp>
@@ -16,61 +17,8 @@ namespace abcd {
 using namespace libbitcoin;
 using namespace libwallet;
 
-constexpr unsigned min_output = 5430;
-
 static std::map<data_chunk, std::string> address_map;
 static operation create_data_operation(data_chunk& data);
-
-Status
-makeTx(bc::transaction_type &result, Watcher &watcher,
-    const std::string &changeAddress,
-    int64_t amountSatoshi,
-    bc::transaction_output_list &outputs)
-{
-    bc::transaction_type out;
-
-    out.version = 1;
-    out.locktime = 0;
-    out.outputs = outputs;
-
-    // Gather all the unspent outputs in the wallet:
-    auto unspent = watcher.get_utxos(true);
-
-    // Select a collection of outputs that satisfies our requirements:
-    select_outputs_result utxos = select_outputs(unspent, amountSatoshi);
-    if (utxos.points.size() <= 0)
-        return ABC_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds");
-
-    // Build the transaction's input list:
-    for (auto &point : utxos.points)
-    {
-        transaction_input_type input;
-        input.sequence = 4294967295;
-        input.previous_output = point;
-        out.inputs.push_back(input);
-    }
-
-    // If change is needed, add that to the output list:
-    if (utxos.change > 0)
-    {
-        transaction_output_type change;
-        change.value = utxos.change;
-        ABC_CHECK(outputScriptForAddress(change.script, changeAddress));
-        out.outputs.push_back(change);
-    }
-
-    // Remove any dust outputs, returning those funds to the miners:
-    auto last = std::remove_if(out.outputs.begin(), out.outputs.end(),
-        [](transaction_output_type &o){ return o.value < min_output; });
-    out.outputs.erase(last, out.outputs.end());
-
-    // If all the outputs were dust, we can't send this transaction:
-    if (!out.outputs.size())
-        return ABC_ERROR(ABC_CC_InsufficientFunds, "No remaining outputs");
-
-    result = std::move(out);
-    return Status();
-}
 
 Status
 signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys)
@@ -204,6 +152,104 @@ bool sign_tx(unsigned_transaction& utx, const key_table& keys)
     }
 
     return all_done;
+}
+
+static uint64_t
+minerFee(const bc::transaction_type &tx, tABC_GeneralInfo *pInfo)
+{
+    // Look up the size-based fees from the table:
+    uint64_t sizeFee = 0;
+    if (pInfo->countMinersFees > 0)
+    {
+        // Signatures have a 72-byte signature plus a 32-byte pubkey:
+        size_t size = satoshi_raw_size(tx) + 104 * tx.inputs.size();
+        for (unsigned i = 0; i < pInfo->countMinersFees; ++i)
+        {
+            if (size <= pInfo->aMinersFees[i]->sizeTransaction)
+            {
+                sizeFee = pInfo->aMinersFees[i]->amountSatoshi;
+                break;
+            }
+        }
+    }
+    if (!sizeFee)
+        return 0;
+
+    // The amount-based fee is 0.1% of total funds sent:
+    uint64_t amountFee = outputsTotal(tx.outputs) / 1000;
+
+    // Clamp the amount fee between 10% and 100% of the size-based fee:
+    uint64_t minFee = sizeFee / 10;
+    amountFee = std::max(amountFee, minFee);
+    amountFee = std::min(amountFee, sizeFee);
+
+    // Make the result an integer multiple of the minimum fee:
+    return amountFee - amountFee % minFee;
+}
+
+Status
+inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
+    bc::transaction_type &tx, bc::output_info_list &utxos,
+    tABC_GeneralInfo *pFeeInfo)
+{
+    auto totalOut = outputsTotal(tx.outputs);
+
+    uint64_t fee = 0;
+    uint64_t change = 0;
+    do
+    {
+        // Select a collection of outputs that satisfies our requirements:
+        auto chosen = select_outputs(utxos, totalOut + fee);
+        if (!chosen.points.size())
+            return ABC_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds");
+
+        // Calculate the fees for this input combination:
+        tx.inputs.clear();
+        for (auto &point: chosen.points)
+        {
+            transaction_input_type input;
+            input.sequence = 4294967295;
+            input.previous_output = point;
+            tx.inputs.push_back(input);
+        }
+        change = chosen.change + fee;
+        fee = minerFee(tx, pFeeInfo);
+    }
+    while (change < fee);
+
+    resultFee = fee;
+    resultChange = change - fee;
+    return Status();
+}
+
+Status
+inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
+    bc::transaction_type &tx, bc::output_info_list &utxos,
+    tABC_GeneralInfo *pFeeInfo)
+{
+    auto totalOut = outputsTotal(tx.outputs);
+
+    // Calculate the fees for this input combination:
+    tx.inputs.clear();
+    for (auto &utxo: utxos)
+    {
+        bc::transaction_input_type input;
+        input.sequence = 4294967295;
+        input.previous_output = utxo.point;
+        tx.inputs.push_back(input);
+    }
+    uint64_t fee = minerFee(tx, pFeeInfo);
+
+    // Verify that we have enough:
+    uint64_t totalIn = 0;
+    for (auto &utxo: utxos)
+        totalIn += utxo.value;
+    if (totalIn < totalOut + fee)
+        return ABC_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds");
+
+    resultFee = fee;
+    resultChange = totalIn - (totalOut + fee);
+    return Status();
 }
 
 } // namespace abcd

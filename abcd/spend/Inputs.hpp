@@ -14,21 +14,12 @@
 namespace abcd {
 
 class Watcher;
+typedef struct sABC_GeneralInfo tABC_GeneralInfo;
 
 /**
  * Maps from Bitcoin addresses to WIF-encoded private keys.
  */
 typedef std::map<const std::string, std::string> KeyTable;
-
-/**
- * Select a utxo collection that will satisfy the outputs,
- * and build a transaction with those (including change, if needed).
- */
-Status
-makeTx(bc::transaction_type &result, Watcher &watcher,
-    const std::string &changeAddress,
-    int64_t amountSatoshi,
-    bc::transaction_output_list &outputs);
 
 Status
 signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys);
@@ -69,6 +60,24 @@ bool gather_challenges(unsigned_transaction& utx, Watcher& watcher);
  * @return true if all inputs are now signed.
  */
 bool sign_tx(unsigned_transaction& utx, const key_table& keys);
+
+/**
+ * Select a utxo collection that will satisfy the outputs as best possible
+ * and calculate the resulting fees.
+ */
+Status
+inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
+    bc::transaction_type &tx, bc::output_info_list &utxos,
+    tABC_GeneralInfo *pFeeInfo);
+
+/**
+ * Populate the transaction's input list with all the utxo's in the wallet,
+ * and calculate the mining fee using the already-present outputs.
+ */
+Status
+inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
+    bc::transaction_type &tx, bc::output_info_list &utxos,
+    tABC_GeneralInfo *pFeeInfo);
 
 } // namespace abcd
 

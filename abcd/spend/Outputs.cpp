@@ -72,4 +72,42 @@ outputsForSendInfo(bc::transaction_output_list &result, sABC_TxSendInfo *pInfo)
     return Status();
 }
 
+Status
+outputsFinalize(bc::transaction_output_list &outputs,
+    uint64_t change, const std::string &changeAddress)
+{
+    // Add change:
+    if (outputDust <= change)
+    {
+        bc::transaction_output_type output;
+        output.value = change;
+        ABC_CHECK(outputScriptForAddress(output.script, changeAddress));
+        outputs.push_back(output);
+    }
+
+    // Sort:
+    auto compare = [](const bc::transaction_output_type &a,
+        const bc::transaction_output_type &b)
+    {
+        return a.value < b.value;
+    };
+    std::sort(outputs.begin(), outputs.end(), compare);
+
+    // Check for dust:
+    for (const auto &output: outputs)
+        if (output.value < outputDust)
+            return ABC_ERROR(ABC_CC_InsufficientFunds, "Trying to send dust");
+
+    return Status();
+}
+
+uint64_t
+outputsTotal(const bc::transaction_output_list &outputs)
+{
+    int64_t out = 0;
+    for (const auto &output: outputs)
+        out += output.value;
+    return out;
+}
+
 } // namespace abcd
