@@ -245,6 +245,7 @@ void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo)
         ABC_FREE_STR(pInfo->szLabel);
         ABC_FREE_STR(pInfo->szAddress);
         ABC_FREE_STR(pInfo->szMessage);
+        ABC_FREE_STR(pInfo->szR);
         ABC_FREE_STR(pInfo->szCategory);
         ABC_FREE_STR(pInfo->szRet);
         ABC_CLEAR_FREE(pInfo, sizeof(tABC_BitcoinURIInfo));

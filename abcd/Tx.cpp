@@ -267,7 +267,7 @@ txNewChangeAddress(std::string &result, tABC_WalletID self,
 }
 
 tABC_CC ABC_TxSendComplete(tABC_WalletID self,
-                           tABC_TxSendInfo  *pInfo,
+                           SendInfo         *pInfo,
                            tABC_UnsavedTx   *pUtx,
                            tABC_Error       *pError)
 {

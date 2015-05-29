@@ -20,7 +20,7 @@ namespace abcd {
 
 static Status
 spendMakeTx(libbitcoin::transaction_type &result, tABC_WalletID self,
-    tABC_TxSendInfo *pInfo, const std::string &changeAddress)
+    SendInfo *pInfo, const std::string &changeAddress)
 {
     Watcher *watcher = nullptr;
     ABC_CHECK(watcherFind(watcher, self));
@@ -110,52 +110,24 @@ exit:
     return cc;
 }
 
-/**
- * Free a send info struct
- */
-void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo)
+SendInfo::~SendInfo()
 {
-    if (pTxSendInfo)
-    {
-        ABC_FREE_STR(pTxSendInfo->szDestAddress);
-        delete pTxSendInfo->paymentRequest;
-        ABC_TxFreeDetails(pTxSendInfo->pDetails);
-        ABC_WalletIDFree(pTxSendInfo->walletDest);
-
-        ABC_CLEAR_FREE(pTxSendInfo, sizeof(tABC_TxSendInfo));
-    }
+    ABC_FREE_STR(szDestAddress);
+    delete paymentRequest;
+    ABC_TxFreeDetails(pDetails);
+    if (bTransfer)
+        ABC_WalletIDFree(walletDest);
 }
 
-/**
- * Allocate a send info struct and populate it with the data given
- */
-tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
-                            const char *szDestAddress,
-                            const tABC_TxDetails *pDetails,
-                            tABC_Error *pError)
+SendInfo::SendInfo()
 {
-    tABC_CC cc = ABC_CC_Ok;
-
-    tABC_TxSendInfo *pTxSendInfo = NULL;
-
-    ABC_CHECK_NULL(ppTxSendInfo);
-    ABC_CHECK_NULL(pDetails);
-
-    ABC_NEW(pTxSendInfo, tABC_TxSendInfo);
-    if (szDestAddress)
-        ABC_STRDUP(pTxSendInfo->szDestAddress, szDestAddress);
-    ABC_CHECK_RET(ABC_TxDupDetails(&(pTxSendInfo->pDetails), pDetails, pError));
-
-    *ppTxSendInfo = pTxSendInfo;
-    pTxSendInfo = NULL;
-
-exit:
-    ABC_TxSendInfoFree(pTxSendInfo);
-
-    return cc;
+    szDestAddress = nullptr;
+    paymentRequest = nullptr;
+    pDetails = nullptr;
+    bTransfer = false;
 }
 
-tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, tABC_TxSendInfo *pInfo, uint64_t *pTotalFees, tABC_Error *pError)
+tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, SendInfo *pInfo, uint64_t *pTotalFees, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
@@ -179,7 +151,7 @@ exit:
 }
 
 tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
-                               tABC_TxSendInfo *pInfo,
+                               SendInfo *pInfo,
                                uint64_t *pMaxSatoshi,
                                tABC_Error *pError)
 {
@@ -220,7 +192,7 @@ exit:
  * @param pszTxID Pointer to hold allocated pointer to transaction ID string
  */
 tABC_CC ABC_TxSend(tABC_WalletID self,
-                   tABC_TxSendInfo  *pInfo,
+                   SendInfo         *pInfo,
                    char             **pszTxID,
                    tABC_Error       *pError)
 {

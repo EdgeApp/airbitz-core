@@ -53,7 +53,6 @@ namespace libbitcoin
 namespace abcd {
 
 class Watcher;
-typedef struct sABC_TxSendInfo tABC_TxSendInfo;
 
 Status
 watcherFind(Watcher *&result, tABC_WalletID self);

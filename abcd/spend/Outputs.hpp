@@ -11,7 +11,7 @@
 
 namespace abcd {
 
-typedef struct sABC_TxSendInfo tABC_SendInfo;
+struct SendInfo;
 
 /**
  * The minimum number of satoshis an output should contain.
@@ -32,7 +32,7 @@ outputScriptForAddress(bc::script_type &result, const std::string &address);
  * Updates the info structure with the Airbitz fees, if any.
  */
 Status
-outputsForSendInfo(bc::transaction_output_list &result, sABC_TxSendInfo *pInfo);
+outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo);
 
 /**
  * Add a change output, sort the outputs, and check for dust.

@@ -50,7 +50,7 @@ outputScriptForAddress(bc::script_type &result, const std::string &address)
 }
 
 Status
-outputsForSendInfo(bc::transaction_output_list &result, sABC_TxSendInfo *pInfo)
+outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
 {
     bc::transaction_output_list out;
 

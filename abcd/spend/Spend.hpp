@@ -14,42 +14,35 @@ namespace abcd {
 class PaymentRequest;
 
 /**
- * AirBitz Core Send Tx Structure
- *
- * This structure contains the detailed information associated
- * with initiating a send.
+ * Options for sending money.
  */
-typedef struct sABC_TxSendInfo
+struct SendInfo
 {
+    ~SendInfo();
+    SendInfo();
+
     char                    *szDestAddress;
     PaymentRequest          *paymentRequest;
     tABC_TxDetails          *pDetails;
 
-    // Transfer from money from one wallet to another
+    // Transfer from one wallet to another:
     bool                    bTransfer;
     tABC_WalletID           walletDest;
 
-} tABC_TxSendInfo;
-
-void ABC_TxSendInfoFree(tABC_TxSendInfo *pTxSendInfo);
-
-tABC_CC ABC_TxSendInfoAlloc(tABC_TxSendInfo **ppTxSendInfo,
-                            const char *szDestAddress,
-                            const tABC_TxDetails *pDetails,
-                            tABC_Error *pError);
+};
 
 tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self,
-                            tABC_TxSendInfo *pInfo,
+                            SendInfo *pInfo,
                             uint64_t *pTotalFees,
                             tABC_Error *pError);
 
 tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
-                               tABC_TxSendInfo *pInfo,
+                               SendInfo *pInfo,
                                uint64_t *pMaxSatoshi,
                                tABC_Error *pError);
 
 tABC_CC  ABC_TxSend(tABC_WalletID self,
-                    tABC_TxSendInfo *pInfo,
+                    SendInfo *pInfo,
                     char **pszTxID,
                     tABC_Error *pError);
 

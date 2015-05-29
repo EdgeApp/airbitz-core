@@ -1566,11 +1566,10 @@ void ABC_SpendTargetFree(tABC_SpendTarget *pSpend)
 
     if (pSpend)
     {
-        auto pInfo = static_cast<tABC_TxSendInfo*>(pSpend->pData);
         ABC_FREE_STR(pSpend->szName);
         ABC_FREE_STR(pSpend->szRet);
         ABC_FREE_STR(pSpend->szDestUUID);
-        ABC_TxSendInfoFree(pInfo);
+        delete static_cast<SendInfo*>(pSpend->pData);
     }
     ABC_CLEAR_FREE(pSpend, sizeof(tABC_SpendTarget));
 }
@@ -1583,70 +1582,59 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
     ABC_CHECK_NULL(szText);
 
     {
+        // Create the spend target structure:
+        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
+        ABC_NEW(pSpend.get(), tABC_SpendTarget);
+        SendInfo *pInfo = new SendInfo;
+        pSpend->pData = pInfo;
+        ABC_NEW(pInfo->pDetails, tABC_TxDetails);
+        auto *pDetails = pInfo->pDetails;
+
         // Parse the URI:
         AutoFree<tABC_BitcoinURIInfo, ABC_BridgeFreeURIInfo> pUri;
         ABC_CHECK_RET(ABC_BridgeParseBitcoinURI(szText, &pUri.get(), pError));
-        if (!pUri->szAddress && !pUri->szR)
-            ABC_RET_ERROR(ABC_CC_ParseError, "No address or payment request provided");
-
-        // Build the payment details from the URI:
-        AutoFree<tABC_TxDetails, ABC_TxFreeDetails> pDetails;
-        ABC_NEW(pDetails.get(), tABC_TxDetails);
-        ABC_STRDUP(pDetails->szName, pUri->szLabel ? pUri->szLabel : "");
-        ABC_STRDUP(pDetails->szCategory, pUri->szCategory ? pUri->szCategory : "");
-        ABC_STRDUP(pDetails->szNotes, pUri->szMessage ? pUri->szMessage : "");
-        pDetails->amountSatoshi = (ABC_INVALID_AMOUNT != pUri->amountSatoshi) ?
-            pUri->amountSatoshi : 0;
-
-        // Build a tABC_TxSendInfo:
-        AutoFree<tABC_TxSendInfo, ABC_TxSendInfoFree> pInfo;
-        ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pInfo.get(), pUri->szAddress, pDetails, pError));
-
-        // Build the spend target:
-        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
-        ABC_NEW(pSpend.get(), tABC_SpendTarget);
         if (pUri->szRet)
             ABC_STRDUP(pSpend->szRet, pUri->szRet);
+        ABC_STRDUP(pDetails->szCategory, pUri->szCategory ? pUri->szCategory : "");
 
         // If this is a payment request, fill those details in:
         if (pUri->szR)
         {
             // Grab and verify the payment request:
-            PaymentRequest *request = new PaymentRequest();
+            pInfo->paymentRequest = new PaymentRequest();
+            auto *request = pInfo->paymentRequest;
             ABC_CHECK_NEW(request->fetch(pUri->szR), pError);
             ABC_CHECK_NEW(request->signatureOk(), pError);
 
-            // Update the spend target:
+            // Fill in the spend target:
             pSpend->amount = request->amount();
             pSpend->amountMutable = false;
             ABC_STRDUP(pSpend->szName, request->merchant().c_str());
 
-            // Update the details:
-            pDetails->amountSatoshi = pSpend->amount;
-            if (!request->merchant().empty() && ABC_STRLEN(pDetails->szName) == 0)
-            {
-                ABC_DebugLog("Merchant: %s", request->merchant().c_str());
-                ABC_FREE_STR(pDetails->szName);
-                ABC_STRDUP(pDetails->szName, request->merchant().c_str());
-            }
-            if (!request->memo().empty() && ABC_STRLEN(pDetails->szNotes) == 0)
-            {
-                ABC_DebugLog("Memo: %s", request->memo().c_str());
-                ABC_FREE_STR(pDetails->szNotes);
-                ABC_STRDUP(pDetails->szNotes, request->memo().c_str());
-            }
+            // Fill in the details:
+            ABC_STRDUP(pDetails->szName, pSpend->szName);
+            ABC_STRDUP(pDetails->szNotes,
+                !request->memo().empty() ? request->memo().c_str() :
+                pUri->szMessage ? pUri->szMessage : "");
+        }
+        else if (pUri->szAddress)
+        {
+            ABC_STRDUP(pInfo->szDestAddress, pUri->szAddress);
 
-            pInfo->paymentRequest = request;
+            // Fill in the spend target:
+            pSpend->amount = (ABC_INVALID_AMOUNT != pUri->amountSatoshi) ?
+                pUri->amountSatoshi : 0;
+            pSpend->amountMutable = true;
+            ABC_STRDUP(pSpend->szName, pUri->szAddress);
+
+            // Fill in the details:
+            ABC_STRDUP(pDetails->szName, pUri->szLabel ? pUri->szLabel : "");
+            ABC_STRDUP(pDetails->szNotes, pUri->szMessage ? pUri->szMessage : "");
         }
         else
         {
-            pSpend->amount = pDetails->amountSatoshi;
-            pSpend->amountMutable = true;
-            ABC_STRDUP(pSpend->szName, pUri->szAddress);
+            ABC_RET_ERROR(ABC_CC_ParseError, "No address or payment request provided");
         }
-
-        pSpend->pData = pInfo.get();
-        pInfo.get() = nullptr;
 
         // Assign the output:
         *ppSpend = pSpend.get();
@@ -1670,38 +1658,34 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
         auto wallet = ABC_WalletID(*account, szWalletUUID);
 
+        // Create the spend target structure:
+        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
+        ABC_NEW(pSpend.get(), tABC_SpendTarget);
+        SendInfo *pInfo = new SendInfo;
+        pSpend->pData = pInfo;
+        ABC_NEW(pInfo->pDetails, tABC_TxDetails);
+        auto *pDetails = pInfo->pDetails;
+
+        // Fill in the spend target:
+        pSpend->amount = amount;
+        pSpend->amountMutable = true;
         AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pWallet;
         ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWallet.get(), pError));
+        ABC_STRDUP(pSpend->szName, pWallet->szName);
+        ABC_STRDUP(pSpend->szDestUUID, szWalletUUID);
 
-        // Build the payment details:
-        AutoFree<tABC_TxDetails, ABC_TxFreeDetails> pDetails;
-        ABC_NEW(pDetails.get(), tABC_TxDetails);
-        ABC_STRDUP(pDetails->szName, pWallet->szName);
+        // Fill in the details:
+        ABC_STRDUP(pDetails->szName, pSpend->szName);
         ABC_STRDUP(pDetails->szCategory, "");
         ABC_STRDUP(pDetails->szNotes, "");
-        pDetails->amountSatoshi = amount;
 
-        // Grab an address out of the destination wallet:
+        // Fill in the send info:
         AutoString szRequestId;
         AutoString szRequestAddress;
         ABC_CHECK_RET(ABC_TxCreateReceiveRequest(wallet, pDetails, &szRequestId.get(), true, pError));
-        ABC_CHECK_RET(ABC_TxGetRequestAddress(wallet, szRequestId, &szRequestAddress.get(), pError));
-
-        // Build a tABC_TxSendInfo:
-        AutoFree<tABC_TxSendInfo, ABC_TxSendInfoFree> pInfo;
-        ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pInfo.get(), szRequestAddress, pDetails, pError));
-        pInfo->bTransfer = true;
+        ABC_CHECK_RET(ABC_TxGetRequestAddress(wallet, szRequestId, &pInfo->szDestAddress, pError));
         ABC_CHECK_RET(ABC_WalletIDCopy(&pInfo->walletDest, wallet, pError));
-
-        // Build the spend target:
-        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
-        ABC_NEW(pSpend.get(), tABC_SpendTarget);
-        pSpend->amount = amount;
-        pSpend->amountMutable = true;
-        ABC_STRDUP(pSpend->szName, pWallet->szName);
-        ABC_STRDUP(pSpend->szDestUUID, szWalletUUID);
-        pSpend->pData = pInfo.get();
-        pInfo.get() = nullptr;
+        pInfo->bTransfer = true;
 
         // Assign the output:
         *ppSpend = pSpend.get();
@@ -1724,26 +1708,26 @@ tABC_CC ABC_SpendNewInternal(const char *szAddress,
     ABC_CHECK_NULL(szAddress);
 
     {
-        // Build the payment details:
-        AutoFree<tABC_TxDetails, ABC_TxFreeDetails> pDetails;
-        ABC_NEW(pDetails.get(), tABC_TxDetails);
-        ABC_STRDUP(pDetails->szName, szName ? szName : "");
-        ABC_STRDUP(pDetails->szCategory, szCategory ? szCategory : "");
-        ABC_STRDUP(pDetails->szNotes, szNotes ? szNotes : "");
-        pDetails->amountSatoshi = amount;
-
-        // Build a tABC_TxSendInfo:
-        AutoFree<tABC_TxSendInfo, ABC_TxSendInfoFree> pInfo;
-        ABC_CHECK_RET(ABC_TxSendInfoAlloc(&pInfo.get(), szAddress, pDetails, pError));
-
-        // Build the spend target:
+        // Create the spend target structure:
         AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
         ABC_NEW(pSpend.get(), tABC_SpendTarget);
+        SendInfo *pInfo = new SendInfo;
+        pSpend->pData = pInfo;
+        ABC_NEW(pInfo->pDetails, tABC_TxDetails);
+        auto *pDetails = pInfo->pDetails;
+
+        // Fill in the spend target:
         pSpend->amount = amount;
         pSpend->amountMutable = false;
         ABC_STRDUP(pSpend->szName, szName ? szName : szAddress);
-        pSpend->pData = pInfo.get();
-        pInfo.get() = nullptr;
+
+        // Fill in the details:
+        ABC_STRDUP(pDetails->szName, szName ? szName : "");
+        ABC_STRDUP(pDetails->szCategory, szCategory ? szCategory : "");
+        ABC_STRDUP(pDetails->szNotes, szNotes ? szNotes : "");
+
+        // Fill in the send info:
+        ABC_STRDUP(pInfo->szDestAddress, szAddress);
 
         // Assign the output:
         *ppSpend = pSpend.get();
@@ -1767,9 +1751,8 @@ tABC_CC ABC_SpendGetFee(const char *szUserName,
         ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
         auto wallet = ABC_WalletID(*account, szWalletUUID);
 
-        auto pInfo = static_cast<tABC_TxSendInfo*>(pSpend->pData);
-        if (pSpend->amountMutable)
-            pInfo->pDetails->amountSatoshi = pSpend->amount;
+        auto pInfo = static_cast<SendInfo*>(pSpend->pData);
+        pInfo->pDetails->amountSatoshi = pSpend->amount;
         ABC_CHECK_RET(ABC_TxCalcSendFees(wallet, pInfo, pFee, pError));
     }
 
@@ -1790,9 +1773,8 @@ tABC_CC ABC_SpendGetMax(const char *szUserName,
         ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
         auto wallet = ABC_WalletID(*account, szWalletUUID);
 
-        auto pInfo = static_cast<tABC_TxSendInfo*>(pSpend->pData);
-        if (pSpend->amountMutable)
-            pInfo->pDetails->amountSatoshi = pSpend->amount;
+        auto pInfo = static_cast<SendInfo*>(pSpend->pData);
+        pInfo->pDetails->amountSatoshi = pSpend->amount;
         ABC_CHECK_RET(ABC_BridgeMaxSpendable(wallet, pInfo, pMax, pError));
     }
 
@@ -1814,9 +1796,8 @@ tABC_CC ABC_SpendApprove(const char *szUserName,
         ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
         auto wallet = ABC_WalletID(*account, szWalletUUID);
 
-        auto pInfo = static_cast<tABC_TxSendInfo*>(pSpend->pData);
-        if (pSpend->amountMutable)
-            pInfo->pDetails->amountSatoshi = pSpend->amount;
+        auto pInfo = static_cast<SendInfo*>(pSpend->pData);
+        pInfo->pDetails->amountSatoshi = pSpend->amount;
         ABC_CHECK_RET(ABC_TxSend(wallet, pInfo, pszTxId, pError));
     }
 

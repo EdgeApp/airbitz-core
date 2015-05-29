@@ -42,7 +42,7 @@
 
 namespace abcd {
 
-typedef struct sABC_TxSendInfo tABC_TxSendInfo;
+struct SendInfo;
 typedef std::map<const std::string, std::string> KeyTable;
 
 /**
@@ -83,7 +83,7 @@ txNewChangeAddress(std::string &result, tABC_WalletID self,
     tABC_TxDetails *pDetails);
 
 tABC_CC ABC_TxSendComplete(tABC_WalletID self,
-                           tABC_TxSendInfo  *pInfo,
+                           SendInfo         *pInfo,
                            tABC_UnsavedTx   *pUtx,
                            tABC_Error       *pError);
 
