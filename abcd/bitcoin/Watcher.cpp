@@ -6,6 +6,7 @@
  */
 
 #include "Watcher.hpp"
+#include "../util/Debug.hpp"
 #include <sstream>
 
 using namespace libbitcoin;
@@ -99,10 +100,16 @@ void Watcher::watch_address(const payment_address& address, unsigned poll_ms)
 void Watcher::prioritize_address(const payment_address& address)
 {
     if (is_valid(priority_address_))
+    {
         send_watch_addr(priority_address_, default_poll);
+        ABC_DebugLog("DISABLE prioritize_address %s", priority_address_.encoded().c_str());
+    }
     priority_address_ = address;
     if (is_valid(priority_address_))
+    {
         send_watch_addr(priority_address_, priority_poll);
+        ABC_DebugLog("ENABLE prioritize_address %s", priority_address_.encoded().c_str());
+    }
 }
 
 transaction_type Watcher::find_tx(hash_digest txid)

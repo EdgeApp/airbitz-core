@@ -15,7 +15,7 @@
 		346440654C0FB74C949B7CF2 /* FileIO.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FileIO.cpp; sourceTree = "<group>"; };
 		346440DDC26ABE4448112818 /* workspace.xml */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = workspace.xml; sourceTree = "<group>"; };
 		346440EC6E84761834E66F21 /* Crypto.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Crypto.cpp; sourceTree = "<group>"; };
-		346441200D9F9B6523AFE04E /* watcher.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = watcher.hpp; sourceTree = "<group>"; };
+		346441200D9F9B6523AFE04E /* Watcher.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Watcher.hpp; sourceTree = "<group>"; };
 		3464412E82A232309493DF42 /* Lobby.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Lobby.hpp; sourceTree = "<group>"; };
 		3464415B5D5BF7001FE63417 /* Exchange.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Exchange.cpp; sourceTree = "<group>"; };
 		346441BAC7886E0CD9D820CD /* Testnet.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Testnet.cpp; sourceTree = "<group>"; };
@@ -50,7 +50,7 @@
 		346446815D4D42C145C393FA /* LoginShim.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = LoginShim.hpp; sourceTree = "<group>"; };
 		3464468CD3523786B7EE8A91 /* Sync.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Sync.cpp; sourceTree = "<group>"; };
 		346446B9D702A5F487819D22 /* Util.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Util.hpp; sourceTree = "<group>"; };
-		346446D1C1A55064D57CB57B /* watcher.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = watcher.cpp; sourceTree = "<group>"; };
+		346446D1C1A55064D57CB57B /* Watcher.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Watcher.cpp; sourceTree = "<group>"; };
 		34644705AEBE747581BDCBC7 /* .name */ = {isa = PBXFileReference; lastKnownFileType = file.name; path = .name; sourceTree = "<group>"; };
 		3464470D841608AB3CA8A2F9 /* picker.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = picker.hpp; sourceTree = "<group>"; };
 		3464471E20E985190B9D6EAB /* Account.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Account.cpp; sourceTree = "<group>"; };
@@ -350,8 +350,8 @@
 				3464470D841608AB3CA8A2F9 /* picker.hpp */,
 				346441BAC7886E0CD9D820CD /* Testnet.cpp */,
 				34644CD9B3A24C4AA09A354A /* Testnet.hpp */,
-				346446D1C1A55064D57CB57B /* watcher.cpp */,
-				346441200D9F9B6523AFE04E /* watcher.hpp */,
+				346446D1C1A55064D57CB57B /* Watcher.cpp */,
+				346441200D9F9B6523AFE04E /* Watcher.hpp */,
 				34644CEC513A5E24B47126A7 /* Broadcast.cpp */,
 				34644A4B31ED66657A9926CA /* Broadcast.hpp */,
 				346443D14E58241E3914F80B /* WatcherBridge.cpp */,
