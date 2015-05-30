@@ -78,6 +78,30 @@ static bool gbInitialized = false;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok); \
     ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized")
 
+#define ABC_GET_LOBBY() \
+    std::shared_ptr<Lobby> lobby; \
+    ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError)
+
+#define ABC_GET_LOGIN() \
+    std::shared_ptr<Login> login; \
+    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError)
+
+#define ABC_GET_ACCOUNT() \
+    std::shared_ptr<Account> account; \
+    ABC_CHECK_NEW(cacheAccount(account, szUserName), pError)
+
+#define ABC_GET_WALLET() \
+    std::shared_ptr<Account> account; \
+    ABC_CHECK_NEW(cacheAccount(account, szUserName), pError); \
+    ABC_CHECK_NULL(szWalletUUID); \
+    auto wallet = ABC_WalletID(*account, szWalletUUID)
+
+#define ABC_GET_WALLET_N() \
+    std::shared_ptr<Account> account; \
+    ABC_CHECK_NEW(cacheAccount(account, nullptr), pError); \
+    ABC_CHECK_NULL(szWalletUUID); \
+    auto wallet = ABC_WalletID(*account, szWalletUUID)
+
 /** Helper macro for ABC_GetCurrencies. */
 #define CURRENCY_GUI_ROW(code, number, name) {#code, number, name, ""},
 
@@ -196,8 +220,7 @@ tABC_CC ABC_AccountAvailable(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Lobby> lobby;
-        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_GET_LOBBY();
         ABC_CHECK_RET(ABC_LoginServerAvailable(*lobby, pError));
     }
 
@@ -275,8 +298,7 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error, "No recovery answers provided");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        ABC_GET_LOGIN();
         ABC_CHECK_RET(ABC_LoginRecoverySet(*login,
             szRecoveryQuestions, szRecoveryAnswers, pError));
     }
@@ -300,8 +322,7 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
     ABC_CHECK_NULL(pOk);
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        ABC_GET_LOGIN();
         ABC_CHECK_RET(ABC_LoginPasswordOk(*login, szPassword, pOk, pError));
     }
 
@@ -319,8 +340,7 @@ tABC_CC ABC_PasswordExists(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        ABC_GET_LOGIN();
 
         bool out;
         ABC_CHECK_NEW(passwordExists(out, *login), pError);
@@ -339,8 +359,7 @@ tABC_CC ABC_OtpKeyGet(const char *szUserName,
     ABC_CHECK_NULL(pszKey);
 
     {
-        std::shared_ptr<Lobby> lobby;
-        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_GET_LOBBY();
 
         const OtpKey *key = lobby->otpKey();
         ABC_CHECK_ASSERT(key, ABC_CC_NULLPtr, "No OTP key in account.");
@@ -359,8 +378,7 @@ tABC_CC ABC_OtpKeySet(const char *szUserName,
     ABC_CHECK_NULL(szKey);
 
     {
-        std::shared_ptr<Lobby> lobby;
-        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_GET_LOBBY();
 
         OtpKey key;
         ABC_CHECK_NEW(key.decodeBase32(szKey), pError);
@@ -377,8 +395,7 @@ tABC_CC ABC_OtpKeyRemove(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Lobby> lobby;
-        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_GET_LOBBY();
         ABC_CHECK_NEW(lobby->otpKeyRemove(), pError);
     }
 
@@ -397,8 +414,7 @@ tABC_CC ABC_OtpAuthGet(const char *szUserName,
     ABC_CHECK_NULL(pTimeout);
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        ABC_GET_LOGIN();
         ABC_CHECK_NEW(otpAuthGet(*login, *pbEnabled, *pTimeout), pError);
     }
 
@@ -414,8 +430,7 @@ tABC_CC ABC_OtpAuthSet(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        ABC_GET_LOGIN();
         ABC_CHECK_NEW(otpAuthSet(*login, timeout), pError);
     }
 
@@ -430,8 +445,7 @@ tABC_CC ABC_OtpAuthRemove(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        ABC_GET_LOGIN();
         ABC_CHECK_NEW(otpAuthRemove(*login), pError);
     }
 
@@ -476,8 +490,7 @@ tABC_CC ABC_OtpResetSet(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Lobby> lobby;
-        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_GET_LOBBY();
         ABC_CHECK_NEW(otpResetSet(*lobby), pError);
     }
 
@@ -492,8 +505,7 @@ tABC_CC ABC_OtpResetRemove(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        ABC_GET_LOGIN();
         ABC_CHECK_NEW(otpResetRemove(*login), pError);
     }
 
@@ -526,9 +538,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szWalletName) > 0, ABC_CC_Error, "No wallet name provided");
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-
+        ABC_GET_ACCOUNT();
         ABC_CHECK_RET(ABC_WalletCreate(account, szWalletName, currencyNum, pszUuid, pError));
     }
 
@@ -613,8 +623,7 @@ tABC_CC ABC_GetPIN(const char *szUserName,
     ABC_CHECK_NULL(pszPin);
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        ABC_GET_ACCOUNT();
 
         AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
         ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
@@ -649,8 +658,7 @@ tABC_CC ABC_SetPIN(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error, "Pin is too short");
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        ABC_GET_ACCOUNT();
 
         AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
         ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
@@ -685,9 +693,7 @@ tABC_CC ABC_GetCategories(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-
+        ABC_GET_ACCOUNT();
         ABC_CHECK_RET(ABC_AccountCategoriesLoad(*account, paszCategories, pCount, pError));
     }
 
@@ -714,9 +720,7 @@ tABC_CC ABC_AddCategory(const char *szUserName,
     ABC_CHECK_NULL(szCategory);
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-
+        ABC_GET_ACCOUNT();
         ABC_CHECK_RET(ABC_AccountCategoriesAdd(*account, szCategory, pError));
     }
 
@@ -744,9 +748,7 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
     ABC_CHECK_NULL(szCategory);
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-
+        ABC_GET_ACCOUNT();
         ABC_CHECK_RET(ABC_AccountCategoriesRemove(*account, szCategory, pError));
     }
 
@@ -770,10 +772,7 @@ tABC_CC ABC_RenameWallet(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_WalletSetName(wallet, szNewWalletName, pError));
     }
 
@@ -795,8 +794,7 @@ tABC_CC ABC_SetWalletArchived(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        ABC_GET_ACCOUNT();
         ABC_CHECK_NEW(account->wallets.archive(szWalletUUID, archived), pError);
     }
 
@@ -872,8 +870,7 @@ tABC_CC ABC_PinLoginDelete(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Lobby> lobby;
-        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_GET_LOBBY();
         ABC_CHECK_RET(ABC_LoginPinDelete(*lobby, pError));
     }
 
@@ -910,10 +907,8 @@ tABC_CC ABC_PinSetup(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Login> login;
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        ABC_GET_LOGIN();
+        ABC_GET_ACCOUNT();
 
         AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
         ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
@@ -969,10 +964,7 @@ tABC_CC ABC_GetWalletInfo(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_WalletGetInfo(wallet, ppWalletInfo, pError));
     }
 
@@ -1008,9 +1000,7 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
+        ABC_GET_WALLET();
 
         U08Buf seedBuf; // Do not free
         ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(wallet, &seedBuf, pError));
@@ -1038,10 +1028,9 @@ tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto list = account->wallets.list();
+        ABC_GET_ACCOUNT();
 
+        auto list = account->wallets.list();
         ABC_ARRAY_NEW(*paWalletUUID, list.size(), char*);
         int n = 0;
         for (const auto &i: list)
@@ -1080,8 +1069,7 @@ tABC_CC ABC_GetWallets(const char *szUserName,
     ABC_CHECK_NULL(pCount);
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        ABC_GET_ACCOUNT();
 
         // Return an empty list by default:
         *paWalletInfo = nullptr;
@@ -1157,8 +1145,7 @@ tABC_CC ABC_SetWalletOrder(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        ABC_GET_ACCOUNT();
 
         // Make a mutable copy of the input:
         AutoString temp;
@@ -1232,8 +1219,7 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
     ABC_CHECK_NULL(pszQuestions);
 
     {
-        std::shared_ptr<Lobby> lobby;
-        ABC_CHECK_NEW(cacheLobby(lobby, szUserName), pError);
+        ABC_GET_LOBBY();
         ABC_CHECK_RET(ABC_LoginGetRQ(*lobby, pszQuestions, pError));
     }
 
@@ -1264,8 +1250,7 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error, "No new password provided");
 
     {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
+        ABC_GET_LOGIN();
         ABC_CHECK_RET(ABC_LoginPasswordSet(*login, szNewPassword, pError));
         ABC_WalletClearCache(); // added in 23fab303, but no idea why
     }
@@ -1422,10 +1407,7 @@ tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxCreateReceiveRequest(wallet, pDetails, pszRequestID, false, pError));
     }
 
@@ -1455,10 +1437,7 @@ tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxModifyReceiveRequest(wallet, szRequestID, pDetails, pError));
     }
 
@@ -1484,10 +1463,7 @@ tABC_CC ABC_FinalizeReceiveRequest(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxFinalizeReceiveRequest(wallet, szRequestID, pError));
     }
 
@@ -1513,10 +1489,7 @@ tABC_CC ABC_CancelReceiveRequest(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxCancelReceiveRequest(wallet, szRequestID, pError));
     }
 
@@ -1548,10 +1521,7 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxGenerateRequestQRCode(wallet, szRequestID, pszURI, paData, pWidth, pError));
     }
 
@@ -1655,9 +1625,7 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
+        ABC_GET_WALLET();
 
         // Create the spend target structure:
         AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
@@ -1748,9 +1716,7 @@ tABC_CC ABC_SpendGetFee(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
+        ABC_GET_WALLET();
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->pDetails->amountSatoshi = pSpend->amount;
@@ -1770,9 +1736,7 @@ tABC_CC ABC_SpendGetMax(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
+        ABC_GET_WALLET();
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->pDetails->amountSatoshi = pSpend->amount;
@@ -1793,9 +1757,7 @@ tABC_CC ABC_SpendApprove(const char *szUserName,
     ABC_CHECK_NULL(pszTxId);
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
+        ABC_GET_WALLET();
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->pDetails->amountSatoshi = pSpend->amount;
@@ -1829,9 +1791,7 @@ tABC_CC ABC_SweepKey(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
+        ABC_GET_WALLET();
 
         AutoU08Buf key;
         bool bCompressed;
@@ -1865,10 +1825,7 @@ tABC_CC ABC_GetTransaction(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxGetTransaction(wallet, szID, ppTransaction, pError));
     }
 
@@ -1898,10 +1855,7 @@ tABC_CC ABC_GetTransactions(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxGetTransactions(wallet, startTime, endTime, paTransactions, pCount, pError));
         ABC_CHECK_RET(ABC_BridgeFilterTransactions(wallet, *paTransactions, pCount, pError));
     }
@@ -1932,10 +1886,7 @@ tABC_CC ABC_SearchTransactions(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxSearchTransactions(wallet, szQuery, paTransactions, pCount, pError));
     }
 
@@ -1956,9 +1907,7 @@ tABC_CC ABC_GetRawTransaction(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
+        ABC_GET_WALLET();
 
         AutoFree<tABC_TxInfo, ABC_FreeTransaction> info;
         ABC_CHECK_RET(ABC_TxGetTransaction(wallet, szID, &info.get(), pError));
@@ -2020,10 +1969,7 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxSetTransactionDetails(wallet, szID, pDetails, pError));
     }
 
@@ -2052,10 +1998,7 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxGetTransactionDetails(wallet, szID, ppDetails, pError));
     }
 
@@ -2083,10 +2026,7 @@ tABC_CC ABC_GetRequestAddress(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxGetRequestAddress(wallet, szRequestID, pszAddress, pError));
     }
 
@@ -2114,10 +2054,7 @@ tABC_CC ABC_GetPendingRequests(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxGetPendingRequests(wallet, paRequests, pCount, pError));
     }
 
@@ -2405,9 +2342,7 @@ tABC_CC ABC_LoadAccountSettings(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-
+        ABC_GET_ACCOUNT();
         ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, ppSettings, pError));
     }
 
@@ -2431,9 +2366,7 @@ tABC_CC ABC_UpdateAccountSettings(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-
+        ABC_GET_ACCOUNT();
         ABC_CHECK_RET(ABC_AccountSettingsSave(*account, pSettings, pError));
     }
 
@@ -2463,8 +2396,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        ABC_GET_ACCOUNT();
 
         // Sync the account data:
         bool dirty = false;
@@ -2528,9 +2460,7 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
     ABC_CHECK_NULL(fAsyncBitCoinEventCallback);
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
+        ABC_GET_WALLET();
 
         bool dirty = false;
         ABC_CHECK_RET(ABC_WalletSyncData(wallet, dirty, pError));
@@ -2564,10 +2494,7 @@ tABC_CC ABC_WatcherStart(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_BridgeWatcherStart(wallet, pError));
     }
 
@@ -2590,10 +2517,7 @@ tABC_CC ABC_WatcherLoop(const char *szWalletUUID,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET_N();
         ABC_CHECK_RET(ABC_BridgeWatcherLoop(wallet, fAsyncBitCoinEventCallback, pData, pError));
     }
 
@@ -2606,10 +2530,7 @@ tABC_CC ABC_WatcherConnect(const char *szWalletUUID, tABC_Error *pError)
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET_N();
         ABC_CHECK_RET(ABC_BridgeWatcherConnect(wallet, pError));
     }
 
@@ -2630,10 +2551,7 @@ tABC_CC ABC_WatchAddresses(const char *szUserName, const char *szPassword,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxWatchAddresses(wallet, pError));
     }
 
@@ -2656,10 +2574,7 @@ tABC_CC ABC_PrioritizeAddress(const char *szUserName, const char *szPassword,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_BridgePrioritizeAddress(wallet, szAddress, pError));
     }
 
@@ -2677,10 +2592,7 @@ tABC_CC ABC_WatcherDisconnect(const char *szWalletUUID, tABC_Error *pError)
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET_N();
         ABC_CHECK_RET(ABC_BridgeWatcherDisconnect(wallet, pError));
     }
 
@@ -2698,10 +2610,7 @@ tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError)
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET_N();
         ABC_CHECK_RET(ABC_BridgeWatcherStop(wallet, pError));
     }
 
@@ -2720,10 +2629,7 @@ tABC_CC ABC_WatcherDelete(const char *szWalletUUID, tABC_Error *pError)
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET_N();
         ABC_CHECK_RET(ABC_BridgeWatcherDelete(wallet, pError));
     }
 
@@ -2748,10 +2654,7 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
     ABC_CHECK_ASSERT(strlen(szTxId) > 0, ABC_CC_Error, "No tx id provided");
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET_N();
         ABC_CHECK_RET(ABC_BridgeTxHeight(wallet, szTxId, height, pError));
     }
 
@@ -2773,10 +2676,7 @@ tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Err
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, nullptr), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
-
+        ABC_GET_WALLET_N();
         ABC_CHECK_RET(ABC_BridgeTxBlockHeight(wallet, height, pError));
     }
 
@@ -2794,8 +2694,7 @@ tABC_CC ABC_PluginDataGet(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        ABC_GET_ACCOUNT();
 
         std::string data;
         ABC_CHECK_NEW(pluginDataGet(*account, szPlugin, szKey, data), pError);
@@ -2816,9 +2715,7 @@ tABC_CC ABC_PluginDataSet(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-
+        ABC_GET_ACCOUNT();
         ABC_CHECK_NEW(pluginDataSet(*account, szPlugin, szKey, szData), pError);
     }
 
@@ -2835,9 +2732,7 @@ tABC_CC ABC_PluginDataRemove(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-
+        ABC_GET_ACCOUNT();
         ABC_CHECK_NEW(pluginDataRemove(*account, szPlugin, szKey), pError);
     }
 
@@ -2853,9 +2748,7 @@ tABC_CC ABC_PluginDataClear(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-
+        ABC_GET_ACCOUNT();
         ABC_CHECK_NEW(pluginDataClear(*account, szPlugin), pError);
     }
 
@@ -2875,8 +2768,7 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
+        ABC_GET_ACCOUNT();
 
         std::set<Currency> currencies;
         currencies.insert(static_cast<Currency>(currencyNum));
@@ -2943,9 +2835,7 @@ tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-        auto wallet = ABC_WalletID(*account, szWalletUUID);
+        ABC_GET_WALLET();
 
         ABC_CHECK_RET(ABC_TxGetTransactions(wallet, startTime, endTime, &paTransactions, &count, pError));
         ABC_CHECK_ASSERT(0 != count, ABC_CC_NoTransaction, "No transactions to export");
@@ -2966,9 +2856,7 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
     ABC_PROLOG();
 
     {
-        std::shared_ptr<Account> account;
-        ABC_CHECK_NEW(cacheAccount(account, szUserName), pError);
-
+        ABC_GET_ACCOUNT();
         ABC_CHECK_RET(ABC_LoginServerUploadLogs(*account, pError));
     }
 
