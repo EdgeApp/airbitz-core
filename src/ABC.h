@@ -427,6 +427,8 @@ typedef struct sABC_SpendTarget
     /** The destination to show to the user. This is often an address,
      * but also could be something else like a wallet name. */
     const char *szName;
+    /** True if this is a signed bip70 payment request. */
+    bool bSigned;
     /** Non-null if the payment request provides a URL
      * to visit once the payment is done. */
     const char *szRet;

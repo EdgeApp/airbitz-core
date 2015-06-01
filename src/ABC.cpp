@@ -1610,6 +1610,7 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
             pSpend->amount = request->amount();
             pSpend->amountMutable = false;
             ABC_STRDUP(pSpend->szName, request->merchant().c_str());
+            pSpend->bSigned = true;
 
             // Fill in the details:
             ABC_STRDUP(pDetails->szName, pSpend->szName);
