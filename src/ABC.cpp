@@ -631,6 +631,49 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_CreateSigsafeWallet(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletName,
+                                int         currencyNum,
+                                const char *szPubkey0,
+                                const char *szPubkey1,
+                                char **pszUUID,
+                                tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    AutoSyncKeys pKeys;
+    AutoU08Buf L1;
+    AutoU08Buf LP1;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_ASSERT(strlen(szUserName) > 0, ABC_CC_Error, "No username provided");
+    ABC_CHECK_NULL(szWalletName);
+    ABC_CHECK_ASSERT(strlen(szWalletName) > 0, ABC_CC_Error, "No wallet name provided");
+
+    // get account keys:
+    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
+    ABC_CHECK_RET(ABC_LoginShimGetServerKeys(szUserName, szPassword, &L1, &LP1, pError));
+
+    ABC_CHECK_RET(ABC_WalletCreate(pKeys, L1, LP1, szUserName, szWalletName,
+        currencyNum, pszUUID, pError));
+
+    // TODO:
+    // * WalletCreate does not know that this is a sig-safe wallet.
+    //   Either parameterize WalletCreate to do the right thing,
+    //   or copy-paste that function and modify it.
+    // * Add a field to the wallet info file,
+    //   indicating that this is a Sigsafe wallet.
+    // * Hack the wallet address generator to only return the p2sh address
+    //   if this is a Sigsafe wallet.
+
+exit:
+    return cc;
+}
 
 /**
  * Clear cached keys.
@@ -1865,6 +1908,74 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
 
 exit:
     return cc;
+}
+
+tABC_CC ABC_CreateSigsafeTX(const char *szUserName,
+                            const char *szPassword,
+                            const char *szWalletUUID,
+                            const char *szDestAddress,
+                            tABC_TxDetails *pDetails,
+                            tABC_SigsafeTx **ppTx,
+                            tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    AutoSyncKeys pKeys;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_NULL(pDetails);
+    ABC_CHECK_NULL(ppTx);
+
+    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
+    // TODO: Actually generate this stuff!
+
+exit:
+    return cc;
+}
+
+/**
+ * Signs and sends a SigSafe transaction.
+ * @param pDetails GUI-supplied transaction metadata.
+ * @param pTx a signed transaction returned from the device.
+ */
+tABC_CC ABC_CompleteSigsafeTX(const char *szUserName,
+                              const char *szPassword,
+                              const char *szWalletUUID,
+                              tABC_TxDetails *pDetails,
+                              tABC_SigsafeTx *pTx,
+                              tABC_Error *pError)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+
+    AutoSyncKeys pKeys;
+
+    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized");
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_NULL(pDetails);
+    ABC_CHECK_NULL(pTx);
+
+    ABC_CHECK_RET(ABC_LoginShimGetSyncKeys(szUserName, szPassword, &pKeys.get(), pError));
+    // TODO: Actually generate this stuff!
+
+exit:
+    return cc;
+}
+
+void ABC_FreeSigsafeTx(tABC_SigsafeTx *pTx)
+{
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    // TODO: fill this out once we understand what the fields are
+    // free(pTx->unsignedTX);
 }
 
 /**

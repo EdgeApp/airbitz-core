@@ -261,6 +261,14 @@ typedef struct sABC_WalletInfo
     unsigned        archived;
     /** wallet balance */
     int64_t         balanceSatoshi;
+
+    /** True if this is a Sigsafe multisig demo wallet. */
+    unsigned        sigsafe;
+    // TODO:
+    // * Save this field to disk.
+    // * Have the UI check this field when sending money out,
+    //   going down the NFC-tap route if it's set.
+
 } tABC_WalletInfo;
 
 /**
@@ -343,6 +351,15 @@ typedef struct sABC_TxDetails
     /** attributes for the transaction */
     unsigned int attributes;
 } tABC_TxDetails;
+
+typedef struct sABC_SigsafeTx
+{
+    // TODO: Actually define what goes in here.
+    char *unsignedTX;
+    char *redeemScript;
+    int *n_inputs;
+    int *indices;
+} tABC_SigsafeTx;
 
 typedef struct sABC_TransferDetails
 {
@@ -905,6 +922,21 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
                          char       **pszUuid,
                          tABC_Error *pError);
 
+/**
+ * Creates a multi-sig wallet for the SigSafe demo.
+ * @param szPubkey0 The public key from the first NFC device.
+ * @param szPubkey1 The public key from the second NFC device.
+ * @param pszUUID The resulting wallet UUID. The caller frees this.
+ */
+tABC_CC ABC_CreateSigsafeWallet(const char *szUserName,
+                                const char *szPassword,
+                                const char *szWalletName,
+                                int         currencyNum,
+                                const char *szPubkey0,
+                                const char *szPubkey1,
+                                char **pszUUID,
+                                tABC_Error *pError);
+
 tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
                            const char *szPassword,
                            char ***paWalletUUID,
@@ -1010,6 +1042,36 @@ tABC_CC ABC_InitiateSendRequest(const char *szUserName,
                                 tABC_TxDetails *pDetails,
                                 char **szTxId,
                                 tABC_Error *pError);
+
+/**
+ * Creates an unsigned Sigsafe transaction.
+ * This does not write anything to the wallet database;
+ * the GUI is responsible for holding the transaction
+ * until the device signs it.
+ * @param pDetails GUI-supplied transaction metadata.
+ * @param ppTx the resulting unsigned transaction. The caller frees this.
+ */
+tABC_CC ABC_CreateSigsafeTX(const char *szUserName,
+                            const char *szPassword,
+                            const char *szWalletUUID,
+                            const char *szDestAddress,
+                            tABC_TxDetails *pDetails,
+                            tABC_SigsafeTx **ppTx,
+                            tABC_Error *pError);
+
+/**
+ * Signs and sends a SigSafe transaction.
+ * @param pDetails GUI-supplied transaction metadata.
+ * @param pTx a signed transaction returned from the device.
+ */
+tABC_CC ABC_CompleteSigsafeTX(const char *szUserName,
+                              const char *szPassword,
+                              const char *szWalletUUID,
+                              tABC_TxDetails *pDetails,
+                              tABC_SigsafeTx *pTx,
+                              tABC_Error *pError);
+
+void ABC_FreeSigsafeTx(tABC_SigsafeTx *pTx);
 
 tABC_CC ABC_InitiateTransfer(const char *szUserName,
                              const char *szPassword,
