@@ -111,7 +111,7 @@ outputsFinalize(bc::transaction_output_list &outputs,
     // Check for dust:
     for (const auto &output: outputs)
         if (output.value < outputDust)
-            return ABC_ERROR(ABC_CC_InsufficientFunds, "Trying to send dust");
+            return ABC_ERROR(ABC_CC_SpendDust, "Trying to send dust");
 
     return Status();
 }
