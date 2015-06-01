@@ -16,7 +16,7 @@ struct SendInfo;
 /**
  * The minimum number of satoshis an output should contain.
  */
-constexpr unsigned outputDust = 5460;
+constexpr unsigned outputDust = 546;
 
 bc::script_type
 outputScriptForPubkey(const bc::short_hash &hash);
