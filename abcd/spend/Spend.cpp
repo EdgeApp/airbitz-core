@@ -245,9 +245,16 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
             PaymentReceipt receipt;
             ABC_CHECK_NEW(pInfo->paymentRequest->pay(receipt, rawTx, refund), pError);
 
-            // TODO: make something happen with the memo???
+            // Append the receipt memo to the notes field:
             if (receipt.ack.has_memo())
-                ABC_DebugLog("Memo: %s", receipt.ack.memo().c_str());
+            {
+                std::string notes = pInfo->pDetails->szNotes;
+                if (!notes.empty())
+                    notes += '\n';
+                notes += receipt.ack.memo();
+                ABC_FREE_STR(pInfo->pDetails->szNotes);
+                ABC_STRDUP(pInfo->pDetails->szNotes, notes.c_str());
+            }
         }
 
         // Mark the outputs as spent:
