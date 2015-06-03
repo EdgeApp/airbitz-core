@@ -1604,19 +1604,19 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
             pInfo->paymentRequest = new PaymentRequest();
             auto *request = pInfo->paymentRequest;
             ABC_CHECK_NEW(request->fetch(pUri->szR), pError);
-            ABC_CHECK_NEW(request->signatureOk(), pError);
+            std::string signer;
+            ABC_CHECK_NEW(request->signatureOk(signer), pError);
 
             // Fill in the spend target:
             pSpend->amount = request->amount();
             pSpend->amountMutable = false;
-            ABC_STRDUP(pSpend->szName, request->merchant().c_str());
+            ABC_STRDUP(pSpend->szName, signer.c_str());
             pSpend->bSigned = true;
 
             // Fill in the details:
-            ABC_STRDUP(pDetails->szName, pSpend->szName);
-            ABC_STRDUP(pDetails->szNotes,
-                !request->memo().empty() ? request->memo().c_str() :
-                pUri->szMessage ? pUri->szMessage : "");
+            ABC_STRDUP(pDetails->szName, request->merchant(signer).c_str());
+            ABC_STRDUP(pDetails->szNotes, request->memo(
+                pUri->szMessage ? pUri->szMessage : "").c_str());
         }
         else if (pUri->szAddress)
         {
