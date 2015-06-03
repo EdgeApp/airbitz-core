@@ -17,7 +17,7 @@ otpAuthGet(Login &login, bool &enabled, long &timeout)
 {
     AutoU08Buf LP1;
     ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpStatus(login.lobby(), LP1, &enabled, &timeout, &error));
+    ABC_CHECK_OLD(ABC_LoginServerOtpStatus(login.lobby, LP1, &enabled, &timeout, &error));
 
     return Status();
 }
@@ -26,17 +26,17 @@ Status
 otpAuthSet(Login &login, long timeout)
 {
     // Install a key if needed:
-    if (!login.lobby().otpKey())
+    if (!login.lobby.otpKey())
     {
         OtpKey random;
         ABC_CHECK(random.create());
-        login.lobby().otpKeySet(random);
+        login.lobby.otpKeySet(random);
     }
 
     AutoU08Buf LP1;
     ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpEnable(login.lobby(), LP1,
-        login.lobby().otpKey()->encodeBase32().c_str(), timeout, &error));
+    ABC_CHECK_OLD(ABC_LoginServerOtpEnable(login.lobby, LP1,
+        login.lobby.otpKey()->encodeBase32().c_str(), timeout, &error));
 
     return Status();
 }
@@ -46,7 +46,7 @@ otpAuthRemove(Login &login)
 {
     AutoU08Buf LP1;
     ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpDisable(login.lobby(), LP1, &error));
+    ABC_CHECK_OLD(ABC_LoginServerOtpDisable(login.lobby, LP1, &error));
 
     return Status();
 }
@@ -96,7 +96,7 @@ otpResetRemove(Login &login)
 {
     AutoU08Buf LP1;
     ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpResetCancelPending(login.lobby(), LP1, &error));
+    ABC_CHECK_OLD(ABC_LoginServerOtpResetCancelPending(login.lobby, LP1, &error));
 
     return Status();
 }

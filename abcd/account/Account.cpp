@@ -13,9 +13,10 @@
 
 namespace abcd {
 
-Account::Account(std::shared_ptr<Login> login):
-    login_(login),
-    dir_(login->lobby().dir() + "sync/"),
+Account::Account(std::shared_ptr<Login> parent):
+    login(*parent),
+    parent_(std::move(parent)),
+    dir_(login.lobby.dir() + "sync/"),
     wallets(*this)
 {}
 
@@ -30,12 +31,12 @@ Account::init()
     if (!exists)
     {
         bool dirty = false;
-        std::string tempName = login().lobby().dir() + "tmp/";
+        std::string tempName = login.lobby.dir() + "tmp/";
         ABC_CHECK_OLD(ABC_FileIOFileExists(tempName.c_str(), &exists, &error));
         if (exists)
             ABC_CHECK_OLD(ABC_FileIODeleteRecursive(tempName.c_str(), &error));
         ABC_CHECK_OLD(ABC_SyncMakeRepo(tempName.c_str(), &error));
-        ABC_CHECK_OLD(ABC_SyncRepo(tempName.c_str(), login().syncKey().c_str(), dirty, &error));
+        ABC_CHECK_OLD(ABC_SyncRepo(tempName.c_str(), login.syncKey().c_str(), dirty, &error));
         if (rename(tempName.c_str(), dir().c_str()))
             return ABC_ERROR(ABC_CC_SysError, "rename failed");
     }
@@ -47,7 +48,7 @@ Account::init()
 Status
 Account::sync(bool &dirty)
 {
-    ABC_CHECK_OLD(ABC_SyncRepo(dir().c_str(), login().syncKey().c_str(), dirty, &error));
+    ABC_CHECK_OLD(ABC_SyncRepo(dir().c_str(), login.syncKey().c_str(), dirty, &error));
     if (dirty)
     {
         ABC_CHECK(wallets.load());

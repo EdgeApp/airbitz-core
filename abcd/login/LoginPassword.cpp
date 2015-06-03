@@ -132,11 +132,11 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     DataChunk passwordKey;      // Unlocks dataKey
     JsonBox box;
     JsonSnrp snrp;
-    std::string LP = login.lobby().username() + szPassword;
+    std::string LP = login.lobby.username() + szPassword;
 
     // Load the packages:
-    ABC_CHECK_NEW(carePackage.load(login.lobby().carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.load(login.lobby().loginPackageName()), pError);
+    ABC_CHECK_NEW(carePackage.load(login.lobby.carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(login.lobby.loginPackageName()), pError);
 
     // Load the old keys:
     ABC_CHECK_RET(ABC_LoginGetServerKey(login, &oldLP1, pError));
@@ -160,12 +160,12 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     ABC_CHECK_NEW(loginPackage.authKeyBoxSet(box), pError);
 
     // Change the server login:
-    ABC_CHECK_RET(ABC_LoginServerChangePassword(login.lobby(), oldLP1,
+    ABC_CHECK_RET(ABC_LoginServerChangePassword(login.lobby, oldLP1,
         toU08Buf(authKey), toU08Buf(oldLRA1), carePackage, loginPackage, pError));
 
     // Change the on-disk login:
-    ABC_CHECK_NEW(carePackage.save(login.lobby().carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.save(login.lobby().loginPackageName()), pError);
+    ABC_CHECK_NEW(carePackage.save(login.lobby.carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.save(login.lobby.loginPackageName()), pError);
 
 exit:
     return cc;
@@ -189,13 +189,13 @@ tABC_CC ABC_LoginPasswordOk(Login &login,
     LoginPackage loginPackage;
     DataChunk passwordKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
-    std::string LP = login.lobby().username() + szPassword;
+    std::string LP = login.lobby.username() + szPassword;
 
     *pOk = false;
 
     // Load the packages:
-    ABC_CHECK_NEW(carePackage.load(login.lobby().carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.load(login.lobby().loginPackageName()), pError);
+    ABC_CHECK_NEW(carePackage.load(login.lobby.carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(login.lobby.loginPackageName()), pError);
 
     // Try to decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);
@@ -212,7 +212,7 @@ Status
 passwordExists(bool &result, Login &login)
 {
     LoginPackage loginPackage;
-    ABC_CHECK(loginPackage.load(login.lobby().loginPackageName()));
+    ABC_CHECK(loginPackage.load(login.lobby.loginPackageName()));
 
     result = !!loginPackage.passwordBox().get();
     return Status();

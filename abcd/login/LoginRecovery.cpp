@@ -117,11 +117,11 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     DataChunk recoveryKey;      // Unlocks dataKey
     JsonBox box;
     JsonSnrp snrp;
-    std::string LRA = login.lobby().username() + szRecoveryAnswers;
+    std::string LRA = login.lobby.username() + szRecoveryAnswers;
 
     // Load the packages:
-    ABC_CHECK_NEW(carePackage.load(login.lobby().carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.load(login.lobby().loginPackageName()), pError);
+    ABC_CHECK_NEW(carePackage.load(login.lobby.carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(login.lobby.loginPackageName()), pError);
 
     // Load the old keys:
     ABC_CHECK_RET(ABC_LoginGetServerKey(login, &oldLP1, pError));
@@ -133,7 +133,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_NEW(carePackage.snrp4Set(snrp), pError);
 
     // L4  = Scrypt(L, SNRP4):
-    ABC_CHECK_NEW(carePackage.snrp4().hash(questionKey, login.lobby().username()), pError);
+    ABC_CHECK_NEW(carePackage.snrp4().hash(questionKey, login.lobby.username()), pError);
 
     // Update ERQ:
     ABC_CHECK_NEW(box.encrypt(std::string(szRecoveryQuestions), questionKey), pError);
@@ -150,12 +150,12 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_NEW(loginPackage.ELRA1Set(box), pError);
 
     // Change the server login:
-    ABC_CHECK_RET(ABC_LoginServerChangePassword(login.lobby(), oldLP1,
+    ABC_CHECK_RET(ABC_LoginServerChangePassword(login.lobby, oldLP1,
         oldLP1, toU08Buf(recoveryAuthKey), carePackage, loginPackage, pError));
 
     // Change the on-disk login:
-    ABC_CHECK_NEW(carePackage.save(login.lobby().carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.save(login.lobby().loginPackageName()), pError);
+    ABC_CHECK_NEW(carePackage.save(login.lobby.carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.save(login.lobby.loginPackageName()), pError);
 
 exit:
     return cc;

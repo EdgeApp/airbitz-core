@@ -21,8 +21,9 @@ namespace abcd {
 
 #define ACCOUNT_MK_LENGTH 32
 
-Login::Login(std::shared_ptr<Lobby> lobby, DataSlice dataKey):
-    lobby_(std::move(lobby)),
+Login::Login(std::shared_ptr<Lobby> parent, DataSlice dataKey):
+    lobby(*parent),
+    parent_(std::move(parent)),
     dataKey_(dataKey.begin(), dataKey.end())
 {}
 
@@ -34,7 +35,7 @@ Login::init(const LoginPackage &loginPackage)
     syncKey_ = base16Encode(syncKey);
 
     // Ensure that the directory is in place:
-    ABC_CHECK(lobby_->dirCreate());
+    ABC_CHECK(lobby.dirCreate());
     return Status();
 }
 
@@ -132,7 +133,7 @@ tABC_CC ABC_LoginGetServerKey(const Login &login,
     LoginPackage loginPackage;
     DataChunk authKey;          // Unlocks the server
 
-    ABC_CHECK_NEW(loginPackage.load(login.lobby().loginPackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(login.lobby.loginPackageName()), pError);
     ABC_CHECK_NEW(loginPackage.authKeyBox().decrypt(authKey, login.dataKey()), pError);
     ABC_BUF_DUP(*pLP1, toU08Buf(authKey));
 

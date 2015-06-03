@@ -120,7 +120,7 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
     {
         // load and decrypted the file into a json object
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
-            toU08Buf(account.login().dataKey()), &pJSON_Root, pError));
+            toU08Buf(account.login.dataKey()), &pJSON_Root, pError));
         //ABC_DebugLog("Loaded settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
 
         // allocate the new settings object
@@ -491,7 +491,7 @@ tABC_CC ABC_AccountSettingsSave(const Account &account,
     // encrypt and save json
 //    ABC_DebugLog("Saving settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root,
-        toU08Buf(account.login().dataKey()), ABC_CryptoType_AES256,
+        toU08Buf(account.login.dataKey()), ABC_CryptoType_AES256,
         filename.c_str(), pError));
 
 

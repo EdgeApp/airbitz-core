@@ -23,19 +23,14 @@ struct LoginPackage;
 class Login
 {
 public:
-    Login(std::shared_ptr<Lobby> lobby, DataSlice dataKey);
+    Login(std::shared_ptr<Lobby> parent, DataSlice dataKey);
+    Lobby &lobby;
 
     /**
      * Prepares the Login object for use.
      */
     Status
     init(const LoginPackage &loginPackage);
-
-    /**
-     * Obtains a reference to the lobby object associated with this account.
-     */
-    Lobby &
-    lobby() const { return *lobby_; }
 
     /**
      * Obtains the master key for the account.
@@ -53,7 +48,7 @@ private:
     // No mutex, since all members are immutable after init.
     // The lobby mutex can cover disk-based things like logging in and
     // changing passwords if we ever want to to protect those one day.
-    const std::shared_ptr<Lobby> lobby_;
+    const std::shared_ptr<Lobby> parent_;
     const DataChunk dataKey_;
     std::string syncKey_;
 };

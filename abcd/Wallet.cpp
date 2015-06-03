@@ -199,7 +199,7 @@ tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
     tWalletData *pData = NULL;
 
     ABC_CHECK_NULL(pszUUID);
-    ABC_CHECK_RET(ABC_LoginGetServerKey(account->login(), &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKey(account->login, &LP1, pError));
 
     // create a new wallet data struct
     ABC_NEW(pData, tWalletData);
@@ -244,11 +244,11 @@ tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
     ABC_CHECK_RET(ABC_WalletSetCurrencyNum(wallet, currencyNum, pError));
 
     // Request remote wallet repo
-    ABC_CHECK_NEW(LoginServerWalletCreate(account->login().lobby(), LP1, pData->szWalletAcctKey), pError);
+    ABC_CHECK_NEW(LoginServerWalletCreate(account->login.lobby, LP1, pData->szWalletAcctKey), pError);
 
     // set this account for the wallet's first account
     ABC_CHECK_RET(ABC_WalletAddAccount(wallet,
-        account->login().lobby().username().c_str(), pError));
+        account->login.lobby.username().c_str(), pError));
 
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
@@ -257,7 +257,7 @@ tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
     ABC_CHECK_RET(ABC_SyncRepo(syncDir.c_str(), pData->szWalletAcctKey, dirty, pError));
 
     // Actiate the remote wallet
-    ABC_CHECK_NEW(LoginServerWalletActivate(account->login().lobby(), LP1, pData->szWalletAcctKey), pError);
+    ABC_CHECK_NEW(LoginServerWalletActivate(account->login.lobby, LP1, pData->szWalletAcctKey), pError);
 
     // If everything worked, add the wallet to the account:
     ABC_CHECK_NEW(json.dataKeySet(base16Encode(dataKey).c_str()), pError);

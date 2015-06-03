@@ -21,9 +21,9 @@ class Login;
 class Account
 {
 public:
-    Account(std::shared_ptr<Login> login);
+    Account(std::shared_ptr<Login> parent);
+    Login &login;
 
-    const Login &login() const { return *login_; }
     const std::string &dir() const { return dir_; }
 
     /**
@@ -40,7 +40,7 @@ public:
     sync(bool &dirty);
 
 private:
-    const std::shared_ptr<Login> login_;
+    const std::shared_ptr<Login> parent_;
     const std::string dir_;
 
 public:
