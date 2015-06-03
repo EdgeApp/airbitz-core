@@ -59,9 +59,9 @@ otpResetGet(std::list<std::string> &result,
     std::list<DataChunk> authIds;
     for (const auto &i: usernames)
     {
-        Lobby lobby;
-        ABC_CHECK(lobby.init(i));
-        auto authId = lobby.authId();
+        std::shared_ptr<Lobby> lobby;
+        ABC_CHECK(Lobby::create(lobby, i));
+        auto authId = lobby->authId();
         authIds.emplace_back(authId.begin(), authId.end());
     }
 

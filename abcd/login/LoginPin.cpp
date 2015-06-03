@@ -88,7 +88,7 @@ exit:
  * Assuming a PIN-based login pagage exits, log the user in.
  */
 tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
-                     std::shared_ptr<Lobby> lobby,
+                     Lobby &lobby,
                      const char *szPin,
                      tABC_Error *pError)
 {
@@ -105,12 +105,12 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     DataChunk pinKey;           // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
     JsonBox pinKeyBox;          // Holds pinKey
-    std::string LPIN = lobby->username() + szPin;
+    std::string LPIN = lobby.username() + szPin;
 
     // Load the packages:
-    ABC_CHECK_NEW(carePackage.load(lobby->carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.load(lobby->loginPackageName()), pError);
-    ABC_CHECK_NEW(local.load(lobby->dir() + PIN_FILENAME), pError);
+    ABC_CHECK_NEW(carePackage.load(lobby.carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(lobby.loginPackageName()), pError);
+    ABC_CHECK_NEW(local.load(lobby.dir() + PIN_FILENAME), pError);
     ABC_CHECK_NEW(local.pinAuthIdDecode(pinAuthId), pError);
 
     // Get EPINK from the server:

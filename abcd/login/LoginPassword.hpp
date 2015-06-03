@@ -21,7 +21,7 @@ class Login;
 class Lobby;
 
 tABC_CC ABC_LoginPassword(std::shared_ptr<Login> &result,
-                          std::shared_ptr<Lobby> lobby,
+                          Lobby &lobby,
                           const char *szPassword,
                           tABC_Error *pError);
 

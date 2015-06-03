@@ -67,9 +67,7 @@ cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName)
     {
         if (!szUserName)
             return ABC_ERROR(ABC_CC_NULLPtr, "No user name");
-        std::unique_ptr<Lobby> lobby(new Lobby());
-        ABC_CHECK(lobby->init(szUserName));
-        gLobbyCache.reset(lobby.release());
+        ABC_CHECK(Lobby::create(gLobbyCache, szUserName));
     }
 
     result = gLobbyCache;
@@ -87,7 +85,7 @@ cacheLoginNew(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginCreate(gLoginCache, lobby, szPassword, &error));
+        ABC_CHECK_OLD(ABC_LoginCreate(gLoginCache, *lobby, szPassword, &error));
     }
 
     result = gLoginCache;
@@ -105,7 +103,7 @@ cacheLoginPassword(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginPassword(gLoginCache, lobby, szPassword, &error));
+        ABC_CHECK_OLD(ABC_LoginPassword(gLoginCache, *lobby, szPassword, &error));
     }
 
     result = gLoginCache;
@@ -123,7 +121,7 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginRecovery(gLoginCache, lobby, szRecoveryAnswers, &error));
+        ABC_CHECK_OLD(ABC_LoginRecovery(gLoginCache, *lobby, szRecoveryAnswers, &error));
     }
 
     result = gLoginCache;
@@ -141,7 +139,7 @@ cacheLoginPin(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginPin(gLoginCache, lobby, szPin, &error));
+        ABC_CHECK_OLD(ABC_LoginPin(gLoginCache, *lobby, szPin, &error));
     }
 
     result = gLoginCache;

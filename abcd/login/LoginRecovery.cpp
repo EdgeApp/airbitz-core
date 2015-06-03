@@ -58,7 +58,7 @@ exit:
  * Uses recovery answers rather than a password.
  */
 tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
-                          std::shared_ptr<Lobby> lobby,
+                          Lobby &lobby,
                           const char *szRecoveryAnswers,
                           tABC_Error *pError)
 {
@@ -70,14 +70,14 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     DataChunk recoveryAuthKey;  // Unlocks the server
     DataChunk recoveryKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
-    std::string LRA = lobby->username() + szRecoveryAnswers;
+    std::string LRA = lobby.username() + szRecoveryAnswers;
 
     // Get the CarePackage:
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(*lobby, carePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(lobby, carePackage, pError));
 
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(recoveryAuthKey, LRA), pError);
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(*lobby,
+    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(lobby,
         U08Buf(), toU08Buf(recoveryAuthKey), loginPackage, pError));
 
     // Decrypt MK:
@@ -89,8 +89,8 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(login->init(loginPackage), pError);
 
     // Set up the on-disk login:
-    ABC_CHECK_NEW(carePackage.save(lobby->carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.save(lobby->loginPackageName()), pError);
+    ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.save(lobby.loginPackageName()), pError);
 
     // Assign the final output:
     result.reset(login.release());

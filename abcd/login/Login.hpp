@@ -23,7 +23,7 @@ struct LoginPackage;
 class Login
 {
 public:
-    Login(std::shared_ptr<Lobby> parent, DataSlice dataKey);
+    Login(Lobby &lobby, DataSlice dataKey);
     Lobby &lobby;
 
     /**
@@ -55,7 +55,7 @@ private:
 
 // Constructors:
 tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
-                        std::shared_ptr<Lobby> lobby,
+                        Lobby &lobby,
                         const char *szPassword,
                         tABC_Error *pError);
 

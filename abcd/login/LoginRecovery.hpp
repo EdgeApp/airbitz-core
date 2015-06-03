@@ -25,7 +25,7 @@ tABC_CC ABC_LoginGetRQ(Lobby &lobby,
                        tABC_Error *pError);
 
 tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
-                          std::shared_ptr<Lobby> lobby,
+                          Lobby &lobby,
                           const char *szRecoveryAnswers,
                           tABC_Error *pError);
 

@@ -17,7 +17,7 @@ namespace abcd {
 
 static
 tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
-                              std::shared_ptr<Lobby> lobby,
+                              Lobby &lobby,
                               const char *szPassword,
                               tABC_Error *pError)
 {
@@ -28,11 +28,11 @@ tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
     LoginPackage loginPackage;
     DataChunk passwordKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
-    std::string LP = lobby->username() + szPassword;
+    std::string LP = lobby.username() + szPassword;
 
     // Load the packages:
-    ABC_CHECK_NEW(carePackage.load(lobby->carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.load(lobby->loginPackageName()), pError);
+    ABC_CHECK_NEW(carePackage.load(lobby.carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(lobby.loginPackageName()), pError);
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);
@@ -49,7 +49,7 @@ exit:
 
 static
 tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
-                                std::shared_ptr<Lobby> lobby,
+                                Lobby &lobby,
                                 const char *szPassword,
                                 tABC_Error *pError)
 {
@@ -61,14 +61,14 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     DataChunk authKey;          // Unlocks the server
     DataChunk passwordKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
-    std::string LP = lobby->username() + szPassword;
+    std::string LP = lobby.username() + szPassword;
 
     // Get the CarePackage:
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(*lobby, carePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(lobby, carePackage, pError));
 
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP), pError);
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(*lobby,
+    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(lobby,
         toU08Buf(authKey), U08Buf(), loginPackage, pError));
 
     // Decrypt MK:
@@ -80,8 +80,8 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(login->init(loginPackage), pError);
 
     // Set up the on-disk login:
-    ABC_CHECK_NEW(carePackage.save(lobby->carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.save(lobby->loginPackageName()), pError);
+    ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.save(lobby.loginPackageName()), pError);
 
     // Assign the result:
     result.reset(login.release());
@@ -96,7 +96,7 @@ exit:
  * @param szPassword    The password for the account.
  */
 tABC_CC ABC_LoginPassword(std::shared_ptr<Login> &result,
-                          std::shared_ptr<Lobby> lobby,
+                          Lobby &lobby,
                           const char *szPassword,
                           tABC_Error *pError)
 {

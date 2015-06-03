@@ -11,8 +11,8 @@
 #include "../crypto/OtpKey.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
+#include <memory>
 #include <mutex>
-#include <string>
 
 namespace abcd {
 
@@ -22,15 +22,12 @@ class OtpKey;
  * The lobby object contains the account data that is knowable from just
  * the username, without logging in.
  */
-class Lobby
+class Lobby:
+    public std::enable_shared_from_this<Lobby>
 {
 public:
-    /**
-     * Prepares the Lobby object for use.
-     * This call must succeed before object is usable.
-     */
-    Status
-    init(const std::string &username);
+    static Status
+    create(std::shared_ptr<Lobby> &result, const std::string &username);
 
     /**
      * Obtains the normalized username for this account.
@@ -94,6 +91,11 @@ private:
 
     bool otpKeyOk_ = false;
     OtpKey otpKey_;
+
+    Lobby() {};
+
+    Status
+    init(const std::string &username);
 
     /**
      * Writes the OTP key to disk, assuming the account has a directory.

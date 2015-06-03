@@ -21,9 +21,9 @@ namespace abcd {
 
 #define ACCOUNT_MK_LENGTH 32
 
-Login::Login(std::shared_ptr<Lobby> parent, DataSlice dataKey):
-    lobby(*parent),
-    parent_(std::move(parent)),
+Login::Login(Lobby &lobby, DataSlice dataKey):
+    lobby(lobby),
+    parent_(lobby.shared_from_this()),
     dataKey_(dataKey.begin(), dataKey.end())
 {}
 
@@ -47,7 +47,7 @@ Login::init(const LoginPackage &loginPackage)
  * @param ppSelf        The returned login object.
  */
 tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
-                        std::shared_ptr<Lobby> lobby,
+                        Lobby &lobby,
                         const char *szPassword,
                         tABC_Error *pError)
 {
@@ -75,7 +75,7 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
 
     if (szPassword)
     {
-        std::string LP = lobby->username() + szPassword;
+        std::string LP = lobby.username() + szPassword;
 
         // Generate authKey:
         ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP), pError);
@@ -100,7 +100,7 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(loginPackage.syncKeyBoxSet(box), pError);
 
     // Create the account and repo on server:
-    ABC_CHECK_RET(ABC_LoginServerCreate(*lobby, toU08Buf(authKey),
+    ABC_CHECK_RET(ABC_LoginServerCreate(lobby, toU08Buf(authKey),
         carePackage, loginPackage, base16Encode(syncKey).c_str(), pError));
 
     // Create the Login object:
@@ -108,11 +108,11 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(login->init(loginPackage), pError);
 
     // Latch the account:
-    ABC_CHECK_RET(ABC_LoginServerActivate(*lobby, toU08Buf(authKey), pError));
+    ABC_CHECK_RET(ABC_LoginServerActivate(lobby, toU08Buf(authKey), pError));
 
     // Set up the on-disk login:
-    ABC_CHECK_NEW(carePackage.save(lobby->carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.save(lobby->loginPackageName()), pError);
+    ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.save(lobby.loginPackageName()), pError);
 
     // Assign the result:
     result.reset(login.release());
