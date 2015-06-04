@@ -544,7 +544,7 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_WalletCreate(account, szWalletName, currencyNum, pszUuid, pError));
+        ABC_CHECK_RET(ABC_WalletCreate(*account, szWalletName, currencyNum, pszUuid, pError));
     }
 
 exit:

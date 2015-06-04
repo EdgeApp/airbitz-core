@@ -13,6 +13,26 @@
 
 namespace abcd {
 
+Status
+Account::create(std::shared_ptr<Account> &result, Login &login)
+{
+    std::shared_ptr<Account> out(new Account(login));
+    ABC_CHECK(out->load());
+
+    result = std::move(out);
+    return Status();
+}
+
+Status
+Account::sync(bool &dirty)
+{
+    ABC_CHECK_OLD(ABC_SyncRepo(dir().c_str(), login.syncKey().c_str(), dirty, &error));
+    if (dirty)
+        ABC_CHECK(load());
+
+    return Status();
+}
+
 Account::Account(Login &login):
     login(login),
     parent_(login.shared_from_this()),
@@ -21,7 +41,7 @@ Account::Account(Login &login):
 {}
 
 Status
-Account::init()
+Account::load()
 {
     // Locate the sync dir:
     bool exists = false;
@@ -42,18 +62,6 @@ Account::init()
     }
 
     ABC_CHECK(wallets.load());
-    return Status();
-}
-
-Status
-Account::sync(bool &dirty)
-{
-    ABC_CHECK_OLD(ABC_SyncRepo(dir().c_str(), login.syncKey().c_str(), dirty, &error));
-    if (dirty)
-    {
-        ABC_CHECK(wallets.load());
-    }
-
     return Status();
 }
 

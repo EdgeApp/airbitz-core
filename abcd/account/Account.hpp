@@ -18,19 +18,16 @@ class Login;
 /**
  * Manages the account sync directory.
  */
-class Account
+class Account:
+    public std::enable_shared_from_this<Account>
 {
 public:
-    Account(Login &login);
     Login &login;
 
-    const std::string &dir() const { return dir_; }
+    static Status
+    create(std::shared_ptr<Account> &result, Login &login);
 
-    /**
-     * Loads the object.
-     * This should be in the constructor, but those can't return errors.
-     */
-    Status init();
+    const std::string &dir() const { return dir_; }
 
     /**
      * Syncs the account with the file server.
@@ -42,6 +39,11 @@ public:
 private:
     const std::shared_ptr<Login> parent_;
     const std::string dir_;
+
+    Account(Login &login);
+
+    Status
+    load();
 
 public:
     WalletList wallets;
