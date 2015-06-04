@@ -21,7 +21,7 @@ class Login;
 class Account
 {
 public:
-    Account(std::shared_ptr<Login> parent);
+    Account(Login &login);
     Login &login;
 
     const std::string &dir() const { return dir_; }

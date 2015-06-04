@@ -171,7 +171,7 @@ cacheAccount(std::shared_ptr<Account> &result, const char *szUserName)
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gAccountCache)
     {
-        std::unique_ptr<Account> account(new Account(login));
+        std::unique_ptr<Account> account(new Account(*login));
         ABC_CHECK(account->init());
         gAccountCache.reset(account.release());
     }

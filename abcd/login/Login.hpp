@@ -20,17 +20,15 @@ struct LoginPackage;
 /**
  * Holds the keys for a logged-in account.
  */
-class Login
+class Login:
+    public std::enable_shared_from_this<Login>
 {
 public:
-    Login(Lobby &lobby, DataSlice dataKey);
     Lobby &lobby;
 
-    /**
-     * Prepares the Login object for use.
-     */
-    Status
-    init(const LoginPackage &loginPackage);
+    static Status
+    create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
+        const LoginPackage &loginPackage);
 
     /**
      * Obtains the master key for the account.
@@ -50,7 +48,9 @@ private:
     // changing passwords if we ever want to to protect those one day.
     const std::shared_ptr<Lobby> parent_;
     const DataChunk dataKey_;
-    std::string syncKey_;
+    const std::string syncKey_;
+
+    Login(Lobby &lobby, DataSlice dataKey, std::string syncKey);
 };
 
 // Constructors:

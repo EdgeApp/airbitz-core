@@ -23,7 +23,7 @@ tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::unique_ptr<Login> login;
+    std::shared_ptr<Login> out;
     CarePackage carePackage;
     LoginPackage loginPackage;
     DataChunk passwordKey;      // Unlocks dataKey
@@ -39,9 +39,8 @@ tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(loginPackage.passwordBox().decrypt(dataKey, passwordKey), pError);
 
     // Decrypt SyncKey:
-    login.reset(new Login(lobby, dataKey));
-    ABC_CHECK_NEW(login->init(loginPackage), pError);
-    result.reset(login.release());
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage), pError);
+    result = std::move(out);
 
 exit:
     return cc;
@@ -55,7 +54,7 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::unique_ptr<Login> login;
+    std::shared_ptr<Login> out;
     CarePackage carePackage;
     LoginPackage loginPackage;
     DataChunk authKey;          // Unlocks the server
@@ -76,15 +75,14 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(loginPackage.passwordBox().decrypt(dataKey, passwordKey), pError);
 
     // Decrypt SyncKey:
-    login.reset(new Login(lobby, dataKey));
-    ABC_CHECK_NEW(login->init(loginPackage), pError);
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage), pError);
 
     // Set up the on-disk login:
     ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()), pError);
     ABC_CHECK_NEW(loginPackage.save(lobby.loginPackageName()), pError);
 
     // Assign the result:
-    result.reset(login.release());
+    result = std::move(out);
 
 exit:
     return cc;

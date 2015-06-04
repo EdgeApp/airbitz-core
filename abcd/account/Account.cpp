@@ -13,9 +13,9 @@
 
 namespace abcd {
 
-Account::Account(std::shared_ptr<Login> parent):
-    login(*parent),
-    parent_(std::move(parent)),
+Account::Account(Login &login):
+    login(login),
+    parent_(login.shared_from_this()),
     dir_(login.lobby.dir() + "sync/"),
     wallets(*this)
 {}

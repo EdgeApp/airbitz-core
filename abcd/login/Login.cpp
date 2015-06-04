@@ -21,23 +21,24 @@ namespace abcd {
 
 #define ACCOUNT_MK_LENGTH 32
 
-Login::Login(Lobby &lobby, DataSlice dataKey):
-    lobby(lobby),
-    parent_(lobby.shared_from_this()),
-    dataKey_(dataKey.begin(), dataKey.end())
-{}
-
 Status
-Login::init(const LoginPackage &loginPackage)
+Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
+    const LoginPackage &loginPackage)
 {
     DataChunk syncKey;
-    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey, dataKey_));
-    syncKey_ = base16Encode(syncKey);
-
-    // Ensure that the directory is in place:
+    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey, dataKey));
     ABC_CHECK(lobby.dirCreate());
+
+    result.reset(new Login(lobby, dataKey, base16Encode(syncKey)));
     return Status();
 }
+
+Login::Login(Lobby &lobby, DataSlice dataKey, std::string syncKey):
+    lobby(lobby),
+    parent_(lobby.shared_from_this()),
+    dataKey_(dataKey.begin(), dataKey.end()),
+    syncKey_(syncKey)
+{}
 
 /**
  * Creates a new login account, both on-disk and on the server.
@@ -53,7 +54,7 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::unique_ptr<Login> login;
+    std::shared_ptr<Login> out;
     CarePackage carePackage;
     LoginPackage loginPackage;
     DataChunk authKey;          // Unlocks the server
@@ -104,8 +105,7 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
         carePackage, loginPackage, base16Encode(syncKey).c_str(), pError));
 
     // Create the Login object:
-    login.reset(new Login(lobby, dataKey));
-    ABC_CHECK_NEW(login->init(loginPackage), pError);
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage), pError);
 
     // Latch the account:
     ABC_CHECK_RET(ABC_LoginServerActivate(lobby, toU08Buf(authKey), pError));
@@ -115,7 +115,7 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(loginPackage.save(lobby.loginPackageName()), pError);
 
     // Assign the result:
-    result.reset(login.release());
+    result = std::move(out);
 
 exit:
     return cc;

@@ -94,7 +94,7 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::unique_ptr<Login> login;
+    std::shared_ptr<Login> out;
     CarePackage carePackage;
     LoginPackage loginPackage;
     PinLocal local;
@@ -125,9 +125,8 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(local.pinBox().decrypt(dataKey, pinKey), pError);
 
     // Create the Login object:
-    login.reset(new Login(lobby, dataKey));
-    ABC_CHECK_NEW(login->init(loginPackage), pError);
-    result.reset(login.release());
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage), pError);
+    result = std::move(out);
 
 exit:
     ABC_FREE_STR(szEPINK);
