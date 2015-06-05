@@ -277,7 +277,7 @@ tABC_CC ABC_BridgeWatcherConnect(tABC_WalletID self, tABC_Error *pError)
     }
 
     // Connect:
-    ABC_DebugLog("Connecting to %s\n", szServer);
+    ABC_DebugLog("WalletID:%s Connecting to %s\n", self.szUUID, szServer);
     watcher->connect(szServer);
 
 exit:
