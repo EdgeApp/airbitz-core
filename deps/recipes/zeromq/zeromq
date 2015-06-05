@@ -1,0 +1,24 @@
+depends="libsodium"
+inherit lib
+
+version="4.0.5"
+source="https://github.com/zeromq/cppzmq.git#ac705f604701e2ca1643fa31bae240f9da8b9b9a
+        http://download.zeromq.org/zeromq-$version.tar.gz#a664ec63661a848ef46114029156a0a6006feecd"
+
+build() {
+    cd zeromq-$version
+
+    echo Patching...
+    patch -p1 < $recipe_dir/notest.patch
+
+    echo Building...
+    ./autogen.sh
+    ./configure --disable-eventfd \
+        --enable-static --disable-shared --host=$cross --prefix=$install_dir
+    make
+    make install
+    cp ../zmq.hpp $install_dir/include/zmq.hpp
+}
+
+include="include/zmq.h include/zmq_utils.h include/zmq.hpp"
+lib="lib/libzmq.a"

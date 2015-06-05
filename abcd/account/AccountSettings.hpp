@@ -12,13 +12,13 @@
 
 namespace abcd {
 
-class Login;
+class Account;
 
-tABC_CC ABC_AccountSettingsLoad(const Login &login,
+tABC_CC ABC_AccountSettingsLoad(const Account &account,
                                 tABC_AccountSettings **ppSettings,
                                 tABC_Error *pError);
 
-tABC_CC ABC_AccountSettingsSave(const Login &login,
+tABC_CC ABC_AccountSettingsSave(const Account &account,
                                 tABC_AccountSettings *pSettings,
                                 tABC_Error *pError);
 

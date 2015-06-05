@@ -23,6 +23,7 @@ namespace abcd {
 
 class Lobby;
 class Login;
+class Account;
 
 /**
  * Clears all cached login objects.
@@ -32,6 +33,7 @@ cacheLogout();
 
 /**
  * Loads the lobby for the given user into the cache.
+ * If the username is null, the function returns whatever is cached.
  */
 Status
 cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName);
@@ -70,10 +72,11 @@ cacheLoginPin(std::shared_ptr<Login> &result,
 Status
 cacheLogin(std::shared_ptr<Login> &result, const char *szUserName);
 
-tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
-                                   tABC_U08Buf *pL1,
-                                   tABC_U08Buf *pLP1,
-                                   tABC_Error *pError);
+/**
+ * Retrieves the cached account, assuming the username still matches.
+ */
+Status
+cacheAccount(std::shared_ptr<Account> &result, const char *szUserName);
 
 } // namespace abcd
 

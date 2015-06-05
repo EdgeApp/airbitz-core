@@ -8,6 +8,7 @@
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
 #include "LoginServer.hpp"
+#include "../crypto/Encoding.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/FileIO.hpp"
 
@@ -16,7 +17,7 @@ namespace abcd {
 struct OtpFile:
     public JsonObject
 {
-    ABC_JSON_STRING(Key, "TOTP", "!bad")
+    ABC_JSON_STRING(key, "TOTP", "!bad")
 };
 
 const char otpFilename[] = "OtpKey.json";
@@ -32,17 +33,14 @@ Lobby::init(const std::string &username)
 
     // Create authId:
     // TODO: Make this lazy!
-    AutoFree<tABC_CryptoSNRP, ABC_CryptoFreeSNRP> SNRP0;
-    ABC_CHECK_OLD(ABC_CryptoCreateSNRPForServer(&SNRP0.get(), &error));
-    AutoU08Buf L1;
-    ABC_CHECK_OLD(ABC_CryptoScryptSNRP(toU08Buf(username_), SNRP0, &L1, &error));
-    authId_ = DataChunk(L1.p, L1.end);
+    ABC_CHECK(usernameSnrp().hash(authId_, username_));
+    ABC_DebugLog("authId: %s", base16Encode(authId()).c_str());
 
     // Load the OTP key, if possible:
     OtpFile file;
     otpKeyOk_ = !dir_.empty() &&
         file.load(dir_ + otpFilename) &&
-        otpKey_.decodeBase32(file.getKey());
+        otpKey_.decodeBase32(file.key());
 
     return Status();
 }
@@ -85,14 +83,6 @@ Lobby::otpKeyRemove()
         ABC_CHECK_OLD(ABC_FileIODeleteFile(filename.c_str(), &error));
     }
     otpKeyOk_ = false;
-    return Status();
-}
-
-Status
-Lobby::available() const
-{
-    // No lock needed.
-    ABC_CHECK_OLD(ABC_LoginServerAvailable(toU08Buf(authId()), &error));
     return Status();
 }
 
@@ -143,7 +133,7 @@ Lobby::otpKeySave()
     if (!dir_.empty() && otpKeyOk_)
     {
         OtpFile file;
-        ABC_CHECK(file.setKey(otpKey_.encodeBase32().c_str()));
+        ABC_CHECK(file.keySet(otpKey_.encodeBase32().c_str()));
         ABC_CHECK(file.save(dir_ + otpFilename));
     }
     return Status();

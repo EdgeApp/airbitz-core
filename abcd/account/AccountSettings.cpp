@@ -6,8 +6,9 @@
  */
 
 #include "AccountSettings.hpp"
+#include "Account.hpp"
 #include "../crypto/Crypto.hpp"
-#include "../exchange/Exchange.hpp"
+#include "../exchange/ExchangeSource.hpp"
 #include "../login/Login.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Json.hpp"
@@ -28,7 +29,6 @@ namespace abcd {
 #define JSON_ACCT_RECOVERY_REMINDER_COUNT       "recoveryReminderCount"
 #define JSON_ACCT_LANGUAGE_FIELD                "language"
 #define JSON_ACCT_NUM_CURRENCY_FIELD            "numCurrency"
-#define JSON_ACCT_EX_RATE_SOURCES_FIELD         "exchangeRateSources"
 #define JSON_ACCT_EX_RATE_SOURCE_FIELD          "exchangeRateSource"
 #define JSON_ACCT_BITCOIN_DENOMINATION_FIELD    "bitcoinDenomination"
 #define JSON_ACCT_LABEL_FIELD                   "label"
@@ -59,8 +59,6 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     tABC_AccountSettings *pSettings = NULL;
-    tABC_ExchangeRateSource **aSources = NULL;
-    unsigned i = 0;
 
     ABC_CHECK_NULL(ppSettings);
 
@@ -79,23 +77,11 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     pSettings->bDisablePINLogin = false;
 
     ABC_STRDUP(pSettings->szLanguage, "en");
-    pSettings->currencyNum = CURRENCY_NUM_USD;
+    pSettings->currencyNum = static_cast<int>(Currency::USD);
+    ABC_STRDUP(pSettings->szExchangeRateSource, exchangeSources.front().c_str());
 
-    pSettings->exchangeRateSources.numSources = EXCHANGE_DEFAULTS_SIZE;
-    ABC_ARRAY_NEW(pSettings->exchangeRateSources.aSources,
-                    pSettings->exchangeRateSources.numSources, tABC_ExchangeRateSource*);
-
-    aSources = pSettings->exchangeRateSources.aSources;
-
-    for (i = 0; i < EXCHANGE_DEFAULTS_SIZE; ++i)
-    {
-        ABC_NEW(aSources[i], tABC_ExchangeRateSource);
-        aSources[i]->currencyNum = EXCHANGE_DEFAULTS[i].currencyNum;
-        ABC_STRDUP(aSources[i]->szSource, EXCHANGE_DEFAULTS[i].szDefaultExchange);
-    }
-
-    pSettings->bitcoinDenomination.denominationType = ABC_DENOMINATION_MBTC;
-    pSettings->bitcoinDenomination.satoshi = 100000;
+    pSettings->bitcoinDenomination.denominationType = ABC_DENOMINATION_UBTC;
+    pSettings->bitcoinDenomination.satoshi = 100;
 
     // assign final settings
     *ppSettings = pSettings;
@@ -111,11 +97,10 @@ exit:
  * Loads the settings for a specific account using the given key
  * If no settings file exists for the given user, defaults are created
  *
- * @param login         Access to the account sync dir
  * @param ppSettings    Location to store ptr to allocated settings (caller must free)
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_AccountSettingsLoad(const Login &login,
+tABC_CC ABC_AccountSettingsLoad(const Account &account,
                                 tABC_AccountSettings **ppSettings,
                                 tABC_Error *pError)
 {
@@ -126,7 +111,7 @@ tABC_CC ABC_AccountSettingsLoad(const Login &login,
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
     bool bExists = false;
-    auto filename = login.syncDir() + ACCOUNT_SETTINGS_FILENAME;
+    auto filename = account.dir() + ACCOUNT_SETTINGS_FILENAME;
 
     ABC_CHECK_NULL(ppSettings);
 
@@ -135,7 +120,7 @@ tABC_CC ABC_AccountSettingsLoad(const Login &login,
     {
         // load and decrypted the file into a json object
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
-            toU08Buf(login.dataKey()), &pJSON_Root, pError));
+            toU08Buf(account.login().dataKey()), &pJSON_Root, pError));
         //ABC_DebugLog("Loaded settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
 
         // allocate the new settings object
@@ -293,72 +278,15 @@ tABC_CC ABC_AccountSettingsLoad(const Login &login,
         ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
         pSettings->bitcoinDenomination.denominationType = json_integer_value(pJSON_Value);
 
-        // get the exchange rates array
-        json_t *pJSON_Sources = json_object_get(pJSON_Root, JSON_ACCT_EX_RATE_SOURCES_FIELD);
-        ABC_CHECK_ASSERT((pJSON_Sources && json_is_array(pJSON_Sources)), ABC_CC_JSONError, "Error parsing JSON array value");
-
-        // get the number of elements in the array
-        pSettings->exchangeRateSources.numSources = (int) json_array_size(pJSON_Sources);
-        if (pSettings->exchangeRateSources.numSources > 0)
+        // get exchange rate source
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_EX_RATE_SOURCE_FIELD);
+        if (pJSON_Value && json_is_string(pJSON_Value))
         {
-            ABC_ARRAY_NEW(pSettings->exchangeRateSources.aSources,
-                          pSettings->exchangeRateSources.numSources, tABC_ExchangeRateSource*);
+            ABC_STRDUP(pSettings->szExchangeRateSource, json_string_value(pJSON_Value));
         }
-
-        // run through all the sources
-        for (unsigned i = 0; i < pSettings->exchangeRateSources.numSources; i++)
+        else
         {
-            tABC_ExchangeRateSource *pSource = NULL;
-            ABC_NEW(pSource, tABC_ExchangeRateSource);
-
-            // get the source object
-            json_t *pJSON_Source = json_array_get(pJSON_Sources, i);
-            ABC_CHECK_ASSERT((pJSON_Source && json_is_object(pJSON_Source)), ABC_CC_JSONError, "Error parsing JSON array element object");
-
-            // get the currency num
-            pJSON_Value = json_object_get(pJSON_Source, JSON_ACCT_NUM_CURRENCY_FIELD);
-            ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON integer value");
-            pSource->currencyNum = (int) json_integer_value(pJSON_Value);
-
-            // get the exchange rate source
-            pJSON_Value = json_object_get(pJSON_Source, JSON_ACCT_EX_RATE_SOURCE_FIELD);
-            ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSource->szSource, json_string_value(pJSON_Value));
-
-            // assign this source to the array
-            pSettings->exchangeRateSources.aSources[i] = pSource;
-        }
-        // If the user doesn't have defaults for all the exchange rates
-        if (pSettings->exchangeRateSources.numSources != EXCHANGE_DEFAULTS_SIZE)
-        {
-            size_t curExchanges = pSettings->exchangeRateSources.numSources;
-            // resize exchange rate array
-            ABC_ARRAY_RESIZE(pSettings->exchangeRateSources.aSources,
-                             EXCHANGE_DEFAULTS_SIZE, tABC_ExchangeRateSource*);
-            for (unsigned i = 0; i < EXCHANGE_DEFAULTS_SIZE; ++i)
-            {
-                bool found = false;
-                for (unsigned j = 0; j < pSettings->exchangeRateSources.numSources; ++j)
-                {
-                    if (pSettings->exchangeRateSources.aSources[j]->currencyNum
-                            == EXCHANGE_DEFAULTS[i].currencyNum)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                {
-                    tABC_ExchangeRateSource *pSource = NULL;
-                    ABC_NEW(pSource, tABC_ExchangeRateSource);
-                    pSource->currencyNum = EXCHANGE_DEFAULTS[i].currencyNum;
-                    ABC_STRDUP(pSource->szSource, EXCHANGE_DEFAULTS[i].szDefaultExchange);
-
-                    pSettings->exchangeRateSources.aSources[curExchanges] = pSource;
-                    curExchanges++;
-                }
-            }
-            pSettings->exchangeRateSources.numSources = curExchanges;
+            ABC_STRDUP(pSettings->szExchangeRateSource, exchangeSources.front().c_str());
         }
 
         //
@@ -436,11 +364,10 @@ exit:
 /**
  * Saves the settings for a specific account using the given key
  *
- * @param login         Access to the account sync dir
  * @param pSettings     Pointer to settings
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_AccountSettingsSave(const Login &login,
+tABC_CC ABC_AccountSettingsSave(const Account &account,
                                 tABC_AccountSettings *pSettings,
                                 tABC_Error *pError)
 {
@@ -450,9 +377,8 @@ tABC_CC ABC_AccountSettingsSave(const Login &login,
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Denom = NULL;
     json_t *pJSON_SourcesArray = NULL;
-    json_t *pJSON_Source = NULL;
     int retVal = 0;
-    auto filename = login.syncDir() + ACCOUNT_SETTINGS_FILENAME;
+    auto filename = account.dir() + ACCOUNT_SETTINGS_FILENAME;
 
     ABC_CHECK_NULL(pSettings);
 
@@ -553,52 +479,25 @@ tABC_CC ABC_AccountSettingsSave(const Login &login,
     retVal = json_object_set(pJSON_Root, JSON_ACCT_BITCOIN_DENOMINATION_FIELD, pJSON_Denom);
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
-    // create the exchange sources array
+    // add the exchange source
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_EX_RATE_SOURCE_FIELD, json_string(pSettings->szExchangeRateSource));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    // support old exchange array so older cores don't crash but leave it empty
     pJSON_SourcesArray = json_array();
-    ABC_CHECK_ASSERT(pJSON_SourcesArray != NULL, ABC_CC_Error, "Could not create settings JSON object");
-
-    // add the exchange sources
-    for (unsigned i = 0; i < pSettings->exchangeRateSources.numSources; i++)
-    {
-        tABC_ExchangeRateSource *pSource = pSettings->exchangeRateSources.aSources[i];
-
-        // create the source object
-        pJSON_Source = json_object();
-        ABC_CHECK_ASSERT(pJSON_Source != NULL, ABC_CC_Error, "Could not create settings JSON object");
-
-        // set the currency num
-        retVal = json_object_set_new(pJSON_Source, JSON_ACCT_NUM_CURRENCY_FIELD, json_integer(pSource->currencyNum));
-        ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-        // set the exchange rate source
-        retVal = json_object_set_new(pJSON_Source, JSON_ACCT_EX_RATE_SOURCE_FIELD, json_string(pSource->szSource));
-        ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-        // append this object to our array
-        retVal = json_array_append(pJSON_SourcesArray, pJSON_Source);
-        ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-        // free the source object
-        if (pJSON_Source) json_decref(pJSON_Source);
-        pJSON_Source = NULL;
-    }
-
-    // add the exchange sources array object
-    retVal = json_object_set(pJSON_Root, JSON_ACCT_EX_RATE_SOURCES_FIELD, pJSON_SourcesArray);
+    retVal = json_object_set(pJSON_Root, "exchangeRateSources", pJSON_SourcesArray);
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // encrypt and save json
 //    ABC_DebugLog("Saving settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root,
-        toU08Buf(login.dataKey()), ABC_CryptoType_AES256,
+        toU08Buf(account.login().dataKey()), ABC_CryptoType_AES256,
         filename.c_str(), pError));
 
 
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
     if (pJSON_Denom) json_decref(pJSON_Denom);
-    if (pJSON_SourcesArray) json_decref(pJSON_SourcesArray);
-    if (pJSON_Source) json_decref(pJSON_Source);
 
     return cc;
 }
@@ -616,15 +515,7 @@ void ABC_AccountSettingsFree(tABC_AccountSettings *pSettings)
         ABC_FREE_STR(pSettings->szNickname);
         ABC_FREE_STR(pSettings->szLanguage);
         ABC_FREE_STR(pSettings->szPIN);
-        if (pSettings->exchangeRateSources.aSources)
-        {
-            for (unsigned i = 0; i < pSettings->exchangeRateSources.numSources; i++)
-            {
-                ABC_FREE_STR(pSettings->exchangeRateSources.aSources[i]->szSource);
-                ABC_CLEAR_FREE(pSettings->exchangeRateSources.aSources[i], sizeof(tABC_ExchangeRateSource));
-            }
-            ABC_CLEAR_FREE(pSettings->exchangeRateSources.aSources, sizeof(tABC_ExchangeRateSource *) * pSettings->exchangeRateSources.numSources);
-        }
+        ABC_FREE_STR(pSettings->szExchangeRateSource);
 
         ABC_CLEAR_FREE(pSettings, sizeof(tABC_AccountSettings));
     }

@@ -45,6 +45,9 @@ public:
     const std::string &
     dir() const;
 
+    std::string carePackageName() { return dir() + "CarePackage.json"; }
+    std::string loginPackageName() { return dir() + "LoginPackage.json"; }
+
     /**
      * Creates a directory for the account if one does not already exist.
      */
@@ -75,12 +78,6 @@ public:
      */
     Status
     otpKeyRemove();
-
-    /**
-     * Queries the server to determine if this username is available.
-     */
-    Status
-    available() const;
 
     /**
      * Re-formats a username to all-lowercase,

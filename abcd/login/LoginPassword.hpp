@@ -12,7 +12,7 @@
 #ifndef ABCD_LOGIN_LOGIN_PASSWORD_HPP
 #define ABCD_LOGIN_LOGIN_PASSWORD_HPP
 
-#include "../../src/ABC.h"
+#include "../util/Status.hpp"
 #include <memory>
 
 namespace abcd {
@@ -33,6 +33,12 @@ tABC_CC ABC_LoginPasswordOk(Login &login,
                             const char *szPassword,
                             bool *pOk,
                             tABC_Error *pError);
+
+/**
+ * Returns true if the logged-in account has a password.
+ */
+Status
+passwordExists(bool &result, Login &login);
 
 } // namespace abcd
 

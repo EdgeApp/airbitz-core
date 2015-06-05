@@ -36,43 +36,22 @@
 #ifndef ABCD_EXCHANGE_EXCHANGE_H
 #define ABCD_EXCHANGE_EXCHANGE_H
 
-#include "../util/Status.hpp"
-#include "../../src/ABC.h"
-#include <stddef.h>
+#include "Currency.hpp"
+#include "ExchangeSource.hpp"
 
 namespace abcd {
 
-#define CURRENCY_NUM_AUD                 36
-#define CURRENCY_NUM_CAD                124
-#define CURRENCY_NUM_CNY                156
-#define CURRENCY_NUM_CUP                192
-#define CURRENCY_NUM_HKD                344
-#define CURRENCY_NUM_MXN                484
-#define CURRENCY_NUM_NZD                554
-#define CURRENCY_NUM_PHP                608
-#define CURRENCY_NUM_GBP                826
-#define CURRENCY_NUM_USD                840
-#define CURRENCY_NUM_EUR                978
-
 /**
- * AirBitz default exchange info
+ * Updates the exchange rates, trying the sources in the given order.
  */
-typedef struct sABC_ExchangeDefaults {
-    int currencyNum;
-    const char *szDefaultExchange;
-} tABC_ExchangeDefaults;
-
-// Default Exchange array
-extern const tABC_ExchangeDefaults EXCHANGE_DEFAULTS[];
-extern const size_t EXCHANGE_DEFAULTS_SIZE;
-
-tABC_CC ABC_ExchangeUpdate(tABC_ExchangeRateSources &sources, int currencyNum, tABC_Error *pError);
+Status
+exchangeUpdate(Currencies currencies, const ExchangeSources &sources);
 
 Status
-exchangeSatoshiToCurrency(int64_t satoshi, double &currency, int currencyNum);
+exchangeSatoshiToCurrency(double &result, int64_t in, Currency currency);
 
 Status
-exchangeCurrencyToSatoshi(double currency, int64_t &satoshi, int currencyNum);
+exchangeCurrencyToSatoshi(int64_t &result, double in, Currency currency);
 
 } // namespace abcd
 

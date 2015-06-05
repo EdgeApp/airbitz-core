@@ -292,6 +292,7 @@ char *ABC_UtilStringFromJSONObject(const json_t *pJSON_Data, size_t flags)
     char *strJanssonJSON = NULL;
     char *strJSON = NULL;
 
+    ABC_CHECK_NULL(pJSON_Data);
     strJanssonJSON = json_dumps(pJSON_Data, flags);
 
     if (strJanssonJSON != NULL)

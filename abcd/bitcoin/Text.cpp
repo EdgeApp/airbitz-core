@@ -124,7 +124,7 @@ tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
     ABC_STRDUP(szAddress, address.encoded().c_str());
 
     // Write out:
-    ABC_BUF_DUP_PTR(*pOut, secret.data(), secret.size());
+    ABC_BUF_DUP(*pOut, U08Buf(secret.data(), secret.size()));
     *pbCompressed = bCompressed;
     *pszAddress = szAddress;
     szAddress = NULL;
@@ -135,88 +135,100 @@ exit:
     return cc;
 }
 
+struct CustomResult:
+    public libwallet::uri_parse_result
+{
+    optional_string category;
+    optional_string ret;
+
+protected:
+    virtual bool got_param(std::string& key, std::string& value)
+    {
+        if ("category" == key)
+            category.reset(value);
+        if ("ret" == key)
+            ret.reset(value);
+        return uri_parse_result::got_param(key, value);
+    }
+};
+
 /**
  * Parses a Bitcoin URI and creates an info struct with the data found in the URI.
  *
- * @param szURI     URI to parse
  * @param ppInfo    Pointer to location to store allocated info struct.
  *                  If a member is not present in the URI, the corresponding
  *                  string poiner in the struct will be NULL.
- * @param pError    A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_BridgeParseBitcoinURI(const char *szURI,
-                            tABC_BitcoinURIInfo **ppInfo,
-                            tABC_Error *pError)
+tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
+                                  tABC_BitcoinURIInfo **ppInfo,
+                                  tABC_Error *pError)
 {
-    libwallet::uri_parse_result result;
-    bc::payment_address address;
-    char *uriString = NULL;
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     tABC_BitcoinURIInfo *pInfo = NULL;
-    std::string tempStr = szURI;
+    CustomResult result;
 
-    ABC_CHECK_NULL(szURI);
-    ABC_CHECK_ASSERT(strlen(szURI) > 0, ABC_CC_Error, "No URI provided");
-    ABC_CHECK_NULL(ppInfo);
-    *ppInfo = NULL;
+    // Allow a double-slash in the "bitcoin:" URI schema
+    // to work around limitations in email and SMS programs:
+    if (0 == uri.find("bitcoin://", 0))
+        uri.replace(0, 10, "bitcoin:");
 
-    // allocate initial struct
-    ABC_NEW(pInfo, tABC_BitcoinURIInfo);
-
-    // XX semi-hack warning. Might not be BIP friendly. Convert "bitcoin://1zf7ef..." URIs to
-    // "bitcoin:1zf7ef..." so that libwallet parser doesn't choke. "bitcoin://" URLs are the
-    // only style that are understood by email and SMS readers and will get forwarded
-    // to bitcoin wallets. Airbitz wallet creates "bitcoin://" URIs when requesting funds via
-    // email/SMS so it should be able to parse them as well. -paulvp
-
-    ABC_STRDUP(uriString, szURI);
-
-    if (0 == tempStr.find("bitcoin://", 0))
-    {
-        tempStr.replace(0, 10, "bitcoin:");
-        std::size_t length = tempStr.copy(uriString,0xFFFFFFFF);
-        uriString[length] = '\0';
-    }
+    // Handle our own URI schema to allow apps to target us specifically:
+    if (0 == uri.find("airbitz://bitcoin/", 0))
+        uri.replace(0, 18, "bitcoin:");
 
     // Try to parse as a URI:
-    if (!libwallet::uri_parse(uriString, result))
+    if (!libwallet::uri_parse(uri, result))
     {
         // Try to parse as a raw address:
-        if (!address.set_encoded(uriString))
+        bc::payment_address address;
+        if (!address.set_encoded(uri))
         {
             // Try to parse as a private key:
-            if (!wifToAddress(address, uriString))
+            if (!wifToAddress(address, uri))
             {
                 ABC_RET_ERROR(ABC_CC_ParseError, "Malformed bitcoin URI");
             }
         }
         result.address = address;
     }
+
+    // Copy into the output struct:
+    ABC_NEW(pInfo, tABC_BitcoinURIInfo);
     if (result.address)
-        ABC_STRDUP(pInfo->szAddress, result.address.get().encoded().c_str());
+    {
+        auto address = result.address.get();
+        if (address.version() == pubkeyVersion() ||
+            address.version() == scriptVersion())
+            ABC_STRDUP(pInfo->szAddress, address.encoded().c_str());
+    }
     if (result.amount)
         pInfo->amountSatoshi = result.amount.get();
     if (result.label)
         ABC_STRDUP(pInfo->szLabel, result.label.get().c_str());
     if (result.message)
         ABC_STRDUP(pInfo->szMessage, result.message.get().c_str());
-
-    // Reject altcoin addresses:
-    if (result.address.get().version() != pubkeyVersion() &&
-        result.address.get().version() != scriptVersion())
+    if (result.category)
     {
-        ABC_RET_ERROR(ABC_CC_ParseError, "Wrong network URI");
+        auto category = result.category.get();
+        if (0 == category.find("Expense:") ||
+            0 == category.find("Income:") ||
+            0 == category.find("Transfer:") ||
+            0 == category.find("Exchange:"))
+            ABC_STRDUP(pInfo->szCategory, category.c_str());
     }
+    if (result.r)
+        ABC_STRDUP(pInfo->szR, result.r.get().c_str());
+    if (result.ret)
+        ABC_STRDUP(pInfo->szRet, result.ret.get().c_str());
 
     // assign created info struct
     *ppInfo = pInfo;
-    pInfo = NULL; // do this so we don't free below what we just gave the caller
+    pInfo = nullptr;
 
 exit:
     ABC_BridgeFreeURIInfo(pInfo);
-    ABC_FREE(uriString);
 
     return cc;
 }
@@ -231,11 +243,11 @@ void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo)
     if (pInfo != NULL)
     {
         ABC_FREE_STR(pInfo->szLabel);
-
         ABC_FREE_STR(pInfo->szAddress);
-
         ABC_FREE_STR(pInfo->szMessage);
-
+        ABC_FREE_STR(pInfo->szR);
+        ABC_FREE_STR(pInfo->szCategory);
+        ABC_FREE_STR(pInfo->szRet);
         ABC_CLEAR_FREE(pInfo, sizeof(tABC_BitcoinURIInfo));
     }
 }

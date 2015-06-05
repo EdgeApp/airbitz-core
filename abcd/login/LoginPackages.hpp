@@ -13,47 +13,35 @@
 #define ABCD_LOGIN_LOGIN_PACKAGES_HPP
 
 #include "../crypto/Scrypt.hpp"
-#include "../../src/ABC.h"
-#include <jansson.h>
+#include "../json/JsonBox.hpp"
 
 namespace abcd {
 
 /**
  * A round-trippable representation of the AirBitz CarePackage file.
  */
-typedef struct sABC_CarePackage
+struct CarePackage:
+    public JsonObject
 {
-    tABC_CryptoSNRP *pSNRP1;
-    tABC_CryptoSNRP *pSNRP2;
-    tABC_CryptoSNRP *pSNRP3;
-    tABC_CryptoSNRP *pSNRP4;
-    json_t          *ERQ;       // Optional
-} tABC_CarePackage;
-
-void ABC_CarePackageFree(tABC_CarePackage *pSelf);
-
-tABC_CC ABC_CarePackageNew(tABC_CarePackage **ppSelf,
-                           tABC_Error *pError);
-
-tABC_CC ABC_CarePackageDecode(tABC_CarePackage **ppSelf,
-                              char *szCarePackage,
-                              tABC_Error *pError);
-
-tABC_CC ABC_CarePackageEncode(tABC_CarePackage *pSelf,
-                              char **pszCarePackage,
-                              tABC_Error *pError);
+    ABC_JSON_VALUE(snrp2,       "SNRP2",    JsonSnrp)
+    ABC_JSON_VALUE(snrp3,       "SNRP3",    JsonSnrp)
+    ABC_JSON_VALUE(snrp4,       "SNRP4",    JsonSnrp)
+    ABC_JSON_VALUE(questionBox, "ERQ",      JsonBox) // Optional
+};
 
 /**
  * A round-trippable representation of the AirBitz LoginPackage file.
  */
-typedef struct sABC_LoginPackage
+struct LoginPackage:
+    public JsonObject
 {
-    json_t          *EMK_LP2;
-    json_t          *EMK_LRA3;  // Optional
+    ABC_JSON_VALUE(passwordBox, "EMK_LP2",  JsonBox)
+    ABC_JSON_VALUE(recoveryBox, "EMK_LRA3", JsonBox) // Optional
+
     // These are all encrypted with MK:
-    json_t          *ESyncKey;
-    json_t          *ELP1;
-    json_t          *ELRA1;     // Optional
+    ABC_JSON_VALUE(syncKeyBox,  "ESyncKey", JsonBox)
+    ABC_JSON_VALUE(authKeyBox,  "ELP1",     JsonBox)
+    ABC_JSON_VALUE(ELRA1,       "ELRA1",    JsonBox) // Optional
     /* There was a time when the login and password were not orthogonal.
      * Therefore, any updates to one needed to include the other for
      * atomic consistency. The login refactor solved this problem, but
@@ -70,22 +58,7 @@ typedef struct sABC_LoginPackage
      * recovery answers. The client-side routines no longer take an
      * oldLRA1 parameter, but the server API still does.
      */
-} tABC_LoginPackage;
-
-void ABC_LoginPackageFree(tABC_LoginPackage *pSelf);
-
-tABC_CC ABC_LoginPackageDecode(tABC_LoginPackage **ppSelf,
-                               char *szLoginPackage,
-                               tABC_Error *pError);
-
-tABC_CC ABC_LoginPackageEncode(tABC_LoginPackage *pSelf,
-                               char **pszLoginPackage,
-                               tABC_Error *pError);
-
-tABC_CC ABC_LoginPackageGetSyncKey(tABC_LoginPackage *pSelf,
-                                   const tABC_U08Buf MK,
-                                   char **pszSyncKey,
-                                   tABC_Error *pError);
+};
 
 } // namespace abcd
 

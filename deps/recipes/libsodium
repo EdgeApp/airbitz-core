@@ -1,7 +1,7 @@
 inherit lib
 
-version="0.5.0"
-source="http://download.dnscrypt.org/libsodium/releases/libsodium-$version.tar.gz#a1490d47d5fb776c47e03f888e8f2f3e93a3dea0"
+version="1.0.3"
+source="https://github.com/jedisct1/libsodium/releases/download/$version/libsodium-$version.tar.gz#e44ed485842966d4e2d8f58e74a5fd78fbfbe4b0"
 
 build() {
     cd libsodium-$version

@@ -15,10 +15,10 @@ TEST_CASE("Scrypt RFC test vectors", "[crypto][scrypt]")
     {
         std::string password;
         std::string salt;
-        unsigned long N;
-        unsigned long r;
-        unsigned long p;
-        unsigned long dklen;
+        uint64_t N;
+        uint32_t r;
+        uint32_t p;
+        size_t dklen;
         const char *result;
     };
     TestCase cases[] =
@@ -65,13 +65,13 @@ TEST_CASE("Scrypt RFC test vectors", "[crypto][scrypt]")
 
     for (auto &test: cases)
     {
-        abcd::AutoU08Buf out;
-        tABC_Error error;
-
-        CHECK(ABC_CC_Ok == abcd::ABC_CryptoScrypt(
-            abcd::toU08Buf(test.password), abcd::toU08Buf(test.salt),
-            test.N, test.r, test.p, test.dklen, &out, &error));
-
-        CHECK(abcd::base16Encode(abcd::U08Buf(out)) == test.result);
+        abcd::ScryptSnrp snrp =
+        {
+            abcd::DataChunk(test.salt.begin(), test.salt.end()),
+            test.N, test.r, test.p
+        };
+        abcd::DataChunk out;
+        CHECK(snrp.hash(out, test.password, test.dklen));
+        CHECK(abcd::base16Encode(out) == test.result);
     }
 }

@@ -15,7 +15,7 @@
 namespace abcd {
 
 class Lobby;
-typedef struct sABC_LoginPackage tABC_LoginPackage;
+struct LoginPackage;
 
 /**
  * Holds the keys for a logged-in account.
@@ -29,7 +29,7 @@ public:
      * Prepares the Login object for use.
      */
     Status
-    init(tABC_LoginPackage *package);
+    init(const LoginPackage &loginPackage);
 
     /**
      * Obtains a reference to the lobby object associated with this account.
@@ -49,24 +49,12 @@ public:
     const std::string &
     syncKey() const { return syncKey_; }
 
-    /**
-     * Returns the account's sync directory name.
-     */
-    std::string
-    syncDir() const;
-
-    /**
-     * If the sync dir doesn't exist, create and sync it.
-     */
-    Status
-    syncDirCreate() const;
-
 private:
     // No mutex, since all members are immutable after init.
-    // The lobby mutext can cover disk-based things like logging in and
+    // The lobby mutex can cover disk-based things like logging in and
     // changing passwords if we ever want to to protect those one day.
-    std::shared_ptr<Lobby> lobby_;
-    DataChunk dataKey_;
+    const std::shared_ptr<Lobby> lobby_;
+    const DataChunk dataKey_;
     std::string syncKey_;
 };
 
@@ -77,8 +65,7 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
                         tABC_Error *pError);
 
 // Read accessors:
-tABC_CC ABC_LoginGetServerKeys(Login &login,
-                               tABC_U08Buf *pL1,
+tABC_CC ABC_LoginGetServerKey(const Login &login,
                                tABC_U08Buf *pLP1,
                                tABC_Error *pError);
 

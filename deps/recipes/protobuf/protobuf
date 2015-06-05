@@ -1,0 +1,15 @@
+inherit lib
+
+version="2.6.1"
+source="https://github.com/google/protobuf/releases/download/v$version/protobuf-$version.tar.gz#375765455ad49e45e4e10364f91aaf2831d3e905"
+
+build() {
+    cd protobuf-$version
+    ./configure --enable-static --disable-shared \
+        --host=$cross --prefix=$install_dir --with-protoc=protoc
+    make
+    make install
+}
+
+include="include/google/protobuf/*"
+lib="lib/libprotobuf-lite.a"

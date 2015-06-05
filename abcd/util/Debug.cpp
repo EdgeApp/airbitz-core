@@ -30,47 +30,40 @@
  */
 
 #include "Debug.hpp"
-#include "Util.hpp"
+#include "FileIO.hpp"
 #include <stdarg.h>
 #include <stdio.h>
-#include <string.h>
 #include <time.h>
 #ifdef ANDROID
 #include <android/log.h>
 #endif
+#include <iomanip>
 #include <mutex>
+#include <sstream>
 
 namespace abcd {
 
 #ifdef DEBUG
 
-#define BUF_SIZE 16384
-#define MAX_LOG_SIZE 102400 // Max size 100 KB
-
+#define MAX_LOG_SIZE 102400 // Max size 100 KiB
 #define ABC_LOG_FILE "abc.log"
 
-static FILE             *gfLog = NULL;
-static bool             gbInitialized = false;
-std::recursive_mutex gDebugMutex;
-char gszLogFile[ABC_MAX_STRING_LENGTH + 1];
+static std::recursive_mutex gDebugMutex;
+static std::string gLogFilename;
+static FILE *gLogFile = nullptr;
 
 static void ABC_DebugAppendToLog(const char *szOut);
 
-tABC_CC ABC_DebugInitialize(const char *szRootDir, tABC_Error *pError)
+tABC_CC ABC_DebugInitialize(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    ABC_CHECK_NULL(szRootDir);
+    gLogFilename = getRootDir() + ABC_LOG_FILE;
 
-    snprintf(gszLogFile, ABC_MAX_STRING_LENGTH, "%s/%s", szRootDir, ABC_LOG_FILE);
-    gszLogFile[ABC_MAX_STRING_LENGTH] = '\0';
-
-    gfLog = fopen(gszLogFile, "a");
-    ABC_CHECK_SYS(gfLog, "fopen(log file)");
-    fseek(gfLog, 0L, SEEK_END);
-
-    gbInitialized = true;
+    gLogFile = fopen(gLogFilename.c_str(), "a");
+    ABC_CHECK_SYS(gLogFile, "fopen(log file)");
+    fseek(gLogFile, 0L, SEEK_END);
 
 exit:
     return cc;
@@ -78,78 +71,77 @@ exit:
 
 void ABC_DebugTerminate()
 {
-    if (gbInitialized == true)
-    {
-        if (gfLog)
-        {
-            fclose(gfLog);
-        }
-        gbInitialized = false;
-    }
+    if (gLogFile)
+        fclose(gLogFile);
 }
 
 tABC_CC ABC_DebugLogFilename(char **szFilename, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-	ABC_CHECK_NULL(szFilename);
-	ABC_STRDUP(*szFilename, gszLogFile);
+    ABC_STRDUP(*szFilename, gLogFilename.c_str());
 
 exit:
     return cc;
 }
 
-void ABC_DebugLog(const char * format, ...)
+void ABC_DebugLog(const char *format, ...)
 {
-    static char szOut[BUF_SIZE];
-    struct tm *	newtime;
-    time_t		t;
+    time_t t = time(nullptr);
+    struct tm *utc = gmtime(&t);
 
-    time(&t);                /* Get time as long integer. */
-    newtime = localtime(&t); /* Convert to local time. */
+    std::stringstream date;
+    date << std::setfill('0');
+    date << std::setw(4) << utc->tm_year + 1900 << '-';
+    date << std::setw(2) << utc->tm_mon + 1 << '-';
+    date << std::setw(2) << utc->tm_mday << ' ';
+    date << std::setw(2) << utc->tm_hour << ':';
+    date << std::setw(2) << utc->tm_min << ':';
+    date << std::setw(2) << utc->tm_sec << " ABC_Log: ";
 
-    snprintf(szOut, BUF_SIZE, "%d-%02d-%02d %.2d:%.2d:%.2d ABC_Log: ",
-            newtime->tm_year + 1900,
-            newtime->tm_mon + 1,
-            newtime->tm_mday,
-            newtime->tm_hour, newtime->tm_min, newtime->tm_sec);
-
-    va_list	args;
+    // Get the message length:
+    va_list args;
     va_start(args, format);
-    vsnprintf(&(szOut[strlen(szOut)]), BUF_SIZE, format, args);
-    // if it doesn't end in an newline, add it
-    if (szOut[strlen(szOut) - 1] != '\n')
-    {
-        szOut[strlen(szOut) + 1] = '\0';
-        szOut[strlen(szOut)] = '\n';
-    }
-#ifdef ANDROID
-    __android_log_print(ANDROID_LOG_DEBUG, "ABC", "%s", szOut);
-#else
-    printf("%s", szOut);
-#endif
+    char temp[1];
+    int size = vsnprintf(temp, sizeof(temp), format, args);
     va_end(args);
-    ABC_DebugAppendToLog(szOut);
+    if (size < 0)
+        return;
+
+    // Format the message:
+    va_start(args, format);
+    std::vector<char> message(size + 1);
+    vsnprintf(message.data(), message.size(), format, args);
+    va_end(args);
+
+    // Put the pieces together:
+    std::string out = date.str();
+    out.append(message.begin(), message.end() - 1);
+    if (out.back() != '\n')
+        out.append(1, '\n');
+
+#ifdef ANDROID
+    __android_log_print(ANDROID_LOG_DEBUG, "ABC", "%s", out.c_str());
+#else
+    printf("%s", out.c_str());
+#endif
+    ABC_DebugAppendToLog(out.c_str());
 }
 
 static void ABC_DebugAppendToLog(const char *szOut)
 {
-    if (gbInitialized)
+    if (gLogFile)
     {
         std::lock_guard<std::recursive_mutex> lock(gDebugMutex);
-        if (gfLog)
+        size_t size = ftell(gLogFile);
+        if (size > MAX_LOG_SIZE)
         {
-            size_t size = ftell(gfLog);
-            if (size > MAX_LOG_SIZE)
-            {
-                fclose(gfLog);
-                gfLog = fopen(gszLogFile, "w");
-            }
-
-            fwrite(szOut, 1, strlen(szOut), gfLog);
-            fflush(gfLog);
+            fclose(gLogFile);
+            gLogFile = fopen(gLogFilename.c_str(), "w");
         }
+
+        fwrite(szOut, 1, strlen(szOut), gLogFile);
+        fflush(gLogFile);
     }
 }
 

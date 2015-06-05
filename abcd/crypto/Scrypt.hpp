@@ -8,58 +8,74 @@
 #ifndef ABCD_CRYPTO_SCRYPT_HPP
 #define ABCD_CRYPTO_SCRYPT_HPP
 
-#include "../util/U08Buf.hpp"
-#include "../../src/ABC.h"
-#include <jansson.h>
+#include "../json/JsonObject.hpp"
+#include "../util/Data.hpp"
+#include "../util/Status.hpp"
 
 namespace abcd {
 
-typedef struct sABC_CryptoSNRP
+constexpr size_t scryptDefaultSize = 32;
+
+/*
+ * Initializes Scrypt parameters by benchmarking the device.
+ */
+tABC_CC ABC_InitializeCrypto(tABC_Error *pError);
+
+/**
+ * Parameters for the scrypt algorithm.
+ */
+struct ScryptSnrp
 {
-    tABC_U08Buf     Salt;
-    unsigned long   N;
-    unsigned long   r;
-    unsigned long   p;
-} tABC_CryptoSNRP;
+    DataChunk salt;
+    uint64_t n;
+    uint32_t r;
+    uint32_t p;
 
-tABC_CC ABC_InitializeCrypto(tABC_Error        *pError);
+    /**
+     * Initializes the parameters with a random salt and
+     * benchmarked difficulty settings.
+     */
+    Status
+    create();
 
-tABC_CC ABC_CryptoScryptSNRP(const tABC_U08Buf     Data,
-                             const tABC_CryptoSNRP *pSNRP,
-                             tABC_U08Buf           *pScryptData,
-                             tABC_Error            *pError);
+    /**
+     * The scrypt hash function.
+     */
+    Status
+    hash(DataChunk &result, DataSlice data, size_t size=scryptDefaultSize) const;
+};
 
-tABC_CC ABC_CryptoScrypt(const tABC_U08Buf Data,
-                         const tABC_U08Buf Salt,
-                         unsigned long     N,
-                         unsigned long     r,
-                         unsigned long     p,
-                         unsigned int      scryptDataLength,
-                         tABC_U08Buf       *pScryptData,
-                         tABC_Error        *pError);
+/**
+ * Returns the fixed SNRP value used for the username.
+ */
+const ScryptSnrp &
+usernameSnrp();
 
-tABC_CC ABC_CryptoCreateSNRPForClient(tABC_CryptoSNRP   **ppSNRP,
-                                      tABC_Error        *pError);
+/**
+ * Serialization format.
+ */
+struct JsonSnrp:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(JsonSnrp, JsonObject)
 
-tABC_CC ABC_CryptoCreateSNRPForServer(tABC_CryptoSNRP   **ppSNRP,
-                                      tABC_Error        *pError);
+    ABC_JSON_STRING(salt, "salt_hex", nullptr)
+    ABC_JSON_INTEGER(n, "n", 0)
+    ABC_JSON_INTEGER(r, "r", 0)
+    ABC_JSON_INTEGER(p, "p", 0)
 
-tABC_CC ABC_CryptoCreateSNRP(const tABC_U08Buf Salt,
-                             unsigned long     N,
-                             unsigned long     r,
-                             unsigned long     p,
-                             tABC_CryptoSNRP   **ppSNRP,
-                             tABC_Error        *pError);
+    Status
+    snrpGet(ScryptSnrp &result) const;
 
-tABC_CC ABC_CryptoCreateJSONObjectSNRP(const tABC_CryptoSNRP  *pSNRP,
-                                       json_t                 **ppJSON_SNRP,
-                                       tABC_Error             *pError);
+    Status
+    snrpSet(const ScryptSnrp &snrp);
 
-tABC_CC ABC_CryptoDecodeJSONObjectSNRP(const json_t      *pJSON_SNRP,
-                                       tABC_CryptoSNRP   **ppSNRP,
-                                       tABC_Error        *pError);
+    Status
+    create();
 
-void ABC_CryptoFreeSNRP(tABC_CryptoSNRP *pSNRP);
+    Status
+    hash(DataChunk &result, DataSlice data) const;
+};
 
 } // namespace abcd
 

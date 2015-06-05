@@ -6,6 +6,7 @@
  */
 
 #include "LoginShim.hpp"
+#include "../abcd/account/Account.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/login/LoginDir.hpp"
@@ -23,9 +24,10 @@ namespace abcd {
 // The mutex only needs to be locked when updating the cache,
 // not when using the objects inside.
 // The cached objects must provide their own thread safety.
-std::mutex gLoginMutex;
-std::shared_ptr<Lobby> gLobbyCache;
-std::shared_ptr<Login> gLoginCache;
+static std::mutex gLoginMutex;
+static std::shared_ptr<Lobby> gLobbyCache;
+static std::shared_ptr<Login> gLoginCache;
+static std::shared_ptr<Account> gAccountCache;
 
 /**
  * Clears the cached login.
@@ -36,6 +38,7 @@ cacheClear()
 {
     gLobbyCache.reset();
     gLoginCache.reset();
+    gAccountCache.reset();
 }
 
 void
@@ -50,11 +53,8 @@ cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName)
 {
     std::lock_guard<std::mutex> lock(gLoginMutex);
 
-    if (!szUserName)
-        return ABC_ERROR(ABC_CC_NULLPtr, "No user name");
-
     // Clear the cache if the username has changed:
-    if (gLobbyCache)
+    if (szUserName && gLobbyCache)
     {
         std::string fixed;
         ABC_CHECK(Lobby::fixUsername(fixed, szUserName));
@@ -65,6 +65,8 @@ cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName)
     // Load the new lobby, if necessary:
     if (!gLobbyCache)
     {
+        if (!szUserName)
+            return ABC_ERROR(ABC_CC_NULLPtr, "No user name");
         std::unique_ptr<Lobby> lobby(new Lobby());
         ABC_CHECK(lobby->init(szUserName));
         gLobbyCache.reset(lobby.release());
@@ -149,45 +151,35 @@ cacheLoginPin(std::shared_ptr<Login> &result,
 Status
 cacheLogin(std::shared_ptr<Login> &result, const char *szUserName)
 {
+    std::shared_ptr<Lobby> lobby;
+    ABC_CHECK(cacheLobby(lobby, szUserName));
+
+    // Verify that the user is logged in:
     std::lock_guard<std::mutex> lock(gLoginMutex);
-
-    // Get the real username:
-    if (!szUserName)
-        return ABC_ERROR(ABC_CC_NULLPtr, "No user name");
-    std::string fixed;
-    ABC_CHECK(Lobby::fixUsername(fixed, szUserName));
-
-    // Ensure the user is still logged in:
-    if (!gLoginCache || !gLobbyCache || gLobbyCache->username() != fixed)
+    if (!gLoginCache)
         return ABC_ERROR(ABC_CC_AccountDoesNotExist, "Not logged in");
 
     result = gLoginCache;
     return Status();
 }
 
-/**
- * Obtains the information needed to access the server for a given account.
- *
- * @param szUserName UserName for the account to access
- * @param szPassword Password for the account to access
- * @param pL1        A buffer to receive L1. The caller must free this.
- * @param pLP1       A buffer to receive LP1. The caller must free this.
- * @param pError     A pointer to the location to store the error if there is one
- */
-
-tABC_CC ABC_LoginShimGetServerKeys(const char *szUserName,
-                                   tABC_U08Buf *pL1,
-                                   tABC_U08Buf *pLP1,
-                                   tABC_Error *pError)
+Status
+cacheAccount(std::shared_ptr<Account> &result, const char *szUserName)
 {
-    tABC_CC cc = ABC_CC_Ok;
     std::shared_ptr<Login> login;
+    ABC_CHECK(cacheLogin(login, szUserName));
 
-    ABC_CHECK_NEW(cacheLogin(login, szUserName), pError);
-    ABC_CHECK_RET(ABC_LoginGetServerKeys(*login, pL1, pLP1, pError));
+    // Create the object, if necessary:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+    if (!gAccountCache)
+    {
+        std::unique_ptr<Account> account(new Account(login));
+        ABC_CHECK(account->init());
+        gAccountCache.reset(account.release());
+    }
 
-exit:
-    return cc;
+    result = gAccountCache;
+    return Status();
 }
 
 } // namespace abcd
