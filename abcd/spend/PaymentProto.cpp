@@ -7,6 +7,7 @@
 #include "../bitcoin/Testnet.hpp"
 #include "../http/HttpRequest.hpp"
 #include "../util/AutoFree.hpp"
+#include <regex>
 
 #include <openssl/ssl.h>
 #include <openssl/x509_vfy.h>
@@ -101,14 +102,11 @@ PaymentRequest::fetch(const std::string &url)
             || (!isTestnet() && "main" != details_.network()))
         return ABC_ERROR(ABC_CC_Error, "Unsupported network");
 
-    if (details_.has_memo())
-        memo_ = details_.memo();
-
     return Status();
 }
 
 Status
-PaymentRequest::signatureOk()
+PaymentRequest::signatureOk(std::string &result)
 {
     const EVP_MD* alg = NULL;
     if (request_.pki_type() == "x509+sha256")
@@ -162,8 +160,7 @@ PaymentRequest::signatureOk()
         website.data(), website.size()) != textlen && 0 < textlen)
         return ABC_ERROR(ABC_CC_Error, "Missing common name");
 
-    merchant_ = website.data();
-
+    result = website.data();
     return Status();
 }
 
@@ -190,6 +187,26 @@ PaymentRequest::amount() const
     for (auto &i: details_.outputs())
         out += i.amount();
     return out;
+}
+
+std::string
+PaymentRequest::merchant(const std::string &fallback) const
+{
+    if (!details_.has_memo())
+        return fallback;
+
+    std::regex re("Payment request for BitPay invoice [^ ]* for merchant (.*)");
+    std::smatch match;
+    if (!std::regex_match(details_.memo(), match, re))
+        return fallback;
+
+    return match[1];
+}
+
+std::string
+PaymentRequest::memo(const std::string &fallback) const
+{
+    return details_.has_memo() ? details_.memo() : fallback;
 }
 
 Status

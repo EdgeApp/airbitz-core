@@ -42,9 +42,10 @@ public:
 
     /**
      * Returns true if the certificate chain checks out.
+     * Sets the result to the certificate domain name.
      */
     Status
-    signatureOk();
+    signatureOk(std::string &result);
 
     /**
      * Obtains the payment scripts and amounts being requested.
@@ -52,8 +53,23 @@ public:
     std::list<PaymentOutput>
     outputs() const;
 
+    /**
+     * Obtain the total of all outputs.
+     */
     uint64_t
     amount() const;
+
+    /**
+     * Guesses the merchant name using a regex.
+     */
+    std::string
+    merchant(const std::string &fallback="") const;
+
+    /**
+     * Returns the memo, if any.
+     */
+    std::string
+    memo(const std::string &fallback="") const;
 
     /**
      * Pays the payment request,
@@ -62,15 +78,9 @@ public:
     Status
     pay(PaymentReceipt &result, DataSlice tx, DataSlice refund);
 
-    std::string merchant() const { return merchant_; }
-    std::string memo() const { return memo_; }
-
 private:
     payments::PaymentRequest request_;
     payments::PaymentDetails details_;
-
-    std::string merchant_;
-    std::string memo_;
 };
 
 } // namespace abcd
