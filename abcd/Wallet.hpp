@@ -36,7 +36,6 @@
 #ifndef ABC_Wallet_h
 #define ABC_Wallet_h
 
-#include "General.hpp"
 #include "util/Data.hpp"
 #include "../src/ABC.h"
 
@@ -65,8 +64,6 @@ tABC_CC ABC_WalletIDCopy(tABC_WalletID *out,
                          tABC_Error *pError);
 
 void ABC_WalletIDFree(tABC_WalletID in);
-
-tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
 
 void ABC_WalletClearCache();
 

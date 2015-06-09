@@ -8,6 +8,7 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "PaymentProto.hpp"
+#include "../General.hpp"
 #include "../Tx.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include "../bitcoin/WatcherBridge.hpp"

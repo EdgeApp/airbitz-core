@@ -51,12 +51,10 @@
 
 namespace abcd {
 
-#define WALLET_ACCOUNTS_WALLETS_FILENAME        "Wallets.json"
 #define WALLET_NAME_FILENAME                    "WalletName.json"
 #define WALLET_CURRENCY_FILENAME                "Currency.json"
 #define WALLET_ACCOUNTS_FILENAME                "Accounts.json"
 
-#define JSON_WALLET_WALLETS_FIELD               "wallets"
 #define JSON_WALLET_NAME_FIELD                  "walletName"
 #define JSON_WALLET_CURRENCY_NUM_FIELD          "num"
 #define JSON_WALLET_ACCOUNTS_FIELD              "accounts"
@@ -94,6 +92,7 @@ static tABC_CC ABC_WalletSetCurrencyNum(tABC_WalletID self, int currencyNum, tAB
 static tABC_CC ABC_WalletAddAccount(tABC_WalletID self, const char *szAccount, tABC_Error *pError);
 static tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error *pError);
 static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
+static tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError);
 static void    ABC_WalletFreeData(tWalletData *pData);
 
@@ -292,11 +291,7 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, bool &dirty, tABC_Error *pError)
 
     std::string dir = walletDir(self.szUUID);
     std::string syncDir = walletSyncDir(self.szUUID);
-    tABC_GeneralInfo *pInfo = NULL;
     tWalletData *pData      = NULL;
-
-    // Fetch general info
-    ABC_CHECK_RET(ABC_GeneralGetInfo(&pInfo, pError));
 
     // create the wallet root directory if necessary
     ABC_CHECK_NEW(fileEnsureDir(gContext->walletsDir()));
@@ -322,7 +317,6 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, bool &dirty, tABC_Error *pError)
         ABC_WalletClearCache();
 
 exit:
-    ABC_GeneralFreeInfo(pInfo);
     return cc;
 }
 
