@@ -85,8 +85,8 @@ typedef struct sWalletData
 static unsigned int gWalletsCacheCount = 0;
 static tWalletData **gaWalletsCacheArray = NULL;
 
-static tABC_CC ABC_WalletSetCurrencyNum(tABC_WalletID self, int currencyNum, tABC_Error *pError);
-static tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error *pError);
+static tABC_CC ABC_WalletSetCurrencyNum(Wallet &self, int currencyNum, tABC_Error *pError);
+static tABC_CC ABC_WalletCacheData(Wallet &self, tWalletData **ppData, tABC_Error *pError);
 static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
 static tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError);
@@ -236,7 +236,7 @@ exit:
 /**
  * Sync the wallet's data
  */
-tABC_CC ABC_WalletSyncData(tABC_WalletID self, bool &dirty, tABC_Error *pError)
+tABC_CC ABC_WalletSyncData(Wallet &self, bool &dirty, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -275,7 +275,7 @@ exit:
 /**
  * Sets the name of a wallet
  */
-tABC_CC ABC_WalletSetName(tABC_WalletID self, const char *szName, tABC_Error *pError)
+tABC_CC ABC_WalletSetName(Wallet &self, const char *szName, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -310,7 +310,7 @@ exit:
  * Sets the currency number of a wallet
  */
 static
-tABC_CC ABC_WalletSetCurrencyNum(tABC_WalletID self, int currencyNum, tABC_Error *pError)
+tABC_CC ABC_WalletSetCurrencyNum(Wallet &self, int currencyNum, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -345,7 +345,7 @@ exit:
  * If the wallet is not currently in the cache it is added
  */
 static
-tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error *pError)
+tABC_CC ABC_WalletCacheData(Wallet &self, tWalletData **ppData, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
@@ -605,7 +605,7 @@ void ABC_WalletFreeData(tWalletData *pData)
     }
 }
 
-tABC_CC ABC_WalletDirtyCache(tABC_WalletID self,
+tABC_CC ABC_WalletDirtyCache(Wallet &self,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -628,7 +628,7 @@ exit:
  * @param ppWalletInfo          Pointer to store the pointer of the allocated wallet info struct
  * @param pError                A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
+tABC_CC ABC_WalletGetInfo(Wallet &self,
                           tABC_WalletInfo **ppWalletInfo,
                           tABC_Error *pError)
 {
@@ -712,7 +712,7 @@ void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo)
  * @param pMK Pointer to store the master key
  *            (note: this is not allocated and should not be free'ed by the caller)
  */
-tABC_CC ABC_WalletGetMK(tABC_WalletID self, tABC_U08Buf *pMK, tABC_Error *pError)
+tABC_CC ABC_WalletGetMK(Wallet &self, tABC_U08Buf *pMK, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
@@ -735,7 +735,7 @@ exit:
  * @param pSeed Pointer to store the bitcoin private seed
  *            (note: this is not allocated and should not be free'ed by the caller)
  */
-tABC_CC ABC_WalletGetBitcoinPrivateSeed(tABC_WalletID self, tABC_U08Buf *pSeed, tABC_Error *pError)
+tABC_CC ABC_WalletGetBitcoinPrivateSeed(Wallet &self, tABC_U08Buf *pSeed, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
@@ -752,7 +752,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self, tABC_U08Buf *pSeed, tABC_Error *pError)
+tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(Wallet &self, tABC_U08Buf *pSeed, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);

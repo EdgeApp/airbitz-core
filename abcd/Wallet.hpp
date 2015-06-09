@@ -44,8 +44,6 @@ namespace abcd {
 class Account;
 class Wallet;
 
-typedef Wallet &tABC_WalletID;
-
 std::string walletDir(const std::string &id);
 std::string walletSyncDir(const std::string &id);
 std::string walletAddressDir(const std::string &id);
@@ -53,28 +51,28 @@ std::string walletTxDir(const std::string &id);
 
 void ABC_WalletClearCache();
 
-tABC_CC ABC_WalletSetName(tABC_WalletID self,
+tABC_CC ABC_WalletSetName(Wallet &self,
                           const char *szName,
                           tABC_Error *pError);
 
-tABC_CC ABC_WalletDirtyCache(tABC_WalletID self,
+tABC_CC ABC_WalletDirtyCache(Wallet &self,
                              tABC_Error *pError);
 
-tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
+tABC_CC ABC_WalletGetInfo(Wallet &self,
                           tABC_WalletInfo **ppWalletInfo,
                           tABC_Error *pError);
 
 void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo);
 
-tABC_CC ABC_WalletGetMK(tABC_WalletID self,
+tABC_CC ABC_WalletGetMK(Wallet &self,
                         tABC_U08Buf *pMK,
                         tABC_Error *pError);
 
-tABC_CC ABC_WalletGetBitcoinPrivateSeed(tABC_WalletID self,
+tABC_CC ABC_WalletGetBitcoinPrivateSeed(Wallet &self,
                                         tABC_U08Buf *pSeed,
                                         tABC_Error *pError);
 
-tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self,
+tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(Wallet &self,
                                             tABC_U08Buf *pSeed,
                                             tABC_Error *pError);
 
@@ -85,7 +83,7 @@ tABC_CC ABC_WalletCreate(Account &account,
                          char **pszUUID,
                          tABC_Error *pError);
 
-tABC_CC ABC_WalletSyncData(tABC_WalletID self,
+tABC_CC ABC_WalletSyncData(Wallet &self,
                            bool &dirty,
                            tABC_Error *pError);
 

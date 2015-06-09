@@ -41,7 +41,6 @@
 #ifndef ABC_Bridge_h
 #define ABC_Bridge_h
 
-#include "../Wallet.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 
@@ -52,57 +51,58 @@ namespace libbitcoin
 
 namespace abcd {
 
+class Wallet;
 class Watcher;
 
 Status
-watcherFind(Watcher *&result, tABC_WalletID self);
+watcherFind(Watcher *&result, Wallet &self);
 
 Status
-watcherSave(tABC_WalletID self);
+watcherSave(Wallet &self);
 
 std::string
 watcherPath(const std::string &walletId);
 
-tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
+tABC_CC ABC_BridgeSweepKey(Wallet &self,
                            tABC_U08Buf key,
                            bool compressed,
                            tABC_Sweep_Done_Callback fCallback,
                            void *pData,
                            tABC_Error *pError);
 
-tABC_CC ABC_BridgeWatcherStart(tABC_WalletID self,
+tABC_CC ABC_BridgeWatcherStart(Wallet &self,
                                tABC_Error *pError);
 
-tABC_CC ABC_BridgeWatcherLoop(tABC_WalletID self,
+tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
                               tABC_BitCoin_Event_Callback fAsyncCallback,
                               void *pData,
                               tABC_Error *pError);
 
-tABC_CC ABC_BridgeWatcherConnect(tABC_WalletID self, tABC_Error *pError);
+tABC_CC ABC_BridgeWatcherConnect(Wallet &self, tABC_Error *pError);
 
-tABC_CC ABC_BridgeWatcherDisconnect(tABC_WalletID self, tABC_Error *pError);
+tABC_CC ABC_BridgeWatcherDisconnect(Wallet &self, tABC_Error *pError);
 
-tABC_CC ABC_BridgeWatcherStop(tABC_WalletID self, tABC_Error *pError);
+tABC_CC ABC_BridgeWatcherStop(Wallet &self, tABC_Error *pError);
 
-tABC_CC ABC_BridgeWatcherDelete(tABC_WalletID self, tABC_Error *pError);
+tABC_CC ABC_BridgeWatcherDelete(Wallet &self, tABC_Error *pError);
 
-tABC_CC ABC_BridgeWatchAddr(tABC_WalletID self, const char *address,
+tABC_CC ABC_BridgeWatchAddr(Wallet &self, const char *address,
                             tABC_Error *pError);
 
-tABC_CC ABC_BridgePrioritizeAddress(tABC_WalletID self,
+tABC_CC ABC_BridgePrioritizeAddress(Wallet &self,
                                     const char *szAddress,
                                     tABC_Error *pError);
 
-tABC_CC ABC_BridgeTxHeight(tABC_WalletID self, const char *szTxId, unsigned int *height, tABC_Error *pError);
+tABC_CC ABC_BridgeTxHeight(Wallet &self, const char *szTxId, unsigned int *height, tABC_Error *pError);
 
-tABC_CC ABC_BridgeTxBlockHeight(tABC_WalletID self, unsigned int *height, tABC_Error *pError);
+tABC_CC ABC_BridgeTxBlockHeight(Wallet &self, unsigned int *height, tABC_Error *pError);
 
-tABC_CC ABC_BridgeTxDetails(tABC_WalletID self, const char *szTxID,
+tABC_CC ABC_BridgeTxDetails(Wallet &self, const char *szTxID,
                             tABC_TxOutput ***paOutputs, unsigned int *pCount,
                             int64_t *pAmount, int64_t *pFees, tABC_Error *pError);
 
 
-tABC_CC ABC_BridgeFilterTransactions(tABC_WalletID self,
+tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
                                      tABC_TxInfo **aTransactions,
                                      unsigned int *pCount,
                                      tABC_Error *pError);
@@ -114,7 +114,7 @@ ABC_BridgeNonMalleableTxId(libbitcoin::transaction_type tx);
  * Pulls a raw transaction out of the watcher database.
  */
 Status
-watcherBridgeRawTx(tABC_WalletID self, const char *szTxID,
+watcherBridgeRawTx(Wallet &self, const char *szTxID,
     DataChunk &result);
 
 } // namespace abcd
