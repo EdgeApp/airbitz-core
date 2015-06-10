@@ -65,7 +65,7 @@ tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     int e = 0;
 
-    ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "ABC_Sync has already been initalized");
+    ABC_CHECK_ASSERT(!gbInitialized, ABC_CC_Reinitialization, "ABC_Sync has already been initalized");
 
     e = git_threads_init();
     ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_threads_init failed");

@@ -861,7 +861,7 @@ tABC_CC ABC_TxCreateNewAddress(tABC_WalletID self,
 
         // if we don't have an address yet and this one is available
         ABC_CHECK_NULL(aAddresses[i]->pStateInfo);
-        if (aAddresses[i]->pStateInfo->bRecycleable == true
+        if (aAddresses[i]->pStateInfo->bRecycleable
                 && aAddresses[i]->pStateInfo->countActivities == 0)
         {
             recyclable++;
@@ -1444,7 +1444,7 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
                     }
 
                     // if this doesn't not have an internal equivalent (or is an internal itself)
-                    if (bHasInternalEquivalent == false)
+                    if (!bHasInternalEquivalent)
                     {
                         // add this transaction to the array
 
@@ -2041,7 +2041,7 @@ tABC_CC ABC_TxGetPendingRequests(tABC_WalletID self,
                 ABC_CHECK_NULL(pState);
 
                 // if this is not a recyclable address (i.e., it was specifically used for a transaction)
-                if (pState->bRecycleable == false)
+                if (!pState->bRecycleable)
                 {
                     // if this address was used for a request of funds (i.e., not a send)
                     int64_t requestSatoshi = pDetails->amountSatoshi;

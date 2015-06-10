@@ -789,7 +789,7 @@ tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
                 pInfo->archived = i.archived;
     }
 
-    if (pData->balanceDirty == true)
+    if (pData->balanceDirty)
     {
         ABC_CHECK_RET(
             ABC_TxGetTransactions(self,

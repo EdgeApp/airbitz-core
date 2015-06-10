@@ -76,7 +76,7 @@ static bool gbInitialized = false;
     ABC_DebugLog("%s called", __FUNCTION__); \
     tABC_CC cc = ABC_CC_Ok; \
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok); \
-    ABC_CHECK_ASSERT(true == gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized")
+    ABC_CHECK_ASSERT(gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized")
 
 #define ABC_GET_LOBBY() \
     std::shared_ptr<Lobby> lobby; \
@@ -132,7 +132,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
     DataSlice Seed(pSeedData, pSeedData + seedLength);
 
-    ABC_CHECK_ASSERT(false == gbInitialized, ABC_CC_Reinitialization, "The core library has already been initalized");
+    ABC_CHECK_ASSERT(!gbInitialized, ABC_CC_Reinitialization, "The core library has already been initalized");
     ABC_CHECK_NULL(szRootDir);
     ABC_CHECK_NULL(pSeedData);
 
@@ -173,7 +173,7 @@ exit:
 void ABC_Terminate()
 {
     // Cannot use ABC_PROLOG - no pError
-    if (gbInitialized == true)
+    if (gbInitialized)
     {
         ABC_ClearKeyCache(NULL);
 
