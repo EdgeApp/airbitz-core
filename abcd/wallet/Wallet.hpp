@@ -29,10 +29,15 @@ public:
         const std::string &id);
 
     const std::string &id() const { return id_; }
+    const std::string &dir() const { return dir_; }
+    std::string syncDir() const     { return dir() + "sync/"; }
+    std::string addressDir() const  { return syncDir() + "Addresses/"; }
+    std::string txDir() const       { return syncDir() + "Transactions/"; }
 
 private:
     const std::shared_ptr<Account> parent_;
     const std::string id_;
+    const std::string dir_;
 
     Wallet(Account &account, const std::string &id);
 };

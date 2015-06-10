@@ -44,11 +44,6 @@ namespace abcd {
 class Account;
 class Wallet;
 
-std::string walletDir(const std::string &id);
-std::string walletSyncDir(const std::string &id);
-std::string walletAddressDir(const std::string &id);
-std::string walletTxDir(const std::string &id);
-
 void ABC_WalletClearCache();
 
 tABC_CC ABC_WalletSetName(Wallet &self,

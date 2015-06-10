@@ -20,6 +20,7 @@
 #include "../account/Account.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/FileIO.hpp"
+#include "../../src/LoginShim.hpp"
 
 namespace abcd {
 
@@ -907,17 +908,20 @@ tABC_CC ABC_LoginServerUploadLogs(const Account &account,
     AutoU08Buf LP1;
     ABC_CHECK_RET(ABC_LoginGetServerKey(account.login, &LP1, pError));
 
-    ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
-    ABC_CHECK_NEW(fileLoad(logData, szLogFilename));
-
     pJSON_array = json_array();
     for (const auto &id: ids)
     {
-        ABC_CHECK_NEW(fileLoad(watchData, watcherPath(id)));
-
-        json_array_append_new(pJSON_array,
-            json_string(base64Encode(watchData).c_str()));
+        std::shared_ptr<Wallet> wallet;
+        if (cacheWallet(wallet, nullptr, id.c_str()))
+        {
+            ABC_CHECK_NEW(fileLoad(watchData, watcherPath(*wallet)));
+            json_array_append_new(pJSON_array,
+                json_string(base64Encode(watchData).c_str()));
+        }
     }
+
+    ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
+    ABC_CHECK_NEW(fileLoad(logData, szLogFilename));
 
     pJSON_Root = json_pack("{ss, ss, ss}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(account.login.lobby.authId()).c_str(),

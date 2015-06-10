@@ -16,6 +16,7 @@
 #include "../../abcd/login/Login.hpp"
 #include "../../abcd/util/FileIO.hpp"
 #include "../../abcd/util/Util.hpp"
+#include "../../abcd/wallet/Wallet.hpp"
 #include "../../src/LoginShim.hpp"
 #include <wallet/wallet.hpp>
 #include <iostream>
@@ -318,13 +319,13 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
     auto ids = session.account->wallets.list();
     for (const auto &id: ids)
     {
-        JsonBox box;
-        ABC_CHECK(box.load(walletSyncDir(id) + "WalletName.json"));
-
         std::shared_ptr<Wallet> wallet;
         ABC_CHECK(cacheWallet(wallet, nullptr, id.c_str()));
         U08Buf dataKey;
         ABC_CHECK_OLD(ABC_WalletGetMK(*wallet, &dataKey, &error));
+
+        JsonBox box;
+        ABC_CHECK(box.load(wallet->syncDir() + "WalletName.json"));
 
         DataChunk data;
         ABC_CHECK(box.decrypt(data, dataKey));

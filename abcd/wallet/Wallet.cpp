@@ -6,6 +6,7 @@
  */
 
 #include "Wallet.hpp"
+#include "../Context.hpp"
 #include "../account/Account.hpp"
 
 namespace abcd {
@@ -20,7 +21,8 @@ Wallet::create(std::shared_ptr<Wallet> &result, Account &account, const std::str
 Wallet::Wallet(Account &account, const std::string &id):
     account(account),
     parent_(account.shared_from_this()),
-    id_(id)
+    id_(id),
+    dir_(gContext->walletsDir() + id + "/")
 {}
 
 } // namespace abcd

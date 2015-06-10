@@ -35,7 +35,6 @@
 #include "Watcher.hpp"
 #include "../General.hpp"
 #include "../Tx.hpp"
-#include "../Wallet.hpp"
 #include "../spend/Broadcast.hpp"
 #include "../spend/Inputs.hpp"
 #include "../spend/Outputs.hpp"
@@ -123,7 +122,7 @@ watcherLoad(Wallet &self)
     ABC_CHECK(watcherFind(watcher, self));
 
     DataChunk data;
-    ABC_CHECK(fileLoad(data, watcherPath(self.id())));
+    ABC_CHECK(fileLoad(data, watcherPath(self)));
     if (!watcher->load(data))
         return ABC_ERROR(ABC_CC_Error, "Unable to load serialized watcher");
 
@@ -137,15 +136,15 @@ watcherSave(Wallet &self)
     ABC_CHECK(watcherFind(watcher, self));
 
     auto data = watcher->serialize();;
-    ABC_CHECK(fileSave(data, watcherPath(self.id())));
+    ABC_CHECK(fileSave(data, watcherPath(self)));
 
     return Status();
 }
 
 std::string
-watcherPath(const std::string &walletId)
+watcherPath(Wallet &self)
 {
-    return walletDir(walletId) + "watcher.ser";
+    return self.dir() + "watcher.ser";
 }
 
 tABC_CC ABC_BridgeSweepKey(Wallet &self,

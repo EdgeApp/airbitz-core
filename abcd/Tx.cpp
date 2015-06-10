@@ -149,7 +149,7 @@ typedef struct sABC_TxAddress
 
 static tABC_CC  ABC_TxCreateNewAddress(Wallet &self, tABC_TxDetails *pDetails, tABC_TxAddress **ppAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError);
-static tABC_CC  ABC_GetAddressFilename(const char *szWalletUUID, const char *szRequestID, char **pszFilename, tABC_Error *pError);
+static tABC_CC  ABC_GetAddressFilename(Wallet &self, const char *szRequestID, char **pszFilename, tABC_Error *pError);
 static tABC_CC  ABC_TxParseAddrFilename(const char *szFilename, char **pszID, char **pszPublicAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxSetAddressRecycle(Wallet &self, const char *szAddress, bool bRecyclable, tABC_Error *pError);
 static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *pbEquivalent, tABC_Error *pError);
@@ -1009,8 +1009,8 @@ tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
     tABC_TxDetails *pNewDetails = NULL;
 
     // get the filename for this request (note: interally requests are addresses)
-    ABC_CHECK_RET(ABC_GetAddressFilename(self.id().c_str(), szRequestID, &szFile, pError));
-    path = walletAddressDir(self.id()) + szFile;
+    ABC_CHECK_RET(ABC_GetAddressFilename(self, szRequestID, &szFile, pError));
+    path = self.addressDir() + szFile;
 
     // load the request address
     ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), &pAddress, pError));
@@ -1039,13 +1039,12 @@ exit:
 /**
  * Gets the filename for a given address based upon the address id
  *
- * @param szWalletUUID  UUID of the wallet associated with this address
  * @param szAddressID   ID of this address
  * @param pszFilename   Address to store pointer to filename
  * @param pError        A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
+tABC_CC ABC_GetAddressFilename(Wallet &self,
                                const char *szAddressID,
                                char **pszFilename,
                                tABC_Error *pError)
@@ -1053,12 +1052,10 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
     tABC_CC cc = ABC_CC_Ok;
     AutoFileLock lock(gFileMutex); // We are iterating over the filesystem
 
-    std::string addressDir = walletAddressDir(szWalletUUID);
+    std::string addressDir = self.addressDir();
     tABC_FileIOList *pFileList = NULL;
     char *szID = NULL;
 
-    ABC_CHECK_NULL(szWalletUUID);
-    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
     ABC_CHECK_NULL(szAddressID);
     ABC_CHECK_ASSERT(strlen(szAddressID) > 0, ABC_CC_Error, "No address UUID provided");
     ABC_CHECK_NULL(pszFilename);
@@ -1231,8 +1228,8 @@ tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
     tABC_TxDetails *pNewDetails = NULL;
 
     // get the filename for this address
-    ABC_CHECK_RET(ABC_GetAddressFilename(self.id().c_str(), szAddress, &szFile, pError));
-    path = walletAddressDir(self.id()) + szFile;
+    ABC_CHECK_RET(ABC_GetAddressFilename(self, szAddress, &szFile, pError));
+    path = self.addressDir() + szFile;
 
     // load the request address
     ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), &pAddress, pError));
@@ -1403,7 +1400,7 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
     AutoCoreLock lock(gCoreMutex);
     AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
 
-    std::string txDir = walletTxDir(self.id());
+    std::string txDir = self.txDir();
     tABC_FileIOList *pFileList = NULL;
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
@@ -2295,7 +2292,7 @@ tABC_CC ABC_TxCreateTxFilename(Wallet &self, char **pszFilename, const char *szT
     // (note that this will also make sure the account and wallet exist)
     ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
 
-    path = walletTxDir(self.id()) + cryptoFilename(MK, szTxID) +
+    path = self.txDir() + cryptoFilename(MK, szTxID) +
         (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX);
     ABC_STRDUP(*pszFilename, path.c_str());
 
@@ -2607,7 +2604,7 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
     ABC_CHECK_ASSERT(e == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // create the transaction directory if needed
-    ABC_CHECK_NEW(fileEnsureDir(walletTxDir(self.id())));
+    ABC_CHECK_NEW(fileEnsureDir(self.txDir()));
 
     // get the filename for this transaction
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, pTx->szID, pTx->pStateInfo->bInternal, pError));
@@ -2786,8 +2783,8 @@ tABC_CC ABC_TxLoadAddress(Wallet &self,
     std::string path;
 
     // get the filename for this address
-    ABC_CHECK_RET(ABC_GetAddressFilename(self.id().c_str(), szAddressID, &szFile, pError));
-    path = walletAddressDir(self.id()) + szFile;
+    ABC_CHECK_RET(ABC_GetAddressFilename(self, szAddressID, &szFile, pError));
+    path = self.addressDir() + szFile;
 
     // load the request address
     ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), ppAddress, pError));
@@ -2993,7 +2990,7 @@ tABC_CC ABC_TxSaveAddress(Wallet &self,
     ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pAddress->pDetails, pError));
 
     // create the address directory if needed
-    ABC_CHECK_NEW(fileEnsureDir(walletAddressDir(self.id())));
+    ABC_CHECK_NEW(fileEnsureDir(self.addressDir()));
 
     // create the filename for this transaction
     ABC_CHECK_RET(ABC_TxCreateAddressFilename(self, &szFilename, pAddress, pError));
@@ -3106,7 +3103,7 @@ tABC_CC ABC_TxCreateAddressFilename(Wallet &self, char **pszFilename, const tABC
     // (note that this will also make sure the account and wallet exist)
     ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
 
-    path = walletAddressDir(self.id()) +
+    path = self.addressDir() +
         std::to_string(pAddress->seq) + "-" +
         cryptoFilename(MK, pAddress->szPubAddress) + ".json";
     ABC_STRDUP(*pszFilename, path.c_str());
@@ -3216,7 +3213,7 @@ tABC_CC ABC_TxGetAddresses(Wallet &self,
     AutoCoreLock lock(gCoreMutex);
     AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
 
-    std::string addressDir = walletAddressDir(self.id());
+    std::string addressDir = self.addressDir();
     tABC_FileIOList *pFileList = NULL;
     tABC_TxAddress **aAddresses = NULL;
     unsigned int count = 0;

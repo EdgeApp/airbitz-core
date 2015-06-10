@@ -61,7 +61,7 @@ Status
 watcherSave(Wallet &self);
 
 std::string
-watcherPath(const std::string &walletId);
+watcherPath(Wallet &self);
 
 tABC_CC ABC_BridgeSweepKey(Wallet &self,
                            tABC_U08Buf key,
