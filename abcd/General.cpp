@@ -120,7 +120,6 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     json_t  *pJSON_AirBitzFees      = NULL;
     json_t  *pJSON_ObeliskArray     = NULL;
     json_t  *pJSON_SyncArray        = NULL;
-    bool bExists = false;
 
     ABC_CHECK_NULL(ppInfo);
 
@@ -128,8 +127,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     ABC_CHECK_RET(ABC_GeneralGetInfoFilename(&szInfoFilename, pError));
 
     // check to see if we have the file
-    ABC_CHECK_RET(ABC_FileIOFileExists(szInfoFilename, &bExists, pError));
-    if (false == bExists)
+    if (!fileExists(szInfoFilename))
     {
         // pull it down from the server
         ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
@@ -280,14 +278,12 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     char    *szInfoFilename = NULL;
     char    *szJSON         = NULL;
     bool    bUpdateRequired = true;
-    bool bExists = false;
 
     // get the info filename
     ABC_CHECK_RET(ABC_GeneralGetInfoFilename(&szInfoFilename, pError));
 
     // check to see if we have the file
-    ABC_CHECK_RET(ABC_FileIOFileExists(szInfoFilename, &bExists, pError));
-    if (true == bExists)
+    if (fileExists(szInfoFilename))
     {
         // check to see if the file is too old
 
@@ -387,14 +383,12 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     QuestionsFile file;
     json_t *pJSON_Value = NULL;
     tABC_QuestionChoices *pQuestionChoices = NULL;
-    bool bExists = false;
     unsigned int count = 0;
 
     ABC_CHECK_NULL(ppQuestionChoices);
 
     // if the file doesn't exist
-    ABC_CHECK_RET(ABC_FileIOFileExists(filename.c_str(), &bExists, pError));
-    if (true != bExists)
+    if (!fileExists(filename))
     {
         // get an update from the server
         ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));

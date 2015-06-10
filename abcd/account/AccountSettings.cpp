@@ -110,13 +110,11 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
     tABC_AccountSettings *pSettings = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Value = NULL;
-    bool bExists = false;
     auto filename = account.dir() + ACCOUNT_SETTINGS_FILENAME;
 
     ABC_CHECK_NULL(ppSettings);
 
-    ABC_CHECK_RET(ABC_FileIOFileExists(filename.c_str(), &bExists, pError));
-    if (true == bExists)
+    if (fileExists(filename))
     {
         // load and decrypted the file into a json object
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(filename.c_str(),

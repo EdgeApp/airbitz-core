@@ -86,15 +86,17 @@ getRootDir();
 Status
 fileEnsureDir(const std::string &dir);
 
+/**
+ * Returns true if the path exists.
+ */
+bool
+fileExists(const std::string &path);
+
 tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
                                  const char *szDir,
                                  tABC_Error *pError);
 
 void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList);
-
-tABC_CC ABC_FileIOFileExists(const char *szFilename,
-                             bool *pbExists,
-                             tABC_Error *pError);
 
 /**
  * Reads a file from disk.

@@ -36,14 +36,10 @@ tABC_CC ABC_AccountCategoriesLoad(const Account &account,
     AutoU08Buf data;
     *paszCategories = NULL;
     *pCount = 0;
-    bool bExists = false;
     auto filename = account.dir() + ACCOUNT_CATEGORIES_FILENAME;
 
-    // Find the file:
-    ABC_CHECK_RET(ABC_FileIOFileExists(filename.c_str(), &bExists, pError));
-
     // Load the entries (if any):
-    if (bExists)
+    if (fileExists(filename))
     {
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(filename.c_str(),
             toU08Buf(account.login.dataKey()), &data, pError));

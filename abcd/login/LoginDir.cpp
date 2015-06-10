@@ -63,14 +63,12 @@ newDirName(std::string &result)
     std::string accountsDir = accountsDirectory();
     std::string directory;
 
-    bool exists;
     unsigned i = 0;
     do
     {
         directory = accountsDir + "Account" + std::to_string(i++) + '/';
-        ABC_CHECK_OLD(ABC_FileIOFileExists(directory.c_str(), &exists, &error));
     }
-    while (exists);
+    while (fileExists(directory));
 
     result = directory;
     return Status();

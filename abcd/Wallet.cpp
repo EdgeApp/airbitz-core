@@ -302,7 +302,6 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, bool &dirty, tABC_Error *pError)
     std::string syncDir;
     tABC_GeneralInfo *pInfo = NULL;
     tWalletData *pData      = NULL;
-    bool bExists            = false;
     bool bNew               = false;
 
     // Fetch general info
@@ -316,8 +315,7 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, bool &dirty, tABC_Error *pError)
 
     // create the wallet sync dir under the main dir
     syncDir = walletSyncDir(self.szUUID);
-    ABC_CHECK_RET(ABC_FileIOFileExists(syncDir.c_str(), &bExists, pError));
-    if (!bExists)
+    if (!fileExists(syncDir))
     {
         ABC_CHECK_RET(ABC_SyncMakeRepo(syncDir.c_str(), pError));
         bNew = true;
@@ -498,9 +496,7 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
         ABC_STRDUP(pData->szWalletAcctKey, json.syncKey());
 
         // make sure this wallet exists, if it doesn't leave fields empty
-        bool bExists = false;
-        ABC_CHECK_RET(ABC_FileIOFileExists(syncDir.c_str(), &bExists, pError));
-        if (!bExists)
+        if (!fileExists(syncDir))
         {
             ABC_STRDUP(pData->szName, "");
             pData->currencyNum = -1;
@@ -513,9 +509,7 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
 
             // get the name
             path = syncDir + WALLET_NAME_FILENAME;
-            bExists = false;
-            ABC_CHECK_RET(ABC_FileIOFileExists(path.c_str(), &bExists, pError));
-            if (true == bExists)
+            if (fileExists(path))
             {
                 AutoU08Buf Data;
                 ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(path.c_str(), pData->MK, &Data, pError));
@@ -528,9 +522,7 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
 
             // get the currency num
             path = syncDir + WALLET_CURRENCY_FILENAME;
-            bExists = false;
-            ABC_CHECK_RET(ABC_FileIOFileExists(path.c_str(), &bExists, pError));
-            if (true == bExists)
+            if (fileExists(path))
             {
                 AutoU08Buf Data;
                 ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(path.c_str(), pData->MK, &Data, pError));
@@ -543,9 +535,7 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
 
             // get the accounts
             path = syncDir + WALLET_ACCOUNTS_FILENAME;
-            bExists = false;
-            ABC_CHECK_RET(ABC_FileIOFileExists(path.c_str(), &bExists, pError));
-            if (true == bExists)
+            if (fileExists(path))
             {
                 AutoU08Buf Data;
                 ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(path.c_str(), pData->MK, &Data, pError));

@@ -43,17 +43,12 @@ Account::Account(Login &login):
 Status
 Account::load()
 {
-    // Locate the sync dir:
-    bool exists = false;
-    ABC_CHECK_OLD(ABC_FileIOFileExists(dir().c_str(), &exists, &error));
-
-    // If it doesn't exist, create it:
-    if (!exists)
+    // If the sync dir doesn't exist, create it:
+    if (!fileExists(dir()))
     {
         bool dirty = false;
         std::string tempName = login.lobby.dir() + "tmp/";
-        ABC_CHECK_OLD(ABC_FileIOFileExists(tempName.c_str(), &exists, &error));
-        if (exists)
+        if (fileExists(tempName))
             ABC_CHECK_OLD(ABC_FileIODeleteRecursive(tempName.c_str(), &error));
         ABC_CHECK_OLD(ABC_SyncMakeRepo(tempName.c_str(), &error));
         ABC_CHECK_OLD(ABC_SyncRepo(tempName.c_str(), login.syncKey().c_str(), dirty, &error));
