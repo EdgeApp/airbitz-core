@@ -905,7 +905,7 @@ tABC_CC ABC_LoginServerUploadLogs(const Account &account,
     json_t *pJSON_array = NULL;
 
     AutoU08Buf LP1;
-    ABC_CHECK_RET(ABC_LoginGetServerKey(account.login(), &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKey(account.login, &LP1, pError));
 
     ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
     ABC_CHECK_NEW(fileLoad(logData, szLogFilename), pError);
@@ -920,7 +920,7 @@ tABC_CC ABC_LoginServerUploadLogs(const Account &account,
     }
 
     pJSON_Root = json_pack("{ss, ss, ss}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(account.login().lobby().authId()).c_str(),
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(account.login.lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
         "log", base64Encode(logData).c_str());
     json_object_set(pJSON_Root, "watchers", pJSON_array);

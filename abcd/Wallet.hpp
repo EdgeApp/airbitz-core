@@ -39,7 +39,6 @@
 #include "General.hpp"
 #include "util/Data.hpp"
 #include "../src/ABC.h"
-#include <memory>
 
 namespace abcd {
 
@@ -97,7 +96,7 @@ tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self,
                                             tABC_Error *pError);
 
 // Blocking functions:
-tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
+tABC_CC ABC_WalletCreate(Account &account,
                          const char *szWalletName,
                          int  currencyNum,
                          char **pszUUID,

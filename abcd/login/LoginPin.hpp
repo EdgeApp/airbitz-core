@@ -29,7 +29,7 @@ tABC_CC ABC_LoginPinDelete(const Lobby &lobby,
                            tABC_Error *pError);
 
 tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
-                     std::shared_ptr<Lobby> lobby,
+                     Lobby &lobby,
                      const char *szPin,
                      tABC_Error *pError);
 

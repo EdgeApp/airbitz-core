@@ -88,13 +88,13 @@ exit:
  * Assuming a PIN-based login pagage exits, log the user in.
  */
 tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
-                     std::shared_ptr<Lobby> lobby,
+                     Lobby &lobby,
                      const char *szPin,
                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::unique_ptr<Login> login;
+    std::shared_ptr<Login> out;
     CarePackage carePackage;
     LoginPackage loginPackage;
     PinLocal local;
@@ -105,12 +105,12 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     DataChunk pinKey;           // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
     JsonBox pinKeyBox;          // Holds pinKey
-    std::string LPIN = lobby->username() + szPin;
+    std::string LPIN = lobby.username() + szPin;
 
     // Load the packages:
-    ABC_CHECK_NEW(carePackage.load(lobby->carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.load(lobby->loginPackageName()), pError);
-    ABC_CHECK_NEW(local.load(lobby->dir() + PIN_FILENAME), pError);
+    ABC_CHECK_NEW(carePackage.load(lobby.carePackageName()), pError);
+    ABC_CHECK_NEW(loginPackage.load(lobby.loginPackageName()), pError);
+    ABC_CHECK_NEW(local.load(lobby.dir() + PIN_FILENAME), pError);
     ABC_CHECK_NEW(local.pinAuthIdDecode(pinAuthId), pError);
 
     // Get EPINK from the server:
@@ -125,9 +125,8 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(local.pinBox().decrypt(dataKey, pinKey), pError);
 
     // Create the Login object:
-    login.reset(new Login(lobby, dataKey));
-    ABC_CHECK_NEW(login->init(loginPackage), pError);
-    result.reset(login.release());
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage), pError);
+    result = std::move(out);
 
 exit:
     ABC_FREE_STR(szEPINK);
@@ -153,15 +152,15 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     DataChunk pinKey;           // Unlocks dataKey
     JsonBox pinKeyBox;          // Holds pinKey
     JsonBox pinBox;             // Holds dataKey
-    std::string LPIN = login.lobby().username() + szPin;
+    std::string LPIN = login.lobby.username() + szPin;
     std::string str;
 
     // Get login stuff:
-    ABC_CHECK_NEW(carePackage.load(login.lobby().carePackageName()), pError);
+    ABC_CHECK_NEW(carePackage.load(login.lobby.carePackageName()), pError);
     ABC_CHECK_RET(ABC_LoginGetServerKey(login, &LP1, pError));
 
     // Set up DID:
-    if (!local.load(login.lobby().dir() + PIN_FILENAME) ||
+    if (!local.load(login.lobby.dir() + PIN_FILENAME) ||
         !local.pinAuthIdDecode(pinAuthId))
         ABC_CHECK_NEW(randomData(pinAuthId, KEY_LENGTH), pError);
 
@@ -176,14 +175,14 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     // Set up the server:
     ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN), pError);
     ABC_CHECK_NEW(pinKeyBox.encode(str), pError);
-    ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(login.lobby(), LP1,
+    ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(login.lobby, LP1,
         toU08Buf(pinAuthId), toU08Buf(pinAuthKey), str, expires, pError));
 
     // Save the local file:
     ABC_CHECK_NEW(local.pinBoxSet(pinBox), pError);
     ABC_CHECK_NEW(local.pinAuthIdSet(base64Encode(pinAuthId).c_str()), pError);
     ABC_CHECK_NEW(local.expiresSet(expires), pError);
-    ABC_CHECK_NEW(local.save(login.lobby().dir() + PIN_FILENAME), pError);
+    ABC_CHECK_NEW(local.save(login.lobby.dir() + PIN_FILENAME), pError);
 
 exit:
 

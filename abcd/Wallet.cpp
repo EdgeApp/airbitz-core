@@ -175,7 +175,7 @@ void ABC_WalletIDFree(tABC_WalletID in)
  *
  * @param pszUUID Pointer to hold allocated pointer to UUID string
  */
-tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
+tABC_CC ABC_WalletCreate(Account &account,
                          const char *szWalletName,
                          int  currencyNum,
                          char                  **pszUUID,
@@ -199,7 +199,7 @@ tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
     tWalletData *pData = NULL;
 
     ABC_CHECK_NULL(pszUUID);
-    ABC_CHECK_RET(ABC_LoginGetServerKey(account->login(), &LP1, pError));
+    ABC_CHECK_RET(ABC_LoginGetServerKey(account.login, &LP1, pError));
 
     // create a new wallet data struct
     ABC_NEW(pData, tWalletData);
@@ -208,7 +208,7 @@ tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
     ABC_CHECK_NEW(randomUuid(uuid), pError);
     ABC_STRDUP(pData->szUUID, uuid.c_str());
     ABC_STRDUP(*pszUUID, uuid.c_str());
-    wallet = ABC_WalletID(*account, pData->szUUID);
+    wallet = ABC_WalletID(account, pData->szUUID);
 
     // generate the master key for this wallet - MK_<Wallet_GUID1>
     ABC_CHECK_NEW(randomData(dataKey, WALLET_KEY_LENGTH), pError);
@@ -244,11 +244,11 @@ tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
     ABC_CHECK_RET(ABC_WalletSetCurrencyNum(wallet, currencyNum, pError));
 
     // Request remote wallet repo
-    ABC_CHECK_NEW(LoginServerWalletCreate(account->login().lobby(), LP1, pData->szWalletAcctKey), pError);
+    ABC_CHECK_NEW(LoginServerWalletCreate(account.login.lobby, LP1, pData->szWalletAcctKey), pError);
 
     // set this account for the wallet's first account
     ABC_CHECK_RET(ABC_WalletAddAccount(wallet,
-        account->login().lobby().username().c_str(), pError));
+        account.login.lobby.username().c_str(), pError));
 
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
@@ -257,19 +257,19 @@ tABC_CC ABC_WalletCreate(std::shared_ptr<Account> account,
     ABC_CHECK_RET(ABC_SyncRepo(syncDir.c_str(), pData->szWalletAcctKey, dirty, pError));
 
     // Actiate the remote wallet
-    ABC_CHECK_NEW(LoginServerWalletActivate(account->login().lobby(), LP1, pData->szWalletAcctKey), pError);
+    ABC_CHECK_NEW(LoginServerWalletActivate(account.login.lobby, LP1, pData->szWalletAcctKey), pError);
 
     // If everything worked, add the wallet to the account:
     ABC_CHECK_NEW(json.dataKeySet(base16Encode(dataKey).c_str()), pError);
     ABC_CHECK_NEW(json.syncKeySet(base16Encode(syncKey).c_str()), pError);
     ABC_CHECK_NEW(json.bitcoinKeySet(base16Encode(bitcoinKey).c_str()), pError);
-    ABC_CHECK_NEW(account->wallets.insert(uuid, json), pError);
+    ABC_CHECK_NEW(account.wallets.insert(uuid, json), pError);
 
     // Now the wallet is written to disk, generate some addresses
     ABC_CHECK_RET(ABC_TxCreateInitialAddresses(wallet, pError));
 
     // After wallet is created, sync the account:
-    ABC_CHECK_NEW(account->sync(dirty), pError);
+    ABC_CHECK_NEW(account.sync(dirty), pError);
 
     pData = NULL; // so we don't free what we just added to the cache
 exit:

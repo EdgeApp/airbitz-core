@@ -20,22 +20,15 @@ struct LoginPackage;
 /**
  * Holds the keys for a logged-in account.
  */
-class Login
+class Login:
+    public std::enable_shared_from_this<Login>
 {
 public:
-    Login(std::shared_ptr<Lobby> lobby, DataSlice dataKey);
+    Lobby &lobby;
 
-    /**
-     * Prepares the Login object for use.
-     */
-    Status
-    init(const LoginPackage &loginPackage);
-
-    /**
-     * Obtains a reference to the lobby object associated with this account.
-     */
-    Lobby &
-    lobby() const { return *lobby_; }
+    static Status
+    create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
+        const LoginPackage &loginPackage);
 
     /**
      * Obtains the master key for the account.
@@ -53,14 +46,16 @@ private:
     // No mutex, since all members are immutable after init.
     // The lobby mutex can cover disk-based things like logging in and
     // changing passwords if we ever want to to protect those one day.
-    const std::shared_ptr<Lobby> lobby_;
+    const std::shared_ptr<Lobby> parent_;
     const DataChunk dataKey_;
-    std::string syncKey_;
+    const std::string syncKey_;
+
+    Login(Lobby &lobby, DataSlice dataKey, std::string syncKey);
 };
 
 // Constructors:
 tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
-                        std::shared_ptr<Lobby> lobby,
+                        Lobby &lobby,
                         const char *szPassword,
                         tABC_Error *pError);
 

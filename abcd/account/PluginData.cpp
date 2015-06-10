@@ -34,7 +34,7 @@ static std::string
 pluginDirectory(const Account &account, const std::string &plugin)
 {
     return pluginsDirectory(account) +
-        cryptoFilename(account.login().dataKey(), plugin) + "/";
+        cryptoFilename(account.login.dataKey(), plugin) + "/";
 }
 
 static std::string
@@ -42,7 +42,7 @@ keyFilename(const Account &account, const std::string &plugin,
     const std::string &key)
 {
     return pluginDirectory(account, plugin) +
-        cryptoFilename(account.login().dataKey(), key) + ".json";
+        cryptoFilename(account.login.dataKey(), key) + ".json";
 }
 
 Status
@@ -50,7 +50,7 @@ pluginDataGet(const Account &account, const std::string &plugin,
     const std::string &key, std::string &data)
 {
     PluginDataFile json;
-    ABC_CHECK(json.load(keyFilename(account, plugin, key), account.login().dataKey()));
+    ABC_CHECK(json.load(keyFilename(account, plugin, key), account.login.dataKey()));
     ABC_CHECK(json.keyOk());
     ABC_CHECK(json.dataOk());
 
@@ -71,7 +71,7 @@ pluginDataSet(const Account &account, const std::string &plugin,
     PluginDataFile json;
     json.keySet(key.c_str());
     json.dataSet(data.c_str());
-    ABC_CHECK(json.save(keyFilename(account, plugin, key), account.login().dataKey()));
+    ABC_CHECK(json.save(keyFilename(account, plugin, key), account.login.dataKey()));
 
     return Status();
 }
