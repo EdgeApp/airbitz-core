@@ -39,31 +39,31 @@ namespace abcd {
 
 #define SATOSHI_PER_BITCOIN                     100000000
 
-static std::mutex exchangeMutex;
-static std::unique_ptr<ExchangeCache> exchangeCache;
-
 /**
  * Loads the exchange cache from disk if it hasn't been done yet.
  */
-static Status
+static ExchangeCache &
 exchangeCacheLoad()
 {
-    if (!exchangeCache)
+    static std::mutex mutex;
+    static std::unique_ptr<ExchangeCache> cache;
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!cache)
     {
-        exchangeCache.reset(new ExchangeCache(getRootDir()));
-        exchangeCache->load(); // Nothing bad happens if this fails
+        cache.reset(new ExchangeCache(getRootDir()));
+        cache->load(); // Nothing bad happens if this fails
     }
-    return Status();
+    return *cache;
 }
 
 Status
 exchangeUpdate(Currencies currencies, const ExchangeSources &sources)
 {
-    std::lock_guard<std::mutex> lock(exchangeMutex);
-    ABC_CHECK(exchangeCacheLoad());
+    ExchangeCache &cache = exchangeCacheLoad();
 
     time_t now = time(nullptr);
-    if (exchangeCache->fresh(currencies, now))
+    if (cache.fresh(currencies, now))
         return Status();
 
     ExchangeRates allRates;
@@ -93,8 +93,8 @@ exchangeUpdate(Currencies currencies, const ExchangeSources &sources)
 
     // Add the rates to the cache:
     for (auto rate: allRates)
-        ABC_CHECK(exchangeCache->update(rate.first, rate.second, now));
-    ABC_CHECK(exchangeCache->save());
+        ABC_CHECK(cache.update(rate.first, rate.second, now));
+    ABC_CHECK(cache.save());
 
     return Status();
 }
@@ -104,10 +104,8 @@ exchangeSatoshiToCurrency(double &result, int64_t in, Currency currency)
 {
     result = 0.0;
 
-    ABC_CHECK(exchangeCacheLoad());
-
     double rate;
-    ABC_CHECK(exchangeCache->rate(rate, currency));
+    ABC_CHECK(exchangeCacheLoad().rate(rate, currency));
 
     result = in * (rate / SATOSHI_PER_BITCOIN);
     return Status();
@@ -118,10 +116,8 @@ exchangeCurrencyToSatoshi(int64_t &result, double in, Currency currency)
 {
     result = 0;
 
-    ABC_CHECK(exchangeCacheLoad());
-
     double rate;
-    ABC_CHECK(exchangeCache->rate(rate, currency));
+    ABC_CHECK(exchangeCacheLoad().rate(rate, currency));
 
     result = static_cast<int64_t>(in * (SATOSHI_PER_BITCOIN / rate));
     return Status();
