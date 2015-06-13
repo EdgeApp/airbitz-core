@@ -11,6 +11,7 @@
 #include "Currency.hpp"
 #include <time.h>
 #include <map>
+#include <mutex>
 
 namespace abcd {
 
@@ -53,6 +54,7 @@ public:
     fresh(const Currencies &currencies, time_t now);
 
 private:
+    mutable std::mutex mutex_;
     const std::string dir_;
 
     struct CacheRow
