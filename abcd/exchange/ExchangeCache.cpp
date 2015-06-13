@@ -13,8 +13,10 @@ namespace abcd {
 
 #define FILENAME "Exchange.json"
 
+static std::mutex exchangeCacheMutex;
+
 struct CacheJson:
-    public JsonObject
+public JsonObject
 {
     ABC_JSON_VALUE(rates, "rates", JsonArray)
 };
@@ -36,6 +38,8 @@ Status
 ExchangeCache::load()
 {
     CacheJson json;
+    std::lock_guard<std::mutex> lock(exchangeCacheMutex);
+
     ABC_CHECK(json.load(dir_ + FILENAME));
     auto rates = json.rates();
 
@@ -60,6 +64,7 @@ Status
 ExchangeCache::save()
 {
     JsonArray rates;
+    std::lock_guard<std::mutex> lock(exchangeCacheMutex);
     for (const auto &i: cache_)
     {
         std::string code;
@@ -82,6 +87,7 @@ ExchangeCache::save()
 Status
 ExchangeCache::rate(double &result, Currency currency)
 {
+    std::lock_guard<std::mutex> lock(exchangeCacheMutex);
     const auto &i = cache_.find(currency);
     if (cache_.end() == i)
         return ABC_ERROR(ABC_CC_Error, "Currency not in cache");
@@ -93,6 +99,7 @@ ExchangeCache::rate(double &result, Currency currency)
 Status
 ExchangeCache::update(Currency currency, double rate, time_t now)
 {
+    std::lock_guard<std::mutex> lock(exchangeCacheMutex);
     cache_[currency] = CacheRow{rate, now};
     return Status();
 }
@@ -100,6 +107,7 @@ ExchangeCache::update(Currency currency, double rate, time_t now)
 bool
 ExchangeCache::fresh(const Currencies &currencies, time_t now)
 {
+    std::lock_guard<std::mutex> lock(exchangeCacheMutex);
     for (auto currency: currencies)
     {
         auto i = cache_.find(currency);

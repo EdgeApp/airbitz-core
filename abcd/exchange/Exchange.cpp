@@ -104,7 +104,6 @@ exchangeSatoshiToCurrency(double &result, int64_t in, Currency currency)
 {
     result = 0.0;
 
-    std::lock_guard<std::mutex> lock(exchangeMutex);
     ABC_CHECK(exchangeCacheLoad());
 
     double rate;
@@ -119,7 +118,6 @@ exchangeCurrencyToSatoshi(int64_t &result, double in, Currency currency)
 {
     result = 0;
 
-    std::lock_guard<std::mutex> lock(exchangeMutex);
     ABC_CHECK(exchangeCacheLoad());
 
     double rate;
