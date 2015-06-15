@@ -173,7 +173,7 @@ minerFee(const bc::transaction_type &tx, tABC_GeneralInfo *pInfo)
         }
     }
     if (!sizeFee)
-        return 0;
+        sizeFee = pInfo->aMinersFees[pInfo->countMinersFees - 1]->amountSatoshi;
 
     // The amount-based fee is 0.1% of total funds sent:
     uint64_t amountFee = outputsTotal(tx.outputs) / 1000;
@@ -214,6 +214,9 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
         }
         change = chosen.change + fee;
         fee = minerFee(tx, pFeeInfo);
+
+        // Guard against any potential fee insanity:
+        fee = std::min<uint64_t>(1000000, fee);
     }
     while (change < fee);
 
