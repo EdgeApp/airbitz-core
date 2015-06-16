@@ -8,7 +8,7 @@
 #ifndef ABCD_CONTEXT_H
 #define ABCD_CONTEXT_H
 
-#include "util/Status.hpp"
+#include "exchange/ExchangeCache.hpp"
 #include <memory>
 
 namespace abcd {
@@ -29,6 +29,9 @@ public:
 private:
     const std::string rootDir_;
     const std::string certPath_;
+
+public:
+    ExchangeCache exchangeCache;
 };
 
 /**

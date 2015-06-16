@@ -45,7 +45,6 @@
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
-#include "../abcd/exchange/Exchange.hpp"
 #include "../abcd/http/Http.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
@@ -1308,7 +1307,7 @@ tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
 {
     ABC_PROLOG();
 
-    ABC_CHECK_NEW(exchangeSatoshiToCurrency(*pCurrency, satoshi,
+    ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(*pCurrency, satoshi,
         static_cast<Currency>(currencyNum)), pError);
 
 exit:
@@ -1332,7 +1331,7 @@ tABC_CC ABC_CurrencyToSatoshi(const char *szUserName,
 {
     ABC_PROLOG();
 
-    ABC_CHECK_NEW(exchangeCurrencyToSatoshi(*pSatoshi, currency,
+    ABC_CHECK_NEW(gContext->exchangeCache.currencyToSatoshi(*pSatoshi, currency,
         static_cast<Currency>(currencyNum)), pError);
 
 exit:
@@ -2780,7 +2779,7 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
         sources.push_front(preference);
 
         // Do the update:
-        ABC_CHECK_NEW(exchangeUpdate(currencies, sources), pError);
+        ABC_CHECK_NEW(gContext->exchangeCache.update(currencies, sources), pError);
     }
 
 exit:

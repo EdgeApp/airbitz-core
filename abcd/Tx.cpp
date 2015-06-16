@@ -30,13 +30,13 @@
  */
 
 #include "Tx.hpp"
+#include "Context.hpp"
 #include "Wallet.hpp"
 #include "account/Account.hpp"
 #include "account/AccountSettings.hpp"
 #include "bitcoin/Text.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"
-#include "exchange/Exchange.hpp"
 #include "spend/Spend.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"
@@ -748,7 +748,7 @@ tABC_CC ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi,
     tABC_WalletInfo *pWallet = NULL;
 
     ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet, pError));
-    ABC_CHECK_NEW(exchangeSatoshiToCurrency(
+    ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
         currency, amountSatoshi, static_cast<Currency>(pWallet->currencyNum)), pError);
 
     *pCurrency = currency;
@@ -2265,7 +2265,7 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
     pTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
     ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWalletInfo, pError));
-    ABC_CHECK_NEW(exchangeSatoshiToCurrency(
+    ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
         currency, pTx->pDetails->amountSatoshi,
         static_cast<Currency>(pWalletInfo->currencyNum)), pError);
     pTx->pDetails->amountCurrency = currency;

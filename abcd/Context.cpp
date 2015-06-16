@@ -20,7 +20,8 @@ slashify(const std::string &s)
 
 Context::Context(const std::string &rootDir, const std::string &certPath):
     rootDir_(slashify(rootDir)),
-    certPath_(certPath)
+    certPath_(certPath),
+    exchangeCache(rootDir_)
 {}
 
 std::string

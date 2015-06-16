@@ -11,7 +11,7 @@
 
 namespace abcd {
 
-#define FILENAME "Exchange.json"
+#define SATOSHI_PER_BITCOIN 100000000
 
 struct CacheJson:
     public JsonObject
@@ -29,8 +29,77 @@ struct CacheJsonRow:
 };
 
 ExchangeCache::ExchangeCache(const std::string &dir):
-    dir_(dir)
-{}
+   path_(dir + "Exchange.json")
+{
+    load(); // Nothing bad happens if this fails
+}
+
+Status
+ExchangeCache::update(Currencies currencies, const ExchangeSources &sources)
+{
+    // No mutex, since we are making network calls.
+    // We only call member functions that provide their own mutexes.
+
+    time_t now = time(nullptr);
+    if (fresh(currencies, now))
+        return Status();
+
+    ExchangeRates allRates;
+    for (auto source: sources)
+    {
+        // Stop if the todo list is empty:
+        if (currencies.empty())
+            break;
+
+        // Grab the rates from the server:
+        ExchangeRates rates;
+        if (!exchangeSourceFetch(rates, source))
+            continue; // Just skip the failed ones
+
+        // Remove any new rates from the todo list:
+        for (auto rate: rates)
+        {
+            auto i = currencies.find(rate.first);
+            if (currencies.end() != i)
+                currencies.erase(i);
+        }
+
+        // Add any new rates to the allRates list:
+        rates.insert(allRates.begin(), allRates.end());
+        allRates = std::move(rates);
+    }
+
+    // Add the rates to the cache:
+    for (auto rate: allRates)
+        ABC_CHECK(update(rate.first, rate.second, now));
+    ABC_CHECK(save());
+
+    return Status();
+}
+
+Status
+ExchangeCache::satoshiToCurrency(double &result, int64_t in, Currency currency)
+{
+    result = 0.0;
+
+    double r;
+    ABC_CHECK(rate(r, currency));
+
+    result = in * (r / SATOSHI_PER_BITCOIN);
+    return Status();
+}
+
+Status
+ExchangeCache::currencyToSatoshi(int64_t &result, double in, Currency currency)
+{
+    result = 0;
+
+    double r;
+    ABC_CHECK(rate(r, currency));
+
+    result = static_cast<int64_t>(in * (SATOSHI_PER_BITCOIN / r));
+    return Status();
+}
 
 Status
 ExchangeCache::load()
@@ -38,7 +107,7 @@ ExchangeCache::load()
     std::lock_guard<std::mutex> lock(mutex_);
 
     CacheJson json;
-    ABC_CHECK(json.load(dir_ + FILENAME));
+    ABC_CHECK(json.load(path_));
     auto rates = json.rates();
 
     auto size = rates.size();
@@ -78,7 +147,7 @@ ExchangeCache::save()
 
     CacheJson json;
     ABC_CHECK(json.ratesSet(rates));
-    ABC_CHECK(json.save(dir_ + FILENAME));
+    ABC_CHECK(json.save(path_));
 
     return Status();
 }
