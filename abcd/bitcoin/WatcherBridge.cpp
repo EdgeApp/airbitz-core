@@ -226,8 +226,14 @@ tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
 
     heightCallback = [watcherInfo, fAsyncCallback, pData](const size_t height)
     {
-        tABC_Error error;
-        ABC_TxBlockHeightUpdate(height, fAsyncCallback, pData, &error);
+        if (fAsyncCallback)
+        {
+            tABC_AsyncBitCoinInfo info;
+            info.eventType = ABC_AsyncEventType_BlockHeightChange;
+            info.pData = pData;
+            info.szDescription = "Block height change";
+            fAsyncCallback(&info);
+        }
         watcherSave(watcherInfo->wallet); // Failure is not fatal
     };
     watcherInfo->watcher.set_height_callback(heightCallback);

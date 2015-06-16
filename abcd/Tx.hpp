@@ -82,11 +82,6 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
                            tABC_UnsavedTx   *pUtx,
                            tABC_Error       *pError);
 
-tABC_CC ABC_TxBlockHeightUpdate(uint64_t height,
-                                tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                                void *pData,
-                                tABC_Error *pError);
-
 tABC_CC ABC_TxReceiveTransaction(Wallet &self,
                                  uint64_t amountSatoshi, uint64_t feeSatoshi,
                                  tABC_TxOutput **paInAddress, unsigned int inAddressCount,

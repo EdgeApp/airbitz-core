@@ -432,26 +432,6 @@ exit:
     return cc;
 }
 
-tABC_CC
-ABC_TxBlockHeightUpdate(uint64_t height,
-                        tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                        void *pData,
-                        tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    if (fAsyncBitCoinEventCallback)
-    {
-        tABC_AsyncBitCoinInfo info;
-        info.eventType = ABC_AsyncEventType_BlockHeightChange;
-        info.pData = pData;
-        info.szDescription = stringCopy("Block height change");
-        fAsyncBitCoinEventCallback(&info);
-        ABC_FREE_STR(info.szDescription);
-    }
-
-    return cc;
-}
-
 /**
  * Handles creating or updating when we receive a transaction
  */
