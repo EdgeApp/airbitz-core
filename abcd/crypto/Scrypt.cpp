@@ -22,45 +22,30 @@ namespace abcd {
 #define SCRYPT_MAX_CLIENT_N        (1 << 17)
 #define SCRYPT_TARGET_USECONDS     500000
 
-#define SCRYPT_DEFAULT_LENGTH      32
 #define SCRYPT_DEFAULT_SALT_LENGTH 32
 
-#define TIMED_SCRYPT_PARAMS        TRUE
-
-//
-// Eeewww. Global var. Should we mutex this? It's just a single initialized var at
-// startup. It's never written after that. Only read.
-//
-unsigned int g_timedScryptN = SCRYPT_DEFAULT_CLIENT_N;
-unsigned int g_timedScryptR = SCRYPT_DEFAULT_CLIENT_R;
-
-tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
+Status
+ScryptSnrp::create()
 {
-    tABC_CC cc = ABC_CC_Ok;
+    // Set up default values:
+    ABC_CHECK(randomData(salt, SCRYPT_DEFAULT_SALT_LENGTH));
+    n = SCRYPT_DEFAULT_CLIENT_N;
+    r = SCRYPT_DEFAULT_CLIENT_R;
+    p = SCRYPT_DEFAULT_CLIENT_P;
 
+    // Benchmark the CPU:
+    DataChunk temp;
     struct timeval timerStart;
     struct timeval timerEnd;
-    int totalTime;
-    DataChunk temp;
+    gettimeofday(&timerStart, nullptr);
+    ABC_CHECK(hash(temp, salt));
+    gettimeofday(&timerEnd, nullptr);
 
-    ABC_DebugLog("%s called", __FUNCTION__);
-
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    ScryptSnrp snrp = usernameSnrp();
-    snrp.n = SCRYPT_DEFAULT_CLIENT_N,
-    snrp.r = SCRYPT_DEFAULT_CLIENT_R,
-    snrp.p = SCRYPT_DEFAULT_CLIENT_P,
-
-    gettimeofday(&timerStart, NULL);
-    ABC_CHECK_NEW(snrp.hash(temp, snrp.salt), pError);
-    gettimeofday(&timerEnd, NULL);
-
-    // Totaltime is in uSec
-    totalTime = 1000000 * (timerEnd.tv_sec - timerStart.tv_sec);
+    // Find the time in microseconds:
+    int totalTime = 1000000 * (timerEnd.tv_sec - timerStart.tv_sec);
     totalTime += timerEnd.tv_usec;
     totalTime -= timerStart.tv_usec;
 
-#ifdef TIMED_SCRYPT_PARAMS
     if (totalTime >= SCRYPT_TARGET_USECONDS)
     {
         // Very slow device.
@@ -71,38 +56,22 @@ tABC_CC ABC_InitializeCrypto(tABC_Error        *pError)
         // Medium speed device.
         // Scale R between 1 to 8 assuming linear effect on hashing time.
         // Don't touch N.
-        g_timedScryptR = SCRYPT_TARGET_USECONDS / totalTime;
+        r = SCRYPT_TARGET_USECONDS / totalTime;
     }
     else if (totalTime > 0)
     {
         // Very fast device.
-        g_timedScryptR = 8;
+        r = 8;
 
         // Need to adjust scryptN to make scrypt even stronger:
         unsigned int temp = (SCRYPT_TARGET_USECONDS / 8) / totalTime;
-        g_timedScryptN <<= (temp - 1);
-        if (SCRYPT_MAX_CLIENT_N < g_timedScryptN || !g_timedScryptN)
+        n <<= (temp - 1);
+        if (SCRYPT_MAX_CLIENT_N < n || !n)
         {
-            g_timedScryptN = SCRYPT_MAX_CLIENT_N;
+            n = SCRYPT_MAX_CLIENT_N;
         }
     }
-#endif
 
-    ABC_DebugLog("Scrypt timing: %d\n", totalTime);
-    ABC_DebugLog("Scrypt N = %d\n",g_timedScryptN);
-    ABC_DebugLog("Scrypt R = %d\n",g_timedScryptR);
-
-exit:
-    return cc;
-}
-
-Status
-ScryptSnrp::create()
-{
-    ABC_CHECK(randomData(salt, SCRYPT_DEFAULT_SALT_LENGTH));
-    n = g_timedScryptN;
-    r = g_timedScryptR;
-    p = SCRYPT_DEFAULT_CLIENT_P;
     return Status();
 }
 

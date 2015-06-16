@@ -15,11 +15,6 @@ namespace abcd {
 
 constexpr size_t scryptDefaultSize = 32;
 
-/*
- * Initializes Scrypt parameters by benchmarking the device.
- */
-tABC_CC ABC_InitializeCrypto(tABC_Error *pError);
-
 /**
  * Parameters for the scrypt algorithm.
  */

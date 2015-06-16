@@ -140,9 +140,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
         // override the alloc and free of janson so we can have a secure method
         json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
-        // initialize Crypto perf checks to determine hashing power
-        ABC_CHECK_RET(ABC_InitializeCrypto(pError));
-
         DataSlice Seed(pSeedData, pSeedData + seedLength);
         ABC_CHECK_RET(ABC_CryptoSetRandomSeed(toU08Buf(Seed), pError));
 
