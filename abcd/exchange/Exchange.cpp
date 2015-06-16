@@ -31,7 +31,7 @@
 
 #include "Exchange.hpp"
 #include "ExchangeCache.hpp"
-#include "../util/FileIO.hpp"
+#include "../Context.hpp"
 #include <memory>
 #include <mutex>
 
@@ -51,7 +51,7 @@ exchangeCacheLoad()
 
     if (!cache)
     {
-        cache.reset(new ExchangeCache(getRootDir()));
+        cache.reset(new ExchangeCache(gContext->rootDir()));
         cache->load(); // Nothing bad happens if this fails
     }
     return *cache;

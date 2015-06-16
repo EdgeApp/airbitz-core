@@ -14,6 +14,7 @@
  */
 
 #include "General.hpp"
+#include "Context.hpp"
 #include "http/AirbitzRequest.hpp"
 #include "login/LoginServer.hpp"
 #include "json/JsonObject.hpp"
@@ -329,7 +330,7 @@ tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::string filename = getRootDir() + GENERAL_INFO_FILENAME;
+    std::string filename = gContext->rootDir() + GENERAL_INFO_FILENAME;
 
     ABC_CHECK_NULL(pszFilename);
     ABC_STRDUP(*pszFilename, filename.c_str());
@@ -379,7 +380,7 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::string filename = getRootDir() + GENERAL_QUESTIONS_FILENAME;
+    std::string filename = gContext->rootDir() + GENERAL_QUESTIONS_FILENAME;
     QuestionsFile file;
     json_t *pJSON_Value = NULL;
     tABC_QuestionChoices *pQuestionChoices = NULL;
@@ -462,7 +463,7 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
     // get the questions from the server
     ABC_CHECK_NEW(loginServerGetQuestions(resultsJson), pError);
     ABC_CHECK_NEW(file.questionsSet(resultsJson), pError);
-    ABC_CHECK_NEW(file.save(getRootDir() + GENERAL_QUESTIONS_FILENAME), pError);
+    ABC_CHECK_NEW(file.save(gContext->rootDir() + GENERAL_QUESTIONS_FILENAME), pError);
 
 exit:
     return cc;

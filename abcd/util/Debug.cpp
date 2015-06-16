@@ -30,7 +30,8 @@
  */
 
 #include "Debug.hpp"
-#include "FileIO.hpp"
+#include "Util.hpp"
+#include "../Context.hpp"
 #include <stdarg.h>
 #include <stdio.h>
 #include <time.h>
@@ -40,13 +41,13 @@
 #include <iomanip>
 #include <mutex>
 #include <sstream>
+#include <vector>
 
 namespace abcd {
 
 #ifdef DEBUG
 
 #define MAX_LOG_SIZE 102400 // Max size 100 KiB
-#define ABC_LOG_FILE "abc.log"
 
 static std::recursive_mutex gDebugMutex;
 static std::string gLogFilename;
@@ -59,7 +60,7 @@ tABC_CC ABC_DebugInitialize(tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    gLogFilename = getRootDir() + ABC_LOG_FILE;
+    gLogFilename = gContext->rootDir() + "abc.log";
 
     gLogFile = fopen(gLogFilename.c_str(), "a");
     ABC_CHECK_SYS(gLogFile, "fopen(log file)");

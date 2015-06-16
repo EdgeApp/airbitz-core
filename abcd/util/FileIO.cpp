@@ -42,25 +42,7 @@
 
 namespace abcd {
 
-static std::string gRootDir = ".";
 std::recursive_mutex gFileMutex;
-
-void
-setRootDir(const std::string &rootDir)
-{
-    AutoFileLock lock(gFileMutex);
-
-    gRootDir = rootDir;
-    if (gRootDir.back() != '/')
-        gRootDir += '/';
-}
-
-const std::string &
-getRootDir()
-{
-    AutoFileLock lock(gFileMutex);
-    return gRootDir;
-}
 
 Status
 fileEnsureDir(const std::string &dir)

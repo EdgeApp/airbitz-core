@@ -30,6 +30,7 @@
  */
 
 #include "Wallet.hpp"
+#include "Context.hpp"
 #include "Tx.hpp"
 #include "account/Account.hpp"
 #include "bitcoin/WatcherBridge.hpp"
@@ -100,16 +101,10 @@ static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
 static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError);
 static void    ABC_WalletFreeData(tWalletData *pData);
 
-static std::string
-walletRootDir()
-{
-    return getRootDir() + "Wallets/";
-}
-
 std::string
 walletDir(const std::string &id)
 {
-    return walletRootDir() + id + "/";
+    return gContext->walletsDir() + id + "/";
 }
 
 std::string
@@ -223,7 +218,7 @@ tABC_CC ABC_WalletCreate(Account &account,
     ABC_STRDUP(pData->szWalletAcctKey, base16Encode(syncKey).c_str());
 
     // create the wallet root directory if necessary
-    ABC_CHECK_NEW(fileEnsureDir(walletRootDir()), pError);
+    ABC_CHECK_NEW(fileEnsureDir(gContext->walletsDir()), pError);
 
     // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
     dir = walletDir(pData->szUUID);
@@ -308,7 +303,7 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, bool &dirty, tABC_Error *pError)
     ABC_CHECK_RET(ABC_GeneralGetInfo(&pInfo, pError));
 
     // create the wallet root directory if necessary
-    ABC_CHECK_NEW(fileEnsureDir(walletRootDir()), pError);
+    ABC_CHECK_NEW(fileEnsureDir(gContext->walletsDir()), pError);
 
     // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
     ABC_CHECK_NEW(fileEnsureDir(walletDir(self.szUUID)), pError);

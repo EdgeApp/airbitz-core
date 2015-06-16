@@ -31,6 +31,7 @@
 
 #include "ABC.h"
 #include "LoginShim.hpp"
+#include "../abcd/Context.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Export.hpp"
 #include "../abcd/Wallet.hpp"
@@ -70,13 +71,11 @@
 
 using namespace abcd;
 
-static bool gbInitialized = false;
-
 #define ABC_PROLOG() \
     ABC_DebugLog("%s called", __FUNCTION__); \
     tABC_CC cc = ABC_CC_Ok; \
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok); \
-    ABC_CHECK_ASSERT(gbInitialized, ABC_CC_NotInitialized, "The core library has not been initalized")
+    ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized")
 
 #define ABC_GET_LOBBY() \
     std::shared_ptr<Lobby> lobby; \
@@ -126,38 +125,31 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 {
     // Cannot use ABC_PROLOG - different initialization semantics
     ABC_DebugLog("%s called", __FUNCTION__);
-
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    DataSlice Seed(pSeedData, pSeedData + seedLength);
-
-    ABC_CHECK_ASSERT(!gbInitialized, ABC_CC_Reinitialization, "The core library has already been initalized");
+    ABC_CHECK_ASSERT(!gContext, ABC_CC_Reinitialization, "The core library has already been initalized");
     ABC_CHECK_NULL(szRootDir);
     ABC_CHECK_NULL(pSeedData);
 
-    setRootDir(szRootDir);
+    {
+        // Initialize the global context object:
+        gContext.reset(new Context(szRootDir, szCaCertPath));
 
-    // initialize logging
-    ABC_CHECK_RET(ABC_DebugInitialize(pError));
+        // initialize logging
+        ABC_CHECK_RET(ABC_DebugInitialize(pError));
 
-    // override the alloc and free of janson so we can have a secure method
-    json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
+        // override the alloc and free of janson so we can have a secure method
+        json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
-    // initialize URL system
-    ABC_CHECK_NEW(httpInit(szCaCertPath), pError);
+        // initialize Crypto perf checks to determine hashing power
+        ABC_CHECK_RET(ABC_InitializeCrypto(pError));
 
-    // initialize Crypto perf checks to determine hashing power
-    ABC_CHECK_RET(ABC_InitializeCrypto(pError));
-    ABC_CHECK_RET(ABC_CryptoSetRandomSeed(toU08Buf(Seed), pError));
+        DataSlice Seed(pSeedData, pSeedData + seedLength);
+        ABC_CHECK_RET(ABC_CryptoSetRandomSeed(toU08Buf(Seed), pError));
 
-    // initialize sync
-    ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
-
-    // initialize payment
-    ABC_CHECK_NEW(paymentInit(szCaCertPath), pError);
-
-    gbInitialized = true;
+        ABC_CHECK_NEW(httpInit(), pError);
+        ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
+    }
 
 exit:
     return cc;
@@ -173,15 +165,14 @@ exit:
 void ABC_Terminate()
 {
     // Cannot use ABC_PROLOG - no pError
-    if (gbInitialized)
+    if (gContext)
     {
         ABC_ClearKeyCache(NULL);
+        gContext.reset();
 
         ABC_SyncTerminate();
 
         ABC_DebugTerminate();
-
-        gbInitialized = false;
     }
 }
 

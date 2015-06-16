@@ -11,10 +11,10 @@
 namespace abcd {
 
 /**
- * Initialize the cURL library and sets the CA certificate path.
+ * Initialize the cURL library.
  */
 Status
-httpInit(const std::string &certPath);
+httpInit();
 
 } // namespace abcd
 
