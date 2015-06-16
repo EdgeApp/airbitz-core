@@ -70,6 +70,19 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
                                 tABC_U08Buf       *pData,
                                 tABC_Error        *pError);
 
+/**
+ * A constant-time alternative to memcmp.
+ */
+static bool
+cryptoCompare(const uint8_t *a, const uint8_t *b, size_t size)
+{
+    uint8_t out = false;
+    for (size_t i = 0; i < size; ++i)
+        out |= *a++ ^ *b++;
+
+    return !out;
+}
+
 std::string
 cryptoFilename(DataSlice key, const std::string &name)
 {
@@ -476,7 +489,7 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     SHA256(Data.data(), shaCheckLength, sha256Output);
 
     // check the sha256
-    if (0 != memcmp(pSHALoc, sha256Output, SHA256_DIGEST_LENGTH))
+    if (!cryptoCompare(pSHALoc, sha256Output, SHA256_DIGEST_LENGTH))
     {
         // this can be specifically used by the caller to possibly determine whether the key was incorrect
         ABC_RET_ERROR(ABC_CC_DecryptFailure, "Decrypted data failed checksum (SHA) check");
