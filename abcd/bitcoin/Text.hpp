@@ -23,19 +23,19 @@ namespace abcd {
 typedef struct sABC_BitcoinURIInfo
 {
     /** label for that address (e.g. name of receiver) */
-    char *szLabel;
+    const char *szLabel;
     /** bitcoin address (base58) */
-    char *szAddress;
+    const char *szAddress;
     /** message that shown to the user after scanning the QR code */
-    char *szMessage;
+    const char *szMessage;
     /** amount of bitcoins */
     int64_t amountSatoshi;
     /** Bip72 payment request r parameter */
-    char *szR;
+    const char *szR;
     /** Airbitz category extension */
-    char *szCategory;
+    const char *szCategory;
     /** Airbitz ret extension for return URI */
-    char *szRet;
+    const char *szRet;
 } tABC_BitcoinURIInfo;
 
 tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,

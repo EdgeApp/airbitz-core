@@ -156,7 +156,7 @@ static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pTyp
 static tABC_CC  ABC_TxLoadTransactionInfo(tABC_WalletID self, const char *szFilename, tABC_TxInfo **ppTransaction, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTxAndAppendToArray(tABC_WalletID self, int64_t startTime, int64_t endTime, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxGetAddressOwed(tABC_TxAddress *pAddr, int64_t *pSatoshiBalance, tABC_Error *pError);
-static tABC_CC  ABC_TxBuildFromLabel(tABC_WalletID self, char **pszLabel, tABC_Error *pError);
+static tABC_CC  ABC_TxBuildFromLabel(tABC_WalletID self, const char **pszLabel, tABC_Error *pError);
 static void     ABC_TxFreeRequest(tABC_RequestInfo *pRequest);
 static tABC_CC  ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const char *szTxID, bool bInternal, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransaction(tABC_WalletID self, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
@@ -2172,7 +2172,7 @@ exit:
  */
 static
 tABC_CC ABC_TxBuildFromLabel(tABC_WalletID self,
-                             char **pszLabel, tABC_Error *pError)
+                             const char **pszLabel, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
