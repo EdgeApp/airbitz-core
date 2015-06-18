@@ -749,7 +749,7 @@ tABC_CC ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi,
 
     ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet, pError));
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
-        currency, amountSatoshi, static_cast<Currency>(pWallet->currencyNum)), pError);
+        currency, amountSatoshi, static_cast<Currency>(pWallet->currencyNum)));
 
     *pCurrency = currency;
 exit:
@@ -2267,7 +2267,7 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
     ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWalletInfo, pError));
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
         currency, pTx->pDetails->amountSatoshi,
-        static_cast<Currency>(pWalletInfo->currencyNum)), pError);
+        static_cast<Currency>(pWalletInfo->currencyNum)));
     pTx->pDetails->amountCurrency = currency;
 
     // save the transaction
@@ -2611,7 +2611,7 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
     ABC_CHECK_ASSERT(e == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // create the transaction directory if needed
-    ABC_CHECK_NEW(fileEnsureDir(walletTxDir(self.szUUID)), pError);
+    ABC_CHECK_NEW(fileEnsureDir(walletTxDir(self.szUUID)));
 
     // get the filename for this transaction
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, pTx->szID, pTx->pStateInfo->bInternal, pError));
@@ -2997,7 +2997,7 @@ tABC_CC ABC_TxSaveAddress(tABC_WalletID self,
     ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pAddress->pDetails, pError));
 
     // create the address directory if needed
-    ABC_CHECK_NEW(fileEnsureDir(walletAddressDir(self.szUUID)), pError);
+    ABC_CHECK_NEW(fileEnsureDir(walletAddressDir(self.szUUID)));
 
     // create the filename for this transaction
     ABC_CHECK_RET(ABC_TxCreateAddressFilename(self, &szFilename, pAddress, pError));

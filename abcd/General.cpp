@@ -135,7 +135,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     }
 
     // load the json
-    ABC_CHECK_NEW(file.load(szInfoFilename), pError);
+    ABC_CHECK_NEW(file.load(szInfoFilename));
     pJSON_Root = file.get();
 
     // allocate the struct
@@ -306,8 +306,8 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     if (bUpdateRequired)
     {
         JsonPtr infoJson;
-        ABC_CHECK_NEW(loginServerGetGeneral(infoJson), pError);
-        ABC_CHECK_NEW(infoJson.save(szInfoFilename), pError);
+        ABC_CHECK_NEW(loginServerGetGeneral(infoJson));
+        ABC_CHECK_NEW(infoJson.save(szInfoFilename));
     }
 
 exit:
@@ -396,7 +396,7 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     }
 
     // Read in the recovery question choices json object
-    ABC_CHECK_NEW(file.load(filename), pError);
+    ABC_CHECK_NEW(file.load(filename));
     pJSON_Value = file.questions().get();
     if (!json_is_array(pJSON_Value))
         ABC_RET_ERROR(ABC_CC_JSONError, "No questions in the recovery question choices file")
@@ -461,9 +461,9 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
     QuestionsFile file;
 
     // get the questions from the server
-    ABC_CHECK_NEW(loginServerGetQuestions(resultsJson), pError);
-    ABC_CHECK_NEW(file.questionsSet(resultsJson), pError);
-    ABC_CHECK_NEW(file.save(gContext->rootDir() + GENERAL_QUESTIONS_FILENAME), pError);
+    ABC_CHECK_NEW(loginServerGetQuestions(resultsJson));
+    ABC_CHECK_NEW(file.questionsSet(resultsJson));
+    ABC_CHECK_NEW(file.save(gContext->rootDir() + GENERAL_QUESTIONS_FILENAME));
 
 exit:
     return cc;

@@ -97,7 +97,7 @@ std::ostream &operator<<(std::ostream &output, const Status &s);
 /**
  * Use when an old-style function calls a new-style abcd::Status function.
  */
-#define ABC_CHECK_NEW(f, pError) \
+#define ABC_CHECK_NEW(f) \
     do { \
         Status ABC_status = (f); \
         if (!ABC_status) { \

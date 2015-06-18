@@ -59,7 +59,7 @@ ABC_BridgeExtractOutputs(tABC_WalletID self, tABC_UnsavedTx **ppUtx,
     AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> pUtx;
 
     Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcher, self));
 
     // Fill in tABC_UnsavedTx structure:
     ABC_NEW(pUtx.get(), tABC_UnsavedTx);
@@ -140,8 +140,8 @@ tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, SendInfo *pInfo, uint64_t *pTota
     pInfo->pDetails->amountFeesMinersSatoshi = 0;
 
     // Make an unsigned transaction
-    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails), pError);
-    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress), pError);
+    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails));
+    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress));
 
     *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
                 + pInfo->pDetails->amountFeesMinersSatoshi;
@@ -159,7 +159,7 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
 
     {
         Watcher *watcher = nullptr;
-        ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+        ABC_CHECK_NEW(watcherFind(watcher, self));
         auto utxos = watcher->get_utxos(true);
 
         AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> pFeeInfo;
@@ -171,7 +171,7 @@ tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
 
         auto oldAmount = pInfo->pDetails->amountSatoshi;
         pInfo->pDetails->amountSatoshi = 0;
-        ABC_CHECK_NEW(outputsForSendInfo(tx.outputs, pInfo), pError);
+        ABC_CHECK_NEW(outputsForSendInfo(tx.outputs, pInfo));
         pInfo->pDetails->amountSatoshi = oldAmount;
 
         uint64_t fee, change;
@@ -206,18 +206,18 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     ABC_CHECK_NULL(pInfo);
 
     // Make an unsigned transaction:
-    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails), pError);
-    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress), pError);
+    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails));
+    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress));
 
     // Sign and send transaction:
     {
         Watcher *watcher = nullptr;
-        ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+        ABC_CHECK_NEW(watcherFind(watcher, self));
 
         // Sign the transaction:
         KeyTable keys;
-        ABC_CHECK_NEW(txKeyTableGet(keys, self), pError);
-        ABC_CHECK_NEW(signTx(tx, *watcher, keys), pError);
+        ABC_CHECK_NEW(txKeyTableGet(keys, self));
+        ABC_CHECK_NEW(signTx(tx, *watcher, keys));
 
         ABC_DebugLog("Change: %s, Amount: %ld, Contents: %s",
             changeAddress.c_str(), pInfo->pDetails->amountSatoshi,
@@ -226,7 +226,7 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
         // Send to the network:
         bc::data_chunk rawTx(satoshi_raw_size(tx));
         bc::satoshi_save(tx, rawTx.begin());
-        ABC_CHECK_NEW(broadcastTx(rawTx), pError);
+        ABC_CHECK_NEW(broadcastTx(rawTx));
 
         // Let the merchant broadcast the transaction:
         if (pInfo->paymentRequest)
@@ -236,14 +236,14 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
             ABC_CHECK_RET(ABC_TxDupDetails(&pRefundDetails.get(), pInfo->pDetails, pError));
 
             std::string refundAddress;
-            ABC_CHECK_NEW(txNewChangeAddress(refundAddress, self, pRefundDetails), pError);
+            ABC_CHECK_NEW(txNewChangeAddress(refundAddress, self, pRefundDetails));
 
             bc::script_type refundScript;
-            ABC_CHECK_NEW(outputScriptForAddress(refundScript, refundAddress), pError);
+            ABC_CHECK_NEW(outputScriptForAddress(refundScript, refundAddress));
             DataChunk refund = save_script(refundScript);
 
             PaymentReceipt receipt;
-            ABC_CHECK_NEW(pInfo->paymentRequest->pay(receipt, rawTx, refund), pError);
+            ABC_CHECK_NEW(pInfo->paymentRequest->pay(receipt, rawTx, refund));
 
             // Append the receipt memo to the notes field:
             if (receipt.ack.has_memo())

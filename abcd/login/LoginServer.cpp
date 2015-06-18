@@ -225,8 +225,8 @@ tABC_CC ABC_LoginServerCreate(const Lobby &lobby,
 
     ABC_CHECK_NULL_BUF(LP1);
 
-    ABC_CHECK_NEW(carePackage.encode(carePackageStr), pError);
-    ABC_CHECK_NEW(loginPackage.encode(loginPackageStr), pError);
+    ABC_CHECK_NEW(carePackage.encode(carePackageStr));
+    ABC_CHECK_NEW(loginPackage.encode(loginPackageStr));
 
     // create the post data
     pJSON_Root = json_pack("{ssssssssss}",
@@ -238,11 +238,11 @@ tABC_CC ABC_LoginServerCreate(const Lobby &lobby,
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost));
 
     // decode the result
-    ABC_CHECK_NEW(replyJson.decode(reply.body), pError);
-    ABC_CHECK_NEW(replyJson.ok(), pError);
+    ABC_CHECK_NEW(replyJson.decode(reply.body));
+    ABC_CHECK_NEW(replyJson.ok());
 
 exit:
     ABC_FREE_STR(szPost);
@@ -276,11 +276,11 @@ tABC_CC ABC_LoginServerActivate(const Lobby &lobby,
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost));
 
     // decode the result
-    ABC_CHECK_NEW(replyJson.decode(reply.body), pError);
-    ABC_CHECK_NEW(replyJson.ok(), pError);
+    ABC_CHECK_NEW(replyJson.decode(reply.body));
+    ABC_CHECK_NEW(replyJson.ok());
 
 exit:
     ABC_FREE_STR(szPost);
@@ -305,15 +305,15 @@ tABC_CC ABC_LoginServerAvailable(const Lobby &lobby,
     AccountAvailableJson json;
 
     // create the json
-    ABC_CHECK_NEW(json.authIdSet(base64Encode(lobby.authId()).c_str()), pError);
-    ABC_CHECK_NEW(json.encode(get), pError);
+    ABC_CHECK_NEW(json.authIdSet(base64Encode(lobby.authId()).c_str()));
+    ABC_CHECK_NEW(json.encode(get));
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, get), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, get));
 
     // decode the result
-    ABC_CHECK_NEW(replyJson.decode(reply.body), pError);
-    ABC_CHECK_NEW(replyJson.ok(), pError);
+    ABC_CHECK_NEW(replyJson.decode(reply.body));
+    ABC_CHECK_NEW(replyJson.ok());
 
 exit:
     return cc;
@@ -351,8 +351,8 @@ tABC_CC ABC_LoginServerChangePassword(const Lobby &lobby,
     ABC_CHECK_NULL_BUF(oldLP1);
     ABC_CHECK_NULL_BUF(newLP1);
 
-    ABC_CHECK_NEW(carePackage.encode(carePackageStr), pError);
-    ABC_CHECK_NEW(loginPackage.encode(loginPackageStr), pError);
+    ABC_CHECK_NEW(carePackage.encode(carePackageStr));
+    ABC_CHECK_NEW(loginPackage.encode(loginPackageStr));
 
     // Encode those:
     pJSON_Root = json_pack("{ss, ss, ss, ss, ss}",
@@ -373,10 +373,10 @@ tABC_CC ABC_LoginServerChangePassword(const Lobby &lobby,
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost));
 
-    ABC_CHECK_NEW(replyJson.decode(reply.body), pError);
-    ABC_CHECK_NEW(replyJson.ok(), pError);
+    ABC_CHECK_NEW(replyJson.decode(reply.body));
+    ABC_CHECK_NEW(replyJson.ok());
 
 exit:
     ABC_FREE_STR(szPost);
@@ -397,7 +397,7 @@ tABC_CC ABC_LoginServerGetCarePackage(const Lobby &lobby,
     char *szCarePackage = NULL;
 
     ABC_CHECK_RET(ABC_LoginServerGetString(lobby, U08Buf(), U08Buf(), url.c_str(), JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
-    ABC_CHECK_NEW(result.decode(szCarePackage), pError);
+    ABC_CHECK_NEW(result.decode(szCarePackage));
 
 exit:
     ABC_FREE_STR(szCarePackage);
@@ -417,7 +417,7 @@ tABC_CC ABC_LoginServerGetLoginPackage(const Lobby &lobby,
     char *szLoginPackage = NULL;
 
     ABC_CHECK_RET(ABC_LoginServerGetString(lobby, LP1, LRA1, url.c_str(), JSON_ACCT_LOGIN_PACKAGE, &szLoginPackage, pError));
-    ABC_CHECK_NEW(result.decode(szLoginPackage), pError);
+    ABC_CHECK_NEW(result.decode(szLoginPackage));
 
 exit:
     ABC_FREE_STR(szLoginPackage);
@@ -469,11 +469,11 @@ tABC_CC ABC_LoginServerGetString(const Lobby &lobby, tABC_U08Buf LP1, tABC_U08Bu
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, szURL, szPost), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, szURL, szPost));
 
     // Check the results, and store json if successful
-    ABC_CHECK_NEW(replyJson.decode(reply.body), pError);
-    ABC_CHECK_NEW(replyJson.ok(), pError);
+    ABC_CHECK_NEW(replyJson.decode(reply.body));
+    ABC_CHECK_NEW(replyJson.ok());
 
     // get the care package
     pJSON_Value = replyJson.results().get();
@@ -514,11 +514,11 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost));
 
     // Check the result
-    ABC_CHECK_NEW(replyJson.decode(reply.body), pError);
-    ABC_CHECK_NEW(replyJson.ok(), pError);
+    ABC_CHECK_NEW(replyJson.decode(reply.body));
+    ABC_CHECK_NEW(replyJson.ok());
 
     // get the results field
     pJSON_Value = replyJson.results().get();
@@ -584,10 +584,10 @@ tABC_CC ABC_LoginServerUpdatePinPackage(const Lobby &lobby,
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost));
 
-    ABC_CHECK_NEW(replyJson.decode(reply.body), pError);
-    ABC_CHECK_NEW(replyJson.ok(), pError);
+    ABC_CHECK_NEW(replyJson.decode(reply.body));
+    ABC_CHECK_NEW(replyJson.ok());
 
 exit:
     ABC_FREE_STR(szPost);
@@ -637,10 +637,10 @@ tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby,
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost));
 
-    ABC_CHECK_NEW(replyJson.decode(reply.body), pError);
-    ABC_CHECK_NEW(replyJson.ok(), pError);
+    ABC_CHECK_NEW(replyJson.decode(reply.body));
+    ABC_CHECK_NEW(replyJson.ok());
 
 exit:
     ABC_FREE_STR(szPost);
@@ -686,10 +686,10 @@ tABC_CC ABC_LoginServerOtpEnable(const Lobby &lobby,
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost));
 
-    ABC_CHECK_NEW(replyJson.decode(reply.body), pError);
-    ABC_CHECK_NEW(replyJson.ok(), pError);
+    ABC_CHECK_NEW(replyJson.decode(reply.body));
+    ABC_CHECK_NEW(replyJson.ok());
 
 exit:
     ABC_FREE_STR(szPost);
@@ -729,10 +729,10 @@ tABC_CC ABC_LoginServerOtpRequest(const char *szUrl,
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, szUrl, szPost), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, szUrl, szPost));
 
-    ABC_CHECK_NEW(replyJson.decode(reply.body), pError);
-    ABC_CHECK_NEW(replyJson.ok(), pError);
+    ABC_CHECK_NEW(replyJson.decode(reply.body));
+    ABC_CHECK_NEW(replyJson.ok());
     if (results)
         *results = replyJson.results();
 
@@ -827,10 +827,10 @@ tABC_CC ABC_LoginServerOtpPending(std::list<DataChunk> users, std::list<bool> &i
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost));
 
-    ABC_CHECK_NEW(replyJson.decode(reply.body), pError);
-    ABC_CHECK_NEW(replyJson.ok(), pError);
+    ABC_CHECK_NEW(replyJson.decode(reply.body));
+    ABC_CHECK_NEW(replyJson.ok());
 
     arrayJson = replyJson.results();
     if (arrayJson)
@@ -908,12 +908,12 @@ tABC_CC ABC_LoginServerUploadLogs(const Account &account,
     ABC_CHECK_RET(ABC_LoginGetServerKey(account.login, &LP1, pError));
 
     ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
-    ABC_CHECK_NEW(fileLoad(logData, szLogFilename), pError);
+    ABC_CHECK_NEW(fileLoad(logData, szLogFilename));
 
     pJSON_array = json_array();
     for (const auto &i: uuids)
     {
-        ABC_CHECK_NEW(fileLoad(watchData, watcherPath(i.id)), pError);
+        ABC_CHECK_NEW(fileLoad(watchData, watcherPath(i.id)));
 
         json_array_append_new(pJSON_array,
             json_string(base64Encode(watchData).c_str()));
@@ -927,7 +927,7 @@ tABC_CC ABC_LoginServerUploadLogs(const Account &account,
 
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost), pError);
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost));
 
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);

@@ -135,21 +135,21 @@ tABC_CC ABC_LoginDirCreate(std::string &directory,
     UsernameFile f;
 
     // make sure the accounts directory is in place:
-    ABC_CHECK_NEW(fileEnsureDir(gContext->accountsDir()), pError);
+    ABC_CHECK_NEW(fileEnsureDir(gContext->accountsDir()));
 
     // We don't need to do anything if our directory already exists:
     if (!directory.empty())
         goto exit;
 
     // Find next available account number:
-    ABC_CHECK_NEW(newDirName(directory), pError);
+    ABC_CHECK_NEW(newDirName(directory));
 
     // Create main account directory:
-    ABC_CHECK_NEW(fileEnsureDir(directory), pError);
+    ABC_CHECK_NEW(fileEnsureDir(directory));
 
     // Write user name:
-    ABC_CHECK_NEW(f.usernameSet(szUserName), pError);
-    ABC_CHECK_NEW(f.save(directory + ACCOUNT_NAME_FILENAME), pError);
+    ABC_CHECK_NEW(f.usernameSet(szUserName));
+    ABC_CHECK_NEW(f.save(directory + ACCOUNT_NAME_FILENAME));
 
 exit:
     return cc;
