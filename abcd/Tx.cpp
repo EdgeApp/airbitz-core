@@ -78,7 +78,6 @@ namespace abcd {
 #define JSON_TX_ID_FIELD                        "ntxid"
 #define JSON_TX_STATE_FIELD                     "state"
 #define JSON_TX_INTERNAL_FIELD                  "internal"
-#define JSON_TX_LOGIN_FIELD                     "login"
 #define JSON_TX_AMOUNT_CURRENCY_FIELD           "amountCurrency"
 #define JSON_TX_NAME_FIELD                      "name"
 #define JSON_TX_BIZID_FIELD                     "bizId"

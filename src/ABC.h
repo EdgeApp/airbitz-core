@@ -314,8 +314,6 @@ typedef struct sABC_TxDetails
     int64_t amountFeesAirbitzSatoshi;
     /** miners fees in satoshi */
     int64_t amountFeesMinersSatoshi;
-    /** login of user who created the transaction **/
-    const char *szLogin;
     /** amount in currency */
     double amountCurrency;
     /** payer or payee */
