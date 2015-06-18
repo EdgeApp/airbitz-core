@@ -13,6 +13,7 @@
 #include "../bitcoin/Watcher.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/Mutex.hpp"
+#include "../wallet/Details.hpp"
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {

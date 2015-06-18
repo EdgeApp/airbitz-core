@@ -61,11 +61,6 @@ typedef struct sABC_UnsavedTx
     tABC_TxOutput **aOutputs;
 } tABC_UnsavedTx;
 
-tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
-                         const tABC_TxDetails *pOldDetails,
-                         tABC_Error *pError);
-
-void ABC_TxFreeDetails(tABC_TxDetails *pDetails);
 void ABC_UnsavedTxFree(tABC_UnsavedTx *pUtx);
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
