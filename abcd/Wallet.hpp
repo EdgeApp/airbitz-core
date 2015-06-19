@@ -36,7 +36,6 @@
 #ifndef ABC_Wallet_h
 #define ABC_Wallet_h
 
-#include "util/Data.hpp"
 #include "../src/ABC.h"
 
 namespace abcd {
@@ -58,18 +57,6 @@ tABC_CC ABC_WalletGetInfo(Wallet &self,
                           tABC_Error *pError);
 
 void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo);
-
-tABC_CC ABC_WalletGetMK(Wallet &self,
-                        tABC_U08Buf *pMK,
-                        tABC_Error *pError);
-
-tABC_CC ABC_WalletGetBitcoinPrivateSeed(Wallet &self,
-                                        tABC_U08Buf *pSeed,
-                                        tABC_Error *pError);
-
-tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(Wallet &self,
-                                            tABC_U08Buf *pSeed,
-                                            tABC_Error *pError);
 
 // Blocking functions:
 tABC_CC ABC_WalletCreate(Account &account,

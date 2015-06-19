@@ -199,13 +199,12 @@ static tABC_CC  ABC_TxCalcCurrency(Wallet &self, int64_t amountSatoshi, double *
  */
 static tABC_CC
 ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
-                                       tABC_U08Buf PrivateSeed,
+                               const DataChunk &seed,
                                        int32_t N,
                                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    libbitcoin::data_chunk seed(PrivateSeed.begin(), PrivateSeed.end());
     libwallet::hd_private_key m(seed);
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);
@@ -227,9 +226,7 @@ exit:
 Status
 txKeyTableGet(KeyTable &result, Wallet &self)
 {
-    U08Buf seed; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(self, &seed, &error));
-    libwallet::hd_private_key m(DataChunk(seed.begin(), seed.end()));
+    libwallet::hd_private_key m(self.bitcoinKey());
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);
 
@@ -864,9 +861,7 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
             if (pAddress == NULL)
             {
                 char *szRegenAddress = NULL;
-                AutoU08Buf Seed;
-                ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeedDisk(self, &Seed, pError));
-                ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&szRegenAddress, Seed, aAddresses[i]->seq, pError));
+                ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&szRegenAddress, self.bitcoinKey(), aAddresses[i]->seq, pError));
 
                 if (strncmp(aAddresses[i]->szPubAddress, szRegenAddress, strlen(aAddresses[i]->szPubAddress)) == 0)
                 {
@@ -937,13 +932,9 @@ tABC_CC ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     tABC_TxAddress *pAddress = NULL;
-    AutoU08Buf Seed;
 
     // Now we know the latest N, create a new address
     ABC_NEW(pAddress, tABC_TxAddress);
-
-    // get the private seed so we can generate the public address
-    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeedDisk(self, &Seed, pError));
 
     // generate the public address
     pAddress->szPubAddress = NULL;
@@ -954,7 +945,7 @@ tABC_CC ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError)
         pAddress->seq++;
 
         // Get the public address for our sequence (it can return NULL, if it is invalid)
-        ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), Seed, pAddress->seq, pError));
+        ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), self.bitcoinKey(), pAddress->seq, pError));
     } while (pAddress->szPubAddress == NULL);
 
     // set the final ID
@@ -2283,17 +2274,9 @@ tABC_CC ABC_TxCreateTxFilename(Wallet &self, char **pszFilename, const char *szT
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    U08Buf MK; // Do not free
-    std::string path;
-
-    *pszFilename = NULL;
-
-    // Get the master key we will need to encode the filename
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
-
-    path = self.txDir() + cryptoFilename(MK, szTxID) +
+    std::string path = self.txDir() + cryptoFilename(self.dataKey(), szTxID) +
         (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX);
+
     ABC_STRDUP(*pszFilename, path.c_str());
 
 exit:
@@ -2315,22 +2298,17 @@ tABC_CC ABC_TxLoadTransaction(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    U08Buf MK; // Do not free
     json_t *pJSON_Root = NULL;
     tABC_Tx *pTx = NULL;
     json_t *jsonVal = NULL;
 
     *ppTx = NULL;
 
-    // Get the master key we will need to decode the transaction data
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
-
     // make sure the transaction exists
     ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoTransaction, "Transaction does not exist");
 
     // load the json object (load file, decrypt it, create json object
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, MK, &pJSON_Root, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, toU08Buf(self.dataKey()), &pJSON_Root, pError));
 
     // start decoding
 
@@ -2540,7 +2518,6 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
     AutoCoreLock lock(gCoreMutex);
     int e;
 
-    U08Buf MK; // Do not free
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_OutputArray = NULL;
@@ -2549,10 +2526,6 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
     ABC_CHECK_NULL(pTx->pStateInfo);
     ABC_CHECK_NULL(pTx->szID);
     ABC_CHECK_ASSERT(strlen(pTx->szID) > 0, ABC_CC_Error, "No transaction ID provided");
-
-    // Get the master key we will need to encode the transaction data
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
 
     // create the json for the transaction
     pJSON_Root = json_object();
@@ -2610,7 +2583,7 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, pTx->szID, pTx->pStateInfo->bInternal, pError));
 
     // save out the transaction object to a file encrypted with the master key
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, MK, ABC_CryptoType_AES256, szFilename, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, toU08Buf(self.dataKey()), ABC_CryptoType_AES256, szFilename, pError));
 
     ABC_CHECK_RET(ABC_WalletDirtyCache(self, pError));
 exit:
@@ -2810,22 +2783,17 @@ tABC_CC ABC_TxLoadAddressFile(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    U08Buf MK; // Do not free
     json_t *pJSON_Root = NULL;
     tABC_TxAddress *pAddress = NULL;
     json_t *jsonVal = NULL;
 
     *ppAddress = NULL;
 
-    // Get the master key we will need to decode the transaction data
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
-
     // make sure the addresss exists
     ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoRequest, "Request address does not exist");
 
     // load the json object (load file, decrypt it, create json object
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, MK, &pJSON_Root, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, toU08Buf(self.dataKey()), &pJSON_Root, pError));
 
     // start decoding
 
@@ -2961,17 +2929,12 @@ tABC_CC ABC_TxSaveAddress(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    U08Buf MK; // Do not free
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL(pAddress->pStateInfo);
     ABC_CHECK_NULL(pAddress->szID);
     ABC_CHECK_ASSERT(strlen(pAddress->szID) > 0, ABC_CC_Error, "No address ID provided");
-
-    // Get the master key we will need to encode the address data
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
 
     // create the json for the transaction
     pJSON_Root = json_object();
@@ -2996,7 +2959,7 @@ tABC_CC ABC_TxSaveAddress(Wallet &self,
     ABC_CHECK_RET(ABC_TxCreateAddressFilename(self, &szFilename, pAddress, pError));
 
     // save out the transaction object to a file encrypted with the master key
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, MK, ABC_CryptoType_AES256, szFilename, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, toU08Buf(self.dataKey()), ABC_CryptoType_AES256, szFilename, pError));
 
 exit:
     ABC_FREE_STR(szFilename);
@@ -3094,18 +3057,10 @@ tABC_CC ABC_TxCreateAddressFilename(Wallet &self, char **pszFilename, const tABC
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    U08Buf MK; // Do not free
-    std::string path;
-
-    *pszFilename = NULL;
-
-    // Get the master key we will need to encode the filename
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
-
-    path = self.addressDir() +
+    std::string path = self.addressDir() +
         std::to_string(pAddress->seq) + "-" +
-        cryptoFilename(MK, pAddress->szPubAddress) + ".json";
+        cryptoFilename(self.dataKey(), pAddress->szPubAddress) + ".json";;
+
     ABC_STRDUP(*pszFilename, path.c_str());
 
 exit:

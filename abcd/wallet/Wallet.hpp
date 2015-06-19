@@ -8,6 +8,7 @@
 #ifndef ABCD_WALLET_WALLET_HPP
 #define ABCD_WALLET_WALLET_HPP
 
+#include "../util/Data.hpp"
 #include "../util/Status.hpp"
 #include <memory>
 
@@ -34,12 +35,24 @@ public:
     std::string addressDir() const  { return syncDir() + "Addresses/"; }
     std::string txDir() const       { return syncDir() + "Transactions/"; }
 
+    const DataChunk &bitcoinKey() const;
+    const DataChunk &dataKey() const { return dataKey_; }
+
 private:
     const std::shared_ptr<Account> parent_;
     const std::string id_;
     const std::string dir_;
 
+    // Account data:
+    DataChunk bitcoinKey_;
+    DataChunk bitcoinKeyBackup_;
+    DataChunk dataKey_;
+    std::string syncKey_;
+
     Wallet(Account &account, const std::string &id);
+
+    Status
+    loadKeys();
 };
 
 } // namespace abcd

@@ -61,6 +61,7 @@
 #include "../abcd/util/Json.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/Util.hpp"
+#include "../abcd/wallet/Wallet.hpp"
 #include <qrencode.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -990,10 +991,7 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-
-        U08Buf seedBuf; // Do not free
-        ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(*wallet, &seedBuf, pError));
-        ABC_STRDUP(*pszWalletSeed, base16Encode(seedBuf).c_str());
+        ABC_STRDUP(*pszWalletSeed, base16Encode(wallet->bitcoinKey()).c_str());
     }
 
 exit:
