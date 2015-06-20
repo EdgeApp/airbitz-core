@@ -139,7 +139,7 @@ ExchangeCache::save()
         ABC_CHECK(currencyCode(code, i.first));
 
         CacheJsonRow row;
-        ABC_CHECK(row.codeSet(code.c_str()));
+        ABC_CHECK(row.codeSet(code));
         ABC_CHECK(row.rateSet(i.second.rate));
         ABC_CHECK(row.timestampSet(i.second.timestamp));
         ABC_CHECK(rates.append(row));

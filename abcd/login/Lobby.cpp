@@ -141,7 +141,7 @@ Lobby::otpKeySave()
     if (!dir_.empty() && otpKeyOk_)
     {
         OtpFile file;
-        ABC_CHECK(file.keySet(otpKey_.encodeBase32().c_str()));
+        ABC_CHECK(file.keySet(otpKey_.encodeBase32()));
         ABC_CHECK(file.save(dir_ + otpFilename));
     }
     return Status();

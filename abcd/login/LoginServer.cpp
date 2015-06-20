@@ -305,7 +305,7 @@ tABC_CC ABC_LoginServerAvailable(const Lobby &lobby,
     AccountAvailableJson json;
 
     // create the json
-    ABC_CHECK_NEW(json.authIdSet(base64Encode(lobby.authId()).c_str()));
+    ABC_CHECK_NEW(json.authIdSet(base64Encode(lobby.authId())));
     ABC_CHECK_NEW(json.encode(get));
 
     // send the command

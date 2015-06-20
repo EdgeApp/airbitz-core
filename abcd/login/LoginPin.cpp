@@ -180,7 +180,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 
     // Save the local file:
     ABC_CHECK_NEW(local.pinBoxSet(pinBox));
-    ABC_CHECK_NEW(local.pinAuthIdSet(base64Encode(pinAuthId).c_str()));
+    ABC_CHECK_NEW(local.pinAuthIdSet(base64Encode(pinAuthId)));
     ABC_CHECK_NEW(local.expiresSet(expires));
     ABC_CHECK_NEW(local.save(login.lobby.dir() + PIN_FILENAME));
 

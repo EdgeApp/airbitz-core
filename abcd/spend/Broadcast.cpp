@@ -25,11 +25,12 @@ blockcypherPostTx(DataSlice tx)
         "https://api.blockcypher.com/v1/btc/test3/txs/push":
         "https://api.blockcypher.com/v1/btc/main/txs/push";
 
-    struct ChainJson: public JsonObject
+    struct BlockcypherJson:
+        public JsonObject
     {
         ABC_JSON_STRING(tx, "tx", nullptr);
     } json;
-    json.txSet(base16Encode(tx).c_str());
+    json.txSet(base16Encode(tx));
     std::string body;
     ABC_CHECK(json.encode(body));
 
@@ -53,11 +54,12 @@ chainPostTx(DataSlice tx)
         "https://api.chain.com/v1/testnet3/transactions":
         "https://api.chain.com/v1/bitcoin/transactions";
 
-    struct ChainJson: public JsonObject
+    struct ChainJson:
+        public JsonObject
     {
         ABC_JSON_STRING(hex, "hex", nullptr);
     } json;
-    json.hexSet(base16Encode(tx).c_str());
+    json.hexSet(base16Encode(tx));
     std::string body;
     ABC_CHECK(json.encode(body));
 

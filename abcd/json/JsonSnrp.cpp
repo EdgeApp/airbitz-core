@@ -28,7 +28,7 @@ JsonSnrp::snrpGet(ScryptSnrp &result) const
 Status
 JsonSnrp::snrpSet(const ScryptSnrp &snrp)
 {
-    ABC_CHECK(saltSet(base16Encode(snrp.salt).c_str()));
+    ABC_CHECK(saltSet(base16Encode(snrp.salt)));
     ABC_CHECK(nSet(snrp.n));
     ABC_CHECK(rSet(snrp.r));
     ABC_CHECK(pSet(snrp.p));

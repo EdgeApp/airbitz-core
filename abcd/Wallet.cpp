@@ -255,9 +255,9 @@ tABC_CC ABC_WalletCreate(Account &account,
     ABC_CHECK_NEW(LoginServerWalletActivate(account.login.lobby, LP1, pData->szWalletAcctKey));
 
     // If everything worked, add the wallet to the account:
-    ABC_CHECK_NEW(json.dataKeySet(base16Encode(dataKey).c_str()));
-    ABC_CHECK_NEW(json.syncKeySet(base16Encode(syncKey).c_str()));
-    ABC_CHECK_NEW(json.bitcoinKeySet(base16Encode(bitcoinKey).c_str()));
+    ABC_CHECK_NEW(json.dataKeySet(base16Encode(dataKey)));
+    ABC_CHECK_NEW(json.syncKeySet(base16Encode(syncKey)));
+    ABC_CHECK_NEW(json.bitcoinKeySet(base16Encode(bitcoinKey)));
     ABC_CHECK_NEW(account.wallets.insert(uuid, json));
 
     // Now the wallet is written to disk, generate some addresses

@@ -53,7 +53,8 @@ protected:
 #define ABC_JSON_STRING(name, key, fallback) \
     const char *name() const                    { return getString(key, fallback); } \
     abcd::Status name##Ok() const               { return hasString(key); } \
-    abcd::Status name##Set(const char *value)   { return setValue(key, json_string(value)); }
+    abcd::Status name##Set(const char *value)   { return setValue(key, json_string(value)); } \
+    abcd::Status name##Set(const std::string &value) { return name##Set(value.c_str()); }
 
 #define ABC_JSON_NUMBER(name, key, fallback) \
     double name() const                         { return getNumber(key, fallback); } \

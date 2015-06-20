@@ -69,8 +69,8 @@ pluginDataSet(const Account &account, const std::string &plugin,
     ABC_CHECK(fileEnsureDir(pluginDirectory(account, plugin)));
 
     PluginDataFile json;
-    json.keySet(key.c_str());
-    json.dataSet(data.c_str());
+    json.keySet(key);
+    json.dataSet(data);
     ABC_CHECK(json.save(keyFilename(account, plugin, key), account.login.dataKey()));
 
     return Status();
