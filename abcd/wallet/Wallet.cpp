@@ -8,7 +8,6 @@
 #include "Wallet.hpp"
 #include "../Context.hpp"
 #include "../Tx.hpp"
-#include "../Wallet.hpp"
 #include "../account/Account.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../crypto/Encoding.hpp"
@@ -23,6 +22,7 @@
 namespace abcd {
 
 #define WALLET_CURRENCY_FILENAME "Currency.json"
+#define WALLET_NAME_FILENAME "WalletName.json"
 
 struct WalletJson:
     public JsonObject
@@ -36,6 +36,12 @@ struct CurrencyJson:
     public JsonObject
 {
     ABC_JSON_INTEGER(currency, "num", 0)
+};
+
+struct NameJson:
+    public JsonObject
+{
+    ABC_JSON_STRING(name, "walletName", "")
 };
 
 Status
@@ -70,6 +76,26 @@ Wallet::bitcoinKey() const
     // Otherwise, we might generate a bad bitcoin address and lose money:
     assert(bitcoinKeyBackup_ == bitcoinKey_);
     return bitcoinKey_;
+}
+
+std::string
+Wallet::name() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return name_;
+}
+
+Status
+Wallet::nameSet(const std::string &name)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    name_ = name;
+    NameJson json;
+    ABC_CHECK(json.nameSet(name));
+    ABC_CHECK(json.save(syncDir() + WALLET_NAME_FILENAME, dataKey()));
+
+    return Status();
 }
 
 Status
@@ -119,7 +145,6 @@ Wallet::sync(bool &dirty)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         ABC_CHECK(loadSync());
-        ABC_WalletClearCache();
     }
 
     return Status();
@@ -154,7 +179,7 @@ Wallet::createNew(const std::string &name, int currency)
     CurrencyJson currencyJson;
     ABC_CHECK(currencyJson.currencySet(currency));
     ABC_CHECK(currencyJson.save(syncDir() + WALLET_CURRENCY_FILENAME, dataKey()));
-    ABC_CHECK_OLD(ABC_WalletSetName(*this, name.c_str(), &error));
+    ABC_CHECK(nameSet(name));
     ABC_CHECK_OLD(ABC_TxCreateInitialAddresses(*this, &error));
 
     // Push the wallet to the server:
@@ -199,6 +224,17 @@ Wallet::loadSync()
     ABC_CHECK(fileEnsureDir(gContext->walletsDir()));
     ABC_CHECK(fileEnsureDir(dir()));
     ABC_CHECK(syncEnsureRepo(syncDir(), dir() + "tmp/", syncKey_));
+
+    // Load the currency:
+    CurrencyJson currencyJson;
+    currencyJson.load(syncDir() + WALLET_CURRENCY_FILENAME, dataKey());
+    ABC_CHECK(currencyJson.currencyOk());
+    currency_ = currencyJson.currency();
+
+    // Load the name (failure is acceptable):
+    NameJson json;
+    json.load(syncDir() + WALLET_NAME_FILENAME, dataKey());
+    name_ = json.name();
 
     return Status();
 }

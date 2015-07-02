@@ -549,7 +549,6 @@ tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
     ABC_PROLOG();
 
     cacheLogout();
-    ABC_WalletClearCache();
 
 exit:
     return cc;
@@ -764,7 +763,7 @@ tABC_CC ABC_RenameWallet(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_WalletSetName(*wallet, szNewWalletName, pError));
+        ABC_CHECK_NEW(wallet->nameSet(szNewWalletName));
     }
 
 exit:
@@ -1243,7 +1242,6 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     {
         ABC_GET_LOGIN();
         ABC_CHECK_RET(ABC_LoginPasswordSet(*login, szNewPassword, pError));
-        ABC_WalletClearCache(); // added in 23fab303, but no idea why
     }
 
 exit:
@@ -1279,7 +1277,6 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
         std::shared_ptr<Login> login;
         ABC_CHECK_NEW(cacheLoginRecovery(login, szUserName, szRecoveryAnswers));
         ABC_CHECK_RET(ABC_LoginPasswordSet(*login, szNewPassword, pError));
-        ABC_WalletClearCache(); // added in 23fab303, but no idea why
     }
 
 exit:
@@ -2394,9 +2391,6 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         ABC_CHECK_NEW(account->sync(dirty));
         if (dirty && fAsyncBitCoinEventCallback)
         {
-            // Try to clear the wallet cache in case the Wallets list changed
-            ABC_WalletClearCache();
-
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
             info.pData = pData;
