@@ -26,7 +26,7 @@ Account::create(std::shared_ptr<Account> &result, Login &login)
 Status
 Account::sync(bool &dirty)
 {
-    ABC_CHECK_OLD(ABC_SyncRepo(dir().c_str(), login.syncKey().c_str(), dirty, &error));
+    ABC_CHECK(syncRepo(dir(), login.syncKey(), dirty));
     if (dirty)
         ABC_CHECK(load());
 
@@ -50,8 +50,8 @@ Account::load()
         std::string tempName = login.lobby.dir() + "tmp/";
         if (fileExists(tempName))
             ABC_CHECK_OLD(ABC_FileIODeleteRecursive(tempName.c_str(), &error));
-        ABC_CHECK_OLD(ABC_SyncMakeRepo(tempName.c_str(), &error));
-        ABC_CHECK_OLD(ABC_SyncRepo(tempName.c_str(), login.syncKey().c_str(), dirty, &error));
+        ABC_CHECK(syncMakeRepo(tempName));
+        ABC_CHECK(syncRepo(tempName, login.syncKey(), dirty));
         if (rename(tempName.c_str(), dir().c_str()))
             return ABC_ERROR(ABC_CC_SysError, "rename failed");
     }

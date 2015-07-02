@@ -244,8 +244,8 @@ tABC_CC ABC_WalletCreate(Account &account,
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
     // Init the git repo and sync it
-    ABC_CHECK_RET(ABC_SyncMakeRepo(syncDir.c_str(), pError));
-    ABC_CHECK_RET(ABC_SyncRepo(syncDir.c_str(), pData->szWalletAcctKey, dirty, pError));
+    ABC_CHECK_NEW(syncMakeRepo(syncDir));
+    ABC_CHECK_NEW(syncRepo(syncDir, pData->szWalletAcctKey, dirty));
 
     // Actiate the remote wallet
     ABC_CHECK_NEW(LoginServerWalletActivate(account.login.lobby, LP1, pData->szWalletAcctKey));
@@ -308,7 +308,7 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, bool &dirty, tABC_Error *pError)
     syncDir = walletSyncDir(self.szUUID);
     if (!fileExists(syncDir))
     {
-        ABC_CHECK_RET(ABC_SyncMakeRepo(syncDir.c_str(), pError));
+        ABC_CHECK_NEW(syncMakeRepo(syncDir));
         bNew = true;
     }
 
@@ -317,7 +317,7 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, bool &dirty, tABC_Error *pError)
     ABC_CHECK_ASSERT(NULL != pData->szWalletAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
 
     // Sync
-    ABC_CHECK_RET(ABC_SyncRepo(syncDir.c_str(), pData->szWalletAcctKey, dirty, pError));
+    ABC_CHECK_NEW(syncRepo(syncDir, pData->szWalletAcctKey, dirty));
     if (dirty || bNew)
     {
         dirty = true;

@@ -6,243 +6,147 @@
  */
 
 #include "Sync.hpp"
-#include "Util.hpp"
+#include "AutoFree.hpp"
+#include "Debug.hpp"
 #include "Mutex.hpp"
 #include "../General.hpp"
-#include "../util/Data.hpp"
 #include "../../minilibs/git-sync/sync.h"
 #include <stdlib.h>
 #include <mutex>
 
 namespace abcd {
 
-static bool gbInitialized = false;
 std::recursive_mutex gSyncMutex;
+static bool gbInitialized = false;
+static int syncServerIndex;
+static std::string syncServerName;
+
 typedef std::lock_guard<std::recursive_mutex> AutoSyncLock;
 
-static char *gszCurrSyncServer = NULL;
-static int serverIdx = -1;
-
-static tABC_CC ABC_SyncServerRot(tABC_Error *pError);
-static tABC_CC ABC_SyncGetServer(const char *szRepoKey,
-                                 char **pszServer,
-                                 tABC_Error *pError);
-
-#define ABC_SYNC_ROT(code, desc) \
-    { \
-        e = code; \
-        if (0 > e) \
-        { \
-            ABC_CHECK_RET(ABC_SyncServerRot(pError)); \
-            ABC_FREE_STR(szServer); \
-            ABC_CHECK_RET(ABC_SyncGetServer(szRepoKey, &szServer, pError)); \
-            e = code; \
-        } \
-        ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, desc); \
-    }
+#define ABC_CHECK_GIT(f) \
+    do { \
+        int ABC_e = (f); \
+        if (ABC_e < 0) \
+            return ABC_ERROR(ABC_CC_SysError, syncGitError(ABC_e)); \
+    } while (false)
 
 /**
- * Logs error information produced by libgit2.
+ * Formats the error information produced by libgit2.
  */
-static void SyncLogGitError(int e)
+static std::string
+syncGitError(int e)
 {
+    std::string out = "libgit2 returned " + std::to_string(e);
     const git_error *error = giterr_last();
     if (error && error->message)
     {
-        ABC_DebugLog("libgit2 returned %d: %s", e, error->message);
+        out += ": ";
+        out += error->message;
     }
-    else
-    {
-        ABC_DebugLog("libgit2 returned %d: <no message>", e);
-    }
+    return out;
+}
+
+static std::string
+slashify(const std::string &s)
+{
+    return s.back() == '/' ? s : s + '/';
 }
 
 /**
- * Initializes the underlying git library. Should be called at program start.
+ * Builds a URL for the current git server.
  */
-tABC_CC ABC_SyncInit(const char *szCaCertPath, tABC_Error *pError)
+static Status
+syncUrl(std::string &result, const std::string &syncKey, bool rotate=false)
 {
-    tABC_CC cc = ABC_CC_Ok;
-    int e = 0;
+    if (rotate || syncServerName.empty())
+    {
+        AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> pInfo;
+        ABC_CHECK_OLD(ABC_GeneralGetInfo(&pInfo.get(), &error));
 
-    ABC_CHECK_ASSERT(!gbInitialized, ABC_CC_Reinitialization, "ABC_Sync has already been initalized");
+        syncServerIndex++;
+        syncServerIndex %= pInfo->countSyncServers;
+        syncServerName = slashify(pInfo->aszSyncServers[syncServerIndex]);
+    }
 
-    e = git_threads_init();
-    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_threads_init failed");
+    result = syncServerName + syncKey;
+    ABC_DebugLog("Syncing to: %s", result.c_str());
+    return Status();
+}
+
+Status
+syncInit(const char *szCaCertPath)
+{
+    AutoSyncLock lock(gSyncMutex);
+
+    if (gbInitialized)
+        return ABC_ERROR(ABC_CC_Reinitialization, "ABC_Sync has already been initalized");
+
+    ABC_CHECK_GIT(git_threads_init());
     gbInitialized = true;
 
     if (szCaCertPath)
-    {
-        e = git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, szCaCertPath, NULL);
-        ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_libgit2_opts failed");
-    }
+        ABC_CHECK_GIT(git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, szCaCertPath, nullptr));
 
-exit:
-    if (e < 0) SyncLogGitError(e);
-    return cc;
+    // Choose a random server to start with:
+    syncServerIndex = time(nullptr);
+
+    return Status();
 }
 
-/**
- * Shuts down the underlying git library. Should be called when the program
- * exits.
- */
-void ABC_SyncTerminate()
+void
+syncTerminate()
 {
+    AutoSyncLock lock(gSyncMutex);
+
     if (gbInitialized)
     {
         git_threads_shutdown();
         gbInitialized = false;
     }
-    ABC_FREE_STR(gszCurrSyncServer);
 }
 
-/**
- * Prepares a directory for syncing.
- * This will create the directory if it does not exist already.
- * Has no effect if the repo has already been created.
- */
-tABC_CC ABC_SyncMakeRepo(const char *szRepoPath,
-                         tABC_Error *pError)
+Status
+syncMakeRepo(const std::string &syncDir)
 {
-    tABC_CC cc = ABC_CC_Ok;
     AutoSyncLock lock(gSyncMutex);
-    int e = 0;
 
     git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
-    git_repository *repo = NULL;
-
     opts.flags |= GIT_REPOSITORY_INIT_MKDIR;
     opts.flags |= GIT_REPOSITORY_INIT_MKPATH;
-    e = git_repository_init_ext(&repo, szRepoPath, &opts);
-    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_init failed");
 
-exit:
-    if (e < 0) SyncLogGitError(e);
-    if (repo) git_repository_free(repo);
+    AutoFree<git_repository, git_repository_free> repo;
+    ABC_CHECK_GIT(git_repository_init_ext(&repo.get(), syncDir.c_str(), &opts));
 
-    return cc;
+    return Status();
 }
 
-/**
- * Synchronizes the directory with the server. New files in the folder will
- * go up to the server, and new files on the server will come down to the
- * directory. If there is a conflict, the server's file will win.
- * @param pDirty set to 1 if the sync has modified the filesystem, or 0
- * otherwise.
- */
-tABC_CC ABC_SyncRepo(const char *szRepoPath,
-                     const char *szRepoKey,
-                     bool &dirty,
-                     tABC_Error *pError)
+Status
+syncRepo(const std::string &syncDir, const std::string &syncKey, bool &dirty)
 {
-    tABC_CC cc = ABC_CC_Ok;
     AutoSyncLock lock(gSyncMutex);
-    int e = 0;
-    char *szServer = NULL;
 
-    git_repository *repo = NULL;
+    AutoFree<git_repository, git_repository_free> repo;
+    ABC_CHECK_GIT(git_repository_open(&repo.get(), syncDir.c_str()));
+
+    std::string url;
+    ABC_CHECK(syncUrl(url, syncKey));
+    if (sync_fetch(repo, url.c_str()) < 0)
+    {
+        ABC_CHECK(syncUrl(url, syncKey, true));
+        ABC_CHECK_GIT(sync_fetch(repo, url.c_str()));
+    }
+
     int files_changed, need_push;
-
-    ABC_CHECK_RET(ABC_SyncGetServer(szRepoKey, &szServer, pError));
-
-    e = git_repository_open(&repo, szRepoPath);
-    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "git_repository_open failed");
-
-    e = sync_fetch(repo, szServer);
-    ABC_SYNC_ROT(sync_fetch(repo, szServer), "sync_fetch failed");
-
     {
         AutoCoreLock lock(gCoreMutex);
-        e = sync_master(repo, &files_changed, &need_push);
+        ABC_CHECK_GIT(sync_master(repo, &files_changed, &need_push));
     }
-    ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_master failed");
 
     if (need_push)
-    {
-        e = sync_push(repo, szServer);
-        ABC_CHECK_ASSERT(0 <= e, ABC_CC_SysError, "sync_push failed");
-    }
+        ABC_CHECK_GIT(sync_push(repo, url.c_str()));
 
     dirty = !!files_changed;
-
-exit:
-    if (e < 0) SyncLogGitError(e);
-    if (repo) git_repository_free(repo);
-
-    ABC_FREE_STR(szServer);
-
-    return cc;
-}
-
-/**
- * Chooses a new server to use for syncing
- */
-static
-tABC_CC ABC_SyncServerRot(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoSyncLock lock(gSyncMutex);
-    tABC_GeneralInfo *pInfo = NULL;
-
-    ABC_CHECK_RET(ABC_GeneralGetInfo(&pInfo, pError));
-
-    if (serverIdx == -1)
-    {
-        // Choose a random server to start with
-        srand((unsigned) time(NULL));
-        serverIdx = rand() % pInfo->countSyncServers;
-    }
-    else
-    {
-        serverIdx++;
-    }
-    if (serverIdx >= (int)pInfo->countSyncServers)
-    {
-        serverIdx = 0;
-    }
-    ABC_FREE_STR(gszCurrSyncServer);
-    ABC_STRDUP(gszCurrSyncServer, pInfo->aszSyncServers[serverIdx]);
-exit:
-    ABC_GeneralFreeInfo(pInfo);
-
-    return cc;
-}
-
-/**
- * Using the settings pick a repo and create the repo URI.
- *
- * @param szRepoKey    The repo key.
- * @param pszServer    Pointer to pointer where the resulting server URI
- *                     will be stored. Caller must free.
- */
-static
-tABC_CC ABC_SyncGetServer(const char *szRepoKey, char **pszServer, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoSyncLock lock(gSyncMutex);
-    std::string url;
-
-    ABC_CHECK_NULL(szRepoKey);
-
-    // Get a server:
-    if (!gszCurrSyncServer)
-    {
-        ABC_CHECK_RET(ABC_SyncServerRot(pError));
-    }
-    ABC_CHECK_ASSERT(gszCurrSyncServer != NULL,
-        ABC_CC_SysError, "Unable to find a sync server");
-
-    // Build the URL:
-    url = gszCurrSyncServer;
-    if (url.back() != '/')
-        url += '/';
-    url += szRepoKey;
-
-    ABC_STRDUP(*pszServer, url.c_str());
-    ABC_DebugLog("Syncing to: %s\n", *pszServer);
-
-exit:
-    return cc;
+    return Status();
 }
 
 } // namespace abcd

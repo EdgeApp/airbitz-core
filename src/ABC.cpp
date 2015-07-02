@@ -144,7 +144,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
         ABC_CHECK_RET(ABC_CryptoSetRandomSeed(toU08Buf(Seed), pError));
 
         ABC_CHECK_NEW(httpInit());
-        ABC_CHECK_RET(ABC_SyncInit(szCaCertPath, pError));
+        ABC_CHECK_NEW(syncInit(szCaCertPath));
     }
 
 exit:
@@ -166,7 +166,7 @@ void ABC_Terminate()
         ABC_ClearKeyCache(NULL);
         gContext.reset();
 
-        ABC_SyncTerminate();
+        syncTerminate();
 
         ABC_DebugTerminate();
     }
