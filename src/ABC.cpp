@@ -2454,7 +2454,7 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
         ABC_GET_WALLET();
 
         bool dirty = false;
-        ABC_CHECK_RET(ABC_WalletSyncData(*wallet, dirty, pError));
+        ABC_CHECK_NEW(wallet->sync(dirty));
         if (dirty)
         {
             tABC_AsyncBitCoinInfo info;

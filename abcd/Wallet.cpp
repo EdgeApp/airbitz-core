@@ -38,7 +38,6 @@
 #include "util/FileIO.hpp"
 #include "util/Json.hpp"
 #include "util/Mutex.hpp"
-#include "util/Sync.hpp"
 #include "util/Util.hpp"
 #include "wallet/Wallet.hpp"
 #include <stdio.h>
@@ -82,45 +81,6 @@ static tABC_CC ABC_WalletCacheData(Wallet &self, tWalletData **ppData, tABC_Erro
 static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
 static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError);
 static void    ABC_WalletFreeData(tWalletData *pData);
-
-/**
- * Sync the wallet's data
- */
-tABC_CC ABC_WalletSyncData(Wallet &self, bool &dirty, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    std::string dir = self.dir();
-    std::string syncDir = self.syncDir();
-    tWalletData *pData      = NULL;
-
-    // create the wallet root directory if necessary
-    ABC_CHECK_NEW(fileEnsureDir(gContext->walletsDir()));
-
-    // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
-    ABC_CHECK_NEW(fileEnsureDir(dir));
-
-    // load the wallet data into the cache
-    ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
-    ABC_CHECK_ASSERT(NULL != pData->szWalletAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
-
-    // Either sync or clone, whichever is needed:
-    if (!fileExists(syncDir))
-    {
-        ABC_CHECK_NEW(syncEnsureRepo(syncDir, dir + "tmp", pData->szWalletAcctKey));
-        dirty = true;
-    }
-    else
-    {
-        ABC_CHECK_NEW(syncRepo(syncDir, pData->szWalletAcctKey, dirty));
-    }
-    if (dirty)
-        ABC_WalletClearCache();
-
-exit:
-    return cc;
-}
 
 /**
  * Sets the name of a wallet

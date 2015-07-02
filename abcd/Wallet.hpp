@@ -54,11 +54,6 @@ tABC_CC ABC_WalletGetInfo(Wallet &self,
 
 void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo);
 
-// Blocking functions:
-tABC_CC ABC_WalletSyncData(Wallet &self,
-                           bool &dirty,
-                           tABC_Error *pError);
-
 } // namespace abcd
 
 #endif

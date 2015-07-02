@@ -7,10 +7,10 @@
 
 #include "Util.hpp"
 #include "Command.hpp"
-#include "../abcd/Wallet.hpp"
 #include "../abcd/account/Account.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
+#include "../abcd/wallet/Wallet.hpp"
 #include "../src/LoginShim.hpp"
 #include <iostream>
 
@@ -29,7 +29,7 @@ Status syncAll(Account &account)
         std::shared_ptr<Wallet> wallet;
         ABC_CHECK(cacheWallet(wallet, nullptr, id.c_str()));
 
-        ABC_CHECK_OLD(ABC_WalletSyncData(*wallet, dirty, &error));
+        ABC_CHECK(wallet->sync(dirty));
     }
 
     return Status();

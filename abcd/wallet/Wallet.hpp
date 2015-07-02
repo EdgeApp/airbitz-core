@@ -48,6 +48,13 @@ public:
     Status balance(int64_t &result);
     void balanceDirty();
 
+    /**
+     * Syncs the account with the file server.
+     * This is a blocking network operation.
+     */
+    Status
+    sync(bool &dirty);
+
 private:
     mutable std::mutex mutex_;
     const std::shared_ptr<Account> parent_;
@@ -71,6 +78,12 @@ private:
 
     Status
     loadKeys();
+
+    /**
+     * Loads the synced data, performing an initial sync if necessary.
+     */
+    Status
+    loadSync();
 };
 
 } // namespace abcd

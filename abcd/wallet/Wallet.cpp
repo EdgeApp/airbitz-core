@@ -44,6 +44,7 @@ Wallet::create(std::shared_ptr<Wallet> &result, Account &account,
 {
     std::shared_ptr<Wallet> out(new Wallet(account, id));
     ABC_CHECK(out->loadKeys());
+    ABC_CHECK(out->loadSync());
 
     result = std::move(out);
     return Status();
@@ -110,6 +111,20 @@ Wallet::balanceDirty()
     balanceDirty_ = true;
 }
 
+Status
+Wallet::sync(bool &dirty)
+{
+    ABC_CHECK(syncRepo(syncDir(), syncKey_, dirty));
+    if (dirty)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        ABC_CHECK(loadSync());
+        ABC_WalletClearCache();
+    }
+
+    return Status();
+}
+
 Wallet::Wallet(Account &account, const std::string &id):
     account(account),
     parent_(account.shared_from_this()),
@@ -174,6 +189,16 @@ Wallet::loadKeys()
     bitcoinKeyBackup_ = bitcoinKey_;
     ABC_CHECK(base16Decode(dataKey_, json.dataKey()));
     syncKey_ = json.syncKey();
+
+    return Status();
+}
+
+Status
+Wallet::loadSync()
+{
+    ABC_CHECK(fileEnsureDir(gContext->walletsDir()));
+    ABC_CHECK(fileEnsureDir(dir()));
+    ABC_CHECK(syncEnsureRepo(syncDir(), dir() + "tmp/", syncKey_));
 
     return Status();
 }
