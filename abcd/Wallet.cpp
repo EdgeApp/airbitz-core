@@ -223,6 +223,7 @@ tABC_CC ABC_WalletCreate(Account &account,
     // create the wallet sync dir under the main dir
     syncDir = walletSyncDir(pData->szUUID);
     ABC_CHECK_NEW(fileEnsureDir(syncDir));
+    ABC_CHECK_NEW(syncMakeRepo(syncDir));
 
     // we now have a new wallet so go ahead and cache its data
     ABC_CHECK_RET(ABC_WalletAddToCache(pData, pError));
@@ -243,8 +244,7 @@ tABC_CC ABC_WalletCreate(Account &account,
 
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
-    // Init the git repo and sync it
-    ABC_CHECK_NEW(syncMakeRepo(syncDir));
+    // Upload the initial files:
     ABC_CHECK_NEW(syncRepo(syncDir, pData->szWalletAcctKey, dirty));
 
     // Actiate the remote wallet
@@ -290,10 +290,10 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, bool &dirty, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::string syncDir;
+    std::string dir = walletDir(self.szUUID);
+    std::string syncDir = walletSyncDir(self.szUUID);
     tABC_GeneralInfo *pInfo = NULL;
     tWalletData *pData      = NULL;
-    bool bNew               = false;
 
     // Fetch general info
     ABC_CHECK_RET(ABC_GeneralGetInfo(&pInfo, pError));
@@ -302,27 +302,25 @@ tABC_CC ABC_WalletSyncData(tABC_WalletID self, bool &dirty, tABC_Error *pError)
     ABC_CHECK_NEW(fileEnsureDir(gContext->walletsDir()));
 
     // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
-    ABC_CHECK_NEW(fileEnsureDir(walletDir(self.szUUID)));
-
-    // create the wallet sync dir under the main dir
-    syncDir = walletSyncDir(self.szUUID);
-    if (!fileExists(syncDir))
-    {
-        ABC_CHECK_NEW(syncMakeRepo(syncDir));
-        bNew = true;
-    }
+    ABC_CHECK_NEW(fileEnsureDir(dir));
 
     // load the wallet data into the cache
     ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
     ABC_CHECK_ASSERT(NULL != pData->szWalletAcctKey, ABC_CC_Error, "Expected to find RepoAcctKey in key cache");
 
-    // Sync
-    ABC_CHECK_NEW(syncRepo(syncDir, pData->szWalletAcctKey, dirty));
-    if (dirty || bNew)
+    // Either sync or clone, whichever is needed:
+    if (!fileExists(syncDir))
     {
+        ABC_CHECK_NEW(syncEnsureRepo(syncDir, dir + "tmp", pData->szWalletAcctKey));
         dirty = true;
-        ABC_WalletClearCache();
     }
+    else
+    {
+        ABC_CHECK_NEW(syncRepo(syncDir, pData->szWalletAcctKey, dirty));
+    }
+    if (dirty)
+        ABC_WalletClearCache();
+
 exit:
     ABC_GeneralFreeInfo(pInfo);
     return cc;

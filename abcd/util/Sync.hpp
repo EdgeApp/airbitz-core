@@ -41,6 +41,15 @@ Status
 syncMakeRepo(const std::string &syncDir);
 
 /**
+ * Ensure that a sync directory exists.
+ * Has no effect if the repo has already been created.
+ * The temporary directory allows the initial clone to happen atomically.
+ */
+Status
+syncEnsureRepo(const std::string &syncDir, const std::string &tempDir,
+    const std::string &syncKey);
+
+/**
  * Synchronizes the directory with the server.
  * New files in the folder will go up to the server,
  * and new files on the server will come down to the directory.

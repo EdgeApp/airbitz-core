@@ -8,6 +8,7 @@
 #include "Sync.hpp"
 #include "AutoFree.hpp"
 #include "Debug.hpp"
+#include "FileIO.hpp"
 #include "Mutex.hpp"
 #include "../General.hpp"
 #include "../../minilibs/git-sync/sync.h"
@@ -116,6 +117,26 @@ syncMakeRepo(const std::string &syncDir)
 
     AutoFree<git_repository, git_repository_free> repo;
     ABC_CHECK_GIT(git_repository_init_ext(&repo.get(), syncDir.c_str(), &opts));
+
+    return Status();
+}
+
+Status
+syncEnsureRepo(const std::string &syncDir, const std::string &tempDir,
+    const std::string &syncKey)
+{
+    AutoSyncLock lock(gSyncMutex);
+
+    if (!fileExists(syncDir))
+    {
+        if (fileExists(tempDir))
+            ABC_CHECK_OLD(ABC_FileIODeleteRecursive(tempDir.c_str(), &error));
+        ABC_CHECK(syncMakeRepo(tempDir));
+        bool dirty = false;
+        ABC_CHECK(syncRepo(tempDir, syncKey, dirty));
+        if (rename(tempDir.c_str(), syncDir.c_str()))
+            return ABC_ERROR(ABC_CC_SysError, "rename failed");
+    }
 
     return Status();
 }
