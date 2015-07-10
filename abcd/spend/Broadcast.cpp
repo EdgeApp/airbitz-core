@@ -35,7 +35,11 @@ blockcypherPostTx(DataSlice tx)
 
     HttpReply reply;
     ABC_CHECK(HttpRequest().post(reply, url, body));
-    ABC_CHECK(reply.codeOk());
+    if (!reply.codeOk())
+    {
+        ABC_DebugLog("%s", reply.body.c_str());
+        return reply.codeOk();
+    }
 
     return Status();
 }
@@ -60,7 +64,11 @@ chainPostTx(DataSlice tx)
     HttpReply reply;
     ABC_CHECK(HttpRequest().header("Authorization", auth).
         put(reply, url, body));
-    ABC_CHECK(reply.codeOk());
+    if (!reply.codeOk())
+    {
+        ABC_DebugLog("%s", reply.body.c_str());
+        return reply.codeOk();
+    }
 
     return Status();
 }
@@ -75,7 +83,11 @@ blockchainPostTx(DataSlice tx)
     HttpReply reply;
     ABC_CHECK(HttpRequest().
         post(reply, "https://blockchain.info/pushtx", body));
-    ABC_CHECK(reply.codeOk());
+    if (!reply.codeOk())
+    {
+        ABC_DebugLog("%s", reply.body.c_str());
+        return reply.codeOk();
+    }
 
     return Status();
 }

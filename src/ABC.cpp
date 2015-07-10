@@ -2639,7 +2639,11 @@ exit:
 tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
                      unsigned int *height, tABC_Error *pError)
 {
-    ABC_PROLOG();
+    // Cannot use ABC_PROLOG - too much debug spew
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized");
+
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
     ABC_CHECK_NULL(szTxId);
@@ -2662,7 +2666,10 @@ exit:
  */
 tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError)
 {
-    ABC_PROLOG();
+    // Cannot use ABC_PROLOG - too much debug spew
+    tABC_CC cc = ABC_CC_Ok;
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
+    ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized");
 
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
