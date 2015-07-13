@@ -281,9 +281,16 @@ COMMAND(InitLevel::wallet, GetWalletInfo, "get-wallet-info")
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-wallet-info <user> <pass> <wallet-name>");
 
-    // TODO: This no longer works without a running watcher!
+    WatcherThread thread;
+    ABC_CHECK(thread.init(session));
+
     AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pInfo;
     ABC_CHECK_OLD(ABC_GetWalletInfo(session.username, session.password, session.uuid, &pInfo.get(), &error));
+
+    ABC_DebugLog("UUID: %s", pInfo->szUUID);
+    ABC_DebugLog("Name: %s", pInfo->szName);
+    ABC_DebugLog("Balance: %f, BTC (%ld satoshi)",
+        pInfo->balanceSatoshi / 100000000.0, pInfo->balanceSatoshi);
 
     return Status();
 }
