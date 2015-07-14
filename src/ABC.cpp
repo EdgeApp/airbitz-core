@@ -525,10 +525,12 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_PROLOG();
     ABC_CHECK_NULL(szWalletName);
     ABC_CHECK_ASSERT(strlen(szWalletName) > 0, ABC_CC_Error, "No wallet name provided");
+    ABC_CHECK_NULL(pszUuid);
 
     {
-        ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_WalletCreate(*account, szWalletName, currencyNum, pszUuid, pError));
+        std::shared_ptr<Wallet> wallet;
+        ABC_CHECK_NEW(cacheWalletNew(wallet, szUserName, szWalletName, currencyNum));
+        ABC_STRDUP(*pszUuid, wallet->id().c_str());
     }
 
 exit:

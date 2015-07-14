@@ -31,14 +31,10 @@
 
 #include "Wallet.hpp"
 #include "Context.hpp"
-#include "Tx.hpp"
 #include "account/Account.hpp"
 #include "crypto/Crypto.hpp"
 #include "crypto/Encoding.hpp"
-#include "crypto/Random.hpp"
-#include "login/Lobby.hpp"
-#include "login/Login.hpp"
-#include "login/LoginServer.hpp"
+#include "json/JsonObject.hpp"
 #include "util/FileIO.hpp"
 #include "util/Json.hpp"
 #include "util/Mutex.hpp"
@@ -82,129 +78,10 @@ typedef struct sWalletData
 static unsigned int gWalletsCacheCount = 0;
 static tWalletData **gaWalletsCacheArray = NULL;
 
-static tABC_CC ABC_WalletSetCurrencyNum(Wallet &self, int currencyNum, tABC_Error *pError);
 static tABC_CC ABC_WalletCacheData(Wallet &self, tWalletData **ppData, tABC_Error *pError);
 static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
-static tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
 static tABC_CC ABC_WalletGetFromCacheByUUID(const char *szUUID, tWalletData **ppData, tABC_Error *pError);
 static void    ABC_WalletFreeData(tWalletData *pData);
-
-/**
- * Creates the wallet with the given info.
- *
- * @param pszUUID Pointer to hold allocated pointer to UUID string
- */
-tABC_CC ABC_WalletCreate(Account &account,
-                         const char *szWalletName,
-                         int  currencyNum,
-                         char                  **pszUUID,
-                         tABC_Error            *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    json_t *pJSON_Data     = NULL;
-    json_t *pJSON_Wallets  = NULL;
-    std::string uuid;
-    std::string dir;
-    std::string syncDir;
-    DataChunk dataKey;
-    DataChunk syncKey;
-    DataChunk bitcoinKey;
-    bool dirty = false;
-    AutoU08Buf LP1;
-    WalletJson json;
-    std::shared_ptr<Wallet> wallet;
-
-    tWalletData *pData = NULL;
-
-    ABC_CHECK_NULL(pszUUID);
-    ABC_CHECK_RET(ABC_LoginGetServerKey(account.login, &LP1, pError));
-
-    // create a new wallet data struct
-    ABC_NEW(pData, tWalletData);
-
-    // create wallet guid
-    ABC_CHECK_NEW(randomUuid(uuid));
-    ABC_STRDUP(pData->szUUID, uuid.c_str());
-    ABC_STRDUP(*pszUUID, uuid.c_str());
-    ABC_CHECK_NEW(Wallet::create(wallet, account, uuid));
-
-    // generate the master key for this wallet - MK_<Wallet_GUID1>
-    ABC_CHECK_NEW(randomData(dataKey, DATA_KEY_LENGTH));
-    ABC_BUF_DUP(pData->MK, toU08Buf(dataKey));
-
-    // create and set the bitcoin private seed for this wallet
-    ABC_CHECK_NEW(randomData(bitcoinKey, BITCOIN_SEED_LENGTH));
-    ABC_BUF_DUP(pData->BitcoinPrivateSeed, toU08Buf(bitcoinKey));
-
-    // Create Wallet Repo key
-    ABC_CHECK_NEW(randomData(syncKey, SYNC_KEY_LENGTH));
-    ABC_STRDUP(pData->szWalletAcctKey, base16Encode(syncKey).c_str());
-
-    // create the wallet root directory if necessary
-    ABC_CHECK_NEW(fileEnsureDir(gContext->walletsDir()));
-
-    // create the wallet directory - <Wallet_UUID1>  <- All data in this directory encrypted with MK_<Wallet_UUID1>
-    dir = wallet->dir();
-    ABC_CHECK_NEW(fileEnsureDir(dir));
-
-    // create the wallet sync dir under the main dir
-    syncDir = wallet->syncDir();
-    ABC_CHECK_NEW(fileEnsureDir(syncDir));
-    ABC_CHECK_NEW(syncMakeRepo(syncDir));
-
-    // we now have a new wallet so go ahead and cache its data
-    ABC_CHECK_RET(ABC_WalletAddToCache(pData, pError));
-
-    // all the functions below assume the wallet is in the cache or can be loaded into the cache
-    // set the wallet name
-    ABC_CHECK_RET(ABC_WalletSetName(*wallet, szWalletName, pError));
-
-    // set the currency
-    ABC_CHECK_RET(ABC_WalletSetCurrencyNum(*wallet, currencyNum, pError));
-
-    // Request remote wallet repo
-    ABC_CHECK_NEW(LoginServerWalletCreate(account.login.lobby, LP1, pData->szWalletAcctKey));
-
-    // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
-
-    // Upload the initial files:
-    ABC_CHECK_NEW(syncRepo(syncDir, pData->szWalletAcctKey, dirty));
-
-    // Actiate the remote wallet
-    ABC_CHECK_NEW(LoginServerWalletActivate(account.login.lobby, LP1, pData->szWalletAcctKey));
-
-    // If everything worked, add the wallet to the account:
-    ABC_CHECK_NEW(json.dataKeySet(base16Encode(dataKey)));
-    ABC_CHECK_NEW(json.syncKeySet(base16Encode(syncKey)));
-    ABC_CHECK_NEW(json.bitcoinKeySet(base16Encode(bitcoinKey)));
-    ABC_CHECK_NEW(account.wallets.insert(uuid, json));
-
-    // Now the wallet is written to disk, generate some addresses
-    ABC_CHECK_RET(ABC_TxCreateInitialAddresses(*wallet, pError));
-
-    // After wallet is created, sync the account:
-    ABC_CHECK_NEW(account.sync(dirty));
-
-    pData = NULL; // so we don't free what we just added to the cache
-exit:
-    if (cc != ABC_CC_Ok)
-    {
-        if (!uuid.empty())
-        {
-            ABC_WalletRemoveFromCache(uuid.c_str(), NULL);
-        }
-        if (!dir.empty())
-        {
-            ABC_FileIODeleteRecursive(dir.c_str(), NULL);
-        }
-    }
-    if (pJSON_Data)         json_decref(pJSON_Data);
-    if (pJSON_Wallets)      json_decref(pJSON_Wallets);
-    if (pData)              ABC_WalletFreeData(pData);
-
-    return cc;
-}
 
 /**
  * Sync the wallet's data
@@ -269,40 +146,6 @@ tABC_CC ABC_WalletSetName(Wallet &self, const char *szName, tABC_Error *pError)
 
     // write the name out to the file
     path = self.syncDir() + WALLET_NAME_FILENAME;
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(
-        U08Buf((unsigned char *)szJSON, strlen(szJSON) + 1),
-        pData->MK, ABC_CryptoType_AES256, path.c_str(), pError));
-
-exit:
-    ABC_FREE_STR(szJSON);
-
-    return cc;
-}
-
-/**
- * Sets the currency number of a wallet
- */
-static
-tABC_CC ABC_WalletSetCurrencyNum(Wallet &self, int currencyNum, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    tWalletData *pData = NULL;
-    std::string path;
-    char *szJSON = NULL;
-
-    // load the wallet data into the cache
-    ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
-
-    // set the currency number
-    pData->currencyNum = currencyNum;
-
-    // create the json for the currency number
-    ABC_CHECK_RET(ABC_UtilCreateIntJSONString(currencyNum, JSON_WALLET_CURRENCY_NUM_FIELD, &szJSON, pError));
-    //printf("currency num:\n%s\n", szJSON);
-
-    // write the name out to the file
-    path = self.syncDir() + WALLET_CURRENCY_FILENAME;
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(
         U08Buf((unsigned char *)szJSON, strlen(szJSON) + 1),
         pData->MK, ABC_CryptoType_AES256, path.c_str(), pError));
@@ -476,46 +319,6 @@ tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError)
     else
     {
         cc = ABC_CC_WalletAlreadyExists;
-    }
-
-exit:
-    return cc;
-}
-
-/**
- * Remove from cache
- */
-tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
-    bool bExists = false;
-    unsigned i;
-
-    ABC_CHECK_NULL(szUUID);
-
-    for (i = 0; i < gWalletsCacheCount; ++i)
-    {
-        tWalletData *pWalletInfo = gaWalletsCacheArray[i];
-        if (strcmp(pWalletInfo->szUUID, szUUID) == 0)
-        {
-            // Delete this element
-            ABC_WalletFreeData(pWalletInfo);
-            pWalletInfo = NULL;
-
-            // put the last element in this elements place
-            gaWalletsCacheArray[i] = gaWalletsCacheArray[gWalletsCacheCount - 1];
-            gaWalletsCacheArray[gWalletsCacheCount - 1] = NULL;
-            bExists = true;
-            break;
-        }
-    }
-    if (bExists)
-    {
-        // Reduce the count of cache
-        gWalletsCacheCount--;
-        // and resize
-        ABC_ARRAY_RESIZE(gaWalletsCacheArray, gWalletsCacheCount, tWalletData*);
     }
 
 exit:

@@ -80,6 +80,13 @@ Status
 cacheAccount(std::shared_ptr<Account> &result, const char *szUserName);
 
 /**
+ * Creates a new wallet and adds it to the cache.
+ */
+Status
+cacheWalletNew(std::shared_ptr<Wallet> &result, const char *szUserName,
+    const std::string &name, int currency);
+
+/**
  * Retrieves a wallet for the currently logged-in user.
  * Verifies that the passed-in wallet id is not a null pointer.
  */

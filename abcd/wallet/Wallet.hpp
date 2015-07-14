@@ -31,6 +31,10 @@ public:
     create(std::shared_ptr<Wallet> &result, Account &account,
         const std::string &id);
 
+    static Status
+    createNew(std::shared_ptr<Wallet> &result, Account &account,
+        const std::string &name, int currency);
+
     const std::string &id() const { return id_; }
     const std::string &dir() const { return dir_; }
     std::string syncDir() const     { return dir() + "sync/"; }
@@ -61,6 +65,9 @@ private:
     std::atomic<bool> balanceDirty_;
 
     Wallet(Account &account, const std::string &id);
+
+    Status
+    createNew(const std::string &name, int currency);
 
     Status
     loadKeys();

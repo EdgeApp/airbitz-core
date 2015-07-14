@@ -181,6 +181,25 @@ cacheAccount(std::shared_ptr<Account> &result, const char *szUserName)
 }
 
 Status
+cacheWalletNew(std::shared_ptr<Wallet> &result, const char *szUserName,
+    const std::string &name, int currency)
+{
+    std::shared_ptr<Account> account;
+    ABC_CHECK(cacheAccount(account, szUserName));
+
+    // Create the wallet:
+    std::shared_ptr<Wallet> out;
+    ABC_CHECK(Wallet::createNew(out, *account, name, currency));
+
+    // Add to the cache:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+    gWalletCache[out->id()] = out;
+
+    result = std::move(out);
+    return Status();
+}
+
+Status
 cacheWallet(std::shared_ptr<Wallet> &result, const char *szUserName,
     const char *szUUID)
 {

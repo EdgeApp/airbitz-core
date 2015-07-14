@@ -40,7 +40,6 @@
 
 namespace abcd {
 
-class Account;
 class Wallet;
 
 void ABC_WalletClearCache();
@@ -56,12 +55,6 @@ tABC_CC ABC_WalletGetInfo(Wallet &self,
 void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo);
 
 // Blocking functions:
-tABC_CC ABC_WalletCreate(Account &account,
-                         const char *szWalletName,
-                         int  currencyNum,
-                         char **pszUUID,
-                         tABC_Error *pError);
-
 tABC_CC ABC_WalletSyncData(Wallet &self,
                            bool &dirty,
                            tABC_Error *pError);
