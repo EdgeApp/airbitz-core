@@ -13,6 +13,9 @@
 
 namespace abcd {
 
+#define DATA_KEY_LENGTH 32
+#define BITCOIN_SEED_LENGTH 32
+
 tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
                                 tABC_Error        *pError);
 

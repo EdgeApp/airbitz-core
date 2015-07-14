@@ -19,8 +19,6 @@
 
 namespace abcd {
 
-#define ACCOUNT_MK_LENGTH 32
-
 Status
 Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
     const LoginPackage &loginPackage)
@@ -69,7 +67,7 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(carePackage.snrp2Set(snrp));
 
     // Generate MK:
-    ABC_CHECK_NEW(randomData(dataKey, ACCOUNT_MK_LENGTH));
+    ABC_CHECK_NEW(randomData(dataKey, DATA_KEY_LENGTH));
 
     // Generate SyncKey:
     ABC_CHECK_NEW(randomData(syncKey, SYNC_KEY_LENGTH));

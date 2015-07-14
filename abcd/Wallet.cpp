@@ -51,10 +51,6 @@
 
 namespace abcd {
 
-#define WALLET_KEY_LENGTH                       AES_256_KEY_LENGTH
-
-#define WALLET_BITCOIN_PRIVATE_SEED_LENGTH      32
-
 #define WALLET_ACCOUNTS_WALLETS_FILENAME        "Wallets.json"
 #define WALLET_NAME_FILENAME                    "WalletName.json"
 #define WALLET_CURRENCY_FILENAME                "Currency.json"
@@ -206,11 +202,11 @@ tABC_CC ABC_WalletCreate(Account &account,
     wallet = ABC_WalletID(account, pData->szUUID);
 
     // generate the master key for this wallet - MK_<Wallet_GUID1>
-    ABC_CHECK_NEW(randomData(dataKey, WALLET_KEY_LENGTH));
+    ABC_CHECK_NEW(randomData(dataKey, DATA_KEY_LENGTH));
     ABC_BUF_DUP(pData->MK, toU08Buf(dataKey));
 
     // create and set the bitcoin private seed for this wallet
-    ABC_CHECK_NEW(randomData(bitcoinKey, WALLET_BITCOIN_PRIVATE_SEED_LENGTH));
+    ABC_CHECK_NEW(randomData(bitcoinKey, BITCOIN_SEED_LENGTH));
     ABC_BUF_DUP(pData->BitcoinPrivateSeed, toU08Buf(bitcoinKey));
 
     // Create Wallet Repo key
