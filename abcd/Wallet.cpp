@@ -53,11 +53,9 @@ namespace abcd {
 
 #define WALLET_NAME_FILENAME                    "WalletName.json"
 #define WALLET_CURRENCY_FILENAME                "Currency.json"
-#define WALLET_ACCOUNTS_FILENAME                "Accounts.json"
 
 #define JSON_WALLET_NAME_FIELD                  "walletName"
 #define JSON_WALLET_CURRENCY_NUM_FIELD          "num"
-#define JSON_WALLET_ACCOUNTS_FIELD              "accounts"
 
 struct WalletJson:
     public JsonObject
@@ -76,8 +74,6 @@ typedef struct sWalletData
     char            *szName;
     char            *szWalletAcctKey;
     int             currencyNum;
-    unsigned int    numAccounts;
-    char            **aszAccounts;
     tABC_U08Buf     MK;
     tABC_U08Buf     BitcoinPrivateSeed;
     bool            balanceDirty;
@@ -89,7 +85,6 @@ static unsigned int gWalletsCacheCount = 0;
 static tWalletData **gaWalletsCacheArray = NULL;
 
 static tABC_CC ABC_WalletSetCurrencyNum(tABC_WalletID self, int currencyNum, tABC_Error *pError);
-static tABC_CC ABC_WalletAddAccount(tABC_WalletID self, const char *szAccount, tABC_Error *pError);
 static tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error *pError);
 static tABC_CC ABC_WalletAddToCache(tWalletData *pData, tABC_Error *pError);
 static tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
@@ -236,10 +231,6 @@ tABC_CC ABC_WalletCreate(Account &account,
 
     // Request remote wallet repo
     ABC_CHECK_NEW(LoginServerWalletCreate(account.login.lobby, LP1, pData->szWalletAcctKey));
-
-    // set this account for the wallet's first account
-    ABC_CHECK_RET(ABC_WalletAddAccount(wallet,
-        account.login.lobby.username().c_str(), pError));
 
     // TODO: should probably add the creation date to optimize wallet export (assuming it is even used)
 
@@ -389,47 +380,6 @@ exit:
 }
 
 /**
- * Adds the given account to the list of accounts that uses this wallet
- */
-static
-tABC_CC ABC_WalletAddAccount(tABC_WalletID self, const char *szAccount, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    tWalletData *pData = NULL;
-    std::string path;
-    json_t *dataJSON = NULL;
-
-    // load the wallet data into the cache
-    ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
-
-    // if there are already accounts in the list
-    if ((pData->aszAccounts) && (pData->numAccounts > 0))
-    {
-        ABC_ARRAY_RESIZE(pData->aszAccounts, pData->numAccounts + 1, char*);
-    }
-    else
-    {
-        pData->numAccounts = 0;
-        ABC_ARRAY_NEW(pData->aszAccounts, 1, char*);
-    }
-    ABC_STRDUP(pData->aszAccounts[pData->numAccounts], szAccount);
-    pData->numAccounts++;
-
-    // create the json for the accounts
-    ABC_CHECK_RET(ABC_UtilCreateArrayJSONObject(pData->aszAccounts, pData->numAccounts, JSON_WALLET_ACCOUNTS_FIELD, &dataJSON, pError));
-
-    // write the name out to the file
-    path = walletSyncDir(self.szUUID) + WALLET_ACCOUNTS_FILENAME;
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(dataJSON, pData->MK, ABC_CryptoType_AES256, path.c_str(), pError));
-
-exit:
-    if (dataJSON)       json_decref(dataJSON);
-
-    return cc;
-}
-
-/**
  * Adds the wallet data to the cache
  * If the wallet is not currently in the cache it is added
  */
@@ -483,8 +433,6 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
         {
             ABC_STRDUP(pData->szName, "");
             pData->currencyNum = -1;
-            pData->numAccounts = 0;
-            pData->aszAccounts = NULL;
         }
         else
         {
@@ -515,21 +463,6 @@ tABC_CC ABC_WalletCacheData(tABC_WalletID self, tWalletData **ppData, tABC_Error
             {
                 pData->currencyNum = -1;
             }
-
-            // get the accounts
-            path = syncDir + WALLET_ACCOUNTS_FILENAME;
-            if (fileExists(path))
-            {
-                AutoU08Buf Data;
-                ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(path.c_str(), pData->MK, &Data, pError));
-                ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)Data.data(), JSON_WALLET_ACCOUNTS_FIELD, &(pData->aszAccounts), &(pData->numAccounts), pError));
-            }
-            else
-            {
-                pData->numAccounts = 0;
-                pData->aszAccounts = NULL;
-            }
-
         }
         pData->balance = 0;
         pData->balanceDirty = true;
@@ -704,9 +637,6 @@ void ABC_WalletFreeData(tWalletData *pData)
         ABC_FREE_STR(pData->szName);
 
         pData->currencyNum = -1;
-
-        ABC_UtilFreeStringArray(pData->aszAccounts, pData->numAccounts);
-        pData->aszAccounts = NULL;
 
         ABC_BUF_FREE(pData->MK);
 
