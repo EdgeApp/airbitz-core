@@ -537,6 +537,72 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_WalletLoad(const char *szUserName,
+                       const char *szWalletUUID,
+                       tABC_Error *pError)
+{
+    ABC_PROLOG();
+
+    {
+        ABC_GET_WALLET();
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_WalletName(const char *szUserName,
+                       const char *szWalletUUID,
+                       char **pszResult,
+                       tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszResult);
+
+    {
+        ABC_GET_WALLET();
+        ABC_STRDUP(*pszResult, wallet->name().c_str());
+    }
+
+exit:
+    return cc;
+}
+
+
+tABC_CC ABC_WalletCurrency(const char *szUserName,
+                           const char *szWalletUUID,
+                           int *pResult,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pResult);
+
+    {
+        ABC_GET_WALLET();
+        *pResult = wallet->currency();
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_WalletBalance(const char *szUserName,
+                          const char *szWalletUUID,
+                          int64_t *pResult,
+                          tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pResult);
+
+    {
+        ABC_GET_WALLET();
+        ABC_CHECK_NEW(wallet->balance(*pResult));
+    }
+
+exit:
+    return cc;
+}
+
 /**
  * Clear cached keys.
  *
@@ -764,6 +830,24 @@ tABC_CC ABC_RenameWallet(const char *szUserName,
     {
         ABC_GET_WALLET();
         ABC_CHECK_NEW(wallet->nameSet(szNewWalletName));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_WalletArchived(const char *szUserName,
+                           const char *szWalletUUID,
+                           bool *pResult,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_NULL(pResult);
+
+    {
+        ABC_GET_ACCOUNT();
+        ABC_CHECK_NEW(account->wallets.archived(*pResult, szWalletUUID));
     }
 
 exit:

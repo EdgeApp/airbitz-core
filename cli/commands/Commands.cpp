@@ -7,7 +7,6 @@
 
 #include "../Command.hpp"
 #include "../Util.hpp"
-#include "../../abcd/Wallet.hpp"
 #include "../../abcd/account/Account.hpp"
 #include "../../abcd/bitcoin/WatcherBridge.hpp"
 #include "../../abcd/crypto/Encoding.hpp"
@@ -275,16 +274,16 @@ COMMAND(InitLevel::wallet, GetWalletInfo, "get-wallet-info")
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-wallet-info <user> <pass> <wallet-name>");
 
+    // Obtain the balance:
     WatcherThread thread;
     ABC_CHECK(thread.init(session));
+    int64_t balance;
+    ABC_CHECK(session.wallet->balance(balance));
 
-    AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pInfo;
-    ABC_CHECK_OLD(ABC_GetWalletInfo(session.username, session.password, session.uuid, &pInfo.get(), &error));
-
-    ABC_DebugLog("UUID: %s", pInfo->szUUID);
-    ABC_DebugLog("Name: %s", pInfo->szName);
-    ABC_DebugLog("Balance: %f, BTC (%ld satoshi)",
-        pInfo->balanceSatoshi / 100000000.0, pInfo->balanceSatoshi);
+    std::cout << "id:      " << session.wallet->id() << std::endl;
+    std::cout << "name:    " << session.wallet->name() << std::endl;
+    std::cout << "balance: " << balance / 100000000.0 <<
+        " (" << balance << " satoshis)" << std::endl;
 
     return Status();
 }

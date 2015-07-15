@@ -830,6 +830,33 @@ tABC_CC ABC_PluginDataClear(const char *szUserName,
                             const char *szPlugin,
                             tABC_Error *pError);
 
+/* === Account wallet list: === */
+
+tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
+                           const char *szPassword,
+                           char ***paWalletUUID,
+                           unsigned int *pCount,
+                           tABC_Error *pError);
+
+tABC_CC ABC_SetWalletOrder(const char *szUserName,
+                           const char *szPassword,
+                           const char *szUUIDs,
+                           tABC_Error *pError);
+
+/**
+ * Determines whether or not the wallet is archived.
+ */
+tABC_CC ABC_WalletArchived(const char *szUserName,
+                           const char *szWalletUUID,
+                           bool *pResult,
+                           tABC_Error *pError);
+
+tABC_CC ABC_SetWalletArchived(const char *szUserName,
+                              const char *szPassword,
+                              const char *szUUID,
+                              unsigned int archived,
+                              tABC_Error *pError);
+
 /* === Exchange rates: === */
 tABC_CC ABC_RequestExchangeRateUpdate(const char *szUserName, const char *szPassword,
                                       int currencyNum,
@@ -849,20 +876,7 @@ tABC_CC ABC_CurrencyToSatoshi(const char *szUserName,
                               int64_t *pSatoshi,
                               tABC_Error *pError);
 
-/* === Wallet lifetime: === */
-tABC_CC ABC_CreateWallet(const char *szUserName,
-                         const char *szPassword,
-                         const char *szWalletName,
-                         int        currencyNum,
-                         char       **pszUuid,
-                         tABC_Error *pError);
-
-tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
-                           const char *szPassword,
-                           char ***paWalletUUID,
-                           unsigned int *pCount,
-                           tABC_Error *pError);
-
+/* === Deprecated wallet omnibus functions: === */
 tABC_CC ABC_GetWallets(const char *szUserName,
                        const char *szPassword,
                        tABC_WalletInfo ***paWalletInfo,
@@ -872,24 +886,6 @@ tABC_CC ABC_GetWallets(const char *szUserName,
 void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
                              unsigned int nCount);
 
-tABC_CC ABC_SetWalletOrder(const char *szUserName,
-                           const char *szPassword,
-                           const char *szUUIDs,
-                           tABC_Error *pError);
-
-/* === Wallet data: === */
-tABC_CC ABC_RenameWallet(const char *szUserName,
-                         const char *szPassword,
-                         const char *szUUID,
-                         const char *szNewWalletName,
-                         tABC_Error *pError);
-
-tABC_CC ABC_SetWalletArchived(const char *szUserName,
-                              const char *szPassword,
-                              const char *szUUID,
-                              unsigned int archived,
-                              tABC_Error *pError);
-
 tABC_CC ABC_GetWalletInfo(const char *szUserName,
                           const char *szPassword,
                           const char *szUUID,
@@ -897,6 +893,51 @@ tABC_CC ABC_GetWalletInfo(const char *szUserName,
                           tABC_Error *pError);
 
 void ABC_FreeWalletInfo(tABC_WalletInfo *pWalletInfo);
+
+/* === Wallet data: === */
+tABC_CC ABC_CreateWallet(const char *szUserName,
+                         const char *szPassword,
+                         const char *szWalletName,
+                         int        currencyNum,
+                         char       **pszUuid,
+                         tABC_Error *pError);
+
+/**
+ * Loads a wallet into memory, doing the initial sync if necessary.
+ */
+tABC_CC ABC_WalletLoad(const char *szUserName,
+                       const char *szWalletUUID,
+                       tABC_Error *pError);
+
+/**
+ * Obtains the wallet's text name.
+ */
+tABC_CC ABC_WalletName(const char *szUserName,
+                       const char *szWalletUUID,
+                       char **pszResult,
+                       tABC_Error *pError);
+
+/**
+ * Obtains the wallet's currency code.
+ */
+tABC_CC ABC_WalletCurrency(const char *szUserName,
+                           const char *szWalletUUID,
+                           int *pResult,
+                           tABC_Error *pError);
+
+/**
+ * Calculates the wallet's balance.
+ */
+tABC_CC ABC_WalletBalance(const char *szUserName,
+                          const char *szWalletUUID,
+                          int64_t *pResult,
+                          tABC_Error *pError);
+
+tABC_CC ABC_RenameWallet(const char *szUserName,
+                         const char *szPassword,
+                         const char *szUUID,
+                         const char *szNewWalletName,
+                         tABC_Error *pError);
 
 tABC_CC ABC_ExportWalletSeed(const char *szUserName,
                              const char *szPassword,
