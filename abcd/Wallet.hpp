@@ -49,9 +49,6 @@ tABC_CC ABC_WalletSetName(Wallet &self,
                           const char *szName,
                           tABC_Error *pError);
 
-tABC_CC ABC_WalletDirtyCache(Wallet &self,
-                             tABC_Error *pError);
-
 tABC_CC ABC_WalletGetInfo(Wallet &self,
                           tABC_WalletInfo **ppWalletInfo,
                           tABC_Error *pError);

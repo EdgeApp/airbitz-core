@@ -605,7 +605,7 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
                         pTx, paOutAddresses, outAddressCount, pError));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
-        ABC_CHECK_RET(ABC_WalletDirtyCache(self, pError));
+        self.balanceDirty();
 
         if (fAsyncBitCoinEventCallback)
         {
@@ -627,7 +627,7 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
                         pTx, paOutAddresses, outAddressCount, pError));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
-        ABC_CHECK_RET(ABC_WalletDirtyCache(self, pError));
+        self.balanceDirty();
 
         if (fAsyncBitCoinEventCallback)
         {
@@ -2585,7 +2585,8 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
     // save out the transaction object to a file encrypted with the master key
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, toU08Buf(self.dataKey()), ABC_CryptoType_AES256, szFilename, pError));
 
-    ABC_CHECK_RET(ABC_WalletDirtyCache(self, pError));
+    self.balanceDirty();
+
 exit:
     ABC_FREE_STR(szFilename);
     ABC_CLEAR_FREE(ppJSON_Output, sizeof(json_t *) * pTx->countOutputs);

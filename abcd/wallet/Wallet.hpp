@@ -10,7 +10,9 @@
 
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
+#include <atomic>
 #include <memory>
+#include <mutex>
 
 namespace abcd {
 
@@ -38,7 +40,12 @@ public:
     const DataChunk &bitcoinKey() const;
     const DataChunk &dataKey() const { return dataKey_; }
 
+    // Balance cache:
+    Status balance(int64_t &result);
+    void balanceDirty();
+
 private:
+    mutable std::mutex mutex_;
     const std::shared_ptr<Account> parent_;
     const std::string id_;
     const std::string dir_;
@@ -48,6 +55,10 @@ private:
     DataChunk bitcoinKeyBackup_;
     DataChunk dataKey_;
     std::string syncKey_;
+
+    // Balance cache:
+    int64_t balance_;
+    std::atomic<bool> balanceDirty_;
 
     Wallet(Account &account, const std::string &id);
 

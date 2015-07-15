@@ -33,7 +33,6 @@
 #include "Context.hpp"
 #include "Tx.hpp"
 #include "account/Account.hpp"
-#include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"
 #include "crypto/Encoding.hpp"
 #include "crypto/Random.hpp"
@@ -77,8 +76,6 @@ typedef struct sWalletData
     int             currencyNum;
     tABC_U08Buf     MK;
     tABC_U08Buf     BitcoinPrivateSeed;
-    bool            balanceDirty;
-    int64_t         balance;
 } tWalletData;
 
 // this holds all the of the currently cached wallets
@@ -401,8 +398,6 @@ tABC_CC ABC_WalletCacheData(Wallet &self, tWalletData **ppData, tABC_Error *pErr
                 pData->currencyNum = -1;
             }
         }
-        pData->balance = 0;
-        pData->balanceDirty = true;
 
         // Add to cache
         ABC_CHECK_RET(ABC_WalletAddToCache(pData, pError));
@@ -581,20 +576,6 @@ void ABC_WalletFreeData(tWalletData *pData)
     }
 }
 
-tABC_CC ABC_WalletDirtyCache(Wallet &self,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
-
-    tWalletData     *pData = NULL;
-
-    ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
-    pData->balanceDirty = true;
-exit:
-    return cc;
-}
-
 /**
  * Gets information on the given wallet.
  *
@@ -613,8 +594,6 @@ tABC_CC ABC_WalletGetInfo(Wallet &self,
 
     tWalletData     *pData = NULL;
     tABC_WalletInfo *pInfo = NULL;
-    tABC_TxInfo     **aTransactions = NULL;
-    unsigned int    nTxCount = 0;
 
     // load the wallet data into the cache
     ABC_CHECK_RET(ABC_WalletCacheData(self, &pData, pError));
@@ -634,24 +613,7 @@ tABC_CC ABC_WalletGetInfo(Wallet &self,
         ABC_CHECK_NEW(self.account.wallets.archived(archived, self.id()));
         pInfo->archived = archived;
     }
-
-    if (pData->balanceDirty)
-    {
-        ABC_CHECK_RET(
-            ABC_TxGetTransactions(self,
-                                  ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
-                                  &aTransactions, &nTxCount, pError));
-        ABC_CHECK_RET(ABC_BridgeFilterTransactions(self, aTransactions, &nTxCount, pError));
-        pData->balance = 0;
-        for (unsigned i = 0; i < nTxCount; i++)
-        {
-            tABC_TxInfo *pTxInfo = aTransactions[i];
-            pData->balance += pTxInfo->pDetails->amountSatoshi;
-        }
-        pData->balanceDirty = false;
-    }
-    pInfo->balanceSatoshi = pData->balance;
-
+    ABC_CHECK_NEW(self.balance(pInfo->balanceSatoshi));
 
     // assign it to the user's pointer
     *ppWalletInfo = pInfo;
@@ -659,7 +621,6 @@ tABC_CC ABC_WalletGetInfo(Wallet &self,
 
 exit:
     ABC_CLEAR_FREE(pInfo, sizeof(tABC_WalletInfo));
-    if (nTxCount > 0) ABC_FreeTransactions(aTransactions, nTxCount);
 
     return cc;
 }
