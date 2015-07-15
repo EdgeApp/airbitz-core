@@ -1626,9 +1626,7 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         // Fill in the spend target:
         pSpend->amount = amount;
         pSpend->amountMutable = true;
-        AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pWallet;
-        ABC_CHECK_RET(ABC_WalletGetInfo(*wallet, &pWallet.get(), pError));
-        ABC_STRDUP(pSpend->szName, pWallet->szName);
+        ABC_STRDUP(pSpend->szName, wallet->name().c_str());
         ABC_STRDUP(pSpend->szDestUUID, szWalletUUID);
 
         // Fill in the details:

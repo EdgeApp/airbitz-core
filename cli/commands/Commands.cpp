@@ -306,23 +306,13 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... list-wallets <user> <pass>");
 
-    // Setup:
-    ABC_CHECK(syncAll(*session.account));
-
     // Iterate over wallets:
     auto ids = session.account->wallets.list();
     for (const auto &id: ids)
     {
         std::shared_ptr<Wallet> wallet;
         ABC_CHECK(cacheWallet(wallet, nullptr, id.c_str()));
-
-        JsonBox box;
-        ABC_CHECK(box.load(wallet->syncDir() + "WalletName.json"));
-
-        DataChunk data;
-        ABC_CHECK(box.decrypt(data, wallet->dataKey()));
-
-        std::cout << id << ": " << toString(data) << std::endl;
+        std::cout << wallet->id() << ": " << wallet->name() << std::endl;
     }
 
     return Status();

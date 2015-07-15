@@ -31,7 +31,6 @@
 
 #include "Tx.hpp"
 #include "Context.hpp"
-#include "Wallet.hpp"
 #include "account/Account.hpp"
 #include "account/AccountSettings.hpp"
 #include "bitcoin/Text.hpp"
@@ -340,10 +339,8 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
         ABC_CHECK_RET(ABC_TxDupDetails(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
 
         // Set the payee name:
-        AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pWallet;
-        ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet.get(), pError));
         ABC_FREE_STR(pReceiveTx->pDetails->szName);
-        ABC_STRDUP(pReceiveTx->pDetails->szName, pWallet->szName);
+        ABC_STRDUP(pReceiveTx->pDetails->szName, self.name().c_str());
 
         pReceiveTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi;
 
@@ -738,16 +735,13 @@ tABC_CC ABC_TxCalcCurrency(Wallet &self, int64_t amountSatoshi,
 {
     tABC_CC cc = ABC_CC_Ok;
     double currency = 0.0;
-    tABC_WalletInfo *pWallet = NULL;
 
-    ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet, pError));
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
-        currency, amountSatoshi, static_cast<Currency>(pWallet->currencyNum)));
+        currency, amountSatoshi, static_cast<Currency>(self.currency())));
 
     *pCurrency = currency;
-exit:
-    ABC_WalletFreeInfo(pWallet);
 
+exit:
     return cc;
 }
 
@@ -2231,7 +2225,6 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_Tx *pTx = NULL;
-    tABC_WalletInfo *pWalletInfo = NULL;
     double currency;
 
     ABC_NEW(pTx, tABC_Tx);
@@ -2248,17 +2241,16 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
     pTx->pDetails->amountSatoshi = funds;
     pTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
-    ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWalletInfo, pError));
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
         currency, pTx->pDetails->amountSatoshi,
-        static_cast<Currency>(pWalletInfo->currencyNum)));
+        static_cast<Currency>(wallet.currency())));
     pTx->pDetails->amountCurrency = currency;
 
     // save the transaction
     ABC_CHECK_RET(ABC_TxSaveTransaction(wallet, pTx, pError));
+
 exit:
     ABC_TxFreeTx(pTx);
-    ABC_WalletFreeInfo(pWalletInfo);
     return cc;
 }
 
