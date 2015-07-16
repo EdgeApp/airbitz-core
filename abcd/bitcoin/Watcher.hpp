@@ -8,7 +8,7 @@
 #ifndef ABCD_BITCOIN_WATCHER_HPP
 #define ABCD_BITCOIN_WATCHER_HPP
 
-#include <bitcoin/watcher/tx_updater.hpp>
+#include "TxUpdater.hpp"
 #include <bitcoin/client.hpp>
 #include <zmq.hpp>
 #include <iostream>
@@ -21,7 +21,7 @@ namespace abcd {
  * watch one or more bitcoin addresses for activity.
  */
 class Watcher:
-    public libwallet::tx_callbacks
+    public TxCallbacks
 {
 public:
     ~Watcher();
@@ -90,10 +90,10 @@ public:
      * Accesses the real database.
      * This should be const, but the db is not const-safe due to mutexes.
      */
-    libwallet::tx_db& db() { return db_; }
+    TxDatabase &db() { return db_; }
 
 private:
-    libwallet::tx_db db_;
+    TxDatabase db_;
     zmq::context_t ctx_;
 
     // Cached addresses, for when we are disconnected:
@@ -125,17 +125,17 @@ private:
     struct connection
     {
         ~connection();
-        connection(libwallet::tx_db& db, void *ctx, tx_callbacks& cb);
+        connection(TxDatabase &db, void *ctx, TxCallbacks &cb);
 
         bc::client::zeromq_socket socket;
         bc::client::obelisk_codec codec;
-        libwallet::tx_updater txu;
+        TxUpdater txu;
     };
     connection* connection_;
 
     bool command(uint8_t* data, size_t size);
 
-    // tx_callbacks interface:
+    // TxCallbacks interface:
     virtual void on_add(const bc::transaction_type& tx) override;
     virtual void on_height(size_t height) override;
     virtual void on_send(const std::error_code& error, const bc::transaction_type& tx) override;

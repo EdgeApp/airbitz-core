@@ -10,7 +10,6 @@
 #include <sstream>
 
 using namespace libbitcoin;
-using namespace libwallet;
 
 namespace abcd {
 
@@ -169,7 +168,7 @@ void Watcher::set_fail_callback(fail_callback cb)
  */
 output_info_list Watcher::get_utxos(const payment_address& address)
 {
-    libwallet::address_set watching;
+    AddressSet watching;
     watching.insert(address);
 
     return db_.get_utxos(watching);
@@ -181,7 +180,7 @@ output_info_list Watcher::get_utxos(const payment_address& address)
  */
 output_info_list Watcher::get_utxos(bool filter)
 {
-    libwallet::address_set addresses;
+    AddressSet addresses;
     for (auto& row: addresses_)
         addresses.insert(row.first);
 
@@ -392,7 +391,7 @@ bool Watcher::command(uint8_t* data, size_t size)
                 connection_->txu.send(tx);
             else
             {
-                db_.insert(tx, tx_state::unsent);
+                db_.insert(tx, TxState::unsent);
                 on_add(tx);
             }
         }
@@ -448,7 +447,7 @@ static void on_update_nop(const payment_address&,
 {
 }
 
-Watcher::connection::connection(tx_db& db, void *ctx, tx_callbacks& cb)
+Watcher::connection::connection(TxDatabase &db, void *ctx, TxCallbacks &cb)
   : socket(ctx),
     codec(socket, on_update_nop, on_unknown_nop, std::chrono::seconds(10), 0),
     txu(db, codec, cb)
