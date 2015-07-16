@@ -31,7 +31,6 @@
 
 #include "ABC.h"
 #include "LoginShim.hpp"
-#include "WalletShim.hpp"
 #include "../abcd/Context.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Export.hpp"
@@ -1117,46 +1116,6 @@ exit:
 }
 
 /**
- * Gets information on the given wallet.
- *
- * This function allocates and fills in a wallet info structure with the information
- * associated with the given wallet UUID
- *
- * @param ppWalletInfo          Pointer to store the pointer of the allocated wallet info struct
- */
-tABC_CC ABC_GetWalletInfo(const char *szUserName,
-                          const char *szPassword,
-                          const char *szWalletUUID,
-                          tABC_WalletInfo **ppWalletInfo,
-                          tABC_Error *pError)
-{
-    ABC_PROLOG();
-
-    {
-        ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_WalletGetInfo(*wallet, ppWalletInfo, pError));
-    }
-
-exit:
-    return cc;
-}
-
-/**
- * Free the wallet info.
- *
- * This function frees the wallet info struct returned from ABC_GetWalletInfo.
- *
- * @param pWalletInfo   Wallet info to be free'd
- */
-void ABC_FreeWalletInfo(tABC_WalletInfo *pWalletInfo)
-{
-    // Cannot use ABC_PROLOG - no pError
-    ABC_DebugLog("%s called", __FUNCTION__);
-
-    ABC_WalletFreeInfo(pWalletInfo);
-}
-
-/**
  * Export the private seed used to generate all addresses within a wallet.
  * For now, this uses a simple hex dump of the raw data.
  */
@@ -1208,89 +1167,6 @@ tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
 
 exit:
     return cc;
-}
-
-/**
- * DEPRECATED - Gets wallets for a specified account.
- *
- * This function allocates and fills in an array of wallet info structures with the information
- * associated with the wallets of the given user
- *
- * @param szUserName            UserName for the account associated with this wallet
- * @param szPassword            Password for the account associated with this wallet
- * @param paWalletInfo          Pointer to store the allocated array of wallet info structs
- * @param pCount                Pointer to store number of wallets in the array
- * @param pError                A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_GetWallets(const char *szUserName,
-                       const char *szPassword,
-                       tABC_WalletInfo ***paWalletInfo,
-                       unsigned int *pCount,
-                       tABC_Error *pError)
-{
-    tABC_WalletInfo **aWalletInfo = NULL;
-
-    ABC_PROLOG();
-    ABC_CHECK_NULL(paWalletInfo);
-    ABC_CHECK_NULL(pCount);
-
-    {
-        ABC_GET_ACCOUNT();
-
-        // Return an empty list by default:
-        *paWalletInfo = nullptr;
-        *pCount = 0;
-
-        // Only build a list if we have stuff to put inside:
-        auto ids = account->wallets.list();
-        if (0 < ids.size())
-        {
-            ABC_ARRAY_NEW(aWalletInfo, ids.size(), tABC_WalletInfo*);
-
-            unsigned n = 0;
-            for (const auto &id: ids)
-            {
-                std::shared_ptr<Wallet> wallet;
-                ABC_CHECK_NEW(cacheWallet(wallet, szUserName, id.c_str()));
-
-                ABC_CHECK_RET(ABC_WalletGetInfo(*wallet, &aWalletInfo[n++], pError));
-            }
-
-            *paWalletInfo = aWalletInfo;
-            *pCount = ids.size();
-            aWalletInfo = NULL;
-        }
-    }
-
-exit:
-    ABC_FreeWalletInfoArray(aWalletInfo, *pCount);
-
-    return cc;
-}
-
-/**
- * DEPRECATED - Free the wallet info array.
- *
- * This function frees the wallet info array returned from ABC_GetWallets.
- *
- * @param aWalletInfo   Wallet info array to be free'd
- * @param nCount        Number of elements in the array
- */
-void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
-                             unsigned int nCount)
-{
-    // Cannot use ABC_PROLOG - no pError
-    ABC_DebugLog("%s called", __FUNCTION__);
-
-    if ((aWalletInfo != NULL) && (nCount > 0))
-    {
-        for (unsigned i = 0; i < nCount; i++)
-        {
-            ABC_WalletFreeInfo(aWalletInfo[i]);
-        }
-
-        ABC_FREE(aWalletInfo);
-    }
 }
 
 /**
