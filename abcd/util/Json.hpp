@@ -16,31 +16,11 @@
 
 namespace abcd {
 
-tABC_CC ABC_UtilCreateValueJSONString(const char *szValue,
-                                      const char *szFieldName,
-                                      char       **pszJSON,
-                                      tABC_Error *pError);
-
-tABC_CC ABC_UtilCreateIntJSONString(int        value,
-                                    const char *szFieldName,
-                                    char       **pszJSON,
-                                    tABC_Error *pError);
-
 tABC_CC ABC_UtilCreateArrayJSONObject(char   **aszValues,
                                       unsigned int count,
                                       const char   *szFieldName,
                                       json_t       **ppJSON_Data,
                                       tABC_Error   *pError);
-
-tABC_CC ABC_UtilGetStringValueFromJSONString(const char *szJSON,
-                                             const char *szFieldName,
-                                             char       **pszValue,
-                                             tABC_Error *pError);
-
-tABC_CC ABC_UtilGetIntValueFromJSONString(const char *szJSON,
-                                          const char *szFieldName,
-                                          int       *pValue,
-                                          tABC_Error *pError);
 
 tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
                                              const char *szFieldName,
