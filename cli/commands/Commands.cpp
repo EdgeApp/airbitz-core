@@ -316,22 +316,20 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
     ABC_CHECK(syncAll(*session.account));
 
     // Iterate over wallets:
-    AutoStringArray uuids;
-    ABC_CHECK_OLD(ABC_GetWalletUUIDs(session.username, session.password,
-        &uuids.data, &uuids.size, &error));
-    for (unsigned i = 0; i < uuids.size; ++i)
+    auto ids = session.account->wallets.list();
+    for (const auto &id: ids)
     {
         JsonBox box;
-        ABC_CHECK(box.load(walletSyncDir(uuids.data[i]) + "WalletName.json"));
+        ABC_CHECK(box.load(walletSyncDir(id) + "WalletName.json"));
 
-        auto wallet = ABC_WalletID(*session.account, uuids.data[i]);
+        auto wallet = ABC_WalletID(*session.account, id.c_str());
         U08Buf dataKey;
         ABC_CHECK_OLD(ABC_WalletGetMK(wallet, &dataKey, &error));
 
         DataChunk data;
         ABC_CHECK(box.decrypt(data, dataKey));
 
-        std::cout << uuids.data[i] << ": " << toString(data) << std::endl;
+        std::cout << id << ": " << toString(data) << std::endl;
     }
 
     return Status();

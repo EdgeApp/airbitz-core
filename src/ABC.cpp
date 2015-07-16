@@ -784,10 +784,11 @@ tABC_CC ABC_SetWalletArchived(const char *szUserName,
                               tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szWalletUUID);
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_NEW(account->wallets.archive(szWalletUUID, archived));
+        ABC_CHECK_NEW(account->wallets.archivedSet(szWalletUUID, archived));
     }
 
 exit:
@@ -1022,14 +1023,14 @@ tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
     {
         ABC_GET_ACCOUNT();
 
-        auto list = account->wallets.list();
-        ABC_ARRAY_NEW(*paWalletUUID, list.size(), char*);
+        auto ids = account->wallets.list();
+        ABC_ARRAY_NEW(*paWalletUUID, ids.size(), char*);
         int n = 0;
-        for (const auto &i: list)
+        for (const auto &id: ids)
         {
-            ABC_STRDUP((*paWalletUUID)[n++], i.id.c_str());
+            ABC_STRDUP((*paWalletUUID)[n++], id.c_str());
         }
-        *pCount = list.size();
+        *pCount = ids.size();
     }
 
 exit:
@@ -1068,20 +1069,20 @@ tABC_CC ABC_GetWallets(const char *szUserName,
         *pCount = 0;
 
         // Only build a list if we have stuff to put inside:
-        auto uuids = account->wallets.list();
-        if (0 < uuids.size())
+        auto ids = account->wallets.list();
+        if (0 < ids.size())
         {
-            ABC_ARRAY_NEW(aWalletInfo, uuids.size(), tABC_WalletInfo*);
+            ABC_ARRAY_NEW(aWalletInfo, ids.size(), tABC_WalletInfo*);
 
             unsigned n = 0;
-            for (const auto &i: uuids)
+            for (const auto &id: ids)
             {
-                auto wallet = ABC_WalletID(*account, i.id.c_str());
+                auto wallet = ABC_WalletID(*account, id.c_str());
                 ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &aWalletInfo[n++], pError));
             }
 
             *paWalletInfo = aWalletInfo;
-            *pCount = uuids.size();
+            *pCount = ids.size();
             aWalletInfo = NULL;
         }
     }

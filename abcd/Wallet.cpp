@@ -769,13 +769,9 @@ tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
     }
     pInfo->currencyNum = pData->currencyNum;
     {
-        // This is mainly here for legacy reasons.
-        // The WalletList should be exposed through the ABC API,
-        // removing the need to handle archiving at this level.
-        auto list = self.account->wallets.list();
-        for (auto &i: list)
-            if (i.id == self.szUUID)
-                pInfo->archived = i.archived;
+        bool archived;
+        ABC_CHECK_NEW(self.account->wallets.archived(archived, self.szUUID));
+        pInfo->archived = archived;
     }
 
     if (pData->balanceDirty)

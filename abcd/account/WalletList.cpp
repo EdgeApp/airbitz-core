@@ -72,39 +72,23 @@ WalletList::load()
     return Status();
 }
 
-std::list<WalletList::Item>
+std::list<std::string>
 WalletList::list() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::list<Item> out;
 
+    std::list<std::string> out;
     for (const auto &wallet: wallets_)
-    {
-        WalletJson json(wallet.second);
-        out.push_back(Item{wallet.first, json.archived()});
-    }
+        out.push_back(wallet.first);
 
-    auto compare = [this](const Item &a, const Item &b)
+    auto compare = [this](const std::string &a, const std::string &b)
     {
-        WalletJson jsonA(wallets_.find(a.id)->second);
-        WalletJson jsonB(wallets_.find(b.id)->second);
+        WalletJson jsonA(wallets_.find(a)->second);
+        WalletJson jsonB(wallets_.find(b)->second);
         return jsonA.sort() < jsonB.sort();
     };
     out.sort(compare);
     return out;
-}
-
-Status
-WalletList::json(JsonPtr &result, const std::string &id) const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    auto wallet = wallets_.find(id);
-    if (wallet == wallets_.end())
-        return ABC_ERROR(ABC_CC_InvalidWalletID, "No such wallet");
-
-    result = wallet->second;
-    return Status();
 }
 
 Status
@@ -123,21 +107,6 @@ WalletList::reorder(const std::string &id, unsigned index)
 }
 
 Status
-WalletList::archive(const std::string &id, bool archived)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    auto wallet = wallets_.find(id);
-    if (wallet == wallets_.end())
-        return ABC_ERROR(ABC_CC_InvalidWalletID, "No such wallet");
-
-    WalletJson json(wallet->second);
-    ABC_CHECK(json.archivedSet(archived));
-    ABC_CHECK(json.save(filename(id), account_.login.dataKey()));
-    return Status();
-}
-
-Status
 WalletList::insert(const std::string &id, const JsonPtr &keys)
 {
     WalletJson json(keys);
@@ -150,6 +119,48 @@ WalletList::insert(const std::string &id, const JsonPtr &keys)
     std::lock_guard<std::mutex> lock(mutex_);
     wallets_[id] = json;
 
+    return Status();
+}
+
+Status
+WalletList::json(JsonPtr &result, const std::string &id) const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    auto wallet = wallets_.find(id);
+    if (wallet == wallets_.end())
+        return ABC_ERROR(ABC_CC_InvalidWalletID, "No such wallet");
+
+    result = wallet->second;
+    return Status();
+}
+
+Status
+WalletList::archived(bool &result, const std::string &id) const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    auto wallet = wallets_.find(id);
+    if (wallet == wallets_.end())
+        return ABC_ERROR(ABC_CC_InvalidWalletID, "No such wallet");
+
+    WalletJson json(wallet->second);
+    result = json.archived();
+    return Status();
+}
+
+Status
+WalletList::archivedSet(const std::string &id, bool archived)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    auto wallet = wallets_.find(id);
+    if (wallet == wallets_.end())
+        return ABC_ERROR(ABC_CC_InvalidWalletID, "No such wallet");
+
+    WalletJson json(wallet->second);
+    ABC_CHECK(json.archivedSet(archived));
+    ABC_CHECK(json.save(filename(id), account_.login.dataKey()));
     return Status();
 }
 

@@ -901,7 +901,7 @@ tABC_CC ABC_LoginServerUploadLogs(const Account &account,
     json_t *pJSON_Root    = NULL;
     DataChunk logData;
     DataChunk watchData;
-    auto uuids = account.wallets.list();
+    auto ids = account.wallets.list();
     json_t *pJSON_array = NULL;
 
     AutoU08Buf LP1;
@@ -911,9 +911,9 @@ tABC_CC ABC_LoginServerUploadLogs(const Account &account,
     ABC_CHECK_NEW(fileLoad(logData, szLogFilename));
 
     pJSON_array = json_array();
-    for (const auto &i: uuids)
+    for (const auto &id: ids)
     {
-        ABC_CHECK_NEW(fileLoad(watchData, watcherPath(i.id)));
+        ABC_CHECK_NEW(fileLoad(watchData, watcherPath(id)));
 
         json_array_append_new(pJSON_array,
             json_string(base64Encode(watchData).c_str()));
