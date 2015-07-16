@@ -4,6 +4,7 @@
  */
 
 #include "TxUpdater.hpp"
+#include "../util/Debug.hpp"
 
 namespace abcd {
 
@@ -142,7 +143,9 @@ void TxUpdater::get_height()
 {
     auto on_error = [this](const std::error_code &error)
     {
-        (void)error;
+        if (!failed_)
+            ABC_DebugLog("fetch_last_height failed: %s",
+                error.message().c_str());
         failed_ = true;
     };
 
@@ -194,7 +197,9 @@ void TxUpdater::get_tx_mem(bc::hash_digest tx_hash, bool want_inputs)
 
     auto on_error = [this](const std::error_code &error)
     {
-        (void)error;
+        if (!failed_)
+            ABC_DebugLog("fetch_unconfirmed_transaction failed: %s",
+                error.message().c_str());
         failed_ = true;
         query_done();
     };
@@ -266,7 +271,9 @@ void TxUpdater::query_address(const bc::payment_address &address)
 
     auto on_error = [this](const std::error_code &error)
     {
-        (void)error;
+        if (!failed_)
+            ABC_DebugLog("address_fetch_history failed: %s",
+                error.message().c_str());
         failed_ = true;
         query_done();
     };
