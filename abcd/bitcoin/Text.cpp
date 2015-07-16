@@ -179,7 +179,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
         uri.replace(0, 18, "bitcoin:");
 
     // Try to parse as a URI:
-    if (!libwallet::uri_parse(uri, result))
+    if (!libwallet::uri_parse(uri, result, false))
     {
         // Try to parse as a raw address:
         bc::payment_address address;
