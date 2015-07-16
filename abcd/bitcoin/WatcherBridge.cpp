@@ -30,6 +30,7 @@
  */
 
 #include "WatcherBridge.hpp"
+#include "TxUpdater.hpp"
 #include "Testnet.hpp"
 #include "Watcher.hpp"
 #include "../General.hpp"
@@ -40,7 +41,6 @@
 #include "../spend/Spend.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
-#include <bitcoin/watcher.hpp> // Includes the rest of the stack
 #include <algorithm>
 #include <list>
 #include <memory>

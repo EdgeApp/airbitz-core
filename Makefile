@@ -4,7 +4,7 @@ WORK_DIR ?= build
 # Compiler options:
 CFLAGS   += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c99
 CXXFLAGS += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c++11
-deps = jansson libbitcoin-watcher libgit2 libqrencode libsecp256k1 libssl libwallet protobuf-lite zlib
+deps = jansson libbitcoin-client libgit2 libqrencode libsecp256k1 libssl libwallet protobuf-lite zlib
 LIBS := $(shell pkg-config --libs --static $(deps)) \
 	-lsodium \
 	-lcsv -lcurl -lm
