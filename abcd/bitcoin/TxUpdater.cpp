@@ -85,9 +85,13 @@ bc::client::sleep_time TxUpdater::wakeup()
             now - row.second.last_check);
         if (poll_time <= elapsed)
         {
-            row.second.last_check = now;
-            next_wakeup = bc::client::min_sleep(next_wakeup, poll_time);
-            query_address(row.first);
+            if (queued_queries_ < 10 ||
+                row.second.poll_time < std::chrono::seconds(2))
+            {
+                row.second.last_check = now;
+                next_wakeup = bc::client::min_sleep(next_wakeup, poll_time);
+                query_address(row.first);
+            }
         }
         else
             next_wakeup = bc::client::min_sleep(next_wakeup, poll_time - elapsed);
