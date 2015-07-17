@@ -18,9 +18,9 @@ build() {
     # Build:
     make $output V=1
 
-    # Run unit tests:
+    # Native builds include unit tests and utilities:
     if [ $target = native ]; then
-        make check
+        make all V=1
     fi
 
     # Install:
