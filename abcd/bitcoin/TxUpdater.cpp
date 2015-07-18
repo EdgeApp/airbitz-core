@@ -9,6 +9,8 @@
 
 namespace abcd {
 
+constexpr unsigned max_queries = 10;
+
 /**
  * An address that needs to be checked.
  * More outdated addresses sort earlier in the list.
@@ -59,8 +61,9 @@ void TxUpdater::watch(const bc::payment_address &address,
     bc::client::sleep_time poll)
 {
     // Only insert if it isn't already present:
-    rows_[address] = AddressRow{poll, std::chrono::steady_clock::now()};
-    query_address(address);
+    rows_[address] = AddressRow{poll, std::chrono::steady_clock::now() - poll};
+    if (queued_queries_ < max_queries)
+        query_address(address);
 }
 
 void TxUpdater::send(bc::transaction_type tx)
@@ -113,10 +116,9 @@ bc::client::sleep_time TxUpdater::wakeup()
     for (const auto &i: toCheck)
     {
         auto &row = rows_[i.address];
-        if (queued_queries_ < 10 ||
+        if (queued_queries_ < max_queries ||
             row.poll_time < std::chrono::seconds(2))
         {
-            row.last_check = now;
             next_wakeup = bc::client::min_sleep(next_wakeup, row.poll_time);
             query_address(i.address);
         }
@@ -292,6 +294,7 @@ void TxUpdater::send_tx(const bc::transaction_type &tx)
 void TxUpdater::query_address(const bc::payment_address &address)
 {
     ++queued_queries_;
+    rows_[address].last_check = std::chrono::steady_clock::now();
 
     auto on_error = [this](const std::error_code &error)
     {
