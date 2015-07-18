@@ -5,8 +5,25 @@
 
 #include "TxUpdater.hpp"
 #include "../util/Debug.hpp"
+#include <list>
 
 namespace abcd {
+
+/**
+ * An address that needs to be checked.
+ * More outdated addresses sort earlier in the list.
+ */
+struct ToCheck
+{
+    bc::client::sleep_time oldness;
+    bc::payment_address address;
+
+    bool
+    operator<(const ToCheck &b) const
+    {
+        return oldness > b.oldness;
+    }
+};
 
 using std::placeholders::_1;
 
@@ -78,24 +95,31 @@ bc::client::sleep_time TxUpdater::wakeup()
     }
     next_wakeup = period - elapsed;
 
-    // Figure out when our next address check should be:
+    // Build a list of all the addresses that are due for a checkup:
+    std::list<ToCheck> toCheck;
     for (auto &row: rows_)
     {
         auto poll_time = row.second.poll_time;
         auto elapsed = std::chrono::duration_cast<bc::client::sleep_time>(
             now - row.second.last_check);
         if (poll_time <= elapsed)
-        {
-            if (queued_queries_ < 10 ||
-                row.second.poll_time < std::chrono::seconds(2))
-            {
-                row.second.last_check = now;
-                next_wakeup = bc::client::min_sleep(next_wakeup, poll_time);
-                query_address(row.first);
-            }
-        }
+            toCheck.push_back(ToCheck{elapsed - poll_time, row.first});
         else
             next_wakeup = bc::client::min_sleep(next_wakeup, poll_time - elapsed);
+    }
+
+    // Process the most outdated addresses first:
+    toCheck.sort();
+    for (const auto &i: toCheck)
+    {
+        auto &row = rows_[i.address];
+        if (queued_queries_ < 10 ||
+            row.poll_time < std::chrono::seconds(2))
+        {
+            row.last_check = now;
+            next_wakeup = bc::client::min_sleep(next_wakeup, row.poll_time);
+            query_address(i.address);
+        }
     }
 
     // Report the last server failure:
