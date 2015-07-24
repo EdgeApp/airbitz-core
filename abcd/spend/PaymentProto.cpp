@@ -225,15 +225,18 @@ PaymentRequest::pay(PaymentReceipt &result, DataSlice tx, DataSlice refund)
         return ABC_ERROR(ABC_CC_Error, "Payment request has expired");
 
     HttpReply reply;
-    ABC_CHECK(HttpRequest()
-        .header("Accept", BIP71_MIMETYPE_PAYMENTACK)
-        .header("Content-Type", BIP71_MIMETYPE_PAYMENT)
-        .header("User-Agent", USER_AGENT)
-        .post(reply, details_.payment_url(), response));
-    ABC_CHECK(reply.codeOk());
+    if (details_.has_payment_url())
+    {
+        ABC_CHECK(HttpRequest()
+            .header("Accept", BIP71_MIMETYPE_PAYMENTACK)
+            .header("Content-Type", BIP71_MIMETYPE_PAYMENT)
+            .header("User-Agent", USER_AGENT)
+            .post(reply, details_.payment_url(), response));
+        ABC_CHECK(reply.codeOk());
 
-    if (!result.ack.ParseFromString(reply.body))
-        return ABC_ERROR(ABC_CC_Error, "Failed to parse PaymentAck");
+        if (!result.ack.ParseFromString(reply.body))
+            return ABC_ERROR(ABC_CC_Error, "Failed to parse PaymentAck");
+    }
 
     return Status();
 }
