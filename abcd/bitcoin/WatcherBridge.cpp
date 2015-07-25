@@ -30,6 +30,7 @@
  */
 
 #include "WatcherBridge.hpp"
+#include "TxUpdater.hpp"
 #include "Testnet.hpp"
 #include "Watcher.hpp"
 #include "../General.hpp"
@@ -40,7 +41,6 @@
 #include "../spend/Spend.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
-#include <bitcoin/watcher.hpp> // Includes the rest of the stack
 #include <algorithm>
 #include <list>
 #include <memory>
@@ -162,7 +162,7 @@ tABC_CC ABC_BridgeSweepKey(tABC_WalletID self,
     PendingSweep sweep;
 
     WatcherInfo *watcherInfo = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcherInfo, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcherInfo, self));
 
     // Decode key and address:
     ABC_CHECK_ASSERT(key.size() == ec_key.size(),
@@ -216,7 +216,7 @@ tABC_CC ABC_BridgeWatcherLoop(tABC_WalletID self,
     Watcher::fail_callback failCallback;
 
     WatcherInfo *watcherInfo = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcherInfo, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcherInfo, self));
     watcherInfo->fAsyncCallback = fAsyncCallback;
     watcherInfo->pData = pData;
 
@@ -260,7 +260,7 @@ tABC_CC ABC_BridgeWatcherConnect(tABC_WalletID self, tABC_Error *pError)
     const char *szServer = FALLBACK_OBELISK;
 
     Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcher, self));
 
     // Pick a server:
     if (isTestnet())
@@ -295,7 +295,7 @@ tABC_CC ABC_BridgeWatchAddr(tABC_WalletID self,
     bc::payment_address addr;
 
     WatcherInfo *watcherInfo = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcherInfo, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcherInfo, self));
 
     if (!addr.set_encoded(pubAddress))
     {
@@ -318,7 +318,7 @@ tABC_CC ABC_BridgePrioritizeAddress(tABC_WalletID self,
     bc::payment_address addr;
 
     Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcher, self));
 
     if (szAddress)
     {
@@ -341,7 +341,7 @@ tABC_CC ABC_BridgeWatcherDisconnect(tABC_WalletID self, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcher, self));
 
     watcher->disconnect();
 
@@ -354,7 +354,7 @@ tABC_CC ABC_BridgeWatcherStop(tABC_WalletID self, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
 
     Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcher, self));
 
     watcher->disconnect();
     watcher->stop();
@@ -381,7 +381,7 @@ ABC_BridgeTxHeight(tABC_WalletID self, const char *szTxId, unsigned int *height,
     bc::hash_digest txId;
 
     Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcher, self));
 
     txId = bc::decode_hash(szTxId);
     if (!watcher->get_tx_height(txId, height_))
@@ -399,7 +399,7 @@ ABC_BridgeTxBlockHeight(tABC_WalletID self, unsigned int *height, tABC_Error *pE
     tABC_CC cc = ABC_CC_Ok;
 
     Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcher, self));
 
     *height = watcher->get_last_block_height();
     if (*height == 0)
@@ -462,7 +462,7 @@ tABC_CC ABC_BridgeTxDetailsSplit(tABC_WalletID self, const char *szTxID,
     int64_t totalInSatoshi = 0, totalOutSatoshi = 0, totalMeSatoshi = 0, totalMeInSatoshi = 0;
 
     WatcherInfo *watcherInfo = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcherInfo, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcherInfo, self));
 
     bc::hash_digest txid;
     txid = bc::decode_hash(szTxID);
@@ -557,7 +557,7 @@ tABC_CC ABC_BridgeFilterTransactions(tABC_WalletID self,
     tABC_TxInfo **di = aTransactions;
 
     Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self), pError);
+    ABC_CHECK_NEW(watcherFind(watcher, self));
 
     while (si < end)
     {
@@ -656,7 +656,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     ABC_CHECK_ASSERT(outputDust + 10000 <= funds, ABC_CC_InsufficientFunds, "Not enough funds");
     funds -= 10000;
     output.value = funds;
-    ABC_CHECK_NEW(outputScriptForAddress(output.script, szAddress), pError);
+    ABC_CHECK_NEW(outputScriptForAddress(output.script, szAddress));
     utx.tx.outputs.push_back(output);
 
     // Now sign that:
@@ -668,7 +668,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     {
         bc::data_chunk raw_tx(satoshi_raw_size(utx.tx));
         bc::satoshi_save(utx.tx, raw_tx.begin());
-        ABC_CHECK_NEW(broadcastTx(raw_tx), pError);
+        ABC_CHECK_NEW(broadcastTx(raw_tx));
     }
 
     // Save the transaction in the database:

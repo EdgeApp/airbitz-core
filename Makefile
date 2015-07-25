@@ -4,7 +4,7 @@ WORK_DIR ?= build
 # Compiler options:
 CFLAGS   += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c99
 CXXFLAGS += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c++11
-deps = jansson libbitcoin-watcher libgit2 libqrencode libsecp256k1 libssl libwallet protobuf-lite zlib
+deps = jansson libbitcoin-client libgit2 libqrencode libsecp256k1 libssl libwallet protobuf-lite zlib
 LIBS := $(shell pkg-config --libs --static $(deps)) \
 	-lsodium \
 	-lcsv -lcurl -lm
@@ -25,6 +25,7 @@ abc_sources = \
 
 cli_sources = $(wildcard cli/*.cpp cli/*/*.cpp)
 test_sources = $(wildcard test/*.cpp)
+watcher_sources = $(wildcard util/*.cpp)
 
 generated_headers = \
 	abcd/config.h \
@@ -34,6 +35,7 @@ generated_headers = \
 abc_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(abc_sources))))
 cli_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(cli_sources))))
 test_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(test_sources))))
+watcher_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(watcher_sources))))
 
 # Adjustable verbosity:
 V ?= 0
@@ -42,7 +44,7 @@ ifeq ($V,0)
 endif
 
 # Targets:
-all: $(WORK_DIR)/abc-cli check
+all: $(WORK_DIR)/abc-cli check $(WORK_DIR)/abc-watcher
 libabc.a:  $(WORK_DIR)/libabc.a
 libabc.so: $(WORK_DIR)/libabc.so
 
@@ -56,6 +58,9 @@ $(WORK_DIR)/abc-cli: $(cli_objects) $(WORK_DIR)/libabc.a
 	$(RUN) $(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 $(WORK_DIR)/abc-test: $(test_objects) $(WORK_DIR)/libabc.a
+	$(RUN) $(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
+
+$(WORK_DIR)/abc-watcher: $(watcher_objects) $(WORK_DIR)/libabc.a
 	$(RUN) $(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 check: $(WORK_DIR)/abc-test

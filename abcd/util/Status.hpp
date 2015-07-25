@@ -76,8 +76,9 @@ std::ostream &operator<<(std::ostream &output, const Status &s);
  */
 #define ABC_CHECK(f) \
     do { \
-        Status s = (f); \
-        if (!s) return s; \
+        Status ABC_status = (f); \
+        if (!ABC_status) \
+            return ABC_status; \
     } while (false)
 
 /**
@@ -96,12 +97,12 @@ std::ostream &operator<<(std::ostream &output, const Status &s);
 /**
  * Use when an old-style function calls a new-style abcd::Status function.
  */
-#define ABC_CHECK_NEW(f, pError) \
+#define ABC_CHECK_NEW(f) \
     do { \
-        Status s = (f); \
-        if (!s) { \
-            s.toError(*pError); \
-            cc = s.value(); \
+        Status ABC_status = (f); \
+        if (!ABC_status) { \
+            ABC_status.toError(*pError); \
+            cc = ABC_status.value(); \
             goto exit; \
         } \
     } while (false)

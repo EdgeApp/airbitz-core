@@ -14,6 +14,7 @@
  */
 
 #include "General.hpp"
+#include "Context.hpp"
 #include "http/AirbitzRequest.hpp"
 #include "login/LoginServer.hpp"
 #include "json/JsonObject.hpp"
@@ -120,7 +121,6 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     json_t  *pJSON_AirBitzFees      = NULL;
     json_t  *pJSON_ObeliskArray     = NULL;
     json_t  *pJSON_SyncArray        = NULL;
-    bool bExists = false;
 
     ABC_CHECK_NULL(ppInfo);
 
@@ -128,15 +128,14 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     ABC_CHECK_RET(ABC_GeneralGetInfoFilename(&szInfoFilename, pError));
 
     // check to see if we have the file
-    ABC_CHECK_RET(ABC_FileIOFileExists(szInfoFilename, &bExists, pError));
-    if (false == bExists)
+    if (!fileExists(szInfoFilename))
     {
         // pull it down from the server
         ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
     }
 
     // load the json
-    ABC_CHECK_NEW(file.load(szInfoFilename), pError);
+    ABC_CHECK_NEW(file.load(szInfoFilename));
     pJSON_Root = file.get();
 
     // allocate the struct
@@ -280,14 +279,12 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     char    *szInfoFilename = NULL;
     char    *szJSON         = NULL;
     bool    bUpdateRequired = true;
-    bool bExists = false;
 
     // get the info filename
     ABC_CHECK_RET(ABC_GeneralGetInfoFilename(&szInfoFilename, pError));
 
     // check to see if we have the file
-    ABC_CHECK_RET(ABC_FileIOFileExists(szInfoFilename, &bExists, pError));
-    if (true == bExists)
+    if (fileExists(szInfoFilename))
     {
         // check to see if the file is too old
 
@@ -309,8 +306,8 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     if (bUpdateRequired)
     {
         JsonPtr infoJson;
-        ABC_CHECK_NEW(loginServerGetGeneral(infoJson), pError);
-        ABC_CHECK_NEW(infoJson.save(szInfoFilename), pError);
+        ABC_CHECK_NEW(loginServerGetGeneral(infoJson));
+        ABC_CHECK_NEW(infoJson.save(szInfoFilename));
     }
 
 exit:
@@ -333,7 +330,7 @@ tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    std::string filename = getRootDir() + GENERAL_INFO_FILENAME;
+    std::string filename = gContext->rootDir() + GENERAL_INFO_FILENAME;
 
     ABC_CHECK_NULL(pszFilename);
     ABC_STRDUP(*pszFilename, filename.c_str());
@@ -383,25 +380,23 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::string filename = getRootDir() + GENERAL_QUESTIONS_FILENAME;
+    std::string filename = gContext->rootDir() + GENERAL_QUESTIONS_FILENAME;
     QuestionsFile file;
     json_t *pJSON_Value = NULL;
     tABC_QuestionChoices *pQuestionChoices = NULL;
-    bool bExists = false;
     unsigned int count = 0;
 
     ABC_CHECK_NULL(ppQuestionChoices);
 
     // if the file doesn't exist
-    ABC_CHECK_RET(ABC_FileIOFileExists(filename.c_str(), &bExists, pError));
-    if (true != bExists)
+    if (!fileExists(filename))
     {
         // get an update from the server
         ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
     }
 
     // Read in the recovery question choices json object
-    ABC_CHECK_NEW(file.load(filename), pError);
+    ABC_CHECK_NEW(file.load(filename));
     pJSON_Value = file.questions().get();
     if (!json_is_array(pJSON_Value))
         ABC_RET_ERROR(ABC_CC_JSONError, "No questions in the recovery question choices file")
@@ -466,9 +461,9 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
     QuestionsFile file;
 
     // get the questions from the server
-    ABC_CHECK_NEW(loginServerGetQuestions(resultsJson), pError);
-    ABC_CHECK_NEW(file.questionsSet(resultsJson), pError);
-    ABC_CHECK_NEW(file.save(getRootDir() + GENERAL_QUESTIONS_FILENAME), pError);
+    ABC_CHECK_NEW(loginServerGetQuestions(resultsJson));
+    ABC_CHECK_NEW(file.questionsSet(resultsJson));
+    ABC_CHECK_NEW(file.save(gContext->rootDir() + GENERAL_QUESTIONS_FILENAME));
 
 exit:
     return cc;

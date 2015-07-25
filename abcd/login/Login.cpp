@@ -19,24 +19,24 @@
 
 namespace abcd {
 
-#define ACCOUNT_MK_LENGTH 32
-
-Login::Login(std::shared_ptr<Lobby> lobby, DataSlice dataKey):
-    lobby_(std::move(lobby)),
-    dataKey_(dataKey.begin(), dataKey.end())
-{}
-
 Status
-Login::init(const LoginPackage &loginPackage)
+Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
+    const LoginPackage &loginPackage)
 {
     DataChunk syncKey;
-    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey, dataKey_));
-    syncKey_ = base16Encode(syncKey);
+    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey, dataKey));
+    ABC_CHECK(lobby.dirCreate());
 
-    // Ensure that the directory is in place:
-    ABC_CHECK(lobby_->dirCreate());
+    result.reset(new Login(lobby, dataKey, base16Encode(syncKey)));
     return Status();
 }
+
+Login::Login(Lobby &lobby, DataSlice dataKey, std::string syncKey):
+    lobby(lobby),
+    parent_(lobby.shared_from_this()),
+    dataKey_(dataKey.begin(), dataKey.end()),
+    syncKey_(syncKey)
+{}
 
 /**
  * Creates a new login account, both on-disk and on the server.
@@ -46,13 +46,13 @@ Login::init(const LoginPackage &loginPackage)
  * @param ppSelf        The returned login object.
  */
 tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
-                        std::shared_ptr<Lobby> lobby,
+                        Lobby &lobby,
                         const char *szPassword,
                         tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::unique_ptr<Login> login;
+    std::shared_ptr<Login> out;
     CarePackage carePackage;
     LoginPackage loginPackage;
     DataChunk authKey;          // Unlocks the server
@@ -63,58 +63,57 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     JsonSnrp snrp;
 
     // Generate SNRP2:
-    ABC_CHECK_NEW(snrp.create(), pError);
-    ABC_CHECK_NEW(carePackage.snrp2Set(snrp), pError);
+    ABC_CHECK_NEW(snrp.create());
+    ABC_CHECK_NEW(carePackage.snrp2Set(snrp));
 
     // Generate MK:
-    ABC_CHECK_NEW(randomData(dataKey, ACCOUNT_MK_LENGTH), pError);
+    ABC_CHECK_NEW(randomData(dataKey, DATA_KEY_LENGTH));
 
     // Generate SyncKey:
-    ABC_CHECK_NEW(randomData(syncKey, SYNC_KEY_LENGTH), pError);
+    ABC_CHECK_NEW(randomData(syncKey, SYNC_KEY_LENGTH));
 
     if (szPassword)
     {
-        std::string LP = lobby->username() + szPassword;
+        std::string LP = lobby.username() + szPassword;
 
         // Generate authKey:
-        ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP), pError);
+        ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP));
 
         // Set up EMK_LP2:
-        ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP), pError);
-        ABC_CHECK_NEW(box.encrypt(dataKey, passwordKey), pError);
-        ABC_CHECK_NEW(loginPackage.passwordBoxSet(box), pError);
+        ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP));
+        ABC_CHECK_NEW(box.encrypt(dataKey, passwordKey));
+        ABC_CHECK_NEW(loginPackage.passwordBoxSet(box));
     }
     else
     {
         // Generate authKey:
-        ABC_CHECK_NEW(randomData(authKey, scryptDefaultSize), pError);
+        ABC_CHECK_NEW(randomData(authKey, scryptDefaultSize));
     }
 
     // Encrypt authKey:
-    ABC_CHECK_NEW(box.encrypt(authKey, dataKey), pError);
-    ABC_CHECK_NEW(loginPackage.authKeyBoxSet(box), pError);
+    ABC_CHECK_NEW(box.encrypt(authKey, dataKey));
+    ABC_CHECK_NEW(loginPackage.authKeyBoxSet(box));
 
     // Set up ESyncKey:
-    ABC_CHECK_NEW(box.encrypt(syncKey, dataKey), pError);
-    ABC_CHECK_NEW(loginPackage.syncKeyBoxSet(box), pError);
+    ABC_CHECK_NEW(box.encrypt(syncKey, dataKey));
+    ABC_CHECK_NEW(loginPackage.syncKeyBoxSet(box));
 
     // Create the account and repo on server:
-    ABC_CHECK_RET(ABC_LoginServerCreate(*lobby, toU08Buf(authKey),
+    ABC_CHECK_RET(ABC_LoginServerCreate(lobby, toU08Buf(authKey),
         carePackage, loginPackage, base16Encode(syncKey).c_str(), pError));
 
     // Create the Login object:
-    login.reset(new Login(lobby, dataKey));
-    ABC_CHECK_NEW(login->init(loginPackage), pError);
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
 
     // Latch the account:
-    ABC_CHECK_RET(ABC_LoginServerActivate(*lobby, toU08Buf(authKey), pError));
+    ABC_CHECK_RET(ABC_LoginServerActivate(lobby, toU08Buf(authKey), pError));
 
     // Set up the on-disk login:
-    ABC_CHECK_NEW(carePackage.save(lobby->carePackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.save(lobby->loginPackageName()), pError);
+    ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()));
+    ABC_CHECK_NEW(loginPackage.save(lobby.loginPackageName()));
 
     // Assign the result:
-    result.reset(login.release());
+    result = std::move(out);
 
 exit:
     return cc;
@@ -132,8 +131,8 @@ tABC_CC ABC_LoginGetServerKey(const Login &login,
     LoginPackage loginPackage;
     DataChunk authKey;          // Unlocks the server
 
-    ABC_CHECK_NEW(loginPackage.load(login.lobby().loginPackageName()), pError);
-    ABC_CHECK_NEW(loginPackage.authKeyBox().decrypt(authKey, login.dataKey()), pError);
+    ABC_CHECK_NEW(loginPackage.load(login.lobby.loginPackageName()));
+    ABC_CHECK_NEW(loginPackage.authKeyBox().decrypt(authKey, login.dataKey()));
     ABC_BUF_DUP(*pLP1, toU08Buf(authKey));
 
 exit:

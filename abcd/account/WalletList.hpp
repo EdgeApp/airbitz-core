@@ -35,19 +35,22 @@ public:
     load();
 
     /**
-     * Contains the information needed to populate the "wallets" screen.
-     */
-    struct Item
-    {
-        std::string id;
-        bool archived;
-    };
-
-    /**
      * Obtains a sorted list of wallets.
      */
-    std::list<Item>
+    std::list<std::string>
     list() const;
+
+    /**
+     * Adjusts the sort index of a wallet.
+     */
+    Status
+    reorder(const std::string &id, unsigned index);
+
+    /**
+     * Adds a new wallet to the account.
+     */
+    Status
+    insert(const std::string &id, const JsonPtr &keys);
 
     /**
      * Returns the meta-data file for a wallet.
@@ -57,22 +60,16 @@ public:
     json(JsonPtr &result, const std::string &id) const;
 
     /**
-     * Adjusts the sort index of a wallet.
+     * Returns the archived state for the given id.
      */
     Status
-    reorder(const std::string &id, unsigned index);
+    archived(bool &result, const std::string &id) const;
 
     /**
      * Adjusts the archived status of a wallet.
      */
     Status
-    archive(const std::string &id, bool archived);
-
-    /**
-     * Adds a new wallet to the account.
-     */
-    Status
-    insert(const std::string &id, const JsonPtr &keys);
+    archivedSet(const std::string &id, bool archived);
 
 private:
     mutable std::mutex mutex_;

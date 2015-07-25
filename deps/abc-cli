@@ -1,0 +1,2 @@
+#!/bin/sh
+make abc.build-native && ${BUILD_DIR:-./build}/abc/native/abc-cli "$@"

@@ -6,7 +6,7 @@
  */
 
 #include "Random.hpp"
-#include "../util/FileIO.hpp"
+#include "../Context.hpp"
 #include <openssl/rand.h>
 #ifndef __ANDROID__
 #include <sys/statvfs.h>
@@ -33,7 +33,7 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     time_t timeResult;
     clock_t clockVal;
     pid_t pid;
-    std::string rootDir = getRootDir();
+    std::string rootDir = gContext->rootDir();
 
     AutoU08Buf NewSeed;
 

@@ -4,13 +4,12 @@
  */
 
 #include "HttpRequest.hpp"
+#include "../Context.hpp"
 #include "../util/Debug.hpp"
 
 namespace abcd {
 
 #define TIMEOUT 10
-
-extern std::string gCertPath;
 
 static int
 curlDebugCallback(CURL *handle, curl_infotype type, char *data, size_t size, void *userp)
@@ -161,9 +160,9 @@ HttpRequest::init()
         return ABC_ERROR(ABC_CC_Error, "cURL failed to ignore signals");
     if (curl_easy_setopt(handle_, CURLOPT_CONNECTTIMEOUT, TIMEOUT))
         return ABC_ERROR(ABC_CC_Error, "cURL failed to set timeout");
-    if (!gCertPath.empty())
+    if (!gContext->certPath().empty())
     {
-        if (curl_easy_setopt(handle_, CURLOPT_CAINFO, gCertPath.c_str()))
+        if (curl_easy_setopt(handle_, CURLOPT_CAINFO, gContext->certPath().c_str()))
             return ABC_ERROR(ABC_CC_Error, "cURL failed to set ca-certificates.crt");
     }
 

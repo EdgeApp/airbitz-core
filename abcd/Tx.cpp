@@ -30,13 +30,13 @@
  */
 
 #include "Tx.hpp"
+#include "Context.hpp"
 #include "Wallet.hpp"
 #include "account/Account.hpp"
 #include "account/AccountSettings.hpp"
 #include "bitcoin/Text.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"
-#include "exchange/Exchange.hpp"
 #include "spend/Spend.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"
@@ -156,7 +156,7 @@ static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pTyp
 static tABC_CC  ABC_TxLoadTransactionInfo(tABC_WalletID self, const char *szFilename, tABC_TxInfo **ppTransaction, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTxAndAppendToArray(tABC_WalletID self, int64_t startTime, int64_t endTime, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxGetAddressOwed(tABC_TxAddress *pAddr, int64_t *pSatoshiBalance, tABC_Error *pError);
-static tABC_CC  ABC_TxBuildFromLabel(tABC_WalletID self, char **pszLabel, tABC_Error *pError);
+static tABC_CC  ABC_TxBuildFromLabel(tABC_WalletID self, const char **pszLabel, tABC_Error *pError);
 static void     ABC_TxFreeRequest(tABC_RequestInfo *pRequest);
 static tABC_CC  ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const char *szTxID, bool bInternal, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransaction(tABC_WalletID self, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
@@ -748,8 +748,8 @@ tABC_CC ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi,
     tABC_WalletInfo *pWallet = NULL;
 
     ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet, pError));
-    ABC_CHECK_NEW(exchangeSatoshiToCurrency(
-        currency, amountSatoshi, static_cast<Currency>(pWallet->currencyNum)), pError);
+    ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
+        currency, amountSatoshi, static_cast<Currency>(pWallet->currencyNum)));
 
     *pCurrency = currency;
 exit:
@@ -861,7 +861,7 @@ tABC_CC ABC_TxCreateNewAddress(tABC_WalletID self,
 
         // if we don't have an address yet and this one is available
         ABC_CHECK_NULL(aAddresses[i]->pStateInfo);
-        if (aAddresses[i]->pStateInfo->bRecycleable == true
+        if (aAddresses[i]->pStateInfo->bRecycleable
                 && aAddresses[i]->pStateInfo->countActivities == 0)
         {
             recyclable++;
@@ -1059,7 +1059,6 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
 
     std::string addressDir = walletAddressDir(szWalletUUID);
     tABC_FileIOList *pFileList = NULL;
-    bool bExists = false;
     char *szID = NULL;
 
     ABC_CHECK_NULL(szWalletUUID);
@@ -1070,8 +1069,7 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
     *pszFilename = NULL;
 
     // Make sure there is an addresses directory
-    ABC_CHECK_RET(ABC_FileIOFileExists(addressDir.c_str(), &bExists, pError));
-    ABC_CHECK_ASSERT(bExists == true, ABC_CC_Error, "No existing requests/addresses");
+    ABC_CHECK_ASSERT(fileExists(addressDir), ABC_CC_Error, "No existing requests/addresses");
 
     // get all the files in the address directory
     ABC_FileIOCreateFileList(&pFileList, addressDir.c_str(), NULL);
@@ -1358,7 +1356,6 @@ tABC_CC ABC_TxGetTransaction(tABC_WalletID self,
     char *szFilename = NULL;
     tABC_Tx *pTx = NULL;
     tABC_TxInfo *pTransaction = NULL;
-    bool bExists = false;
 
     *ppTransaction = NULL;
 
@@ -1366,18 +1363,14 @@ tABC_CC ABC_TxGetTransaction(tABC_WalletID self,
 
     // first try the internal
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, true, pError));
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-
-    // if the internal doesn't exist
-    if (bExists == false)
+    if (!fileExists(szFilename))
     {
         // try the external
         ABC_FREE_STR(szFilename);
         ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, false, pError));
-        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     }
 
-    ABC_CHECK_ASSERT(bExists == true, ABC_CC_NoTransaction, "Transaction does not exist");
+    ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoTransaction, "Transaction does not exist");
 
     // load the existing transaction
     ABC_CHECK_RET(ABC_TxLoadTransactionInfo(self, szFilename, &pTransaction, pError));
@@ -1418,15 +1411,12 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
     tABC_FileIOList *pFileList = NULL;
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
-    bool bExists = false;
 
     *paTransactions = NULL;
     *pCount = 0;
 
     // if there is a transaction directory
-    ABC_CHECK_RET(ABC_FileIOFileExists(txDir.c_str(), &bExists, pError));
-
-    if (bExists == true)
+    if (fileExists(txDir))
     {
         // get all the files in the transaction directory
         ABC_FileIOCreateFileList(&pFileList, txDir.c_str(), NULL);
@@ -1454,7 +1444,7 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
                     }
 
                     // if this doesn't not have an internal equivalent (or is an internal itself)
-                    if (bHasInternalEquivalent == false)
+                    if (!bHasInternalEquivalent)
                     {
                         // add this transaction to the array
 
@@ -1607,12 +1597,8 @@ tABC_CC ABC_TxCheckForInternalEquivalent(const char *szFilename,
     {
         std::string name = std::string(szBasename) + TX_INTERNAL_SUFFIX;
 
-        // check if this internal version of the file exists
-        bool bExists = false;
-        ABC_CHECK_RET(ABC_FileIOFileExists(name.c_str(), &bExists, pError));
-
         // if the internal version exists
-        if (bExists)
+        if (fileExists(name))
         {
             // delete the external version (this one)
             ABC_CHECK_RET(ABC_FileIODeleteFile(szFilename, pError));
@@ -1883,24 +1869,19 @@ tABC_CC ABC_TxSetTransactionDetails(tABC_WalletID self,
 
     char *szFilename = NULL;
     tABC_Tx *pTx = NULL;
-    bool bExists = false;
 
     // find the filename of the existing transaction
 
     // first try the internal
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, true, pError));
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-
-    // if the internal doesn't exist
-    if (bExists == false)
+    if (!fileExists(szFilename))
     {
         // try the external
         ABC_FREE_STR(szFilename);
         ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, false, pError));
-        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     }
 
-    ABC_CHECK_ASSERT(bExists == true, ABC_CC_NoTransaction, "Transaction does not exist");
+    ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoTransaction, "Transaction does not exist");
 
     // load the existing transaction
     ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, &pTx, pError));
@@ -1950,24 +1931,19 @@ tABC_CC ABC_TxGetTransactionDetails(tABC_WalletID self,
     char *szFilename = NULL;
     tABC_Tx *pTx = NULL;
     tABC_TxDetails *pDetails = NULL;
-    bool bExists = false;
 
     // find the filename of the existing transaction
 
     // first try the internal
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, true, pError));
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-
-    // if the internal doesn't exist
-    if (bExists == false)
+    if (!fileExists(szFilename))
     {
         // try the external
         ABC_FREE_STR(szFilename);
         ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, false, pError));
-        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     }
 
-    ABC_CHECK_ASSERT(bExists == true, ABC_CC_NoTransaction, "Transaction does not exist");
+    ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoTransaction, "Transaction does not exist");
 
     // load the existing transaction
     ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, &pTx, pError));
@@ -2065,7 +2041,7 @@ tABC_CC ABC_TxGetPendingRequests(tABC_WalletID self,
                 ABC_CHECK_NULL(pState);
 
                 // if this is not a recyclable address (i.e., it was specifically used for a transaction)
-                if (pState->bRecycleable == false)
+                if (!pState->bRecycleable)
                 {
                     // if this address was used for a request of funds (i.e., not a send)
                     int64_t requestSatoshi = pDetails->amountSatoshi;
@@ -2196,7 +2172,7 @@ exit:
  */
 static
 tABC_CC ABC_TxBuildFromLabel(tABC_WalletID self,
-                             char **pszLabel, tABC_Error *pError)
+                             const char **pszLabel, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -2289,9 +2265,9 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
     pTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
     ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWalletInfo, pError));
-    ABC_CHECK_NEW(exchangeSatoshiToCurrency(
+    ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
         currency, pTx->pDetails->amountSatoshi,
-        static_cast<Currency>(pWalletInfo->currencyNum)), pError);
+        static_cast<Currency>(pWalletInfo->currencyNum)));
     pTx->pDetails->amountCurrency = currency;
 
     // save the transaction
@@ -2349,7 +2325,6 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
     U08Buf MK; // Do not free
     json_t *pJSON_Root = NULL;
     tABC_Tx *pTx = NULL;
-    bool bExists = false;
     json_t *jsonVal = NULL;
 
     *ppTx = NULL;
@@ -2359,8 +2334,7 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
     ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
 
     // make sure the transaction exists
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-    ABC_CHECK_ASSERT(bExists == true, ABC_CC_NoTransaction, "Transaction does not exist");
+    ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoTransaction, "Transaction does not exist");
 
     // load the json object (load file, decrypt it, create json object
     ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, MK, &pJSON_Root, pError));
@@ -2637,7 +2611,7 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
     ABC_CHECK_ASSERT(e == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // create the transaction directory if needed
-    ABC_CHECK_NEW(fileEnsureDir(walletTxDir(self.szUUID)), pError);
+    ABC_CHECK_NEW(fileEnsureDir(walletTxDir(self.szUUID)));
 
     // get the filename for this transaction
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, pTx->szID, pTx->pStateInfo->bInternal, pError));
@@ -2846,7 +2820,6 @@ tABC_CC ABC_TxLoadAddressFile(tABC_WalletID self,
     U08Buf MK; // Do not free
     json_t *pJSON_Root = NULL;
     tABC_TxAddress *pAddress = NULL;
-    bool bExists = false;
     json_t *jsonVal = NULL;
 
     *ppAddress = NULL;
@@ -2856,8 +2829,7 @@ tABC_CC ABC_TxLoadAddressFile(tABC_WalletID self,
     ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
 
     // make sure the addresss exists
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-    ABC_CHECK_ASSERT(bExists == true, ABC_CC_NoRequest, "Request address does not exist");
+    ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoRequest, "Request address does not exist");
 
     // load the json object (load file, decrypt it, create json object
     ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, MK, &pJSON_Root, pError));
@@ -3025,7 +2997,7 @@ tABC_CC ABC_TxSaveAddress(tABC_WalletID self,
     ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pAddress->pDetails, pError));
 
     // create the address directory if needed
-    ABC_CHECK_NEW(fileEnsureDir(walletAddressDir(self.szUUID)), pError);
+    ABC_CHECK_NEW(fileEnsureDir(walletAddressDir(self.szUUID)));
 
     // create the filename for this transaction
     ABC_CHECK_RET(ABC_TxCreateAddressFilename(self, &szFilename, pAddress, pError));
@@ -3252,15 +3224,12 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
     tABC_FileIOList *pFileList = NULL;
     tABC_TxAddress **aAddresses = NULL;
     unsigned int count = 0;
-    bool bExists = false;
 
     *paAddresses = NULL;
     *pCount = 0;
 
     // if there is a address directory
-    ABC_CHECK_RET(ABC_FileIOFileExists(addressDir.c_str(), &bExists, pError));
-
-    if (bExists == true)
+    if (fileExists(addressDir))
     {
         // get all the files in the address directory
         ABC_FileIOCreateFileList(&pFileList, addressDir.c_str(), NULL);
@@ -3510,26 +3479,25 @@ tABC_CC ABC_TxTransactionExists(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
     char *szFilename = NULL;
-    bool bExists = false;
 
     // first try the internal
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, true, pError));
-    ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
-
-    // if the internal doesn't exist
-    if (bExists == false)
+    if (!fileExists(szFilename))
     {
         // try the external
         ABC_FREE_STR(szFilename);
         ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, szID, false, pError));
-        ABC_CHECK_RET(ABC_FileIOFileExists(szFilename, &bExists, pError));
     }
-    if (bExists)
+
+    if (fileExists(szFilename))
     {
         ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, pTx, pError));
-    } else {
+    }
+    else
+    {
         *pTx = NULL;
     }
+
 exit:
     ABC_FREE_STR(szFilename);
 

@@ -23,25 +23,12 @@ struct OtpFile:
 const char otpFilename[] = "OtpKey.json";
 
 Status
-Lobby::init(const std::string &username)
+Lobby::create(std::shared_ptr<Lobby> &result, const std::string &username)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::shared_ptr<Lobby> out(new Lobby());
+    ABC_CHECK(out->init(username));
 
-    // Set up identity:
-    ABC_CHECK(fixUsername(username_, username));
-    dir_ = loginDirFind(username_);
-
-    // Create authId:
-    // TODO: Make this lazy!
-    ABC_CHECK(usernameSnrp().hash(authId_, username_));
-    ABC_DebugLog("authId: %s", base16Encode(authId()).c_str());
-
-    // Load the OTP key, if possible:
-    OtpFile file;
-    otpKeyOk_ = !dir_.empty() &&
-        file.load(dir_ + otpFilename) &&
-        otpKey_.decodeBase32(file.key());
-
+    result = std::move(out);
     return Status();
 }
 
@@ -128,12 +115,33 @@ Lobby::fixUsername(std::string &result, const std::string &username)
 }
 
 Status
+Lobby::init(const std::string &username)
+{
+    // Set up identity:
+    ABC_CHECK(fixUsername(username_, username));
+    dir_ = loginDirFind(username_);
+
+    // Create authId:
+    // TODO: Make this lazy!
+    ABC_CHECK(usernameSnrp().hash(authId_, username_));
+    ABC_DebugLog("authId: %s", base16Encode(authId()).c_str());
+
+    // Load the OTP key, if possible:
+    OtpFile file;
+    otpKeyOk_ = !dir_.empty() &&
+        file.load(dir_ + otpFilename) &&
+        otpKey_.decodeBase32(file.key());
+
+    return Status();
+}
+
+Status
 Lobby::otpKeySave()
 {
     if (!dir_.empty() && otpKeyOk_)
     {
         OtpFile file;
-        ABC_CHECK(file.keySet(otpKey_.encodeBase32().c_str()));
+        ABC_CHECK(file.keySet(otpKey_.encodeBase32()));
         ABC_CHECK(file.save(dir_ + otpFilename));
     }
     return Status();

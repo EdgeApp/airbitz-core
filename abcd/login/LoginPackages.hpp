@@ -12,7 +12,7 @@
 #ifndef ABCD_LOGIN_LOGIN_PACKAGES_HPP
 #define ABCD_LOGIN_LOGIN_PACKAGES_HPP
 
-#include "../crypto/Scrypt.hpp"
+#include "../json/JsonSnrp.hpp"
 #include "../json/JsonBox.hpp"
 
 namespace abcd {

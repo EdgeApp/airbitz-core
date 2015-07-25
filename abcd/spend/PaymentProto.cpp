@@ -4,6 +4,7 @@
  */
 
 #include "PaymentProto.hpp"
+#include "../Context.hpp"
 #include "../bitcoin/Testnet.hpp"
 #include "../http/HttpRequest.hpp"
 #include "../util/AutoFree.hpp"
@@ -34,8 +35,6 @@ public:
             X509_free(this->at(i));
     }
 };
-
-static std::string gCertPath;
 
 static bool
 loadCerts(payments::X509Certificates certChain, AutoX509 &certs)
@@ -71,13 +70,6 @@ isValidSignature(X509 *cert, const EVP_MD* alg, payments::PaymentRequest req)
             (unsigned int) req.signature().size(), pubkey))
         return false;
     return true;
-}
-
-Status
-paymentInit(const std::string &certPath)
-{
-    gCertPath = certPath;
-    return Status();
 }
 
 Status
@@ -140,7 +132,7 @@ PaymentRequest::signatureOk(std::string &result)
         return ABC_ERROR(ABC_CC_Error, "Error creating X509_STORE_CTX");
 
     AutoFree<SSL_CTX, SSL_CTX_free> sslContext(SSL_CTX_new(SSLv23_client_method()));
-    if (!SSL_CTX_load_verify_locations(sslContext.get(), gCertPath.c_str(), NULL))
+    if (!SSL_CTX_load_verify_locations(sslContext.get(), gContext->certPath().c_str(), NULL))
         return ABC_ERROR(ABC_CC_Error, "Unable to load caCerts");
 
     if (!X509_STORE_CTX_init(store_ctx.get(),
@@ -195,12 +187,16 @@ PaymentRequest::merchant(const std::string &fallback) const
     if (!details_.has_memo())
         return fallback;
 
+#ifdef ANDROID
+    return fallback;
+#else
     std::regex re("Payment request for BitPay invoice [^ ]* for merchant (.*)");
     std::smatch match;
     if (!std::regex_match(details_.memo(), match, re))
         return fallback;
 
     return match[1];
+#endif
 }
 
 std::string
@@ -229,15 +225,18 @@ PaymentRequest::pay(PaymentReceipt &result, DataSlice tx, DataSlice refund)
         return ABC_ERROR(ABC_CC_Error, "Payment request has expired");
 
     HttpReply reply;
-    ABC_CHECK(HttpRequest()
-        .header("Accept", BIP71_MIMETYPE_PAYMENTACK)
-        .header("Content-Type", BIP71_MIMETYPE_PAYMENT)
-        .header("User-Agent", USER_AGENT)
-        .post(reply, details_.payment_url(), response));
-    ABC_CHECK(reply.codeOk());
+    if (details_.has_payment_url())
+    {
+        ABC_CHECK(HttpRequest()
+            .header("Accept", BIP71_MIMETYPE_PAYMENTACK)
+            .header("Content-Type", BIP71_MIMETYPE_PAYMENT)
+            .header("User-Agent", USER_AGENT)
+            .post(reply, details_.payment_url(), response));
+        ABC_CHECK(reply.codeOk());
 
-    if (!result.ack.ParseFromString(reply.body))
-        return ABC_ERROR(ABC_CC_Error, "Failed to parse PaymentAck");
+        if (!result.ack.ParseFromString(reply.body))
+            return ABC_ERROR(ABC_CC_Error, "Failed to parse PaymentAck");
+    }
 
     return Status();
 }

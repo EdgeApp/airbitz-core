@@ -6,7 +6,7 @@
  */
 
 #include "../Command.hpp"
-#include "../../abcd/exchange/Exchange.hpp"
+#include "../../abcd/Context.hpp"
 #include <iostream>
 
 using namespace abcd;
@@ -42,7 +42,7 @@ COMMAND(InitLevel::account, ExchangeUpdate, "exchange-update")
     ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1], static_cast<int>(currency), &error));
 
     double rate;
-    ABC_CHECK(exchangeSatoshiToCurrency(rate, 100000000, currency));
+    ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(rate, 100000000, currency));
     std::cout << "result: " << rate << std::endl;
 
     return Status();

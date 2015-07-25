@@ -36,17 +36,13 @@ tABC_CC ABC_AccountCategoriesLoad(const Account &account,
     AutoU08Buf data;
     *paszCategories = NULL;
     *pCount = 0;
-    bool bExists = false;
     auto filename = account.dir() + ACCOUNT_CATEGORIES_FILENAME;
 
-    // Find the file:
-    ABC_CHECK_RET(ABC_FileIOFileExists(filename.c_str(), &bExists, pError));
-
     // Load the entries (if any):
-    if (bExists)
+    if (fileExists(filename))
     {
         ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(filename.c_str(),
-            toU08Buf(account.login().dataKey()), &data, pError));
+            toU08Buf(account.login.dataKey()), &data, pError));
         ABC_CHECK_RET(ABC_UtilGetArrayValuesFromJSONString((char *)data.data(), JSON_ACCT_CATEGORIES_FIELD, paszCategories, pCount, pError));
     }
 
@@ -149,7 +145,7 @@ tABC_CC ABC_AccountCategoriesSave(const Account &account,
 
     // write them out
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(dataJSON,
-        toU08Buf(account.login().dataKey()), ABC_CryptoType_AES256,
+        toU08Buf(account.login.dataKey()), ABC_CryptoType_AES256,
         filename.c_str(), pError));
 
 exit:

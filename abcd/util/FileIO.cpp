@@ -42,34 +42,14 @@
 
 namespace abcd {
 
-static std::string gRootDir = ".";
 std::recursive_mutex gFileMutex;
-
-void
-setRootDir(const std::string &rootDir)
-{
-    AutoFileLock lock(gFileMutex);
-
-    gRootDir = rootDir;
-    if (gRootDir.back() != '/')
-        gRootDir += '/';
-}
-
-const std::string &
-getRootDir()
-{
-    AutoFileLock lock(gFileMutex);
-    return gRootDir;
-}
 
 Status
 fileEnsureDir(const std::string &dir)
 {
     AutoFileLock lock(gFileMutex);
 
-    bool exists;
-    ABC_CHECK_OLD(ABC_FileIOFileExists(dir.c_str(), &exists, &error));
-    if (!exists)
+    if (!fileExists(dir))
     {
         mode_t process_mask = umask(0);
         int e = mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
@@ -80,6 +60,14 @@ fileEnsureDir(const std::string &dir)
     }
 
     return Status();
+}
+
+bool
+fileExists(const std::string &path)
+{
+    AutoFileLock lock(gFileMutex);
+
+    return 0 == access(path.c_str(), F_OK);
 }
 
 /**
@@ -167,31 +155,6 @@ void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList)
         }
         ABC_CLEAR_FREE(pFileList, sizeof(tABC_FileIOList));
     }
-}
-
-/**
- * Checks if a file exists
- */
-tABC_CC ABC_FileIOFileExists(const char *szFilename,
-                             bool *pbExists,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoFileLock lock(gFileMutex);
-
-    ABC_CHECK_NULL(pbExists);
-    *pbExists = false;
-
-    if (szFilename != NULL)
-    {
-        if (access(szFilename, F_OK) != -1 )
-        {
-            *pbExists = true;
-        }
-    }
-
-exit:
-    return cc;
 }
 
 Status

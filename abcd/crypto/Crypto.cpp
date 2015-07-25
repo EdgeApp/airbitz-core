@@ -70,6 +70,19 @@ tABC_CC ABC_CryptoDecryptAES256(const tABC_U08Buf EncData,
                                 tABC_U08Buf       *pData,
                                 tABC_Error        *pError);
 
+/**
+ * A constant-time alternative to memcmp.
+ */
+static bool
+cryptoCompare(const uint8_t *a, const uint8_t *b, size_t size)
+{
+    uint8_t out = false;
+    for (size_t i = 0; i < size; ++i)
+        out |= *a++ ^ *b++;
+
+    return !out;
+}
+
 std::string
 cryptoFilename(DataSlice key, const std::string &name)
 {
@@ -147,7 +160,7 @@ tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
     ABC_CHECK_NULL(szFilename);
 
     ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(Data, Key, cryptoType, &root, pError));
-    ABC_CHECK_NEW(JsonPtr(root).save(szFilename), pError);
+    ABC_CHECK_NEW(JsonPtr(root).save(szFilename));
 
 exit:
     return cc;
@@ -171,7 +184,7 @@ tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(pJSON_Data);
 
-    ABC_CHECK_NEW(JsonPtr(json_incref(pJSON_Data)).encode(data), pError);
+    ABC_CHECK_NEW(JsonPtr(json_incref(pJSON_Data)).encode(data));
      // Downstream decoders often forget to null-terminate their input.
      // This is a bug, but we can save the app from crashing by
      // including a null byte in the encrypted data.
@@ -210,12 +223,12 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     // get the IV
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_IV_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing iv");
-    ABC_CHECK_NEW(base16Decode(iv, json_string_value(jsonVal)), pError);
+    ABC_CHECK_NEW(base16Decode(iv, json_string_value(jsonVal)));
 
     // get the encrypted data
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_DATA_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing data");
-    ABC_CHECK_NEW(base64Decode(data, json_string_value(jsonVal)), pError);
+    ABC_CHECK_NEW(base64Decode(data, json_string_value(jsonVal)));
 
     // decrypted the data
     ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(toU08Buf(data), Key, toU08Buf(iv), pData, pError));
@@ -241,7 +254,7 @@ tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(pData);
 
-    ABC_CHECK_NEW(json.load(szFilename), pError);
+    ABC_CHECK_NEW(json.load(szFilename));
     ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(json.get(), Key, pData, pError));
 
 exit:
@@ -271,7 +284,7 @@ tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
     *ppJSON_Data = NULL;
 
     ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, Key, &Data, pError));
-    ABC_CHECK_NEW(file.decode(toString(Data)), pError);
+    ABC_CHECK_NEW(file.decode(toString(Data)));
     *ppJSON_Data = json_incref(file.get());
 
 exit:
@@ -314,25 +327,25 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     ABC_CHECK_NULL(pEncData);
 
     // create a random IV
-    ABC_CHECK_NEW(randomData(IV, AES_256_IV_LENGTH), pError);
+    ABC_CHECK_NEW(randomData(IV, AES_256_IV_LENGTH));
 
     // create a random number of header bytes 0-255
     {
         DataChunk r;
-        ABC_CHECK_NEW(randomData(r, 1), pError);
+        ABC_CHECK_NEW(randomData(r, 1));
         nRandomHeaderBytes = r[0];
     }
     //printf("rand header count: %d\n", nRandomHeaderBytes);
-    ABC_CHECK_NEW(randomData(headerData, nRandomHeaderBytes), pError);
+    ABC_CHECK_NEW(randomData(headerData, nRandomHeaderBytes));
 
     // create a random number of footer bytes 0-255
     {
         DataChunk r;
-        ABC_CHECK_NEW(randomData(r, 1), pError);
+        ABC_CHECK_NEW(randomData(r, 1));
         nRandomFooterBytes = r[0];
     }
     //printf("rand footer count: %d\n", nRandomFooterBytes);
-    ABC_CHECK_NEW(randomData(footerData, nRandomFooterBytes), pError);
+    ABC_CHECK_NEW(randomData(footerData, nRandomFooterBytes));
 
     // calculate the size of our unencrypted buffer
     totalSizeUnencrypted += 1; // header count
@@ -476,7 +489,7 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     SHA256(Data.data(), shaCheckLength, sha256Output);
 
     // check the sha256
-    if (0 != memcmp(pSHALoc, sha256Output, SHA256_DIGEST_LENGTH))
+    if (!cryptoCompare(pSHALoc, sha256Output, SHA256_DIGEST_LENGTH))
     {
         // this can be specifically used by the caller to possibly determine whether the key was incorrect
         ABC_RET_ERROR(ABC_CC_DecryptFailure, "Decrypted data failed checksum (SHA) check");

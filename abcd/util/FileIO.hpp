@@ -68,33 +68,22 @@ typedef struct sABC_FileIOFileList
 } tABC_FileIOList;
 
 /**
- * Sets the core root directory.
- */
-void
-setRootDir(const std::string &rootDir);
-
-/**
- * Obtains the core root directory.
- * The returned directory always ends with a `/`.
- */
-const std::string &
-getRootDir();
-
-/**
  * Ensures that a directory exists, creating it if not.
  */
 Status
 fileEnsureDir(const std::string &dir);
+
+/**
+ * Returns true if the path exists.
+ */
+bool
+fileExists(const std::string &path);
 
 tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
                                  const char *szDir,
                                  tABC_Error *pError);
 
 void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList);
-
-tABC_CC ABC_FileIOFileExists(const char *szFilename,
-                             bool *pbExists,
-                             tABC_Error *pError);
 
 /**
  * Reads a file from disk.

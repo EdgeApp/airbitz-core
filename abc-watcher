@@ -1,0 +1,3 @@
+#!/bin/sh
+program=build/abc-watcher
+make $program && ./$program "$@"

@@ -25,9 +25,6 @@ struct PaymentReceipt
     payments::PaymentACK ack;
 };
 
-Status
-paymentInit(const std::string &certPath);
-
 /**
  * Represents a request from the bip70 payment protocol.
  */

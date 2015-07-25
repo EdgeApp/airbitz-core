@@ -1,4 +1,4 @@
-depends="curl jansson libbitcoin-watcher libcsv libgit2 libqrencode openssl protobuf"
+depends="curl jansson libbitcoin-client libcsv libgit2 libqrencode libwallet openssl protobuf"
 inherit lib
 
 build() {
@@ -18,9 +18,9 @@ build() {
     # Build:
     make $output V=1
 
-    # Run unit tests:
+    # Native builds include unit tests and utilities:
     if [ $target = native ]; then
-        make check
+        make all V=1
     fi
 
     # Install:

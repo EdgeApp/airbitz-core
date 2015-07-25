@@ -26,7 +26,6 @@ struct HttpSingleton
 
 // Global variables:
 static HttpSingleton gSingleton;
-std::string gCertPath;
 
 static void
 sslLockCallback(int mode, int n, const char *sourceFile, int sourceLine)
@@ -65,9 +64,8 @@ HttpSingleton::HttpSingleton()
 }
 
 Status
-httpInit(const std::string &certPath)
+httpInit()
 {
-    gCertPath = certPath;
     return gSingleton.status;
 }
 

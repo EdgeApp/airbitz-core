@@ -6,6 +6,7 @@
  */
 
 #include "LoginDir.hpp"
+#include "../Context.hpp"
 #include "../bitcoin/Testnet.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/FileIO.hpp"
@@ -23,22 +24,9 @@ struct UsernameFile:
     ABC_JSON_STRING(username, "userName", nullptr)
 };
 
-#define ACCOUNT_DIR                             "Accounts"
 #define ACCOUNT_NAME_FILENAME                   "UserName.json"
 #define ACCOUNT_CARE_PACKAGE_FILENAME           "CarePackage.json"
 #define ACCOUNT_LOGIN_PACKAGE_FILENAME          "LoginPackage.json"
-
-/**
- * Finds the name of the base "Accounts" directory.
- */
-static std::string
-accountsDirectory()
-{
-    if (isTestnet())
-        return getRootDir() + ACCOUNT_DIR "-testnet/";
-    else
-        return getRootDir() + ACCOUNT_DIR "/";
-}
 
 /**
  * Reads the username file from an account directory.
@@ -60,17 +48,15 @@ readUsername(const std::string &directory, std::string &result)
 static Status
 newDirName(std::string &result)
 {
-    std::string accountsDir = accountsDirectory();
+    std::string accountsDir = gContext->accountsDir();
     std::string directory;
 
-    bool exists;
     unsigned i = 0;
     do
     {
         directory = accountsDir + "Account" + std::to_string(i++) + '/';
-        ABC_CHECK_OLD(ABC_FileIOFileExists(directory.c_str(), &exists, &error));
     }
-    while (exists);
+    while (fileExists(directory));
 
     result = directory;
     return Status();
@@ -81,7 +67,7 @@ loginDirList()
 {
     std::list<std::string> out;
 
-    std::string accountsDir = accountsDirectory();
+    std::string accountsDir = gContext->accountsDir();
     DIR *dir = opendir(accountsDir.c_str());
     if (!dir)
         return out;
@@ -109,7 +95,7 @@ loginDirFind(const std::string &username)
 {
     std::string out;
 
-    std::string accountsDir = accountsDirectory();
+    std::string accountsDir = gContext->accountsDir();
     DIR *dir = opendir(accountsDir.c_str());
     if (!dir)
         return out;
@@ -149,21 +135,21 @@ tABC_CC ABC_LoginDirCreate(std::string &directory,
     UsernameFile f;
 
     // make sure the accounts directory is in place:
-    ABC_CHECK_NEW(fileEnsureDir(accountsDirectory()), pError);
+    ABC_CHECK_NEW(fileEnsureDir(gContext->accountsDir()));
 
     // We don't need to do anything if our directory already exists:
     if (!directory.empty())
         goto exit;
 
     // Find next available account number:
-    ABC_CHECK_NEW(newDirName(directory), pError);
+    ABC_CHECK_NEW(newDirName(directory));
 
     // Create main account directory:
-    ABC_CHECK_NEW(fileEnsureDir(directory), pError);
+    ABC_CHECK_NEW(fileEnsureDir(directory));
 
     // Write user name:
-    ABC_CHECK_NEW(f.usernameSet(szUserName), pError);
-    ABC_CHECK_NEW(f.save(directory + ACCOUNT_NAME_FILENAME), pError);
+    ABC_CHECK_NEW(f.usernameSet(szUserName));
+    ABC_CHECK_NEW(f.save(directory + ACCOUNT_NAME_FILENAME));
 
 exit:
     return cc;
