@@ -274,7 +274,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
     // Copy outputs
     ABC_TxCopyOuputs(pTx, pUtx->aOutputs, pUtx->countOutputs, pError);
     // copy the details
-    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsCopy(&(pTx->pDetails), pInfo->pDetails, pError));
     // Add in tx fees to the amount of the tx
 
     if (pInfo->szDestAddress)
@@ -321,7 +321,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
         // Copy outputs
         ABC_TxCopyOuputs(pReceiveTx, pUtx->aOutputs, pUtx->countOutputs, pError);
         // copy the details
-        ABC_CHECK_RET(ABC_TxDupDetails(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
+        ABC_CHECK_RET(ABC_TxDetailsCopy(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
 
         // Set the payee name:
         ABC_FREE_STR(pReceiveTx->pDetails->szName);
@@ -718,7 +718,7 @@ tABC_CC ABC_TxCreateInitialAddresses(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoFree<tABC_TxDetails, ABC_TxFreeDetails>
+    AutoFree<tABC_TxDetails, ABC_TxDetailsFree>
         pDetails(structAlloc<tABC_TxDetails>());
     pDetails->szName = stringCopy("");
     pDetails->szCategory = stringCopy("");
@@ -823,11 +823,11 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
         // free state and details as we will be setting them to new data below
         ABC_TxFreeAddressStateInfo(pAddress->pStateInfo);
         pAddress->pStateInfo = NULL;
-        ABC_FreeTxDetails(pAddress->pDetails);
+        ABC_TxDetailsFree(pAddress->pDetails);
         pAddress->pDetails = NULL;
 
         // copy over the info we were given
-        ABC_CHECK_RET(ABC_DuplicateTxDetails(&(pAddress->pDetails), pDetails, pError));
+        ABC_CHECK_RET(ABC_TxDetailsCopy(&(pAddress->pDetails), pDetails, pError));
 
         // create the state info
         pAddress->pStateInfo = structAlloc<tTxAddressStateInfo>();
@@ -925,10 +925,10 @@ tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
     ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), &pAddress, pError));
 
     // copy the new details
-    ABC_CHECK_RET(ABC_TxDupDetails(&pNewDetails, pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsCopy(&pNewDetails, pDetails, pError));
 
     // free the old details on this address
-    ABC_TxFreeDetails(pAddress->pDetails);
+    ABC_TxDetailsFree(pAddress->pDetails);
 
     // set the new details
     pAddress->pDetails = pNewDetails;
@@ -940,7 +940,7 @@ tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
 exit:
     ABC_FREE_STR(szFile);
     ABC_TxFreeAddress(pAddress);
-    ABC_TxFreeDetails(pNewDetails);
+    ABC_TxDetailsFree(pNewDetails);
 
     return cc;
 }
@@ -1726,7 +1726,7 @@ void ABC_TxFreeTransaction(tABC_TxInfo *pTransaction)
     {
         ABC_FREE_STR(pTransaction->szID);
         ABC_TxFreeOutputs(pTransaction->aOutputs, pTransaction->countOutputs);
-        ABC_TxFreeDetails(pTransaction->pDetails);
+        ABC_TxDetailsFree(pTransaction->pDetails);
         ABC_CLEAR_FREE(pTransaction, sizeof(tABC_TxInfo));
     }
 }
@@ -1850,7 +1850,7 @@ tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
     ABC_CHECK_NULL(pTx->pStateInfo);
 
     // duplicate the details
-    ABC_CHECK_RET(ABC_TxDupDetails(&pDetails, pTx->pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsCopy(&pDetails, pTx->pDetails, pError));
 
     // assign final result
     *ppDetails = pDetails;
@@ -1860,7 +1860,7 @@ tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
 exit:
     ABC_FREE_STR(szFilename);
     ABC_TxFreeTx(pTx);
-    ABC_TxFreeDetails(pDetails);
+    ABC_TxDetailsFree(pDetails);
 
     return cc;
 }
@@ -2102,7 +2102,7 @@ void ABC_TxFreeRequest(tABC_RequestInfo *pRequest)
 {
     if (pRequest)
     {
-        ABC_TxFreeDetails(pRequest->pDetails);
+        ABC_TxDetailsFree(pRequest->pDetails);
 
         ABC_CLEAR_FREE(pRequest, sizeof(tABC_RequestInfo));
     }
@@ -2156,7 +2156,7 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
     pTx->pStateInfo->szMalleableTxId = stringCopy(malTxId);
 
     // Copy the details
-    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsCopy(&(pTx->pDetails), pDetails, pError));
     pTx->pDetails->amountSatoshi = funds;
     pTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
@@ -2229,7 +2229,7 @@ tABC_CC ABC_TxLoadTransaction(Wallet &self,
     ABC_CHECK_RET(ABC_TxDecodeTxState(pJSON_Root, &(pTx->pStateInfo), pError));
 
     // get the details object
-    ABC_CHECK_RET(ABC_TxDecodeTxDetails(pJSON_Root, &(pTx->pDetails), pError));
+    ABC_CHECK_RET(ABC_TxDetailsDecode(pJSON_Root, &(pTx->pDetails), pError));
 
     // get advanced details
     ABC_CHECK_RET(
@@ -2309,7 +2309,7 @@ void ABC_TxFreeTx(tABC_Tx *pTx)
     if (pTx)
     {
         ABC_FREE_STR(pTx->szID);
-        ABC_TxFreeDetails(pTx->pDetails);
+        ABC_TxDetailsFree(pTx->pDetails);
         ABC_CLEAR_FREE(pTx->pStateInfo, sizeof(tTxStateInfo));
         ABC_TxFreeOutputs(pTx->aOutputs, pTx->countOutputs);
         ABC_CLEAR_FREE(pTx, sizeof(tABC_Tx));
@@ -2350,7 +2350,7 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
     ABC_CHECK_RET(ABC_TxEncodeTxState(pJSON_Root, pTx->pStateInfo, pError));
 
     // set the details
-    ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pTx->pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsEncode(pJSON_Root, pTx->pDetails, pError));
 
     // create the addresses array object
     pJSON_OutputArray = json_array();
@@ -2557,7 +2557,7 @@ tABC_CC ABC_TxLoadAddressFile(Wallet &self,
     ABC_CHECK_RET(ABC_TxDecodeAddressStateInfo(pJSON_Root, &(pAddress->pStateInfo), pError));
 
     // get the details object
-    ABC_CHECK_RET(ABC_TxDecodeTxDetails(pJSON_Root, &(pAddress->pDetails), pError));
+    ABC_CHECK_RET(ABC_TxDetailsDecode(pJSON_Root, &(pAddress->pDetails), pError));
 
     // assign final result
     *ppAddress = pAddress;
@@ -2689,7 +2689,7 @@ tABC_CC ABC_TxSaveAddress(Wallet &self,
     ABC_CHECK_RET(ABC_TxEncodeAddressStateInfo(pJSON_Root, pAddress->pStateInfo, pError));
 
     // set the details
-    ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pAddress->pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsEncode(pJSON_Root, pAddress->pDetails, pError));
 
     // create the address directory if needed
     ABC_CHECK_NEW(fileEnsureDir(self.addressDir()));
@@ -2815,7 +2815,7 @@ void ABC_TxFreeAddress(tABC_TxAddress *pAddress)
     {
         ABC_FREE_STR(pAddress->szID);
         ABC_FREE_STR(pAddress->szPubAddress);
-        ABC_TxFreeDetails(pAddress->pDetails);
+        ABC_TxDetailsFree(pAddress->pDetails);
         ABC_TxFreeAddressStateInfo(pAddress->pStateInfo);
 
         ABC_CLEAR_FREE(pAddress, sizeof(tABC_TxAddress));

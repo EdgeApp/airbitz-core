@@ -22,7 +22,7 @@ namespace abcd {
 #define JSON_TX_ATTRIBUTES_FIELD                "attributes"
 
 void
-ABC_TxFreeDetails(tABC_TxDetails *pDetails)
+ABC_TxDetailsFree(tABC_TxDetails *pDetails)
 {
     if (pDetails)
     {
@@ -34,11 +34,11 @@ ABC_TxFreeDetails(tABC_TxDetails *pDetails)
 }
 
 tABC_CC
-ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pOldDetails, tABC_Error *pError)
+ABC_TxDetailsCopy(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pOldDetails, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    AutoFree<tABC_TxDetails, ABC_TxFreeDetails>
+    AutoFree<tABC_TxDetails, ABC_TxDetailsFree>
         pNewDetails(structAlloc<tABC_TxDetails>());
 
     ABC_CHECK_NULL(ppNewDetails);
@@ -65,12 +65,12 @@ exit:
 }
 
 tABC_CC
-ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError)
+ABC_TxDetailsDecode(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoFree<tABC_TxDetails, ABC_TxFreeDetails>
+    AutoFree<tABC_TxDetails, ABC_TxDetailsFree>
         pDetails(structAlloc<tABC_TxDetails>());
     json_t *jsonDetails = NULL;
     json_t *jsonVal = NULL;
@@ -145,7 +145,7 @@ exit:
 }
 
 tABC_CC
-ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError)
+ABC_TxDetailsEncode(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);

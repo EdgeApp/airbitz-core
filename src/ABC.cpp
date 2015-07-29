@@ -2158,7 +2158,7 @@ tABC_CC ABC_DuplicateTxDetails(tABC_TxDetails **ppNewDetails,
 {
     ABC_PROLOG();
 
-    ABC_CHECK_RET(ABC_TxDupDetails(ppNewDetails, pOldDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsCopy(ppNewDetails, pOldDetails, pError));
 
 exit:
     return cc;
@@ -2174,7 +2174,7 @@ void ABC_FreeTxDetails(tABC_TxDetails *pDetails)
     // Cannot use ABC_PROLOG - no pError
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    ABC_TxFreeDetails(pDetails);
+    ABC_TxDetailsFree(pDetails);
 }
 
 /**
