@@ -168,7 +168,6 @@ static void     ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int co
 static tABC_CC  ABC_TxGetAddresses(Wallet &self, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static int      ABC_TxAddrPtrCompare(const void * a, const void * b);
 static tABC_CC  ABC_TxLoadAddressAndAppendToArray(Wallet &self, const char *szFilename, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
-//static void     ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count);
 static tABC_CC  ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError);
 static tABC_CC  ABC_TxTransactionExists(Wallet &self, const char *szID, tABC_Tx **pTx, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
@@ -1923,9 +1922,6 @@ tABC_CC ABC_TxGetPendingRequests(Wallet &self,
     // if there are any addresses
     if (count > 0)
     {
-        // print out the addresses - debug
-        //ABC_TxPrintAddresses(aAddresses, count);
-
         // walk through all the addresses looking for those with outstanding balances
         for (unsigned i = 0; i < count; i++)
         {
@@ -3037,91 +3033,6 @@ exit:
 
     return cc;
 }
-
-#if 0
-/**
- * For debug purposes, this prints all of the addresses in the given array
- */
-static
-void ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count)
-{
-    if ((aAddresses != NULL) && (count > 0))
-    {
-        for (int i = 0; i < count; i++)
-        {
-            ABC_DebugLog("Address - seq: %lld, id: %s, pubAddress: %s\n", aAddresses[i]->seq, aAddresses[i]->szID, aAddresses[i]->szPubAddress);
-            if (aAddresses[i]->pDetails)
-            {
-                ABC_DebugLog("\tDetails - satoshi: %lld, airbitz_fee: %lld, miners_fee: %lld, currency: %lf, name: %s, bizid: %u, category: %s, notes: %s, attributes: %u\n",
-                             aAddresses[i]->pDetails->amountSatoshi,
-                             aAddresses[i]->pDetails->amountFeesAirbitzSatoshi,
-                             aAddresses[i]->pDetails->amountFeesMinersSatoshi,
-                             aAddresses[i]->pDetails->amountCurrency,
-                             aAddresses[i]->pDetails->szName,
-                             aAddresses[i]->pDetails->bizId,
-                             aAddresses[i]->pDetails->szCategory,
-                             aAddresses[i]->pDetails->szNotes,
-                             aAddresses[i]->pDetails->attributes);
-            }
-            else
-            {
-                ABC_DebugLog("\tNo Details");
-            }
-            if (aAddresses[i]->pStateInfo)
-            {
-                ABC_DebugLog("\tState Info - timeCreation: %lld, recycleable: %s\n",
-                             aAddresses[i]->pStateInfo->timeCreation,
-                             aAddresses[i]->pStateInfo->bRecycleable ? "yes" : "no");
-                if (aAddresses[i]->pStateInfo->aActivities && aAddresses[i]->pStateInfo->countActivities)
-                {
-                    for (int nActivity = 0; nActivity < aAddresses[i]->pStateInfo->countActivities; nActivity++)
-                    {
-                        ABC_DebugLog("\t\tActivity - txID: %s, timeCreation: %lld, satoshi: %lld\n",
-                                     aAddresses[i]->pStateInfo->aActivities[nActivity].szTxID,
-                                     aAddresses[i]->pStateInfo->aActivities[nActivity].timeCreation,
-                                     aAddresses[i]->pStateInfo->aActivities[nActivity].amountSatoshi);
-                    }
-                }
-                else
-                {
-                    ABC_DebugLog("\t\tNo Activities");
-                }
-            }
-            else
-            {
-                ABC_DebugLog("\tNo State Info");
-            }
-        }
-        typedef struct sTxAddressActivity
-        {
-            char    *szTxID; // ntxid from bitcoin associated with this activity
-            int64_t timeCreation;
-            int64_t amountSatoshi;
-        } tTxAddressActivity;
-
-        typedef struct sTxAddressStateInfo
-        {
-            int64_t             timeCreation;
-            bool                bRecycleable;
-            unsigned int        countActivities;
-            tTxAddressActivity  *aActivities;
-        } tTxAddressStateInfo;
-
-        typedef struct sABC_TxAddress
-        {
-            int64_t             seq; // sequence number
-            char                *szID; // sequence number in string form
-            char                *szPubAddress; // public address
-            tABC_TxDetails      *pDetails;
-            tTxAddressStateInfo *pStateInfo;
-        } tABC_TxAddress;
-    }
-    else
-    {
-        ABC_DebugLog("No addresses");
-    }
-}
-#endif
 
 /**
  * Adds a transaction to an address's activity log.
