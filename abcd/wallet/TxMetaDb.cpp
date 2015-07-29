@@ -6,11 +6,9 @@
  */
 
 #include "TxMetaDb.hpp"
-#include "Details.hpp"
 #include "Wallet.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
-#include "../util/AutoFree.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
 #include <dirent.h>
@@ -34,7 +32,7 @@ struct TxJson:
 
     ABC_JSON_STRING(ntxid, "ntxid", nullptr)
     ABC_JSON_VALUE(state, "state", TxStateJson)
-    ABC_JSON_VALUE(metadata, "meta", JsonObject)
+    ABC_JSON_VALUE(metadata, "meta", JsonPtr)
 
     Status
     pack(const Tx &in);
@@ -57,9 +55,9 @@ TxJson::pack(const Tx &in)
     ABC_CHECK(stateSet(stateJson));
 
     // Details json:
-    AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pDetails(
-        in.metadata.toDetails());
-    ABC_CHECK_OLD(ABC_TxDetailsEncode(get(), pDetails, &error));
+    JsonPtr metaJson;
+    ABC_CHECK(in.metadata.save(metaJson));
+    ABC_CHECK(metadataSet(metaJson));
 
     return Status();
 }
@@ -80,9 +78,7 @@ TxJson::unpack(Tx &result)
     out.internal = stateJson.internal();
 
     // Details json:
-    AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pDetails;
-    ABC_CHECK_OLD(ABC_TxDetailsDecode(get(), &pDetails.get(), &error));
-    out.metadata = TxMetadata(pDetails);
+    ABC_CHECK(out.metadata.load(metadata()));
 
     result = std::move(out);
     return Status();

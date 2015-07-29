@@ -8,6 +8,7 @@
 #ifndef ABCD_WALLET_TX_METADATA_HPP
 #define ABCD_WALLET_TX_METADATA_HPP
 
+#include "../json/JsonPtr.hpp"
 #include "../util/Status.hpp"
 
 namespace abcd {
@@ -31,6 +32,18 @@ struct TxMetadata
     int64_t amountSatoshi;
     int64_t amountFeesAirbitzSatoshi;
     int64_t amountFeesMinersSatoshi;
+
+    /**
+     * Loads the structure from a JSON object.
+     */
+    Status
+    load(JsonPtr json);
+
+    /**
+     * Encodes the structure into a JSON object.
+     */
+    Status
+    save(JsonPtr &result) const;
 
     /**
      * Converts this structure to the legacy format.

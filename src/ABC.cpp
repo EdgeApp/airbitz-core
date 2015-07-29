@@ -7,6 +7,7 @@
 
 #include "ABC.h"
 #include "LoginShim.hpp"
+#include "TxDetails.hpp"
 #include "TxInfo.hpp"
 #include "Version.h"
 #include "../abcd/Context.hpp"
@@ -40,7 +41,6 @@
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/Util.hpp"
-#include "../abcd/wallet/Details.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include <qrencode.h>
 #include <stdio.h>

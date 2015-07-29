@@ -6,12 +6,10 @@
  */
 
 #include "AddressDb.hpp"
-#include "Details.hpp"
 #include "Wallet.hpp"
 #include "../bitcoin/TxDatabase.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
-#include "../util/AutoFree.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
 #include <bitcoin/bitcoin.hpp>
@@ -37,6 +35,7 @@ struct AddressJson:
     ABC_JSON_INTEGER(index, "seq", 0)
     ABC_JSON_STRING(address, "address", nullptr)
     ABC_JSON_VALUE(state, "state", AddressStateJson)
+    ABC_JSON_VALUE(metadata, "meta", JsonPtr)
 
     Status
     pack(const Address &in);
@@ -59,9 +58,9 @@ AddressJson::pack(const Address &in)
     ABC_CHECK(stateSet(stateJson));
 
     // Details json:
-    AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pDetails(
-        in.metadata.toDetails());
-    ABC_CHECK_OLD(ABC_TxDetailsEncode(get(), pDetails, &error));
+    JsonPtr metaJson;
+    ABC_CHECK(in.metadata.save(metaJson));
+    ABC_CHECK(metadataSet(metaJson));
 
     return Status();
 }
@@ -83,9 +82,7 @@ AddressJson::unpack(Address &result)
     out.time = stateJson.time();
 
     // Details json:
-    AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pDetails;
-    ABC_CHECK_OLD(ABC_TxDetailsDecode(get(), &pDetails.get(), &error));
-    out.metadata = TxMetadata(pDetails);
+    ABC_CHECK(out.metadata.load(metadata()));
 
     result = std::move(out);
     return Status();

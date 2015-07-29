@@ -6,8 +6,8 @@
  */
 
 #include "TxInfo.hpp"
+#include "TxDetails.hpp"
 #include "../abcd/bitcoin/TxDatabase.hpp"
-#include "../abcd/wallet/Details.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include "../abcd/util/Util.hpp"
 
