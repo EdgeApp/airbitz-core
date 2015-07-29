@@ -653,8 +653,9 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
         funds += utxo.value;
         utx.tx.inputs.push_back(input);
     }
-    ABC_CHECK_ASSERT(outputDust + 10000 <= funds, ABC_CC_InsufficientFunds, "Not enough funds");
-    funds -= 10000;
+    if (10000 < funds)
+        funds -= 10000; // Ugh, hard-coded mining fee
+    ABC_CHECK_ASSERT(!outputIsDust(funds), ABC_CC_InsufficientFunds, "Not enough funds");
     output.value = funds;
     ABC_CHECK_NEW(outputScriptForAddress(output.script, szAddress));
     utx.tx.outputs.push_back(output);

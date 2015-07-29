@@ -87,12 +87,18 @@ outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
     return Status();
 }
 
+bool
+outputIsDust(uint64_t amount)
+{
+    return amount < 546;
+}
+
 Status
 outputsFinalize(bc::transaction_output_list &outputs,
     uint64_t change, const std::string &changeAddress)
 {
     // Add change:
-    if (outputDust <= change)
+    if (!outputIsDust(change))
     {
         bc::transaction_output_type output;
         output.value = change;
@@ -110,7 +116,7 @@ outputsFinalize(bc::transaction_output_list &outputs,
 
     // Check for dust:
     for (const auto &output: outputs)
-        if (output.value < outputDust)
+        if (outputIsDust(output.value))
             return ABC_ERROR(ABC_CC_SpendDust, "Trying to send dust");
 
     return Status();
