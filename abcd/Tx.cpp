@@ -31,7 +31,6 @@
 
 #include "Tx.hpp"
 #include "Context.hpp"
-#include "Wallet.hpp"
 #include "account/Account.hpp"
 #include "account/AccountSettings.hpp"
 #include "bitcoin/Text.hpp"
@@ -42,6 +41,7 @@
 #include "util/FileIO.hpp"
 #include "util/Mutex.hpp"
 #include "util/Util.hpp"
+#include "wallet/Wallet.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -146,48 +146,48 @@ typedef struct sABC_TxAddress
     tTxAddressStateInfo *pStateInfo;
 } tABC_TxAddress;
 
-static tABC_CC  ABC_TxCreateNewAddress(tABC_WalletID self, tABC_TxDetails *pDetails, tABC_TxAddress **ppAddress, tABC_Error *pError);
-static tABC_CC  ABC_TxCreateNewAddressForN(tABC_WalletID self, int32_t N, tABC_Error *pError);
-static tABC_CC  ABC_GetAddressFilename(const char *szWalletUUID, const char *szRequestID, char **pszFilename, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateNewAddress(Wallet &self, tABC_TxDetails *pDetails, tABC_TxAddress **ppAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError);
+static tABC_CC  ABC_GetAddressFilename(Wallet &self, const char *szRequestID, char **pszFilename, tABC_Error *pError);
 static tABC_CC  ABC_TxParseAddrFilename(const char *szFilename, char **pszID, char **pszPublicAddress, tABC_Error *pError);
-static tABC_CC  ABC_TxSetAddressRecycle(tABC_WalletID self, const char *szAddress, bool bRecyclable, tABC_Error *pError);
+static tABC_CC  ABC_TxSetAddressRecycle(Wallet &self, const char *szAddress, bool bRecyclable, tABC_Error *pError);
 static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *pbEquivalent, tABC_Error *pError);
 static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pType, char **pszBasename, tABC_Error *pError);
-static tABC_CC  ABC_TxLoadTransactionInfo(tABC_WalletID self, const char *szFilename, tABC_TxInfo **ppTransaction, tABC_Error *pError);
-static tABC_CC  ABC_TxLoadTxAndAppendToArray(tABC_WalletID self, int64_t startTime, int64_t endTime, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadTransactionInfo(Wallet &self, const char *szFilename, tABC_TxInfo **ppTransaction, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadTxAndAppendToArray(Wallet &self, int64_t startTime, int64_t endTime, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxGetAddressOwed(tABC_TxAddress *pAddr, int64_t *pSatoshiBalance, tABC_Error *pError);
-static tABC_CC  ABC_TxBuildFromLabel(tABC_WalletID self, const char **pszLabel, tABC_Error *pError);
+static tABC_CC  ABC_TxBuildFromLabel(Wallet &self, const char **pszLabel, tABC_Error *pError);
 static void     ABC_TxFreeRequest(tABC_RequestInfo *pRequest);
-static tABC_CC  ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const char *szTxID, bool bInternal, tABC_Error *pError);
-static tABC_CC  ABC_TxLoadTransaction(tABC_WalletID self, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateTxFilename(Wallet &self, char **pszFilename, const char *szTxID, bool bInternal, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadTransaction(Wallet &self, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError);
 static void     ABC_TxFreeTx(tABC_Tx *pTx);
-static tABC_CC  ABC_TxSaveTransaction(tABC_WalletID self, const tABC_Tx *pTx, tABC_Error *pError);
+static tABC_CC  ABC_TxSaveTransaction(Wallet &self, const tABC_Tx *pTx, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError);
 static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
-static tABC_CC  ABC_TxLoadAddress(tABC_WalletID self, const char *szAddressID, tABC_TxAddress **ppAddress, tABC_Error *pError);
-static tABC_CC  ABC_TxLoadAddressFile(tABC_WalletID self, const char *szFilename, tABC_TxAddress **ppAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadAddress(Wallet &self, const char *szAddressID, tABC_TxAddress **ppAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadAddressFile(Wallet &self, const char *szFilename, tABC_TxAddress **ppAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **ppState, tABC_Error *pError);
-static tABC_CC  ABC_TxSaveAddress(tABC_WalletID self, const tABC_TxAddress *pAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxSaveAddress(Wallet &self, const tABC_TxAddress *pAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pInfo, tABC_Error *pError);
-static tABC_CC  ABC_TxCreateAddressFilename(tABC_WalletID self, char **pszFilename, const tABC_TxAddress *pAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateAddressFilename(Wallet &self, char **pszFilename, const tABC_TxAddress *pAddress, tABC_Error *pError);
 static void     ABC_TxFreeAddress(tABC_TxAddress *pAddress);
 static void     ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo);
 static void     ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count);
-static tABC_CC  ABC_TxGetAddresses(tABC_WalletID self, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
+static tABC_CC  ABC_TxGetAddresses(Wallet &self, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static int      ABC_TxAddrPtrCompare(const void * a, const void * b);
-static tABC_CC  ABC_TxLoadAddressAndAppendToArray(tABC_WalletID self, const char *szFilename, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadAddressAndAppendToArray(Wallet &self, const char *szFilename, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 //static void     ABC_TxPrintAddresses(tABC_TxAddress **aAddresses, unsigned int count);
 static tABC_CC  ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError);
-static tABC_CC  ABC_TxTransactionExists(tABC_WalletID self, const char *szID, tABC_Tx **pTx, tABC_Error *pError);
+static tABC_CC  ABC_TxTransactionExists(Wallet &self, const char *szID, tABC_Tx **pTx, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
 static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError);
-static tABC_CC  ABC_TxWalletOwnsAddress(tABC_WalletID self, const char *szAddress, bool *bFound, tABC_Error *pError);
-static tABC_CC  ABC_TxTrashAddresses(tABC_WalletID self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
-static tABC_CC  ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
+static tABC_CC  ABC_TxWalletOwnsAddress(Wallet &self, const char *szAddress, bool *bFound, tABC_Error *pError);
+static tABC_CC  ABC_TxTrashAddresses(Wallet &self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
+static tABC_CC  ABC_TxCalcCurrency(Wallet &self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
 
 /**
  * Calculates a public address for the HD wallet main external chain.
@@ -198,13 +198,12 @@ static tABC_CC  ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi, do
  */
 static tABC_CC
 ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
-                                       tABC_U08Buf PrivateSeed,
+                               const DataChunk &seed,
                                        int32_t N,
                                        tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    libbitcoin::data_chunk seed(PrivateSeed.begin(), PrivateSeed.end());
     libwallet::hd_private_key m(seed);
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);
@@ -224,11 +223,9 @@ exit:
 }
 
 Status
-txKeyTableGet(KeyTable &result, tABC_WalletID self)
+txKeyTableGet(KeyTable &result, Wallet &self)
 {
-    U08Buf seed; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(self, &seed, &error));
-    libwallet::hd_private_key m(DataChunk(seed.begin(), seed.end()));
+    libwallet::hd_private_key m(self.bitcoinKey());
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);
 
@@ -255,7 +252,7 @@ txKeyTableGet(KeyTable &result, tABC_WalletID self)
 }
 
 Status
-txNewChangeAddress(std::string &result, tABC_WalletID self,
+txNewChangeAddress(std::string &result, Wallet &self,
     tABC_TxDetails *pDetails)
 {
     AutoFree<tABC_TxAddress, ABC_TxFreeAddress> pAddress;
@@ -266,7 +263,7 @@ txNewChangeAddress(std::string &result, tABC_WalletID self,
     return Status();
 }
 
-tABC_CC ABC_TxSendComplete(tABC_WalletID self,
+tABC_CC ABC_TxSendComplete(Wallet &self,
                            SendInfo         *pInfo,
                            tABC_UnsavedTx   *pUtx,
                            tABC_Error       *pError)
@@ -342,10 +339,8 @@ tABC_CC ABC_TxSendComplete(tABC_WalletID self,
         ABC_CHECK_RET(ABC_TxDupDetails(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
 
         // Set the payee name:
-        AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pWallet;
-        ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet.get(), pError));
         ABC_FREE_STR(pReceiveTx->pDetails->szName);
-        ABC_STRDUP(pReceiveTx->pDetails->szName, pWallet->szName);
+        ABC_STRDUP(pReceiveTx->pDetails->szName, self.name().c_str());
 
         pReceiveTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi;
 
@@ -355,7 +350,7 @@ tABC_CC ABC_TxSendComplete(tABC_WalletID self,
         //
         pReceiveTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
-        ABC_CHECK_RET(ABC_TxCalcCurrency(pInfo->walletDest,
+        ABC_CHECK_RET(ABC_TxCalcCurrency(*pInfo->walletDest,
             pReceiveTx->pDetails->amountSatoshi, &pReceiveTx->pDetails->amountCurrency, pError));
 
         if (pReceiveTx->pDetails->amountSatoshi < 0)
@@ -367,7 +362,7 @@ tABC_CC ABC_TxSendComplete(tABC_WalletID self,
         ABC_STRDUP(pReceiveTx->szID, pUtx->szTxId);
 
         // save the transaction
-        ABC_CHECK_RET(ABC_TxSaveTransaction(pInfo->walletDest, pReceiveTx, pError));
+        ABC_CHECK_RET(ABC_TxSaveTransaction(*pInfo->walletDest, pReceiveTx, pError));
     }
 
 exit:
@@ -376,7 +371,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_TxWalletOwnsAddress(tABC_WalletID self,
+tABC_CC ABC_TxWalletOwnsAddress(Wallet &self,
                                 const char *szAddress,
                                 bool *bFound,
                                 tABC_Error *pError)
@@ -406,7 +401,7 @@ exit:
  * @param pCount            Pointer to store number of addresses
  * @param pError            A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxGetPubAddresses(tABC_WalletID self,
+tABC_CC ABC_TxGetPubAddresses(Wallet &self,
                               char ***paAddresses,
                               unsigned int *pCount,
                               tABC_Error *pError)
@@ -430,7 +425,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_TxWatchAddresses(tABC_WalletID self,
+tABC_CC ABC_TxWatchAddresses(Wallet &self,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -533,7 +528,7 @@ exit:
 /**
  * Handles creating or updating when we receive a transaction
  */
-tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
+tABC_CC ABC_TxReceiveTransaction(Wallet &self,
                                  uint64_t amountSatoshi, uint64_t feeSatoshi,
                                  tABC_TxOutput **paInAddresses, unsigned int inAddressCount,
                                  tABC_TxOutput **paOutAddresses, unsigned int outAddressCount,
@@ -607,7 +602,7 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
                         pTx, paOutAddresses, outAddressCount, pError));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
-        ABC_CHECK_RET(ABC_WalletDirtyCache(self, pError));
+        self.balanceDirty();
 
         if (fAsyncBitCoinEventCallback)
         {
@@ -615,7 +610,7 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
             info.pData = pData;
             info.eventType = ABC_AsyncEventType_IncomingBitCoin;
             ABC_STRDUP(info.szTxID, pTx->szID);
-            ABC_STRDUP(info.szWalletUUID, self.szUUID);
+            ABC_STRDUP(info.szWalletUUID, self.id().c_str());
             ABC_STRDUP(info.szDescription, "Received funds");
             fAsyncBitCoinEventCallback(&info);
             ABC_FREE_STR(info.szTxID);
@@ -629,7 +624,7 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
                         pTx, paOutAddresses, outAddressCount, pError));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
-        ABC_CHECK_RET(ABC_WalletDirtyCache(self, pError));
+        self.balanceDirty();
 
         if (fAsyncBitCoinEventCallback)
         {
@@ -637,7 +632,7 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
             info.pData = pData;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
             ABC_STRDUP(info.szTxID, pTx->szID);
-            ABC_STRDUP(info.szWalletUUID, self.szUUID);
+            ABC_STRDUP(info.szWalletUUID, self.id().c_str());
             ABC_STRDUP(info.szDescription, "Updated balance");
             fAsyncBitCoinEventCallback(&info);
             ABC_FREE_STR(info.szTxID);
@@ -659,7 +654,7 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_TxTrashAddresses(tABC_WalletID self,
+tABC_CC ABC_TxTrashAddresses(Wallet &self,
                              bool bAdd,
                              tABC_Tx *pTx,
                              tABC_TxOutput **paAddresses,
@@ -733,28 +728,20 @@ exit:
 
 /**
  * Calculates the amount of currency based off of Wallet's currency code
- *
- * @param tABC_WalletID
- * @param amountSatoshi
- * @param pCurrency     Point to double
- * @param pError        A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_TxCalcCurrency(tABC_WalletID self, int64_t amountSatoshi,
+tABC_CC ABC_TxCalcCurrency(Wallet &self, int64_t amountSatoshi,
                            double *pCurrency, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     double currency = 0.0;
-    tABC_WalletInfo *pWallet = NULL;
 
-    ABC_CHECK_RET(ABC_WalletGetInfo(self, &pWallet, pError));
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
-        currency, amountSatoshi, static_cast<Currency>(pWallet->currencyNum)));
+        currency, amountSatoshi, static_cast<Currency>(self.currency())));
 
     *pCurrency = currency;
-exit:
-    ABC_WalletFreeInfo(pWallet);
 
+exit:
     return cc;
 }
 
@@ -766,7 +753,7 @@ exit:
  * @param pszRequestID  Pointer to store allocated ID for this request
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxCreateReceiveRequest(tABC_WalletID self,
+tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
                                    tABC_TxDetails *pDetails,
                                    char **pszRequestID,
                                    bool bTransfer,
@@ -797,7 +784,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_TxCreateInitialAddresses(tABC_WalletID self,
+tABC_CC ABC_TxCreateInitialAddresses(Wallet &self,
                                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -831,7 +818,7 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_TxCreateNewAddress(tABC_WalletID self,
+tABC_CC ABC_TxCreateNewAddress(Wallet &self,
                                tABC_TxDetails *pDetails,
                                tABC_TxAddress **ppAddress,
                                tABC_Error *pError)
@@ -868,9 +855,7 @@ tABC_CC ABC_TxCreateNewAddress(tABC_WalletID self,
             if (pAddress == NULL)
             {
                 char *szRegenAddress = NULL;
-                AutoU08Buf Seed;
-                ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeedDisk(self, &Seed, pError));
-                ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&szRegenAddress, Seed, aAddresses[i]->seq, pError));
+                ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&szRegenAddress, self.bitcoinKey(), aAddresses[i]->seq, pError));
 
                 if (strncmp(aAddresses[i]->szPubAddress, szRegenAddress, strlen(aAddresses[i]->szPubAddress)) == 0)
                 {
@@ -936,18 +921,14 @@ exit:
 }
 
 static
-tABC_CC ABC_TxCreateNewAddressForN(tABC_WalletID self, int32_t N, tABC_Error *pError)
+tABC_CC ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     tABC_TxAddress *pAddress = NULL;
-    AutoU08Buf Seed;
 
     // Now we know the latest N, create a new address
     ABC_NEW(pAddress, tABC_TxAddress);
-
-    // get the private seed so we can generate the public address
-    ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeedDisk(self, &Seed, pError));
 
     // generate the public address
     pAddress->szPubAddress = NULL;
@@ -958,7 +939,7 @@ tABC_CC ABC_TxCreateNewAddressForN(tABC_WalletID self, int32_t N, tABC_Error *pE
         pAddress->seq++;
 
         // Get the public address for our sequence (it can return NULL, if it is invalid)
-        ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), Seed, pAddress->seq, pError));
+        ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), self.bitcoinKey(), pAddress->seq, pError));
     } while (pAddress->szPubAddress == NULL);
 
     // set the final ID
@@ -999,7 +980,7 @@ exit:
  * @param pDetails      Pointer to transaction details
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxModifyReceiveRequest(tABC_WalletID self,
+tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
                                    const char *szRequestID,
                                    tABC_TxDetails *pDetails,
                                    tABC_Error *pError)
@@ -1013,8 +994,8 @@ tABC_CC ABC_TxModifyReceiveRequest(tABC_WalletID self,
     tABC_TxDetails *pNewDetails = NULL;
 
     // get the filename for this request (note: interally requests are addresses)
-    ABC_CHECK_RET(ABC_GetAddressFilename(self.szUUID, szRequestID, &szFile, pError));
-    path = walletAddressDir(self.szUUID) + szFile;
+    ABC_CHECK_RET(ABC_GetAddressFilename(self, szRequestID, &szFile, pError));
+    path = self.addressDir() + szFile;
 
     // load the request address
     ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), &pAddress, pError));
@@ -1043,13 +1024,12 @@ exit:
 /**
  * Gets the filename for a given address based upon the address id
  *
- * @param szWalletUUID  UUID of the wallet associated with this address
  * @param szAddressID   ID of this address
  * @param pszFilename   Address to store pointer to filename
  * @param pError        A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
+tABC_CC ABC_GetAddressFilename(Wallet &self,
                                const char *szAddressID,
                                char **pszFilename,
                                tABC_Error *pError)
@@ -1057,12 +1037,10 @@ tABC_CC ABC_GetAddressFilename(const char *szWalletUUID,
     tABC_CC cc = ABC_CC_Ok;
     AutoFileLock lock(gFileMutex); // We are iterating over the filesystem
 
-    std::string addressDir = walletAddressDir(szWalletUUID);
+    std::string addressDir = self.addressDir();
     tABC_FileIOList *pFileList = NULL;
     char *szID = NULL;
 
-    ABC_CHECK_NULL(szWalletUUID);
-    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet UUID provided");
     ABC_CHECK_NULL(szAddressID);
     ABC_CHECK_ASSERT(strlen(szAddressID) > 0, ABC_CC_Error, "No address UUID provided");
     ABC_CHECK_NULL(pszFilename);
@@ -1177,7 +1155,7 @@ exit:
  * @param szRequestID   ID of this request
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxFinalizeReceiveRequest(tABC_WalletID self,
+tABC_CC ABC_TxFinalizeReceiveRequest(Wallet &self,
                                      const char *szRequestID,
                                      tABC_Error *pError)
 {
@@ -1199,7 +1177,7 @@ exit:
  * @param szRequestID   ID of this request
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxCancelReceiveRequest(tABC_WalletID self,
+tABC_CC ABC_TxCancelReceiveRequest(Wallet &self,
                                    const char *szRequestID,
                                    tABC_Error *pError)
 {
@@ -1221,7 +1199,7 @@ exit:
  * @param pError        A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_TxSetAddressRecycle(tABC_WalletID self,
+tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
                                 const char *szAddress,
                                 bool bRecyclable,
                                 tABC_Error *pError)
@@ -1235,8 +1213,8 @@ tABC_CC ABC_TxSetAddressRecycle(tABC_WalletID self,
     tABC_TxDetails *pNewDetails = NULL;
 
     // get the filename for this address
-    ABC_CHECK_RET(ABC_GetAddressFilename(self.szUUID, szAddress, &szFile, pError));
-    path = walletAddressDir(self.szUUID) + szFile;
+    ABC_CHECK_RET(ABC_GetAddressFilename(self, szAddress, &szFile, pError));
+    path = self.addressDir() + szFile;
 
     // load the request address
     ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), &pAddress, pError));
@@ -1270,7 +1248,7 @@ exit:
  * @param pWidth        Pointer to store width of image (image will be square)
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxGenerateRequestQRCode(tABC_WalletID self,
+tABC_CC ABC_TxGenerateRequestQRCode(Wallet &self,
                                     const char *szRequestID,
                                     char **pszURI,
                                     unsigned char **paData,
@@ -1345,7 +1323,7 @@ exit:
  *                          (caller must free)
  * @param pError            A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxGetTransaction(tABC_WalletID self,
+tABC_CC ABC_TxGetTransaction(Wallet &self,
                              const char *szID,
                              tABC_TxInfo **ppTransaction,
                              tABC_Error *pError)
@@ -1396,7 +1374,7 @@ exit:
  * @param pCount            Pointer to store number of transactions
  * @param pError            A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
+tABC_CC ABC_TxGetTransactions(Wallet &self,
                               int64_t startTime,
                               int64_t endTime,
                               tABC_TxInfo ***paTransactions,
@@ -1407,7 +1385,7 @@ tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
     AutoCoreLock lock(gCoreMutex);
     AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
 
-    std::string txDir = walletTxDir(self.szUUID);
+    std::string txDir = self.txDir();
     tABC_FileIOList *pFileList = NULL;
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
@@ -1489,7 +1467,7 @@ exit:
  * @param pCount            Pointer to store number of transactions
  * @param pError            A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxSearchTransactions(tABC_WalletID self,
+tABC_CC ABC_TxSearchTransactions(Wallet &self,
                                  const char *szQuery,
                                  tABC_TxInfo ***paTransactions,
                                  unsigned int *pCount,
@@ -1710,7 +1688,7 @@ exit:
  * @param pError            A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_TxLoadTransactionInfo(tABC_WalletID self,
+tABC_CC ABC_TxLoadTransactionInfo(Wallet &self,
                                   const char *szFilename,
                                   tABC_TxInfo **ppTransaction,
                                   tABC_Error *pError)
@@ -1762,7 +1740,7 @@ exit:
  * @param pError            A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_TxLoadTxAndAppendToArray(tABC_WalletID self,
+tABC_CC ABC_TxLoadTxAndAppendToArray(Wallet &self,
                                      int64_t startTime,
                                      int64_t endTime,
                                      const char *szFilename,
@@ -1859,7 +1837,7 @@ void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
  * @param pDetails          Details for the transaction
  * @param pError            A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxSetTransactionDetails(tABC_WalletID self,
+tABC_CC ABC_TxSetTransactionDetails(Wallet &self,
                                     const char *szID,
                                     tABC_TxDetails *pDetails,
                                     tABC_Error *pError)
@@ -1920,7 +1898,7 @@ exit:
  *                          (caller must free)
  * @param pError            A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxGetTransactionDetails(tABC_WalletID self,
+tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
                                     const char *szID,
                                     tABC_TxDetails **ppDetails,
                                     tABC_Error *pError)
@@ -1973,7 +1951,7 @@ exit:
  * @param pszAddress        Location to store allocated address string (caller must free)
  * @param pError            A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxGetRequestAddress(tABC_WalletID self,
+tABC_CC ABC_TxGetRequestAddress(Wallet &self,
                                 const char *szRequestID,
                                 char **pszAddress,
                                 tABC_Error *pError)
@@ -2001,7 +1979,7 @@ exit:
  * @param pCount            Pointer to store number of requests
  * @param pError            A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_TxGetPendingRequests(tABC_WalletID self,
+tABC_CC ABC_TxGetPendingRequests(Wallet &self,
                                  tABC_RequestInfo ***paRequests,
                                  unsigned int *pCount,
                                  tABC_Error *pError)
@@ -2171,7 +2149,7 @@ exit:
  * @param pError         A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_TxBuildFromLabel(tABC_WalletID self,
+tABC_CC ABC_TxBuildFromLabel(Wallet &self,
                              const char **pszLabel, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -2182,7 +2160,7 @@ tABC_CC ABC_TxBuildFromLabel(tABC_WalletID self,
     ABC_CHECK_NULL(pszLabel);
     *pszLabel = NULL;
 
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(*self.account, &pSettings.get(), pError));
+    ABC_CHECK_RET(ABC_AccountSettingsLoad(self.account, &pSettings.get(), pError));
 
     if (pSettings->bNameOnPayments && pSettings->szFullName)
     {
@@ -2238,7 +2216,7 @@ void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
  * @param funds     Amount of funds swept
  * @param pDetails  Tx Details
  */
-tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
+tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
                                    const char *txId,
                                    const char *malTxId,
                                    uint64_t funds,
@@ -2247,7 +2225,6 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_Tx *pTx = NULL;
-    tABC_WalletInfo *pWalletInfo = NULL;
     double currency;
 
     ABC_NEW(pTx, tABC_Tx);
@@ -2264,17 +2241,16 @@ tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
     pTx->pDetails->amountSatoshi = funds;
     pTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
-    ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWalletInfo, pError));
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
         currency, pTx->pDetails->amountSatoshi,
-        static_cast<Currency>(pWalletInfo->currencyNum)));
+        static_cast<Currency>(wallet.currency())));
     pTx->pDetails->amountCurrency = currency;
 
     // save the transaction
     ABC_CHECK_RET(ABC_TxSaveTransaction(wallet, pTx, pError));
+
 exit:
     ABC_TxFreeTx(pTx);
-    ABC_WalletFreeInfo(pWalletInfo);
     return cc;
 }
 
@@ -2286,21 +2262,13 @@ exit:
  * @param pszFilename Output filename name. The caller must free this.
  */
 static
-tABC_CC ABC_TxCreateTxFilename(tABC_WalletID self, char **pszFilename, const char *szTxID, bool bInternal, tABC_Error *pError)
+tABC_CC ABC_TxCreateTxFilename(Wallet &self, char **pszFilename, const char *szTxID, bool bInternal, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    U08Buf MK; // Do not free
-    std::string path;
-
-    *pszFilename = NULL;
-
-    // Get the master key we will need to encode the filename
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
-
-    path = walletTxDir(self.szUUID) + cryptoFilename(MK, szTxID) +
+    std::string path = self.txDir() + cryptoFilename(self.dataKey(), szTxID) +
         (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX);
+
     ABC_STRDUP(*pszFilename, path.c_str());
 
 exit:
@@ -2314,7 +2282,7 @@ exit:
  *              (it is the callers responsiblity to free this transaction)
  */
 static
-tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
+tABC_CC ABC_TxLoadTransaction(Wallet &self,
                               const char *szFilename,
                               tABC_Tx **ppTx,
                               tABC_Error *pError)
@@ -2322,22 +2290,17 @@ tABC_CC ABC_TxLoadTransaction(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    U08Buf MK; // Do not free
     json_t *pJSON_Root = NULL;
     tABC_Tx *pTx = NULL;
     json_t *jsonVal = NULL;
 
     *ppTx = NULL;
 
-    // Get the master key we will need to decode the transaction data
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
-
     // make sure the transaction exists
     ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoTransaction, "Transaction does not exist");
 
     // load the json object (load file, decrypt it, create json object
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, MK, &pJSON_Root, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, toU08Buf(self.dataKey()), &pJSON_Root, pError));
 
     // start decoding
 
@@ -2539,7 +2502,7 @@ void ABC_TxFreeTx(tABC_Tx *pTx)
  * @param pTx  Pointer to transaction data
  */
 static
-tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
+tABC_CC ABC_TxSaveTransaction(Wallet &self,
                               const tABC_Tx *pTx,
                               tABC_Error *pError)
 {
@@ -2547,7 +2510,6 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
     AutoCoreLock lock(gCoreMutex);
     int e;
 
-    U08Buf MK; // Do not free
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
     json_t *pJSON_OutputArray = NULL;
@@ -2556,10 +2518,6 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
     ABC_CHECK_NULL(pTx->pStateInfo);
     ABC_CHECK_NULL(pTx->szID);
     ABC_CHECK_ASSERT(strlen(pTx->szID) > 0, ABC_CC_Error, "No transaction ID provided");
-
-    // Get the master key we will need to encode the transaction data
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
 
     // create the json for the transaction
     pJSON_Root = json_object();
@@ -2611,15 +2569,16 @@ tABC_CC ABC_TxSaveTransaction(tABC_WalletID self,
     ABC_CHECK_ASSERT(e == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // create the transaction directory if needed
-    ABC_CHECK_NEW(fileEnsureDir(walletTxDir(self.szUUID)));
+    ABC_CHECK_NEW(fileEnsureDir(self.txDir()));
 
     // get the filename for this transaction
     ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, pTx->szID, pTx->pStateInfo->bInternal, pError));
 
     // save out the transaction object to a file encrypted with the master key
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, MK, ABC_CryptoType_AES256, szFilename, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, toU08Buf(self.dataKey()), ABC_CryptoType_AES256, szFilename, pError));
 
-    ABC_CHECK_RET(ABC_WalletDirtyCache(self, pError));
+    self.balanceDirty();
+
 exit:
     ABC_FREE_STR(szFilename);
     ABC_CLEAR_FREE(ppJSON_Output, sizeof(json_t *) * pTx->countOutputs);
@@ -2778,7 +2737,7 @@ int ABC_TxInfoPtrCompare (const void * a, const void * b)
  * @param pError        A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_TxLoadAddress(tABC_WalletID self,
+tABC_CC ABC_TxLoadAddress(Wallet &self,
                           const char *szAddressID,
                           tABC_TxAddress **ppAddress,
                           tABC_Error *pError)
@@ -2790,8 +2749,8 @@ tABC_CC ABC_TxLoadAddress(tABC_WalletID self,
     std::string path;
 
     // get the filename for this address
-    ABC_CHECK_RET(ABC_GetAddressFilename(self.szUUID, szAddressID, &szFile, pError));
-    path = walletAddressDir(self.szUUID) + szFile;
+    ABC_CHECK_RET(ABC_GetAddressFilename(self, szAddressID, &szFile, pError));
+    path = self.addressDir() + szFile;
 
     // load the request address
     ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), ppAddress, pError));
@@ -2809,7 +2768,7 @@ exit:
  *                   (it is the callers responsiblity to free this address)
  */
 static
-tABC_CC ABC_TxLoadAddressFile(tABC_WalletID self,
+tABC_CC ABC_TxLoadAddressFile(Wallet &self,
                               const char *szFilename,
                               tABC_TxAddress **ppAddress,
                               tABC_Error *pError)
@@ -2817,22 +2776,17 @@ tABC_CC ABC_TxLoadAddressFile(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    U08Buf MK; // Do not free
     json_t *pJSON_Root = NULL;
     tABC_TxAddress *pAddress = NULL;
     json_t *jsonVal = NULL;
 
     *ppAddress = NULL;
 
-    // Get the master key we will need to decode the transaction data
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
-
     // make sure the addresss exists
     ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoRequest, "Request address does not exist");
 
     // load the json object (load file, decrypt it, create json object
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, MK, &pJSON_Root, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, toU08Buf(self.dataKey()), &pJSON_Root, pError));
 
     // start decoding
 
@@ -2961,24 +2915,19 @@ exit:
  * @param pAddress  Pointer to address data
  */
 static
-tABC_CC ABC_TxSaveAddress(tABC_WalletID self,
+tABC_CC ABC_TxSaveAddress(Wallet &self,
                           const tABC_TxAddress *pAddress,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    U08Buf MK; // Do not free
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL(pAddress->pStateInfo);
     ABC_CHECK_NULL(pAddress->szID);
     ABC_CHECK_ASSERT(strlen(pAddress->szID) > 0, ABC_CC_Error, "No address ID provided");
-
-    // Get the master key we will need to encode the address data
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
 
     // create the json for the transaction
     pJSON_Root = json_object();
@@ -2997,13 +2946,13 @@ tABC_CC ABC_TxSaveAddress(tABC_WalletID self,
     ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pAddress->pDetails, pError));
 
     // create the address directory if needed
-    ABC_CHECK_NEW(fileEnsureDir(walletAddressDir(self.szUUID)));
+    ABC_CHECK_NEW(fileEnsureDir(self.addressDir()));
 
     // create the filename for this transaction
     ABC_CHECK_RET(ABC_TxCreateAddressFilename(self, &szFilename, pAddress, pError));
 
     // save out the transaction object to a file encrypted with the master key
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, MK, ABC_CryptoType_AES256, szFilename, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, toU08Buf(self.dataKey()), ABC_CryptoType_AES256, szFilename, pError));
 
 exit:
     ABC_FREE_STR(szFilename);
@@ -3097,22 +3046,14 @@ exit:
  * @param pszFilename Output filename name. The caller must free this.
  */
 static
-tABC_CC ABC_TxCreateAddressFilename(tABC_WalletID self, char **pszFilename, const tABC_TxAddress *pAddress, tABC_Error *pError)
+tABC_CC ABC_TxCreateAddressFilename(Wallet &self, char **pszFilename, const tABC_TxAddress *pAddress, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    U08Buf MK; // Do not free
-    std::string path;
-
-    *pszFilename = NULL;
-
-    // Get the master key we will need to encode the filename
-    // (note that this will also make sure the account and wallet exist)
-    ABC_CHECK_RET(ABC_WalletGetMK(self, &MK, pError));
-
-    path = walletAddressDir(self.szUUID) +
+    std::string path = self.addressDir() +
         std::to_string(pAddress->seq) + "-" +
-        cryptoFilename(MK, pAddress->szPubAddress) + ".json";
+        cryptoFilename(self.dataKey(), pAddress->szPubAddress) + ".json";;
+
     ABC_STRDUP(*pszFilename, path.c_str());
 
 exit:
@@ -3211,7 +3152,7 @@ void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count)
  * @param pError            A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
+tABC_CC ABC_TxGetAddresses(Wallet &self,
                            tABC_TxAddress ***paAddresses,
                            unsigned int *pCount,
                            tABC_Error *pError)
@@ -3220,7 +3161,7 @@ tABC_CC ABC_TxGetAddresses(tABC_WalletID self,
     AutoCoreLock lock(gCoreMutex);
     AutoFileLock fileLock(gFileMutex); // We are iterating over the filesystem
 
-    std::string addressDir = walletAddressDir(self.szUUID);
+    std::string addressDir = self.addressDir();
     tABC_FileIOList *pFileList = NULL;
     tABC_TxAddress **aAddresses = NULL;
     unsigned int count = 0;
@@ -3306,7 +3247,7 @@ int ABC_TxAddrPtrCompare(const void * a, const void * b)
  * @param pError            A pointer to the location to store the error if there is one
  */
 static
-tABC_CC ABC_TxLoadAddressAndAppendToArray(tABC_WalletID self,
+tABC_CC ABC_TxLoadAddressAndAppendToArray(Wallet &self,
                                           const char *szFilename,
                                           tABC_TxAddress ***paAddresses,
                                           unsigned int *pCount,
@@ -3471,7 +3412,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_TxTransactionExists(tABC_WalletID self,
+tABC_CC ABC_TxTransactionExists(Wallet &self,
                                 const char *szID,
                                 tABC_Tx **pTx,
                                 tABC_Error *pError)

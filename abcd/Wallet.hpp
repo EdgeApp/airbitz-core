@@ -36,75 +36,17 @@
 #ifndef ABC_Wallet_h
 #define ABC_Wallet_h
 
-#include "General.hpp"
-#include "util/Data.hpp"
 #include "../src/ABC.h"
 
 namespace abcd {
 
-class Account;
+class Wallet;
 
-std::string walletDir(const std::string &id);
-std::string walletSyncDir(const std::string &id);
-std::string walletAddressDir(const std::string &id);
-std::string walletTxDir(const std::string &id);
-
-/* Temporary struct to bundle wallet identification. This will become
- * an opaque pointer to the wallet itself at some point. */
-typedef struct sABC_WalletID
-{
-    const Account *account;
-    const char *szUUID;
-} tABC_WalletID;
-
-tABC_WalletID ABC_WalletID(const Account &account,
-                           const char *szUUID);
-
-tABC_CC ABC_WalletIDCopy(tABC_WalletID *out,
-                         tABC_WalletID in,
-                         tABC_Error *pError);
-
-void ABC_WalletIDFree(tABC_WalletID in);
-
-tABC_CC ABC_WalletRemoveFromCache(const char *szUUID, tABC_Error *pError);
-
-void ABC_WalletClearCache();
-
-tABC_CC ABC_WalletSetName(tABC_WalletID self,
-                          const char *szName,
-                          tABC_Error *pError);
-
-tABC_CC ABC_WalletDirtyCache(tABC_WalletID self,
-                             tABC_Error *pError);
-
-tABC_CC ABC_WalletGetInfo(tABC_WalletID self,
+tABC_CC ABC_WalletGetInfo(Wallet &self,
                           tABC_WalletInfo **ppWalletInfo,
                           tABC_Error *pError);
 
 void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo);
-
-tABC_CC ABC_WalletGetMK(tABC_WalletID self,
-                        tABC_U08Buf *pMK,
-                        tABC_Error *pError);
-
-tABC_CC ABC_WalletGetBitcoinPrivateSeed(tABC_WalletID self,
-                                        tABC_U08Buf *pSeed,
-                                        tABC_Error *pError);
-
-tABC_CC ABC_WalletGetBitcoinPrivateSeedDisk(tABC_WalletID self,
-                                            tABC_U08Buf *pSeed,
-                                            tABC_Error *pError);
-
-// Blocking functions:
-tABC_CC ABC_WalletCreate(Account &account,
-                         const char *szWalletName,
-                         int  currencyNum,
-                         char **pszUUID,
-                         tABC_Error *pError);
-
-tABC_CC ABC_WalletSyncData(tABC_WalletID self,
-                           bool &dirty,
-                           tABC_Error *pError);
 
 } // namespace abcd
 

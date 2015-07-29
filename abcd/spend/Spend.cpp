@@ -8,6 +8,7 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "PaymentProto.hpp"
+#include "../General.hpp"
 #include "../Tx.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
@@ -19,7 +20,7 @@ namespace abcd {
 #define NO_AB_FEES
 
 static Status
-spendMakeTx(libbitcoin::transaction_type &result, tABC_WalletID self,
+spendMakeTx(libbitcoin::transaction_type &result, Wallet &self,
     SendInfo *pInfo, const std::string &changeAddress)
 {
     Watcher *watcher = nullptr;
@@ -47,7 +48,7 @@ spendMakeTx(libbitcoin::transaction_type &result, tABC_WalletID self,
  * Fills in the tABC_UnsavedTx structure.
  */
 static tABC_CC
-ABC_BridgeExtractOutputs(tABC_WalletID self, tABC_UnsavedTx **ppUtx,
+ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
                          const libbitcoin::transaction_type &tx,
                          tABC_Error *pError)
 {
@@ -115,8 +116,6 @@ SendInfo::~SendInfo()
     ABC_FREE_STR(szDestAddress);
     delete paymentRequest;
     ABC_TxFreeDetails(pDetails);
-    if (bTransfer)
-        ABC_WalletIDFree(walletDest);
 }
 
 SendInfo::SendInfo()
@@ -127,7 +126,7 @@ SendInfo::SendInfo()
     bTransfer = false;
 }
 
-tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, SendInfo *pInfo, uint64_t *pTotalFees, tABC_Error *pError)
+tABC_CC  ABC_TxCalcSendFees(Wallet &self, SendInfo *pInfo, uint64_t *pTotalFees, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
@@ -150,7 +149,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
+tABC_CC ABC_BridgeMaxSpendable(Wallet &self,
                                SendInfo *pInfo,
                                uint64_t *pMaxSatoshi,
                                tABC_Error *pError)
@@ -191,7 +190,7 @@ exit:
  * @param pInfo Pointer to transaction information
  * @param pszTxID Pointer to hold allocated pointer to transaction ID string
  */
-tABC_CC ABC_TxSend(tABC_WalletID self,
+tABC_CC ABC_TxSend(Wallet &self,
                    SendInfo         *pInfo,
                    char             **pszTxID,
                    tABC_Error       *pError)

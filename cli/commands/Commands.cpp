@@ -7,7 +7,6 @@
 
 #include "../Command.hpp"
 #include "../Util.hpp"
-#include "../../abcd/Wallet.hpp"
 #include "../../abcd/account/Account.hpp"
 #include "../../abcd/bitcoin/WatcherBridge.hpp"
 #include "../../abcd/crypto/Encoding.hpp"
@@ -16,6 +15,8 @@
 #include "../../abcd/login/Login.hpp"
 #include "../../abcd/util/FileIO.hpp"
 #include "../../abcd/util/Util.hpp"
+#include "../../abcd/wallet/Wallet.hpp"
+#include "../../src/LoginShim.hpp"
 #include <wallet/wallet.hpp>
 #include <iostream>
 
@@ -166,15 +167,10 @@ COMMAND(InitLevel::account, DataSync, "data-sync")
 
 COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... generate-addresses <user> <pass> <wallet-name> <count>");
 
-    tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(wallet, &data, &error));
-
-    libbitcoin::data_chunk seed(data.begin(), data.end());
-    libwallet::hd_private_key m(seed);
+    libwallet::hd_private_key m(session.wallet->bitcoinKey());
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);
     long max = strtol(argv[3], 0, 10);
@@ -189,13 +185,10 @@ COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
 
 COMMAND(InitLevel::wallet, GetBitcoinSeed, "get-bitcoin-seed")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-bitcoin-seed <user> <pass> <wallet-name>");
 
-    tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(wallet, &data, &error));
-    std::cout << base16Encode(data) << std::endl;
+    std::cout << base16Encode(session.wallet->bitcoinKey()) << std::endl;
 
     return Status();
 }
@@ -281,16 +274,16 @@ COMMAND(InitLevel::wallet, GetWalletInfo, "get-wallet-info")
     if (argc != 3)
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-wallet-info <user> <pass> <wallet-name>");
 
+    // Obtain the balance:
     WatcherThread thread;
     ABC_CHECK(thread.init(session));
+    int64_t balance;
+    ABC_CHECK(session.wallet->balance(balance));
 
-    AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pInfo;
-    ABC_CHECK_OLD(ABC_GetWalletInfo(session.username, session.password, session.uuid, &pInfo.get(), &error));
-
-    ABC_DebugLog("UUID: %s", pInfo->szUUID);
-    ABC_DebugLog("Name: %s", pInfo->szName);
-    ABC_DebugLog("Balance: %f, BTC (%ld satoshi)",
-        pInfo->balanceSatoshi / 100000000.0, pInfo->balanceSatoshi);
+    std::cout << "id:      " << session.wallet->id() << std::endl;
+    std::cout << "name:    " << session.wallet->name() << std::endl;
+    std::cout << "balance: " << balance / 100000000.0 <<
+        " (" << balance << " satoshis)" << std::endl;
 
     return Status();
 }
@@ -312,24 +305,13 @@ COMMAND(InitLevel::account, ListWallets, "list-wallets")
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... list-wallets <user> <pass>");
 
-    // Setup:
-    ABC_CHECK(syncAll(*session.account));
-
     // Iterate over wallets:
     auto ids = session.account->wallets.list();
     for (const auto &id: ids)
     {
-        JsonBox box;
-        ABC_CHECK(box.load(walletSyncDir(id) + "WalletName.json"));
-
-        auto wallet = ABC_WalletID(*session.account, id.c_str());
-        U08Buf dataKey;
-        ABC_CHECK_OLD(ABC_WalletGetMK(wallet, &dataKey, &error));
-
-        DataChunk data;
-        ABC_CHECK(box.decrypt(data, dataKey));
-
-        std::cout << id << ": " << toString(data) << std::endl;
+        std::shared_ptr<Wallet> wallet;
+        ABC_CHECK(cacheWallet(wallet, nullptr, id.c_str()));
+        std::cout << wallet->id() << ": " << wallet->name() << std::endl;
     }
 
     return Status();
@@ -392,7 +374,6 @@ COMMAND(InitLevel::account, RemoveCategory, "remove-category")
 
 COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 6)
         return ABC_ERROR(ABC_CC_Error, "usage: ... search-bitcoin-seed <user> <pass> <wallet-name> <addr> <start> <end>");
 
@@ -400,11 +381,7 @@ COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed")
     long end = strtol(argv[5], 0, 10);
     char *szMatchAddr = argv[3];
 
-    tABC_U08Buf data; // Do not free
-    ABC_CHECK_OLD(ABC_WalletGetBitcoinPrivateSeed(wallet, &data, &error));
-
-    libbitcoin::data_chunk seed(data.begin(), data.end());
-    libwallet::hd_private_key m(seed);
+    libwallet::hd_private_key m(session.wallet->bitcoinKey());
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);
 
@@ -490,18 +467,14 @@ COMMAND(InitLevel::wallet, WalletArchive, "wallet-archive")
 
 COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-decrypt <user> <pass> <wallet-name> <file>");
-
-    U08Buf dataKey;
-    ABC_CHECK_OLD(ABC_WalletGetMK(wallet, &dataKey, &error));
 
     JsonBox box;
     ABC_CHECK(box.load(argv[3]));
 
     DataChunk data;
-    ABC_CHECK(box.decrypt(data, dataKey));
+    ABC_CHECK(box.decrypt(data, session.wallet->dataKey()));
     std::cout << toString(data) << std::endl;
     printf("\n");
 
@@ -510,18 +483,14 @@ COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
 
 COMMAND(InitLevel::wallet, WalletEncrypt, "wallet-encrypt")
 {
-    auto wallet = ABC_WalletID(*session.account, session.uuid);
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-encrypt <user> <pass> <wallet-name> <file>");
-
-    U08Buf dataKey;
-    ABC_CHECK_OLD(ABC_WalletGetMK(wallet, &dataKey, &error));
 
     DataChunk contents;
     ABC_CHECK(fileLoad(contents, argv[3]));
 
     JsonBox box;
-    ABC_CHECK(box.encrypt(contents, dataKey));
+    ABC_CHECK(box.encrypt(contents, session.wallet->dataKey()));
 
     std::string str;
     ABC_CHECK(box.encode(str));

@@ -6,12 +6,12 @@
 #ifndef ABCD_SPEND_SPEND_HPP
 #define ABCD_SPEND_SPEND_HPP
 
-#include "../Wallet.hpp"
 #include "../util/Status.hpp"
 
 namespace abcd {
 
 class PaymentRequest;
+class Wallet;
 
 /**
  * Options for sending money.
@@ -27,21 +27,21 @@ struct SendInfo
 
     // Transfer from one wallet to another:
     bool                    bTransfer;
-    tABC_WalletID           walletDest;
+    Wallet                  *walletDest;
 
 };
 
-tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self,
+tABC_CC  ABC_TxCalcSendFees(Wallet &self,
                             SendInfo *pInfo,
                             uint64_t *pTotalFees,
                             tABC_Error *pError);
 
-tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
+tABC_CC ABC_BridgeMaxSpendable(Wallet &self,
                                SendInfo *pInfo,
                                uint64_t *pMaxSatoshi,
                                tABC_Error *pError);
 
-tABC_CC  ABC_TxSend(tABC_WalletID self,
+tABC_CC  ABC_TxSend(Wallet &self,
                     SendInfo *pInfo,
                     char **pszTxID,
                     tABC_Error *pError);

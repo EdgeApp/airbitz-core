@@ -66,6 +66,7 @@ static Status run(int argc, char *argv[])
             return ABC_ERROR(ABC_CC_Error, std::string("No wallet name given"));
 
         session.uuid = argv[5];
+        ABC_CHECK(cacheWallet(session.wallet, session.username, session.uuid));
     }
 
     // Invoke the command:
