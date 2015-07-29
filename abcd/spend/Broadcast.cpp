@@ -51,13 +51,13 @@ chainPostTx(DataSlice tx)
     static const std::string auth =
         "Basic " + base64Encode(std::string(CHAIN_API_USERPWD));
     const char *url = isTestnet() ?
-        "https://api.chain.com/v1/testnet3/transactions":
-        "https://api.chain.com/v1/bitcoin/transactions";
+        "https://api.chain.com/v2/testnet3/transactions/send":
+        "https://api.chain.com/v2/bitcoin/transactions/send";
 
     struct ChainJson:
         public JsonObject
     {
-        ABC_JSON_STRING(hex, "hex", nullptr);
+        ABC_JSON_STRING(hex, "signed_hex", nullptr);
     } json;
     json.hexSet(base16Encode(tx));
     std::string body;
@@ -65,7 +65,7 @@ chainPostTx(DataSlice tx)
 
     HttpReply reply;
     ABC_CHECK(HttpRequest().header("Authorization", auth).
-        put(reply, url, body));
+        post(reply, url, body));
     if (!reply.codeOk())
     {
         ABC_DebugLog("%s", reply.body.c_str());
