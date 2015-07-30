@@ -173,12 +173,6 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
                                    tABC_TxDetails *pDetails,
                                    tABC_Error *pError);
 
-// Blocking functions:
-tABC_CC ABC_TxGetPubAddresses(Wallet &self,
-                            char ***paAddresses,
-                            unsigned int *pCount,
-                            tABC_Error *pError);
-
 tABC_CC ABC_TxWatchAddresses(Wallet &self,
                              tABC_Error *pError);
 

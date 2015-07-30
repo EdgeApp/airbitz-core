@@ -361,49 +361,20 @@ tABC_CC ABC_TxWalletOwnsAddress(Wallet &self,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoStringArray addresses;
+    tABC_TxAddress **aAddresses = NULL;
+    unsigned int countAddresses = 0;
 
-    ABC_CHECK_RET(
-        ABC_TxGetPubAddresses(self, &addresses.data, &addresses.size, pError));
+    ABC_CHECK_RET(ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
     *bFound = false;
-    for (unsigned i = 0; i < addresses.size; ++i)
+    for (unsigned i = 0; i < countAddresses; ++i)
     {
-        if (strncmp(szAddress, addresses.data[i], strlen(szAddress)) == 0)
+        if (strcmp(szAddress, aAddresses[i]->szPubAddress) == 0)
         {
             *bFound = true;
             break;
         }
     }
-exit:
-    return cc;
-}
 
-/**
- * Gets the public addresses associated with the given wallet.
- *
- * @param paAddresses       Pointer to string array of addresses
- * @param pCount            Pointer to store number of addresses
- * @param pError            A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_TxGetPubAddresses(Wallet &self,
-                              char ***paAddresses,
-                              unsigned int *pCount,
-                              tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_TxAddress **aAddresses = NULL;
-    char **sAddresses;
-    unsigned int countAddresses = 0;
-    ABC_CHECK_RET(
-        ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
-    ABC_ARRAY_NEW(sAddresses, countAddresses, char*);
-    for (unsigned i = 0; i < countAddresses; i++)
-    {
-        const char *s = aAddresses[i]->szPubAddress;
-        sAddresses[i] = stringCopy(s);
-    }
-    *pCount = countAddresses;
-    *paAddresses = sAddresses;
 exit:
     ABC_TxFreeAddresses(aAddresses, countAddresses);
     return cc;
