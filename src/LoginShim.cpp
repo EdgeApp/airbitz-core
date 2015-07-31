@@ -14,7 +14,7 @@
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
-#include "../abcd/Wallet/Wallet.hpp"
+#include "../abcd/wallet/Wallet.hpp"
 #include <map>
 #include <mutex>
 
