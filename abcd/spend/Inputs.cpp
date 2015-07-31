@@ -155,7 +155,8 @@ bool sign_tx(unsigned_transaction& utx, const key_table& keys)
 }
 
 static uint64_t
-minerFee(const bc::transaction_type &tx, tABC_GeneralInfo *pInfo)
+minerFee(const bc::transaction_type &tx, uint64_t sourced,
+    tABC_GeneralInfo *pInfo)
 {
     // Look up the size-based fees from the table:
     uint64_t sizeFee = 0;
@@ -176,7 +177,7 @@ minerFee(const bc::transaction_type &tx, tABC_GeneralInfo *pInfo)
         sizeFee = pInfo->aMinersFees[pInfo->countMinersFees - 1]->amountSatoshi;
 
     // The amount-based fee is 0.1% of total funds sent:
-    uint64_t amountFee = outputsTotal(tx.outputs) / 1000;
+    uint64_t amountFee = sourced / 1000;
 
     // Clamp the amount fee between 10% and 100% of the size-based fee:
     uint64_t minFee = sizeFee / 10;
@@ -194,14 +195,15 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
 {
     auto totalOut = outputsTotal(tx.outputs);
 
+    uint64_t sourced = 0;
     uint64_t fee = 0;
-    uint64_t change = 0;
     do
     {
         // Select a collection of outputs that satisfies our requirements:
         auto chosen = select_outputs(utxos, totalOut + fee);
         if (!chosen.points.size())
             return ABC_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds");
+        sourced = totalOut + fee + chosen.change;
 
         // Calculate the fees for this input combination:
         tx.inputs.clear();
@@ -212,16 +214,15 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
             input.previous_output = point;
             tx.inputs.push_back(input);
         }
-        change = chosen.change + fee;
-        fee = minerFee(tx, pFeeInfo);
+        fee = minerFee(tx, sourced, pFeeInfo);
 
         // Guard against any potential fee insanity:
         fee = std::min<uint64_t>(1000000, fee);
     }
-    while (change < fee);
+    while (sourced < totalOut + fee);
 
     resultFee = fee;
-    resultChange = change - fee;
+    resultChange = sourced - (totalOut + fee);
     return Status();
 }
 
@@ -234,14 +235,16 @@ inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
 
     // Calculate the fees for this input combination:
     tx.inputs.clear();
+    uint64_t sourced = 0;
     for (auto &utxo: utxos)
     {
         bc::transaction_input_type input;
         input.sequence = 4294967295;
         input.previous_output = utxo.point;
         tx.inputs.push_back(input);
+        sourced += utxo.value;
     }
-    uint64_t fee = minerFee(tx, pFeeInfo);
+    uint64_t fee = minerFee(tx, sourced, pFeeInfo);
 
     // Verify that we have enough:
     uint64_t totalIn = 0;
