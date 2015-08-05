@@ -31,10 +31,10 @@
 
 #include "ABC.h"
 #include "LoginShim.hpp"
+#include "WalletShim.hpp"
 #include "../abcd/Context.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Export.hpp"
-#include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
 #include "../abcd/account/Account.hpp"
 #include "../abcd/account/AccountSettings.hpp"

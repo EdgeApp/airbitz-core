@@ -28,69 +28,26 @@
  *  of the authors and should not be interpreted as representing official policies,
  *  either expressed or implied, of the Airbitz Project.
  */
+/**
+ * @file
+ * Functions for dealing with the contents of the wallet sync directory.
+ */
 
-#include "Wallet.hpp"
-#include "account/Account.hpp"
-#include "wallet/Wallet.hpp"
+#ifndef ABC_Wallet_h
+#define ABC_Wallet_h
+
+#include "ABC.h"
 
 namespace abcd {
 
-/**
- * Gets information on the given wallet.
- *
- * This function allocates and fills in an wallet info structure with the information
- * associated with the given wallet UUID
- *
- * @param ppWalletInfo          Pointer to store the pointer of the allocated wallet info struct
- * @param pError                A pointer to the location to store the error if there is one
- */
+class Wallet;
+
 tABC_CC ABC_WalletGetInfo(Wallet &self,
                           tABC_WalletInfo **ppWalletInfo,
-                          tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_WalletInfo *pInfo = NULL;
+                          tABC_Error *pError);
 
-    // create the wallet info struct
-    ABC_NEW(pInfo, tABC_WalletInfo);
+void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo);
 
-    // copy data from what was cachqed
-    ABC_STRDUP(pInfo->szUUID, self.id().c_str());
-    ABC_STRDUP(pInfo->szName, self.name().c_str());
-    pInfo->currencyNum = self.currency();
-    {
-        bool archived;
-        ABC_CHECK_NEW(self.account.wallets.archived(archived, self.id()));
-        pInfo->archived = archived;
-    }
-    ABC_CHECK_NEW(self.balance(pInfo->balanceSatoshi));
+} // namespace abcd
 
-    // assign it to the user's pointer
-    *ppWalletInfo = pInfo;
-    pInfo = NULL;
-
-exit:
-    ABC_CLEAR_FREE(pInfo, sizeof(tABC_WalletInfo));
-
-    return cc;
-}
-
-/**
- * Free the wallet info.
- *
- * This function frees the info struct returned from ABC_WalletGetInfo.
- *
- * @param pWalletInfo   Wallet info to be free'd
- */
-void ABC_WalletFreeInfo(tABC_WalletInfo *pWalletInfo)
-{
-    if (pWalletInfo != NULL)
-    {
-        ABC_FREE_STR(pWalletInfo->szUUID);
-        ABC_FREE_STR(pWalletInfo->szName);
-
-        ABC_CLEAR_FREE(pWalletInfo, sizeof(sizeof(tABC_WalletInfo)));
-    }
-}
-
-} // namespace abcds
+#endif
