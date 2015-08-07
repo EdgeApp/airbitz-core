@@ -2925,8 +2925,11 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
     ABC_PROLOG();
 
     {
-        ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_LoginServerUploadLogs(*account, pError));
+        // Cannot use ABC_GET_ACCOUNT - account is not required to upload logs
+        std::shared_ptr<Account> account;
+        cacheAccount(account, szUserName);
+
+        ABC_CHECK_RET(ABC_LoginServerUploadLogs(account.get(), pError));
     }
 
 exit:
