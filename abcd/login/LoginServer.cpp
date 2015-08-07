@@ -888,8 +888,7 @@ exit:
  * @param szPassword    Password for the account associated with the settings
  * @param pError        A pointer to the location to store the error if there is one
  */
-tABC_CC ABC_LoginServerUploadLogs(const Account &account,
-                                  tABC_Error *pError)
+tABC_CC ABC_LoginServerUploadLogs(const Account *account, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -901,29 +900,37 @@ tABC_CC ABC_LoginServerUploadLogs(const Account &account,
     json_t *pJSON_Root    = NULL;
     DataChunk logData;
     DataChunk watchData;
-    auto ids = account.wallets.list();
     json_t *pJSON_array = NULL;
-
-    AutoU08Buf LP1;
-    ABC_CHECK_RET(ABC_LoginGetServerKey(account.login, &LP1, pError));
 
     ABC_CHECK_RET(ABC_DebugLogFilename(&szLogFilename, pError);)
     ABC_CHECK_NEW(fileLoad(logData, szLogFilename));
 
-    pJSON_array = json_array();
-    for (const auto &id: ids)
+    if (account)
     {
-        ABC_CHECK_NEW(fileLoad(watchData, watcherPath(id)));
+        AutoU08Buf LP1;
+        ABC_CHECK_RET(ABC_LoginGetServerKey(account->login, &LP1, pError));
 
-        json_array_append_new(pJSON_array,
-            json_string(base64Encode(watchData).c_str()));
+        pJSON_array = json_array();
+
+        auto ids = account->wallets.list();
+        for (const auto &id: ids)
+        {
+            ABC_CHECK_NEW(fileLoad(watchData, watcherPath(id)));
+
+            json_array_append_new(pJSON_array,
+                json_string(base64Encode(watchData).c_str()));
+        }
+
+        pJSON_Root = json_pack("{ss, ss, ss}",
+            ABC_SERVER_JSON_L1_FIELD, base64Encode(account->login.lobby.authId()).c_str(),
+            ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
+            "log", base64Encode(logData).c_str());
+        json_object_set(pJSON_Root, "watchers", pJSON_array);
     }
-
-    pJSON_Root = json_pack("{ss, ss, ss}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(account.login.lobby.authId()).c_str(),
-        ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
-        "log", base64Encode(logData).c_str());
-    json_object_set(pJSON_Root, "watchers", pJSON_array);
+    else
+    {
+        pJSON_Root = json_pack("{ss}", "log", base64Encode(logData).c_str());
+    }
 
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
