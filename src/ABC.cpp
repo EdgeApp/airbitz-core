@@ -1680,8 +1680,7 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
         }
 
         // Assign the output:
-        *ppSpend = pSpend.get();
-        pSpend.get() = nullptr;
+        *ppSpend = pSpend.release();
     }
 
 exit:
@@ -1727,8 +1726,7 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         pInfo->bTransfer = true;
 
         // Assign the output:
-        *ppSpend = pSpend.get();
-        pSpend.get() = nullptr;
+        *ppSpend = pSpend.release();
     }
 
 exit:
@@ -1769,8 +1767,7 @@ tABC_CC ABC_SpendNewInternal(const char *szAddress,
         ABC_STRDUP(pInfo->szDestAddress, szAddress);
 
         // Assign the output:
-        *ppSpend = pSpend.get();
-        pSpend.get() = nullptr;
+        *ppSpend = pSpend.release();
     }
 
 exit:
@@ -2377,8 +2374,8 @@ tABC_CC ABC_QrEncode(const char *szText,
     ABC_CHECK_NULL(pWidth);
 
     {
-        AutoFree<QRcode, QRcode_free> qr =
-            QRcode_encodeString(szText, 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+        AutoFree<QRcode, QRcode_free>
+            qr(QRcode_encodeString(szText, 0, QR_ECLEVEL_L, QR_MODE_8, 1));
         ABC_CHECK_ASSERT(qr, ABC_CC_Error, "Unable to create QR code");
         size_t size = qr->width * qr->width;
 

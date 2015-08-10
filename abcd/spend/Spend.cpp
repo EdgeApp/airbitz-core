@@ -104,8 +104,7 @@ ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
         i++;
     }
 
-    *ppUtx = pUtx.get();
-    pUtx.get() = 0;
+    *ppUtx = pUtx.release();
 
 exit:
     return cc;
