@@ -57,13 +57,13 @@ ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
     auto txid = bc::encode_hex(bc::hash_transaction(tx));
     auto ntxid = ABC_BridgeNonMalleableTxId(tx);
     int i = 0;
-    AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> pUtx;
+    AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree>
+        pUtx(structAlloc<tABC_UnsavedTx>());
 
     Watcher *watcher = nullptr;
     ABC_CHECK_NEW(watcherFind(watcher, self));
 
     // Fill in tABC_UnsavedTx structure:
-    ABC_NEW(pUtx.get(), tABC_UnsavedTx);
     pUtx->szTxId = stringCopy(ntxid);
     pUtx->szTxMalleableId = stringCopy(txid);
     pUtx->countOutputs = tx.inputs.size() + tx.outputs.size();

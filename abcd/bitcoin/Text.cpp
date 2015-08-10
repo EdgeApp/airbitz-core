@@ -166,8 +166,9 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_BitcoinURIInfo *pInfo = NULL;
     CustomResult result;
+    AutoFree<tABC_BitcoinURIInfo, ABC_BridgeFreeURIInfo>
+        pInfo(structAlloc<tABC_BitcoinURIInfo>());
 
     // Allow a double-slash in the "bitcoin:" URI schema
     // to work around limitations in email and SMS programs:
@@ -195,7 +196,6 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
     }
 
     // Copy into the output struct:
-    ABC_NEW(pInfo, tABC_BitcoinURIInfo);
     if (result.address)
     {
         auto address = result.address.get();
@@ -224,12 +224,9 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
         pInfo->szRet = stringCopy(result.ret.get());
 
     // assign created info struct
-    *ppInfo = pInfo;
-    pInfo = nullptr;
+    *ppInfo = pInfo.release();
 
 exit:
-    ABC_BridgeFreeURIInfo(pInfo);
-
     return cc;
 }
 

@@ -64,6 +64,18 @@ stringCopy(const std::string &string);
 
 typedef AutoFree<char, stringFree> AutoString;
 
+/**
+ * Allocates a C-style structure.
+ */
+template<typename T> T *
+structAlloc()
+{
+    auto out = static_cast<T *>(calloc(1, sizeof(T)));
+    if (!out)
+        throw std::bad_alloc();
+    return out;
+}
+
 #ifdef DEBUG
 #define ABC_LOG_ERROR(code, err_string) \
     { \
@@ -133,12 +145,6 @@ typedef AutoFree<char, stringFree> AutoString;
             ); \
         } \
         printf("\n"); \
-    }
-
-#define ABC_NEW(ptr, type) \
-    { \
-        ptr = (type*)calloc(1, sizeof(type)); \
-        ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "calloc failed (returned NULL)"); \
     }
 
 #define ABC_STR_NEW(ptr, count) \

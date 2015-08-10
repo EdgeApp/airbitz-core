@@ -80,12 +80,11 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
     tABC_CC cc = ABC_CC_Ok;
     AutoFileLock lock(gFileMutex);
 
-    tABC_FileIOList *pFileList = NULL;
+    AutoFree<tABC_FileIOList, ABC_FileIOFreeFileList>
+        pFileList(structAlloc<tABC_FileIOList>());
 
     ABC_CHECK_NULL(ppFileList);
     ABC_CHECK_NULL(szDir);
-
-    ABC_NEW(pFileList, tABC_FileIOList);
 
     DIR *dir;
     struct dirent *ent;
@@ -103,7 +102,7 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
             }
 
             pFileList->apFiles[pFileList->nCount] = NULL;
-            ABC_NEW(pFileList->apFiles[pFileList->nCount], tABC_FileIOFileInfo);
+            pFileList->apFiles[pFileList->nCount] = structAlloc<tABC_FileIOFileInfo>();
 
             pFileList->apFiles[pFileList->nCount]->szName = stringCopy(ent->d_name);
             if (ent->d_type == DT_UNKNOWN)
@@ -128,7 +127,7 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
         ABC_RET_ERROR(ABC_CC_DirReadError, "Could not read directory");
     }
 
-    *ppFileList = pFileList;
+    *ppFileList = pFileList.release();
 
 exit:
     return cc;

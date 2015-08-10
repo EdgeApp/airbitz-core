@@ -58,11 +58,10 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    tABC_AccountSettings *pSettings = NULL;
+    AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree>
+        pSettings(structAlloc<tABC_AccountSettings>());
 
     ABC_CHECK_NULL(ppSettings);
-
-    ABC_NEW(pSettings, tABC_AccountSettings);
 
     pSettings->szFirstName = NULL;
     pSettings->szLastName = NULL;
@@ -84,12 +83,9 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     pSettings->bitcoinDenomination.satoshi = 100;
 
     // assign final settings
-    *ppSettings = pSettings;
-    pSettings = NULL;
+    *ppSettings = pSettings.release();
 
 exit:
-    ABC_AccountSettingsFree(pSettings);
-
     return cc;
 }
 
@@ -122,7 +118,7 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         //ABC_DebugLog("Loaded settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
 
         // allocate the new settings object
-        ABC_NEW(pSettings, tABC_AccountSettings);
+        pSettings = structAlloc<tABC_AccountSettings>();
         pSettings->szFirstName = NULL;
         pSettings->szLastName = NULL;
         pSettings->szNickname = NULL;

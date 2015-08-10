@@ -1624,11 +1624,11 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
 
     {
         // Create the spend target structure:
-        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
-        ABC_NEW(pSpend.get(), tABC_SpendTarget);
+        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree>
+            pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        ABC_NEW(pInfo->pDetails, tABC_TxDetails);
+        pInfo->pDetails = structAlloc<tABC_TxDetails>();
         auto *pDetails = pInfo->pDetails;
 
         // Parse the URI:
@@ -1698,11 +1698,11 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         ABC_GET_WALLET();
 
         // Create the spend target structure:
-        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
-        ABC_NEW(pSpend.get(), tABC_SpendTarget);
+        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree>
+            pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        ABC_NEW(pInfo->pDetails, tABC_TxDetails);
+        pInfo->pDetails = structAlloc<tABC_TxDetails>();
         auto *pDetails = pInfo->pDetails;
 
         // Fill in the spend target:
@@ -1745,11 +1745,11 @@ tABC_CC ABC_SpendNewInternal(const char *szAddress,
 
     {
         // Create the spend target structure:
-        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
-        ABC_NEW(pSpend.get(), tABC_SpendTarget);
+        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree>
+            pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        ABC_NEW(pInfo->pDetails, tABC_TxDetails);
+        pInfo->pDetails = structAlloc<tABC_TxDetails>();
         auto *pDetails = pInfo->pDetails;
 
         // Fill in the spend target:
@@ -2197,10 +2197,10 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     double secondsToCrack;
     tABC_PasswordRule **aRules = NULL;
     unsigned int count = 0;
-    tABC_PasswordRule *pRuleCount = NULL;
-    tABC_PasswordRule *pRuleLC = NULL;
-    tABC_PasswordRule *pRuleUC = NULL;
-    tABC_PasswordRule *pRuleNum = NULL;
+    tABC_PasswordRule *pRuleCount = structAlloc<tABC_PasswordRule>();
+    tABC_PasswordRule *pRuleLC = structAlloc<tABC_PasswordRule>();
+    tABC_PasswordRule *pRuleUC = structAlloc<tABC_PasswordRule>();
+    tABC_PasswordRule *pRuleNum = structAlloc<tABC_PasswordRule>();
     // We don't require a special character, but we still include it in our
     // time to crack calculations
     bool bSpecChar = false;
@@ -2216,28 +2216,24 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     ABC_ARRAY_NEW(aRules, 4, tABC_PasswordRule*);
 
     // must have upper case letter
-    ABC_NEW(pRuleUC, tABC_PasswordRule);
     pRuleUC->szDescription = stringCopy("Must have at least one upper case letter");
     pRuleUC->bPassed = false;
     aRules[count] = pRuleUC;
     count++;
 
     // must have lower case letter
-    ABC_NEW(pRuleLC, tABC_PasswordRule);
     pRuleLC->szDescription = stringCopy("Must have at least one lower case letter");
     pRuleLC->bPassed = false;
     aRules[count] = pRuleLC;
     count++;
 
     // must have number
-    ABC_NEW(pRuleNum, tABC_PasswordRule);
     pRuleNum->szDescription = stringCopy("Must have at least one number");
     pRuleNum->bPassed = false;
     aRules[count] = pRuleNum;
     count++;
 
     // must have 10 characters
-    ABC_NEW(pRuleCount, tABC_PasswordRule);
     char aPassRDesc[64];
     snprintf(aPassRDesc, sizeof(aPassRDesc), "Must have at least %d characters", ABC_MIN_PASS_LENGTH);
     pRuleCount->szDescription = stringCopy(aPassRDesc);

@@ -269,7 +269,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
-    tABC_Tx *pTx = NULL;
+    tABC_Tx *pTx = structAlloc<tABC_Tx>();
     tABC_Tx *pReceiveTx = NULL;
     bool bFound = false;
     double currency;
@@ -277,11 +277,8 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
     // Start watching all addresses incuding new change addres
     ABC_CHECK_RET(ABC_TxWatchAddresses(self, pError));
 
-    // sucessfully sent, now create a transaction
-    ABC_NEW(pTx, tABC_Tx);
-    ABC_NEW(pTx->pStateInfo, tTxStateInfo);
-
     // set the state
+    pTx->pStateInfo = structAlloc<tTxStateInfo>();
     pTx->pStateInfo->timeCreation = time(NULL);
     pTx->pStateInfo->bInternal = true;
     pTx->pStateInfo->szMalleableTxId = stringCopy(pUtx->szTxMalleableId);
@@ -325,8 +322,8 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
 
     if (pInfo->bTransfer)
     {
-        ABC_NEW(pReceiveTx, tABC_Tx);
-        ABC_NEW(pReceiveTx->pStateInfo, tTxStateInfo);
+        pReceiveTx = structAlloc<tABC_Tx>();
+        pReceiveTx->pStateInfo = structAlloc<tTxStateInfo>();
 
         // set the state
         pReceiveTx->pStateInfo->timeCreation = time(NULL);
@@ -454,12 +451,11 @@ tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pO
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tABC_TxDetails *pNewDetails = NULL;
+    AutoFree<tABC_TxDetails, ABC_TxFreeDetails>
+        pNewDetails(structAlloc<tABC_TxDetails>());
 
     ABC_CHECK_NULL(ppNewDetails);
     ABC_CHECK_NULL(pOldDetails);
-
-    ABC_NEW(pNewDetails, tABC_TxDetails);
 
     pNewDetails->amountSatoshi  = pOldDetails->amountSatoshi;
     pNewDetails->amountFeesAirbitzSatoshi = pOldDetails->amountFeesAirbitzSatoshi;
@@ -475,12 +471,9 @@ tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pO
         pNewDetails->szNotes = stringCopy(pOldDetails->szNotes);
 
     // set the pointer for the caller
-    *ppNewDetails = pNewDetails;
-    pNewDetails = NULL;
+    *ppNewDetails = pNewDetails.release();
 
 exit:
-    ABC_TxFreeDetails(pNewDetails);
-
     return cc;
 }
 
@@ -542,9 +535,9 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
         ABC_CHECK_RET(ABC_TxCalcCurrency(self, amountSatoshi, &currency, pError));
 
         // create a transaction
-        ABC_NEW(pTx, tABC_Tx);
-        ABC_NEW(pTx->pStateInfo, tTxStateInfo);
-        ABC_NEW(pTx->pDetails, tABC_TxDetails);
+        pTx = structAlloc<tABC_Tx>();
+        pTx->pStateInfo = structAlloc<tTxStateInfo>();
+        pTx->pDetails = structAlloc<tABC_TxDetails>();
 
         pTx->pStateInfo->szMalleableTxId = stringCopy(szMalTxId);
         pTx->pStateInfo->timeCreation = time(NULL);
@@ -569,7 +562,7 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
         {
             ABC_DebugLog("Saving Input address: %s\n", paInAddresses[i]->szAddress);
 
-            ABC_NEW(pTx->aOutputs[i], tABC_TxOutput);
+            pTx->aOutputs[i] = structAlloc<tABC_TxOutput>();
             pTx->aOutputs[i]->szAddress = stringCopy(paInAddresses[i]->szAddress);
             pTx->aOutputs[i]->szTxId = stringCopy(paInAddresses[i]->szTxId);
             pTx->aOutputs[i]->input = paInAddresses[i]->input;
@@ -579,7 +572,7 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
         {
             ABC_DebugLog("Saving Output address: %s\n", paOutAddresses[i]->szAddress);
             int newi = i + inAddressCount;
-            ABC_NEW(pTx->aOutputs[newi], tABC_TxOutput);
+            pTx->aOutputs[newi] = structAlloc<tABC_TxOutput>();
             pTx->aOutputs[newi]->szAddress = stringCopy(paOutAddresses[i]->szAddress);
             pTx->aOutputs[newi]->szTxId = stringCopy(paOutAddresses[i]->szTxId);
             pTx->aOutputs[newi]->input = paOutAddresses[i]->input;
@@ -783,8 +776,8 @@ tABC_CC ABC_TxCreateInitialAddresses(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_TxDetails *pDetails = NULL;
-    ABC_NEW(pDetails, tABC_TxDetails);
+    AutoFree<tABC_TxDetails, ABC_TxFreeDetails>
+        pDetails(structAlloc<tABC_TxDetails>());
     pDetails->szName = stringCopy("");
     pDetails->szCategory = stringCopy("");
     pDetails->szNotes = stringCopy("");
@@ -792,9 +785,8 @@ tABC_CC ABC_TxCreateInitialAddresses(Wallet &self,
     pDetails->bizId = 0;
 
     ABC_CHECK_RET(ABC_TxCreateNewAddress(self, pDetails, NULL, pError));
-exit:
-    ABC_FreeTxDetails(pDetails);
 
+exit:
     return cc;
 }
 
@@ -896,7 +888,7 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
         ABC_CHECK_RET(ABC_DuplicateTxDetails(&(pAddress->pDetails), pDetails, pError));
 
         // create the state info
-        ABC_NEW(pAddress->pStateInfo, tTxAddressStateInfo);
+        pAddress->pStateInfo = structAlloc<tTxAddressStateInfo>();
         pAddress->pStateInfo->bRecycleable = true;
         pAddress->pStateInfo->countActivities = 0;
         pAddress->pStateInfo->aActivities = NULL;
@@ -918,10 +910,7 @@ tABC_CC ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    tABC_TxAddress *pAddress = NULL;
-
-    // Now we know the latest N, create a new address
-    ABC_NEW(pAddress, tABC_TxAddress);
+    tABC_TxAddress *pAddress = structAlloc<tABC_TxAddress>();
 
     // generate the public address
     pAddress->szPubAddress = NULL;
@@ -939,13 +928,13 @@ tABC_CC ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError)
     ABC_STR_NEW(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
     sprintf(pAddress->szID, "%u", pAddress->seq);
 
-    ABC_NEW(pAddress->pStateInfo, tTxAddressStateInfo);
+    pAddress->pStateInfo = structAlloc<tTxAddressStateInfo>();
     pAddress->pStateInfo->bRecycleable = true;
     pAddress->pStateInfo->countActivities = 0;
     pAddress->pStateInfo->aActivities = NULL;
     pAddress->pStateInfo->timeCreation = time(NULL);
 
-    ABC_NEW(pAddress->pDetails, tABC_TxDetails);
+    pAddress->pDetails = structAlloc<tABC_TxDetails>();
     pAddress->pDetails->szName = stringCopy("");
     pAddress->pDetails->szCategory = stringCopy("");
     pAddress->pDetails->szNotes = stringCopy("");
@@ -1203,7 +1192,6 @@ tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
     std::string path;
     char *szFile = NULL;
     tABC_TxAddress *pAddress = NULL;
-    tABC_TxDetails *pNewDetails = NULL;
 
     // get the filename for this address
     ABC_CHECK_RET(ABC_GetAddressFilename(self, szAddress, &szFile, pError));
@@ -1227,7 +1215,6 @@ tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
 exit:
     ABC_FREE_STR(szFile);
     ABC_TxFreeAddress(pAddress);
-    ABC_TxFreeDetails(pNewDetails);
 
     return cc;
 }
@@ -1690,7 +1677,7 @@ tABC_CC ABC_TxLoadTransactionInfo(Wallet &self,
     AutoCoreLock lock(gCoreMutex);
 
     tABC_Tx *pTx = NULL;
-    tABC_TxInfo *pTransaction = NULL;
+    tABC_TxInfo *pTransaction = structAlloc<tABC_TxInfo>();
 
     *ppTransaction = NULL;
 
@@ -1700,7 +1687,6 @@ tABC_CC ABC_TxLoadTransactionInfo(Wallet &self,
     ABC_CHECK_NULL(pTx->pStateInfo);
 
     // steal the data and assign it to our new struct
-    ABC_NEW(pTransaction, tABC_TxInfo);
     pTransaction->szID = pTx->szID;
     pTx->szID = NULL;
     pTransaction->szMalleableTxId = pTx->pStateInfo->szMalleableTxId;
@@ -2026,7 +2012,7 @@ tABC_CC ABC_TxGetPendingRequests(Wallet &self,
                         if (owedSatoshi > 0)
                         {
                             // create this request
-                            ABC_NEW(pRequest, tABC_RequestInfo);
+                            pRequest = structAlloc<tABC_RequestInfo>();
                             pRequest->szID = stringCopy(pAddr->szID);
                             pRequest->timeCreation = pState->timeCreation;
                             pRequest->owedSatoshi = owedSatoshi;
@@ -2217,13 +2203,11 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_Tx *pTx = NULL;
+    tABC_Tx *pTx = structAlloc<tABC_Tx>();
     double currency;
 
-    ABC_NEW(pTx, tABC_Tx);
-    ABC_NEW(pTx->pStateInfo, tTxStateInfo);
-
     // set the state
+    pTx->pStateInfo = structAlloc<tTxStateInfo>();
     pTx->pStateInfo->timeCreation = time(NULL);
     pTx->pStateInfo->bInternal = true;
     pTx->szID = stringCopy(txId);
@@ -2283,7 +2267,7 @@ tABC_CC ABC_TxLoadTransaction(Wallet &self,
     AutoCoreLock lock(gCoreMutex);
 
     json_t *pJSON_Root = NULL;
-    tABC_Tx *pTx = NULL;
+    tABC_Tx *pTx = structAlloc<tABC_Tx>();
     json_t *jsonVal = NULL;
 
     *ppTx = NULL;
@@ -2293,10 +2277,6 @@ tABC_CC ABC_TxLoadTransaction(Wallet &self,
 
     // load the json object (load file, decrypt it, create json object
     ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, toU08Buf(self.dataKey()), &pJSON_Root, pError));
-
-    // start decoding
-
-    ABC_NEW(pTx, tABC_Tx);
 
     // get the id
     jsonVal = json_object_get(pJSON_Root, JSON_TX_ID_FIELD);
@@ -2339,16 +2319,13 @@ tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tTxStateInfo *pInfo = NULL;
+    tTxStateInfo *pInfo = structAlloc<tTxStateInfo>();
     json_t *jsonState = NULL;
     json_t *jsonVal = NULL;
 
     ABC_CHECK_NULL(pJSON_Obj);
     ABC_CHECK_NULL(ppInfo);
     *ppInfo = NULL;
-
-    // allocate the struct
-    ABC_NEW(pInfo, tTxStateInfo);
 
     // get the state object
     jsonState = json_object_get(pJSON_Obj, JSON_TX_STATE_FIELD);
@@ -2393,16 +2370,14 @@ tABC_CC ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tAB
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_TxDetails *pDetails = NULL;
+    AutoFree<tABC_TxDetails, ABC_TxFreeDetails>
+        pDetails(structAlloc<tABC_TxDetails>());
     json_t *jsonDetails = NULL;
     json_t *jsonVal = NULL;
 
     ABC_CHECK_NULL(pJSON_Obj);
     ABC_CHECK_NULL(ppDetails);
     *ppDetails = NULL;
-
-    // allocated the struct
-    ABC_NEW(pDetails, tABC_TxDetails);
 
     // get the details object
     jsonDetails = json_object_get(pJSON_Obj, JSON_DETAILS_FIELD);
@@ -2463,12 +2438,9 @@ tABC_CC ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tAB
     pDetails->attributes = (unsigned int) json_integer_value(jsonVal);
 
     // assign final result
-    *ppDetails = pDetails;
-    pDetails = NULL;
+    *ppDetails = pDetails.release();
 
 exit:
-    ABC_TxFreeDetails(pDetails);
-
     return cc;
 }
 
@@ -2769,7 +2741,7 @@ tABC_CC ABC_TxLoadAddressFile(Wallet &self,
     AutoCoreLock lock(gCoreMutex);
 
     json_t *pJSON_Root = NULL;
-    tABC_TxAddress *pAddress = NULL;
+    tABC_TxAddress *pAddress = structAlloc<tABC_TxAddress>();
     json_t *jsonVal = NULL;
 
     *ppAddress = NULL;
@@ -2779,10 +2751,6 @@ tABC_CC ABC_TxLoadAddressFile(Wallet &self,
 
     // load the json object (load file, decrypt it, create json object
     ABC_CHECK_RET(ABC_CryptoDecryptJSONFileObject(szFilename, toU08Buf(self.dataKey()), &pJSON_Root, pError));
-
-    // start decoding
-
-    ABC_NEW(pAddress, tABC_TxAddress);
 
     // get the seq and id
     jsonVal = json_object_get(pJSON_Root, JSON_ADDR_SEQ_FIELD);
@@ -2825,7 +2793,7 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tTxAddressStateInfo *pState = NULL;
+    tTxAddressStateInfo *pState = structAlloc<tTxAddressStateInfo>();
     json_t *jsonState = NULL;
     json_t *jsonVal = NULL;
     json_t *jsonActivity = NULL;
@@ -2833,9 +2801,6 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
     ABC_CHECK_NULL(pJSON_Obj);
     ABC_CHECK_NULL(ppState);
     *ppState = NULL;
-
-    // allocated the struct
-    ABC_NEW(pState, tTxAddressStateInfo);
 
     // get the state object
     jsonState = json_object_get(pJSON_Obj, JSON_ADDR_STATE_FIELD);
@@ -3552,7 +3517,7 @@ ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_
         for (i = 0; i < countOutputs; ++i)
         {
             ABC_DebugLog("Saving Outputs: %s\n", aOutputs[i]->szAddress);
-            ABC_NEW(pTx->aOutputs[i], tABC_TxOutput);
+            pTx->aOutputs[i] = structAlloc<tABC_TxOutput>();
             pTx->aOutputs[i]->szAddress = stringCopy(aOutputs[i]->szAddress);
             pTx->aOutputs[i]->szTxId = stringCopy(aOutputs[i]->szTxId);
             pTx->aOutputs[i]->input = aOutputs[i]->input;

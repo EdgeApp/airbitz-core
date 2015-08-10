@@ -49,10 +49,8 @@ tABC_CC ABC_WalletGetInfo(Wallet &self,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_WalletInfo *pInfo = NULL;
-
-    // create the wallet info struct
-    ABC_NEW(pInfo, tABC_WalletInfo);
+    AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo>
+        pInfo(structAlloc<tABC_WalletInfo>());
 
     // copy data from what was cachqed
     pInfo->szUUID = stringCopy(self.id());
@@ -66,12 +64,9 @@ tABC_CC ABC_WalletGetInfo(Wallet &self,
     ABC_CHECK_NEW(self.balance(pInfo->balanceSatoshi));
 
     // assign it to the user's pointer
-    *ppWalletInfo = pInfo;
-    pInfo = NULL;
+    *ppWalletInfo = pInfo.release();
 
 exit:
-    ABC_CLEAR_FREE(pInfo, sizeof(tABC_WalletInfo));
-
     return cc;
 }
 
