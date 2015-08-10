@@ -482,7 +482,7 @@ tABC_CC ABC_LoginServerGetString(const Lobby &lobby, tABC_U08Buf LP1, tABC_U08Bu
 
     pJSON_Value = json_object_get(pJSON_Value, szField);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error care package JSON results");
-    ABC_STRDUP(*szResponse, json_string_value(pJSON_Value));
+    *szResponse = stringCopy(json_string_value(pJSON_Value));
 
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -530,7 +530,7 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error pin package JSON results");
 
     // copy the value
-    ABC_STRDUP(*szPinPackage, json_string_value(pJSON_Value));
+    *szPinPackage = stringCopy(json_string_value(pJSON_Value));
 
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);

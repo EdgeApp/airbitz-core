@@ -320,7 +320,7 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
         out += szCurrRec;
     }
 
-    ABC_STRDUP(*szCsvData, out.c_str());
+    *szCsvData = stringCopy(out);
 
 exit:
     return cc;

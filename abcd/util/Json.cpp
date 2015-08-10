@@ -97,7 +97,7 @@ tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
         {
             json_t *pJSON_Elem = json_array_get(pJSON_Value, i);
             ABC_CHECK_ASSERT((pJSON_Elem && json_is_string(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pArrayStrings[i], json_string_value(pJSON_Elem));
+            pArrayStrings[i] = stringCopy(json_string_value(pJSON_Elem));
         }
 
         *aszValues = pArrayStrings;
@@ -175,7 +175,7 @@ char *ABC_UtilStringFromJSONObject(const json_t *pJSON_Data, size_t flags)
 
     if (strJanssonJSON != NULL)
     {
-        ABC_STRDUP(strJSON, strJanssonJSON);
+        strJSON = stringCopy(strJanssonJSON);
     }
 
 exit:

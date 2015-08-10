@@ -105,7 +105,7 @@ tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
             pFileList->apFiles[pFileList->nCount] = NULL;
             ABC_NEW(pFileList->apFiles[pFileList->nCount], tABC_FileIOFileInfo);
 
-            ABC_STRDUP(pFileList->apFiles[pFileList->nCount]->szName, ent->d_name);
+            pFileList->apFiles[pFileList->nCount]->szName = stringCopy(ent->d_name);
             if (ent->d_type == DT_UNKNOWN)
             {
                 pFileList->apFiles[pFileList->nCount]->type = ABC_FileIOFileType_Unknown;

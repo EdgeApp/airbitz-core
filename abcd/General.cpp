@@ -201,7 +201,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     // get the air bitz fees address
     pJSON_Value = json_object_get(pJSON_AirBitzFees, JSON_INFO_AIRBITZ_FEE_ADDRESS_FIELD);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-    ABC_STRDUP(pInfo->pAirBitzFee->szAddresss, json_string_value(pJSON_Value));
+    pInfo->pAirBitzFee->szAddresss = stringCopy(json_string_value(pJSON_Value));
 
 
     // get the obelisk array
@@ -221,7 +221,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
         // get the obelisk server
         pJSON_Value = json_array_get(pJSON_ObeliskArray, i);
         ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-        ABC_STRDUP(pInfo->aszObeliskServers[i], json_string_value(pJSON_Value));
+        pInfo->aszObeliskServers[i] = stringCopy(json_string_value(pJSON_Value));
     }
 
     // get the sync array
@@ -243,7 +243,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
             // get the sync server
             pJSON_Value = json_array_get(pJSON_SyncArray, i);
             ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pInfo->aszSyncServers[i], json_string_value(pJSON_Value));
+            pInfo->aszSyncServers[i] = stringCopy(json_string_value(pJSON_Value));
         }
     }
     else
@@ -333,7 +333,7 @@ tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename,
     std::string filename = gContext->rootDir() + GENERAL_INFO_FILENAME;
 
     ABC_CHECK_NULL(pszFilename);
-    ABC_STRDUP(*pszFilename, filename.c_str());
+    *pszFilename = stringCopy(filename);
 
 exit:
     return cc;
@@ -424,12 +424,12 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
         // get the category
         json_t *pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_CATEGORY_FIELD);
         ABC_CHECK_ASSERT((pJSON_Obj && json_is_string(pJSON_Obj)), ABC_CC_JSONError, "Error parsing JSON category value for recovery questions");
-        ABC_STRDUP(pQuestionChoices->aChoices[i]->szCategory, json_string_value(pJSON_Obj));
+        pQuestionChoices->aChoices[i]->szCategory = stringCopy(json_string_value(pJSON_Obj));
 
         // get the question
         pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_QUESTION_FIELD);
         ABC_CHECK_ASSERT((pJSON_Obj && json_is_string(pJSON_Obj)), ABC_CC_JSONError, "Error parsing JSON question value for recovery questions");
-        ABC_STRDUP(pQuestionChoices->aChoices[i]->szQuestion, json_string_value(pJSON_Obj));
+        pQuestionChoices->aChoices[i]->szQuestion = stringCopy(json_string_value(pJSON_Obj));
 
         // get the min length
         pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_MIN_LENGTH_FIELD);

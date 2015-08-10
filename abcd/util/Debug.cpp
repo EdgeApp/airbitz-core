@@ -80,9 +80,8 @@ tABC_CC ABC_DebugLogFilename(char **szFilename, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_STRDUP(*szFilename, gLogFilename.c_str());
+    *szFilename = stringCopy(gLogFilename);
 
-exit:
     return cc;
 }
 

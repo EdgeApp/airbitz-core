@@ -479,8 +479,8 @@ tABC_CC ABC_BridgeTxDetailsSplit(Wallet &self, const char *szTxID,
         // Create output
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = true;
-        ABC_STRDUP(out->szTxId, bc::encode_hex(prev.hash).c_str());
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
+        out->szTxId = stringCopy(bc::encode_hex(prev.hash));
+        out->szAddress = stringCopy(addr.encoded());
 
         auto tx = watcherInfo->watcher.find_tx(prev.hash);
         if (prev.index < tx.outputs.size())
@@ -508,8 +508,8 @@ tABC_CC ABC_BridgeTxDetailsSplit(Wallet &self, const char *szTxID,
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = false;
         out->value = o.value;
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
-        ABC_STRDUP(out->szTxId, szTxID);
+        out->szAddress = stringCopy(addr.encoded());
+        out->szTxId = stringCopy(szTxID);
 
         // Do we own this address?
         auto row = watcherInfo->addresses.find(addr.encoded());
@@ -688,7 +688,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_IncomingSweep;
             info.sweepSatoshi = output.value;
-            ABC_STRDUP(info.szTxID, txId.c_str());
+            info.szTxID = stringCopy(txId);
             watcherInfo->fAsyncCallback(&info);
             ABC_FREE_STR(info.szTxID);
         }
@@ -733,7 +733,6 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
 {
     tABC_CC cc = ABC_CC_Ok;
     tABC_Error error;
-    tABC_Error *pError = &error;
     int64_t fees = 0;
     int64_t totalInSatoshi = 0, totalOutSatoshi = 0, totalMeSatoshi = 0, totalMeInSatoshi = 0;
     tABC_TxOutput **iarr = NULL, **oarr = NULL;
@@ -761,8 +760,8 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
         // Create output
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = true;
-        ABC_STRDUP(out->szTxId, bc::encode_hex(prev.hash).c_str());
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
+        out->szTxId = stringCopy(bc::encode_hex(prev.hash));
+        out->szAddress = stringCopy(addr.encoded());
 
         // Check prevouts for values
         auto tx = watcherInfo->watcher.find_tx(prev.hash);
@@ -789,8 +788,8 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = false;
         out->value = o.value;
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
-        ABC_STRDUP(out->szTxId, malTxId.c_str());
+        out->szAddress = stringCopy(addr.encoded());
+        out->szTxId = stringCopy(malTxId);
 
         // Do we own this address?
         auto row = watcherInfo->addresses.find(addr.encoded());

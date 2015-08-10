@@ -121,7 +121,7 @@ tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
     // Get address:
     ec_addr = bc::secret_to_public_key(secret, bCompressed);
     address.set(pubkeyVersion(), bc::bitcoin_short_hash(ec_addr));
-    ABC_STRDUP(szAddress, address.encoded().c_str());
+    szAddress = stringCopy(address.encoded());
 
     // Write out:
     ABC_BUF_DUP(*pOut, U08Buf(secret.data(), secret.size()));
@@ -201,14 +201,14 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
         auto address = result.address.get();
         if (address.version() == pubkeyVersion() ||
             address.version() == scriptVersion())
-            ABC_STRDUP(pInfo->szAddress, address.encoded().c_str());
+            pInfo->szAddress = stringCopy(address.encoded());
     }
     if (result.amount)
         pInfo->amountSatoshi = result.amount.get();
     if (result.label)
-        ABC_STRDUP(pInfo->szLabel, result.label.get().c_str());
+        pInfo->szLabel = stringCopy(result.label.get());
     if (result.message)
-        ABC_STRDUP(pInfo->szMessage, result.message.get().c_str());
+        pInfo->szMessage = stringCopy(result.message.get());
     if (result.category)
     {
         auto category = result.category.get();
@@ -216,12 +216,12 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
             0 == category.find("Income:") ||
             0 == category.find("Transfer:") ||
             0 == category.find("Exchange:"))
-            ABC_STRDUP(pInfo->szCategory, category.c_str());
+            pInfo->szCategory = stringCopy(category);
     }
     if (result.r)
-        ABC_STRDUP(pInfo->szR, result.r.get().c_str());
+        pInfo->szR = stringCopy(result.r.get());
     if (result.ret)
-        ABC_STRDUP(pInfo->szRet, result.ret.get().c_str());
+        pInfo->szRet = stringCopy(result.ret.get());
 
     // assign created info struct
     *ppInfo = pInfo;
@@ -300,7 +300,7 @@ tABC_CC ABC_BridgeFormatAmount(int64_t amount,
     {
         out = libwallet::format_amount(amount, decimalPlaces);
     }
-    ABC_STRDUP(*pszAmountOut, out.c_str());
+    *pszAmountOut = stringCopy(out);
 
 exit:
     return cc;
@@ -325,9 +325,8 @@ tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
     if (pInfo->szMessage)
         writer.write_param("message", pInfo->szMessage);
 
-    ABC_STRDUP(*pszURI, writer.string().c_str());
+    *pszURI = stringCopy(writer.string());
 
-exit:
     return cc;
 }
 

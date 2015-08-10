@@ -64,8 +64,8 @@ ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
 
     // Fill in tABC_UnsavedTx structure:
     ABC_NEW(pUtx.get(), tABC_UnsavedTx);
-    ABC_STRDUP(pUtx->szTxId, ntxid.c_str());
-    ABC_STRDUP(pUtx->szTxMalleableId, txid.c_str());
+    pUtx->szTxId = stringCopy(ntxid);
+    pUtx->szTxMalleableId = stringCopy(txid);
     pUtx->countOutputs = tx.inputs.size() + tx.outputs.size();
     ABC_ARRAY_NEW(pUtx->aOutputs, pUtx->countOutputs, tABC_TxOutput*)
 
@@ -78,8 +78,8 @@ ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
 
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = true;
-        ABC_STRDUP(out->szTxId, bc::encode_hex(prev.hash).c_str());
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
+        out->szTxId = stringCopy(bc::encode_hex(prev.hash));
+        out->szAddress = stringCopy(addr.encoded());
 
         auto tx = watcher->find_tx(prev.hash);
         if (prev.index < tx.outputs.size())
@@ -97,8 +97,8 @@ ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = false;
         out->value = output.value;
-        ABC_STRDUP(out->szTxId, txid.c_str());
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
+        out->szTxId = stringCopy(txid);
+        out->szAddress = stringCopy(addr.encoded());
 
         pUtx->aOutputs[i] = out;
         i++;
@@ -251,7 +251,7 @@ tABC_CC ABC_TxSend(Wallet &self,
                     notes += '\n';
                 notes += receipt.ack.memo();
                 ABC_FREE_STR(pInfo->pDetails->szNotes);
-                ABC_STRDUP(pInfo->pDetails->szNotes, notes.c_str());
+                pInfo->pDetails->szNotes = stringCopy(notes);
             }
         }
 
@@ -265,7 +265,7 @@ tABC_CC ABC_TxSend(Wallet &self,
     ABC_CHECK_RET(ABC_TxSendComplete(self, pInfo, unsaved, pError));
 
     // return the new tx id
-    ABC_STRDUP(*pszTxID, unsaved->szTxId);
+    *pszTxID = stringCopy(unsaved->szTxId);
 
 exit:
     return cc;

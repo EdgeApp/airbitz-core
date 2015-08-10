@@ -211,14 +211,13 @@ ABC_BridgeGetBitcoinPubAddress(char **pszPubAddress,
     if (m00n.valid())
     {
         std::string out = m00n.address().encoded();
-        ABC_STRDUP(*pszPubAddress, out.c_str());
+        *pszPubAddress = stringCopy(out);
     }
     else
     {
         *pszPubAddress = nullptr;
     }
 
-exit:
     return cc;
 }
 
@@ -285,7 +284,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
     // set the state
     pTx->pStateInfo->timeCreation = time(NULL);
     pTx->pStateInfo->bInternal = true;
-    ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, pUtx->szTxMalleableId);
+    pTx->pStateInfo->szMalleableTxId = stringCopy(pUtx->szTxMalleableId);
     // Copy outputs
     ABC_TxCopyOuputs(pTx, pUtx->aOutputs, pUtx->countOutputs, pError);
     // copy the details
@@ -319,7 +318,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
         pTx->pDetails->amountCurrency *= -1.0;
 
     // Store transaction ID
-    ABC_STRDUP(pTx->szID, pUtx->szTxId);
+    pTx->szID = stringCopy(pUtx->szTxId);
 
     // Save the transaction:
     ABC_CHECK_RET(ABC_TxSaveTransaction(self, pTx, pError));
@@ -332,7 +331,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
         // set the state
         pReceiveTx->pStateInfo->timeCreation = time(NULL);
         pReceiveTx->pStateInfo->bInternal = true;
-        ABC_STRDUP(pReceiveTx->pStateInfo->szMalleableTxId, pUtx->szTxMalleableId);
+        pReceiveTx->pStateInfo->szMalleableTxId = stringCopy(pUtx->szTxMalleableId);
         // Copy outputs
         ABC_TxCopyOuputs(pReceiveTx, pUtx->aOutputs, pUtx->countOutputs, pError);
         // copy the details
@@ -340,7 +339,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
 
         // Set the payee name:
         ABC_FREE_STR(pReceiveTx->pDetails->szName);
-        ABC_STRDUP(pReceiveTx->pDetails->szName, self.name().c_str());
+        pReceiveTx->pDetails->szName = stringCopy(self.name());
 
         pReceiveTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi;
 
@@ -359,7 +358,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
             pReceiveTx->pDetails->amountCurrency *= -1.0;
 
         // Store transaction ID
-        ABC_STRDUP(pReceiveTx->szID, pUtx->szTxId);
+        pReceiveTx->szID = stringCopy(pUtx->szTxId);
 
         // save the transaction
         ABC_CHECK_RET(ABC_TxSaveTransaction(*pInfo->walletDest, pReceiveTx, pError));
@@ -416,7 +415,7 @@ tABC_CC ABC_TxGetPubAddresses(Wallet &self,
     for (unsigned i = 0; i < countAddresses; i++)
     {
         const char *s = aAddresses[i]->szPubAddress;
-        ABC_STRDUP(sAddresses[i], s);
+        sAddresses[i] = stringCopy(s);
     }
     *pCount = countAddresses;
     *paAddresses = sAddresses;
@@ -468,18 +467,12 @@ tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pO
     pNewDetails->amountCurrency  = pOldDetails->amountCurrency;
     pNewDetails->bizId = pOldDetails->bizId;
     pNewDetails->attributes = pOldDetails->attributes;
-    if (pOldDetails->szName != NULL)
-    {
-        ABC_STRDUP(pNewDetails->szName, pOldDetails->szName);
-    }
-    if (pOldDetails->szCategory != NULL)
-    {
-        ABC_STRDUP(pNewDetails->szCategory, pOldDetails->szCategory);
-    }
-    if (pOldDetails->szNotes != NULL)
-    {
-        ABC_STRDUP(pNewDetails->szNotes, pOldDetails->szNotes);
-    }
+    if (pOldDetails->szName)
+        pNewDetails->szName = stringCopy(pOldDetails->szName);
+    if (pOldDetails->szCategory)
+        pNewDetails->szCategory = stringCopy(pOldDetails->szCategory);
+    if (pOldDetails->szNotes)
+        pNewDetails->szNotes = stringCopy(pOldDetails->szNotes);
 
     // set the pointer for the caller
     *ppNewDetails = pNewDetails;
@@ -517,11 +510,11 @@ ABC_TxBlockHeightUpdate(uint64_t height,
         tABC_AsyncBitCoinInfo info;
         info.eventType = ABC_AsyncEventType_BlockHeightChange;
         info.pData = pData;
-        ABC_STRDUP(info.szDescription, "Block height change");
+        info.szDescription = stringCopy("Block height change");
         fAsyncBitCoinEventCallback(&info);
         ABC_FREE_STR(info.szDescription);
     }
-exit:
+
     return cc;
 }
 
@@ -553,22 +546,22 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
         ABC_NEW(pTx->pStateInfo, tTxStateInfo);
         ABC_NEW(pTx->pDetails, tABC_TxDetails);
 
-        ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, szMalTxId);
+        pTx->pStateInfo->szMalleableTxId = stringCopy(szMalTxId);
         pTx->pStateInfo->timeCreation = time(NULL);
         pTx->pDetails->amountSatoshi = amountSatoshi;
         pTx->pDetails->amountCurrency = currency;
         pTx->pDetails->amountFeesMinersSatoshi = feeSatoshi;
 
-        ABC_STRDUP(pTx->pDetails->szName, "");
-        ABC_STRDUP(pTx->pDetails->szCategory, "");
-        ABC_STRDUP(pTx->pDetails->szNotes, "");
+        pTx->pDetails->szName = stringCopy("");
+        pTx->pDetails->szCategory = stringCopy("");
+        pTx->pDetails->szNotes = stringCopy("");
 
         // set the state
         pTx->pStateInfo->timeCreation = time(NULL);
         pTx->pStateInfo->bInternal = false;
 
         // store transaction id
-        ABC_STRDUP(pTx->szID, szTxId);
+        pTx->szID = stringCopy(szTxId);
         // store the input addresses
         pTx->countOutputs = inAddressCount + outAddressCount;
         ABC_ARRAY_NEW(pTx->aOutputs, pTx->countOutputs, tABC_TxOutput*);
@@ -577,8 +570,8 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
             ABC_DebugLog("Saving Input address: %s\n", paInAddresses[i]->szAddress);
 
             ABC_NEW(pTx->aOutputs[i], tABC_TxOutput);
-            ABC_STRDUP(pTx->aOutputs[i]->szAddress, paInAddresses[i]->szAddress);
-            ABC_STRDUP(pTx->aOutputs[i]->szTxId, paInAddresses[i]->szTxId);
+            pTx->aOutputs[i]->szAddress = stringCopy(paInAddresses[i]->szAddress);
+            pTx->aOutputs[i]->szTxId = stringCopy(paInAddresses[i]->szTxId);
             pTx->aOutputs[i]->input = paInAddresses[i]->input;
             pTx->aOutputs[i]->value = paInAddresses[i]->value;
         }
@@ -587,8 +580,8 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
             ABC_DebugLog("Saving Output address: %s\n", paOutAddresses[i]->szAddress);
             int newi = i + inAddressCount;
             ABC_NEW(pTx->aOutputs[newi], tABC_TxOutput);
-            ABC_STRDUP(pTx->aOutputs[newi]->szAddress, paOutAddresses[i]->szAddress);
-            ABC_STRDUP(pTx->aOutputs[newi]->szTxId, paOutAddresses[i]->szTxId);
+            pTx->aOutputs[newi]->szAddress = stringCopy(paOutAddresses[i]->szAddress);
+            pTx->aOutputs[newi]->szTxId = stringCopy(paOutAddresses[i]->szTxId);
             pTx->aOutputs[newi]->input = paOutAddresses[i]->input;
             pTx->aOutputs[newi]->value = paOutAddresses[i]->value;
         }
@@ -609,9 +602,9 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
             tABC_AsyncBitCoinInfo info;
             info.pData = pData;
             info.eventType = ABC_AsyncEventType_IncomingBitCoin;
-            ABC_STRDUP(info.szTxID, pTx->szID);
-            ABC_STRDUP(info.szWalletUUID, self.id().c_str());
-            ABC_STRDUP(info.szDescription, "Received funds");
+            info.szTxID = stringCopy(pTx->szID);
+            info.szWalletUUID = stringCopy(self.id());
+            info.szDescription = stringCopy("Received funds");
             fAsyncBitCoinEventCallback(&info);
             ABC_FREE_STR(info.szTxID);
             ABC_FREE_STR(info.szDescription);
@@ -631,9 +624,9 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
             tABC_AsyncBitCoinInfo info;
             info.pData = pData;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
-            ABC_STRDUP(info.szTxID, pTx->szID);
-            ABC_STRDUP(info.szWalletUUID, self.id().c_str());
-            ABC_STRDUP(info.szDescription, "Updated balance");
+            info.szTxID = stringCopy(pTx->szID);
+            info.szWalletUUID = stringCopy(self.id());
+            info.szDescription = stringCopy("Updated balance");
             fAsyncBitCoinEventCallback(&info);
             ABC_FREE_STR(info.szTxID);
             ABC_FREE_STR(info.szDescription);
@@ -696,19 +689,19 @@ tABC_CC ABC_TxTrashAddresses(Wallet &self,
             if (ABC_STRLEN(pTx->pDetails->szName) == 0
                     && ABC_STRLEN(pAddress->pDetails->szName) > 0)
             {
-                ABC_STRDUP(pTx->pDetails->szName, pAddress->pDetails->szName);
+                pTx->pDetails->szName = stringCopy(pAddress->pDetails->szName);
                 ++changed;
             }
             if (ABC_STRLEN(pTx->pDetails->szNotes) == 0
                     && ABC_STRLEN(pAddress->pDetails->szNotes) > 0)
             {
-                ABC_STRDUP(pTx->pDetails->szNotes, pAddress->pDetails->szNotes);
+                pTx->pDetails->szNotes = stringCopy(pAddress->pDetails->szNotes);
                 ++changed;
             }
             if (ABC_STRLEN(pTx->pDetails->szCategory) == 0
                     && ABC_STRLEN(pAddress->pDetails->szCategory))
             {
-                ABC_STRDUP(pTx->pDetails->szCategory, pAddress->pDetails->szCategory);
+                pTx->pDetails->szCategory = stringCopy(pAddress->pDetails->szCategory);
                 ++changed;
             }
             if (changed)
@@ -773,7 +766,7 @@ tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
     ABC_CHECK_RET(ABC_TxSaveAddress(self, pAddress, pError));
 
     // set the id for the caller
-    ABC_STRDUP(*pszRequestID, pAddress->szID);
+    *pszRequestID = stringCopy(pAddress->szID);
 
     // Watch this new address
     ABC_CHECK_RET(ABC_TxWatchAddresses(self, pError));
@@ -792,9 +785,9 @@ tABC_CC ABC_TxCreateInitialAddresses(Wallet &self,
 
     tABC_TxDetails *pDetails = NULL;
     ABC_NEW(pDetails, tABC_TxDetails);
-    ABC_STRDUP(pDetails->szName, "");
-    ABC_STRDUP(pDetails->szCategory, "");
-    ABC_STRDUP(pDetails->szNotes, "");
+    pDetails->szName = stringCopy("");
+    pDetails->szCategory = stringCopy("");
+    pDetails->szNotes = stringCopy("");
     pDetails->attributes = 0x0;
     pDetails->bizId = 0;
 
@@ -953,9 +946,9 @@ tABC_CC ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError)
     pAddress->pStateInfo->timeCreation = time(NULL);
 
     ABC_NEW(pAddress->pDetails, tABC_TxDetails);
-    ABC_STRDUP(pAddress->pDetails->szName, "");
-    ABC_STRDUP(pAddress->pDetails->szCategory, "");
-    ABC_STRDUP(pAddress->pDetails->szNotes, "");
+    pAddress->pDetails->szName = stringCopy("");
+    pAddress->pDetails->szCategory = stringCopy("");
+    pAddress->pDetails->szNotes = stringCopy("");
     pAddress->pDetails->attributes = 0x0;
     pAddress->pDetails->bizId = 0;
     pAddress->pDetails->amountSatoshi = 0;
@@ -1064,7 +1057,7 @@ tABC_CC ABC_GetAddressFilename(Wallet &self,
             if (strcmp(szID, szAddressID) == 0)
             {
                 // copy over the filename
-                ABC_STRDUP(*pszFilename, pFileList->apFiles[i]->szName);
+                *pszFilename = stringCopy(pFileList->apFiles[i]->szName);
                 break;
             }
         }
@@ -1136,7 +1129,7 @@ tABC_CC ABC_TxParseAddrFilename(const char *szFilename,
 
                 if (pszPublicAddress != NULL)
                 {
-                    ABC_STRDUP(*pszPublicAddress, &(szFilename[nPosSeparator + 1]))
+                    *pszPublicAddress = stringCopy(&(szFilename[nPosSeparator + 1]));
                     (*pszPublicAddress)[strlen(*pszPublicAddress) - strlen(ADDRESS_FILENAME_SUFFIX)] = '\0';
                 }
             }
@@ -1303,7 +1296,7 @@ tABC_CC ABC_TxGenerateRequestQRCode(Wallet &self,
 
     if (pszURI != NULL)
     {
-        ABC_STRDUP(*pszURI, szURI);
+        *pszURI = stringCopy(szURI);
     }
 
 exit:
@@ -1637,7 +1630,7 @@ tABC_CC ABC_TxGetTxTypeAndBasename(const char *szFilename,
             // if they want the basename
             if (pszBasename != NULL)
             {
-                ABC_STRDUP(szBasename, szFilename);
+                szBasename = stringCopy(szFilename);
                 szBasename[strlen(szFilename) - sizeSuffix] = '\0';
             }
         }
@@ -1660,7 +1653,7 @@ tABC_CC ABC_TxGetTxTypeAndBasename(const char *szFilename,
                 // if they want the basename
                 if (pszBasename != NULL)
                 {
-                    ABC_STRDUP(szBasename, szFilename);
+                    szBasename = stringCopy(szFilename);
                     szBasename[strlen(szFilename) - sizeSuffix] = '\0';
                 }
             }
@@ -1874,11 +1867,11 @@ tABC_CC ABC_TxSetTransactionDetails(Wallet &self,
     pTx->pDetails->bizId = pDetails->bizId;
     pTx->pDetails->attributes = pDetails->attributes;
     ABC_FREE_STR(pTx->pDetails->szName);
-    ABC_STRDUP(pTx->pDetails->szName, pDetails->szName);
+    pTx->pDetails->szName = stringCopy(pDetails->szName);
     ABC_FREE_STR(pTx->pDetails->szCategory);
-    ABC_STRDUP(pTx->pDetails->szCategory, pDetails->szCategory);
+    pTx->pDetails->szCategory = stringCopy(pDetails->szCategory);
     ABC_FREE_STR(pTx->pDetails->szNotes);
-    ABC_STRDUP(pTx->pDetails->szNotes, pDetails->szNotes);
+    pTx->pDetails->szNotes = stringCopy(pDetails->szNotes);
 
     // re-save the transaction
     ABC_CHECK_RET(ABC_TxSaveTransaction(self, pTx, pError));
@@ -1965,7 +1958,7 @@ tABC_CC ABC_TxGetRequestAddress(Wallet &self,
     ABC_CHECK_RET(
         ABC_TxLoadAddress(self, szRequestID,
                           &pAddress, pError));
-    ABC_STRDUP(*pszAddress, pAddress->szPubAddress);
+    *pszAddress = stringCopy(pAddress->szPubAddress);
 exit:
     ABC_TxFreeAddress(pAddress);
 
@@ -2034,7 +2027,7 @@ tABC_CC ABC_TxGetPendingRequests(Wallet &self,
                         {
                             // create this request
                             ABC_NEW(pRequest, tABC_RequestInfo);
-                            ABC_STRDUP(pRequest->szID, pAddr->szID);
+                            pRequest->szID = stringCopy(pAddr->szID);
                             pRequest->timeCreation = pState->timeCreation;
                             pRequest->owedSatoshi = owedSatoshi;
                             pRequest->amountSatoshi = pDetails->amountSatoshi - owedSatoshi;
@@ -2164,7 +2157,7 @@ tABC_CC ABC_TxBuildFromLabel(Wallet &self,
 
     if (pSettings->bNameOnPayments && pSettings->szFullName)
     {
-        ABC_STRDUP(*pszLabel, pSettings->szFullName);
+        *pszLabel = stringCopy(pSettings->szFullName);
     }
 
 exit:
@@ -2233,8 +2226,8 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
     // set the state
     pTx->pStateInfo->timeCreation = time(NULL);
     pTx->pStateInfo->bInternal = true;
-    ABC_STRDUP(pTx->szID, txId);
-    ABC_STRDUP(pTx->pStateInfo->szMalleableTxId, malTxId);
+    pTx->szID = stringCopy(txId);
+    pTx->pStateInfo->szMalleableTxId = stringCopy(malTxId);
 
     // Copy the details
     ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pDetails, pError));
@@ -2269,9 +2262,8 @@ tABC_CC ABC_TxCreateTxFilename(Wallet &self, char **pszFilename, const char *szT
     std::string path = self.txDir() + cryptoFilename(self.dataKey(), szTxID) +
         (bInternal ? TX_INTERNAL_SUFFIX : TX_EXTERNAL_SUFFIX);
 
-    ABC_STRDUP(*pszFilename, path.c_str());
+    *pszFilename = stringCopy(path);
 
-exit:
     return cc;
 }
 
@@ -2309,7 +2301,7 @@ tABC_CC ABC_TxLoadTransaction(Wallet &self,
     // get the id
     jsonVal = json_object_get(pJSON_Root, JSON_TX_ID_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing id");
-    ABC_STRDUP(pTx->szID, json_string_value(jsonVal));
+    pTx->szID = stringCopy(json_string_value(jsonVal));
 
     // get the state object
     ABC_CHECK_RET(ABC_TxDecodeTxState(pJSON_Root, &(pTx->pStateInfo), pError));
@@ -2371,7 +2363,7 @@ tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error
     if (jsonVal)
     {
         ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing malleable tx id");
-        ABC_STRDUP(pInfo->szMalleableTxId, json_string_value(jsonVal));
+        pInfo->szMalleableTxId = stringCopy(json_string_value(jsonVal));
     }
 
     // get the internal boolean
@@ -2445,7 +2437,7 @@ tABC_CC ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tAB
     // get the name field
     jsonVal = json_object_get(jsonDetails, JSON_TX_NAME_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing name");
-    ABC_STRDUP(pDetails->szName, json_string_value(jsonVal));
+    pDetails->szName = stringCopy(json_string_value(jsonVal));
 
     // get the business-directory id field
     jsonVal = json_object_get(jsonDetails, JSON_TX_BIZID_FIELD);
@@ -2458,12 +2450,12 @@ tABC_CC ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tAB
     // get the category field
     jsonVal = json_object_get(jsonDetails, JSON_TX_CATEGORY_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing category");
-    ABC_STRDUP(pDetails->szCategory, json_string_value(jsonVal));
+    pDetails->szCategory = stringCopy(json_string_value(jsonVal));
 
     // get the notes field
     jsonVal = json_object_get(jsonDetails, JSON_TX_NOTES_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing notes");
-    ABC_STRDUP(pDetails->szNotes, json_string_value(jsonVal));
+    pDetails->szNotes = stringCopy(json_string_value(jsonVal));
 
     // get the attributes field
     jsonVal = json_object_get(jsonDetails, JSON_TX_ATTRIBUTES_FIELD);
@@ -2802,7 +2794,7 @@ tABC_CC ABC_TxLoadAddressFile(Wallet &self,
     // get the public address field
     jsonVal = json_object_get(pJSON_Root, JSON_ADDR_ADDRESS_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing address");
-    ABC_STRDUP(pAddress->szPubAddress, json_string_value(jsonVal));
+    pAddress->szPubAddress = stringCopy(json_string_value(jsonVal));
 
     // get the state object
     ABC_CHECK_RET(ABC_TxDecodeAddressStateInfo(pJSON_Root, &(pAddress->pStateInfo), pError));
@@ -2880,7 +2872,7 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
                 // get the tx id
                 jsonVal = json_object_get(pJSON_Elem, JSON_TX_ID_FIELD);
                 ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing activity txid");
-                ABC_STRDUP(pState->aActivities[i].szTxID, json_string_value(jsonVal));
+                pState->aActivities[i].szTxID = stringCopy(json_string_value(jsonVal));
 
                 // get the date field
                 jsonVal = json_object_get(pJSON_Elem, JSON_ADDR_DATE_FIELD);
@@ -3054,9 +3046,8 @@ tABC_CC ABC_TxCreateAddressFilename(Wallet &self, char **pszFilename, const tABC
         std::to_string(pAddress->seq) + "-" +
         cryptoFilename(self.dataKey(), pAddress->szPubAddress) + ".json";;
 
-    ABC_STRDUP(*pszFilename, path.c_str());
+    *pszFilename = stringCopy(path);
 
-exit:
     return cc;
 }
 
@@ -3397,7 +3388,7 @@ tABC_CC ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *p
     ABC_ARRAY_RESIZE(aActivities, countActivities + 1, tTxAddressActivity);
 
     // fill in the new entry:
-    ABC_STRDUP(aActivities[countActivities].szTxID, pTx->szID);
+    aActivities[countActivities].szTxID = stringCopy(pTx->szID);
     aActivities[countActivities].timeCreation = pTx->pStateInfo->timeCreation;
     aActivities[countActivities].amountSatoshi = pTx->pDetails->amountSatoshi;
 
@@ -3562,8 +3553,8 @@ ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_
         {
             ABC_DebugLog("Saving Outputs: %s\n", aOutputs[i]->szAddress);
             ABC_NEW(pTx->aOutputs[i], tABC_TxOutput);
-            ABC_STRDUP(pTx->aOutputs[i]->szAddress, aOutputs[i]->szAddress);
-            ABC_STRDUP(pTx->aOutputs[i]->szTxId, aOutputs[i]->szTxId);
+            pTx->aOutputs[i]->szAddress = stringCopy(aOutputs[i]->szAddress);
+            pTx->aOutputs[i]->szTxId = stringCopy(aOutputs[i]->szTxId);
             pTx->aOutputs[i]->input = aOutputs[i]->input;
             pTx->aOutputs[i]->value = aOutputs[i]->value;
         }

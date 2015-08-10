@@ -76,9 +76,9 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     pSettings->spendRequirePinSatoshis = DEF_REQUIRE_PIN_SATOSHIS;
     pSettings->bDisablePINLogin = false;
 
-    ABC_STRDUP(pSettings->szLanguage, "en");
+    pSettings->szLanguage = stringCopy("en");
     pSettings->currencyNum = static_cast<int>(Currency::USD);
-    ABC_STRDUP(pSettings->szExchangeRateSource, exchangeSources.front().c_str());
+    pSettings->szExchangeRateSource = stringCopy(exchangeSources.front());
 
     pSettings->bitcoinDenomination.denominationType = ABC_DENOMINATION_UBTC;
     pSettings->bitcoinDenomination.satoshi = 100;
@@ -132,7 +132,7 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         if (pJSON_Value)
         {
             ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szFirstName, json_string_value(pJSON_Value));
+            pSettings->szFirstName = stringCopy(json_string_value(pJSON_Value));
         }
 
         // get the last name
@@ -140,7 +140,7 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         if (pJSON_Value)
         {
             ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szLastName, json_string_value(pJSON_Value));
+            pSettings->szLastName = stringCopy(json_string_value(pJSON_Value));
         }
 
         // get the nickname
@@ -148,14 +148,14 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         if (pJSON_Value)
         {
             ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szNickname, json_string_value(pJSON_Value));
+            pSettings->szNickname = stringCopy(json_string_value(pJSON_Value));
         }
 
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_PIN_FIELD);
         if (pJSON_Value)
         {
             ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szPIN, json_string_value(pJSON_Value));
+            pSettings->szPIN = stringCopy(json_string_value(pJSON_Value));
         }
 
         // get name on payments option
@@ -179,7 +179,7 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         // get language
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_LANGUAGE_FIELD);
         ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-        ABC_STRDUP(pSettings->szLanguage, json_string_value(pJSON_Value));
+        pSettings->szLanguage = stringCopy(json_string_value(pJSON_Value));
 
         // get currency num
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_NUM_CURRENCY_FIELD);
@@ -280,11 +280,11 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_EX_RATE_SOURCE_FIELD);
         if (pJSON_Value && json_is_string(pJSON_Value))
         {
-            ABC_STRDUP(pSettings->szExchangeRateSource, json_string_value(pJSON_Value));
+            pSettings->szExchangeRateSource = stringCopy(json_string_value(pJSON_Value));
         }
         else
         {
-            ABC_STRDUP(pSettings->szExchangeRateSource, exchangeSources.front().c_str());
+            pSettings->szExchangeRateSource = stringCopy(exchangeSources.front());
         }
 
         //

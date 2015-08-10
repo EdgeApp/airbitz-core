@@ -42,7 +42,7 @@ tABC_CC ABC_LoginGetRQ(Lobby &lobby,
     // Decrypt:
     if (carePackage.questionBox().decrypt(questions, questionKey))
     {
-        ABC_STRDUP(*pszRecoveryQuestions, toString(questions).c_str());
+        *pszRecoveryQuestions = stringCopy(toString(questions));
     }
     else
     {

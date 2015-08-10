@@ -42,15 +42,27 @@
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <new>
+#include <string>
 
 namespace abcd {
 
 /**
- * Frees a C-style string and sets the pointer to NULL.
+ * Frees a C-style string and sets the pointer to null.
  */
-void StringFree(char *string);
+void
+stringFree(char *string);
 
-typedef AutoFree<char, StringFree> AutoString;
+/**
+ * Copies a C-style string, throwing an exception if something goes wrong.
+ */
+char *
+stringCopy(const char *string);
+
+char *
+stringCopy(const std::string &string);
+
+typedef AutoFree<char, stringFree> AutoString;
 
 #ifdef DEBUG
 #define ABC_LOG_ERROR(code, err_string) \
@@ -149,11 +161,6 @@ typedef AutoFree<char, StringFree> AutoString;
 
 #define ABC_STRLEN(string) (string == NULL ? 0 : strlen(string))
 
-#define ABC_STRDUP(ptr, string) \
-    { \
-        ABC_CHECK_ASSERT((ptr = strdup(string)) != NULL, ABC_CC_NULLPtr, "strdup failed (returned NULL)"); \
-    }
-
 #define ABC_FREE(ptr) \
     { \
         if (ptr != NULL) \
@@ -165,7 +172,7 @@ typedef AutoFree<char, StringFree> AutoString;
 
 #define ABC_FREE_STR(str) \
     { \
-        StringFree(const_cast<char*>(str)); \
+        stringFree(const_cast<char*>(str)); \
         str = nullptr; \
     }
 

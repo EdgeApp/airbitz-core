@@ -55,8 +55,8 @@ tABC_CC ABC_WalletGetInfo(Wallet &self,
     ABC_NEW(pInfo, tABC_WalletInfo);
 
     // copy data from what was cachqed
-    ABC_STRDUP(pInfo->szUUID, self.id().c_str());
-    ABC_STRDUP(pInfo->szName, self.name().c_str());
+    pInfo->szUUID = stringCopy(self.id());
+    pInfo->szName = stringCopy(self.name());
     pInfo->currencyNum = self.currency();
     {
         bool archived;
