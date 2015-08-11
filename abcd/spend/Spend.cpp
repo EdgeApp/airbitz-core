@@ -13,6 +13,7 @@
 #include "../bitcoin/Watcher.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/Mutex.hpp"
+#include "../wallet/Details.hpp"
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
@@ -114,7 +115,7 @@ SendInfo::~SendInfo()
 {
     ABC_FREE_STR(szDestAddress);
     delete paymentRequest;
-    ABC_TxFreeDetails(pDetails);
+    ABC_TxDetailsFree(pDetails);
 }
 
 SendInfo::SendInfo()
@@ -230,8 +231,8 @@ tABC_CC ABC_TxSend(Wallet &self,
         if (pInfo->paymentRequest)
         {
             // TODO: add something to the details about a refund
-            AutoFree<tABC_TxDetails, ABC_TxFreeDetails> pRefundDetails;
-            ABC_CHECK_RET(ABC_TxDupDetails(&pRefundDetails.get(), pInfo->pDetails, pError));
+            AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pRefundDetails;
+            ABC_CHECK_RET(ABC_TxDetailsCopy(&pRefundDetails.get(), pInfo->pDetails, pError));
 
             std::string refundAddress;
             ABC_CHECK_NEW(txNewChangeAddress(refundAddress, self, pRefundDetails));

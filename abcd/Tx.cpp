@@ -41,6 +41,7 @@
 #include "util/FileIO.hpp"
 #include "util/Mutex.hpp"
 #include "util/Util.hpp"
+#include "wallet/Details.hpp"
 #include "wallet/Wallet.hpp"
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,23 +69,13 @@ namespace abcd {
 #define ADDRESS_FILENAME_SUFFIX                 ".json"
 #define ADDRESS_FILENAME_MIN_LEN                8 // <id>-<public_addr>.json
 
-#define JSON_DETAILS_FIELD                      "meta"
 #define JSON_CREATION_DATE_FIELD                "creationDate"
 #define JSON_MALLEABLE_TX_ID                    "malleableTxId"
 #define JSON_AMOUNT_SATOSHI_FIELD               "amountSatoshi"
-#define JSON_AMOUNT_AIRBITZ_FEE_SATOSHI_FIELD   "amountFeeAirBitzSatoshi"
-#define JSON_AMOUNT_MINERS_FEE_SATOSHI_FIELD    "amountFeeMinersSatoshi"
 
 #define JSON_TX_ID_FIELD                        "ntxid"
 #define JSON_TX_STATE_FIELD                     "state"
 #define JSON_TX_INTERNAL_FIELD                  "internal"
-#define JSON_TX_LOGIN_FIELD                     "login"
-#define JSON_TX_AMOUNT_CURRENCY_FIELD           "amountCurrency"
-#define JSON_TX_NAME_FIELD                      "name"
-#define JSON_TX_BIZID_FIELD                     "bizId"
-#define JSON_TX_CATEGORY_FIELD                  "category"
-#define JSON_TX_NOTES_FIELD                     "notes"
-#define JSON_TX_ATTRIBUTES_FIELD                "attributes"
 #define JSON_TX_OUTPUTS_FIELD                   "outputs"
 #define JSON_TX_OUTPUT_FLAG                     "input"
 #define JSON_TX_OUTPUT_VALUE                    "value"
@@ -161,11 +152,9 @@ static void     ABC_TxFreeRequest(tABC_RequestInfo *pRequest);
 static tABC_CC  ABC_TxCreateTxFilename(Wallet &self, char **pszFilename, const char *szTxID, bool bInternal, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransaction(Wallet &self, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
 static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError);
-static tABC_CC  ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError);
 static void     ABC_TxFreeTx(tABC_Tx *pTx);
 static tABC_CC  ABC_TxSaveTransaction(Wallet &self, const tABC_Tx *pTx, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *pError);
-static tABC_CC  ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError);
 static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
 static tABC_CC  ABC_TxLoadAddress(Wallet &self, const char *szAddressID, tABC_TxAddress **ppAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadAddressFile(Wallet &self, const char *szFilename, tABC_TxAddress **ppAddress, tABC_Error *pError);
@@ -285,7 +274,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
     // Copy outputs
     ABC_TxCopyOuputs(pTx, pUtx->aOutputs, pUtx->countOutputs, pError);
     // copy the details
-    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pInfo->pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsCopy(&(pTx->pDetails), pInfo->pDetails, pError));
     // Add in tx fees to the amount of the tx
 
     if (pInfo->szDestAddress)
@@ -332,7 +321,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
         // Copy outputs
         ABC_TxCopyOuputs(pReceiveTx, pUtx->aOutputs, pUtx->countOutputs, pError);
         // copy the details
-        ABC_CHECK_RET(ABC_TxDupDetails(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
+        ABC_CHECK_RET(ABC_TxDetailsCopy(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
 
         // Set the payee name:
         ABC_FREE_STR(pReceiveTx->pDetails->szName);
@@ -442,53 +431,6 @@ exit:
     ABC_FREE_STR(szPubAddress);
 
     return cc;
-}
-
-/**
- * Duplicate a TX details struct
- */
-tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pOldDetails, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    AutoFree<tABC_TxDetails, ABC_TxFreeDetails>
-        pNewDetails(structAlloc<tABC_TxDetails>());
-
-    ABC_CHECK_NULL(ppNewDetails);
-    ABC_CHECK_NULL(pOldDetails);
-
-    pNewDetails->amountSatoshi  = pOldDetails->amountSatoshi;
-    pNewDetails->amountFeesAirbitzSatoshi = pOldDetails->amountFeesAirbitzSatoshi;
-    pNewDetails->amountFeesMinersSatoshi = pOldDetails->amountFeesMinersSatoshi;
-    pNewDetails->amountCurrency  = pOldDetails->amountCurrency;
-    pNewDetails->bizId = pOldDetails->bizId;
-    pNewDetails->attributes = pOldDetails->attributes;
-    if (pOldDetails->szName)
-        pNewDetails->szName = stringCopy(pOldDetails->szName);
-    if (pOldDetails->szCategory)
-        pNewDetails->szCategory = stringCopy(pOldDetails->szCategory);
-    if (pOldDetails->szNotes)
-        pNewDetails->szNotes = stringCopy(pOldDetails->szNotes);
-
-    // set the pointer for the caller
-    *ppNewDetails = pNewDetails.release();
-
-exit:
-    return cc;
-}
-
-/**
- * Free a TX details struct
- */
-void ABC_TxFreeDetails(tABC_TxDetails *pDetails)
-{
-    if (pDetails)
-    {
-        ABC_FREE_STR(pDetails->szName);
-        ABC_FREE_STR(pDetails->szCategory);
-        ABC_FREE_STR(pDetails->szNotes);
-        ABC_CLEAR_FREE(pDetails, sizeof(tABC_TxDetails));
-    }
 }
 
 tABC_CC
@@ -776,7 +718,7 @@ tABC_CC ABC_TxCreateInitialAddresses(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    AutoFree<tABC_TxDetails, ABC_TxFreeDetails>
+    AutoFree<tABC_TxDetails, ABC_TxDetailsFree>
         pDetails(structAlloc<tABC_TxDetails>());
     pDetails->szName = stringCopy("");
     pDetails->szCategory = stringCopy("");
@@ -881,11 +823,11 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
         // free state and details as we will be setting them to new data below
         ABC_TxFreeAddressStateInfo(pAddress->pStateInfo);
         pAddress->pStateInfo = NULL;
-        ABC_FreeTxDetails(pAddress->pDetails);
+        ABC_TxDetailsFree(pAddress->pDetails);
         pAddress->pDetails = NULL;
 
         // copy over the info we were given
-        ABC_CHECK_RET(ABC_DuplicateTxDetails(&(pAddress->pDetails), pDetails, pError));
+        ABC_CHECK_RET(ABC_TxDetailsCopy(&(pAddress->pDetails), pDetails, pError));
 
         // create the state info
         pAddress->pStateInfo = structAlloc<tTxAddressStateInfo>();
@@ -983,10 +925,10 @@ tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
     ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), &pAddress, pError));
 
     // copy the new details
-    ABC_CHECK_RET(ABC_TxDupDetails(&pNewDetails, pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsCopy(&pNewDetails, pDetails, pError));
 
     // free the old details on this address
-    ABC_TxFreeDetails(pAddress->pDetails);
+    ABC_TxDetailsFree(pAddress->pDetails);
 
     // set the new details
     pAddress->pDetails = pNewDetails;
@@ -998,7 +940,7 @@ tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
 exit:
     ABC_FREE_STR(szFile);
     ABC_TxFreeAddress(pAddress);
-    ABC_TxFreeDetails(pNewDetails);
+    ABC_TxDetailsFree(pNewDetails);
 
     return cc;
 }
@@ -1784,7 +1726,7 @@ void ABC_TxFreeTransaction(tABC_TxInfo *pTransaction)
     {
         ABC_FREE_STR(pTransaction->szID);
         ABC_TxFreeOutputs(pTransaction->aOutputs, pTransaction->countOutputs);
-        ABC_TxFreeDetails(pTransaction->pDetails);
+        ABC_TxDetailsFree(pTransaction->pDetails);
         ABC_CLEAR_FREE(pTransaction, sizeof(tABC_TxInfo));
     }
 }
@@ -1908,7 +1850,7 @@ tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
     ABC_CHECK_NULL(pTx->pStateInfo);
 
     // duplicate the details
-    ABC_CHECK_RET(ABC_TxDupDetails(&pDetails, pTx->pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsCopy(&pDetails, pTx->pDetails, pError));
 
     // assign final result
     *ppDetails = pDetails;
@@ -1918,7 +1860,7 @@ tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
 exit:
     ABC_FREE_STR(szFilename);
     ABC_TxFreeTx(pTx);
-    ABC_TxFreeDetails(pDetails);
+    ABC_TxDetailsFree(pDetails);
 
     return cc;
 }
@@ -2160,7 +2102,7 @@ void ABC_TxFreeRequest(tABC_RequestInfo *pRequest)
 {
     if (pRequest)
     {
-        ABC_TxFreeDetails(pRequest->pDetails);
+        ABC_TxDetailsFree(pRequest->pDetails);
 
         ABC_CLEAR_FREE(pRequest, sizeof(tABC_RequestInfo));
     }
@@ -2214,7 +2156,7 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
     pTx->pStateInfo->szMalleableTxId = stringCopy(malTxId);
 
     // Copy the details
-    ABC_CHECK_RET(ABC_TxDupDetails(&(pTx->pDetails), pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsCopy(&(pTx->pDetails), pDetails, pError));
     pTx->pDetails->amountSatoshi = funds;
     pTx->pDetails->amountFeesAirbitzSatoshi = 0;
 
@@ -2287,7 +2229,7 @@ tABC_CC ABC_TxLoadTransaction(Wallet &self,
     ABC_CHECK_RET(ABC_TxDecodeTxState(pJSON_Root, &(pTx->pStateInfo), pError));
 
     // get the details object
-    ABC_CHECK_RET(ABC_TxDecodeTxDetails(pJSON_Root, &(pTx->pDetails), pError));
+    ABC_CHECK_RET(ABC_TxDetailsDecode(pJSON_Root, &(pTx->pDetails), pError));
 
     // get advanced details
     ABC_CHECK_RET(
@@ -2359,92 +2301,6 @@ exit:
 }
 
 /**
- * Decodes the transaction details data from a json transaction or address object
- *
- * @param ppInfo Pointer to store allocated meta info
- *               (it is the callers responsiblity to free this)
- */
-static
-tABC_CC ABC_TxDecodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    AutoFree<tABC_TxDetails, ABC_TxFreeDetails>
-        pDetails(structAlloc<tABC_TxDetails>());
-    json_t *jsonDetails = NULL;
-    json_t *jsonVal = NULL;
-
-    ABC_CHECK_NULL(pJSON_Obj);
-    ABC_CHECK_NULL(ppDetails);
-    *ppDetails = NULL;
-
-    // get the details object
-    jsonDetails = json_object_get(pJSON_Obj, JSON_DETAILS_FIELD);
-    ABC_CHECK_ASSERT((jsonDetails && json_is_object(jsonDetails)), ABC_CC_JSONError, "Error parsing JSON details package - missing meta data (details)");
-
-    // get the satoshi field
-    jsonVal = json_object_get(jsonDetails, JSON_AMOUNT_SATOSHI_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing satoshi amount");
-    pDetails->amountSatoshi = json_integer_value(jsonVal);
-
-    // get the airbitz fees satoshi field
-    jsonVal = json_object_get(jsonDetails, JSON_AMOUNT_AIRBITZ_FEE_SATOSHI_FIELD);
-    if (jsonVal)
-    {
-        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError, "Error parsing JSON details package - malformed airbitz fees field");
-        pDetails->amountFeesAirbitzSatoshi = json_integer_value(jsonVal);
-    }
-
-    // get the miners fees satoshi field
-    jsonVal = json_object_get(jsonDetails, JSON_AMOUNT_MINERS_FEE_SATOSHI_FIELD);
-    if (jsonVal)
-    {
-        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError, "Error parsing JSON details package - malformed miners fees field");
-        pDetails->amountFeesMinersSatoshi = json_integer_value(jsonVal);
-    }
-
-    // get the currency field
-    jsonVal = json_object_get(jsonDetails, JSON_TX_AMOUNT_CURRENCY_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_real(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing currency amount");
-    pDetails->amountCurrency = json_real_value(jsonVal);
-
-    // get the name field
-    jsonVal = json_object_get(jsonDetails, JSON_TX_NAME_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing name");
-    pDetails->szName = stringCopy(json_string_value(jsonVal));
-
-    // get the business-directory id field
-    jsonVal = json_object_get(jsonDetails, JSON_TX_BIZID_FIELD);
-    if (jsonVal)
-    {
-        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError, "Error parsing JSON details package - malformed directory bizId field");
-        pDetails->bizId = json_integer_value(jsonVal);
-    }
-
-    // get the category field
-    jsonVal = json_object_get(jsonDetails, JSON_TX_CATEGORY_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing category");
-    pDetails->szCategory = stringCopy(json_string_value(jsonVal));
-
-    // get the notes field
-    jsonVal = json_object_get(jsonDetails, JSON_TX_NOTES_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing notes");
-    pDetails->szNotes = stringCopy(json_string_value(jsonVal));
-
-    // get the attributes field
-    jsonVal = json_object_get(jsonDetails, JSON_TX_ATTRIBUTES_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing attributes");
-    pDetails->attributes = (unsigned int) json_integer_value(jsonVal);
-
-    // assign final result
-    *ppDetails = pDetails.release();
-
-exit:
-    return cc;
-}
-
-/**
  * Free's a tABC_Tx struct and all its elements
  */
 static
@@ -2453,7 +2309,7 @@ void ABC_TxFreeTx(tABC_Tx *pTx)
     if (pTx)
     {
         ABC_FREE_STR(pTx->szID);
-        ABC_TxFreeDetails(pTx->pDetails);
+        ABC_TxDetailsFree(pTx->pDetails);
         ABC_CLEAR_FREE(pTx->pStateInfo, sizeof(tTxStateInfo));
         ABC_TxFreeOutputs(pTx->aOutputs, pTx->countOutputs);
         ABC_CLEAR_FREE(pTx, sizeof(tABC_Tx));
@@ -2494,7 +2350,7 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
     ABC_CHECK_RET(ABC_TxEncodeTxState(pJSON_Root, pTx->pStateInfo, pError));
 
     // set the details
-    ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pTx->pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsEncode(pJSON_Root, pTx->pDetails, pError));
 
     // create the addresses array object
     pJSON_OutputArray = json_array();
@@ -2591,73 +2447,6 @@ tABC_CC ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *
 
 exit:
     if (pJSON_State) json_decref(pJSON_State);
-
-    return cc;
-}
-
-/**
- * Encodes the transaction details data into the given json transaction object
- *
- * @param pJSON_Obj Pointer to the json object into which the details are stored.
- * @param pDetails  Pointer to the details to store in the json object.
- */
-static
-tABC_CC ABC_TxEncodeTxDetails(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    json_t *pJSON_Details = NULL;
-    int retVal = 0;
-
-    ABC_CHECK_NULL(pJSON_Obj);
-    ABC_CHECK_NULL(pDetails);
-
-    // create the details object
-    pJSON_Details = json_object();
-
-    // add the satoshi field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_AMOUNT_SATOSHI_FIELD, json_integer(pDetails->amountSatoshi));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // add the airbitz fees satoshi field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_AMOUNT_AIRBITZ_FEE_SATOSHI_FIELD, json_integer(pDetails->amountFeesAirbitzSatoshi));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // add the miners fees satoshi field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_AMOUNT_MINERS_FEE_SATOSHI_FIELD, json_integer(pDetails->amountFeesMinersSatoshi));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // add the currency field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_AMOUNT_CURRENCY_FIELD, json_real(pDetails->amountCurrency));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // add the name field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_NAME_FIELD, json_string(pDetails->szName));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // add the business-directory id field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_BIZID_FIELD, json_integer(pDetails->bizId));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // add the category field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_CATEGORY_FIELD, json_string(pDetails->szCategory));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // add the notes field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_NOTES_FIELD, json_string(pDetails->szNotes));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // add the attributes field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_ATTRIBUTES_FIELD, json_integer(pDetails->attributes));
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-    // add the details object to the master object
-    retVal = json_object_set(pJSON_Obj, JSON_DETAILS_FIELD, pJSON_Details);
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-exit:
-    if (pJSON_Details) json_decref(pJSON_Details);
 
     return cc;
 }
@@ -2768,7 +2557,7 @@ tABC_CC ABC_TxLoadAddressFile(Wallet &self,
     ABC_CHECK_RET(ABC_TxDecodeAddressStateInfo(pJSON_Root, &(pAddress->pStateInfo), pError));
 
     // get the details object
-    ABC_CHECK_RET(ABC_TxDecodeTxDetails(pJSON_Root, &(pAddress->pDetails), pError));
+    ABC_CHECK_RET(ABC_TxDetailsDecode(pJSON_Root, &(pAddress->pDetails), pError));
 
     // assign final result
     *ppAddress = pAddress;
@@ -2900,7 +2689,7 @@ tABC_CC ABC_TxSaveAddress(Wallet &self,
     ABC_CHECK_RET(ABC_TxEncodeAddressStateInfo(pJSON_Root, pAddress->pStateInfo, pError));
 
     // set the details
-    ABC_CHECK_RET(ABC_TxEncodeTxDetails(pJSON_Root, pAddress->pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsEncode(pJSON_Root, pAddress->pDetails, pError));
 
     // create the address directory if needed
     ABC_CHECK_NEW(fileEnsureDir(self.addressDir()));
@@ -3026,7 +2815,7 @@ void ABC_TxFreeAddress(tABC_TxAddress *pAddress)
     {
         ABC_FREE_STR(pAddress->szID);
         ABC_FREE_STR(pAddress->szPubAddress);
-        ABC_TxFreeDetails(pAddress->pDetails);
+        ABC_TxDetailsFree(pAddress->pDetails);
         ABC_TxFreeAddressStateInfo(pAddress->pStateInfo);
 
         ABC_CLEAR_FREE(pAddress, sizeof(tABC_TxAddress));
