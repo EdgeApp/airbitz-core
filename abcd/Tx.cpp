@@ -167,13 +167,13 @@ static void     ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int co
 static tABC_CC  ABC_TxGetAddresses(Wallet &self, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static int      ABC_TxAddrPtrCompare(const void * a, const void * b);
 static tABC_CC  ABC_TxLoadAddressAndAppendToArray(Wallet &self, const char *szFilename, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
-static tABC_CC  ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError);
 static tABC_CC  ABC_TxTransactionExists(Wallet &self, const char *szID, tABC_Tx **pTx, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
 static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError);
 static tABC_CC  ABC_TxWalletOwnsAddress(Wallet &self, const char *szAddress, bool *bFound, tABC_Error *pError);
-static tABC_CC  ABC_TxTrashAddresses(Wallet &self, bool bAdd, tABC_Tx *pTx, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
+static tABC_CC  ABC_TxSaveNewTx(Wallet &self, tABC_Tx *pTx, bool bOutside, tABC_Error *pError);
+static tABC_CC  ABC_TxTrashAddresses(Wallet &self, tABC_TxDetails **ppDetails, tTxAddressActivity *pActivity, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
 static tABC_CC  ABC_TxCalcCurrency(Wallet &self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
 
 /**
@@ -305,7 +305,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
     pTx->szID = stringCopy(pUtx->szTxId);
 
     // Save the transaction:
-    ABC_CHECK_RET(ABC_TxSaveTransaction(self, pTx, pError));
+    ABC_CHECK_RET(ABC_TxSaveNewTx(self, pTx, false, pError));
 
     if (pInfo->bTransfer)
     {
@@ -345,7 +345,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
         pReceiveTx->szID = stringCopy(pUtx->szTxId);
 
         // save the transaction
-        ABC_CHECK_RET(ABC_TxSaveTransaction(*pInfo->walletDest, pReceiveTx, pError));
+        ABC_CHECK_RET(ABC_TxSaveNewTx(*pInfo->walletDest, pReceiveTx, false, pError));
     }
 
 exit:
@@ -470,13 +470,8 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
             pTx->aOutputs[newi]->value = paOutAddresses[i]->value;
         }
 
-        // save the transaction
-        ABC_CHECK_RET(
-            ABC_TxSaveTransaction(self, pTx, pError));
-
         // add the transaction to the address
-        ABC_CHECK_RET(ABC_TxTrashAddresses(self, true,
-                        pTx, paOutAddresses, outAddressCount, pError));
+        ABC_CHECK_RET(ABC_TxSaveNewTx(self, pTx, true, pError));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
         self.balanceDirty();
@@ -497,8 +492,6 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
     else
     {
         ABC_DebugLog("We already have %s\n", szTxId);
-        ABC_CHECK_RET(ABC_TxTrashAddresses(self, false,
-                        pTx, paOutAddresses, outAddressCount, pError));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
         self.balanceDirty();
@@ -523,17 +516,56 @@ exit:
 }
 
 /**
- * Marks the address as unusable and copies the details to the new Tx
+ * Saves the a never-before-seen transaction to the sync database,
+ * updating the metadata as appropriate.
  *
- * @param pTx           The transaction that will be updated
- * @param paAddress     Addresses that will be search
+ * @param bOutside true if this is an outside transaction that needs its
+ * details populated from the address database.
+ */
+tABC_CC
+ABC_TxSaveNewTx(Wallet &self,
+                tABC_Tx *pTx,
+                bool bOutside,
+                tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tTxAddressActivity activity;
+    AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pDetails;
+
+    activity.szTxID = pTx->szID;
+    activity.timeCreation = pTx->pStateInfo->timeCreation;
+    activity.amountSatoshi = pTx->pDetails->amountSatoshi;
+
+    ABC_CHECK_RET(ABC_TxTrashAddresses(self, &pDetails.get(),
+        &activity, pTx->aOutputs, pTx->countOutputs, pError));
+
+    if (bOutside)
+    {
+        if (ABC_STRLEN(pDetails->szName) && !ABC_STRLEN(pTx->pDetails->szName))
+            pTx->pDetails->szName = stringCopy(pDetails->szName);
+        if (ABC_STRLEN(pDetails->szNotes) && !ABC_STRLEN(pTx->pDetails->szNotes))
+            pTx->pDetails->szNotes = stringCopy(pDetails->szNotes);
+        if (ABC_STRLEN(pDetails->szCategory) && !ABC_STRLEN(pTx->pDetails->szCategory))
+            pTx->pDetails->szCategory = stringCopy(pDetails->szCategory);
+    }
+    ABC_CHECK_RET(ABC_TxSaveTransaction(self, pTx, pError));
+
+exit:
+    return cc;
+}
+
+/**
+ * Marks the address as unusable and returns its metadata.
+ *
+ * @param ppDetails     Metadata extracted from the address database
+ * @param paAddress     Addresses that will be updated
  * @param addressCount  Number of address in paAddress
- * @param pError        A pointer to the location to store the error if there is one
  */
 static
 tABC_CC ABC_TxTrashAddresses(Wallet &self,
-                             bool bAdd,
-                             tABC_Tx *pTx,
+                             tABC_TxDetails **ppDetails,
+                             tTxAddressActivity *pActivity,
                              tABC_TxOutput **paAddresses,
                              unsigned int addressCount,
                              tABC_Error *pError)
@@ -553,8 +585,12 @@ tABC_CC ABC_TxTrashAddresses(Wallet &self,
         addrMap[addr] = pInternalAddress[i];
     }
 
+    *ppDetails = nullptr;
     for (unsigned i = 0; i < addressCount; ++i)
     {
+        if (paAddresses[i]->input)
+            continue;
+
         std::string addr(paAddresses[i]->szAddress);
         if (addrMap.find(addr) == addrMap.end())
             continue;
@@ -562,37 +598,28 @@ tABC_CC ABC_TxTrashAddresses(Wallet &self,
         pAddress = addrMap[addr];
         if (pAddress)
         {
+            unsigned int countActivities = pAddress->pStateInfo->countActivities;
+            tTxAddressActivity *aActivities = pAddress->pStateInfo->aActivities;
+
+            // grow the array:
+            ABC_ARRAY_RESIZE(aActivities, countActivities + 1, tTxAddressActivity);
+
+            // fill in the new entry:
+            aActivities[countActivities].szTxID = stringCopy(pActivity->szTxID);
+            aActivities[countActivities].timeCreation = pActivity->timeCreation;
+            aActivities[countActivities].amountSatoshi = pActivity->amountSatoshi;
+
+            // save the array:
+            pAddress->pStateInfo->countActivities = countActivities + 1;
+            pAddress->pStateInfo->aActivities = aActivities;
+
+            // Save the transaction:
             pAddress->pStateInfo->bRecycleable = false;
-            if (bAdd)
-            {
-                ABC_CHECK_RET(ABC_TxAddressAddTx(pAddress, pTx, pError));
-            }
-            ABC_CHECK_RET(ABC_TxSaveAddress(self,
-                    pAddress, pError));
-            int changed = 0;
-            if (ABC_STRLEN(pTx->pDetails->szName) == 0
-                    && ABC_STRLEN(pAddress->pDetails->szName) > 0)
-            {
-                pTx->pDetails->szName = stringCopy(pAddress->pDetails->szName);
-                ++changed;
-            }
-            if (ABC_STRLEN(pTx->pDetails->szNotes) == 0
-                    && ABC_STRLEN(pAddress->pDetails->szNotes) > 0)
-            {
-                pTx->pDetails->szNotes = stringCopy(pAddress->pDetails->szNotes);
-                ++changed;
-            }
-            if (ABC_STRLEN(pTx->pDetails->szCategory) == 0
-                    && ABC_STRLEN(pAddress->pDetails->szCategory))
-            {
-                pTx->pDetails->szCategory = stringCopy(pAddress->pDetails->szCategory);
-                ++changed;
-            }
-            if (changed)
-            {
-                ABC_CHECK_RET(
-                    ABC_TxSaveTransaction(self, pTx, pError));
-            }
+            ABC_CHECK_RET(ABC_TxSaveAddress(self, pAddress, pError));
+
+            // Return our details:
+            ABC_TxDetailsFree(*ppDetails);
+            ABC_CHECK_RET(ABC_TxDetailsCopy(ppDetails, pAddress->pDetails, pError));
         }
         pAddress = NULL;
     }
@@ -2949,40 +2976,6 @@ tABC_CC ABC_TxLoadAddressAndAppendToArray(Wallet &self,
 
 exit:
     ABC_TxFreeAddress(pAddress);
-
-    return cc;
-}
-
-/**
- * Adds a transaction to an address's activity log.
- *
- * @param pAddress the address to modify
- * @param pTx the transaction to add to the address
- */
-static
-tABC_CC ABC_TxAddressAddTx(tABC_TxAddress *pAddress, tABC_Tx *pTx, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    unsigned int countActivities;
-    tTxAddressActivity *aActivities = NULL;
-
-    // grow the array:
-    countActivities = pAddress->pStateInfo->countActivities;
-    aActivities = pAddress->pStateInfo->aActivities;
-    ABC_ARRAY_RESIZE(aActivities, countActivities + 1, tTxAddressActivity);
-
-    // fill in the new entry:
-    aActivities[countActivities].szTxID = stringCopy(pTx->szID);
-    aActivities[countActivities].timeCreation = pTx->pStateInfo->timeCreation;
-    aActivities[countActivities].amountSatoshi = pTx->pDetails->amountSatoshi;
-
-    // save the array:
-    pAddress->pStateInfo->countActivities = countActivities + 1;
-    pAddress->pStateInfo->aActivities = aActivities;
-    aActivities = NULL;
-
-exit:
-    ABC_FREE(aActivities);
 
     return cc;
 }
