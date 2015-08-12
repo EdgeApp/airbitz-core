@@ -158,14 +158,6 @@ tABC_CC ABC_TxGetRequestAddress(Wallet &self,
                                 char **pszAddress,
                                 tABC_Error *pError);
 
-tABC_CC ABC_TxGetPendingRequests(Wallet &self,
-                                 tABC_RequestInfo ***paRequests,
-                                 unsigned int *pCount,
-                                 tABC_Error *pError);
-
-void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
-                        unsigned int count);
-
 tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
                                    const char *txId,
                                    const char *malTxId,

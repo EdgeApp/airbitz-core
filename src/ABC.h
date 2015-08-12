@@ -388,26 +388,6 @@ typedef struct sABC_PasswordRule
 } tABC_PasswordRule;
 
 /**
- * AirBitz Request Info
- *
- * This structure contains info for a request.
- *
- */
-typedef struct sABC_RequestInfo
-{
-    /** request identifier */
-    const char *szID;
-    /** time of creation */
-    int64_t timeCreation;
-    /** request details */
-    tABC_TxDetails *pDetails;
-    /** satoshi amount in address */
-    int64_t amountSatoshi;
-    /** satoshi still owed */
-    int64_t owedSatoshi;
-} tABC_RequestInfo;
-
-/**
  * A work-in-progress spend.
  *
  * Somebody, somewhere, wants money.
@@ -1000,16 +980,6 @@ tABC_CC ABC_GetRequestAddress(const char *szUserName,
                               const char *szRequestID,
                               char **pszAddress,
                               tABC_Error *pError);
-
-tABC_CC ABC_GetPendingRequests(const char *szUserName,
-                               const char *szPassword,
-                               const char *szWalletUUID,
-                               tABC_RequestInfo ***paRequests,
-                               unsigned int *pCount,
-                               tABC_Error *pError);
-
-void ABC_FreeRequests(tABC_RequestInfo **aRequests,
-                      unsigned int count);
 
 /* === Spending: === */
 
