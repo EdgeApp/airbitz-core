@@ -857,17 +857,11 @@ tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    char *szFile = NULL;
-    std::string path;
-    tABC_TxAddress *pAddress = NULL;
+    AutoFree<tABC_TxAddress, ABC_TxFreeAddress> pAddress;
     tABC_TxDetails *pNewDetails = NULL;
 
-    // get the filename for this request (note: interally requests are addresses)
-    ABC_CHECK_RET(ABC_GetAddressFilename(self, szRequestID, &szFile, pError));
-    path = self.addressDir() + szFile;
-
     // load the request address
-    ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), &pAddress, pError));
+    ABC_CHECK_RET(ABC_TxLoadAddress(self, szRequestID, &pAddress.get(), pError));
 
     // copy the new details
     ABC_CHECK_RET(ABC_TxDetailsCopy(&pNewDetails, pDetails, pError));
@@ -883,8 +877,6 @@ tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
     ABC_CHECK_RET(ABC_TxSaveAddress(self, pAddress, pError));
 
 exit:
-    ABC_FREE_STR(szFile);
-    ABC_TxFreeAddress(pAddress);
     ABC_TxDetailsFree(pNewDetails);
 
     return cc;
@@ -1076,19 +1068,13 @@ tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    std::string path;
-    char *szFile = NULL;
-    tABC_TxAddress *pAddress = NULL;
-
-    // get the filename for this address
-    ABC_CHECK_RET(ABC_GetAddressFilename(self, szAddress, &szFile, pError));
-    path = self.addressDir() + szFile;
+    AutoFree<tABC_TxAddress, ABC_TxFreeAddress> pAddress;
 
     // load the request address
-    ABC_CHECK_RET(ABC_TxLoadAddressFile(self, path.c_str(), &pAddress, pError));
-    ABC_CHECK_NULL(pAddress->pStateInfo);
+    ABC_CHECK_RET(ABC_TxLoadAddress(self, szAddress, &pAddress.get(), pError));
 
     // if it isn't already set as required
+    ABC_CHECK_NULL(pAddress->pStateInfo);
     if (pAddress->pStateInfo->bRecycleable != bRecyclable)
     {
         // change the recycle boolean
@@ -1100,9 +1086,6 @@ tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
     }
 
 exit:
-    ABC_FREE_STR(szFile);
-    ABC_TxFreeAddress(pAddress);
-
     return cc;
 }
 
@@ -1823,18 +1806,13 @@ tABC_CC ABC_TxGetRequestAddress(Wallet &self,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    tABC_TxAddress *pAddress = NULL;
 
-    *pszAddress = NULL;
+    AutoFree<tABC_TxAddress, ABC_TxFreeAddress> pAddress;
 
-    ABC_CHECK_RET(
-        ABC_TxLoadAddress(self, szRequestID,
-                          &pAddress, pError));
+    ABC_CHECK_RET(ABC_TxLoadAddress(self, szRequestID, &pAddress.get(), pError));
     *pszAddress = stringCopy(pAddress->szPubAddress);
-exit:
-    ABC_TxFreeAddress(pAddress);
 
+exit:
     return cc;
 }
 
