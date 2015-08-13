@@ -42,6 +42,7 @@
 #include "util/Mutex.hpp"
 #include "util/Util.hpp"
 #include "wallet/Details.hpp"
+#include "wallet/TxMetadata.hpp"
 #include "wallet/Wallet.hpp"
 #include <stdio.h>
 #include <stdlib.h>
@@ -112,16 +113,16 @@ typedef struct sABC_Tx
     tABC_TxOutput   **aOutputs;
 } tABC_Tx;
 
-typedef struct sABC_TxAddress
+struct Address
 {
-    int32_t             seq; // sequence number
-    char                *szPubAddress; // public address
-    bool                recyclable;
-    time_t              time; // Creation time
-    tABC_TxDetails      *pDetails;
-} tABC_TxAddress;
+    size_t index;
+    std::string address;
+    bool recyclable;
+    time_t time;
+    TxMetadata metadata;
+};
 
-static tABC_CC  ABC_TxCreateNewAddress(Wallet &self, tABC_TxDetails *pDetails, tABC_TxAddress **ppAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateNewAddress(Wallet &self, tABC_TxDetails *pDetails, Address **ppAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError);
 static tABC_CC  ABC_GetAddressFilename(Wallet &self, const char *szRequestID, char **pszFilename, tABC_Error *pError);
 static tABC_CC  ABC_TxParseAddrFilename(const char *szFilename, char **pszID, char **pszPublicAddress, tABC_Error *pError);
@@ -138,17 +139,17 @@ static void     ABC_TxFreeTx(tABC_Tx *pTx);
 static tABC_CC  ABC_TxSaveTransaction(Wallet &self, const tABC_Tx *pTx, tABC_Error *pError);
 static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *pError);
 static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
-static tABC_CC  ABC_TxLoadAddress(Wallet &self, const char *szAddressID, tABC_TxAddress **ppAddress, tABC_Error *pError);
-static tABC_CC  ABC_TxLoadAddressFile(Wallet &self, const char *szFilename, tABC_TxAddress **ppAddress, tABC_Error *pError);
-static tABC_CC  ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tABC_TxAddress *pAddress, tABC_Error *pError);
-static tABC_CC  ABC_TxSaveAddress(Wallet &self, const tABC_TxAddress *pAddress, tABC_Error *pError);
-static tABC_CC  ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, const tABC_TxAddress *pAddress, tABC_Error *pError);
-static tABC_CC  ABC_TxCreateAddressFilename(Wallet &self, char **pszFilename, const tABC_TxAddress *pAddress, tABC_Error *pError);
-static void     ABC_TxFreeAddress(tABC_TxAddress *pAddress);
-static void     ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count);
-static tABC_CC  ABC_TxGetAddresses(Wallet &self, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadAddress(Wallet &self, const char *szAddressID, Address **ppAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadAddressFile(Wallet &self, const char *szFilename, Address **ppAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, Address *pAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxSaveAddress(Wallet &self, const Address *pAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, const Address *pAddress, tABC_Error *pError);
+static tABC_CC  ABC_TxCreateAddressFilename(Wallet &self, char **pszFilename, const Address *pAddress, tABC_Error *pError);
+static void     ABC_TxFreeAddress(Address *pAddress);
+static void     ABC_TxFreeAddresses(Address **aAddresses, unsigned int count);
+static tABC_CC  ABC_TxGetAddresses(Wallet &self, Address ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static int      ABC_TxAddrPtrCompare(const void * a, const void * b);
-static tABC_CC  ABC_TxLoadAddressAndAppendToArray(Wallet &self, const char *szFilename, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadAddressAndAppendToArray(Wallet &self, const char *szFilename, Address ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxTransactionExists(Wallet &self, const char *szID, tABC_Tx **pTx, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
@@ -197,7 +198,7 @@ txKeyTableGet(KeyTable &result, Wallet &self)
     libwallet::hd_private_key m0 = m.generate_private_key(0);
     libwallet::hd_private_key m00 = m0.generate_private_key(0);
 
-    tABC_TxAddress **aAddresses = nullptr;
+    Address **aAddresses = nullptr;
     unsigned int countAddresses = 0;
     ABC_CHECK_OLD(ABC_TxGetAddresses(self, &aAddresses, &countAddresses, &error));
 
@@ -205,7 +206,7 @@ txKeyTableGet(KeyTable &result, Wallet &self)
     for (unsigned i = 0; i < countAddresses; i++)
     {
         libwallet::hd_private_key m00n =
-            m00.generate_private_key(aAddresses[i]->seq);
+            m00.generate_private_key(aAddresses[i]->index);
         if (!m00n.valid())
             return ABC_ERROR(ABC_CC_NULLPtr, "Super-unlucky key derivation path!");
 
@@ -223,11 +224,11 @@ Status
 txNewChangeAddress(std::string &result, Wallet &self,
     tABC_TxDetails *pDetails)
 {
-    AutoFree<tABC_TxAddress, ABC_TxFreeAddress> pAddress;
+    AutoFree<Address, ABC_TxFreeAddress> pAddress;
     ABC_CHECK_OLD(ABC_TxCreateNewAddress(self, pDetails, &pAddress.get(), &error));
     ABC_CHECK_OLD(ABC_TxSaveAddress(self, pAddress, &error));
 
-    result = pAddress->szPubAddress;
+    result = pAddress->address;
     return Status();
 }
 
@@ -342,14 +343,14 @@ tABC_CC ABC_TxWalletOwnsAddress(Wallet &self,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_TxAddress **aAddresses = NULL;
+    Address **aAddresses = NULL;
     unsigned int countAddresses = 0;
 
     ABC_CHECK_RET(ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
     *bFound = false;
     for (unsigned i = 0; i < countAddresses; ++i)
     {
-        if (strcmp(szAddress, aAddresses[i]->szPubAddress) == 0)
+        if (aAddresses[i]->address == szAddress)
         {
             *bFound = true;
             break;
@@ -367,15 +368,15 @@ tABC_CC ABC_TxWatchAddresses(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
     char *szPubAddress          = NULL;
-    tABC_TxAddress **aAddresses = NULL;
+    Address **aAddresses = NULL;
     unsigned int countAddresses = 0;
 
     ABC_CHECK_RET(
         ABC_TxGetAddresses(self, &aAddresses, &countAddresses, pError));
     for (unsigned i = 0; i < countAddresses; i++)
     {
-        const tABC_TxAddress *a = aAddresses[i];
-        ABC_CHECK_RET(ABC_BridgeWatchAddr(self, a->szPubAddress, pError));
+        const Address *a = aAddresses[i];
+        ABC_CHECK_RET(ABC_BridgeWatchAddr(self, a->address.c_str(), pError));
     }
 exit:
     ABC_TxFreeAddresses(aAddresses, countAddresses);
@@ -547,18 +548,17 @@ tABC_CC ABC_TxTrashAddresses(Wallet &self,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_TxAddress *pAddress = NULL;
+    Address *pAddress = NULL;
 
     unsigned int localCount = 0;
-    tABC_TxAddress **pInternalAddress = NULL;
-    std::unordered_map<std::string, sABC_TxAddress*> addrMap;
+    Address **pInternalAddress = NULL;
+    std::unordered_map<std::string, Address*> addrMap;
 
     // Create a more efficient structure to query
     ABC_CHECK_RET(ABC_TxGetAddresses(self, &pInternalAddress, &localCount, pError));
     for (unsigned i = 0; i < localCount; ++i)
     {
-        std::string addr(pInternalAddress[i]->szPubAddress);
-        addrMap[addr] = pInternalAddress[i];
+        addrMap[pInternalAddress[i]->address] = pInternalAddress[i];
     }
 
     *ppDetails = nullptr;
@@ -583,7 +583,7 @@ tABC_CC ABC_TxTrashAddresses(Wallet &self,
 
             // Return our details:
             ABC_TxDetailsFree(*ppDetails);
-            ABC_CHECK_RET(ABC_TxDetailsCopy(ppDetails, pAddress->pDetails, pError));
+            *ppDetails = pAddress->metadata.toDetails();
         }
         pAddress = NULL;
     }
@@ -630,7 +630,7 @@ tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    tABC_TxAddress *pAddress = NULL;
+    Address *pAddress = NULL;
 
     *pszRequestID = NULL;
 
@@ -641,7 +641,7 @@ tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
     ABC_CHECK_RET(ABC_TxSaveAddress(self, pAddress, pError));
 
     // set the id for the caller
-    *pszRequestID = stringCopy(std::to_string(pAddress->seq));
+    *pszRequestID = stringCopy(std::to_string(pAddress->index));
 
     // Watch this new address
     ABC_CHECK_RET(ABC_TxWatchAddresses(self, pError));
@@ -687,15 +687,15 @@ exit:
 static
 tABC_CC ABC_TxCreateNewAddress(Wallet &self,
                                tABC_TxDetails *pDetails,
-                               tABC_TxAddress **ppAddress,
+                               Address **ppAddress,
                                tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    tABC_TxAddress **aAddresses = NULL;
+    Address **aAddresses = NULL;
     unsigned int countAddresses = 0;
-    tABC_TxAddress *pAddress = NULL;
+    Address *pAddress = NULL;
     int64_t N = -1;
     unsigned recyclable = 0;
 
@@ -708,9 +708,9 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
     for (unsigned i = 0; i < countAddresses; i++)
     {
         // if this is the highest seq number
-        if (aAddresses[i]->seq > N)
+        if (aAddresses[i]->index > N)
         {
-            N = aAddresses[i]->seq;
+            N = aAddresses[i]->index;
         }
 
         // if we don't have an address yet and this one is available
@@ -720,9 +720,9 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
             if (pAddress == NULL)
             {
                 char *szRegenAddress = NULL;
-                ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&szRegenAddress, self.bitcoinKey(), aAddresses[i]->seq, pError));
+                ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&szRegenAddress, self.bitcoinKey(), aAddresses[i]->index, pError));
 
-                if (strncmp(aAddresses[i]->szPubAddress, szRegenAddress, strlen(aAddresses[i]->szPubAddress)) == 0)
+                if (aAddresses[i]->address == szRegenAddress)
                 {
                     // set it to NULL so we don't free it as part of the array
                     // free, we will be sending this back to the caller
@@ -734,9 +734,9 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
                 {
                     ABC_DebugLog("********************************\n");
                     ABC_DebugLog("Address Corrupt\nInitially: %s, Now: %s\nSeq: %d",
-                                    aAddresses[i]->szPubAddress,
+                                    aAddresses[i]->address.c_str(),
                                     szRegenAddress,
-                                    aAddresses[i]->seq);
+                                    aAddresses[i]->index);
                     ABC_DebugLog("********************************\n");
                 }
                 ABC_FREE_STR(szRegenAddress);
@@ -759,10 +759,7 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
         ABC_CHECK_ASSERT(pAddress != NULL, ABC_CC_NoAvailableAddress, "Unable to locate a non-corrupt address.");
 
         // Copy in the new details:
-        ABC_TxDetailsFree(pAddress->pDetails);
-        pAddress->pDetails = nullptr;
-        ABC_CHECK_RET(ABC_TxDetailsCopy(&(pAddress->pDetails), pDetails, pError));
-
+        pAddress->metadata = pDetails;
         pAddress->recyclable = true;
         pAddress->time = time(nullptr);
 
@@ -782,33 +779,23 @@ tABC_CC ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    tABC_TxAddress *pAddress = structAlloc<tABC_TxAddress>();
+    Address *pAddress = new Address();
 
     // generate the public address
-    pAddress->szPubAddress = NULL;
-    pAddress->seq = N;
+    pAddress->index = N;
     do
     {
         // move to the next sequence number
-        pAddress->seq++;
+        pAddress->index++;
 
         // Get the public address for our sequence (it can return NULL, if it is invalid)
-        ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), self.bitcoinKey(), pAddress->seq, pError));
-    } while (pAddress->szPubAddress == NULL);
+        AutoString address;
+        ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&address.get(), self.bitcoinKey(), pAddress->index, pError));
+        pAddress->address = address;
+    } while (pAddress->address.empty());
 
     pAddress->recyclable = true;
     pAddress->time = time(nullptr);
-
-    pAddress->pDetails = structAlloc<tABC_TxDetails>();
-    pAddress->pDetails->szName = stringCopy("");
-    pAddress->pDetails->szCategory = stringCopy("");
-    pAddress->pDetails->szNotes = stringCopy("");
-    pAddress->pDetails->attributes = 0x0;
-    pAddress->pDetails->bizId = 0;
-    pAddress->pDetails->amountSatoshi = 0;
-    pAddress->pDetails->amountCurrency = 0;
-    pAddress->pDetails->amountFeesAirbitzSatoshi = 0;
-    pAddress->pDetails->amountFeesMinersSatoshi = 0;
 
     // Save the new Address
     ABC_CHECK_RET(ABC_TxSaveAddress(self, pAddress, pError));
@@ -835,28 +822,13 @@ tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    AutoFree<tABC_TxAddress, ABC_TxFreeAddress> pAddress;
-    tABC_TxDetails *pNewDetails = NULL;
+    AutoFree<Address, ABC_TxFreeAddress> pAddress;
 
-    // load the request address
     ABC_CHECK_RET(ABC_TxLoadAddress(self, szRequestID, &pAddress.get(), pError));
-
-    // copy the new details
-    ABC_CHECK_RET(ABC_TxDetailsCopy(&pNewDetails, pDetails, pError));
-
-    // free the old details on this address
-    ABC_TxDetailsFree(pAddress->pDetails);
-
-    // set the new details
-    pAddress->pDetails = pNewDetails;
-    pNewDetails = NULL;
-
-    // write out the address
+    pAddress->metadata = pDetails;
     ABC_CHECK_RET(ABC_TxSaveAddress(self, pAddress, pError));
 
 exit:
-    ABC_TxDetailsFree(pNewDetails);
-
     return cc;
 }
 
@@ -1046,7 +1018,7 @@ tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    AutoFree<tABC_TxAddress, ABC_TxFreeAddress> pAddress;
+    AutoFree<Address, ABC_TxFreeAddress> pAddress;
 
     ABC_CHECK_RET(ABC_TxLoadAddress(self, szAddress, &pAddress.get(), pError));
     if (pAddress->recyclable != bRecyclable)
@@ -1078,7 +1050,7 @@ tABC_CC ABC_TxGenerateRequestQRCode(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    tABC_TxAddress *pAddress = NULL;
+    Address *pAddress = NULL;
     QRcode *qr = NULL;
     unsigned char *aData = NULL;
     unsigned int length = 0;
@@ -1086,24 +1058,20 @@ tABC_CC ABC_TxGenerateRequestQRCode(Wallet &self,
 
     // load the request/address
     ABC_CHECK_RET(ABC_TxLoadAddress(self, szRequestID, &pAddress, pError));
-    ABC_CHECK_NULL(pAddress->pDetails);
 
     // Get the URL string for this info
     tABC_BitcoinURIInfo infoURI;
     memset(&infoURI, 0, sizeof(tABC_BitcoinURIInfo));
-    infoURI.amountSatoshi = pAddress->pDetails->amountSatoshi;
-    infoURI.szAddress = pAddress->szPubAddress;
+    infoURI.amountSatoshi = pAddress->metadata.amountSatoshi;
+    infoURI.szAddress = pAddress->address.c_str();
 
     // Set the label if there is one
     ABC_CHECK_RET(ABC_TxBuildFromLabel(self, &(infoURI.szLabel), pError));
 
     // if there is a note
-    if (pAddress->pDetails->szNotes)
+    if (!pAddress->metadata.notes.empty())
     {
-        if (strlen(pAddress->pDetails->szNotes) > 0)
-        {
-            infoURI.szMessage = pAddress->pDetails->szNotes;
-        }
+        infoURI.szMessage = pAddress->metadata.notes.c_str();
     }
     ABC_CHECK_RET(ABC_BridgeEncodeBitcoinURI(&szURI, &infoURI, pError));
 
@@ -1777,10 +1745,10 @@ tABC_CC ABC_TxGetRequestAddress(Wallet &self,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    AutoFree<tABC_TxAddress, ABC_TxFreeAddress> pAddress;
+    AutoFree<Address, ABC_TxFreeAddress> pAddress;
 
     ABC_CHECK_RET(ABC_TxLoadAddress(self, szRequestID, &pAddress.get(), pError));
-    *pszAddress = stringCopy(pAddress->szPubAddress);
+    *pszAddress = stringCopy(pAddress->address);
 
 exit:
     return cc;
@@ -2179,7 +2147,7 @@ int ABC_TxInfoPtrCompare (const void * a, const void * b)
 static
 tABC_CC ABC_TxLoadAddress(Wallet &self,
                           const char *szAddressID,
-                          tABC_TxAddress **ppAddress,
+                          Address **ppAddress,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -2210,15 +2178,16 @@ exit:
 static
 tABC_CC ABC_TxLoadAddressFile(Wallet &self,
                               const char *szFilename,
-                              tABC_TxAddress **ppAddress,
+                              Address **ppAddress,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
     json_t *pJSON_Root = NULL;
-    tABC_TxAddress *pAddress = structAlloc<tABC_TxAddress>();
+    AutoFree<Address, ABC_TxFreeAddress> pAddress(new Address());
     json_t *jsonVal = NULL;
+    AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pDetails;
 
     *ppAddress = NULL;
 
@@ -2231,26 +2200,25 @@ tABC_CC ABC_TxLoadAddressFile(Wallet &self,
     // get the seq and id
     jsonVal = json_object_get(pJSON_Root, JSON_ADDR_SEQ_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing seq");
-    pAddress->seq = (uint32_t)json_integer_value(jsonVal);
+    pAddress->index = (uint32_t)json_integer_value(jsonVal);
 
     // get the public address field
     jsonVal = json_object_get(pJSON_Root, JSON_ADDR_ADDRESS_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing address");
-    pAddress->szPubAddress = stringCopy(json_string_value(jsonVal));
+    pAddress->address = stringCopy(json_string_value(jsonVal));
 
     // get the state object
     ABC_CHECK_RET(ABC_TxDecodeAddressStateInfo(pJSON_Root, pAddress, pError));
 
     // get the details object
-    ABC_CHECK_RET(ABC_TxDetailsDecode(pJSON_Root, &(pAddress->pDetails), pError));
+    ABC_CHECK_RET(ABC_TxDetailsDecode(pJSON_Root, &pDetails.get(), pError));
+    pAddress->metadata = TxMetadata(pDetails);
 
     // assign final result
-    *ppAddress = pAddress;
-    pAddress = NULL;
+    *ppAddress = pAddress.release();
 
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
-    ABC_TxFreeAddress(pAddress);
 
     return cc;
 }
@@ -2262,7 +2230,7 @@ exit:
  *               (it is the callers responsiblity to free this)
  */
 static
-tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tABC_TxAddress *pAddress, tABC_Error *pError)
+tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, Address *pAddress, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -2297,7 +2265,7 @@ exit:
  */
 static
 tABC_CC ABC_TxSaveAddress(Wallet &self,
-                          const tABC_TxAddress *pAddress,
+                          const Address *pAddress,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -2305,22 +2273,24 @@ tABC_CC ABC_TxSaveAddress(Wallet &self,
 
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
+    AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pDetails(
+        pAddress->metadata.toDetails());
 
     // create the json for the transaction
     pJSON_Root = json_object();
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_Error, "Could not create address JSON object");
 
     // set the seq
-    json_object_set_new(pJSON_Root, JSON_ADDR_SEQ_FIELD, json_integer(pAddress->seq));
+    json_object_set_new(pJSON_Root, JSON_ADDR_SEQ_FIELD, json_integer(pAddress->index));
 
     // set the address
-    json_object_set_new(pJSON_Root, JSON_ADDR_ADDRESS_FIELD, json_string(pAddress->szPubAddress));
+    json_object_set_new(pJSON_Root, JSON_ADDR_ADDRESS_FIELD, json_string(pAddress->address.c_str()));
 
     // set the state info
     ABC_CHECK_RET(ABC_TxEncodeAddressStateInfo(pJSON_Root, pAddress, pError));
 
     // set the details
-    ABC_CHECK_RET(ABC_TxDetailsEncode(pJSON_Root, pAddress->pDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsEncode(pJSON_Root, pDetails, pError));
 
     // create the address directory if needed
     ABC_CHECK_NEW(fileEnsureDir(self.addressDir()));
@@ -2345,7 +2315,7 @@ exit:
  * @param pInfo     Pointer to the state info to store in the json object.
  */
 static
-tABC_CC ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, const tABC_TxAddress *pAddress, tABC_Error *pError)
+tABC_CC ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, const Address *pAddress, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -2387,13 +2357,13 @@ exit:
  * @param pszFilename Output filename name. The caller must free this.
  */
 static
-tABC_CC ABC_TxCreateAddressFilename(Wallet &self, char **pszFilename, const tABC_TxAddress *pAddress, tABC_Error *pError)
+tABC_CC ABC_TxCreateAddressFilename(Wallet &self, char **pszFilename, const Address *pAddress, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     std::string path = self.addressDir() +
-        std::to_string(pAddress->seq) + "-" +
-        cryptoFilename(self.dataKey(), pAddress->szPubAddress) + ".json";;
+        std::to_string(pAddress->index) + "-" +
+        cryptoFilename(self.dataKey(), pAddress->address) + ".json";;
 
     *pszFilename = stringCopy(path);
 
@@ -2404,21 +2374,15 @@ tABC_CC ABC_TxCreateAddressFilename(Wallet &self, char **pszFilename, const tABC
  * Free's a ABC_TxFreeAddress struct and all its elements
  */
 static
-void ABC_TxFreeAddress(tABC_TxAddress *pAddress)
+void ABC_TxFreeAddress(Address *pAddress)
 {
-    if (pAddress)
-    {
-        ABC_FREE_STR(pAddress->szPubAddress);
-        ABC_TxDetailsFree(pAddress->pDetails);
-
-        ABC_CLEAR_FREE(pAddress, sizeof(tABC_TxAddress));
-    }
+    delete pAddress;
 }
 
 /**
  * Free's an array of  ABC_TxFreeAddress structs
  */
-void ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count)
+void ABC_TxFreeAddresses(Address **aAddresses, unsigned int count)
 {
     if ((aAddresses != NULL) && (count > 0))
     {
@@ -2427,7 +2391,7 @@ void ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count)
             ABC_TxFreeAddress(aAddresses[i]);
         }
 
-        ABC_CLEAR_FREE(aAddresses, sizeof(tABC_TxAddress *) * count);
+        ABC_CLEAR_FREE(aAddresses, sizeof(Address *) * count);
     }
 }
 
@@ -2470,7 +2434,7 @@ void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count)
  */
 static
 tABC_CC ABC_TxGetAddresses(Wallet &self,
-                           tABC_TxAddress ***paAddresses,
+                           Address ***paAddresses,
                            unsigned int *pCount,
                            tABC_Error *pError)
 {
@@ -2480,7 +2444,7 @@ tABC_CC ABC_TxGetAddresses(Wallet &self,
 
     std::string addressDir = self.addressDir();
     tABC_FileIOList *pFileList = NULL;
-    tABC_TxAddress **aAddresses = NULL;
+    Address **aAddresses = NULL;
     unsigned int count = 0;
 
     *paAddresses = NULL;
@@ -2508,7 +2472,7 @@ tABC_CC ABC_TxGetAddresses(Wallet &self,
     if (count > 1)
     {
         // sort the transactions by creation date using qsort
-        qsort(aAddresses, count, sizeof(tABC_TxAddress *), ABC_TxAddrPtrCompare);
+        qsort(aAddresses, count, sizeof(Address *), ABC_TxAddrPtrCompare);
     }
 
     // store final results
@@ -2543,14 +2507,14 @@ exit:
 static
 int ABC_TxAddrPtrCompare(const void * a, const void * b)
 {
-    tABC_TxAddress **ppInfoA = (tABC_TxAddress **)a;
-    tABC_TxAddress *pInfoA = (tABC_TxAddress *)*ppInfoA;
-    tABC_TxAddress **ppInfoB = (tABC_TxAddress **)b;
-    tABC_TxAddress *pInfoB = (tABC_TxAddress *)*ppInfoB;
+    Address **ppInfoA = (Address **)a;
+    Address *pInfoA = (Address *)*ppInfoA;
+    Address **ppInfoB = (Address **)b;
+    Address *pInfoB = (Address *)*ppInfoB;
 
-    if (pInfoA->seq < pInfoB->seq) return -1;
-    if (pInfoA->seq == pInfoB->seq) return 0;
-    if (pInfoA->seq > pInfoB->seq) return 1;
+    if (pInfoA->index < pInfoB->index) return -1;
+    if (pInfoA->index == pInfoB->index) return 0;
+    if (pInfoA->index > pInfoB->index) return 1;
 
     return 0;
 }
@@ -2566,15 +2530,15 @@ int ABC_TxAddrPtrCompare(const void * a, const void * b)
 static
 tABC_CC ABC_TxLoadAddressAndAppendToArray(Wallet &self,
                                           const char *szFilename,
-                                          tABC_TxAddress ***paAddresses,
+                                          Address ***paAddresses,
                                           unsigned int *pCount,
                                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_TxAddress *pAddress = NULL;
-    tABC_TxAddress **aAddresses = NULL;
+    Address *pAddress = NULL;
+    Address **aAddresses = NULL;
     unsigned int count = 0;
 
     // hold on to current values
@@ -2587,13 +2551,13 @@ tABC_CC ABC_TxLoadAddressAndAppendToArray(Wallet &self,
     // create space for new entry
     if (aAddresses == NULL)
     {
-        ABC_ARRAY_NEW(aAddresses, 1, tABC_TxAddress*);
+        ABC_ARRAY_NEW(aAddresses, 1, Address*);
         count = 1;
     }
     else
     {
         count++;
-        ABC_ARRAY_RESIZE(aAddresses, count, tABC_TxAddress*);
+        ABC_ARRAY_RESIZE(aAddresses, count, Address*);
     }
 
     // add it to the array
