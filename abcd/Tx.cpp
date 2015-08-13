@@ -87,7 +87,6 @@ namespace abcd {
 #define JSON_ADDR_ADDRESS_FIELD                 "address"
 #define JSON_ADDR_STATE_FIELD                   "state"
 #define JSON_ADDR_RECYCLEABLE_FIELD             "recycleable"
-#define JSON_ADDR_ACTIVITY_FIELD                "activity"
 #define JSON_ADDR_DATE_FIELD                    "date"
 
 typedef enum eTxType
@@ -113,19 +112,10 @@ typedef struct sABC_Tx
     tABC_TxOutput   **aOutputs;
 } tABC_Tx;
 
-typedef struct sTxAddressActivity
-{
-    char    *szTxID; // ntxid from bitcoin associated with this activity
-    int64_t timeCreation;
-    int64_t amountSatoshi;
-} tTxAddressActivity;
-
 typedef struct sTxAddressStateInfo
 {
     int64_t             timeCreation;
     bool                bRecycleable;
-    unsigned int        countActivities;
-    tTxAddressActivity  *aActivities;
 } tTxAddressStateInfo;
 
 typedef struct sABC_TxAddress
@@ -171,7 +161,7 @@ static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Erro
 static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError);
 static tABC_CC  ABC_TxWalletOwnsAddress(Wallet &self, const char *szAddress, bool *bFound, tABC_Error *pError);
 static tABC_CC  ABC_TxSaveNewTx(Wallet &self, tABC_Tx *pTx, bool bOutside, tABC_Error *pError);
-static tABC_CC  ABC_TxTrashAddresses(Wallet &self, tABC_TxDetails **ppDetails, tTxAddressActivity *pActivity, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
+static tABC_CC  ABC_TxTrashAddresses(Wallet &self, tABC_TxDetails **ppDetails, tABC_TxOutput **paAddresses, unsigned int addressCount, tABC_Error *pError);
 static tABC_CC  ABC_TxCalcCurrency(Wallet &self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
 
 /**
@@ -528,15 +518,10 @@ ABC_TxSaveNewTx(Wallet &self,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    tTxAddressActivity activity;
     AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pDetails;
 
-    activity.szTxID = pTx->szID;
-    activity.timeCreation = pTx->pStateInfo->timeCreation;
-    activity.amountSatoshi = pTx->pDetails->amountSatoshi;
-
     ABC_CHECK_RET(ABC_TxTrashAddresses(self, &pDetails.get(),
-        &activity, pTx->aOutputs, pTx->countOutputs, pError));
+        pTx->aOutputs, pTx->countOutputs, pError));
 
     if (bOutside)
     {
@@ -563,7 +548,6 @@ exit:
 static
 tABC_CC ABC_TxTrashAddresses(Wallet &self,
                              tABC_TxDetails **ppDetails,
-                             tTxAddressActivity *pActivity,
                              tABC_TxOutput **paAddresses,
                              unsigned int addressCount,
                              tABC_Error *pError)
@@ -596,24 +580,12 @@ tABC_CC ABC_TxTrashAddresses(Wallet &self,
         pAddress = addrMap[addr];
         if (pAddress)
         {
-            unsigned int countActivities = pAddress->pStateInfo->countActivities;
-            tTxAddressActivity *aActivities = pAddress->pStateInfo->aActivities;
-
-            // grow the array:
-            ABC_ARRAY_RESIZE(aActivities, countActivities + 1, tTxAddressActivity);
-
-            // fill in the new entry:
-            aActivities[countActivities].szTxID = stringCopy(pActivity->szTxID);
-            aActivities[countActivities].timeCreation = pActivity->timeCreation;
-            aActivities[countActivities].amountSatoshi = pActivity->amountSatoshi;
-
-            // save the array:
-            pAddress->pStateInfo->countActivities = countActivities + 1;
-            pAddress->pStateInfo->aActivities = aActivities;
-
-            // Save the transaction:
-            pAddress->pStateInfo->bRecycleable = false;
-            ABC_CHECK_RET(ABC_TxSaveAddress(self, pAddress, pError));
+            // Update the transaction:
+            if (pAddress->pStateInfo->bRecycleable)
+            {
+                pAddress->pStateInfo->bRecycleable = false;
+                ABC_CHECK_RET(ABC_TxSaveAddress(self, pAddress, pError));
+            }
 
             // Return our details:
             ABC_TxDetailsFree(*ppDetails);
@@ -749,8 +721,7 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
 
         // if we don't have an address yet and this one is available
         ABC_CHECK_NULL(aAddresses[i]->pStateInfo);
-        if (aAddresses[i]->pStateInfo->bRecycleable
-                && aAddresses[i]->pStateInfo->countActivities == 0)
+        if (aAddresses[i]->pStateInfo->bRecycleable)
         {
             recyclable++;
             if (pAddress == NULL)
@@ -806,8 +777,6 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
         // create the state info
         pAddress->pStateInfo = structAlloc<tTxAddressStateInfo>();
         pAddress->pStateInfo->bRecycleable = true;
-        pAddress->pStateInfo->countActivities = 0;
-        pAddress->pStateInfo->aActivities = NULL;
         pAddress->pStateInfo->timeCreation = time(NULL);
 
         // assigned final address
@@ -842,8 +811,6 @@ tABC_CC ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError)
 
     pAddress->pStateInfo = structAlloc<tTxAddressStateInfo>();
     pAddress->pStateInfo->bRecycleable = true;
-    pAddress->pStateInfo->countActivities = 0;
-    pAddress->pStateInfo->aActivities = NULL;
     pAddress->pStateInfo->timeCreation = time(NULL);
 
     pAddress->pDetails = structAlloc<tABC_TxDetails>();
@@ -2325,7 +2292,6 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
     tTxAddressStateInfo *pState = structAlloc<tTxAddressStateInfo>();
     json_t *jsonState = NULL;
     json_t *jsonVal = NULL;
-    json_t *jsonActivity = NULL;
 
     ABC_CHECK_NULL(pJSON_Obj);
     ABC_CHECK_NULL(ppState);
@@ -2344,46 +2310,6 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
     jsonVal = json_object_get(jsonState, JSON_ADDR_RECYCLEABLE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_boolean(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing recycleable boolean");
     pState->bRecycleable = json_is_true(jsonVal) ? true : false;
-
-    // get the activity array (if it exists)
-    jsonActivity = json_object_get(jsonState, JSON_ADDR_ACTIVITY_FIELD);
-    if (jsonActivity)
-    {
-        ABC_CHECK_ASSERT(json_is_array(jsonActivity), ABC_CC_JSONError, "Error parsing JSON address package - missing activity array");
-
-        // get the number of elements in the array
-        pState->countActivities = (int) json_array_size(jsonActivity);
-
-        if (pState->countActivities > 0)
-        {
-            ABC_ARRAY_NEW(pState->aActivities, pState->countActivities, tTxAddressActivity);
-
-            for (unsigned i = 0; i < pState->countActivities; i++)
-            {
-                json_t *pJSON_Elem = json_array_get(jsonActivity, i);
-                ABC_CHECK_ASSERT((pJSON_Elem && json_is_object(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON address package - missing activity array element");
-
-                // get the tx id
-                jsonVal = json_object_get(pJSON_Elem, JSON_TX_ID_FIELD);
-                ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing activity txid");
-                pState->aActivities[i].szTxID = stringCopy(json_string_value(jsonVal));
-
-                // get the date field
-                jsonVal = json_object_get(pJSON_Elem, JSON_ADDR_DATE_FIELD);
-                ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing date");
-                pState->aActivities[i].timeCreation = json_integer_value(jsonVal);
-
-                // get the satoshi field
-                jsonVal = json_object_get(pJSON_Elem, JSON_AMOUNT_SATOSHI_FIELD);
-                ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing satoshi amount");
-                pState->aActivities[i].amountSatoshi = json_integer_value(jsonVal);
-            }
-        }
-    }
-    else
-    {
-        pState->countActivities = 0;
-    }
 
     // assign final result
     *ppState = pState;
@@ -2476,41 +2402,6 @@ tABC_CC ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pIn
     retVal = json_object_set_new(pJSON_State, JSON_ADDR_RECYCLEABLE_FIELD, json_boolean(pInfo->bRecycleable));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
-    // create the array object
-    pJSON_ActivityArray = json_array();
-
-    // if there are any activities
-    if ((pInfo->countActivities > 0) && (pInfo->aActivities != NULL))
-    {
-        for (unsigned i = 0; i < pInfo->countActivities; i++)
-        {
-            // create the array object
-            pJSON_Activity = json_object();
-
-            // add the ntxid to the activity object
-            retVal = json_object_set_new(pJSON_Activity, JSON_TX_ID_FIELD, json_string(pInfo->aActivities[i].szTxID));
-            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-            // add the date to the activity object
-            retVal = json_object_set_new(pJSON_Activity, JSON_ADDR_DATE_FIELD, json_integer(pInfo->aActivities[i].timeCreation));
-            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-            // add the amount satoshi to the activity object
-            retVal = json_object_set_new(pJSON_Activity, JSON_AMOUNT_SATOSHI_FIELD, json_integer(pInfo->aActivities[i].amountSatoshi));
-            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-            // add this activity to the activity array
-            json_array_append_new(pJSON_ActivityArray, pJSON_Activity);
-
-            // the appent_new stole the reference so we are done with it
-            pJSON_Activity = NULL;
-        }
-    }
-
-    // add the activity array to the state object
-    retVal = json_object_set(pJSON_State, JSON_ADDR_ACTIVITY_FIELD, pJSON_ActivityArray);
-    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
     // add the state object to the master object
     retVal = json_object_set(pJSON_Obj, JSON_ADDR_STATE_FIELD, pJSON_State);
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
@@ -2567,15 +2458,6 @@ void ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo)
 {
     if (pInfo)
     {
-        if ((pInfo->aActivities != NULL) && (pInfo->countActivities > 0))
-        {
-            for (unsigned i = 0; i < pInfo->countActivities; i++)
-            {
-                ABC_FREE_STR(pInfo->aActivities[i].szTxID);
-            }
-            ABC_CLEAR_FREE(pInfo->aActivities, sizeof(tTxAddressActivity) * pInfo->countActivities);
-        }
-
         ABC_CLEAR_FREE(pInfo, sizeof(tTxAddressStateInfo));
     }
 }
