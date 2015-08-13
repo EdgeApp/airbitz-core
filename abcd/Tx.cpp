@@ -131,7 +131,6 @@ typedef struct sTxAddressStateInfo
 typedef struct sABC_TxAddress
 {
     int32_t             seq; // sequence number
-    char                *szID; // sequence number in string form
     char                *szPubAddress; // public address
     tABC_TxDetails      *pDetails;
     tTxAddressStateInfo *pStateInfo;
@@ -651,7 +650,7 @@ tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
     ABC_CHECK_RET(ABC_TxSaveAddress(self, pAddress, pError));
 
     // set the id for the caller
-    *pszRequestID = stringCopy(pAddress->szID);
+    *pszRequestID = stringCopy(std::to_string(pAddress->seq));
 
     // Watch this new address
     ABC_CHECK_RET(ABC_TxWatchAddresses(self, pError));
@@ -815,10 +814,6 @@ tABC_CC ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError)
         // Get the public address for our sequence (it can return NULL, if it is invalid)
         ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), self.bitcoinKey(), pAddress->seq, pError));
     } while (pAddress->szPubAddress == NULL);
-
-    // set the final ID
-    ABC_STR_NEW(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
-    sprintf(pAddress->szID, "%u", pAddress->seq);
 
     pAddress->pStateInfo = structAlloc<tTxAddressStateInfo>();
     pAddress->pStateInfo->bRecycleable = true;
@@ -1902,7 +1897,7 @@ tABC_CC ABC_TxGetPendingRequests(Wallet &self,
                         {
                             // create this request
                             pRequest = structAlloc<tABC_RequestInfo>();
-                            pRequest->szID = stringCopy(pAddr->szID);
+                            pRequest->szID = stringCopy(std::to_string(pAddr->seq));
                             pRequest->timeCreation = pState->timeCreation;
                             pRequest->owedSatoshi = owedSatoshi;
                             pRequest->amountSatoshi = pDetails->amountSatoshi - owedSatoshi;
@@ -2492,8 +2487,6 @@ tABC_CC ABC_TxLoadAddressFile(Wallet &self,
     jsonVal = json_object_get(pJSON_Root, JSON_ADDR_SEQ_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing seq");
     pAddress->seq = (uint32_t)json_integer_value(jsonVal);
-    ABC_STR_NEW(pAddress->szID, TX_MAX_ADDR_ID_LENGTH);
-    sprintf(pAddress->szID, "%u", pAddress->seq);
 
     // get the public address field
     jsonVal = json_object_get(pJSON_Root, JSON_ADDR_ADDRESS_FIELD);
@@ -2619,8 +2612,6 @@ tABC_CC ABC_TxSaveAddress(Wallet &self,
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL(pAddress->pStateInfo);
-    ABC_CHECK_NULL(pAddress->szID);
-    ABC_CHECK_ASSERT(strlen(pAddress->szID) > 0, ABC_CC_Error, "No address ID provided");
 
     // create the json for the transaction
     pJSON_Root = json_object();
@@ -2760,7 +2751,6 @@ void ABC_TxFreeAddress(tABC_TxAddress *pAddress)
 {
     if (pAddress)
     {
-        ABC_FREE_STR(pAddress->szID);
         ABC_FREE_STR(pAddress->szPubAddress);
         ABC_TxDetailsFree(pAddress->pDetails);
         ABC_TxFreeAddressStateInfo(pAddress->pStateInfo);
