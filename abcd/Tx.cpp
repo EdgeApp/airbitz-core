@@ -112,18 +112,13 @@ typedef struct sABC_Tx
     tABC_TxOutput   **aOutputs;
 } tABC_Tx;
 
-typedef struct sTxAddressStateInfo
-{
-    int64_t             timeCreation;
-    bool                bRecycleable;
-} tTxAddressStateInfo;
-
 typedef struct sABC_TxAddress
 {
     int32_t             seq; // sequence number
     char                *szPubAddress; // public address
+    bool                recyclable;
+    time_t              time; // Creation time
     tABC_TxDetails      *pDetails;
-    tTxAddressStateInfo *pStateInfo;
 } tABC_TxAddress;
 
 static tABC_CC  ABC_TxCreateNewAddress(Wallet &self, tABC_TxDetails *pDetails, tABC_TxAddress **ppAddress, tABC_Error *pError);
@@ -145,12 +140,11 @@ static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC
 static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
 static tABC_CC  ABC_TxLoadAddress(Wallet &self, const char *szAddressID, tABC_TxAddress **ppAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadAddressFile(Wallet &self, const char *szFilename, tABC_TxAddress **ppAddress, tABC_Error *pError);
-static tABC_CC  ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **ppState, tABC_Error *pError);
+static tABC_CC  ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tABC_TxAddress *pAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxSaveAddress(Wallet &self, const tABC_TxAddress *pAddress, tABC_Error *pError);
-static tABC_CC  ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pInfo, tABC_Error *pError);
+static tABC_CC  ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, const tABC_TxAddress *pAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateAddressFilename(Wallet &self, char **pszFilename, const tABC_TxAddress *pAddress, tABC_Error *pError);
 static void     ABC_TxFreeAddress(tABC_TxAddress *pAddress);
-static void     ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo);
 static void     ABC_TxFreeAddresses(tABC_TxAddress **aAddresses, unsigned int count);
 static tABC_CC  ABC_TxGetAddresses(Wallet &self, tABC_TxAddress ***paAddresses, unsigned int *pCount, tABC_Error *pError);
 static int      ABC_TxAddrPtrCompare(const void * a, const void * b);
@@ -581,9 +575,9 @@ tABC_CC ABC_TxTrashAddresses(Wallet &self,
         if (pAddress)
         {
             // Update the transaction:
-            if (pAddress->pStateInfo->bRecycleable)
+            if (pAddress->recyclable)
             {
-                pAddress->pStateInfo->bRecycleable = false;
+                pAddress->recyclable = false;
                 ABC_CHECK_RET(ABC_TxSaveAddress(self, pAddress, pError));
             }
 
@@ -720,8 +714,7 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
         }
 
         // if we don't have an address yet and this one is available
-        ABC_CHECK_NULL(aAddresses[i]->pStateInfo);
-        if (aAddresses[i]->pStateInfo->bRecycleable)
+        if (aAddresses[i]->recyclable)
         {
             recyclable++;
             if (pAddress == NULL)
@@ -765,19 +758,13 @@ tABC_CC ABC_TxCreateNewAddress(Wallet &self,
         // Did we find an address to use?
         ABC_CHECK_ASSERT(pAddress != NULL, ABC_CC_NoAvailableAddress, "Unable to locate a non-corrupt address.");
 
-        // free state and details as we will be setting them to new data below
-        ABC_TxFreeAddressStateInfo(pAddress->pStateInfo);
-        pAddress->pStateInfo = NULL;
+        // Copy in the new details:
         ABC_TxDetailsFree(pAddress->pDetails);
-        pAddress->pDetails = NULL;
-
-        // copy over the info we were given
+        pAddress->pDetails = nullptr;
         ABC_CHECK_RET(ABC_TxDetailsCopy(&(pAddress->pDetails), pDetails, pError));
 
-        // create the state info
-        pAddress->pStateInfo = structAlloc<tTxAddressStateInfo>();
-        pAddress->pStateInfo->bRecycleable = true;
-        pAddress->pStateInfo->timeCreation = time(NULL);
+        pAddress->recyclable = true;
+        pAddress->time = time(nullptr);
 
         // assigned final address
         *ppAddress = pAddress;
@@ -809,9 +796,8 @@ tABC_CC ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError)
         ABC_CHECK_RET(ABC_BridgeGetBitcoinPubAddress(&(pAddress->szPubAddress), self.bitcoinKey(), pAddress->seq, pError));
     } while (pAddress->szPubAddress == NULL);
 
-    pAddress->pStateInfo = structAlloc<tTxAddressStateInfo>();
-    pAddress->pStateInfo->bRecycleable = true;
-    pAddress->pStateInfo->timeCreation = time(NULL);
+    pAddress->recyclable = true;
+    pAddress->time = time(nullptr);
 
     pAddress->pDetails = structAlloc<tABC_TxDetails>();
     pAddress->pDetails->szName = stringCopy("");
@@ -1062,18 +1048,10 @@ tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
 
     AutoFree<tABC_TxAddress, ABC_TxFreeAddress> pAddress;
 
-    // load the request address
     ABC_CHECK_RET(ABC_TxLoadAddress(self, szAddress, &pAddress.get(), pError));
-
-    // if it isn't already set as required
-    ABC_CHECK_NULL(pAddress->pStateInfo);
-    if (pAddress->pStateInfo->bRecycleable != bRecyclable)
+    if (pAddress->recyclable != bRecyclable)
     {
-        // change the recycle boolean
-        ABC_CHECK_NULL(pAddress->pStateInfo);
-        pAddress->pStateInfo->bRecycleable = bRecyclable;
-
-        // write out the address
+        pAddress->recyclable = bRecyclable;
         ABC_CHECK_RET(ABC_TxSaveAddress(self, pAddress, pError));
     }
 
@@ -2261,7 +2239,7 @@ tABC_CC ABC_TxLoadAddressFile(Wallet &self,
     pAddress->szPubAddress = stringCopy(json_string_value(jsonVal));
 
     // get the state object
-    ABC_CHECK_RET(ABC_TxDecodeAddressStateInfo(pJSON_Root, &(pAddress->pStateInfo), pError));
+    ABC_CHECK_RET(ABC_TxDecodeAddressStateInfo(pJSON_Root, pAddress, pError));
 
     // get the details object
     ABC_CHECK_RET(ABC_TxDetailsDecode(pJSON_Root, &(pAddress->pDetails), pError));
@@ -2284,18 +2262,15 @@ exit:
  *               (it is the callers responsiblity to free this)
  */
 static
-tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **ppState, tABC_Error *pError)
+tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tABC_TxAddress *pAddress, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tTxAddressStateInfo *pState = structAlloc<tTxAddressStateInfo>();
     json_t *jsonState = NULL;
     json_t *jsonVal = NULL;
 
     ABC_CHECK_NULL(pJSON_Obj);
-    ABC_CHECK_NULL(ppState);
-    *ppState = NULL;
 
     // get the state object
     jsonState = json_object_get(pJSON_Obj, JSON_ADDR_STATE_FIELD);
@@ -2304,20 +2279,14 @@ tABC_CC ABC_TxDecodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo **pp
     // get the creation date
     jsonVal = json_object_get(jsonState, JSON_CREATION_DATE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing creation date");
-    pState->timeCreation = json_integer_value(jsonVal);
+    pAddress->time = json_integer_value(jsonVal);
 
     // get the internal boolean
     jsonVal = json_object_get(jsonState, JSON_ADDR_RECYCLEABLE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_boolean(jsonVal)), ABC_CC_JSONError, "Error parsing JSON address package - missing recycleable boolean");
-    pState->bRecycleable = json_is_true(jsonVal) ? true : false;
-
-    // assign final result
-    *ppState = pState;
-    pState = NULL;
+    pAddress->recyclable = json_is_true(jsonVal) ? true : false;
 
 exit:
-    ABC_TxFreeAddressStateInfo(pState);
-
     return cc;
 }
 
@@ -2337,8 +2306,6 @@ tABC_CC ABC_TxSaveAddress(Wallet &self,
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
 
-    ABC_CHECK_NULL(pAddress->pStateInfo);
-
     // create the json for the transaction
     pJSON_Root = json_object();
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_Error, "Could not create address JSON object");
@@ -2350,7 +2317,7 @@ tABC_CC ABC_TxSaveAddress(Wallet &self,
     json_object_set_new(pJSON_Root, JSON_ADDR_ADDRESS_FIELD, json_string(pAddress->szPubAddress));
 
     // set the state info
-    ABC_CHECK_RET(ABC_TxEncodeAddressStateInfo(pJSON_Root, pAddress->pStateInfo, pError));
+    ABC_CHECK_RET(ABC_TxEncodeAddressStateInfo(pJSON_Root, pAddress, pError));
 
     // set the details
     ABC_CHECK_RET(ABC_TxDetailsEncode(pJSON_Root, pAddress->pDetails, pError));
@@ -2378,7 +2345,7 @@ exit:
  * @param pInfo     Pointer to the state info to store in the json object.
  */
 static
-tABC_CC ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pInfo, tABC_Error *pError)
+tABC_CC ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, const tABC_TxAddress *pAddress, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -2389,17 +2356,16 @@ tABC_CC ABC_TxEncodeAddressStateInfo(json_t *pJSON_Obj, tTxAddressStateInfo *pIn
     int retVal = 0;
 
     ABC_CHECK_NULL(pJSON_Obj);
-    ABC_CHECK_NULL(pInfo);
 
     // create the state object
     pJSON_State = json_object();
 
     // add the creation date to the state object
-    retVal = json_object_set_new(pJSON_State, JSON_CREATION_DATE_FIELD, json_integer(pInfo->timeCreation));
+    retVal = json_object_set_new(pJSON_State, JSON_CREATION_DATE_FIELD, json_integer(pAddress->time));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the recycleable boolean
-    retVal = json_object_set_new(pJSON_State, JSON_ADDR_RECYCLEABLE_FIELD, json_boolean(pInfo->bRecycleable));
+    retVal = json_object_set_new(pJSON_State, JSON_ADDR_RECYCLEABLE_FIELD, json_boolean(pAddress->recyclable));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the state object to the master object
@@ -2444,21 +2410,8 @@ void ABC_TxFreeAddress(tABC_TxAddress *pAddress)
     {
         ABC_FREE_STR(pAddress->szPubAddress);
         ABC_TxDetailsFree(pAddress->pDetails);
-        ABC_TxFreeAddressStateInfo(pAddress->pStateInfo);
 
         ABC_CLEAR_FREE(pAddress, sizeof(tABC_TxAddress));
-    }
-}
-
-/**
- * Free's a tTxAddressStateInfo struct and all its elements
- */
-static
-void ABC_TxFreeAddressStateInfo(tTxAddressStateInfo *pInfo)
-{
-    if (pInfo)
-    {
-        ABC_CLEAR_FREE(pInfo, sizeof(tTxAddressStateInfo));
     }
 }
 
