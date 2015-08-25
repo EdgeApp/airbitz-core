@@ -70,6 +70,16 @@ fileExists(const std::string &path)
     return 0 == access(path.c_str(), F_OK);
 }
 
+bool
+fileIsJson(const std::string &name)
+{
+    // Skip hidden files:
+    if ('.' == name[0])
+        return false;
+
+    return 5 <= name.size() && std::equal(name.end() - 5, name.end(), ".json");
+}
+
 /**
  * Creates a filelist structure for a specified directory
  */

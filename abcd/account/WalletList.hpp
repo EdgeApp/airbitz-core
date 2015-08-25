@@ -79,10 +79,10 @@ private:
     std::map<std::string, JsonPtr> wallets_;
 
     /**
-     * Finds the filename for a wallet.
+     * Builds the path to a wallet file.
      */
     std::string
-    filename(const std::string &name) const;
+    path(const std::string &name) const;
 };
 
 } // namespace abcd
