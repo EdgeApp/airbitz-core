@@ -10,6 +10,7 @@
 
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
+#include "AddressDb.hpp"
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -92,6 +93,9 @@ private:
      */
     Status
     loadSync();
+
+public:
+    AddressDb addresses;
 };
 
 } // namespace abcd

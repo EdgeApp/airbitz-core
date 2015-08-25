@@ -113,15 +113,6 @@ typedef struct sABC_Tx
     tABC_TxOutput   **aOutputs;
 } tABC_Tx;
 
-struct Address
-{
-    size_t index;
-    std::string address;
-    bool recyclable;
-    time_t time;
-    TxMetadata metadata;
-};
-
 static tABC_CC  ABC_TxCreateNewAddress(Wallet &self, tABC_TxDetails *pDetails, Address **ppAddress, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateNewAddressForN(Wallet &self, int32_t N, tABC_Error *pError);
 static tABC_CC  ABC_GetAddressFilename(Wallet &self, const char *szRequestID, char **pszFilename, tABC_Error *pError);
