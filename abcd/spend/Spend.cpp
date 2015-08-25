@@ -14,6 +14,7 @@
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/Mutex.hpp"
 #include "../wallet/Details.hpp"
+#include "../wallet/Wallet.hpp"
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
@@ -130,8 +131,8 @@ tABC_CC  ABC_TxCalcSendFees(Wallet &self, SendInfo *pInfo, uint64_t *pTotalFees,
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
-    std::string changeAddress;
     bc::transaction_type tx;
+    Address changeAddress;
 
     ABC_CHECK_NULL(pInfo);
 
@@ -139,8 +140,8 @@ tABC_CC  ABC_TxCalcSendFees(Wallet &self, SendInfo *pInfo, uint64_t *pTotalFees,
     pInfo->pDetails->amountFeesMinersSatoshi = 0;
 
     // Make an unsigned transaction
-    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails));
-    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress));
+    ABC_CHECK_NEW(self.addresses.getNew(changeAddress));
+    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress.address));
 
     *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
                 + pInfo->pDetails->amountFeesMinersSatoshi;
@@ -198,15 +199,15 @@ tABC_CC ABC_TxSend(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    std::string changeAddress;
+    Address changeAddress;
     bc::transaction_type tx;
     AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> unsaved;
 
     ABC_CHECK_NULL(pInfo);
 
     // Make an unsigned transaction:
-    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails));
-    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress));
+    ABC_CHECK_NEW(self.addresses.getNew(changeAddress));
+    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress.address));
 
     // Sign and send transaction:
     {
@@ -214,12 +215,11 @@ tABC_CC ABC_TxSend(Wallet &self,
         ABC_CHECK_NEW(watcherFind(watcher, self));
 
         // Sign the transaction:
-        KeyTable keys;
-        ABC_CHECK_NEW(txKeyTableGet(keys, self));
+        KeyTable keys = self.addresses.keyTable();
         ABC_CHECK_NEW(signTx(tx, *watcher, keys));
 
         ABC_DebugLog("Change: %s, Amount: %ld, Contents: %s",
-            changeAddress.c_str(), pInfo->pDetails->amountSatoshi,
+            changeAddress.address.c_str(), pInfo->pDetails->amountSatoshi,
             bc::pretty(tx).c_str());
 
         // Send to the network:
@@ -230,15 +230,15 @@ tABC_CC ABC_TxSend(Wallet &self,
         // Let the merchant broadcast the transaction:
         if (pInfo->paymentRequest)
         {
-            // TODO: add something to the details about a refund
-            AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pRefundDetails;
-            ABC_CHECK_RET(ABC_TxDetailsCopy(&pRefundDetails.get(), pInfo->pDetails, pError));
-
-            std::string refundAddress;
-            ABC_CHECK_NEW(txNewChangeAddress(refundAddress, self, pRefundDetails));
+            // TODO: Update the metadata with something about a refund
+            Address refundAddress;
+            ABC_CHECK_NEW(self.addresses.getNew(refundAddress));
+            refundAddress.time = time(nullptr);
+            refundAddress.metadata = pInfo->pDetails;
+            ABC_CHECK_NEW(self.addresses.save(refundAddress));
 
             bc::script_type refundScript;
-            ABC_CHECK_NEW(outputScriptForAddress(refundScript, refundAddress));
+            ABC_CHECK_NEW(outputScriptForAddress(refundScript, refundAddress.address));
             DataChunk refund = save_script(refundScript);
 
             PaymentReceipt receipt;

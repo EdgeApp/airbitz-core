@@ -182,7 +182,6 @@ Wallet::createNew(const std::string &name, int currency)
     ABC_CHECK(currencyJson.save(syncDir() + WALLET_CURRENCY_FILENAME, dataKey()));
     ABC_CHECK(nameSet(name));
     ABC_CHECK(addresses.load());
-    ABC_CHECK_OLD(ABC_TxCreateInitialAddresses(*this, &error));
 
     // Push the wallet to the server:
     bool dirty = false;

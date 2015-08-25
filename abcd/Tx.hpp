@@ -42,7 +42,6 @@
 namespace abcd {
 
 struct SendInfo;
-typedef std::map<const std::string, std::string> KeyTable;
 class Wallet;
 
 /**
@@ -64,19 +63,6 @@ typedef struct sABC_UnsavedTx
 void ABC_UnsavedTxFree(tABC_UnsavedTx *pUtx);
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
-/**
- * Calculates the private keys for a wallet.
- */
-Status
-txKeyTableGet(KeyTable &result, Wallet &self);
-
-/**
- * Gets the next unused change address from the wallet.
- */
-Status
-txNewChangeAddress(std::string &result, Wallet &self,
-    tABC_TxDetails *pDetails);
-
 tABC_CC ABC_TxSendComplete(Wallet &self,
                            SendInfo         *pInfo,
                            tABC_UnsavedTx   *pUtx,
@@ -90,9 +76,6 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
                                  tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
                                  void *pData,
                                  tABC_Error *pError);
-
-tABC_CC ABC_TxCreateInitialAddresses(Wallet &self,
-                                     tABC_Error *pError);
 
 tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
                                    tABC_TxDetails *pDetails,
