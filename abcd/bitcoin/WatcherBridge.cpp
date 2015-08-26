@@ -41,6 +41,7 @@
 #include "../spend/Spend.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Util.hpp"
+#include "../wallet/Address.hpp"
 #include "../wallet/Wallet.hpp"
 #include <algorithm>
 #include <list>

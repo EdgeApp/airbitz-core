@@ -77,32 +77,6 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
                                  void *pData,
                                  tABC_Error *pError);
 
-tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
-                                   tABC_TxDetails *pDetails,
-                                   char **pszRequestID,
-                                   bool bTransfer,
-                                   tABC_Error *pError);
-
-tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
-                                   const char *szRequestID,
-                                   tABC_TxDetails *pDetails,
-                                   tABC_Error *pError);
-
-tABC_CC ABC_TxFinalizeReceiveRequest(Wallet &self,
-                                     const char *szRequestID,
-                                     tABC_Error *pError);
-
-tABC_CC ABC_TxCancelReceiveRequest(Wallet &self,
-                                   const char *szRequestID,
-                                   tABC_Error *pError);
-
-tABC_CC ABC_TxGenerateRequestQRCode(Wallet &self,
-                                    const char *szRequestID,
-                                    char **pszURI,
-                                    unsigned char **paData,
-                                    unsigned int *pWidth,
-                                    tABC_Error *pError);
-
 tABC_CC ABC_TxGetTransaction(Wallet &self,
                              const char *szID,
                              tABC_TxInfo **ppTransaction,
@@ -136,20 +110,12 @@ tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
                                     tABC_TxDetails **ppDetails,
                                     tABC_Error *pError);
 
-tABC_CC ABC_TxGetRequestAddress(Wallet &self,
-                                const char *szRequestID,
-                                char **pszAddress,
-                                tABC_Error *pError);
-
 tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
                                    const char *txId,
                                    const char *malTxId,
                                    uint64_t funds,
                                    tABC_TxDetails *pDetails,
                                    tABC_Error *pError);
-
-tABC_CC ABC_TxWatchAddresses(Wallet &self,
-                             tABC_Error *pError);
 
 } // namespace abcd
 

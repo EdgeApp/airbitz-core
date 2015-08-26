@@ -61,6 +61,7 @@
 #include "../abcd/util/Json.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/Util.hpp"
+#include "../abcd/wallet/Address.hpp"
 #include "../abcd/wallet/Details.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include <qrencode.h>
