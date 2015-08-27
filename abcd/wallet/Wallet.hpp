@@ -10,6 +10,7 @@
 
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
+#include "AddressDb.hpp"
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -38,7 +39,6 @@ public:
     const std::string &id() const { return id_; }
     const std::string &dir() const { return dir_; }
     std::string syncDir() const     { return dir() + "sync/"; }
-    std::string addressDir() const  { return syncDir() + "Addresses/"; }
     std::string txDir() const       { return syncDir() + "Transactions/"; }
 
     const DataChunk &bitcoinKey() const;
@@ -92,6 +92,9 @@ private:
      */
     Status
     loadSync();
+
+public:
+    AddressDb addresses;
 };
 
 } // namespace abcd

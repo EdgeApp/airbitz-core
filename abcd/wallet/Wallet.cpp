@@ -155,7 +155,8 @@ Wallet::Wallet(Account &account, const std::string &id):
     parent_(account.shared_from_this()),
     id_(id),
     dir_(gContext->walletsDir() + id + "/"),
-    balanceDirty_(true)
+    balanceDirty_(true),
+    addresses(*this)
 {}
 
 Status
@@ -180,7 +181,7 @@ Wallet::createNew(const std::string &name, int currency)
     ABC_CHECK(currencyJson.currencySet(currency));
     ABC_CHECK(currencyJson.save(syncDir() + WALLET_CURRENCY_FILENAME, dataKey()));
     ABC_CHECK(nameSet(name));
-    ABC_CHECK_OLD(ABC_TxCreateInitialAddresses(*this, &error));
+    ABC_CHECK(addresses.load());
 
     // Push the wallet to the server:
     bool dirty = false;
@@ -235,6 +236,9 @@ Wallet::loadSync()
     NameJson json;
     json.load(syncDir() + WALLET_NAME_FILENAME, dataKey());
     name_ = json.name();
+
+    // Load the databases:
+    ABC_CHECK(addresses.load());
 
     return Status();
 }

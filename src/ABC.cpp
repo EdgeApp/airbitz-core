@@ -61,6 +61,7 @@
 #include "../abcd/util/Json.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/Util.hpp"
+#include "../abcd/wallet/Address.hpp"
 #include "../abcd/wallet/Details.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include <qrencode.h>
@@ -2099,49 +2100,6 @@ tABC_CC ABC_GetRequestAddress(const char *szUserName,
 
 exit:
     return cc;
-}
-
-/**
- * Gets the pending requests associated with the given wallet.
- *
- * @param szUserName        UserName for the account associated with the requests
- * @param szPassword        Password for the account associated with the requests
- * @param szWalletUUID      UUID of the wallet associated with the requests
- * @param paTransactions    Pointer to store array of requests info pointers
- * @param pCount            Pointer to store number of requests
- * @param pError            A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_GetPendingRequests(const char *szUserName,
-                               const char *szPassword,
-                               const char *szWalletUUID,
-                               tABC_RequestInfo ***paRequests,
-                               unsigned int *pCount,
-                               tABC_Error *pError)
-{
-    ABC_PROLOG();
-
-    {
-        ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGetPendingRequests(*wallet, paRequests, pCount, pError));
-    }
-
-exit:
-    return cc;
-}
-
-/**
- * Frees the given array of requets
- *
- * @param aRequests Array of requests
- * @param count     Number of requests
- */
-void ABC_FreeRequests(tABC_RequestInfo **aRequests,
-                      unsigned int count)
-{
-    // Cannot use ABC_PROLOG - no pError
-    ABC_DebugLog("%s called", __FUNCTION__);
-
-    ABC_TxFreeRequests(aRequests, count);
 }
 
 /**
