@@ -8,15 +8,10 @@
 #include "../Command.hpp"
 #include "../Util.hpp"
 #include "../../abcd/account/Account.hpp"
-#include "../../abcd/bitcoin/WatcherBridge.hpp"
-#include "../../abcd/crypto/Encoding.hpp"
-#include "../../abcd/exchange/Currency.hpp"
 #include "../../abcd/json/JsonBox.hpp"
 #include "../../abcd/login/Login.hpp"
 #include "../../abcd/util/FileIO.hpp"
-#include "../../abcd/util/Util.hpp"
 #include "../../abcd/wallet/Wallet.hpp"
-#include "../../src/LoginShim.hpp"
 #include <wallet/wallet.hpp>
 #include <iostream>
 
@@ -142,19 +137,6 @@ COMMAND(InitLevel::context, CreateAccount, "create-account")
     return Status();
 }
 
-COMMAND(InitLevel::account, CreateWallet, "create-wallet")
-{
-    if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... create-wallet <user> <pass> <wallet-name>");
-
-    AutoString uuid;
-    ABC_CHECK_OLD(ABC_CreateWallet(session.username, session.password, argv[2],
-        static_cast<int>(Currency::USD), &uuid.get(), &error));
-    std::cout << "Created wallet " << uuid.get() << std::endl;
-
-    return Status();
-}
-
 COMMAND(InitLevel::account, DataSync, "data-sync")
 {
     if (argc != 2)
@@ -179,16 +161,6 @@ COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
         libwallet::hd_private_key m00n = m00.generate_private_key(i);
         std::cout << "watch " << m00n.address().encoded() << std::endl;
     }
-
-    return Status();
-}
-
-COMMAND(InitLevel::wallet, GetBitcoinSeed, "get-bitcoin-seed")
-{
-    if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... get-bitcoin-seed <user> <pass> <wallet-name>");
-
-    std::cout << base16Encode(session.wallet->bitcoinKey()) << std::endl;
 
     return Status();
 }
@@ -269,25 +241,6 @@ COMMAND(InitLevel::login, GetSettings, "get-settings")
     return Status();
 }
 
-COMMAND(InitLevel::wallet, GetWalletInfo, "get-wallet-info")
-{
-    if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... get-wallet-info <user> <pass> <wallet-name>");
-
-    // Obtain the balance:
-    WatcherThread thread;
-    ABC_CHECK(thread.init(session));
-    int64_t balance;
-    ABC_CHECK(session.wallet->balance(balance));
-
-    std::cout << "id:      " << session.wallet->id() << std::endl;
-    std::cout << "name:    " << session.wallet->name() << std::endl;
-    std::cout << "balance: " << balance / 100000000.0 <<
-        " (" << balance << " satoshis)" << std::endl;
-
-    return Status();
-}
-
 COMMAND(InitLevel::context, ListAccounts, "list-accounts")
 {
     if (argc != 0)
@@ -296,23 +249,6 @@ COMMAND(InitLevel::context, ListAccounts, "list-accounts")
     AutoString usernames;
     ABC_CHECK_OLD(ABC_ListAccounts(&usernames.get(), &error));
     printf("Usernames:\n%s", usernames.get());
-
-    return Status();
-}
-
-COMMAND(InitLevel::account, ListWallets, "list-wallets")
-{
-    if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... list-wallets <user> <pass>");
-
-    // Iterate over wallets:
-    auto ids = session.account->wallets.list();
-    for (const auto &id: ids)
-    {
-        std::shared_ptr<Wallet> wallet;
-        ABC_CHECK(cacheWallet(wallet, nullptr, id.c_str()));
-        std::cout << wallet->id() << ": " << wallet->name() << std::endl;
-    }
 
     return Status();
 }
@@ -453,105 +389,5 @@ COMMAND(InitLevel::none, Version, "version")
     AutoString version;
     ABC_CHECK_OLD(ABC_Version(&version.get(), &error));
     std::cout << "ABC version: " << version.get() << std::endl;
-    return Status();
-}
-
-COMMAND(InitLevel::wallet, WalletArchive, "wallet-archive")
-{
-    if (argc != 4)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-archive <user> <pass> <wallet-name> 1|0");
-
-    ABC_CHECK_OLD(ABC_SetWalletArchived(session.username, session.password, session.uuid, atoi(argv[3]), &error));
-    return Status();
-}
-
-COMMAND(InitLevel::wallet, WalletDecrypt, "wallet-decrypt")
-{
-    if (argc != 4)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-decrypt <user> <pass> <wallet-name> <file>");
-
-    JsonBox box;
-    ABC_CHECK(box.load(argv[3]));
-
-    DataChunk data;
-    ABC_CHECK(box.decrypt(data, session.wallet->dataKey()));
-    std::cout << toString(data) << std::endl;
-    printf("\n");
-
-    return Status();
-}
-
-COMMAND(InitLevel::wallet, WalletEncrypt, "wallet-encrypt")
-{
-    if (argc != 4)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-encrypt <user> <pass> <wallet-name> <file>");
-
-    DataChunk contents;
-    ABC_CHECK(fileLoad(contents, argv[3]));
-
-    JsonBox box;
-    ABC_CHECK(box.encrypt(contents, session.wallet->dataKey()));
-
-    std::string str;
-    ABC_CHECK(box.encode(str));
-    std::cout << str << std::endl;
-
-    return Status();
-}
-
-COMMAND(InitLevel::wallet, WalletGetAddress, "wallet-get-address")
-{
-    if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-get-address <user> <pass> <wallet-name>");
-
-    tABC_TxDetails details;
-    details.szName = const_cast<char*>("");
-    details.szCategory = const_cast<char*>("");
-    details.szNotes = const_cast<char*>("");
-    details.attributes = 0x0;
-    details.bizId = 0x0;
-    details.attributes = 0x0;
-    details.bizId = 0;
-    details.amountSatoshi = 0;
-    details.amountCurrency = 0;
-    details.amountFeesAirbitzSatoshi = 0;
-    details.amountFeesMinersSatoshi = 0;
-
-    AutoString szRequestID;
-    AutoString szAddress;
-    AutoString szURI;
-    unsigned char *szData = NULL;
-    unsigned int width = 0;
-    printf("starting...");
-    ABC_CHECK_OLD(ABC_CreateReceiveRequest(session.username, session.password, session.uuid,
-        &details, &szRequestID.get(), &error));
-
-    ABC_CHECK_OLD(ABC_GenerateRequestQRCode(session.username, session.password, session.uuid,
-        szRequestID, &szURI.get(), &szData, &width, &error));
-
-    ABC_CHECK_OLD(ABC_GetRequestAddress(session.username, session.password, session.uuid,
-        szRequestID, &szAddress.get(), &error));
-
-    printf("URI: %s\n", szURI.get());
-    printf("Address: %s\n", szAddress.get());
-
-    return Status();
-}
-
-COMMAND(InitLevel::account, WalletOrder, "wallet-order")
-{
-    if (argc < 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-order <user> <pass> <wallet-names>...");
-
-    std::string ids;
-    size_t count = argc - 2;
-    for (size_t i = 0; i < count; ++i)
-    {
-        ids += argv[2 + i];
-        ids += "\n";
-    }
-
-    ABC_CHECK_OLD(ABC_SetWalletOrder(session.username, session.password, ids.c_str(), &error));
-
     return Status();
 }
