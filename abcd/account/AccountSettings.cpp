@@ -40,6 +40,7 @@ namespace abcd {
 #define JSON_ACCT_SPEND_REQUIRE_PIN_ENABLED     "spendRequirePinEnabled"
 #define JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS    "spendRequirePinSatoshis"
 #define JSON_ACCT_DISABLE_PIN_LOGIN             "disablePINLogin"
+#define JSON_ACCT_DISABLE_FINGERPRINT_LOGIN     "disableFingerprintLogin"
 #define JSON_ACCT_PIN_LOGIN_COUNT               "pinLoginCount"
 
 #define DEF_REQUIRE_PIN_SATOSHIS 5000000
@@ -74,6 +75,7 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     pSettings->bSpendRequirePin = true;
     pSettings->spendRequirePinSatoshis = DEF_REQUIRE_PIN_SATOSHIS;
     pSettings->bDisablePINLogin = false;
+    pSettings->bDisableFingerprintLogin = false;
 
     pSettings->szLanguage = stringCopy("en");
     pSettings->currencyNum = static_cast<int>(Currency::USD);
@@ -243,6 +245,18 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         {
             // Default to PIN login allowed
             pSettings->pinLoginCount = 0;
+        }
+
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_DISABLE_FINGERPRINT_LOGIN);
+        if (pJSON_Value)
+        {
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON boolean value");
+            pSettings->bDisableFingerprintLogin = json_is_true(pJSON_Value) ? true : false;
+        }
+        else
+        {
+            // Default to PIN login allowed
+            pSettings->bDisableFingerprintLogin = false;
         }
 
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS);
@@ -452,6 +466,9 @@ tABC_CC ABC_AccountSettingsSave(const Account &account,
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     retVal = json_object_set_new(pJSON_Root, JSON_ACCT_DISABLE_PIN_LOGIN, json_boolean(pSettings->bDisablePINLogin));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_DISABLE_FINGERPRINT_LOGIN, json_boolean(pSettings->bDisableFingerprintLogin));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     retVal = json_object_set_new(pJSON_Root, JSON_ACCT_PIN_LOGIN_COUNT, json_integer(pSettings->pinLoginCount));
