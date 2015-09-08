@@ -125,7 +125,7 @@ WalletList::json(JsonPtr &result, const std::string &id) const
     if (wallet == wallets_.end())
         return ABC_ERROR(ABC_CC_InvalidWalletID, "No such wallet");
 
-    result = wallet->second;
+    result = wallet->second.clone();
     return Status();
 }
 

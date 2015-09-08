@@ -46,6 +46,12 @@ public:
     explicit operator bool() const { return root_; }
 
     /**
+     * Deep-copies the contained JSON value.
+     */
+    JsonPtr
+    clone() const;
+
+    /**
      * Loads the JSON object from disk.
      */
     Status

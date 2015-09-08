@@ -53,6 +53,12 @@ JsonPtr::reset(json_t *root)
     root_ = root;
 }
 
+JsonPtr
+JsonPtr::clone() const
+{
+    return json_deep_copy(root_);
+}
+
 Status
 JsonPtr::load(const std::string &filename)
 {
