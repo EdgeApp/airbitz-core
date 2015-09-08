@@ -11,7 +11,7 @@
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/FileIO.hpp"
-#include <wallet/wallet.hpp>
+#include <bitcoin/bitcoin.hpp>
 #include <dirent.h>
 #include <time.h>
 #include <set>
@@ -89,10 +89,10 @@ AddressJson::unpack(Address &result)
     return Status();
 }
 
-static libwallet::hd_private_key
+static bc::hd_private_key
 mainBranch(const Wallet &wallet)
 {
-    return libwallet::hd_private_key(wallet.bitcoinKey()).
+    return bc::hd_private_key(wallet.bitcoinKey()).
         generate_private_key(0).
         generate_private_key(0);
 }
@@ -185,7 +185,7 @@ AddressDb::keyTable()
     KeyTable out;
     for (const auto &i: addresses_)
     {
-        out[i.first] = libwallet::secret_to_wif(
+        out[i.first] = bc::secret_to_wif(
             m00.generate_private_key(i.second.index).private_key());
     }
 

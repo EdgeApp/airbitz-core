@@ -4,7 +4,7 @@ version="1_58_0"
 source="http://iweb.dl.sourceforge.net/project/boost/boost/1.58.0/boost_$version.tar.bz2#2fc96c1651ac6fe9859b678b165bd78dc211e881"
 
 build() {
-    LIBRARIES=--with-libraries=date_time,filesystem,program_options,regex,signals,system,thread,iostreams
+    LIBRARIES=--with-libraries=chrono,date_time,filesystem,locale,program_options,regex,system,thread
 
     cd boost_$version
 

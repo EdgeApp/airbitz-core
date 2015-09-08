@@ -56,7 +56,7 @@ ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    auto txid = bc::encode_hex(bc::hash_transaction(tx));
+    auto txid = bc::encode_hash(bc::hash_transaction(tx));
     auto ntxid = ABC_BridgeNonMalleableTxId(tx);
     int i = 0;
     AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree>
@@ -80,7 +80,7 @@ ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
 
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = true;
-        out->szTxId = stringCopy(bc::encode_hex(prev.hash));
+        out->szTxId = stringCopy(bc::encode_hash(prev.hash));
         out->szAddress = stringCopy(addr.encoded());
 
         auto tx = watcher->find_tx(prev.hash);

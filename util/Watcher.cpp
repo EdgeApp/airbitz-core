@@ -295,7 +295,7 @@ void Cli::cmd_utxos(std::stringstream &args)
     size_t total = 0;
     for (auto &utxo: utxos)
     {
-        std::cout << bc::encode_hex(utxo.point.hash) << ":" <<
+        std::cout << bc::encode_hash(utxo.point.hash) << ":" <<
             utxo.point.index << std::endl;
         auto tx = db_.get_tx(utxo.point.hash);
         auto &output = tx.outputs[utxo.point.index];
@@ -369,7 +369,7 @@ void Cli::cmd_dump(std::stringstream &args)
 
 void Cli::on_add(const libbitcoin::transaction_type &tx)
 {
-    auto txid = libbitcoin::encode_hex(libbitcoin::hash_transaction(tx));
+    auto txid = libbitcoin::encode_hash(libbitcoin::hash_transaction(tx));
     std::cout << "got transaction " << txid << std::endl;
 }
 
@@ -435,7 +435,13 @@ bc::hash_digest Cli::read_txid(std::stringstream &args)
         std::cout << "no txid given" << std::endl;
         return bc::null_hash;
     }
-    return bc::decode_hash(arg);
+    std::hash_digest out;
+    if (!bc::decode_hash(out, arg))
+    {
+        std::cout << "bad txid" << std::endl;
+        return bc::null_hash;
+    }
+    return out;
 }
 
 /**

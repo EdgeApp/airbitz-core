@@ -305,7 +305,7 @@ void TxUpdater::query_address(const bc::payment_address &address)
         query_done();
     };
 
-    auto on_done = [this](const bc::blockchain::history_list &history)
+    auto on_done = [this](const bc::client::history_list &history)
     {
         for (auto &row: history)
         {

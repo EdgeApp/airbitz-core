@@ -9,7 +9,7 @@
 #define ABCD_BITCOIN_WATCHER_HPP
 
 #include "TxUpdater.hpp"
-#include <bitcoin/client.hpp>
+#include "../../minilibs/libbitcoin-client/client.hpp"
 #include <zmq.hpp>
 #include <iostream>
 #include <unordered_map>
