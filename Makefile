@@ -72,11 +72,11 @@ clean:
 # Automatic dependency rules:
 $(WORK_DIR)/%.o: %.c | $(generated_headers)
 	@mkdir -p $(dir $@)
-	$(RUN) $(CC) -c -MMD $(CFLAGS) -o $@ $<
+	$(RUN) $(CC) -c -MD $(CFLAGS) -o $@ $<
 
 $(WORK_DIR)/%.o: %.cpp | $(generated_headers)
 	@mkdir -p $(dir $@)
-	$(RUN) $(CXX) -c -MMD $(CXXFLAGS) -o $@ $<
+	$(RUN) $(CXX) -c -MD $(CXXFLAGS) -o $@ $<
 
 include $(wildcard $(WORK_DIR)/*/*.d $(WORK_DIR)/*/*/*.d)
 %.h: ;
