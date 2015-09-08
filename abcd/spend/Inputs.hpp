@@ -10,6 +10,8 @@
 
 #include "../util/Status.hpp"
 #include <bitcoin/bitcoin.hpp>
+#include <map>
+#include <unordered_map>
 
 namespace abcd {
 
