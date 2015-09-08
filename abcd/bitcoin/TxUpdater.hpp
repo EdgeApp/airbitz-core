@@ -7,7 +7,7 @@
 #define ABCD_BITCOIN_TX_UPDATER_HPP
 
 #include "TxDatabase.hpp"
-#include <bitcoin/client.hpp>
+#include "../../minilibs/libbitcoin-client/client.hpp"
 #include <unordered_map>
 
 namespace abcd {

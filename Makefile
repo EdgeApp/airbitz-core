@@ -4,7 +4,7 @@ WORK_DIR ?= build
 # Compiler options:
 CFLAGS   += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c99
 CXXFLAGS += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c++11
-deps = jansson libbitcoin-client libgit2 libqrencode libsecp256k1 libssl libwallet protobuf-lite zlib
+deps = jansson libbitcoin libgit2 libqrencode libsecp256k1 libssl libwallet libzmq protobuf-lite zlib
 LIBS := $(shell pkg-config --libs --static $(deps)) \
 	-lsodium \
 	-lcsv -lcurl -lm
@@ -19,8 +19,9 @@ endif
 # Source files:
 abc_sources = \
 	$(wildcard abcd/*.cpp abcd/*/*.cpp src/*.cpp) \
-	minilibs/scrypt/crypto_scrypt.c \
+	$(wildcard minilibs/libbitcoin-client/*.cpp) \
 	minilibs/git-sync/sync.c \
+	minilibs/scrypt/crypto_scrypt.c \
 	codegen/paymentrequest.pb.cpp
 
 cli_sources = $(wildcard cli/*.cpp cli/*/*.cpp)
