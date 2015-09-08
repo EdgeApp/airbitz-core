@@ -28,8 +28,6 @@
 namespace libbitcoin {
 namespace client {
 
-typedef stealth_prefix address_prefix;
-
 /**
  * Decodes and encodes messages in the obelisk protocol.
  * This class is a pure codec; it does not talk directly to zeromq.
@@ -40,9 +38,6 @@ class BC_API obelisk_codec
 public:
     // Loose message handlers:
     typedef std::function<void (const std::string& command)> unknown_handler;
-    typedef std::function<void (const payment_address& address,
-        size_t height, const hash_digest& blk_hash, const transaction_type&)>
-        update_handler;
 
     /**
      * Constructor.
@@ -51,7 +46,6 @@ public:
      * @param on_unknown function to handle malformed incoming messages.
      */
     BC_API obelisk_codec(message_stream& out,
-        update_handler&& on_update=on_update_nop,
         unknown_handler&& on_unknown=on_unknown_nop,
         sleep_time timeout=std::chrono::seconds(2),
         unsigned retries=1);
@@ -77,8 +71,6 @@ public:
         fetch_block_header_handler;
     typedef std::function<void (size_t block_height, size_t index)>
         fetch_transaction_index_handler;
-    typedef std::function<void (const blockchain::stealth_list&)>
-        fetch_stealth_handler;
     typedef std::function<void (const index_list& unconfirmed)>
         validate_handler;
     typedef std::function<void ()> empty_handler;
@@ -101,9 +93,6 @@ public:
     BC_API void fetch_transaction_index(error_handler&& on_error,
         fetch_transaction_index_handler&& on_reply,
         const hash_digest& tx_hash);
-    BC_API void fetch_stealth(error_handler&& on_error,
-        fetch_stealth_handler&& on_reply,
-        const stealth_prefix& prefix, size_t from_height=0);
     BC_API void validate(error_handler&& on_error,
         validate_handler&& on_reply,
         const transaction_type& tx);
@@ -116,9 +105,6 @@ public:
     BC_API void address_fetch_history(error_handler&& on_error,
         fetch_history_handler&& on_reply,
         const payment_address& address, size_t from_height=0);
-    BC_API void subscribe(error_handler&& on_error,
-        empty_handler&& on_reply,
-        const address_prefix& prefix);
 
 private:
     typedef deserializer<data_chunk::const_iterator> data_deserial;
@@ -143,8 +129,6 @@ private:
         fetch_block_header_handler& handler);
     static void decode_fetch_transaction_index(data_deserial& payload,
         fetch_transaction_index_handler& handler);
-    static void decode_fetch_stealth(data_deserial& payload,
-        fetch_stealth_handler& handler);
     static void decode_validate(data_deserial& payload,
         validate_handler& handler);
 
@@ -170,13 +154,10 @@ private:
     };
     void send(const obelisk_message& message);
     void receive(const obelisk_message& message);
-    void decode_update(const obelisk_message& message);
     void decode_reply(const obelisk_message& message,
         error_handler& on_error, decoder& on_reply);
 
     BC_API static void on_unknown_nop(const std::string&);
-    BC_API static void on_update_nop(const payment_address&,
-        size_t, const hash_digest&, const transaction_type&);
 
     // Incoming message assembly:
     obelisk_message wip_message_;
@@ -207,7 +188,6 @@ private:
 
     // Loose-message event handlers:
     unknown_handler on_unknown_;
-    update_handler on_update_;
 
     // Outgoing message stream:
     message_stream& out_;

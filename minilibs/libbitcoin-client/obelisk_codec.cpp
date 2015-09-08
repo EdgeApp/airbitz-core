@@ -25,12 +25,11 @@ namespace client {
 using std::placeholders::_1;
 
 BC_API obelisk_codec::obelisk_codec(message_stream& out,
-    update_handler&& on_update, unknown_handler&& on_unknown,
+    unknown_handler&& on_unknown,
     sleep_time timeout, unsigned retries)
   : next_part_(command_part), last_request_id_(0),
     timeout_(timeout), retries_(retries),
     on_unknown_(std::move(on_unknown)),
-    on_update_(std::move(on_update)),
     out_(out)
 {
 }
@@ -181,26 +180,6 @@ BC_API void obelisk_codec::fetch_transaction_index(error_handler&& on_error,
         std::bind(decode_fetch_transaction_index, _1, std::move(on_reply)));
 }
 
-BC_API void obelisk_codec::fetch_stealth(error_handler&& on_error,
-    fetch_stealth_handler&& on_reply,
-    const stealth_prefix& prefix, size_t from_height)
-{
-    data_chunk data(1 + prefix.num_blocks() + 4);
-    auto serial = make_serializer(data.begin());
-    // number_bits
-    serial.write_byte(prefix.size());
-    // Serialize bitfield to raw bytes and serialize
-    data_chunk bitfield(prefix.num_blocks());
-    boost::to_block_range(prefix, bitfield.begin());
-    serial.write_data(bitfield);
-    // from_height
-    serial.write_4_bytes(from_height);
-    BITCOIN_ASSERT(serial.iterator() == data.end());
-
-    send_request("blockchain.fetch_stealth", data, std::move(on_error),
-        std::bind(decode_fetch_stealth, _1, std::move(on_reply)));
-}
-
 BC_API void obelisk_codec::validate(error_handler&& on_error,
     validate_handler&& on_reply,
     const transaction_type& tx)
@@ -255,19 +234,6 @@ BC_API void obelisk_codec::address_fetch_history(error_handler&& on_error,
 
     send_request("address.fetch_history", data, std::move(on_error),
         std::bind(decode_fetch_history, _1, std::move(on_reply)));
-}
-
-BC_API void obelisk_codec::subscribe(error_handler&& on_error,
-    empty_handler&& on_reply,
-    const address_prefix& prefix)
-{
-    BITCOIN_ASSERT(prefix.size() <= 255);
-    data_chunk data(1 + prefix.num_blocks());
-    data[0] = prefix.size();
-    boost::to_block_range(prefix, data.begin() + 1);
-
-    send_request("address.subscribe", data, std::move(on_error),
-        std::bind(decode_empty, _1, std::move(on_reply)));
 }
 
 void obelisk_codec::decode_empty(data_deserial& payload,
@@ -333,23 +299,6 @@ void obelisk_codec::decode_fetch_transaction_index(data_deserial& payload,
     handler(block_height, index);
 }
 
-void obelisk_codec::decode_fetch_stealth(data_deserial& payload,
-    fetch_stealth_handler& handler)
-{
-    blockchain::stealth_list results;
-    while (payload.iterator() != payload.end())
-    {
-        blockchain::stealth_row row;
-        row.ephemkey = payload.read_data(33);
-        uint8_t address_version = payload.read_byte();
-        const short_hash address_hash = payload.read_short_hash();
-        row.address.set(address_version, address_hash);
-        row.transaction_hash = payload.read_hash();
-        results.push_back(row);
-    }
-    handler(results);
-}
-
 void obelisk_codec::decode_validate(data_deserial& payload,
     validate_handler& handler)
 {
@@ -391,12 +340,6 @@ void obelisk_codec::send(const obelisk_message& message)
 
 void obelisk_codec::receive(const obelisk_message& message)
 {
-    if ("address.update" == message.command)
-    {
-        decode_update(message);
-        return;
-    }
-
     auto i = pending_requests_.find(message.id);
     if (i == pending_requests_.end())
     {
@@ -405,30 +348,6 @@ void obelisk_codec::receive(const obelisk_message& message)
     }
     decode_reply(message, i->second.on_error, i->second.on_reply);
     pending_requests_.erase(i);
-}
-
-void obelisk_codec::decode_update(const obelisk_message& message)
-{
-    data_deserial deserial = make_deserializer(
-        message.payload.begin(), message.payload.end());
-    try
-    {
-        // This message does not have an error_code at the beginning.
-        uint8_t version_byte = deserial.read_byte();
-        short_hash addr_hash = deserial.read_short_hash();
-        payment_address address(version_byte, addr_hash);
-        uint32_t height = deserial.read_4_bytes();
-        hash_digest blk_hash = deserial.read_hash();
-        transaction_type tx;
-        satoshi_load(deserial.iterator(), deserial.end(), tx);
-        deserial.set_iterator(deserial.iterator() + satoshi_raw_size(tx));
-        check_end(deserial);
-        on_update_(address, height, blk_hash, tx);
-    }
-    catch (end_of_stream)
-    {
-        on_unknown_(message.command);
-    }
 }
 
 void obelisk_codec::decode_reply(const obelisk_message& message,
@@ -454,11 +373,6 @@ void obelisk_codec::decode_reply(const obelisk_message& message,
 }
 
 BC_API void obelisk_codec::on_unknown_nop(const std::string&)
-{
-}
-
-BC_API void obelisk_codec::on_update_nop(const payment_address&,
-    size_t, const hash_digest&, const transaction_type&)
 {
 }
 
