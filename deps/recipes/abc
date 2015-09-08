@@ -1,4 +1,4 @@
-depends="curl jansson libbitcoin libcsv libgit2 libqrencode libwallet openssl protobuf zeromq"
+depends="curl jansson libbitcoin libcsv libgit2 libqrencode openssl protobuf zeromq"
 inherit lib
 
 build() {

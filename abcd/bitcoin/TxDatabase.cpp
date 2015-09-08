@@ -253,7 +253,7 @@ void TxDatabase::dump(std::ostream &out)
     for (const auto &row: rows_)
     {
         out << "================" << std::endl;
-        out << "hash: " << bc::encode_hex(row.first) << std::endl;
+        out << "hash: " << bc::encode_hash(row.first) << std::endl;
         std::string state;
         switch (row.second.state)
         {

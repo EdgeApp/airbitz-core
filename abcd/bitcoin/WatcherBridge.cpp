@@ -383,13 +383,14 @@ ABC_BridgeTxHeight(Wallet &self, const char *szTxId, unsigned int *height, tABC_
 {
     tABC_CC cc = ABC_CC_Ok;
     int height_;
-    bc::hash_digest txId;
+    bc::hash_digest txid;
 
     Watcher *watcher = nullptr;
     ABC_CHECK_NEW(watcherFind(watcher, self));
 
-    txId = bc::decode_hash(szTxId);
-    if (!watcher->get_tx_height(txId, height_))
+    if (!bc::decode_hash(txid, szTxId))
+        ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
+    if (!watcher->get_tx_height(txid, height_))
     {
         cc = ABC_CC_Synchronizing;
     }
@@ -470,7 +471,8 @@ tABC_CC ABC_BridgeTxDetailsSplit(Wallet &self, const char *szTxID,
     ABC_CHECK_NEW(watcherFind(watcherInfo, self));
 
     bc::hash_digest txid;
-    txid = bc::decode_hash(szTxID);
+    if (!bc::decode_hash(txid, szTxID))
+        ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
 
     tx = watcherInfo->watcher.find_tx(txid);
 
@@ -486,7 +488,7 @@ tABC_CC ABC_BridgeTxDetailsSplit(Wallet &self, const char *szTxID,
         // Create output
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = true;
-        out->szTxId = stringCopy(bc::encode_hex(prev.hash));
+        out->szTxId = stringCopy(bc::encode_hash(prev.hash));
         out->szAddress = stringCopy(addr.encoded());
 
         auto tx = watcherInfo->watcher.find_tx(prev.hash);
@@ -570,7 +572,8 @@ tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
 
         int height;
         bc::hash_digest txid;
-        txid = bc::decode_hash(pTx->szMalleableTxId);
+        if (!bc::decode_hash(txid, pTx->szMalleableTxId))
+            ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
         if (watcher->get_tx_height(txid, height))
         {
             *di++ = pTx;
@@ -678,7 +681,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     }
 
     // Save the transaction in the database:
-    malTxId = bc::encode_hex(bc::hash_transaction(utx.tx));
+    malTxId = bc::encode_hash(bc::hash_transaction(utx.tx));
     txId = ABC_BridgeNonMalleableTxId(utx.tx);
     ABC_CHECK_RET(ABC_TxSweepSaveTransaction(watcherInfo->wallet,
         txId.c_str(), malTxId.c_str(), funds, &details, pError));
@@ -753,7 +756,7 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
     }
 
     txId = ABC_BridgeNonMalleableTxId(tx);
-    malTxId = bc::encode_hex(bc::hash_transaction(tx));
+    malTxId = bc::encode_hash(bc::hash_transaction(tx));
 
     idx = 0;
     iCount = tx.inputs.size();
@@ -767,7 +770,7 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
         // Create output
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = true;
-        out->szTxId = stringCopy(bc::encode_hex(prev.hash));
+        out->szTxId = stringCopy(bc::encode_hash(prev.hash));
         out->szAddress = stringCopy(addr.encoded());
 
         // Check prevouts for values
@@ -842,7 +845,7 @@ ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
 {
     for (auto& input: tx.inputs)
         input.script = bc::script_type();
-    return bc::encode_hex(bc::hash_transaction(tx, bc::sighash::all));
+    return bc::encode_hash(bc::hash_transaction(tx, bc::sighash::all));
 }
 
 Status
@@ -852,7 +855,10 @@ watcherBridgeRawTx(Wallet &self, const char *szTxID,
     Watcher *watcher = nullptr;
     ABC_CHECK(watcherFind(watcher, self));
 
-    auto tx = watcher->find_tx(bc::decode_hash(szTxID));
+    bc::hash_digest txid;
+    if (!bc::decode_hash(txid, szTxID))
+        return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
+    auto tx = watcher->find_tx(txid);
     result.resize(satoshi_raw_size(tx));
     bc::satoshi_save(tx, result.begin());
 

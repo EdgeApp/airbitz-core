@@ -12,7 +12,7 @@
 #include "../../abcd/login/Login.hpp"
 #include "../../abcd/util/FileIO.hpp"
 #include "../../abcd/wallet/Wallet.hpp"
-#include <wallet/wallet.hpp>
+#include <bitcoin/bitcoin.hpp>
 #include <iostream>
 
 using namespace abcd;
@@ -152,13 +152,13 @@ COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
     if (argc != 4)
         return ABC_ERROR(ABC_CC_Error, "usage: ... generate-addresses <user> <pass> <wallet-name> <count>");
 
-    libwallet::hd_private_key m(session.wallet->bitcoinKey());
-    libwallet::hd_private_key m0 = m.generate_private_key(0);
-    libwallet::hd_private_key m00 = m0.generate_private_key(0);
+    bc::hd_private_key m(session.wallet->bitcoinKey());
+    bc::hd_private_key m0 = m.generate_private_key(0);
+    bc::hd_private_key m00 = m0.generate_private_key(0);
     long max = strtol(argv[3], 0, 10);
     for (int i = 0; i < max; ++i)
     {
-        libwallet::hd_private_key m00n = m00.generate_private_key(i);
+        bc::hd_private_key m00n = m00.generate_private_key(i);
         std::cout << "watch " << m00n.address().encoded() << std::endl;
     }
 
@@ -317,13 +317,13 @@ COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed")
     long end = strtol(argv[5], 0, 10);
     char *szMatchAddr = argv[3];
 
-    libwallet::hd_private_key m(session.wallet->bitcoinKey());
-    libwallet::hd_private_key m0 = m.generate_private_key(0);
-    libwallet::hd_private_key m00 = m0.generate_private_key(0);
+    bc::hd_private_key m(session.wallet->bitcoinKey());
+    bc::hd_private_key m0 = m.generate_private_key(0);
+    bc::hd_private_key m00 = m0.generate_private_key(0);
 
     for (long i = start, c = 0; i <= end; i++, ++c)
     {
-        libwallet::hd_private_key m00n = m00.generate_private_key(i);
+        bc::hd_private_key m00n = m00.generate_private_key(i);
         if (m00n.address().encoded() == szMatchAddr)
         {
             printf("Found %s at %ld\n", szMatchAddr, i);

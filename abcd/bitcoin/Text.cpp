@@ -8,7 +8,7 @@
 #include "Text.hpp"
 #include "Testnet.hpp"
 #include "../config.h"
-#include <wallet/wallet.hpp>
+#include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
 
@@ -99,14 +99,14 @@ tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
     std::string wif = szWIF;
 
     // Parse as WIF:
-    secret = libwallet::wif_to_secret(wif);
+    secret = bc::wif_to_secret(wif);
     if (secret != bc::null_hash)
     {
-        bCompressed = libwallet::is_wif_compressed(wif);
+        bCompressed = bc::is_wif_compressed(wif);
     }
     else if (minikeyCheck(wif))
     {
-        secret = libwallet::minikey_to_secret(wif);
+        secret = bc::minikey_to_secret(wif);
         bCompressed = false;
     }
     else if (hbitsDecode(secret, wif))
@@ -136,7 +136,7 @@ exit:
 }
 
 struct CustomResult:
-    public libwallet::uri_parse_result
+    public bc::uri_parse_result
 {
     optional_string category;
     optional_string ret;
@@ -180,7 +180,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
         uri.replace(0, 18, "bitcoin:");
 
     // Try to parse as a URI:
-    if (!libwallet::uri_parse(uri, result, false))
+    if (!bc::uri_parse(uri, result, false))
     {
         // Try to parse as a raw address:
         bc::payment_address address;
@@ -261,7 +261,9 @@ tABC_CC ABC_BridgeParseAmount(const char *szAmount,
                               uint64_t *pAmountOut,
                               unsigned decimalPlaces)
 {
-    *pAmountOut = libwallet::parse_amount(szAmount, decimalPlaces);
+    if (!bc::decode_base10(*pAmountOut, szAmount, decimalPlaces))
+        *pAmountOut = ABC_INVALID_AMOUNT;
+
     return ABC_CC_Ok;
 }
 
@@ -289,13 +291,13 @@ tABC_CC ABC_BridgeFormatAmount(int64_t amount,
 
     if (amount < 0)
     {
-        out = libwallet::format_amount(-amount, decimalPlaces);
+        out = bc::encode_base10(-amount, decimalPlaces);
         if (bAddSign)
             out.insert(0, 1, '-');
     }
     else
     {
-        out = libwallet::format_amount(amount, decimalPlaces);
+        out = bc::encode_base10(amount, decimalPlaces);
     }
     *pszAmountOut = stringCopy(out);
 
@@ -312,7 +314,7 @@ tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    libwallet::uri_writer writer;
+    bc::uri_writer writer;
     if (pInfo->szAddress)
         writer.write_address(pInfo->szAddress);
     if (pInfo->amountSatoshi)

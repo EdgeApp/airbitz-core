@@ -10,12 +10,11 @@
 #include "../General.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include <unistd.h>
-#include <wallet/wallet.hpp>
+#include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
 
 using namespace libbitcoin;
-using namespace libwallet;
 
 static std::map<data_chunk, std::string> address_map;
 static operation create_data_operation(data_chunk& data);
@@ -40,9 +39,9 @@ signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys)
         auto key = keys.find(pa.encoded());
         if (key == keys.end())
             return ABC_ERROR(ABC_CC_Error, "Missing signing key");
-        bc::ec_secret secret = libwallet::wif_to_secret(key->second);
+        bc::ec_secret secret = bc::wif_to_secret(key->second);
         bc::ec_point pubkey = bc::secret_to_public_key(secret,
-            libwallet::is_wif_compressed(key->second));
+            bc::is_wif_compressed(key->second));
 
         // Gererate the previous output's signature:
         // TODO: We already have this; process it and use it

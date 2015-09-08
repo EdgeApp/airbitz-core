@@ -45,12 +45,12 @@
 #include "wallet/Details.hpp"
 #include "wallet/TxMetadata.hpp"
 #include "wallet/Wallet.hpp"
+#include <bitcoin/bitcoin.hpp>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <time.h>
 #include <string.h>
-#include <wallet/wallet.hpp>
 #include <string>
 
 namespace abcd {

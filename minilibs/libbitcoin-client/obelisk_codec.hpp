@@ -28,6 +28,17 @@
 namespace libbitcoin {
 namespace client {
 
+struct history_row
+{
+    output_point output;
+    size_t output_height;
+    uint64_t value;
+    input_point spend;
+    size_t spend_height;
+};
+
+typedef std::vector<history_row> history_list;
+
 /**
  * Decodes and encodes messages in the obelisk protocol.
  * This class is a pure codec; it does not talk directly to zeromq.
@@ -61,7 +72,7 @@ public:
     // Message reply handlers:
     typedef std::function<void (const std::error_code&)>
         error_handler;
-    typedef std::function<void (const blockchain::history_list&)>
+    typedef std::function<void (const history_list&)>
         fetch_history_handler;
     typedef std::function<void (const transaction_type&)>
         fetch_transaction_handler;
@@ -107,7 +118,7 @@ public:
         const payment_address& address, size_t from_height=0);
 
 private:
-    typedef deserializer<data_chunk::const_iterator> data_deserial;
+    typedef deserializer<data_chunk::const_iterator, true> data_deserial;
 
     /**
      * Decodes a message and calls the appropriate callback.
