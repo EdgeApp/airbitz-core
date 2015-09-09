@@ -4,10 +4,10 @@ WORK_DIR ?= build
 # Compiler options:
 CFLAGS   += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c99
 CXXFLAGS += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c++11
-deps = jansson libbitcoin libgit2 libqrencode libsecp256k1 libssl libzmq protobuf-lite zlib
+deps = jansson libbitcoin libcurl libgit2 libqrencode libsecp256k1 libssl libzmq protobuf-lite zlib
 LIBS := $(shell pkg-config --libs --static $(deps)) \
 	-lsodium \
-	-lcsv -lcurl -lm
+	-lcsv -lm
 
 # Do not use -lpthread on Android:
 ifneq (,$(findstring android,$(CC)))
