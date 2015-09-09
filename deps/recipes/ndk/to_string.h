@@ -5,10 +5,10 @@
 
 namespace std {
 
-inline string to_string(int val)
+inline string to_string(double val)
 {
     char temp[64];
-    sprintf(temp, "%d", val);
+    snprintf(temp, sizeof(temp), "%.16g", val);
     return string(temp);
 }
 

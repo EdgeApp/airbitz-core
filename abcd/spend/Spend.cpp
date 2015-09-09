@@ -218,8 +218,9 @@ tABC_CC ABC_TxSend(Wallet &self,
         KeyTable keys = self.addresses.keyTable();
         ABC_CHECK_NEW(signTx(tx, *watcher, keys));
 
-        ABC_DebugLog("Change: %s, Amount: %ld, Contents: %s",
-            changeAddress.address.c_str(), pInfo->pDetails->amountSatoshi,
+        ABC_DebugLog("Change: %s, Amount: %s, Contents: %s",
+            changeAddress.address.c_str(),
+            std::to_string(pInfo->pDetails->amountSatoshi).c_str(),
             bc::pretty(tx).c_str());
 
         // Send to the network:

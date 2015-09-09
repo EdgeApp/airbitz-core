@@ -544,8 +544,6 @@ tABC_CC ABC_TxSearchTransactions(Wallet &self,
     unsigned int i;
     unsigned int count = 0;
     unsigned int matchCount = 0;
-    char satoshi[15];
-    char currency[15];
 
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_NULL(paTransactions);
@@ -556,19 +554,18 @@ tABC_CC ABC_TxSearchTransactions(Wallet &self,
     ABC_TxGetTransactions(self, ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
                           &aTransactions, &count, pError);
     ABC_ARRAY_NEW(aSearchTransactions, count, tABC_TxInfo*);
-    for (i = 0; i < count; i++) {
-        memset(satoshi, '\0', 15);
-        memset(currency, '\0', 15);
+    for (i = 0; i < count; i++)
+    {
         tABC_TxInfo *pInfo = aTransactions[i];
-        snprintf(satoshi, 15, "%ld", pInfo->pDetails->amountSatoshi);
-        snprintf(currency, 15, "%f", pInfo->pDetails->amountCurrency);
-        if (ABC_TxStrStr(satoshi, szQuery, pError))
+        auto satoshi = std::to_string(pInfo->pDetails->amountSatoshi);
+        auto currency = std::to_string(pInfo->pDetails->amountCurrency);
+        if (ABC_TxStrStr(satoshi.c_str(), szQuery, pError))
         {
             aSearchTransactions[matchCount] = pInfo;
             matchCount++;
             continue;
         }
-        if (ABC_TxStrStr(currency, szQuery, pError))
+        if (ABC_TxStrStr(currency.c_str(), szQuery, pError))
         {
             aSearchTransactions[matchCount] = pInfo;
             matchCount++;

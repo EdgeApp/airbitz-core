@@ -820,9 +820,12 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
     fees = totalInSatoshi - totalOutSatoshi;
     totalMeSatoshi -= totalMeInSatoshi;
 
-    ABC_DebugLog("calling ABC_TxReceiveTransaction\n");
-    ABC_DebugLog("Total Me: %d, Total In: %d, Total Out: %d, Fees: %d\n",
-                    totalMeSatoshi, totalInSatoshi, totalOutSatoshi, fees);
+    ABC_DebugLog("calling ABC_TxReceiveTransaction");
+    ABC_DebugLog("Total Me: %s, Total In: %s, Total Out: %s, Fees: %s",
+        std::to_string(totalMeSatoshi).c_str(),
+        std::to_string(totalInSatoshi).c_str(),
+        std::to_string(totalOutSatoshi).c_str(),
+        std::to_string(fees).c_str());
     ABC_CHECK_RET(
         ABC_TxReceiveTransaction(
             watcherInfo->wallet,
