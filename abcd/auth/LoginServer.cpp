@@ -372,7 +372,8 @@ loginServerGetLoginPackage(const Lobby &lobby,
 
     ABC_CHECK(resultJson.packageOk());
     ABC_CHECK(result.decode(resultJson.package()));
-    rootKeyBox = resultJson.rootKeyBox();
+    if (json_is_object(resultJson.rootKeyBox().get()))
+        rootKeyBox = resultJson.rootKeyBox();
     return Status();
 }
 

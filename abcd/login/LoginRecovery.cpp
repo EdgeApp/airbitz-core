@@ -86,7 +86,7 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(loginPackage.recoveryBox().decrypt(dataKey, recoveryKey));
 
     // Decrypt SyncKey:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, rootKeyBox, false));
 
     // Set up the on-disk login:
     ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()));

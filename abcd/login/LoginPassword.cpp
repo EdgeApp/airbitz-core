@@ -39,7 +39,7 @@ tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(loginPackage.passwordBox().decrypt(dataKey, passwordKey));
 
     // Decrypt SyncKey:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, JsonBox(), true));
     result = std::move(out);
 
 exit:
@@ -76,7 +76,7 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(loginPackage.passwordBox().decrypt(dataKey, passwordKey));
 
     // Decrypt SyncKey:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, rootKeyBox, false));
 
     // Set up the on-disk login:
     ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()));

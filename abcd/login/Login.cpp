@@ -15,16 +15,19 @@
 #include "../util/FileIO.hpp"
 #include "../util/Sync.hpp"
 #include "../util/Util.hpp"
+#include <bitcoin/bitcoin.hpp>
 #include <ctype.h>
 
 namespace abcd {
 
+const std::string infoKeyHmacKey("infoKey");
+
 Status
 Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
-    const LoginPackage &loginPackage)
+    const LoginPackage &loginPackage, JsonBox rootKeyBox, bool offline)
 {
     std::shared_ptr<Login> out(new Login(lobby, dataKey));
-    ABC_CHECK(out->loadKeys(loginPackage));
+    ABC_CHECK(out->loadKeys(loginPackage, JsonBox(), true));
 
     result = std::move(out);
     return Status();
@@ -118,6 +121,7 @@ Login::createNew(const char *password)
     ABC_CHECK(lobby.dirCreate());
     ABC_CHECK(carePackage.save(lobby.carePackageName()));
     ABC_CHECK(loginPackage.save(lobby.loginPackageName()));
+    ABC_CHECK(rootKeyUpgrade());
 
     // Latch the account:
     ABC_CHECK(loginServerActivate(*this));
@@ -126,25 +130,68 @@ Login::createNew(const char *password)
 }
 
 Status
-Login::loadKeys(const LoginPackage &loginPackage)
+Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskBased)
 {
     ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey_, dataKey_));
     ABC_CHECK(loginPackage.authKeyBox().decrypt(authKey_, dataKey_));
 
     ABC_CHECK(lobby.dirCreate());
-    if (fileExists(lobby.dir() + "tempRootKey.json"))
+
+    // Look for an existing rootKeyBox:
+    if (!rootKeyBox)
     {
-        JsonBox box;
-        ABC_CHECK(box.load(lobby.dir() + "tempRootKey.json"));
-        ABC_CHECK(box.decrypt(rootKey_, dataKey_));
+        if (fileExists(lobby.rootKeyPath()))
+        {
+            if (diskBased)
+                ABC_CHECK(rootKeyBox.load(lobby.rootKeyPath()));
+            else
+                return ABC_ERROR(ABC_CC_Error, "The account has a rootKey, but it's not on the server.");
+        }
+        else if (diskBased)
+        {
+            // The server hasn't been asked yet, so do that now:
+            LoginPackage unused;
+            ABC_CHECK(loginServerGetLoginPackage(lobby, authKey_, DataChunk(),
+                unused, rootKeyBox));
+
+            // If the server had one, save it for the future:
+            if (rootKeyBox)
+                ABC_CHECK(rootKeyBox.save(lobby.rootKeyPath()));
+        }
+        // Otherwise, there just isn't one.
     }
+
+    // Extract the rootKey:
+    if (rootKeyBox)
+        ABC_CHECK(rootKeyBox.decrypt(rootKey_, dataKey_));
     else
-    {
-        JsonBox box;
-        ABC_CHECK(randomData(rootKey_, 256));
-        ABC_CHECK(box.encrypt(rootKey_, dataKey_));
-        ABC_CHECK(box.save(lobby.dir() + "tempRootKey.json"));
-    }
+        ABC_CHECK(rootKeyUpgrade());
+
+    return Status();
+}
+
+Status
+Login::rootKeyUpgrade()
+{
+    // Create a BIP39 mnemonic, and use it to derive the rootKey:
+    DataChunk entropy;
+    ABC_CHECK(randomData(entropy, 256/8));
+    auto mnemonic = bc::create_mnemonic(entropy, bc::language::en);
+    auto rootKeyRaw = bc::decode_mnemonic(mnemonic);
+    rootKey_ = DataChunk(rootKeyRaw.begin(), rootKeyRaw.end());
+
+    // Pack the keys into various boxes:
+    JsonBox rootKeyBox;
+    ABC_CHECK(rootKeyBox.encrypt(rootKey_, dataKey_));
+    JsonBox mnemonicBox, dataKeyBox;
+    auto infoKey = bc::hmac_sha256_hash(rootKey_, DataSlice(infoKeyHmacKey));
+    ABC_CHECK(mnemonicBox.encrypt(bc::join(mnemonic), infoKey));
+    ABC_CHECK(dataKeyBox.encrypt(dataKey_, infoKey));
+
+    // Upgrade the account on the server:
+    ABC_CHECK(loginServerAccountUpgrade(*this,
+        rootKeyBox, mnemonicBox, dataKeyBox));
+    ABC_CHECK(rootKeyBox.save(lobby.rootKeyPath()));
 
     return Status();
 }

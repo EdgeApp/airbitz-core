@@ -124,7 +124,7 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(local.pinBox().decrypt(dataKey, pinKey));
 
     // Create the Login object:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, JsonBox(), true));
     result = std::move(out);
 
 exit:

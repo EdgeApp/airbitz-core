@@ -15,6 +15,7 @@
 
 namespace abcd {
 
+class JsonBox;
 class Lobby;
 struct LoginPackage;
 
@@ -29,7 +30,7 @@ public:
 
     static Status
     create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
-        const LoginPackage &loginPackage);
+        const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskBased);
 
     static Status
     createNew(std::shared_ptr<Login> &result, Lobby &lobby,
@@ -77,8 +78,17 @@ private:
     Status
     createNew(const char *password);
 
+    /**
+     * Unpacks the keys from the loginPackage.
+     * The server may return a rootKeyBox along with the loginPackage,
+     * so that should be passed in as well.
+     * @param diskBased true if loginPackage was loaded from disk.
+     */
     Status
-    loadKeys(const LoginPackage &loginPackage);
+    loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskBased);
+
+    Status
+    rootKeyUpgrade();
 };
 
 } // namespace abcd
