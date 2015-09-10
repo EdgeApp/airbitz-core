@@ -31,6 +31,12 @@ public:
         const LoginPackage &loginPackage);
 
     /**
+     * Obtains the root key for the account.
+     */
+    DataSlice
+    rootKey() const { return rootKey_; }
+
+    /**
      * Obtains the master key for the account.
      */
     DataSlice
@@ -47,10 +53,11 @@ private:
     // The lobby mutex can cover disk-based things like logging in and
     // changing passwords if we ever want to to protect those one day.
     const std::shared_ptr<Lobby> parent_;
+    const DataChunk rootKey_;
     const DataChunk dataKey_;
     const std::string syncKey_;
 
-    Login(Lobby &lobby, DataSlice dataKey, std::string syncKey);
+    Login(Lobby &lobby, DataSlice rootKey, DataSlice dataKey, std::string syncKey);
 };
 
 // Constructors:
