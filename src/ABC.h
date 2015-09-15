@@ -716,6 +716,22 @@ tABC_CC ABC_OtpResetRemove(const char *szUserName,
                            const char *szPassword,
                            tABC_Error *pError);
 
+/** === BitID: === */
+
+/**
+ * Validates a BitID URI.
+ * @param pszDomain returned domain name to show to the user for confirmation.
+ */
+tABC_CC ABC_BitidParseUri(const char *szUserName,
+                          const char *szPassword,
+                          const char *szBitidURI,
+                          char **pszDomain,
+                          tABC_Error *pError);
+
+tABC_CC ABC_BitidLogin(const char *szUserName,
+                       const char *szPassword,
+                       const char *szBitidURI,
+                       tABC_Error *pError);
 
 /* === Account sync data: === */
 tABC_CC ABC_LoadAccountSettings(const char *szUserName,

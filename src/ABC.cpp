@@ -46,6 +46,8 @@
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
 #include "../abcd/http/Http.hpp"
+#include "../abcd/http/Uri.hpp"
+#include "../abcd/login/Bitid.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/login/LoginDir.hpp"
@@ -498,6 +500,44 @@ tABC_CC ABC_OtpResetRemove(const char *szUserName,
     {
         ABC_GET_LOGIN();
         ABC_CHECK_NEW(otpResetRemove(*login));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_BitidParseUri(const char *szUserName,
+                          const char *szPassword,
+                          const char *szBitidURI,
+                          char **pszDomain,
+                          tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szBitidURI);
+    ABC_CHECK_NULL(pszDomain);
+
+    {
+        Uri callback;
+        ABC_CHECK_NEW(bitidCallback(callback, szBitidURI));
+        callback.pathSet("");
+        *pszDomain = stringCopy(callback.encode());
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_BitidLogin(const char *szUserName,
+                       const char *szPassword,
+                       const char *szBitidURI,
+                       tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szBitidURI);
+
+    {
+        ABC_GET_LOGIN();
+        ABC_CHECK_NEW(bitidLogin(login->rootKey(), szBitidURI));
     }
 
 exit:
