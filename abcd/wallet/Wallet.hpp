@@ -44,7 +44,7 @@ public:
     const DataChunk &bitcoinKey() const;
     const DataChunk &dataKey() const { return dataKey_; }
 
-    int currency() const { return currency_; }
+    int currency() const;
     std::string name() const;
     Status nameSet(const std::string &name);
 
@@ -74,6 +74,7 @@ private:
     // Sync dir data:
     int currency_;
     std::string name_;
+    Status currencySet(int currency);
 
     // Balance cache:
     int64_t balance_;

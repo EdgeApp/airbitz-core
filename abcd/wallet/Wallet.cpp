@@ -78,11 +78,31 @@ Wallet::bitcoinKey() const
     return bitcoinKey_;
 }
 
+int
+Wallet::currency() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return currency_;
+}
+
 std::string
 Wallet::name() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
     return name_;
+}
+
+Status
+Wallet::currencySet(int currency)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    currency_ = currency;
+    CurrencyJson currencyJson;
+    ABC_CHECK(currencyJson.currencySet(currency));
+    ABC_CHECK(currencyJson.save(syncDir() + WALLET_CURRENCY_FILENAME, dataKey()));
+
+    return Status();
 }
 
 Status
@@ -177,9 +197,7 @@ Wallet::createNew(const std::string &name, int currency)
     ABC_CHECK(syncMakeRepo(syncDir()));
 
     // Populate the sync directory:
-    CurrencyJson currencyJson;
-    ABC_CHECK(currencyJson.currencySet(currency));
-    ABC_CHECK(currencyJson.save(syncDir() + WALLET_CURRENCY_FILENAME, dataKey()));
+    ABC_CHECK(currencySet(currency));
     ABC_CHECK(nameSet(name));
     ABC_CHECK(addresses.load());
 
