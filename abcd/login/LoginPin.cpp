@@ -153,7 +153,6 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     JsonBox pinKeyBox;          // Holds pinKey
     JsonBox pinBox;             // Holds dataKey
     std::string LPIN = login.lobby.username() + szPin;
-    std::string str;
 
     // Get login stuff:
     ABC_CHECK_NEW(carePackage.load(login.lobby.carePackageName()));
@@ -174,9 +173,9 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 
     // Set up the server:
     ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN));
-    ABC_CHECK_NEW(pinKeyBox.encode(str));
     ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(login.lobby, LP1,
-        toU08Buf(pinAuthId), toU08Buf(pinAuthKey), str, expires, pError));
+        toU08Buf(pinAuthId), toU08Buf(pinAuthKey), pinKeyBox.encode(),
+        expires, pError));
 
     // Save the local file:
     ABC_CHECK_NEW(local.pinBoxSet(pinBox));

@@ -184,11 +184,12 @@ tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(pJSON_Data);
 
-    ABC_CHECK_NEW(JsonPtr(json_incref(pJSON_Data)).encode(data));
      // Downstream decoders often forget to null-terminate their input.
      // This is a bug, but we can save the app from crashing by
      // including a null byte in the encrypted data.
+    data = JsonPtr(json_incref(pJSON_Data)).encode();
     data.push_back(0);
+
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(toU08Buf(data), Key, cryptoType, szFilename, pError));
 
 exit:
