@@ -8,3 +8,7 @@
 /abcd/config.h
 /build
 /codegen
+
+#Clion
+**/.idea/workspace.xml
+**/.idea/tasks.xml
