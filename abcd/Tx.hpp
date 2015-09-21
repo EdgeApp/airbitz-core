@@ -36,14 +36,13 @@
 #ifndef ABC_Tx_h
 #define ABC_Tx_h
 
-#include "Wallet.hpp"
 #include "util/Status.hpp"
 #include <map>
 
 namespace abcd {
 
 struct SendInfo;
-typedef std::map<const std::string, std::string> KeyTable;
+class Wallet;
 
 /**
  * Information about a transaction that has been sent
@@ -61,38 +60,15 @@ typedef struct sABC_UnsavedTx
     tABC_TxOutput **aOutputs;
 } tABC_UnsavedTx;
 
-tABC_CC ABC_TxDupDetails(tABC_TxDetails **ppNewDetails,
-                         const tABC_TxDetails *pOldDetails,
-                         tABC_Error *pError);
-
-void ABC_TxFreeDetails(tABC_TxDetails *pDetails);
 void ABC_UnsavedTxFree(tABC_UnsavedTx *pUtx);
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
-/**
- * Calculates the private keys for a wallet.
- */
-Status
-txKeyTableGet(KeyTable &result, tABC_WalletID self);
-
-/**
- * Gets the next unused change address from the wallet.
- */
-Status
-txNewChangeAddress(std::string &result, tABC_WalletID self,
-    tABC_TxDetails *pDetails);
-
-tABC_CC ABC_TxSendComplete(tABC_WalletID self,
+tABC_CC ABC_TxSendComplete(Wallet &self,
                            SendInfo         *pInfo,
                            tABC_UnsavedTx   *pUtx,
                            tABC_Error       *pError);
 
-tABC_CC ABC_TxBlockHeightUpdate(uint64_t height,
-                                tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                                void *pData,
-                                tABC_Error *pError);
-
-tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
+tABC_CC ABC_TxReceiveTransaction(Wallet &self,
                                  uint64_t amountSatoshi, uint64_t feeSatoshi,
                                  tABC_TxOutput **paInAddress, unsigned int inAddressCount,
                                  tABC_TxOutput **paOutAddresses, unsigned int outAddressCount,
@@ -101,48 +77,19 @@ tABC_CC ABC_TxReceiveTransaction(tABC_WalletID self,
                                  void *pData,
                                  tABC_Error *pError);
 
-tABC_CC ABC_TxCreateInitialAddresses(tABC_WalletID self,
-                                     tABC_Error *pError);
-
-tABC_CC ABC_TxCreateReceiveRequest(tABC_WalletID self,
-                                   tABC_TxDetails *pDetails,
-                                   char **pszRequestID,
-                                   bool bTransfer,
-                                   tABC_Error *pError);
-
-tABC_CC ABC_TxModifyReceiveRequest(tABC_WalletID self,
-                                   const char *szRequestID,
-                                   tABC_TxDetails *pDetails,
-                                   tABC_Error *pError);
-
-tABC_CC ABC_TxFinalizeReceiveRequest(tABC_WalletID self,
-                                     const char *szRequestID,
-                                     tABC_Error *pError);
-
-tABC_CC ABC_TxCancelReceiveRequest(tABC_WalletID self,
-                                   const char *szRequestID,
-                                   tABC_Error *pError);
-
-tABC_CC ABC_TxGenerateRequestQRCode(tABC_WalletID self,
-                                    const char *szRequestID,
-                                    char **pszURI,
-                                    unsigned char **paData,
-                                    unsigned int *pWidth,
-                                    tABC_Error *pError);
-
-tABC_CC ABC_TxGetTransaction(tABC_WalletID self,
+tABC_CC ABC_TxGetTransaction(Wallet &self,
                              const char *szID,
                              tABC_TxInfo **ppTransaction,
                              tABC_Error *pError);
 
-tABC_CC ABC_TxGetTransactions(tABC_WalletID self,
+tABC_CC ABC_TxGetTransactions(Wallet &self,
                               int64_t startTime,
                               int64_t endTime,
                               tABC_TxInfo ***paTransactions,
                               unsigned int *pCount,
                               tABC_Error *pError);
 
-tABC_CC ABC_TxSearchTransactions(tABC_WalletID self,
+tABC_CC ABC_TxSearchTransactions(Wallet &self,
                                  const char *szQuery,
                                  tABC_TxInfo ***paTransactions,
                                  unsigned int *pCount,
@@ -153,44 +100,22 @@ void ABC_TxFreeTransaction(tABC_TxInfo *pTransactions);
 void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
                             unsigned int count);
 
-tABC_CC ABC_TxSetTransactionDetails(tABC_WalletID self,
+tABC_CC ABC_TxSetTransactionDetails(Wallet &self,
                                     const char *szID,
                                     tABC_TxDetails *pDetails,
                                     tABC_Error *pError);
 
-tABC_CC ABC_TxGetTransactionDetails(tABC_WalletID self,
+tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
                                     const char *szID,
                                     tABC_TxDetails **ppDetails,
                                     tABC_Error *pError);
 
-tABC_CC ABC_TxGetRequestAddress(tABC_WalletID self,
-                                const char *szRequestID,
-                                char **pszAddress,
-                                tABC_Error *pError);
-
-tABC_CC ABC_TxGetPendingRequests(tABC_WalletID self,
-                                 tABC_RequestInfo ***paRequests,
-                                 unsigned int *pCount,
-                                 tABC_Error *pError);
-
-void ABC_TxFreeRequests(tABC_RequestInfo **aRequests,
-                        unsigned int count);
-
-tABC_CC ABC_TxSweepSaveTransaction(tABC_WalletID wallet,
+tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
                                    const char *txId,
                                    const char *malTxId,
                                    uint64_t funds,
                                    tABC_TxDetails *pDetails,
                                    tABC_Error *pError);
-
-// Blocking functions:
-tABC_CC ABC_TxGetPubAddresses(tABC_WalletID self,
-                            char ***paAddresses,
-                            unsigned int *pCount,
-                            tABC_Error *pError);
-
-tABC_CC ABC_TxWatchAddresses(tABC_WalletID self,
-                             tABC_Error *pError);
 
 } // namespace abcd
 

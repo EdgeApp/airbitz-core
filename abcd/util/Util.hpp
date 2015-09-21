@@ -42,15 +42,39 @@
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <new>
+#include <string>
 
 namespace abcd {
 
 /**
- * Frees a C-style string and sets the pointer to NULL.
+ * Frees a C-style string and sets the pointer to null.
  */
-void StringFree(char *string);
+void
+stringFree(char *string);
 
-typedef AutoFree<char, StringFree> AutoString;
+/**
+ * Copies a C-style string, throwing an exception if something goes wrong.
+ */
+char *
+stringCopy(const char *string);
+
+char *
+stringCopy(const std::string &string);
+
+typedef AutoFree<char, stringFree> AutoString;
+
+/**
+ * Allocates a C-style structure.
+ */
+template<typename T> T *
+structAlloc()
+{
+    auto out = static_cast<T *>(calloc(1, sizeof(T)));
+    if (!out)
+        throw std::bad_alloc();
+    return out;
+}
 
 #ifdef DEBUG
 #define ABC_LOG_ERROR(code, err_string) \
@@ -123,12 +147,6 @@ typedef AutoFree<char, StringFree> AutoString;
         printf("\n"); \
     }
 
-#define ABC_NEW(ptr, type) \
-    { \
-        ptr = (type*)calloc(1, sizeof(type)); \
-        ABC_CHECK_ASSERT(ptr != NULL, ABC_CC_NULLPtr, "calloc failed (returned NULL)"); \
-    }
-
 #define ABC_STR_NEW(ptr, count) \
     { \
         ptr = (char*)calloc(count, sizeof(char)); \
@@ -149,11 +167,6 @@ typedef AutoFree<char, StringFree> AutoString;
 
 #define ABC_STRLEN(string) (string == NULL ? 0 : strlen(string))
 
-#define ABC_STRDUP(ptr, string) \
-    { \
-        ABC_CHECK_ASSERT((ptr = strdup(string)) != NULL, ABC_CC_NULLPtr, "strdup failed (returned NULL)"); \
-    }
-
 #define ABC_FREE(ptr) \
     { \
         if (ptr != NULL) \
@@ -165,7 +178,7 @@ typedef AutoFree<char, StringFree> AutoString;
 
 #define ABC_FREE_STR(str) \
     { \
-        StringFree(const_cast<char*>(str)); \
+        stringFree(const_cast<char*>(str)); \
         str = nullptr; \
     }
 

@@ -20,6 +20,7 @@
 #include "../account/Account.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/FileIO.hpp"
+#include "../../src/LoginShim.hpp"
 
 namespace abcd {
 
@@ -481,7 +482,7 @@ tABC_CC ABC_LoginServerGetString(const Lobby &lobby, tABC_U08Buf LP1, tABC_U08Bu
 
     pJSON_Value = json_object_get(pJSON_Value, szField);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error care package JSON results");
-    ABC_STRDUP(*szResponse, json_string_value(pJSON_Value));
+    *szResponse = stringCopy(json_string_value(pJSON_Value));
 
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -529,7 +530,7 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error pin package JSON results");
 
     // copy the value
-    ABC_STRDUP(*szPinPackage, json_string_value(pJSON_Value));
+    *szPinPackage = stringCopy(json_string_value(pJSON_Value));
 
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -915,10 +916,13 @@ tABC_CC ABC_LoginServerUploadLogs(const Account *account, tABC_Error *pError)
         auto ids = account->wallets.list();
         for (const auto &id: ids)
         {
-            ABC_CHECK_NEW(fileLoad(watchData, watcherPath(id)));
-
-            json_array_append_new(pJSON_array,
-                json_string(base64Encode(watchData).c_str()));
+            std::shared_ptr<Wallet> wallet;
+            if (cacheWallet(wallet, nullptr, id.c_str()))
+            {
+                ABC_CHECK_NEW(fileLoad(watchData, watcherPath(*wallet)));
+                json_array_append_new(pJSON_array,
+                    json_string(base64Encode(watchData).c_str()));
+            }
         }
 
         pJSON_Root = json_pack("{ss, ss, ss}",

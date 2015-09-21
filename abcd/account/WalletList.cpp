@@ -35,7 +35,7 @@ WalletList::load()
 
     // Step 1: reload any wallets we already have:
     for (auto &wallet: wallets_)
-        ABC_CHECK(wallet.second.load(filename(wallet.first),
+        ABC_CHECK(wallet.second.load(path(wallet.first),
             account_.login.dataKey()));
 
     // Step 2: scan the directory for new wallets:
@@ -46,26 +46,20 @@ WalletList::load()
     struct dirent *de;
     while (nullptr != (de = readdir(dir)))
     {
-        // Skip hidden files:
-        std::string name = de->d_name;
-        if ('.' == name[0])
+        if (!fileIsJson(de->d_name))
             continue;
-
-        // Skip non-json files:
-        if (name.size() < 5 || !std::equal(name.end() - 5, name.end(), ".json"))
-            continue;
-        name.erase(name.end() - 5, name.end());
 
         // TODO: Be sure the file has been synced!
 
         // Skip stuff we already have:
-        if (wallets_.end() != wallets_.find(name))
+        std::string id(de->d_name, de->d_name + strlen(de->d_name) - 5);
+        if (wallets_.end() != wallets_.find(id))
             continue;
 
         // Try to load the wallet:
         JsonPtr json;
-        if (json.load(filename(name), account_.login.dataKey()))
-            wallets_[name] = std::move(json);
+        if (json.load(dir_ + de->d_name, account_.login.dataKey()))
+            wallets_[id] = std::move(json);
     }
 
     closedir(dir);
@@ -102,7 +96,7 @@ WalletList::reorder(const std::string &id, unsigned index)
 
     WalletJson json(wallet->second);
     ABC_CHECK(json.sortSet(index));
-    ABC_CHECK(json.save(filename(id), account_.login.dataKey()));
+    ABC_CHECK(json.save(path(id), account_.login.dataKey()));
     return Status();
 }
 
@@ -113,7 +107,7 @@ WalletList::insert(const std::string &id, const JsonPtr &keys)
     ABC_CHECK(json.sortSet(wallets_.size()));
     ABC_CHECK(json.archivedSet(false));
     ABC_CHECK(fileEnsureDir(dir_));
-    ABC_CHECK(json.save(filename(id), account_.login.dataKey()));
+    ABC_CHECK(json.save(path(id), account_.login.dataKey()));
 
     // TODO: Don't add the wallet until the sync has finished!
     std::lock_guard<std::mutex> lock(mutex_);
@@ -131,7 +125,7 @@ WalletList::json(JsonPtr &result, const std::string &id) const
     if (wallet == wallets_.end())
         return ABC_ERROR(ABC_CC_InvalidWalletID, "No such wallet");
 
-    result = wallet->second;
+    result = wallet->second.clone();
     return Status();
 }
 
@@ -160,14 +154,14 @@ WalletList::archivedSet(const std::string &id, bool archived)
 
     WalletJson json(wallet->second);
     ABC_CHECK(json.archivedSet(archived));
-    ABC_CHECK(json.save(filename(id), account_.login.dataKey()));
+    ABC_CHECK(json.save(path(id), account_.login.dataKey()));
     return Status();
 }
 
 std::string
-WalletList::filename(const std::string &name) const
+WalletList::path(const std::string &id) const
 {
-    return dir_ + name + ".json";
+    return dir_ + id + ".json";
 }
 
 } // namespace abcd

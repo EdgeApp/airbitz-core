@@ -8,10 +8,13 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "PaymentProto.hpp"
+#include "../General.hpp"
 #include "../Tx.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/Mutex.hpp"
+#include "../wallet/Details.hpp"
+#include "../wallet/Wallet.hpp"
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
@@ -19,7 +22,7 @@ namespace abcd {
 #define NO_AB_FEES
 
 static Status
-spendMakeTx(libbitcoin::transaction_type &result, tABC_WalletID self,
+spendMakeTx(libbitcoin::transaction_type &result, Wallet &self,
     SendInfo *pInfo, const std::string &changeAddress)
 {
     Watcher *watcher = nullptr;
@@ -47,24 +50,24 @@ spendMakeTx(libbitcoin::transaction_type &result, tABC_WalletID self,
  * Fills in the tABC_UnsavedTx structure.
  */
 static tABC_CC
-ABC_BridgeExtractOutputs(tABC_WalletID self, tABC_UnsavedTx **ppUtx,
+ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
                          const libbitcoin::transaction_type &tx,
                          tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    auto txid = bc::encode_hex(bc::hash_transaction(tx));
+    auto txid = bc::encode_hash(bc::hash_transaction(tx));
     auto ntxid = ABC_BridgeNonMalleableTxId(tx);
     int i = 0;
-    AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> pUtx;
+    AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree>
+        pUtx(structAlloc<tABC_UnsavedTx>());
 
     Watcher *watcher = nullptr;
     ABC_CHECK_NEW(watcherFind(watcher, self));
 
     // Fill in tABC_UnsavedTx structure:
-    ABC_NEW(pUtx.get(), tABC_UnsavedTx);
-    ABC_STRDUP(pUtx->szTxId, ntxid.c_str());
-    ABC_STRDUP(pUtx->szTxMalleableId, txid.c_str());
+    pUtx->szTxId = stringCopy(ntxid);
+    pUtx->szTxMalleableId = stringCopy(txid);
     pUtx->countOutputs = tx.inputs.size() + tx.outputs.size();
     ABC_ARRAY_NEW(pUtx->aOutputs, pUtx->countOutputs, tABC_TxOutput*)
 
@@ -77,8 +80,8 @@ ABC_BridgeExtractOutputs(tABC_WalletID self, tABC_UnsavedTx **ppUtx,
 
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = true;
-        ABC_STRDUP(out->szTxId, bc::encode_hex(prev.hash).c_str());
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
+        out->szTxId = stringCopy(bc::encode_hash(prev.hash));
+        out->szAddress = stringCopy(addr.encoded());
 
         auto tx = watcher->find_tx(prev.hash);
         if (prev.index < tx.outputs.size())
@@ -96,15 +99,14 @@ ABC_BridgeExtractOutputs(tABC_WalletID self, tABC_UnsavedTx **ppUtx,
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = false;
         out->value = output.value;
-        ABC_STRDUP(out->szTxId, txid.c_str());
-        ABC_STRDUP(out->szAddress, addr.encoded().c_str());
+        out->szTxId = stringCopy(txid);
+        out->szAddress = stringCopy(addr.encoded());
 
         pUtx->aOutputs[i] = out;
         i++;
     }
 
-    *ppUtx = pUtx.get();
-    pUtx.get() = 0;
+    *ppUtx = pUtx.release();
 
 exit:
     return cc;
@@ -114,9 +116,7 @@ SendInfo::~SendInfo()
 {
     ABC_FREE_STR(szDestAddress);
     delete paymentRequest;
-    ABC_TxFreeDetails(pDetails);
-    if (bTransfer)
-        ABC_WalletIDFree(walletDest);
+    ABC_TxDetailsFree(pDetails);
 }
 
 SendInfo::SendInfo()
@@ -127,12 +127,12 @@ SendInfo::SendInfo()
     bTransfer = false;
 }
 
-tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, SendInfo *pInfo, uint64_t *pTotalFees, tABC_Error *pError)
+tABC_CC  ABC_TxCalcSendFees(Wallet &self, SendInfo *pInfo, uint64_t *pTotalFees, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
-    std::string changeAddress;
     bc::transaction_type tx;
+    Address changeAddress;
 
     ABC_CHECK_NULL(pInfo);
 
@@ -140,8 +140,8 @@ tABC_CC  ABC_TxCalcSendFees(tABC_WalletID self, SendInfo *pInfo, uint64_t *pTota
     pInfo->pDetails->amountFeesMinersSatoshi = 0;
 
     // Make an unsigned transaction
-    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails));
-    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress));
+    ABC_CHECK_NEW(self.addresses.getNew(changeAddress));
+    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress.address));
 
     *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
                 + pInfo->pDetails->amountFeesMinersSatoshi;
@@ -150,7 +150,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeMaxSpendable(tABC_WalletID self,
+tABC_CC ABC_BridgeMaxSpendable(Wallet &self,
                                SendInfo *pInfo,
                                uint64_t *pMaxSatoshi,
                                tABC_Error *pError)
@@ -191,7 +191,7 @@ exit:
  * @param pInfo Pointer to transaction information
  * @param pszTxID Pointer to hold allocated pointer to transaction ID string
  */
-tABC_CC ABC_TxSend(tABC_WalletID self,
+tABC_CC ABC_TxSend(Wallet &self,
                    SendInfo         *pInfo,
                    char             **pszTxID,
                    tABC_Error       *pError)
@@ -199,15 +199,15 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    std::string changeAddress;
+    Address changeAddress;
     bc::transaction_type tx;
     AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> unsaved;
 
     ABC_CHECK_NULL(pInfo);
 
     // Make an unsigned transaction:
-    ABC_CHECK_NEW(txNewChangeAddress(changeAddress, self, pInfo->pDetails));
-    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress));
+    ABC_CHECK_NEW(self.addresses.getNew(changeAddress));
+    ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress.address));
 
     // Sign and send transaction:
     {
@@ -215,12 +215,12 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
         ABC_CHECK_NEW(watcherFind(watcher, self));
 
         // Sign the transaction:
-        KeyTable keys;
-        ABC_CHECK_NEW(txKeyTableGet(keys, self));
+        KeyTable keys = self.addresses.keyTable();
         ABC_CHECK_NEW(signTx(tx, *watcher, keys));
 
-        ABC_DebugLog("Change: %s, Amount: %ld, Contents: %s",
-            changeAddress.c_str(), pInfo->pDetails->amountSatoshi,
+        ABC_DebugLog("Change: %s, Amount: %s, Contents: %s",
+            changeAddress.address.c_str(),
+            std::to_string(pInfo->pDetails->amountSatoshi).c_str(),
             bc::pretty(tx).c_str());
 
         // Send to the network:
@@ -231,15 +231,15 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
         // Let the merchant broadcast the transaction:
         if (pInfo->paymentRequest)
         {
-            // TODO: add something to the details about a refund
-            AutoFree<tABC_TxDetails, ABC_TxFreeDetails> pRefundDetails;
-            ABC_CHECK_RET(ABC_TxDupDetails(&pRefundDetails.get(), pInfo->pDetails, pError));
-
-            std::string refundAddress;
-            ABC_CHECK_NEW(txNewChangeAddress(refundAddress, self, pRefundDetails));
+            // TODO: Update the metadata with something about a refund
+            Address refundAddress;
+            ABC_CHECK_NEW(self.addresses.getNew(refundAddress));
+            refundAddress.time = time(nullptr);
+            refundAddress.metadata = pInfo->pDetails;
+            ABC_CHECK_NEW(self.addresses.save(refundAddress));
 
             bc::script_type refundScript;
-            ABC_CHECK_NEW(outputScriptForAddress(refundScript, refundAddress));
+            ABC_CHECK_NEW(outputScriptForAddress(refundScript, refundAddress.address));
             DataChunk refund = save_script(refundScript);
 
             PaymentReceipt receipt;
@@ -253,7 +253,7 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
                     notes += '\n';
                 notes += receipt.ack.memo();
                 ABC_FREE_STR(pInfo->pDetails->szNotes);
-                ABC_STRDUP(pInfo->pDetails->szNotes, notes.c_str());
+                pInfo->pDetails->szNotes = stringCopy(notes);
             }
         }
 
@@ -267,7 +267,7 @@ tABC_CC ABC_TxSend(tABC_WalletID self,
     ABC_CHECK_RET(ABC_TxSendComplete(self, pInfo, unsaved, pError));
 
     // return the new tx id
-    ABC_STRDUP(*pszTxID, unsaved->szTxId);
+    *pszTxID = stringCopy(unsaved->szTxId);
 
 exit:
     return cc;

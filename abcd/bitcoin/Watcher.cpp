@@ -442,14 +442,9 @@ static void on_unknown_nop(const std::string&)
 {
 }
 
-static void on_update_nop(const payment_address&,
-    size_t, const hash_digest&, const transaction_type&)
-{
-}
-
 Watcher::connection::connection(TxDatabase &db, void *ctx, TxCallbacks &cb)
   : socket(ctx),
-    codec(socket, on_update_nop, on_unknown_nop, std::chrono::seconds(10), 0),
+    codec(socket, on_unknown_nop, std::chrono::seconds(10), 0),
     txu(db, codec, cb)
 {
 }

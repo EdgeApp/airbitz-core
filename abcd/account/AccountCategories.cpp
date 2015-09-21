@@ -74,7 +74,7 @@ tABC_CC ABC_AccountCategoriesAdd(const Account &account,
     {
         ABC_ARRAY_NEW(categories.data, 1, char*);
     }
-    ABC_STRDUP(categories.data[categories.size++], szCategory);
+    categories.data[categories.size++] = stringCopy(szCategory);
 
     // save out the categories
     ABC_CHECK_RET(ABC_AccountCategoriesSave(account, categories.data, categories.size, pError));
@@ -115,7 +115,7 @@ tABC_CC ABC_AccountCategoriesRemove(const Account &account,
             {
                 ABC_ARRAY_NEW(newCat.data, 1, char*);
             }
-            ABC_STRDUP(newCat.data[newCat.size++], oldCat.data[i]);
+            newCat.data[newCat.size++] = stringCopy(oldCat.data[i]);
         }
     }
 

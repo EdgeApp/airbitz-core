@@ -8,7 +8,7 @@
 #include "Text.hpp"
 #include "Testnet.hpp"
 #include "../config.h"
-#include <wallet/wallet.hpp>
+#include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
 
@@ -99,14 +99,14 @@ tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
     std::string wif = szWIF;
 
     // Parse as WIF:
-    secret = libwallet::wif_to_secret(wif);
+    secret = bc::wif_to_secret(wif);
     if (secret != bc::null_hash)
     {
-        bCompressed = libwallet::is_wif_compressed(wif);
+        bCompressed = bc::is_wif_compressed(wif);
     }
     else if (minikeyCheck(wif))
     {
-        secret = libwallet::minikey_to_secret(wif);
+        secret = bc::minikey_to_secret(wif);
         bCompressed = false;
     }
     else if (hbitsDecode(secret, wif))
@@ -121,7 +121,7 @@ tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
     // Get address:
     ec_addr = bc::secret_to_public_key(secret, bCompressed);
     address.set(pubkeyVersion(), bc::bitcoin_short_hash(ec_addr));
-    ABC_STRDUP(szAddress, address.encoded().c_str());
+    szAddress = stringCopy(address.encoded());
 
     // Write out:
     ABC_BUF_DUP(*pOut, U08Buf(secret.data(), secret.size()));
@@ -136,7 +136,7 @@ exit:
 }
 
 struct CustomResult:
-    public libwallet::uri_parse_result
+    public bc::uri_parse_result
 {
     optional_string category;
     optional_string ret;
@@ -166,8 +166,9 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tABC_BitcoinURIInfo *pInfo = NULL;
     CustomResult result;
+    AutoFree<tABC_BitcoinURIInfo, ABC_BridgeFreeURIInfo>
+        pInfo(structAlloc<tABC_BitcoinURIInfo>());
 
     // Allow a double-slash in the "bitcoin:" URI schema
     // to work around limitations in email and SMS programs:
@@ -179,7 +180,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
         uri.replace(0, 18, "bitcoin:");
 
     // Try to parse as a URI:
-    if (!libwallet::uri_parse(uri, result, false))
+    if (!bc::uri_parse(uri, result, false))
     {
         // Try to parse as a raw address:
         bc::payment_address address;
@@ -195,20 +196,19 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
     }
 
     // Copy into the output struct:
-    ABC_NEW(pInfo, tABC_BitcoinURIInfo);
     if (result.address)
     {
         auto address = result.address.get();
         if (address.version() == pubkeyVersion() ||
             address.version() == scriptVersion())
-            ABC_STRDUP(pInfo->szAddress, address.encoded().c_str());
+            pInfo->szAddress = stringCopy(address.encoded());
     }
     if (result.amount)
         pInfo->amountSatoshi = result.amount.get();
     if (result.label)
-        ABC_STRDUP(pInfo->szLabel, result.label.get().c_str());
+        pInfo->szLabel = stringCopy(result.label.get());
     if (result.message)
-        ABC_STRDUP(pInfo->szMessage, result.message.get().c_str());
+        pInfo->szMessage = stringCopy(result.message.get());
     if (result.category)
     {
         auto category = result.category.get();
@@ -216,20 +216,17 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
             0 == category.find("Income:") ||
             0 == category.find("Transfer:") ||
             0 == category.find("Exchange:"))
-            ABC_STRDUP(pInfo->szCategory, category.c_str());
+            pInfo->szCategory = stringCopy(category);
     }
     if (result.r)
-        ABC_STRDUP(pInfo->szR, result.r.get().c_str());
+        pInfo->szR = stringCopy(result.r.get());
     if (result.ret)
-        ABC_STRDUP(pInfo->szRet, result.ret.get().c_str());
+        pInfo->szRet = stringCopy(result.ret.get());
 
     // assign created info struct
-    *ppInfo = pInfo;
-    pInfo = nullptr;
+    *ppInfo = pInfo.release();
 
 exit:
-    ABC_BridgeFreeURIInfo(pInfo);
-
     return cc;
 }
 
@@ -264,7 +261,9 @@ tABC_CC ABC_BridgeParseAmount(const char *szAmount,
                               uint64_t *pAmountOut,
                               unsigned decimalPlaces)
 {
-    *pAmountOut = libwallet::parse_amount(szAmount, decimalPlaces);
+    if (!bc::decode_base10(*pAmountOut, szAmount, decimalPlaces))
+        *pAmountOut = ABC_INVALID_AMOUNT;
+
     return ABC_CC_Ok;
 }
 
@@ -292,15 +291,15 @@ tABC_CC ABC_BridgeFormatAmount(int64_t amount,
 
     if (amount < 0)
     {
-        out = libwallet::format_amount(-amount, decimalPlaces);
+        out = bc::encode_base10(-amount, decimalPlaces);
         if (bAddSign)
             out.insert(0, 1, '-');
     }
     else
     {
-        out = libwallet::format_amount(amount, decimalPlaces);
+        out = bc::encode_base10(amount, decimalPlaces);
     }
-    ABC_STRDUP(*pszAmountOut, out.c_str());
+    *pszAmountOut = stringCopy(out);
 
 exit:
     return cc;
@@ -315,7 +314,7 @@ tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    libwallet::uri_writer writer;
+    bc::uri_writer writer;
     if (pInfo->szAddress)
         writer.write_address(pInfo->szAddress);
     if (pInfo->amountSatoshi)
@@ -325,9 +324,8 @@ tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
     if (pInfo->szMessage)
         writer.write_param("message", pInfo->szMessage);
 
-    ABC_STRDUP(*pszURI, writer.string().c_str());
+    *pszURI = stringCopy(writer.string());
 
-exit:
     return cc;
 }
 

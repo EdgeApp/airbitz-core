@@ -22,7 +22,7 @@ download() {
             fi
         else
             if [ ! -e "$path" ]; then
-                wget -O "$path" "$url"
+                curl -L "$url" > "$path"
             fi
 
             # Checksum:

@@ -14,6 +14,8 @@
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginServer.hpp"
+#include "../abcd/wallet/Wallet.hpp"
+#include <map>
 #include <mutex>
 
 namespace abcd {
@@ -28,6 +30,7 @@ static std::mutex gLoginMutex;
 static std::shared_ptr<Lobby> gLobbyCache;
 static std::shared_ptr<Login> gLoginCache;
 static std::shared_ptr<Account> gAccountCache;
+static std::map<std::string, std::shared_ptr<Wallet>> gWalletCache;
 
 /**
  * Clears the cached login.
@@ -39,6 +42,7 @@ cacheClear()
     gLobbyCache.reset();
     gLoginCache.reset();
     gAccountCache.reset();
+    gWalletCache.clear();
 }
 
 void
@@ -173,6 +177,59 @@ cacheAccount(std::shared_ptr<Account> &result, const char *szUserName)
         ABC_CHECK(Account::create(gAccountCache, *login));
 
     result = gAccountCache;
+    return Status();
+}
+
+Status
+cacheWalletNew(std::shared_ptr<Wallet> &result, const char *szUserName,
+    const std::string &name, int currency)
+{
+    std::shared_ptr<Account> account;
+    ABC_CHECK(cacheAccount(account, szUserName));
+
+    // Create the wallet:
+    std::shared_ptr<Wallet> out;
+    ABC_CHECK(Wallet::createNew(out, *account, name, currency));
+
+    // Add to the cache:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+    gWalletCache[out->id()] = out;
+
+    result = std::move(out);
+    return Status();
+}
+
+Status
+cacheWallet(std::shared_ptr<Wallet> &result, const char *szUserName,
+    const char *szUUID)
+{
+    std::shared_ptr<Account> account;
+    ABC_CHECK(cacheAccount(account, szUserName));
+
+    if (!szUUID)
+        return ABC_ERROR(ABC_CC_NULLPtr, "No wallet id");
+    std::string id = szUUID;
+
+    // Try to return the wallet from the cache:
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        auto i = gWalletCache.find(id);
+        if (i != gWalletCache.end())
+        {
+            result = i->second;
+            return Status();
+        }
+    }
+
+    // Load the wallet:
+    std::shared_ptr<Wallet> out;
+    ABC_CHECK(Wallet::create(out, *account, id));
+
+    // Add to the cache:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+    gWalletCache[id] = out;
+
+    result = std::move(out);
     return Status();
 }
 

@@ -13,11 +13,6 @@ namespace abcd {
 
 struct SendInfo;
 
-/**
- * The minimum number of satoshis an output should contain.
- */
-constexpr unsigned outputDust = 546;
-
 bc::script_type
 outputScriptForPubkey(const bc::short_hash &hash);
 
@@ -33,6 +28,12 @@ outputScriptForAddress(bc::script_type &result, const std::string &address);
  */
 Status
 outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo);
+
+/**
+ * Returns true if an amount is small enough to be considered dust.
+ */
+bool
+outputIsDust(uint64_t amount);
 
 /**
  * Add a change output, sort the outputs, and check for dust.

@@ -1,2 +1,3 @@
 #!/bin/sh
-make abc.build-native && ${BUILD_DIR:-./build}/abc/native/abc-cli "$@"
+build_dir=${BUILD_DIR:-$(pwd)/build}
+make abc.build-native && ( cd ..; $build_dir/abc/native/abc-cli "$@" )

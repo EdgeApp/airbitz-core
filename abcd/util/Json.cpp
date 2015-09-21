@@ -11,59 +11,6 @@
 namespace abcd {
 
 /**
- * Creates the json package with a single field and its value
- */
-tABC_CC ABC_UtilCreateValueJSONString(const char *szValue,
-                                      const char *szFieldName,
-                                      char       **pszJSON,
-                                      tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    json_t *pJSON_Root = NULL;
-
-    ABC_CHECK_NULL(szValue);
-    ABC_CHECK_NULL(szFieldName);
-    ABC_CHECK_NULL(pszJSON);
-
-    // create the jansson object
-    pJSON_Root = json_pack("{ss}", szFieldName, szValue);
-
-    *pszJSON = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-
-exit:
-    if (pJSON_Root) json_decref(pJSON_Root);
-
-    return cc;
-}
-
-/**
- * Creates the json package with a single field and its int value
- */
-tABC_CC ABC_UtilCreateIntJSONString(int        value,
-                                    const char *szFieldName,
-                                    char       **pszJSON,
-                                    tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    json_t *pJSON_Root = NULL;
-
-    ABC_CHECK_NULL(szFieldName);
-    ABC_CHECK_NULL(pszJSON);
-
-    // create the jansson object
-    pJSON_Root = json_pack("{si}", szFieldName, value);
-
-    *pszJSON = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER);
-
-exit:
-    if (pJSON_Root) json_decref(pJSON_Root);
-
-    return cc;
-}
-
-/**
  *  Creates a JSON string representing an array of values with their name
  */
 tABC_CC ABC_UtilCreateArrayJSONObject(char   **aszValues,
@@ -102,75 +49,6 @@ tABC_CC ABC_UtilCreateArrayJSONObject(char   **aszValues,
 exit:
     if (jsonItems)      json_decref(jsonItems);
     if (jsonItemArray)  json_decref(jsonItemArray);
-
-    return cc;
-}
-
-/**
- * Gets the specified field from a json string
- * the user is responsible for free'ing the value
- */
-tABC_CC ABC_UtilGetStringValueFromJSONString(const char *szJSON,
-                                             const char *szFieldName,
-                                             char       **pszValue,
-                                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    json_t *pJSON_Root = NULL;
-    json_t *pJSON_Value = NULL;
-
-    ABC_CHECK_NULL(szJSON);
-    ABC_CHECK_NULL(szFieldName);
-    ABC_CHECK_NULL(pszValue);
-
-    // decode the object
-    json_error_t error;
-    pJSON_Root = json_loads(szJSON, 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-
-    // get the field
-    pJSON_Value = json_object_get(pJSON_Root, szFieldName);
-    ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-    ABC_STRDUP(*pszValue, json_string_value(pJSON_Value));
-
-exit:
-    if (pJSON_Root) json_decref(pJSON_Root);
-
-    return cc;
-}
-
-/**
- * Gets the specified field from a json string
- */
-tABC_CC ABC_UtilGetIntValueFromJSONString(const char *szJSON,
-                                          const char *szFieldName,
-                                          int       *pValue,
-                                          tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    json_t *pJSON_Root = NULL;
-    json_t *pJSON_Value = NULL;
-
-    ABC_CHECK_NULL(szJSON);
-    ABC_CHECK_NULL(szFieldName);
-    ABC_CHECK_NULL(pValue);
-
-    // decode the object
-    json_error_t error;
-    pJSON_Root = json_loads(szJSON, 0, &error);
-    ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_JSONError, "Error parsing JSON");
-    ABC_CHECK_ASSERT(json_is_object(pJSON_Root), ABC_CC_JSONError, "Error parsing JSON");
-
-    // get the field
-    pJSON_Value = json_object_get(pJSON_Root, szFieldName);
-    ABC_CHECK_ASSERT((pJSON_Value && json_is_number(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON int value");
-    *pValue = (int) json_integer_value(pJSON_Value);
-
-exit:
-    if (pJSON_Root) json_decref(pJSON_Root);
 
     return cc;
 }
@@ -219,7 +97,7 @@ tABC_CC ABC_UtilGetArrayValuesFromJSONString(const char *szJSON,
         {
             json_t *pJSON_Elem = json_array_get(pJSON_Value, i);
             ABC_CHECK_ASSERT((pJSON_Elem && json_is_string(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pArrayStrings[i], json_string_value(pJSON_Elem));
+            pArrayStrings[i] = stringCopy(json_string_value(pJSON_Elem));
         }
 
         *aszValues = pArrayStrings;
@@ -297,7 +175,7 @@ char *ABC_UtilStringFromJSONObject(const json_t *pJSON_Data, size_t flags)
 
     if (strJanssonJSON != NULL)
     {
-        ABC_STRDUP(strJSON, strJanssonJSON);
+        strJSON = stringCopy(strJanssonJSON);
     }
 
 exit:

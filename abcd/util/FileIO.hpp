@@ -79,6 +79,12 @@ fileEnsureDir(const std::string &dir);
 bool
 fileExists(const std::string &path);
 
+/**
+ * Returns true if a filename (without the directory part) ends with ".json".
+ */
+bool
+fileIsJson(const std::string &name);
+
 tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
                                  const char *szDir,
                                  tABC_Error *pError);

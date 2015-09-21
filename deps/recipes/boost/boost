@@ -1,24 +1,19 @@
 inherit lib
 
-version="1_55_0"
-source="
-http://softlayer-dal.dl.sourceforge.net/project/boost/boost/1.55.0/boost_$version.tar.bz2#cef9a0cc7084b1d639e06cd3bc34e4251524c840
-https://raw.githubusercontent.com/MysticTreeGames/Boost-for-Android/master/patches/boost-$version/boost-$version.patch#806ca68e03c8af88a910cf56de161f2284f404f8
-"
+version="1_58_0"
+source="http://iweb.dl.sourceforge.net/project/boost/boost/1.58.0/boost_$version.tar.bz2#2fc96c1651ac6fe9859b678b165bd78dc211e881"
 
 build() {
-    LIBRARIES=--with-libraries=date_time,filesystem,program_options,regex,signals,system,thread,iostreams
+    LIBRARIES=--with-libraries=chrono,date_time,filesystem,locale,program_options,regex,system,thread
 
     cd boost_$version
 
+    echo Patching boost...
+    patch -p1 < $recipe_dir/fix-asio-android.patch
+    cp $recipe_dir/user-config.jam tools/build/src/user-config.jam
+
     echo Bootstrapping boost...
     ./bootstrap.sh --prefix=$install_dir $LIBRARIES
-
-    echo Patching boost...
-    patch -p1 < $download_dir/boost-1_55_0.patch
-    patch -p1 < $recipe_dir/fix-atomic.patch
-    patch -p1 < $recipe_dir/libbitcoin-fixes.patch
-    cp $recipe_dir/user-config.jam tools/build/v2/user-config.jam
 
     echo Building boost...
     export NO_BZIP2=1

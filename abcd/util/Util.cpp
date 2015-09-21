@@ -33,13 +33,29 @@
 
 namespace abcd {
 
-void StringFree(char *string)
+void
+stringFree(char *string)
 {
     if (string)
     {
         ABC_UtilGuaranteedMemset(string, 0, strlen(string));
         free(string);
     }
+}
+
+char *
+stringCopy(const char *string)
+{
+    auto out = strdup(string);
+    if (!out)
+        throw std::bad_alloc();
+    return out;
+}
+
+char *
+stringCopy(const std::string &string)
+{
+    return stringCopy(string.c_str());
 }
 
 /**

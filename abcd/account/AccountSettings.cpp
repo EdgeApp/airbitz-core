@@ -40,6 +40,7 @@ namespace abcd {
 #define JSON_ACCT_SPEND_REQUIRE_PIN_ENABLED     "spendRequirePinEnabled"
 #define JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS    "spendRequirePinSatoshis"
 #define JSON_ACCT_DISABLE_PIN_LOGIN             "disablePINLogin"
+#define JSON_ACCT_DISABLE_FINGERPRINT_LOGIN     "disableFingerprintLogin"
 #define JSON_ACCT_PIN_LOGIN_COUNT               "pinLoginCount"
 
 #define DEF_REQUIRE_PIN_SATOSHIS 5000000
@@ -58,11 +59,10 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    tABC_AccountSettings *pSettings = NULL;
+    AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree>
+        pSettings(structAlloc<tABC_AccountSettings>());
 
     ABC_CHECK_NULL(ppSettings);
-
-    ABC_NEW(pSettings, tABC_AccountSettings);
 
     pSettings->szFirstName = NULL;
     pSettings->szLastName = NULL;
@@ -75,21 +75,19 @@ tABC_CC ABC_AccountSettingsCreateDefault(tABC_AccountSettings **ppSettings,
     pSettings->bSpendRequirePin = true;
     pSettings->spendRequirePinSatoshis = DEF_REQUIRE_PIN_SATOSHIS;
     pSettings->bDisablePINLogin = false;
+    pSettings->bDisableFingerprintLogin = false;
 
-    ABC_STRDUP(pSettings->szLanguage, "en");
+    pSettings->szLanguage = stringCopy("en");
     pSettings->currencyNum = static_cast<int>(Currency::USD);
-    ABC_STRDUP(pSettings->szExchangeRateSource, exchangeSources.front().c_str());
+    pSettings->szExchangeRateSource = stringCopy(exchangeSources.front());
 
     pSettings->bitcoinDenomination.denominationType = ABC_DENOMINATION_UBTC;
     pSettings->bitcoinDenomination.satoshi = 100;
 
     // assign final settings
-    *ppSettings = pSettings;
-    pSettings = NULL;
+    *ppSettings = pSettings.release();
 
 exit:
-    ABC_AccountSettingsFree(pSettings);
-
     return cc;
 }
 
@@ -122,7 +120,7 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         //ABC_DebugLog("Loaded settings JSON:\n%s\n", json_dumps(pJSON_Root, JSON_INDENT(4) | JSON_PRESERVE_ORDER));
 
         // allocate the new settings object
-        ABC_NEW(pSettings, tABC_AccountSettings);
+        pSettings = structAlloc<tABC_AccountSettings>();
         pSettings->szFirstName = NULL;
         pSettings->szLastName = NULL;
         pSettings->szNickname = NULL;
@@ -132,7 +130,7 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         if (pJSON_Value)
         {
             ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szFirstName, json_string_value(pJSON_Value));
+            pSettings->szFirstName = stringCopy(json_string_value(pJSON_Value));
         }
 
         // get the last name
@@ -140,7 +138,7 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         if (pJSON_Value)
         {
             ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szLastName, json_string_value(pJSON_Value));
+            pSettings->szLastName = stringCopy(json_string_value(pJSON_Value));
         }
 
         // get the nickname
@@ -148,14 +146,14 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         if (pJSON_Value)
         {
             ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szNickname, json_string_value(pJSON_Value));
+            pSettings->szNickname = stringCopy(json_string_value(pJSON_Value));
         }
 
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_PIN_FIELD);
         if (pJSON_Value)
         {
             ABC_CHECK_ASSERT(json_is_string(pJSON_Value), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pSettings->szPIN, json_string_value(pJSON_Value));
+            pSettings->szPIN = stringCopy(json_string_value(pJSON_Value));
         }
 
         // get name on payments option
@@ -179,7 +177,7 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         // get language
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_LANGUAGE_FIELD);
         ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-        ABC_STRDUP(pSettings->szLanguage, json_string_value(pJSON_Value));
+        pSettings->szLanguage = stringCopy(json_string_value(pJSON_Value));
 
         // get currency num
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_NUM_CURRENCY_FIELD);
@@ -249,6 +247,18 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
             pSettings->pinLoginCount = 0;
         }
 
+        pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_DISABLE_FINGERPRINT_LOGIN);
+        if (pJSON_Value)
+        {
+            ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON boolean value");
+            pSettings->bDisableFingerprintLogin = json_is_true(pJSON_Value) ? true : false;
+        }
+        else
+        {
+            // Default to PIN login allowed
+            pSettings->bDisableFingerprintLogin = false;
+        }
+
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_SPEND_REQUIRE_PIN_SATOSHIS);
         if (pJSON_Value)
         {
@@ -280,11 +290,11 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
         pJSON_Value = json_object_get(pJSON_Root, JSON_ACCT_EX_RATE_SOURCE_FIELD);
         if (pJSON_Value && json_is_string(pJSON_Value))
         {
-            ABC_STRDUP(pSettings->szExchangeRateSource, json_string_value(pJSON_Value));
+            pSettings->szExchangeRateSource = stringCopy(json_string_value(pJSON_Value));
         }
         else
         {
-            ABC_STRDUP(pSettings->szExchangeRateSource, exchangeSources.front().c_str());
+            pSettings->szExchangeRateSource = stringCopy(exchangeSources.front());
         }
 
         //
@@ -456,6 +466,9 @@ tABC_CC ABC_AccountSettingsSave(const Account &account,
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     retVal = json_object_set_new(pJSON_Root, JSON_ACCT_DISABLE_PIN_LOGIN, json_boolean(pSettings->bDisablePINLogin));
+    ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
+
+    retVal = json_object_set_new(pJSON_Root, JSON_ACCT_DISABLE_FINGERPRINT_LOGIN, json_boolean(pSettings->bDisableFingerprintLogin));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     retVal = json_object_set_new(pJSON_Root, JSON_ACCT_PIN_LOGIN_COUNT, json_integer(pSettings->pinLoginCount));

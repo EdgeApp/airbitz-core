@@ -28,27 +28,32 @@ public:
     AutoFree():
         p_(nullptr)
     {}
-    AutoFree(T *p):
+    explicit AutoFree(T *p):
         p_(p)
     {}
 
     /**
      * Obtains a writable reference to the underlying pointer.
      */
-    T *&get()
+    T *&
+    get()
     {
         return p_;
     }
 
-    operator T*()
+    /**
+     * Returns the underlying pointer, passing ownership to the caller.
+     */
+    T *
+    release()
     {
-        return p_;
+        auto out = p_;
+        p_ = nullptr;
+        return out;
     }
 
-    T *operator ->()
-    {
-        return p_;
-    }
+    operator T*() { return p_; }
+    T *operator ->() { return p_; }
 
 private:
     T *p_;

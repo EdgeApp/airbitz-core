@@ -116,11 +116,12 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     json_t  *pJSON_Root             = NULL;
     json_t  *pJSON_Value            = NULL;
     char    *szInfoFilename         = NULL;
-    tABC_GeneralInfo *pInfo         = NULL;
     json_t  *pJSON_MinersFeesArray  = NULL;
     json_t  *pJSON_AirBitzFees      = NULL;
     json_t  *pJSON_ObeliskArray     = NULL;
     json_t  *pJSON_SyncArray        = NULL;
+    AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo>
+        pInfo(structAlloc<tABC_GeneralInfo>());
 
     ABC_CHECK_NULL(ppInfo);
 
@@ -138,9 +139,6 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     ABC_CHECK_NEW(file.load(szInfoFilename));
     pJSON_Root = file.get();
 
-    // allocate the struct
-    ABC_NEW(pInfo, tABC_GeneralInfo);
-
     // get the miners fees array
     pJSON_MinersFeesArray = json_object_get(pJSON_Root, JSON_INFO_MINERS_FEES_FIELD);
     ABC_CHECK_ASSERT((pJSON_MinersFeesArray && json_is_array(pJSON_MinersFeesArray)), ABC_CC_JSONError, "Error parsing JSON array value");
@@ -155,8 +153,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     // run through all the miners fees
     for (unsigned i = 0; i < pInfo->countMinersFees; i++)
     {
-        tABC_GeneralMinerFee *pFee = NULL;
-        ABC_NEW(pFee, tABC_GeneralMinerFee);
+        tABC_GeneralMinerFee *pFee = structAlloc<tABC_GeneralMinerFee>();
 
         // get the source object
         json_t *pJSON_Fee = json_array_get(pJSON_MinersFeesArray, i);
@@ -177,7 +174,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     }
 
     // allocate the air bitz fees
-    ABC_NEW(pInfo->pAirBitzFee, tABC_GeneralAirBitzFee);
+    pInfo->pAirBitzFee = structAlloc<tABC_GeneralAirBitzFee>();
 
     // get the air bitz fees object
     pJSON_AirBitzFees = json_object_get(pJSON_Root, JSON_INFO_AIRBITZ_FEES_FIELD);
@@ -201,7 +198,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     // get the air bitz fees address
     pJSON_Value = json_object_get(pJSON_AirBitzFees, JSON_INFO_AIRBITZ_FEE_ADDRESS_FIELD);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-    ABC_STRDUP(pInfo->pAirBitzFee->szAddresss, json_string_value(pJSON_Value));
+    pInfo->pAirBitzFee->szAddresss = stringCopy(json_string_value(pJSON_Value));
 
 
     // get the obelisk array
@@ -221,7 +218,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
         // get the obelisk server
         pJSON_Value = json_array_get(pJSON_ObeliskArray, i);
         ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-        ABC_STRDUP(pInfo->aszObeliskServers[i], json_string_value(pJSON_Value));
+        pInfo->aszObeliskServers[i] = stringCopy(json_string_value(pJSON_Value));
     }
 
     // get the sync array
@@ -243,7 +240,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
             // get the sync server
             pJSON_Value = json_array_get(pJSON_SyncArray, i);
             ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error parsing JSON string value");
-            ABC_STRDUP(pInfo->aszSyncServers[i], json_string_value(pJSON_Value));
+            pInfo->aszSyncServers[i] = stringCopy(json_string_value(pJSON_Value));
         }
     }
     else
@@ -254,12 +251,10 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
 
 
     // assign the final result
-    *ppInfo = pInfo;
-    pInfo = NULL;
+    *ppInfo = pInfo.release();
 
 exit:
     ABC_FREE_STR(szInfoFilename);
-    ABC_GeneralFreeInfo(pInfo);
 
     return cc;
 }
@@ -333,7 +328,7 @@ tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename,
     std::string filename = gContext->rootDir() + GENERAL_INFO_FILENAME;
 
     ABC_CHECK_NULL(pszFilename);
-    ABC_STRDUP(*pszFilename, filename.c_str());
+    *pszFilename = stringCopy(filename);
 
 exit:
     return cc;
@@ -383,7 +378,8 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     std::string filename = gContext->rootDir() + GENERAL_QUESTIONS_FILENAME;
     QuestionsFile file;
     json_t *pJSON_Value = NULL;
-    tABC_QuestionChoices *pQuestionChoices = NULL;
+    AutoFree<tABC_QuestionChoices, ABC_GeneralFreeQuestionChoices>
+        pQuestionChoices(structAlloc<tABC_QuestionChoices>());
     unsigned int count = 0;
 
     ABC_CHECK_NULL(ppQuestionChoices);
@@ -409,7 +405,6 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     }
 
     // allocate the data
-    ABC_NEW(pQuestionChoices, tABC_QuestionChoices);
     pQuestionChoices->numChoices = count;
     ABC_ARRAY_NEW(pQuestionChoices->aChoices, count, tABC_QuestionChoice*);
 
@@ -419,17 +414,17 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
         ABC_CHECK_ASSERT((pJSON_Elem && json_is_object(pJSON_Elem)), ABC_CC_JSONError, "Error parsing JSON element value for recovery questions");
 
         // allocate this element
-        ABC_NEW(pQuestionChoices->aChoices[i], tABC_QuestionChoice);
+        pQuestionChoices->aChoices[i] = structAlloc<tABC_QuestionChoice>();
 
         // get the category
         json_t *pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_CATEGORY_FIELD);
         ABC_CHECK_ASSERT((pJSON_Obj && json_is_string(pJSON_Obj)), ABC_CC_JSONError, "Error parsing JSON category value for recovery questions");
-        ABC_STRDUP(pQuestionChoices->aChoices[i]->szCategory, json_string_value(pJSON_Obj));
+        pQuestionChoices->aChoices[i]->szCategory = stringCopy(json_string_value(pJSON_Obj));
 
         // get the question
         pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_QUESTION_FIELD);
         ABC_CHECK_ASSERT((pJSON_Obj && json_is_string(pJSON_Obj)), ABC_CC_JSONError, "Error parsing JSON question value for recovery questions");
-        ABC_STRDUP(pQuestionChoices->aChoices[i]->szQuestion, json_string_value(pJSON_Obj));
+        pQuestionChoices->aChoices[i]->szQuestion = stringCopy(json_string_value(pJSON_Obj));
 
         // get the min length
         pJSON_Obj = json_object_get(pJSON_Elem, ABC_SERVER_JSON_MIN_LENGTH_FIELD);
@@ -438,12 +433,9 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     }
 
     // assign final data
-    *ppQuestionChoices = pQuestionChoices;
-    pQuestionChoices = NULL; // so we don't free it below
+    *ppQuestionChoices = pQuestionChoices.release();
 
 exit:
-    if (pQuestionChoices) ABC_GeneralFreeQuestionChoices(pQuestionChoices);
-
     return cc;
 }
 

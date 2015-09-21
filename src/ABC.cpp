@@ -31,10 +31,10 @@
 
 #include "ABC.h"
 #include "LoginShim.hpp"
+#include "WalletShim.hpp"
 #include "../abcd/Context.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Export.hpp"
-#include "../abcd/Wallet.hpp"
 #include "../abcd/Tx.hpp"
 #include "../abcd/account/Account.hpp"
 #include "../abcd/account/AccountSettings.hpp"
@@ -61,6 +61,9 @@
 #include "../abcd/util/Json.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/Util.hpp"
+#include "../abcd/wallet/Address.hpp"
+#include "../abcd/wallet/Details.hpp"
+#include "../abcd/wallet/Wallet.hpp"
 #include <qrencode.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -89,16 +92,12 @@ using namespace abcd;
     ABC_CHECK_NEW(cacheAccount(account, szUserName))
 
 #define ABC_GET_WALLET() \
-    std::shared_ptr<Account> account; \
-    ABC_CHECK_NEW(cacheAccount(account, szUserName)); \
-    ABC_CHECK_NULL(szWalletUUID); \
-    auto wallet = ABC_WalletID(*account, szWalletUUID)
+    std::shared_ptr<Wallet> wallet; \
+    ABC_CHECK_NEW(cacheWallet(wallet, szUserName, szWalletUUID));
 
 #define ABC_GET_WALLET_N() \
-    std::shared_ptr<Account> account; \
-    ABC_CHECK_NEW(cacheAccount(account, nullptr)); \
-    ABC_CHECK_NULL(szWalletUUID); \
-    auto wallet = ABC_WalletID(*account, szWalletUUID)
+    std::shared_ptr<Wallet> wallet; \
+    ABC_CHECK_NEW(cacheWallet(wallet, nullptr, szWalletUUID));
 
 /** Helper macro for ABC_GetCurrencies. */
 #define CURRENCY_GUI_ROW(code, number, name) {#code, number, name, ""},
@@ -355,7 +354,7 @@ tABC_CC ABC_OtpKeyGet(const char *szUserName,
 
         const OtpKey *key = lobby->otpKey();
         ABC_CHECK_ASSERT(key, ABC_CC_NULLPtr, "No OTP key in account.");
-        ABC_STRDUP(*pszKey, key->encodeBase32().c_str());
+        *pszKey = stringCopy(key->encodeBase32());
     }
 
 exit:
@@ -458,7 +457,7 @@ tABC_CC ABC_OtpResetGet(char **pszUsernames,
         std::string out;
         for (auto i: result)
             out += i + "\n";
-        ABC_STRDUP(*pszUsernames, out.c_str());
+        *pszUsernames = stringCopy(out);
     }
 
 exit:
@@ -470,7 +469,7 @@ tABC_CC ABC_OtpResetDate(char **pszDate,
 {
     ABC_PROLOG();
 
-    ABC_STRDUP(*pszDate, gOtpResetDate.c_str());
+    *pszDate = stringCopy(gOtpResetDate);
 
 exit:
     return cc;
@@ -528,10 +527,78 @@ tABC_CC ABC_CreateWallet(const char *szUserName,
     ABC_PROLOG();
     ABC_CHECK_NULL(szWalletName);
     ABC_CHECK_ASSERT(strlen(szWalletName) > 0, ABC_CC_Error, "No wallet name provided");
+    ABC_CHECK_NULL(pszUuid);
 
     {
-        ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_WalletCreate(*account, szWalletName, currencyNum, pszUuid, pError));
+        std::shared_ptr<Wallet> wallet;
+        ABC_CHECK_NEW(cacheWalletNew(wallet, szUserName, szWalletName, currencyNum));
+        *pszUuid = stringCopy(wallet->id());
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_WalletLoad(const char *szUserName,
+                       const char *szWalletUUID,
+                       tABC_Error *pError)
+{
+    ABC_PROLOG();
+
+    {
+        ABC_GET_WALLET();
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_WalletName(const char *szUserName,
+                       const char *szWalletUUID,
+                       char **pszResult,
+                       tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszResult);
+
+    {
+        ABC_GET_WALLET();
+        *pszResult = stringCopy(wallet->name());
+    }
+
+exit:
+    return cc;
+}
+
+
+tABC_CC ABC_WalletCurrency(const char *szUserName,
+                           const char *szWalletUUID,
+                           int *pResult,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pResult);
+
+    {
+        ABC_GET_WALLET();
+        *pResult = wallet->currency();
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_WalletBalance(const char *szUserName,
+                          const char *szWalletUUID,
+                          int64_t *pResult,
+                          tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pResult);
+
+    {
+        ABC_GET_WALLET();
+        ABC_CHECK_NEW(wallet->balance(*pResult));
     }
 
 exit:
@@ -550,7 +617,6 @@ tABC_CC ABC_ClearKeyCache(tABC_Error *pError)
     ABC_PROLOG();
 
     cacheLogout();
-    ABC_WalletClearCache();
 
 exit:
     return cc;
@@ -622,7 +688,7 @@ tABC_CC ABC_GetPIN(const char *szUserName,
 
         *pszPin = nullptr;
         if (settings->szPIN)
-            ABC_STRDUP(*pszPin, settings->szPIN);
+            *pszPin = stringCopy(settings->szPIN);
     }
 
 exit:
@@ -656,7 +722,7 @@ tABC_CC ABC_SetPIN(const char *szUserName,
         ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
 
         ABC_FREE_STR(settings->szPIN);
-        ABC_STRDUP(settings->szPIN, szPin);
+        settings->szPIN = stringCopy(szPin);
         ABC_CHECK_RET(ABC_AccountSettingsSave(*account, settings, pError));
     }
 
@@ -765,7 +831,25 @@ tABC_CC ABC_RenameWallet(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_WalletSetName(wallet, szNewWalletName, pError));
+        ABC_CHECK_NEW(wallet->nameSet(szNewWalletName));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_WalletArchived(const char *szUserName,
+                           const char *szWalletUUID,
+                           bool *pResult,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szWalletUUID);
+    ABC_CHECK_NULL(pResult);
+
+    {
+        ABC_GET_ACCOUNT();
+        ABC_CHECK_NEW(account->wallets.archived(*pResult, szWalletUUID));
     }
 
 exit:
@@ -933,7 +1017,7 @@ tABC_CC ABC_ListAccounts(char **pszUserNames,
         for (const auto &username: list)
             out += username + '\n';
 
-        ABC_STRDUP(*pszUserNames, out.c_str());
+        *pszUserNames = stringCopy(out);
     }
 
 exit:
@@ -958,7 +1042,7 @@ tABC_CC ABC_GetWalletInfo(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_WalletGetInfo(wallet, ppWalletInfo, pError));
+        ABC_CHECK_RET(ABC_WalletGetInfo(*wallet, ppWalletInfo, pError));
     }
 
 exit:
@@ -994,10 +1078,7 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-
-        U08Buf seedBuf; // Do not free
-        ABC_CHECK_RET(ABC_WalletGetBitcoinPrivateSeed(wallet, &seedBuf, pError));
-        ABC_STRDUP(*pszWalletSeed, base16Encode(seedBuf).c_str());
+        *pszWalletSeed = stringCopy(base16Encode(wallet->bitcoinKey()));
     }
 
 exit:
@@ -1028,7 +1109,7 @@ tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
         int n = 0;
         for (const auto &id: ids)
         {
-            ABC_STRDUP((*paWalletUUID)[n++], id.c_str());
+            (*paWalletUUID)[n++] = stringCopy(id);
         }
         *pCount = ids.size();
     }
@@ -1077,8 +1158,10 @@ tABC_CC ABC_GetWallets(const char *szUserName,
             unsigned n = 0;
             for (const auto &id: ids)
             {
-                auto wallet = ABC_WalletID(*account, id.c_str());
-                ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &aWalletInfo[n++], pError));
+                std::shared_ptr<Wallet> wallet;
+                ABC_CHECK_NEW(cacheWallet(wallet, szUserName, id.c_str()));
+
+                ABC_CHECK_RET(ABC_WalletGetInfo(*wallet, &aWalletInfo[n++], pError));
             }
 
             *paWalletInfo = aWalletInfo;
@@ -1141,8 +1224,7 @@ tABC_CC ABC_SetWalletOrder(const char *szUserName,
         ABC_GET_ACCOUNT();
 
         // Make a mutable copy of the input:
-        AutoString temp;
-        ABC_STRDUP(temp.get(), szUUIDs);
+        AutoString temp(stringCopy(szUUIDs));
 
         // Break apart the text:
         unsigned i = 0;
@@ -1245,7 +1327,6 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
     {
         ABC_GET_LOGIN();
         ABC_CHECK_RET(ABC_LoginPasswordSet(*login, szNewPassword, pError));
-        ABC_WalletClearCache(); // added in 23fab303, but no idea why
     }
 
 exit:
@@ -1281,7 +1362,6 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
         std::shared_ptr<Login> login;
         ABC_CHECK_NEW(cacheLoginRecovery(login, szUserName, szRecoveryAnswers));
         ABC_CHECK_RET(ABC_LoginPasswordSet(*login, szNewPassword, pError));
-        ABC_WalletClearCache(); // added in 23fab303, but no idea why
     }
 
 exit:
@@ -1401,7 +1481,7 @@ tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(wallet, pDetails, pszRequestID, false, pError));
+        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(*wallet, pDetails, pszRequestID, false, pError));
     }
 
 exit:
@@ -1431,7 +1511,7 @@ tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxModifyReceiveRequest(wallet, szRequestID, pDetails, pError));
+        ABC_CHECK_RET(ABC_TxModifyReceiveRequest(*wallet, szRequestID, pDetails, pError));
     }
 
 exit:
@@ -1457,7 +1537,7 @@ tABC_CC ABC_FinalizeReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxFinalizeReceiveRequest(wallet, szRequestID, pError));
+        ABC_CHECK_RET(ABC_TxFinalizeReceiveRequest(*wallet, szRequestID, pError));
     }
 
 exit:
@@ -1483,7 +1563,7 @@ tABC_CC ABC_CancelReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxCancelReceiveRequest(wallet, szRequestID, pError));
+        ABC_CHECK_RET(ABC_TxCancelReceiveRequest(*wallet, szRequestID, pError));
     }
 
 exit:
@@ -1515,7 +1595,7 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGenerateRequestQRCode(wallet, szRequestID, pszURI, paData, pWidth, pError));
+        ABC_CHECK_RET(ABC_TxGenerateRequestQRCode(*wallet, szRequestID, pszURI, paData, pWidth, pError));
     }
 
 exit:
@@ -1546,19 +1626,19 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
 
     {
         // Create the spend target structure:
-        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
-        ABC_NEW(pSpend.get(), tABC_SpendTarget);
+        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree>
+            pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        ABC_NEW(pInfo->pDetails, tABC_TxDetails);
+        pInfo->pDetails = structAlloc<tABC_TxDetails>();
         auto *pDetails = pInfo->pDetails;
 
         // Parse the URI:
         AutoFree<tABC_BitcoinURIInfo, ABC_BridgeFreeURIInfo> pUri;
         ABC_CHECK_RET(ABC_BridgeParseBitcoinURI(szText, &pUri.get(), pError));
         if (pUri->szRet)
-            ABC_STRDUP(pSpend->szRet, pUri->szRet);
-        ABC_STRDUP(pDetails->szCategory, pUri->szCategory ? pUri->szCategory : "");
+            pSpend->szRet = stringCopy(pUri->szRet);
+        pDetails->szCategory = stringCopy(pUri->szCategory ? pUri->szCategory : "");
 
         // If this is a payment request, fill those details in:
         if (pUri->szR)
@@ -1573,27 +1653,27 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
             // Fill in the spend target:
             pSpend->amount = request->amount();
             pSpend->amountMutable = false;
-            ABC_STRDUP(pSpend->szName, signer.c_str());
+            pSpend->szName = stringCopy(signer);
             pSpend->bSigned = true;
 
             // Fill in the details:
-            ABC_STRDUP(pDetails->szName, request->merchant(signer).c_str());
-            ABC_STRDUP(pDetails->szNotes, request->memo(
-                pUri->szMessage ? pUri->szMessage : "").c_str());
+            pDetails->szName = stringCopy(request->merchant(signer));
+            pDetails->szNotes = stringCopy(request->memo(
+                pUri->szMessage ? pUri->szMessage : ""));
         }
         else if (pUri->szAddress)
         {
-            ABC_STRDUP(pInfo->szDestAddress, pUri->szAddress);
+            pInfo->szDestAddress = stringCopy(pUri->szAddress);
 
             // Fill in the spend target:
             pSpend->amount = (ABC_INVALID_AMOUNT != pUri->amountSatoshi) ?
                 pUri->amountSatoshi : 0;
             pSpend->amountMutable = true;
-            ABC_STRDUP(pSpend->szName, pUri->szAddress);
+            pSpend->szName = stringCopy(pUri->szAddress);
 
             // Fill in the details:
-            ABC_STRDUP(pDetails->szName, pUri->szLabel ? pUri->szLabel : "");
-            ABC_STRDUP(pDetails->szNotes, pUri->szMessage ? pUri->szMessage : "");
+            pDetails->szName = stringCopy(pUri->szLabel ? pUri->szLabel : "");
+            pDetails->szNotes = stringCopy(pUri->szMessage ? pUri->szMessage : "");
         }
         else
         {
@@ -1601,8 +1681,7 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
         }
 
         // Assign the output:
-        *ppSpend = pSpend.get();
-        pSpend.get() = nullptr;
+        *ppSpend = pSpend.release();
     }
 
 exit:
@@ -1621,37 +1700,34 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         ABC_GET_WALLET();
 
         // Create the spend target structure:
-        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
-        ABC_NEW(pSpend.get(), tABC_SpendTarget);
+        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree>
+            pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        ABC_NEW(pInfo->pDetails, tABC_TxDetails);
+        pInfo->pDetails = structAlloc<tABC_TxDetails>();
         auto *pDetails = pInfo->pDetails;
 
         // Fill in the spend target:
         pSpend->amount = amount;
         pSpend->amountMutable = true;
-        AutoFree<tABC_WalletInfo, ABC_WalletFreeInfo> pWallet;
-        ABC_CHECK_RET(ABC_WalletGetInfo(wallet, &pWallet.get(), pError));
-        ABC_STRDUP(pSpend->szName, pWallet->szName);
-        ABC_STRDUP(pSpend->szDestUUID, szWalletUUID);
+        pSpend->szName = stringCopy(wallet->name());
+        pSpend->szDestUUID = stringCopy(szWalletUUID);
 
         // Fill in the details:
-        ABC_STRDUP(pDetails->szName, pSpend->szName);
-        ABC_STRDUP(pDetails->szCategory, "");
-        ABC_STRDUP(pDetails->szNotes, "");
+        pDetails->szName = stringCopy(pSpend->szName);
+        pDetails->szCategory = stringCopy("");
+        pDetails->szNotes = stringCopy("");
 
         // Fill in the send info:
         AutoString szRequestId;
         AutoString szRequestAddress;
-        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(wallet, pDetails, &szRequestId.get(), true, pError));
-        ABC_CHECK_RET(ABC_TxGetRequestAddress(wallet, szRequestId, &pInfo->szDestAddress, pError));
-        ABC_CHECK_RET(ABC_WalletIDCopy(&pInfo->walletDest, wallet, pError));
+        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(*wallet, pDetails, &szRequestId.get(), true, pError));
+        ABC_CHECK_RET(ABC_TxGetRequestAddress(*wallet, szRequestId, &pInfo->szDestAddress, pError));
+        pInfo->walletDest = wallet.get();
         pInfo->bTransfer = true;
 
         // Assign the output:
-        *ppSpend = pSpend.get();
-        pSpend.get() = nullptr;
+        *ppSpend = pSpend.release();
     }
 
 exit:
@@ -1671,29 +1747,28 @@ tABC_CC ABC_SpendNewInternal(const char *szAddress,
 
     {
         // Create the spend target structure:
-        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
-        ABC_NEW(pSpend.get(), tABC_SpendTarget);
+        AutoFree<tABC_SpendTarget, ABC_SpendTargetFree>
+            pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        ABC_NEW(pInfo->pDetails, tABC_TxDetails);
+        pInfo->pDetails = structAlloc<tABC_TxDetails>();
         auto *pDetails = pInfo->pDetails;
 
         // Fill in the spend target:
         pSpend->amount = amount;
         pSpend->amountMutable = false;
-        ABC_STRDUP(pSpend->szName, szName ? szName : szAddress);
+        pSpend->szName = stringCopy(szName ? szName : szAddress);
 
         // Fill in the details:
-        ABC_STRDUP(pDetails->szName, szName ? szName : "");
-        ABC_STRDUP(pDetails->szCategory, szCategory ? szCategory : "");
-        ABC_STRDUP(pDetails->szNotes, szNotes ? szNotes : "");
+        pDetails->szName = stringCopy(szName ? szName : "");
+        pDetails->szCategory = stringCopy(szCategory ? szCategory : "");
+        pDetails->szNotes = stringCopy(szNotes ? szNotes : "");
 
         // Fill in the send info:
-        ABC_STRDUP(pInfo->szDestAddress, szAddress);
+        pInfo->szDestAddress = stringCopy(szAddress);
 
         // Assign the output:
-        *ppSpend = pSpend.get();
-        pSpend.get() = nullptr;
+        *ppSpend = pSpend.release();
     }
 
 exit:
@@ -1713,7 +1788,7 @@ tABC_CC ABC_SpendGetFee(const char *szUserName,
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->pDetails->amountSatoshi = pSpend->amount;
-        ABC_CHECK_RET(ABC_TxCalcSendFees(wallet, pInfo, pFee, pError));
+        ABC_CHECK_RET(ABC_TxCalcSendFees(*wallet, pInfo, pFee, pError));
     }
 
 exit:
@@ -1733,7 +1808,7 @@ tABC_CC ABC_SpendGetMax(const char *szUserName,
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->pDetails->amountSatoshi = pSpend->amount;
-        ABC_CHECK_RET(ABC_BridgeMaxSpendable(wallet, pInfo, pMax, pError));
+        ABC_CHECK_RET(ABC_BridgeMaxSpendable(*wallet, pInfo, pMax, pError));
     }
 
 exit:
@@ -1754,7 +1829,7 @@ tABC_CC ABC_SpendApprove(const char *szUserName,
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->pDetails->amountSatoshi = pSpend->amount;
-        ABC_CHECK_RET(ABC_TxSend(wallet, pInfo, pszTxId, pError));
+        ABC_CHECK_RET(ABC_TxSend(*wallet, pInfo, pszTxId, pError));
     }
 
 exit:
@@ -1790,7 +1865,7 @@ tABC_CC ABC_SweepKey(const char *szUserName,
         bool bCompressed;
         ABC_CHECK_RET(ABC_BridgeDecodeWIF(szKey, &key, &bCompressed, pszAddress, pError));
 
-        ABC_CHECK_RET(ABC_BridgeSweepKey(wallet, key, bCompressed, fCallback, pData, pError));
+        ABC_CHECK_RET(ABC_BridgeSweepKey(*wallet, key, bCompressed, fCallback, pData, pError));
     }
 
 exit:
@@ -1819,7 +1894,7 @@ tABC_CC ABC_GetTransaction(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGetTransaction(wallet, szID, ppTransaction, pError));
+        ABC_CHECK_RET(ABC_TxGetTransaction(*wallet, szID, ppTransaction, pError));
     }
 
 exit:
@@ -1849,8 +1924,8 @@ tABC_CC ABC_GetTransactions(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGetTransactions(wallet, startTime, endTime, paTransactions, pCount, pError));
-        ABC_CHECK_RET(ABC_BridgeFilterTransactions(wallet, *paTransactions, pCount, pError));
+        ABC_CHECK_RET(ABC_TxGetTransactions(*wallet, startTime, endTime, paTransactions, pCount, pError));
+        ABC_CHECK_RET(ABC_BridgeFilterTransactions(*wallet, *paTransactions, pCount, pError));
     }
 
 exit:
@@ -1880,7 +1955,7 @@ tABC_CC ABC_SearchTransactions(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxSearchTransactions(wallet, szQuery, paTransactions, pCount, pError));
+        ABC_CHECK_RET(ABC_TxSearchTransactions(*wallet, szQuery, paTransactions, pCount, pError));
     }
 
 exit:
@@ -1903,11 +1978,11 @@ tABC_CC ABC_GetRawTransaction(const char *szUserName,
         ABC_GET_WALLET();
 
         AutoFree<tABC_TxInfo, ABC_FreeTransaction> info;
-        ABC_CHECK_RET(ABC_TxGetTransaction(wallet, szID, &info.get(), pError));
+        ABC_CHECK_RET(ABC_TxGetTransaction(*wallet, szID, &info.get(), pError));
 
         DataChunk tx;
-        ABC_CHECK_NEW(watcherBridgeRawTx(wallet, info->szMalleableTxId, tx));
-        ABC_STRDUP(*pszHex, base16Encode(tx).c_str());
+        ABC_CHECK_NEW(watcherBridgeRawTx(*wallet, info->szMalleableTxId, tx));
+        *pszHex = stringCopy(base16Encode(tx));
     }
 
 exit:
@@ -1963,7 +2038,7 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxSetTransactionDetails(wallet, szID, pDetails, pError));
+        ABC_CHECK_RET(ABC_TxSetTransactionDetails(*wallet, szID, pDetails, pError));
     }
 
 exit:
@@ -1992,7 +2067,7 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGetTransactionDetails(wallet, szID, ppDetails, pError));
+        ABC_CHECK_RET(ABC_TxGetTransactionDetails(*wallet, szID, ppDetails, pError));
     }
 
 exit:
@@ -2020,54 +2095,11 @@ tABC_CC ABC_GetRequestAddress(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGetRequestAddress(wallet, szRequestID, pszAddress, pError));
+        ABC_CHECK_RET(ABC_TxGetRequestAddress(*wallet, szRequestID, pszAddress, pError));
     }
 
 exit:
     return cc;
-}
-
-/**
- * Gets the pending requests associated with the given wallet.
- *
- * @param szUserName        UserName for the account associated with the requests
- * @param szPassword        Password for the account associated with the requests
- * @param szWalletUUID      UUID of the wallet associated with the requests
- * @param paTransactions    Pointer to store array of requests info pointers
- * @param pCount            Pointer to store number of requests
- * @param pError            A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_GetPendingRequests(const char *szUserName,
-                               const char *szPassword,
-                               const char *szWalletUUID,
-                               tABC_RequestInfo ***paRequests,
-                               unsigned int *pCount,
-                               tABC_Error *pError)
-{
-    ABC_PROLOG();
-
-    {
-        ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGetPendingRequests(wallet, paRequests, pCount, pError));
-    }
-
-exit:
-    return cc;
-}
-
-/**
- * Frees the given array of requets
- *
- * @param aRequests Array of requests
- * @param count     Number of requests
- */
-void ABC_FreeRequests(tABC_RequestInfo **aRequests,
-                      unsigned int count)
-{
-    // Cannot use ABC_PROLOG - no pError
-    ABC_DebugLog("%s called", __FUNCTION__);
-
-    ABC_TxFreeRequests(aRequests, count);
 }
 
 /**
@@ -2084,7 +2116,7 @@ tABC_CC ABC_DuplicateTxDetails(tABC_TxDetails **ppNewDetails,
 {
     ABC_PROLOG();
 
-    ABC_CHECK_RET(ABC_TxDupDetails(ppNewDetails, pOldDetails, pError));
+    ABC_CHECK_RET(ABC_TxDetailsCopy(ppNewDetails, pOldDetails, pError));
 
 exit:
     return cc;
@@ -2100,7 +2132,7 @@ void ABC_FreeTxDetails(tABC_TxDetails *pDetails)
     // Cannot use ABC_PROLOG - no pError
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    ABC_TxFreeDetails(pDetails);
+    ABC_TxDetailsFree(pDetails);
 }
 
 /**
@@ -2124,10 +2156,10 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     double secondsToCrack;
     tABC_PasswordRule **aRules = NULL;
     unsigned int count = 0;
-    tABC_PasswordRule *pRuleCount = NULL;
-    tABC_PasswordRule *pRuleLC = NULL;
-    tABC_PasswordRule *pRuleUC = NULL;
-    tABC_PasswordRule *pRuleNum = NULL;
+    tABC_PasswordRule *pRuleCount = structAlloc<tABC_PasswordRule>();
+    tABC_PasswordRule *pRuleLC = structAlloc<tABC_PasswordRule>();
+    tABC_PasswordRule *pRuleUC = structAlloc<tABC_PasswordRule>();
+    tABC_PasswordRule *pRuleNum = structAlloc<tABC_PasswordRule>();
     // We don't require a special character, but we still include it in our
     // time to crack calculations
     bool bSpecChar = false;
@@ -2143,31 +2175,27 @@ tABC_CC ABC_CheckPassword(const char *szPassword,
     ABC_ARRAY_NEW(aRules, 4, tABC_PasswordRule*);
 
     // must have upper case letter
-    ABC_NEW(pRuleUC, tABC_PasswordRule);
-    ABC_STRDUP(pRuleUC->szDescription, "Must have at least one upper case letter");
+    pRuleUC->szDescription = stringCopy("Must have at least one upper case letter");
     pRuleUC->bPassed = false;
     aRules[count] = pRuleUC;
     count++;
 
     // must have lower case letter
-    ABC_NEW(pRuleLC, tABC_PasswordRule);
-    ABC_STRDUP(pRuleLC->szDescription, "Must have at least one lower case letter");
+    pRuleLC->szDescription = stringCopy("Must have at least one lower case letter");
     pRuleLC->bPassed = false;
     aRules[count] = pRuleLC;
     count++;
 
     // must have number
-    ABC_NEW(pRuleNum, tABC_PasswordRule);
-    ABC_STRDUP(pRuleNum->szDescription, "Must have at least one number");
+    pRuleNum->szDescription = stringCopy("Must have at least one number");
     pRuleNum->bPassed = false;
     aRules[count] = pRuleNum;
     count++;
 
     // must have 10 characters
-    ABC_NEW(pRuleCount, tABC_PasswordRule);
     char aPassRDesc[64];
     snprintf(aPassRDesc, sizeof(aPassRDesc), "Must have at least %d characters", ABC_MIN_PASS_LENGTH);
-    ABC_STRDUP(pRuleCount->szDescription, aPassRDesc);
+    pRuleCount->szDescription = stringCopy(aPassRDesc);
     pRuleCount->bPassed = false;
     aRules[count] = pRuleCount;
     count++;
@@ -2300,8 +2328,8 @@ tABC_CC ABC_QrEncode(const char *szText,
     ABC_CHECK_NULL(pWidth);
 
     {
-        AutoFree<QRcode, QRcode_free> qr =
-            QRcode_encodeString(szText, 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+        AutoFree<QRcode, QRcode_free>
+            qr(QRcode_encodeString(szText, 0, QR_ECLEVEL_L, QR_MODE_8, 1));
         ABC_CHECK_ASSERT(qr, ABC_CC_Error, "Unable to create QR code");
         size_t size = qr->width * qr->width;
 
@@ -2396,13 +2424,10 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         ABC_CHECK_NEW(account->sync(dirty));
         if (dirty && fAsyncBitCoinEventCallback)
         {
-            // Try to clear the wallet cache in case the Wallets list changed
-            ABC_WalletClearCache();
-
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
             info.pData = pData;
-            ABC_STRDUP(info.szDescription, "Account Updated");
+            info.szDescription = stringCopy("Account Updated");
             fAsyncBitCoinEventCallback(&info);
             ABC_FREE_STR(info.szDescription);
         }
@@ -2427,7 +2452,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
                 tABC_AsyncBitCoinInfo info;
                 info.eventType = ABC_AsyncEventType_RemotePasswordChange;
                 info.pData = pData;
-                ABC_STRDUP(info.szDescription, "Password changed");
+                info.szDescription = stringCopy("Password changed");
                 fAsyncBitCoinEventCallback(&info);
                 ABC_FREE_STR(info.szDescription);
             }
@@ -2456,13 +2481,13 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
         ABC_GET_WALLET();
 
         bool dirty = false;
-        ABC_CHECK_RET(ABC_WalletSyncData(wallet, dirty, pError));
+        ABC_CHECK_NEW(wallet->sync(dirty));
         if (dirty)
         {
             tABC_AsyncBitCoinInfo info;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
             info.pData = pData;
-            ABC_STRDUP(info.szDescription, "Wallet Updated");
+            info.szDescription = stringCopy("Wallet Updated");
             fAsyncBitCoinEventCallback(&info);
             ABC_FREE_STR(info.szDescription);
         }
@@ -2488,7 +2513,7 @@ tABC_CC ABC_WatcherStart(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_BridgeWatcherStart(wallet, pError));
+        ABC_CHECK_RET(ABC_BridgeWatcherStart(*wallet, pError));
     }
 
 exit:
@@ -2511,7 +2536,7 @@ tABC_CC ABC_WatcherLoop(const char *szWalletUUID,
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeWatcherLoop(wallet, fAsyncBitCoinEventCallback, pData, pError));
+        ABC_CHECK_RET(ABC_BridgeWatcherLoop(*wallet, fAsyncBitCoinEventCallback, pData, pError));
     }
 
 exit:
@@ -2524,7 +2549,7 @@ tABC_CC ABC_WatcherConnect(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeWatcherConnect(wallet, pError));
+        ABC_CHECK_RET(ABC_BridgeWatcherConnect(*wallet, pError));
     }
 
 exit:
@@ -2545,7 +2570,7 @@ tABC_CC ABC_WatchAddresses(const char *szUserName, const char *szPassword,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxWatchAddresses(wallet, pError));
+        ABC_CHECK_RET(ABC_TxWatchAddresses(*wallet, pError));
     }
 
 exit:
@@ -2568,7 +2593,7 @@ tABC_CC ABC_PrioritizeAddress(const char *szUserName, const char *szPassword,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_BridgePrioritizeAddress(wallet, szAddress, pError));
+        ABC_CHECK_RET(ABC_BridgePrioritizeAddress(*wallet, szAddress, pError));
     }
 
 exit:
@@ -2586,7 +2611,7 @@ tABC_CC ABC_WatcherDisconnect(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeWatcherDisconnect(wallet, pError));
+        ABC_CHECK_RET(ABC_BridgeWatcherDisconnect(*wallet, pError));
     }
 
 exit:
@@ -2604,7 +2629,7 @@ tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeWatcherStop(wallet, pError));
+        ABC_CHECK_RET(ABC_BridgeWatcherStop(*wallet, pError));
     }
 
 exit:
@@ -2623,7 +2648,7 @@ tABC_CC ABC_WatcherDelete(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeWatcherDelete(wallet, pError));
+        ABC_CHECK_RET(ABC_BridgeWatcherDelete(*wallet, pError));
     }
 
 exit:
@@ -2645,14 +2670,12 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NULL(szWalletUUID);
-    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
     ABC_CHECK_NULL(szTxId);
     ABC_CHECK_ASSERT(strlen(szTxId) > 0, ABC_CC_Error, "No tx id provided");
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeTxHeight(wallet, szTxId, height, pError));
+        ABC_CHECK_RET(ABC_BridgeTxHeight(*wallet, szTxId, height, pError));
     }
 
 exit:
@@ -2672,12 +2695,9 @@ tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Err
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NULL(szWalletUUID);
-    ABC_CHECK_ASSERT(strlen(szWalletUUID) > 0, ABC_CC_Error, "No wallet uuid provided");
-
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeTxBlockHeight(wallet, height, pError));
+        ABC_CHECK_RET(ABC_BridgeTxBlockHeight(*wallet, height, pError));
     }
 
 exit:
@@ -2698,7 +2718,7 @@ tABC_CC ABC_PluginDataGet(const char *szUserName,
 
         std::string data;
         ABC_CHECK_NEW(pluginDataGet(*account, szPlugin, szKey, data));
-        ABC_STRDUP(*pszData, data.c_str());
+        *pszData = stringCopy(data);
     }
 
 exit:
@@ -2816,9 +2836,8 @@ tABC_CC ABC_Version(char **szVersion, tABC_Error *pError)
     std::string version = ABC_VERSION;
     version += isTestnet() ? "-testnet" : "-mainnet";
 
-    ABC_STRDUP(*szVersion, version.c_str());
+    *szVersion = stringCopy(version);
 
-exit:
     return cc;
 }
 
@@ -2837,9 +2856,9 @@ tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
     {
         ABC_GET_WALLET();
 
-        ABC_CHECK_RET(ABC_TxGetTransactions(wallet, startTime, endTime, &paTransactions, &count, pError));
+        ABC_CHECK_RET(ABC_TxGetTransactions(*wallet, startTime, endTime, &paTransactions, &count, pError));
         ABC_CHECK_ASSERT(0 != count, ABC_CC_NoTransaction, "No transactions to export");
-        ABC_CHECK_RET(ABC_BridgeFilterTransactions(wallet, paTransactions, &count, pError));
+        ABC_CHECK_RET(ABC_BridgeFilterTransactions(*wallet, paTransactions, &count, pError));
 
         ABC_CHECK_RET(ABC_ExportFormatCsv(paTransactions, count, szCsvData, pError));
     }
