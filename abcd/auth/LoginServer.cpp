@@ -6,10 +6,11 @@
  */
 
 #include "LoginServer.hpp"
-#include "Lobby.hpp"
-#include "Login.hpp"
+#include "AirbitzRequest.hpp"
+#include "../login/Lobby.hpp"
+#include "../login/Login.hpp"
+#include "../login/LoginPackages.hpp"
 #include "../crypto/Encoding.hpp"
-#include "../http/AirbitzRequest.hpp"
 #include "../json/JsonObject.hpp"
 #include "../json/JsonArray.hpp"
 #include "../util/Json.hpp"

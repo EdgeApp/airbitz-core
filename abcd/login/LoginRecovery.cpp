@@ -9,7 +9,7 @@
 #include "Lobby.hpp"
 #include "Login.hpp"
 #include "LoginDir.hpp"
-#include "LoginServer.hpp"
+#include "../auth/LoginServer.hpp"
 #include "../json/JsonBox.hpp"
 #include "../util/Util.hpp"
 

@@ -9,12 +9,12 @@
 #include "../Context.hpp"
 #include "../Tx.hpp"
 #include "../account/Account.hpp"
+#include "../auth/LoginServer.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
 #include "../json/JsonObject.hpp"
 #include "../login/Login.hpp"
-#include "../login/LoginServer.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Sync.hpp"
 #include <assert.h>

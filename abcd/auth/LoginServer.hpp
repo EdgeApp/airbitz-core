@@ -12,7 +12,6 @@
 #ifndef ABCD_LOGIN_LOGIN_SERVER_HPP
 #define ABCD_LOGIN_LOGIN_SERVER_HPP
 
-#include "LoginPackages.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 #include <time.h>
@@ -20,9 +19,12 @@
 
 namespace abcd {
 
+class Account;
 class Lobby;
 class Login;
-class Account;
+class JsonPtr;
+struct CarePackage;
+struct LoginPackage;
 
 // We need a better way to get this data out than writing to globals:
 extern std::string gOtpResetDate;
