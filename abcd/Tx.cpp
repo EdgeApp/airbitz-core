@@ -73,18 +73,13 @@ typedef enum eTxType
     TxType_External
 } tTxType;
 
-typedef struct sTxStateInfo
-{
-    int64_t timeCreation;
-    bool    bInternal;
-    char    *szTxid;
-} tTxStateInfo;
-
 typedef struct sABC_Tx
 {
-    char            *szNtxid;
+    char *szNtxid;
+    char *szTxid;
+    int64_t timeCreation;
+    bool bInternal;
     tABC_TxDetails  *pDetails;
-    tTxStateInfo    *pStateInfo;
 } tABC_Tx;
 
 static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *pbEquivalent, tABC_Error *pError);
@@ -94,10 +89,10 @@ static Status   txGetOutputs(Wallet &self, const std::string &ntxid, tABC_TxOutp
 static tABC_CC  ABC_TxLoadTxAndAppendToArray(Wallet &self, int64_t startTime, int64_t endTime, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateTxFilename(Wallet &self, char **pszFilename, const std::string &ntxid, bool bInternal, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransaction(Wallet &self, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
-static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError);
+static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tABC_Tx *pTx, tABC_Error *pError);
 static void     ABC_TxFreeTx(tABC_Tx *pTx);
 static tABC_CC  ABC_TxSaveTransaction(Wallet &self, const tABC_Tx *pTx, tABC_Error *pError);
-static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *pError);
+static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, const tABC_Tx *pTx, tABC_Error *pError);
 static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
 static tABC_CC  ABC_TxTransactionExists(Wallet &self, const std::string &ntxid, tABC_Tx **pTx, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
@@ -123,10 +118,10 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
     ABC_CHECK_RET(ABC_TxWatchAddresses(self, pError));
 
     // set the state
-    pTx->pStateInfo = structAlloc<tTxStateInfo>();
-    pTx->pStateInfo->timeCreation = time(NULL);
-    pTx->pStateInfo->bInternal = true;
-    pTx->pStateInfo->szTxid = stringCopy(txid);
+    pTx->szNtxid = stringCopy(ntxid);
+    pTx->szTxid = stringCopy(txid);
+    pTx->timeCreation = time(NULL);
+    pTx->bInternal = true;
 
     // copy the details
     ABC_CHECK_RET(ABC_TxDetailsCopy(&(pTx->pDetails), pInfo->pDetails, pError));
@@ -153,21 +148,16 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
     if (pTx->pDetails->amountCurrency > 0)
         pTx->pDetails->amountCurrency *= -1.0;
 
-    // Store transaction ID
-    pTx->szNtxid = stringCopy(ntxid);
-
     // Save the transaction:
     ABC_CHECK_RET(ABC_TxSaveNewTx(self, pTx, addresses, false, pError));
 
     if (pInfo->bTransfer)
     {
         pReceiveTx = structAlloc<tABC_Tx>();
-        pReceiveTx->pStateInfo = structAlloc<tTxStateInfo>();
-
-        // set the state
-        pReceiveTx->pStateInfo->timeCreation = time(NULL);
-        pReceiveTx->pStateInfo->bInternal = true;
-        pReceiveTx->pStateInfo->szTxid = stringCopy(txid);
+        pReceiveTx->szNtxid = stringCopy(ntxid);
+        pReceiveTx->szTxid = stringCopy(txid);
+        pReceiveTx->timeCreation = time(NULL);
+        pReceiveTx->bInternal = true;
 
         // copy the details
         ABC_CHECK_RET(ABC_TxDetailsCopy(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
@@ -191,9 +181,6 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
             pReceiveTx->pDetails->amountSatoshi *= -1;
         if (pReceiveTx->pDetails->amountCurrency < 0)
             pReceiveTx->pDetails->amountCurrency *= -1.0;
-
-        // Store transaction ID
-        pReceiveTx->szNtxid = stringCopy(ntxid);
 
         // save the transaction
         ABC_CHECK_RET(ABC_TxSaveNewTx(*pInfo->walletDest, pReceiveTx, addresses, false, pError));
@@ -230,11 +217,12 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
 
         // create a transaction
         pTx = structAlloc<tABC_Tx>();
-        pTx->pStateInfo = structAlloc<tTxStateInfo>();
         pTx->pDetails = structAlloc<tABC_TxDetails>();
 
-        pTx->pStateInfo->szTxid = stringCopy(txid);
-        pTx->pStateInfo->timeCreation = time(NULL);
+        pTx->szNtxid = stringCopy(ntxid);
+        pTx->szTxid = stringCopy(txid);
+        pTx->timeCreation = time(NULL);
+        pTx->bInternal = false;
         pTx->pDetails->amountSatoshi = amountSatoshi;
         pTx->pDetails->amountCurrency = currency;
         pTx->pDetails->amountFeesMinersSatoshi = feeSatoshi;
@@ -242,13 +230,6 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
         pTx->pDetails->szName = stringCopy("");
         pTx->pDetails->szCategory = stringCopy("");
         pTx->pDetails->szNotes = stringCopy("");
-
-        // set the state
-        pTx->pStateInfo->timeCreation = time(NULL);
-        pTx->pStateInfo->bInternal = false;
-
-        // store transaction id
-        pTx->szNtxid = stringCopy(ntxid);
 
         // add the transaction to the address
         ABC_CHECK_RET(ABC_TxSaveNewTx(self, pTx, addresses, true, pError));
@@ -809,12 +790,11 @@ tABC_CC ABC_TxLoadTransactionInfo(Wallet &self,
     // load the transaction
     ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, &pTx, pError));
     ABC_CHECK_NULL(pTx->pDetails);
-    ABC_CHECK_NULL(pTx->pStateInfo);
 
     // steal the data and assign it to our new struct
     pTransaction->szID = stringCopy(pTx->szNtxid);
-    pTransaction->szMalleableTxId = stringCopy(pTx->pStateInfo->szTxid);
-    pTransaction->timeCreation = pTx->pStateInfo->timeCreation;
+    pTransaction->szMalleableTxId = stringCopy(pTx->szTxid);
+    pTransaction->timeCreation = pTx->timeCreation;
     pTransaction->pDetails = pTx->pDetails;
     pTx->pDetails = NULL;
     ABC_CHECK_NEW(txGetOutputs(self, pTx->szNtxid,
@@ -961,7 +941,6 @@ tABC_CC ABC_TxSetTransactionDetails(Wallet &self,
     // load the existing transaction
     ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, &pTx, pError));
     ABC_CHECK_NULL(pTx->pDetails);
-    ABC_CHECK_NULL(pTx->pStateInfo);
 
     // modify the details
     pTx->pDetails->amountSatoshi = pDetails->amountSatoshi;
@@ -1020,7 +999,6 @@ tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
     // load the existing transaction
     ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, &pTx, pError));
     ABC_CHECK_NULL(pTx->pDetails);
-    ABC_CHECK_NULL(pTx->pStateInfo);
 
     // duplicate the details
     ABC_CHECK_RET(ABC_TxDetailsCopy(&pDetails, pTx->pDetails, pError));
@@ -1059,11 +1037,10 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
     double currency;
 
     // set the state
-    pTx->pStateInfo = structAlloc<tTxStateInfo>();
-    pTx->pStateInfo->timeCreation = time(NULL);
-    pTx->pStateInfo->bInternal = true;
     pTx->szNtxid = stringCopy(ntxid);
-    pTx->pStateInfo->szTxid = stringCopy(txid);
+    pTx->szTxid = stringCopy(txid);
+    pTx->timeCreation = time(NULL);
+    pTx->bInternal = true;
 
     // Copy the details
     ABC_CHECK_RET(ABC_TxDetailsCopy(&(pTx->pDetails), pDetails, pError));
@@ -1135,7 +1112,7 @@ tABC_CC ABC_TxLoadTransaction(Wallet &self,
     pTx->szNtxid = stringCopy(json_string_value(jsonVal));
 
     // get the state object
-    ABC_CHECK_RET(ABC_TxDecodeTxState(pJSON_Root, &(pTx->pStateInfo), pError));
+    ABC_CHECK_RET(ABC_TxDecodeTxState(pJSON_Root, pTx, pError));
 
     // get the details object
     ABC_CHECK_RET(ABC_TxDetailsDecode(pJSON_Root, &(pTx->pDetails), pError));
@@ -1164,18 +1141,15 @@ exit:
  *               (it is the callers responsiblity to free this)
  */
 static
-tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error *pError)
+tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tABC_Tx *pTx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
-    tTxStateInfo *pInfo = structAlloc<tTxStateInfo>();
     json_t *jsonState = NULL;
     json_t *jsonVal = NULL;
 
     ABC_CHECK_NULL(pJSON_Obj);
-    ABC_CHECK_NULL(ppInfo);
-    *ppInfo = NULL;
 
     // get the state object
     jsonState = json_object_get(pJSON_Obj, JSON_TX_STATE_FIELD);
@@ -1184,27 +1158,21 @@ tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tTxStateInfo **ppInfo, tABC_Error
     // get the creation date
     jsonVal = json_object_get(jsonState, JSON_CREATION_DATE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing creation date");
-    pInfo->timeCreation = json_integer_value(jsonVal);
+    pTx->timeCreation = json_integer_value(jsonVal);
 
     jsonVal = json_object_get(jsonState, JSON_MALLEABLE_TX_ID);
     if (jsonVal)
     {
         ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing malleable tx id");
-        pInfo->szTxid = stringCopy(json_string_value(jsonVal));
+        pTx->szTxid = stringCopy(json_string_value(jsonVal));
     }
 
     // get the internal boolean
     jsonVal = json_object_get(jsonState, JSON_TX_INTERNAL_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_boolean(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing internal boolean");
-    pInfo->bInternal = json_is_true(jsonVal) ? true : false;
-
-    // assign final result
-    *ppInfo = pInfo;
-    pInfo = NULL;
+    pTx->bInternal = json_is_true(jsonVal) ? true : false;
 
 exit:
-    ABC_CLEAR_FREE(pInfo, sizeof(tTxStateInfo));
-
     return cc;
 }
 
@@ -1217,8 +1185,8 @@ void ABC_TxFreeTx(tABC_Tx *pTx)
     if (pTx)
     {
         ABC_FREE_STR(pTx->szNtxid);
+        ABC_FREE_STR(pTx->szTxid);
         ABC_TxDetailsFree(pTx->pDetails);
-        ABC_CLEAR_FREE(pTx->pStateInfo, sizeof(tTxStateInfo));
         ABC_CLEAR_FREE(pTx, sizeof(tABC_Tx));
     }
 }
@@ -1239,7 +1207,6 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
 
-    ABC_CHECK_NULL(pTx->pStateInfo);
     ABC_CHECK_NULL(pTx->szNtxid);
 
     // create the json for the transaction
@@ -1250,7 +1217,7 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
     json_object_set_new(pJSON_Root, JSON_TX_NTXID_FIELD, json_string(pTx->szNtxid));
 
     // set the state info
-    ABC_CHECK_RET(ABC_TxEncodeTxState(pJSON_Root, pTx->pStateInfo, pError));
+    ABC_CHECK_RET(ABC_TxEncodeTxState(pJSON_Root, pTx, pError));
 
     // set the details
     ABC_CHECK_RET(ABC_TxDetailsEncode(pJSON_Root, pTx->pDetails, pError));
@@ -1259,7 +1226,7 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
     ABC_CHECK_NEW(fileEnsureDir(self.txDir()));
 
     // get the filename for this transaction
-    ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, pTx->szNtxid, pTx->pStateInfo->bInternal, pError));
+    ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, pTx->szNtxid, pTx->bInternal, pError));
 
     // save out the transaction object to a file encrypted with the master key
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, toU08Buf(self.dataKey()), ABC_CryptoType_AES256, szFilename, pError));
@@ -1280,7 +1247,7 @@ exit:
  * @param pInfo     Pointer to the state data to store in the json object.
  */
 static
-tABC_CC ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *pError)
+tABC_CC ABC_TxEncodeTxState(json_t *pJSON_Obj, const tABC_Tx *pTx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -1289,21 +1256,20 @@ tABC_CC ABC_TxEncodeTxState(json_t *pJSON_Obj, tTxStateInfo *pInfo, tABC_Error *
     int retVal = 0;
 
     ABC_CHECK_NULL(pJSON_Obj);
-    ABC_CHECK_NULL(pInfo);
 
     // create the state object
     pJSON_State = json_object();
 
     // add the creation date to the state object
-    retVal = json_object_set_new(pJSON_State, JSON_CREATION_DATE_FIELD, json_integer(pInfo->timeCreation));
+    retVal = json_object_set_new(pJSON_State, JSON_CREATION_DATE_FIELD, json_integer(pTx->timeCreation));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the creation date to the state object
-    retVal = json_object_set_new(pJSON_State, JSON_MALLEABLE_TX_ID, json_string(pInfo->szTxid));
+    retVal = json_object_set_new(pJSON_State, JSON_MALLEABLE_TX_ID, json_string(pTx->szTxid));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the internal boolean (internally created or created due to bitcoin event)
-    retVal = json_object_set_new(pJSON_State, JSON_TX_INTERNAL_FIELD, json_boolean(pInfo->bInternal));
+    retVal = json_object_set_new(pJSON_State, JSON_TX_INTERNAL_FIELD, json_boolean(pTx->bInternal));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the state object to the master object
