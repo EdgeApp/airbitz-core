@@ -64,12 +64,6 @@ namespace abcd {
 #define JSON_TX_NTXID_FIELD                     "ntxid"
 #define JSON_TX_STATE_FIELD                     "state"
 #define JSON_TX_INTERNAL_FIELD                  "internal"
-#define JSON_TX_OUTPUTS_FIELD                   "outputs"
-#define JSON_TX_OUTPUT_FLAG                     "input"
-#define JSON_TX_OUTPUT_VALUE                    "value"
-#define JSON_TX_OUTPUT_ADDRESS                  "address"
-#define JSON_TX_OUTPUT_TXID                     "txid"
-#define JSON_TX_OUTPUT_INDEX                    "index"
 
 typedef enum eTxType
 {
@@ -1210,12 +1204,9 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
-    int e;
 
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
-    json_t *pJSON_OutputArray = NULL;
-    json_t **ppJSON_Output = NULL;
 
     ABC_CHECK_NULL(pTx->pStateInfo);
     ABC_CHECK_NULL(pTx->szNtxid);
@@ -1233,42 +1224,6 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
     // set the details
     ABC_CHECK_RET(ABC_TxDetailsEncode(pJSON_Root, pTx->pDetails, pError));
 
-    // create the addresses array object
-    pJSON_OutputArray = json_array();
-
-    // if there are any addresses
-    if ((pTx->countOutputs > 0) && (pTx->aOutputs != NULL))
-    {
-        ABC_ARRAY_NEW(ppJSON_Output, pTx->countOutputs, json_t*);
-        for (unsigned i = 0; i < pTx->countOutputs; i++)
-        {
-            ppJSON_Output[i] = json_object();
-
-            int retVal = json_object_set_new(ppJSON_Output[i], JSON_TX_OUTPUT_FLAG, json_boolean(pTx->aOutputs[i]->input));
-            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-            retVal = json_object_set_new(ppJSON_Output[i], JSON_TX_OUTPUT_VALUE, json_integer(pTx->aOutputs[i]->value));
-            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-            retVal = json_object_set_new(ppJSON_Output[i], JSON_TX_OUTPUT_ADDRESS, json_string(pTx->aOutputs[i]->szAddress));
-            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-            retVal = json_object_set_new(ppJSON_Output[i], JSON_TX_OUTPUT_TXID, json_string(pTx->aOutputs[i]->szTxId));
-            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-            retVal = json_object_set_new(ppJSON_Output[i], JSON_TX_OUTPUT_INDEX, json_integer(pTx->aOutputs[i]->index));
-            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
-            // add output to the array
-            retVal = json_array_append_new(pJSON_OutputArray, ppJSON_Output[i]);
-            ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
-        }
-    }
-
-    // add the address array to the  object
-    e = json_object_set(pJSON_Root, JSON_TX_OUTPUTS_FIELD, pJSON_OutputArray);
-    ABC_CHECK_ASSERT(e == 0, ABC_CC_JSONError, "Could not encode JSON value");
-
     // create the transaction directory if needed
     ABC_CHECK_NEW(fileEnsureDir(self.txDir()));
 
@@ -1282,9 +1237,7 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
 
 exit:
     ABC_FREE_STR(szFilename);
-    ABC_CLEAR_FREE(ppJSON_Output, sizeof(json_t *) * pTx->countOutputs);
     if (pJSON_Root) json_decref(pJSON_Root);
-    if (pJSON_OutputArray) json_decref(pJSON_OutputArray);
 
     return cc;
 }
