@@ -11,6 +11,7 @@
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 #include "AddressDb.hpp"
+#include "TxMetaDb.hpp"
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -96,6 +97,7 @@ private:
 
 public:
     AddressDb addresses;
+    TxMetaDb txs;
 };
 
 } // namespace abcd

@@ -73,15 +73,6 @@ typedef enum eTxType
     TxType_External
 } tTxType;
 
-struct Tx
-{
-    std::string ntxid;
-    std::string txid;
-    int64_t timeCreation;
-    bool internal;
-    TxMetadata metadata;
-};
-
 static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *pbEquivalent, tABC_Error *pError);
 static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pType, char **pszBasename, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransactionInfo(Wallet &self, const char *szFilename, tABC_TxInfo **ppTransaction, tABC_Error *pError);
