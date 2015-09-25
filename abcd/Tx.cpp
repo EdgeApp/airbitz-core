@@ -346,7 +346,7 @@ ABC_TxSaveNewTx(Wallet &self,
     ABC_CHECK_RET(ABC_TxTrashAddresses(self, &pDetails.get(),
         pTx->aOutputs, pTx->countOutputs, pError));
 
-    if (bOutside)
+    if (bOutside && pDetails.get())
     {
         if (ABC_STRLEN(pDetails->szName) && !ABC_STRLEN(pTx->pDetails->szName))
             pTx->pDetails->szName = stringCopy(pDetails->szName);
