@@ -29,7 +29,7 @@ of the XCode command-line tools.
 For Linux native builds, you need the clang compiler.
 The following command will install the necessary dependencies on Ubuntu:
 
-    apt-get install autoconf automake cmake git libtool pkgconfig protobuf-compiler clang
+    apt-get install autoconf automake cmake git libtool pkg-config protobuf-compiler clang
 
 Assuming your system has the necessary command-line tools installed, it should
 be possible to build an Android or iOS-compatible version of ABC by doing
@@ -70,7 +70,7 @@ a standalone distribution.
 The "cli" directory contains a command-line tool for exercising the core.
 We use this internally for debugging and testing.
 
-The "test" directory conains unit tests.
+The "test" directory contains unit tests.
 
 The "util" directory contains ancillary utilities,
 such as a script for generating private keys from an exported wallet seed.
