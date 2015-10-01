@@ -33,19 +33,6 @@ namespace abcd {
 #define JSON_ACCT_PIN_PACKAGE                   "pin_package"
 
 #define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api/v1"
-#define ABC_SERVER_ACCOUNT_CREATE_PATH      "account/create"
-#define ABC_SERVER_ACCOUNT_ACTIVATE         "account/activate"
-#define ABC_SERVER_ACCOUNT_AVAILABLE        "account/available"
-#define ABC_SERVER_CHANGE_PASSWORD_PATH     "account/password/update"
-#define ABC_SERVER_GET_CARE_PACKAGE_PATH    "account/carepackage/get"
-#define ABC_SERVER_LOGIN_PACK_GET_PATH      "account/loginpackage/get"
-#define ABC_SERVER_PIN_PACK_GET_PATH        "account/pinpackage/get"
-#define ABC_SERVER_PIN_PACK_UPDATE_PATH     "account/pinpackage/update"
-#define ABC_SERVER_DEBUG_PATH               "account/debug"
-#define ABC_SERVER_WALLET_CREATE_PATH       "wallet/create"
-#define ABC_SERVER_WALLET_ACTIVATE_PATH     "wallet/activate"
-#define ABC_SERVER_GET_QUESTIONS_PATH       "questions"
-#define ABC_SERVER_GET_INFO_PATH            "getinfo"
 
 #define ABC_SERVER_JSON_L1_FIELD            "l1"
 #define ABC_SERVER_JSON_LP1_FIELD           "lp1"
@@ -172,8 +159,8 @@ ServerReplyJson::ok()
 Status
 loginServerGetGeneral(JsonPtr &result)
 {
+    const auto url = ABC_SERVER_ROOT "/getinfo";
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_INFO_PATH;
     ABC_CHECK(AirbitzRequest().post(reply, url));
 
     ServerReplyJson replyJson;
@@ -187,8 +174,8 @@ loginServerGetGeneral(JsonPtr &result)
 Status
 loginServerGetQuestions(JsonPtr &result)
 {
+    const auto url = ABC_SERVER_ROOT "/questions";
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_QUESTIONS_PATH;
     ABC_CHECK(AirbitzRequest().post(reply, url));
 
     ServerReplyJson replyJson;
@@ -217,8 +204,8 @@ tABC_CC ABC_LoginServerCreate(const Lobby &lobby,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    const auto url = ABC_SERVER_ROOT "/account/create";
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_ACCOUNT_CREATE_PATH;
     ServerReplyJson replyJson;
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
@@ -260,8 +247,8 @@ tABC_CC ABC_LoginServerActivate(const Lobby &lobby,
 
     tABC_CC cc = ABC_CC_Ok;
 
+    const auto url = ABC_SERVER_ROOT "/account/activate";
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_ACCOUNT_ACTIVATE;
     ServerReplyJson replyJson;
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
@@ -295,8 +282,8 @@ tABC_CC ABC_LoginServerAvailable(const Lobby &lobby,
 
     tABC_CC cc = ABC_CC_Ok;
 
+    const auto url = ABC_SERVER_ROOT "/account/available";
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_ACCOUNT_AVAILABLE;
     ServerReplyJson replyJson;
     AccountAvailableJson json;
 
@@ -333,8 +320,8 @@ tABC_CC ABC_LoginServerChangePassword(const Lobby &lobby,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    const auto url = ABC_SERVER_ROOT "/account/password/update";
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_CHANGE_PASSWORD_PATH;
     ServerReplyJson replyJson;
     char *szPost    = NULL;
     json_t *pJSON_OldLRA1   = NULL;
@@ -383,10 +370,10 @@ tABC_CC ABC_LoginServerGetCarePackage(const Lobby &lobby,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_GET_CARE_PACKAGE_PATH;
+    const auto url = ABC_SERVER_ROOT "/account/carepackage/get";
     char *szCarePackage = NULL;
 
-    ABC_CHECK_RET(ABC_LoginServerGetString(lobby, U08Buf(), U08Buf(), url.c_str(), JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(lobby, U08Buf(), U08Buf(), url, JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
     ABC_CHECK_NEW(result.decode(szCarePackage));
 
 exit:
@@ -403,10 +390,10 @@ tABC_CC ABC_LoginServerGetLoginPackage(const Lobby &lobby,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_LOGIN_PACK_GET_PATH;
+    const auto url = ABC_SERVER_ROOT "/account/loginpackage/get";
     char *szLoginPackage = NULL;
 
-    ABC_CHECK_RET(ABC_LoginServerGetString(lobby, LP1, LRA1, url.c_str(), JSON_ACCT_LOGIN_PACKAGE, &szLoginPackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(lobby, LP1, LRA1, url, JSON_ACCT_LOGIN_PACKAGE, &szLoginPackage, pError));
     ABC_CHECK_NEW(result.decode(szLoginPackage));
 
 exit:
@@ -487,8 +474,8 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    const auto url = ABC_SERVER_ROOT "/account/pinpackage/get";
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_PIN_PACK_GET_PATH;
     ServerReplyJson replyJson;
     json_t  *pJSON_Value    = NULL;
     json_t  *pJSON_Root     = NULL;
@@ -547,8 +534,8 @@ tABC_CC ABC_LoginServerUpdatePinPackage(const Lobby &lobby,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    const auto url = ABC_SERVER_ROOT "/account/pinpackage/update";
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_PIN_PACK_UPDATE_PATH;
     ServerReplyJson replyJson;
     char *szPost         = NULL;
     json_t *pJSON_Root   = NULL;
@@ -590,7 +577,7 @@ Status
 LoginServerWalletCreate(const Lobby &lobby, tABC_U08Buf LP1, const char *syncKey)
 {
     ABC_CHECK_OLD(ABC_WalletServerRepoPost(lobby, LP1, syncKey,
-        ABC_SERVER_WALLET_CREATE_PATH, &error));
+        "wallet/create", &error));
     return Status();
 }
 
@@ -598,7 +585,7 @@ Status
 LoginServerWalletActivate(const Lobby &lobby, tABC_U08Buf LP1, const char *syncKey)
 {
     ABC_CHECK_OLD(ABC_WalletServerRepoPost(lobby, LP1, syncKey,
-        ABC_SERVER_WALLET_ACTIVATE_PATH, &error));
+        "wallet/activate", &error));
     return Status();
 }
 
@@ -611,8 +598,8 @@ tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    const auto url = ABC_SERVER_ROOT "/" + std::string(szPath);
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/" + std::string(szPath);
     ServerReplyJson replyJson;
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
@@ -653,8 +640,8 @@ tABC_CC ABC_LoginServerOtpEnable(const Lobby &lobby,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    const auto url = ABC_SERVER_ROOT "/otp/on";
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/otp/on";
     ServerReplyJson replyJson;
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
@@ -741,8 +728,8 @@ tABC_CC ABC_LoginServerOtpDisable(const Lobby &lobby, tABC_U08Buf LP1, tABC_Erro
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::string url = ABC_SERVER_ROOT "/otp/off";
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), lobby, LP1, NULL, pError));
+    const auto url = ABC_SERVER_ROOT "/otp/off";
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url, lobby, LP1, NULL, pError));
 
 exit:
     return cc;
@@ -753,12 +740,11 @@ tABC_CC ABC_LoginServerOtpStatus(const Lobby &lobby, tABC_U08Buf LP1,
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    const auto url = ABC_SERVER_ROOT "/otp/status";
     json_t *pJSON_Value = NULL;
     JsonPtr reply;
 
-    std::string url = ABC_SERVER_ROOT "/otp/status";
-
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), lobby, LP1, &reply, pError));
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url, lobby, LP1, &reply, pError));
 
     pJSON_Value = json_object_get(reply.get(), ABC_SERVER_JSON_OTP_ON);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error otp/on JSON");
@@ -783,8 +769,8 @@ exit:
 tABC_CC ABC_LoginServerOtpReset(const Lobby &lobby, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    std::string url = ABC_SERVER_ROOT "/otp/reset";
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), lobby, U08Buf(), NULL, pError));
+    const auto url = ABC_SERVER_ROOT "/otp/reset";
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url, lobby, U08Buf(), NULL, pError));
 
 exit:
     return cc;
@@ -794,8 +780,8 @@ tABC_CC ABC_LoginServerOtpPending(std::list<DataChunk> users, std::list<bool> &i
 {
     tABC_CC cc = ABC_CC_Ok;
 
+    const auto url = ABC_SERVER_ROOT "/otp/pending/check";
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/otp/pending/check";
     ServerReplyJson replyJson;
     JsonArray arrayJson;
     json_t *pJSON_Root = NULL;
@@ -863,8 +849,8 @@ exit:
 tABC_CC ABC_LoginServerOtpResetCancelPending(const Lobby &lobby, tABC_U08Buf LP1, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    std::string url = ABC_SERVER_ROOT "/otp/pending/cancel";
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url.c_str(), lobby, LP1, NULL, pError));
+    const auto url = ABC_SERVER_ROOT "/otp/pending/cancel";
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url, lobby, LP1, NULL, pError));
 
 exit:
     return cc;
@@ -883,8 +869,8 @@ tABC_CC ABC_LoginServerUploadLogs(const Account *account, tABC_Error *pError)
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
+    const auto url = ABC_SERVER_ROOT "/account/debug";
     HttpReply reply;
-    std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_DEBUG_PATH;
     char *szPost          = NULL;
     char *szLogFilename   = NULL;
     json_t *pJSON_Root    = NULL;
