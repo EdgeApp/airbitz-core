@@ -70,7 +70,7 @@ a standalone distribution.
 The "cli" directory contains a command-line tool for exercising the core.
 We use this internally for debugging and testing.
 
-The "test" directory conains unit tests.
+The "test" directory contains unit tests.
 
 The "util" directory contains ancillary utilities,
 such as a script for generating private keys from an exported wallet seed.
