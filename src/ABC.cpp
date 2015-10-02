@@ -544,6 +544,36 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_BitidSign(const char *szUserName,
+                      const char *szPassword,
+                      const char *szBitidURI,
+                      const char *szMessage,
+                      char **pszBitidAddress,
+                      char **pszBitidSignature,
+                      tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szBitidURI);
+    ABC_CHECK_NULL(szMessage);
+    ABC_CHECK_NULL(pszBitidAddress);
+    ABC_CHECK_NULL(pszBitidSignature);
+
+    {
+        ABC_GET_LOGIN();
+
+        Uri callback;
+        ABC_CHECK_NEW(bitidCallback(callback, szBitidURI, false));
+        const auto signature = bitidSign(login->rootKey(),
+            szMessage, callback.encode(), 0);
+
+        *pszBitidAddress = stringCopy(signature.address);
+        *pszBitidSignature = stringCopy(signature.signature);
+    }
+
+exit:
+    return cc;
+}
+
 /**
  * Create a new wallet.
  *

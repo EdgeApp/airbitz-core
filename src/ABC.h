@@ -733,6 +733,21 @@ tABC_CC ABC_BitidLogin(const char *szUserName,
                        const char *szBitidURI,
                        tABC_Error *pError);
 
+/**
+ * Signs a message using a BitID key.
+ * @param szBitidURI the URI to derive the private key from.
+ * @param szMessage the message to sign.
+ * @param pszBitidAddress the public address derived from the key.
+ * @param pszBitidSignature the signed message.
+ */
+tABC_CC ABC_BitidSign(const char *szUserName,
+                      const char *szPassword,
+                      const char *szBitidURI,
+                      const char *szMessage,
+                      char **pszBitidAddress,
+                      char **pszBitidSignature,
+                      tABC_Error *pError);
+
 /* === Account sync data: === */
 tABC_CC ABC_LoadAccountSettings(const char *szUserName,
                                 const char *szPassword,
