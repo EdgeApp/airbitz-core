@@ -36,23 +36,21 @@ Status
 loginServerGetQuestions(JsonPtr &result);
 
 tABC_CC ABC_LoginServerCreate(const Lobby &lobby,
-                              tABC_U08Buf LP1,
+                              DataSlice LP1,
                               const CarePackage &carePackage,
                               const LoginPackage &loginPackage,
-                              const char *szRepoAcctKey,
+                              const std::string &syncKey,
                               tABC_Error *pError);
 
-tABC_CC ABC_LoginServerActivate(const Lobby &lobby,
-                                tABC_U08Buf LP1,
+tABC_CC ABC_LoginServerActivate(const Login &login,
                                 tABC_Error *pError);
 
 tABC_CC ABC_LoginServerAvailable(const Lobby &lobby,
                                  tABC_Error *pError);
 
-tABC_CC ABC_LoginServerChangePassword(const Lobby &lobby,
-                                      tABC_U08Buf oldLP1,
-                                      tABC_U08Buf newLP1,
-                                      tABC_U08Buf newLRA1,
+tABC_CC ABC_LoginServerChangePassword(const Login &login,
+                                      DataSlice newLP1,
+                                      DataSlice newLRA1,
                                       const CarePackage &carePackage,
                                       const LoginPackage &loginPackage,
                                       tABC_Error *pError);
@@ -62,20 +60,19 @@ tABC_CC ABC_LoginServerGetCarePackage(const Lobby &lobby,
                                       tABC_Error *pError);
 
 tABC_CC ABC_LoginServerGetLoginPackage(const Lobby &lobby,
-                                       tABC_U08Buf LP1,
-                                       tABC_U08Buf LRA1,
+                                       DataSlice LP1,
+                                       DataSlice LRA1,
                                        LoginPackage &result,
                                        tABC_Error *pError);
 
-tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
-                                     tABC_U08Buf LPIN1,
-                                     char **szPinPackage,
+tABC_CC ABC_LoginServerGetPinPackage(DataSlice DID,
+                                     DataSlice LPIN1,
+                                     std::string &result,
                                      tABC_Error *pError);
 
-tABC_CC ABC_LoginServerUpdatePinPackage(const Lobby &lobby,
-                                        tABC_U08Buf LP1,
-                                        tABC_U08Buf DID,
-                                        tABC_U08Buf LPIN1,
+tABC_CC ABC_LoginServerUpdatePinPackage(const Login &login,
+                                        DataSlice DID,
+                                        DataSlice LPIN1,
                                         const std::string &pinPackage,
                                         time_t ali,
                                         tABC_Error *pError);
@@ -83,20 +80,20 @@ tABC_CC ABC_LoginServerUpdatePinPackage(const Lobby &lobby,
  * Create a git repository on the server, suitable for holding a wallet.
  */
 Status
-LoginServerWalletCreate(const Lobby &lobby, tABC_U08Buf LP1, const char *syncKey);
+LoginServerWalletCreate(const Login &login, const std::string &syncKey);
 
 /**
  * Lock the server wallet repository, so it is not automatically deleted.
  */
 Status
-LoginServerWalletActivate(const Lobby &lobby, tABC_U08Buf LP1, const char *syncKey);
+LoginServerWalletActivate(const Login &login, const std::string &syncKey);
 
-tABC_CC ABC_LoginServerOtpEnable(const Lobby &lobby, tABC_U08Buf LP1, const char *szOtpToken, const long timeout, tABC_Error *pError);
-tABC_CC ABC_LoginServerOtpDisable(const Lobby &lobby, tABC_U08Buf LP1, tABC_Error *pError);
-tABC_CC ABC_LoginServerOtpStatus(const Lobby &lobby, tABC_U08Buf LP1, bool *on, long *timeout, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpEnable(const Login &login, const std::string &otpToken, const long timeout, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpDisable(const Login &login, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpStatus(const Login &login, bool &on, long &timeout, tABC_Error *pError);
 tABC_CC ABC_LoginServerOtpReset(const Lobby &lobby, tABC_Error *pError);
 tABC_CC ABC_LoginServerOtpPending(std::list<DataChunk> users, std::list<bool> &isPending, tABC_Error *pError);
-tABC_CC ABC_LoginServerOtpResetCancelPending(const Lobby &lobby, tABC_U08Buf LP1, tABC_Error *pError);
+tABC_CC ABC_LoginServerOtpResetCancelPending(const Login &login, tABC_Error *pError);
 
 tABC_CC ABC_LoginServerUploadLogs(const Account *account, tABC_Error *pError);
 

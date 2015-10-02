@@ -48,6 +48,12 @@ public:
     const std::string &
     syncKey() const { return syncKey_; }
 
+    /**
+     * Loads the authKey (LP1) from the on-disk care package.
+     */
+    Status
+    authKey(DataChunk &result) const;
+
 private:
     // No mutex, since all members are immutable after init.
     // The lobby mutex can cover disk-based things like logging in and
@@ -65,11 +71,6 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
                         Lobby &lobby,
                         const char *szPassword,
                         tABC_Error *pError);
-
-// Read accessors:
-tABC_CC ABC_LoginGetServerKey(const Login &login,
-                               tABC_U08Buf *pLP1,
-                               tABC_Error *pError);
 
 } // namespace abcd
 

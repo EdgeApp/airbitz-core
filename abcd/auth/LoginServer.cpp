@@ -97,9 +97,9 @@ struct ServerReplyJson:
 static std::string gOtpResetAuth;
 std::string gOtpResetDate;
 
-static tABC_CC ABC_LoginServerGetString(const Lobby &lobby, tABC_U08Buf LP1, tABC_U08Buf LRA1, const char *szURL, const char *szField, char **szResponse, tABC_Error *pError);
-static tABC_CC ABC_LoginServerOtpRequest(const char *szUrl, const Lobby &lobby, tABC_U08Buf LP1, JsonPtr *results, tABC_Error *pError);
-static tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby, tABC_U08Buf LP1, const char *szWalletAcctKey, const char *szPath, tABC_Error *pError);
+static tABC_CC ABC_LoginServerGetString(const Lobby &lobby, DataSlice LP1, DataSlice LRA1, const char *szURL, const char *szField, char **szResponse, tABC_Error *pError);
+static tABC_CC ABC_LoginServerOtpRequest(const char *szUrl, const Lobby &lobby, DataSlice LP1, JsonPtr *results, tABC_Error *pError);
+static tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby, DataSlice LP1, const std::string &szWalletAcctKey, const char *szPath, tABC_Error *pError);
 
 Status
 ServerReplyJson::ok()
@@ -196,10 +196,10 @@ loginServerGetQuestions(JsonPtr &result)
  * @param LP1  Password hash for the account
  */
 tABC_CC ABC_LoginServerCreate(const Lobby &lobby,
-                              tABC_U08Buf LP1,
+                              DataSlice LP1,
                               const CarePackage &carePackage,
                               const LoginPackage &loginPackage,
-                              const char *szRepoAcctKey,
+                              const std::string &syncKey,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -210,15 +210,13 @@ tABC_CC ABC_LoginServerCreate(const Lobby &lobby,
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
 
-    ABC_CHECK_NULL_BUF(LP1);
-
     // create the post data
     pJSON_Root = json_pack("{ssssssssss}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
         ABC_SERVER_JSON_CARE_PACKAGE_FIELD, carePackage.encode().c_str(),
         ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode().c_str(),
-        ABC_SERVER_JSON_REPO_FIELD, szRepoAcctKey);
+        ABC_SERVER_JSON_REPO_FIELD, syncKey.c_str());
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
@@ -237,11 +235,8 @@ exit:
 
 /**
  * Activate an account on the server.
- *
- * @param LP1  Password hash for the account
  */
-tABC_CC ABC_LoginServerActivate(const Lobby &lobby,
-                                tABC_U08Buf LP1,
+tABC_CC ABC_LoginServerActivate(const Login &login,
                                 tABC_Error *pError)
 {
 
@@ -253,10 +248,13 @@ tABC_CC ABC_LoginServerActivate(const Lobby &lobby,
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
 
+    DataChunk authKey;
+    ABC_CHECK_NEW(login.authKey(authKey));
+
     // create the post data
     pJSON_Root = json_pack("{ssss}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
-        ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str());
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(login.lobby.authId()).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(authKey).c_str());
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
@@ -303,17 +301,10 @@ exit:
 
 /**
  * Changes the password for an account on the server.
- *
- * This function sends information to the server to change the password for an account.
- * Either the old LP1 or LRA1 can be used for authentication.
- *
- * @param oldLP1 Old password hash for the account (if this is empty, LRA1 is used instead)
- * @param LRA1   LRA1 for the account (used if oldP1 is empty)
  */
-tABC_CC ABC_LoginServerChangePassword(const Lobby &lobby,
-                                      tABC_U08Buf oldLP1,
-                                      tABC_U08Buf newLP1,
-                                      tABC_U08Buf newLRA1,
+tABC_CC ABC_LoginServerChangePassword(const Login &login,
+                                      DataSlice newLP1,
+                                      DataSlice newLRA1,
                                       const CarePackage &carePackage,
                                       const LoginPackage &loginPackage,
                                       tABC_Error *pError)
@@ -324,17 +315,16 @@ tABC_CC ABC_LoginServerChangePassword(const Lobby &lobby,
     HttpReply reply;
     ServerReplyJson replyJson;
     char *szPost    = NULL;
-    json_t *pJSON_OldLRA1   = NULL;
     json_t *pJSON_NewLRA1   = NULL;
     json_t *pJSON_Root = NULL;
 
-    ABC_CHECK_NULL_BUF(oldLP1);
-    ABC_CHECK_NULL_BUF(newLP1);
+    DataChunk authKey;
+    ABC_CHECK_NEW(login.authKey(authKey));
 
     // Encode those:
     pJSON_Root = json_pack("{ss, ss, ss, ss, ss}",
-        ABC_SERVER_JSON_L1_FIELD,      base64Encode(lobby.authId()).c_str(),
-        ABC_SERVER_JSON_LP1_FIELD,     base64Encode(oldLP1).c_str(),
+        ABC_SERVER_JSON_L1_FIELD,      base64Encode(login.lobby.authId()).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD,     base64Encode(authKey).c_str(),
         ABC_SERVER_JSON_NEW_LP1_FIELD, base64Encode(newLP1).c_str(),
         ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  carePackage.encode().c_str(),
         ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode().c_str());
@@ -357,7 +347,6 @@ tABC_CC ABC_LoginServerChangePassword(const Lobby &lobby,
 
 exit:
     ABC_FREE_STR(szPost);
-    if (pJSON_OldLRA1)  json_decref(pJSON_OldLRA1);
     if (pJSON_NewLRA1)  json_decref(pJSON_NewLRA1);
     if (pJSON_Root)     json_decref(pJSON_Root);
 
@@ -373,7 +362,7 @@ tABC_CC ABC_LoginServerGetCarePackage(const Lobby &lobby,
     const auto url = ABC_SERVER_ROOT "/account/carepackage/get";
     char *szCarePackage = NULL;
 
-    ABC_CHECK_RET(ABC_LoginServerGetString(lobby, U08Buf(), U08Buf(), url, JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
+    ABC_CHECK_RET(ABC_LoginServerGetString(lobby, DataChunk(), DataChunk(), url, JSON_ACCT_CARE_PACKAGE, &szCarePackage, pError));
     ABC_CHECK_NEW(result.decode(szCarePackage));
 
 exit:
@@ -383,8 +372,8 @@ exit:
 }
 
 tABC_CC ABC_LoginServerGetLoginPackage(const Lobby &lobby,
-                                       tABC_U08Buf LP1,
-                                       tABC_U08Buf LRA1,
+                                       DataSlice LP1,
+                                       DataSlice LRA1,
                                        LoginPackage &result,
                                        tABC_Error *pError)
 {
@@ -406,7 +395,7 @@ exit:
  * Helper function for getting CarePackage or LoginPackage.
  */
 static
-tABC_CC ABC_LoginServerGetString(const Lobby &lobby, tABC_U08Buf LP1, tABC_U08Buf LRA1,
+tABC_CC ABC_LoginServerGetString(const Lobby &lobby, DataSlice LP1, DataSlice LRA1,
                                  const char *szURL, const char *szField, char **szResponse, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -467,9 +456,9 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
-                                     tABC_U08Buf LPIN1,
-                                     char **szPinPackage,
+tABC_CC ABC_LoginServerGetPinPackage(DataSlice DID,
+                                     DataSlice LPIN1,
+                                     std::string &result,
                                      tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -480,9 +469,6 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     json_t  *pJSON_Value    = NULL;
     json_t  *pJSON_Root     = NULL;
     char    *szPost         = NULL;
-
-    ABC_CHECK_NULL_BUF(DID);
-    ABC_CHECK_NULL_BUF(LPIN1);
 
     pJSON_Root = json_pack("{ss, ss}",
         ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
@@ -506,7 +492,7 @@ tABC_CC ABC_LoginServerGetPinPackage(tABC_U08Buf DID,
     ABC_CHECK_ASSERT((pJSON_Value && json_is_string(pJSON_Value)), ABC_CC_JSONError, "Error pin package JSON results");
 
     // copy the value
-    *szPinPackage = stringCopy(json_string_value(pJSON_Value));
+    result = json_string_value(pJSON_Value);
 
 exit:
     if (pJSON_Root)     json_decref(pJSON_Root);
@@ -518,16 +504,14 @@ exit:
 /**
  * Uploads the pin package.
  *
- * @param LP1           Login + Password hash
  * @param DID           Device Id
  * @param LPIN1         Hashed pin
  * @param szPinPackage  Pin package
  * @param szAli         auto-logout interval
  */
-tABC_CC ABC_LoginServerUpdatePinPackage(const Lobby &lobby,
-                                        tABC_U08Buf LP1,
-                                        tABC_U08Buf DID,
-                                        tABC_U08Buf LPIN1,
+tABC_CC ABC_LoginServerUpdatePinPackage(const Login &login,
+                                        DataSlice DID,
+                                        DataSlice LPIN1,
                                         const std::string &pinPackage,
                                         time_t ali,
                                         tABC_Error *pError)
@@ -541,17 +525,16 @@ tABC_CC ABC_LoginServerUpdatePinPackage(const Lobby &lobby,
     json_t *pJSON_Root   = NULL;
     char szALI[DATETIME_LENGTH];
 
-    ABC_CHECK_NULL_BUF(LP1);
-    ABC_CHECK_NULL_BUF(DID);
-    ABC_CHECK_NULL_BUF(LPIN1);
+    DataChunk authKey;
+    ABC_CHECK_NEW(login.authKey(authKey));
 
     // format the ali
     strftime(szALI, DATETIME_LENGTH, "%Y-%m-%dT%H:%M:%S", gmtime(&ali));
 
     // Encode those:
     pJSON_Root = json_pack("{ss, ss, ss, ss, ss, ss}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
-        ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(login.lobby.authId()).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(authKey).c_str(),
         ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
         ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1).c_str(),
         JSON_ACCT_PIN_PACKAGE, pinPackage.c_str(),
@@ -574,25 +557,29 @@ exit:
 }
 
 Status
-LoginServerWalletCreate(const Lobby &lobby, tABC_U08Buf LP1, const char *syncKey)
+LoginServerWalletCreate(const Login &login, const std::string &syncKey)
 {
-    ABC_CHECK_OLD(ABC_WalletServerRepoPost(lobby, LP1, syncKey,
+    DataChunk authKey;
+    ABC_CHECK(login.authKey(authKey));
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, authKey, syncKey,
         "wallet/create", &error));
     return Status();
 }
 
 Status
-LoginServerWalletActivate(const Lobby &lobby, tABC_U08Buf LP1, const char *syncKey)
+LoginServerWalletActivate(const Login &login, const std::string &syncKey)
 {
-    ABC_CHECK_OLD(ABC_WalletServerRepoPost(lobby, LP1, syncKey,
+    DataChunk authKey;
+    ABC_CHECK(login.authKey(authKey));
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, authKey, syncKey,
         "wallet/activate", &error));
     return Status();
 }
 
 static
 tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby,
-                                 tABC_U08Buf LP1,
-                                 const char *szWalletAcctKey,
+                                 DataSlice LP1,
+                                 const std::string &szWalletAcctKey,
                                  const char *szPath,
                                  tABC_Error *pError)
 {
@@ -604,13 +591,11 @@ tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby,
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
 
-    ABC_CHECK_NULL_BUF(LP1);
-
     // create the post data
     pJSON_Root = json_pack("{ssssss}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
-        ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey);
+        ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey.c_str());
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
     // send the command
@@ -628,13 +613,10 @@ exit:
 
 /**
  * Enables 2 Factor authentication
- *
- * @param LP1  Password hash for the account
  * @param timeout Amount of time needed for a reset to complete
  */
-tABC_CC ABC_LoginServerOtpEnable(const Lobby &lobby,
-                                 tABC_U08Buf LP1,
-                                 const char *szOtpSecret,
+tABC_CC ABC_LoginServerOtpEnable(const Login &login,
+                                 const std::string &otpToken,
                                  const long timeout,
                                  tABC_Error *pError)
 {
@@ -646,16 +628,17 @@ tABC_CC ABC_LoginServerOtpEnable(const Lobby &lobby,
     char *szPost    = NULL;
     json_t *pJSON_Root = NULL;
 
-    ABC_CHECK_NULL_BUF(LP1);
+    DataChunk authKey;
+    ABC_CHECK_NEW(login.authKey(authKey));
 
     // create the post data
     pJSON_Root = json_pack("{sssssssi}",
-        ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
-        ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
-        ABC_SERVER_JSON_OTP_SECRET_FIELD, szOtpSecret,
+        ABC_SERVER_JSON_L1_FIELD, base64Encode(login.lobby.authId()).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(authKey).c_str(),
+        ABC_SERVER_JSON_OTP_SECRET_FIELD, otpToken.c_str(),
         ABC_SERVER_JSON_OTP_TIMEOUT, timeout);
     {
-        auto key = lobby.otpKey();
+        auto key = login.lobby.otpKey();
         if (key)
             json_object_set_new(pJSON_Root, ABC_SERVER_JSON_OTP_FIELD, json_string(key->totp().c_str()));
     }
@@ -677,7 +660,7 @@ exit:
 
 tABC_CC ABC_LoginServerOtpRequest(const char *szUrl,
                                   const Lobby &lobby,
-                                  tABC_U08Buf LP1,
+                                  DataSlice LP1,
                                   JsonPtr *results,
                                   tABC_Error *pError)
 {
@@ -721,22 +704,22 @@ exit:
 
 /**
  * Disable 2 Factor authentication
- *
- * @param LP1  Password hash for the account
  */
-tABC_CC ABC_LoginServerOtpDisable(const Lobby &lobby, tABC_U08Buf LP1, tABC_Error *pError)
+tABC_CC ABC_LoginServerOtpDisable(const Login &login, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     const auto url = ABC_SERVER_ROOT "/otp/off";
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url, lobby, LP1, NULL, pError));
+    DataChunk authKey;
+    ABC_CHECK_NEW(login.authKey(authKey));
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url, login.lobby, authKey, NULL, pError));
 
 exit:
     return cc;
 }
 
-tABC_CC ABC_LoginServerOtpStatus(const Lobby &lobby, tABC_U08Buf LP1,
-    bool *on, long *timeout, tABC_Error *pError)
+tABC_CC ABC_LoginServerOtpStatus(const Login &login,
+    bool &on, long &timeout, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -744,17 +727,19 @@ tABC_CC ABC_LoginServerOtpStatus(const Lobby &lobby, tABC_U08Buf LP1,
     json_t *pJSON_Value = NULL;
     JsonPtr reply;
 
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url, lobby, LP1, &reply, pError));
+    DataChunk authKey;
+    ABC_CHECK_NEW(login.authKey(authKey));
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url, login.lobby, authKey, &reply, pError));
 
     pJSON_Value = json_object_get(reply.get(), ABC_SERVER_JSON_OTP_ON);
     ABC_CHECK_ASSERT((pJSON_Value && json_is_boolean(pJSON_Value)), ABC_CC_JSONError, "Error otp/on JSON");
-    *on = json_is_true(pJSON_Value);
+    on = json_is_true(pJSON_Value);
 
-    if (*on)
+    if (on)
     {
         pJSON_Value = json_object_get(reply.get(), ABC_SERVER_JSON_OTP_TIMEOUT);
         ABC_CHECK_ASSERT((pJSON_Value && json_is_integer(pJSON_Value)), ABC_CC_JSONError, "Error otp/timeout JSON");
-        *timeout = json_integer_value(pJSON_Value);
+        timeout = json_integer_value(pJSON_Value);
     }
 
 exit:
@@ -763,8 +748,6 @@ exit:
 
 /**
  * Request Reset 2 Factor authentication
- *
- * @param LP1  Password hash for the account
  */
 tABC_CC ABC_LoginServerOtpReset(const Lobby &lobby, tABC_Error *pError)
 {
@@ -841,16 +824,14 @@ exit:
     return cc;
 }
 
-/**
- * Request Reset 2 Factor authentication
- *
- * @param LP1  Password hash for the account
- */
-tABC_CC ABC_LoginServerOtpResetCancelPending(const Lobby &lobby, tABC_U08Buf LP1, tABC_Error *pError)
+tABC_CC ABC_LoginServerOtpResetCancelPending(const Login &login, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
+
     const auto url = ABC_SERVER_ROOT "/otp/pending/cancel";
-    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url, lobby, LP1, NULL, pError));
+    DataChunk authKey;
+    ABC_CHECK_NEW(login.authKey(authKey));
+    ABC_CHECK_RET(ABC_LoginServerOtpRequest(url, login.lobby, authKey, NULL, pError));
 
 exit:
     return cc;
@@ -859,10 +840,6 @@ exit:
 
 /**
  * Upload files to auth server for debugging
- *
- * @param szUserName    UserName for the account associated with the settings
- * @param szPassword    Password for the account associated with the settings
- * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_LoginServerUploadLogs(const Account *account, tABC_Error *pError)
 {
@@ -883,8 +860,8 @@ tABC_CC ABC_LoginServerUploadLogs(const Account *account, tABC_Error *pError)
 
     if (account)
     {
-        AutoU08Buf LP1;
-        ABC_CHECK_RET(ABC_LoginGetServerKey(account->login, &LP1, pError));
+        DataChunk authKey;      // Unlocks the server
+        ABC_CHECK_NEW(account->login.authKey(authKey));
 
         pJSON_array = json_array();
 
@@ -902,7 +879,7 @@ tABC_CC ABC_LoginServerUploadLogs(const Account *account, tABC_Error *pError)
 
         pJSON_Root = json_pack("{ss, ss, ss}",
             ABC_SERVER_JSON_L1_FIELD, base64Encode(account->login.lobby.authId()).c_str(),
-            ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
+            ABC_SERVER_JSON_LP1_FIELD, base64Encode(authKey).c_str(),
             "log", base64Encode(logData).c_str());
         json_object_set(pJSON_Root, "watchers", pJSON_array);
     }

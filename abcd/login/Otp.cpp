@@ -15,9 +15,7 @@ namespace abcd {
 Status
 otpAuthGet(Login &login, bool &enabled, long &timeout)
 {
-    AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpStatus(login.lobby, LP1, &enabled, &timeout, &error));
+    ABC_CHECK_OLD(ABC_LoginServerOtpStatus(login, enabled, timeout, &error));
 
     return Status();
 }
@@ -33,10 +31,8 @@ otpAuthSet(Login &login, long timeout)
         login.lobby.otpKeySet(random);
     }
 
-    AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpEnable(login.lobby, LP1,
-        login.lobby.otpKey()->encodeBase32().c_str(), timeout, &error));
+    ABC_CHECK_OLD(ABC_LoginServerOtpEnable(login,
+        login.lobby.otpKey()->encodeBase32(), timeout, &error));
 
     return Status();
 }
@@ -44,10 +40,7 @@ otpAuthSet(Login &login, long timeout)
 Status
 otpAuthRemove(Login &login)
 {
-    AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpDisable(login.lobby, LP1, &error));
-
+    ABC_CHECK_OLD(ABC_LoginServerOtpDisable(login, &error));
     return Status();
 }
 
@@ -87,17 +80,13 @@ Status
 otpResetSet(Lobby &lobby)
 {
     ABC_CHECK_OLD(ABC_LoginServerOtpReset(lobby, &error));
-
     return Status();
 }
 
 Status
 otpResetRemove(Login &login)
 {
-    AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpResetCancelPending(login.lobby, LP1, &error));
-
+    ABC_CHECK_OLD(ABC_LoginServerOtpResetCancelPending(login, &error));
     return Status();
 }
 

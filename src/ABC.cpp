@@ -2503,13 +2503,13 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         }
 
         // Get the server keys:
-        AutoU08Buf LP1;
-        ABC_CHECK_RET(ABC_LoginGetServerKey(account->login, &LP1, pError));
+        DataChunk authKey;      // Unlocks the server
+        ABC_CHECK_NEW(account->login.authKey(authKey));
 
         // Has the password changed?
         tABC_Error error;
         LoginPackage loginPackage;
-        cc = ABC_LoginServerGetLoginPackage(account->login.lobby, LP1, U08Buf(), loginPackage, &error);
+        cc = ABC_LoginServerGetLoginPackage(account->login.lobby, authKey, DataChunk(), loginPackage, &error);
 
         if (cc == ABC_CC_InvalidOTP)
         {

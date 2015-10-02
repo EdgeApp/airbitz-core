@@ -203,11 +203,9 @@ Wallet::createNew(const std::string &name, int currency)
 
     // Push the wallet to the server:
     bool dirty = false;
-    AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKey(account.login, &LP1, &error));
-    ABC_CHECK(LoginServerWalletCreate(account.login.lobby, LP1, syncKey_.c_str()));
+    ABC_CHECK(LoginServerWalletCreate(account.login, syncKey_));
     ABC_CHECK(syncRepo(syncDir(), syncKey_, dirty));
-    ABC_CHECK(LoginServerWalletActivate(account.login.lobby, LP1, syncKey_.c_str()));
+    ABC_CHECK(LoginServerWalletActivate(account.login, syncKey_));
 
     // If everything worked, add the wallet to the account:
     WalletJson json;
