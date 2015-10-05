@@ -111,9 +111,14 @@ void Watcher::prioritize_address(const payment_address& address)
     }
 }
 
-transaction_type Watcher::find_tx(hash_digest txid)
+transaction_type Watcher::find_tx_hash(hash_digest tx_hash)
 {
-    return db_.get_tx(txid);
+    return db_.get_tx_hash(tx_hash);
+}
+
+transaction_type Watcher::find_tx_id(hash_digest tx_id)
+{
+    return db_.get_tx_id(tx_id);
 }
 
 /**
@@ -192,7 +197,7 @@ output_info_list Watcher::get_utxos(bool filter)
         output_info_list out;
         for (auto& utxo: utxos)
         {
-            if (db_.get_tx_height(utxo.point.hash) ||
+            if (db_.get_txhash_height(utxo.point.hash) ||
                 db_.is_spend(utxo.point.hash, addresses))
                 out.push_back(utxo);
         }
@@ -207,10 +212,10 @@ size_t Watcher::get_last_block_height()
     return db_.last_height();
 }
 
-bool Watcher::get_tx_height(hash_digest txid, int& height)
+bool Watcher::get_txid_height(hash_digest tx_id, int& height)
 {
-    height = db_.get_tx_height(txid);
-    return db_.has_tx(txid);
+    height = db_.get_txid_height(tx_id);
+    return db_.has_tx_id(tx_id);
 }
 
 void Watcher::dump(std::ostream& out)

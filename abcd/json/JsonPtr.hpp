@@ -84,8 +84,8 @@ public:
     /**
      * Saves the JSON object to an in-memory string.
      */
-    Status
-    encode(std::string &result) const;
+    std::string
+    encode() const;
 
 protected:
     json_t *root_;

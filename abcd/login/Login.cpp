@@ -27,13 +27,29 @@ Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
     ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey, dataKey));
     ABC_CHECK(lobby.dirCreate());
 
-    result.reset(new Login(lobby, dataKey, base16Encode(syncKey)));
+    DataChunk rootKey;
+    if (fileExists(lobby.dir() + "tempRootKey.json"))
+    {
+        JsonBox box;
+        ABC_CHECK(box.load(lobby.dir() + "tempRootKey.json"));
+        ABC_CHECK(box.decrypt(rootKey, dataKey));
+    }
+    else
+    {
+        JsonBox box;
+        ABC_CHECK(randomData(rootKey, 256));
+        ABC_CHECK(box.encrypt(rootKey, dataKey));
+        ABC_CHECK(box.save(lobby.dir() + "tempRootKey.json"));
+    }
+
+    result.reset(new Login(lobby, rootKey, dataKey, base16Encode(syncKey)));
     return Status();
 }
 
-Login::Login(Lobby &lobby, DataSlice dataKey, std::string syncKey):
+Login::Login(Lobby &lobby, DataSlice rootKey, DataSlice dataKey, std::string syncKey):
     lobby(lobby),
     parent_(lobby.shared_from_this()),
+    rootKey_(rootKey.begin(), rootKey.end()),
     dataKey_(dataKey.begin(), dataKey.end()),
     syncKey_(syncKey)
 {}

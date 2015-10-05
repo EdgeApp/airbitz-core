@@ -120,7 +120,11 @@ HttpRequest::get(HttpReply &result, const std::string &url)
         return ABC_ERROR(ABC_CC_Error, "cURL failed to make HTTP request");
     if (curl_easy_getinfo(handle_, CURLINFO_RESPONSE_CODE, &result.code))
         return ABC_ERROR(ABC_CC_Error, "cURL failed to get response code");
-    ABC_DebugLog("%s (%d)", url.c_str(), result.code);
+    if (result.codeOk())
+        ABC_DebugLog("%s (%d)", url.c_str(), result.code);
+    else
+        ABC_DebugLog("%s (%d)\n%s", url.c_str(), result.code,
+            result.body.c_str());
 
     return Status();
 }

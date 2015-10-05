@@ -134,19 +134,19 @@ bc::client::sleep_time TxUpdater::wakeup()
     return next_wakeup;
 }
 
-void TxUpdater::watch(bc::hash_digest tx_hash, bool want_inputs)
+void TxUpdater::watch_tx_hash(bc::hash_digest tx_hash, bool want_inputs)
 {
     db_.reset_timestamp(tx_hash);
-    if (!db_.has_tx(tx_hash))
+    if (!db_.has_tx_hash(tx_hash))
         get_tx(tx_hash, want_inputs);
     else if (want_inputs)
-        get_inputs(db_.get_tx(tx_hash));
+        get_inputs(db_.get_tx_hash(tx_hash));
 }
 
 void TxUpdater::get_inputs(const bc::transaction_type &tx)
 {
     for (auto &input: tx.inputs)
-        watch(input.previous_output.hash, false);
+        watch_tx_hash(input.previous_output.hash, false);
 }
 
 void TxUpdater::query_done()
@@ -309,9 +309,9 @@ void TxUpdater::query_address(const bc::payment_address &address)
     {
         for (auto &row: history)
         {
-            watch(row.output.hash, true);
+            watch_tx_hash(row.output.hash, true);
             if (row.spend.hash != bc::null_hash)
-                watch(row.spend.hash, true);
+                watch_tx_hash(row.spend.hash, true);
         }
         query_done();
     };

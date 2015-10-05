@@ -69,9 +69,7 @@ COMMAND(InitLevel::wallet, CliWalletEncrypt, "wallet-encrypt")
     JsonBox box;
     ABC_CHECK(box.encrypt(contents, session.wallet->dataKey()));
 
-    std::string str;
-    ABC_CHECK(box.encode(str));
-    std::cout << str << std::endl;
+    std::cout << box.encode() << std::endl;
 
     return Status();
 }

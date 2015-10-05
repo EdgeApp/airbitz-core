@@ -1,8 +1,8 @@
 depends="openssl"
 inherit lib
 
-version="7.34.0"
-source="http://curl.haxx.se/download/curl-$version.tar.gz#b74b59380e1736b2528cc03016614a78d8aa074e"
+version="7.44.0"
+source="http://curl.haxx.se/download/curl-$version.tar.gz#4dc36d2f3310585cc1f9211b5f5c71327c86fb61"
 
 build() {
     cd curl-$version

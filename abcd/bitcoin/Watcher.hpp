@@ -41,8 +41,9 @@ public:
 
     // - Transactions: -----------------
     void send_tx(const bc::transaction_type& tx);
-    bc::transaction_type find_tx(bc::hash_digest txid);
-    bool get_tx_height(bc::hash_digest txid, int& height);
+    bc::transaction_type find_tx_hash(bc::hash_digest tx_hash);
+    bc::transaction_type find_tx_id(bc::hash_digest tx_id);
+    bool get_txid_height(bc::hash_digest txid, int& height);
     bc::output_info_list get_utxos(const bc::payment_address& address);
     bc::output_info_list get_utxos(bool filter=false);
 

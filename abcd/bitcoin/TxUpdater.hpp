@@ -70,7 +70,7 @@ public:
     virtual bc::client::sleep_time wakeup();
 
 private:
-    void watch(bc::hash_digest tx_hash, bool want_inputs);
+    void watch_tx_hash(bc::hash_digest tx_hash, bool want_inputs);
     void get_inputs(const bc::transaction_type &tx);
     void query_done();
     void queue_get_indices();

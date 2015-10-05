@@ -220,21 +220,16 @@ tABC_CC ABC_LoginServerCreate(const Lobby &lobby,
     std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_ACCOUNT_CREATE_PATH;
     ServerReplyJson replyJson;
     char *szPost    = NULL;
-    std::string carePackageStr;
-    std::string loginPackageStr;
     json_t *pJSON_Root = NULL;
 
     ABC_CHECK_NULL_BUF(LP1);
-
-    ABC_CHECK_NEW(carePackage.encode(carePackageStr));
-    ABC_CHECK_NEW(loginPackage.encode(loginPackageStr));
 
     // create the post data
     pJSON_Root = json_pack("{ssssssssss}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
-        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, carePackageStr.c_str(),
-        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackageStr.c_str(),
+        ABC_SERVER_JSON_CARE_PACKAGE_FIELD, carePackage.encode().c_str(),
+        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode().c_str(),
         ABC_SERVER_JSON_REPO_FIELD, szRepoAcctKey);
     szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
 
@@ -302,15 +297,13 @@ tABC_CC ABC_LoginServerAvailable(const Lobby &lobby,
     HttpReply reply;
     std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_ACCOUNT_AVAILABLE;
     ServerReplyJson replyJson;
-    std::string get;
     AccountAvailableJson json;
 
     // create the json
     ABC_CHECK_NEW(json.authIdSet(base64Encode(lobby.authId())));
-    ABC_CHECK_NEW(json.encode(get));
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, get));
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, json.encode()));
 
     // decode the result
     ABC_CHECK_NEW(replyJson.decode(reply.body));
@@ -343,8 +336,6 @@ tABC_CC ABC_LoginServerChangePassword(const Lobby &lobby,
     std::string url = ABC_SERVER_ROOT "/" ABC_SERVER_CHANGE_PASSWORD_PATH;
     ServerReplyJson replyJson;
     char *szPost    = NULL;
-    std::string carePackageStr;
-    std::string loginPackageStr;
     json_t *pJSON_OldLRA1   = NULL;
     json_t *pJSON_NewLRA1   = NULL;
     json_t *pJSON_Root = NULL;
@@ -352,16 +343,13 @@ tABC_CC ABC_LoginServerChangePassword(const Lobby &lobby,
     ABC_CHECK_NULL_BUF(oldLP1);
     ABC_CHECK_NULL_BUF(newLP1);
 
-    ABC_CHECK_NEW(carePackage.encode(carePackageStr));
-    ABC_CHECK_NEW(loginPackage.encode(loginPackageStr));
-
     // Encode those:
     pJSON_Root = json_pack("{ss, ss, ss, ss, ss}",
         ABC_SERVER_JSON_L1_FIELD,      base64Encode(lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD,     base64Encode(oldLP1).c_str(),
         ABC_SERVER_JSON_NEW_LP1_FIELD, base64Encode(newLP1).c_str(),
-        ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  carePackageStr.c_str(),
-        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackageStr.c_str());
+        ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  carePackage.encode().c_str(),
+        ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode().c_str());
 
     // set up the recovery, if any:
     if (newLRA1.size())

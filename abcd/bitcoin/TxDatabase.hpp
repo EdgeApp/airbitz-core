@@ -12,6 +12,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <time.h>
+#include <vector>
+#include <algorithm>
 
 namespace abcd {
 
@@ -28,6 +30,29 @@ enum class TxState
 typedef std::unordered_set<bc::payment_address> AddressSet;
 
 /**
+ * A single row in the transaction database.
+ */
+struct TxRow
+{
+    // The transaction itself:
+    bc::transaction_type tx;
+    bc::hash_digest tx_hash;
+    bc::hash_digest tx_id;
+
+    // State machine:
+    TxState state;
+    long long block_height;
+    time_t timestamp;
+    bool bMalleated;
+    bool bMasterConfirm;
+    //bc::hash_digest block_hash; // TODO: Fix obelisk to return this
+
+    // The transaction is certainly in a block, but there is some
+    // question whether or not that block is on the main chain:
+    bool need_check;
+};
+
+/**
  * A list of transactions.
  *
  * This will eventually become a full database with queires mirroring what
@@ -41,27 +66,44 @@ class TxDatabase
 {
 public:
     ~TxDatabase();
-    TxDatabase(unsigned unconfirmed_timeout=24*60*60);
+    TxDatabase(unsigned unconfirmed_timeout=60*60);
 
     /**
      * Returns the highest block that this database has seen.
      */
-    size_t last_height();
+    long long last_height();
 
     /**
-     * Returns true if the database contains a transaction.
+     * Returns true if the database contains a transaction matching malleable tx_hash.
      */
-    bool has_tx(bc::hash_digest tx_hash);
+    bool has_tx_hash(bc::hash_digest tx_hash);
 
     /**
-     * Obtains a transaction from the database.
+     * Returns true if the database contains a transaction matching non-malleable tx_id.
      */
-    bc::transaction_type get_tx(bc::hash_digest tx_hash);
+    bool has_tx_id(bc::hash_digest tx_id);
+
+    /**
+     * Obtains a transaction from the database using the malleable tx_hash.
+     */
+    bc::transaction_type get_tx_hash(bc::hash_digest tx_hash);
+
+    /**
+     * Obtains a transaction from the database using the non-malleable tx_id.
+     */
+    bc::transaction_type get_tx_id(bc::hash_digest tx_id);
 
     /**
      * Finds a transaction's height, or 0 if it isn't in a block.
+     * Uses non-malleable tx_id
      */
-    size_t get_tx_height(bc::hash_digest tx_hash);
+    long long get_txid_height(bc::hash_digest tx_id);
+
+    /**
+     * Finds a transaction's height, or 0 if it isn't in a block.
+     * Uses malleable tx hash
+     */
+    long long get_txhash_height(bc::hash_digest tx_hash);
 
     /**
      * Returns true if all inputs are addresses in the list control.
@@ -105,6 +147,11 @@ public:
      */
     bool insert(const bc::transaction_type &tx, TxState state);
 
+    /*
+     * Convert a transaction hash into a non-malleable tx_id hash
+     */
+    bc::hash_digest get_non_malleable_txid(bc::transaction_type tx);
+
 private:
     // - Updater: ----------------------
     friend class TxUpdater;
@@ -118,7 +165,7 @@ private:
      * Mark a transaction as confirmed.
      * TODO: Require the block hash as well, once obelisk provides this.
      */
-    void confirmed(bc::hash_digest tx_hash, size_t block_height);
+    void confirmed(bc::hash_digest tx_hash, long long block_height);
 
     /**
      * Mark a transaction as unconfirmed.
@@ -152,25 +199,12 @@ private:
     // The last block seen on the network:
     size_t last_height_;
 
-    /**
-     * A single row in the transaction database.
-     */
-    struct TxRow
-    {
-        // The transaction itself:
-        bc::transaction_type tx;
-
-        // State machine:
-        TxState state;
-        size_t block_height;
-        time_t timestamp;
-        //bc::hash_digest block_hash; // TODO: Fix obelisk to return this
-
-        // The transaction is certainly in a block, but there is some
-        // question whether or not that block is on the main chain:
-        bool need_check;
-    };
     std::unordered_map<bc::hash_digest, TxRow> rows_;
+
+    /*
+     * Returns a vector of TxRow that match the unmalleable txid
+     */
+    std::vector<TxRow *> findByTxID(bc::hash_digest tx_id);
 
     // Number of seconds an unconfirmed transaction must remain unseen
     // before we stop saving it:

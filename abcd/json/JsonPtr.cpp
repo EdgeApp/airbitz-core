@@ -9,6 +9,7 @@
 #include "../crypto/Crypto.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Json.hpp"
+#include <new>
 
 namespace abcd {
 
@@ -56,7 +57,10 @@ JsonPtr::reset(json_t *root)
 JsonPtr
 JsonPtr::clone() const
 {
-    return json_deep_copy(root_);
+    auto out = json_deep_copy(root_);
+    if (!out)
+        throw std::bad_alloc();
+    return out;
 }
 
 Status
@@ -108,15 +112,15 @@ JsonPtr::save(const std::string &filename, DataSlice dataKey) const
     return Status();
 }
 
-Status
-JsonPtr::encode(std::string &result) const
+std::string
+JsonPtr::encode() const
 {
-    char *raw = json_dumps(root_, saveFlags);
+    auto raw = json_dumps(root_, saveFlags);
     if (!raw)
-        return ABC_ERROR(ABC_CC_JSONError, "Cannot encode JSON.");
-    result = raw;
+        throw std::bad_alloc();
+    std::string out(raw);
     ABC_UtilJanssonSecureFree(raw);
-    return Status();
+    return out;
 }
 
 } // namespace abcd

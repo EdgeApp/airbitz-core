@@ -31,16 +31,10 @@ blockcypherPostTx(DataSlice tx)
         ABC_JSON_STRING(tx, "tx", nullptr);
     } json;
     json.txSet(base16Encode(tx));
-    std::string body;
-    ABC_CHECK(json.encode(body));
 
     HttpReply reply;
-    ABC_CHECK(HttpRequest().post(reply, url, body));
-    if (!reply.codeOk())
-    {
-        ABC_DebugLog("%s", reply.body.c_str());
-        return reply.codeOk();
-    }
+    ABC_CHECK(HttpRequest().post(reply, url, json.encode()));
+    ABC_CHECK(reply.codeOk());
 
     return Status();
 }
@@ -60,17 +54,11 @@ chainPostTx(DataSlice tx)
         ABC_JSON_STRING(hex, "signed_hex", nullptr);
     } json;
     json.hexSet(base16Encode(tx));
-    std::string body;
-    ABC_CHECK(json.encode(body));
 
     HttpReply reply;
     ABC_CHECK(HttpRequest().header("Authorization", auth).
-        post(reply, url, body));
-    if (!reply.codeOk())
-    {
-        ABC_DebugLog("%s", reply.body.c_str());
-        return reply.codeOk();
-    }
+        post(reply, url, json.encode()));
+    ABC_CHECK(reply.codeOk());
 
     return Status();
 }
@@ -85,11 +73,7 @@ blockchainPostTx(DataSlice tx)
     HttpReply reply;
     ABC_CHECK(HttpRequest().
         post(reply, "https://blockchain.info/pushtx", body));
-    if (!reply.codeOk())
-    {
-        ABC_DebugLog("%s", reply.body.c_str());
-        return reply.codeOk();
-    }
+    ABC_CHECK(reply.codeOk());
 
     return Status();
 }

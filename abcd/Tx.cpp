@@ -1110,7 +1110,7 @@ tABC_CC ABC_TxLoadTransaction(Wallet &self,
 
     // get advanced details
     ABC_CHECK_RET(
-        ABC_BridgeTxDetails(self, pTx->pStateInfo->szMalleableTxId,
+        ABC_BridgeTxDetails(self, pTx->szID,
                             &(pTx->aOutputs), &(pTx->countOutputs),
                             &(pTx->pDetails->amountSatoshi),
                             &(pTx->pDetails->amountFeesMinersSatoshi),
