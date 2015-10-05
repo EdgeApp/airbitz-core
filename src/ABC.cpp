@@ -2726,6 +2726,22 @@ exit:
 }
 
 /**
+ * Deletes the on-disk transaction cache for a wallet.
+ */
+tABC_CC ABC_WatcherDeleteCache(const char *szWalletUUID, tABC_Error *pError)
+{
+    ABC_PROLOG();
+
+    {
+        ABC_GET_WALLET_N();
+        ABC_CHECK_NEW(watcherDeleteCache(*wallet));
+    }
+
+exit:
+    return cc;
+}
+
+/**
  * Lookup the transaction height
  *
  * @param szWalletUUID Used to lookup the watcher with the data

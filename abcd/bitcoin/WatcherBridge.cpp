@@ -131,6 +131,13 @@ watcherLoad(Wallet &self)
 }
 
 Status
+watcherDeleteCache(Wallet &self)
+{
+    ABC_CHECK_OLD(ABC_FileIODeleteFile(watcherPath(self).c_str(), &error));
+    return Status();
+}
+
+Status
 watcherSave(Wallet &self)
 {
     Watcher *watcher = nullptr;
