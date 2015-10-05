@@ -8,3 +8,5 @@
 /abcd/config.h
 /build
 /codegen
+*.idea*
+*CMakeLists*
