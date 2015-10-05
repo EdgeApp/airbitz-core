@@ -66,7 +66,7 @@ class TxDatabase
 {
 public:
     ~TxDatabase();
-    TxDatabase(unsigned unconfirmed_timeout=60*60);
+    TxDatabase(unsigned unconfirmed_timeout=20*60);
 
     /**
      * Returns the highest block that this database has seen.

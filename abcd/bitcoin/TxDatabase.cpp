@@ -137,6 +137,10 @@ long long TxDatabase::get_txid_height(bc::hash_digest tx_id)
 
     for (auto i = txRows.begin(); i != txRows.end(); ++i) {
         numFound++;
+        if (numFound > 1)
+        {
+            ABC_DebugLog("Found double spend / malleated transaction");
+        }
         if (TxState::confirmed == (*i)->state) {
             if (height < (*i)->block_height)
                 height = (*i)->block_height;

@@ -1170,9 +1170,9 @@ tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError);
 
 tABC_CC ABC_WatcherDelete(const char *szWalletUUID, tABC_Error *pError);
 
-tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId, unsigned int *height, tABC_Error *pError);
+tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId, int *height, tABC_Error *pError);
 
-tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError);
+tABC_CC ABC_BlockHeight(const char *szWalletUUID, int *height, tABC_Error *pError);
 
 #ifdef __cplusplus
 }

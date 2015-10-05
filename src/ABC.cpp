@@ -2733,7 +2733,7 @@ exit:
  * @param height Pointer to integer to store the results
  */
 tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
-                     unsigned int *height, tABC_Error *pError)
+                     int *height, tABC_Error *pError)
 {
     // Cannot use ABC_PROLOG - too much debug spew
     tABC_CC cc = ABC_CC_Ok;
@@ -2758,7 +2758,7 @@ exit:
  * @param szWalletUUID Used to lookup the watcher with the data
  * @param height Pointer to integer to store the results
  */
-tABC_CC ABC_BlockHeight(const char *szWalletUUID, unsigned int *height, tABC_Error *pError)
+tABC_CC ABC_BlockHeight(const char *szWalletUUID, int *height, tABC_Error *pError)
 {
     // Cannot use ABC_PROLOG - too much debug spew
     tABC_CC cc = ABC_CC_Ok;

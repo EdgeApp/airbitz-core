@@ -379,7 +379,7 @@ tABC_CC ABC_BridgeWatcherDelete(Wallet &self, tABC_Error *pError)
 }
 
 tABC_CC
-ABC_BridgeTxHeight(Wallet &self, const char *szTxId, unsigned int *height, tABC_Error *pError)
+ABC_BridgeTxHeight(Wallet &self, const char *szTxId, int *height, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     int height_;
@@ -400,7 +400,7 @@ exit:
 }
 
 tABC_CC
-ABC_BridgeTxBlockHeight(Wallet &self, unsigned int *height, tABC_Error *pError)
+ABC_BridgeTxBlockHeight(Wallet &self, int *height, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 

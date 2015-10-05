@@ -93,9 +93,9 @@ tABC_CC ABC_BridgePrioritizeAddress(Wallet &self,
                                     const char *szAddress,
                                     tABC_Error *pError);
 
-tABC_CC ABC_BridgeTxHeight(Wallet &self, const char *szTxId, unsigned int *height, tABC_Error *pError);
+tABC_CC ABC_BridgeTxHeight(Wallet &self, const char *szTxId, int *height, tABC_Error *pError);
 
-tABC_CC ABC_BridgeTxBlockHeight(Wallet &self, unsigned int *height, tABC_Error *pError);
+tABC_CC ABC_BridgeTxBlockHeight(Wallet &self, int *height, tABC_Error *pError);
 
 tABC_CC ABC_BridgeTxDetails(Wallet &self, const char *szTxID,
                             tABC_TxOutput ***paOutputs, unsigned int *pCount,
