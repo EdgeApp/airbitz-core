@@ -26,7 +26,7 @@ signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys)
     {
         // Find the utxo this input refers to:
         bc::input_point& point = result.inputs[i].previous_output;
-        bc::transaction_type tx = watcher.find_tx(point.hash);
+        bc::transaction_type tx = watcher.find_tx_hash(point.hash);
 
         // Find the address for that utxo:
         bc::payment_address pa;
@@ -89,9 +89,9 @@ bool gather_challenges(unsigned_transaction& utx, Watcher& watcher)
     for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
     {
         bc::input_point& point = utx.tx.inputs[i].previous_output;
-        if (!watcher.db().has_tx(point.hash))
+        if (!watcher.db().has_tx_hash(point.hash))
             return false;
-        bc::transaction_type tx = watcher.find_tx(point.hash);
+        bc::transaction_type tx = watcher.find_tx_hash(point.hash);
         utx.challenges[i] = tx.outputs[point.index].script;
     }
 

@@ -390,7 +390,7 @@ ABC_BridgeTxHeight(Wallet &self, const char *szTxId, unsigned int *height, tABC_
 
     if (!bc::decode_hash(txid, szTxId))
         ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
-    if (!watcher->get_tx_height(txid, height_))
+    if (!watcher->get_txid_height(txid, height_))
     {
         cc = ABC_CC_Synchronizing;
     }
@@ -474,7 +474,7 @@ tABC_CC ABC_BridgeTxDetailsSplit(Wallet &self, const char *szTxID,
     if (!bc::decode_hash(txid, szTxID))
         ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
 
-    tx = watcherInfo->watcher.find_tx(txid);
+    tx = watcherInfo->watcher.find_tx_id(txid);
 
     idx = 0;
     iCount = tx.inputs.size();
@@ -491,7 +491,7 @@ tABC_CC ABC_BridgeTxDetailsSplit(Wallet &self, const char *szTxID,
         out->szTxId = stringCopy(bc::encode_hash(prev.hash));
         out->szAddress = stringCopy(addr.encoded());
 
-        auto tx = watcherInfo->watcher.find_tx(prev.hash);
+        auto tx = watcherInfo->watcher.find_tx_hash(prev.hash);
         if (prev.index < tx.outputs.size())
         {
             out->value = tx.outputs[prev.index].value;
@@ -572,9 +572,9 @@ tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
 
         int height;
         bc::hash_digest txid;
-        if (!bc::decode_hash(txid, pTx->szMalleableTxId))
+        if (!bc::decode_hash(txid, pTx->szID))
             ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
-        if (watcher->get_tx_height(txid, height))
+        if (watcher->get_txid_height(txid, height))
         {
             *di++ = pTx;
         }
@@ -774,7 +774,7 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
         out->szAddress = stringCopy(addr.encoded());
 
         // Check prevouts for values
-        auto tx = watcherInfo->watcher.find_tx(prev.hash);
+        auto tx = watcherInfo->watcher.find_tx_hash(prev.hash);
         if (prev.index < tx.outputs.size())
         {
             out->value = tx.outputs[prev.index].value;
@@ -852,16 +852,16 @@ ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
 }
 
 Status
-watcherBridgeRawTx(Wallet &self, const char *szTxID,
+watcherBridgeRawTx(Wallet &self, const char *szTxHash,
     DataChunk &result)
 {
     Watcher *watcher = nullptr;
     ABC_CHECK(watcherFind(watcher, self));
 
-    bc::hash_digest txid;
-    if (!bc::decode_hash(txid, szTxID))
+    bc::hash_digest tx_hash;
+    if (!bc::decode_hash(tx_hash, szTxHash))
         return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
-    auto tx = watcher->find_tx(txid);
+    auto tx = watcher->find_tx_hash(tx_hash);
     result.resize(satoshi_raw_size(tx));
     bc::satoshi_save(tx, result.begin());
 

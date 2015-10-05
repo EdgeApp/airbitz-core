@@ -10,7 +10,7 @@ namespace abcd {
 
 // Serialization stuff:
 constexpr uint32_t old_serial_magic = 0x3eab61c3; // From the watcher
-constexpr uint32_t serial_magic = 0xfecdb762;
+constexpr uint32_t serial_magic = 0xfecdb763;
 constexpr uint8_t serial_tx = 0x42;
 
 TxDatabase::~TxDatabase()
@@ -23,21 +23,33 @@ TxDatabase::TxDatabase(unsigned unconfirmed_timeout):
 {
 }
 
-size_t TxDatabase::last_height()
+long long TxDatabase::last_height()
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
     return last_height_;
 }
 
-bool TxDatabase::has_tx(bc::hash_digest tx_hash)
+bool TxDatabase::has_tx_hash(bc::hash_digest tx_hash)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
     return rows_.find(tx_hash) != rows_.end();
 }
 
-bc::transaction_type TxDatabase::get_tx(bc::hash_digest tx_hash)
+bool TxDatabase::has_tx_id(bc::hash_digest tx_id)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    std::vector<TxRow *> txRows = findByTxID(tx_id);
+
+    for (auto i = txRows.begin(); i != txRows.end(); ++i) {
+        return true;
+    }
+    return false;
+}
+
+bc::transaction_type TxDatabase::get_tx_hash(bc::hash_digest tx_hash)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -45,6 +57,34 @@ bc::transaction_type TxDatabase::get_tx(bc::hash_digest tx_hash)
     if (i == rows_.end())
         return bc::transaction_type();
     return i->second.tx;
+}
+
+bc::transaction_type TxDatabase::get_tx_id(bc::hash_digest tx_id)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    std::vector<TxRow *> txRows = findByTxID(tx_id);
+
+    bc::transaction_type tx;
+    bool foundTx = false;
+
+    for (auto i = txRows.begin(); i != txRows.end(); ++i) {
+        // Try to return the master confirmed tx_hash if possible
+        // Otherwise return any confirmed tx_hash
+        // Otherwise return any match
+        if (!foundTx) {
+            tx = (*i)->tx;
+            foundTx = true;
+        } else {
+            if (TxState::confirmed == (*i)->state) {
+                tx = (*i)->tx;
+            }
+        }
+
+        if ((*i)->bMasterConfirm)
+            return tx;
+    }
+    return tx;
 }
 
 static const char unsent[] = "unsent";
@@ -64,7 +104,7 @@ const char * stateToString(TxState state)
 
 }
 
-long long TxDatabase::get_tx_height(bc::hash_digest tx_hash)
+long long TxDatabase::get_txhash_height(bc::hash_digest tx_hash)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -72,15 +112,43 @@ long long TxDatabase::get_tx_height(bc::hash_digest tx_hash)
     if (i == rows_.end())
         return 0;
 
-    std::string malTxID = bc::encode_hash(bc::hash_transaction(i->second.tx));
-
-    ABC_DebugLog("get_tx_height maltxid=%s txid=%s st=%s height=%d",
-                 malTxID.c_str(),i->second.txID.c_str(), stateToString(i->second.state), i->second.block_height);
+//    std::string malTxID = bc::encode_hash(bc::hash_transaction(i->second.tx));
+//    std::string txID    = bc::encode_hash(i->second.tx_id);
+//
+//    ABC_DebugLog("get_txhash_height maltxid=%s txid=%s st=%s height=%d",
+//                 malTxID.c_str(),txID.c_str(), stateToString(i->second.state), i->second.block_height);
 
     if (i->second.state != TxState::confirmed) {
         return 0;
     }
     return i->second.block_height;
+
+}
+
+long long TxDatabase::get_txid_height(bc::hash_digest tx_id)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    std::vector<TxRow *> txRows = findByTxID(tx_id);
+
+    long long height = -1;
+
+    int numFound = 0;
+
+    for (auto i = txRows.begin(); i != txRows.end(); ++i) {
+        numFound++;
+        if (TxState::confirmed == (*i)->state) {
+            if (height < (*i)->block_height)
+                height = (*i)->block_height;
+        } else {
+            height = 0;
+        }
+    }
+
+    if (numFound > 1 && height <= 0)
+        return -1;
+
+    return height;
 }
 
 bool TxDatabase::is_spend(bc::hash_digest tx_hash, const AddressSet &addresses)
@@ -160,10 +228,11 @@ bc::output_info_list TxDatabase::get_utxos()
                 }
             }
         } else {
-            std::string malTxID = bc::encode_hash(bc::hash_transaction(row.second.tx));
-
-            ABC_DebugLog("Tx Excluded from UTXO mall=%d maltxid=%s txid=%s hash=%x st=%s mastc=%d",
-                         row.second.bMalleated,malTxID.c_str(),row.second.txID.c_str(), row.second.tx_hash, stateToString(row.second.state), row.second.bMasterConfirm);
+//            std::string malTxID = bc::encode_hash(bc::hash_transaction(row.second.tx));
+//            std::string txID    = bc::encode_hash(row.second.tx_id);
+//
+//            ABC_DebugLog("Tx Excluded from UTXO mall=%d maltxid=%s txid=%s hash=%x st=%s mastc=%d",
+//                         row.second.bMalleated,malTxID.c_str(),txID.c_str(), row.second.tx_hash, stateToString(row.second.state), row.second.bMasterConfirm);
         }
     }
     return out;
@@ -223,7 +292,7 @@ bc::data_chunk TxDatabase::serialize()
         serial.write_8_bytes(height);
         serial.write_byte(row.second.need_check);
         serial.write_hash(row.second.tx_hash);
-        serial.write_string(row.second.txID);
+        serial.write_hash(row.second.tx_id);
         serial.write_byte(row.second.bMalleated);
         serial.write_byte(row.second.bMasterConfirm);
 
@@ -273,7 +342,7 @@ bool TxDatabase::load(const bc::data_chunk &data)
             row.need_check = serial.read_byte();
 
             row.tx_hash        = serial.read_hash();
-            row.txID           = serial.read_string();
+            row.tx_id          = serial.read_hash();
             row.bMalleated     = serial.read_byte();
             row.bMasterConfirm = serial.read_byte();
 
@@ -331,22 +400,29 @@ void TxDatabase::dump(std::ostream &out)
     }
 }
 
-std::vector<TxRow *> TxDatabase::findByTxID(std::string txID)
+//
+// Find a transaction by the non-malleable txid. Since this can map to multiple
+// malleable txids, return a vector of results
+//
+std::vector<TxRow *> TxDatabase::findByTxID(bc::hash_digest tx_id)
 {
-    //
-    // Yuck. Maybe this func should be in transaction.cpp
-    //
-
     std::vector<TxRow *> txVector;
 
     for (auto it = rows_.begin(); it != rows_.end(); ++it) {
         TxRow *txRow = &it->second;
-        if (txRow->txID.compare(txID) == 0) {
+        if (txRow->tx_id == tx_id) {
             txVector.push_back(txRow);
         }
     }
 
     return txVector;
+}
+
+bc::hash_digest TxDatabase::get_non_malleable_txid(bc::transaction_type tx)
+{
+    for (auto& input: tx.inputs)
+        input.script = bc::script_type();
+    return bc::hash_transaction(tx, bc::sighash::all);
 }
 
 bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
@@ -357,7 +433,7 @@ bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
     //
     // Yuck. Maybe this func should be in transaction.cpp
     //
-    std::string txID = ABC_BridgeNonMalleableTxId(tx);
+    bc::hash_digest tx_id = get_non_malleable_txid(tx);
 
     // Do not stomp existing tx's:
     auto tx_hash = bc::hash_transaction(tx);
@@ -370,7 +446,7 @@ bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
         // Check if there are other transactions with same txid.
         // If so, mark all malleated and copy block height and state to
         // new tx
-        std::vector<TxRow *> txRows = findByTxID(txID);
+        std::vector<TxRow *> txRows = findByTxID(tx_id);
 
         for (auto i = txRows.begin(); i != txRows.end(); ++i) {
             if (tx_hash != (*i)->tx_hash) {
@@ -380,11 +456,12 @@ bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
             }
         }
 
-        rows_[tx_hash] = TxRow{tx, tx_hash, txID, state, height, time(nullptr), bMalleated, false, false};
-        std::string malTxID = bc::encode_hash(bc::hash_transaction(tx));
-
-        ABC_DebugLog("Tx Inserted mall=%d maltxid=%s txid=%s hash=%x st=%s",
-                     bMalleated,malTxID.c_str(),txID.c_str(), tx_hash, stateToString(state));
+        rows_[tx_hash] = TxRow{tx, tx_hash, tx_id, state, height, time(nullptr), bMalleated, false, false};
+//        std::string malTxID = bc::encode_hash(bc::hash_transaction(tx));
+//        std::string txID    = bc::encode_hash(tx_id);
+//
+//        ABC_DebugLog("Tx Inserted mall=%d maltxid=%s txid=%s hash=%x st=%s",
+//                     bMalleated,malTxID.c_str(),txID.c_str(), tx_hash, stateToString(state));
 
         return true;
     }
@@ -420,13 +497,14 @@ void TxDatabase::confirmed(bc::hash_digest tx_hash, long long block_height)
 
     // Check if there are other malleated transactions.
     // If so, mark them all confirmed
-    std::vector<TxRow *> txRows = findByTxID(it->second.txID);
+    std::vector<TxRow *> txRows = findByTxID(it->second.tx_id);
 
     row.state = TxState::confirmed;
     row.block_height = block_height;
     row.bMasterConfirm = true;
 
-    std::string malTxID1 = bc::encode_hash(bc::hash_transaction(row.tx));
+//    std::string txID     = bc::encode_hash(it->second.tx_id);
+//    std::string malTxID1 = bc::encode_hash(bc::hash_transaction(row.tx));
 
     for (auto i = txRows.begin(); i != txRows.end(); ++i) {
         if (tx_hash != (*i)->tx_hash) {
@@ -434,11 +512,11 @@ void TxDatabase::confirmed(bc::hash_digest tx_hash, long long block_height)
             (*i)->state = TxState::confirmed;
             (*i)->bMalleated = true;
             row.bMalleated = true;
-            std::string malTxID2 = bc::encode_hash(bc::hash_transaction((*i)->tx));
-            ABC_DebugLog("Tx Confirmed: TxMalleability txid=%s maltxid1=%s maltxid2=%s", (*i)->txID.c_str(), malTxID1.c_str(), malTxID2.c_str());
+//            std::string malTxID2 = bc::encode_hash(bc::hash_transaction((*i)->tx));
+//            ABC_DebugLog("Tx Confirmed: TxMalleability txid=%s maltxid1=%s maltxid2=%s", txID.c_str(), malTxID1.c_str(), malTxID2.c_str());
         } else {
-            ABC_DebugLog("Tx Confirmed: mall=%d maltxid=%s txid=%s hash=%x st=%s",
-                         row.bMalleated, malTxID1.c_str(), row.txID.c_str(), tx_hash, stateToString(row.state));
+//            ABC_DebugLog("Tx Confirmed: mall=%d maltxid=%s txid=%s hash=%x st=%s",
+//                         row.bMalleated, malTxID1.c_str(), txID.c_str(), tx_hash, stateToString(row.state));
         }
     }
 
@@ -459,33 +537,31 @@ void TxDatabase::unconfirmed(bc::hash_digest tx_hash)
 
     // If the transaction was already confirmed, and is now unconfirmed,
     // we probably have a block fork:
-    std::string malTxID1 = bc::encode_hash(bc::hash_transaction(row.tx));
+//    std::string malTxID1 = bc::encode_hash(bc::hash_transaction(row.tx));
 
     if (row.state == TxState::confirmed) {
 
         // Check if there are other malleated transactions.
         // If so, mark them all unconfirmed_malleated
-        std::vector<TxRow *> txRows = findByTxID(it->second.txID);
+        std::vector<TxRow *> txRows = findByTxID(it->second.tx_id);
 
         for (auto i = txRows.begin(); i != txRows.end(); ++i) {
             if (tx_hash != (*i)->tx_hash) {
-                std::string malTxID2 = bc::encode_hash(bc::hash_transaction((*i)->tx));
+//                std::string malTxID2 = bc::encode_hash(bc::hash_transaction((*i)->tx));
+//                std::string txID = bc::encode_hash((*i)->tx_id);
                 if ((*i)->bMasterConfirm) {
                     height = (*i)->block_height;
                     state = (*i)->state;
-                    ABC_DebugLog("Tx Unconfirmed: TxMalleability txid=%s maltxid1=%s maltxid2MASTER=%s", (*i)->txID.c_str(), malTxID1.c_str(), malTxID2.c_str());
+
+//                    ABC_DebugLog("Tx Unconfirmed: TxMalleability txid=%s maltxid1=%s maltxid2MASTER=%s", txID.c_str(), malTxID1.c_str(), malTxID2.c_str());
                 } else {
                     (*i)->block_height = height = -1;
                     (*i)->state = TxState::unconfirmed;
                     (*i)->bMalleated = bMalleated = true;
-                    ABC_DebugLog("Tx Unconfirmed: TxMalleability txid=%s maltxid1=%s maltxid2=%s", (*i)->txID.c_str(), malTxID1.c_str(), malTxID2.c_str());
+
+//                    ABC_DebugLog("Tx Unconfirmed: TxMalleability txid=%s maltxid1=%s maltxid2=%s", txID.c_str(), malTxID1.c_str(), malTxID2.c_str());
                 }
             }
-//            else {
-//
-//                ABC_DebugLog("Tx Unconfirmed: mall=%d maltxid=%s txid=%s hash=%x st=%s",
-//                             row.bMalleated, malTxID1.c_str(), row.txID.c_str(), tx_hash, stateToString(row.state));
-//            }
         }
 
         if (TxState::unconfirmed == row.state)
@@ -496,7 +572,7 @@ void TxDatabase::unconfirmed(bc::hash_digest tx_hash)
     row.state = state;
     row.bMalleated = bMalleated;
 
-    ABC_DebugLog("Tx Unconfirmed Finished mall=%d hash=%x height=%d st=%s", bMalleated, tx_hash, height, stateToString(row.state));
+//    ABC_DebugLog("Tx Unconfirmed Finished mall=%d hash=%x height=%d st=%s", bMalleated, tx_hash, height, stateToString(row.state));
 }
 
 void TxDatabase::forget(bc::hash_digest tx_hash)
@@ -506,13 +582,15 @@ void TxDatabase::forget(bc::hash_digest tx_hash)
     rows_.erase(tx_hash);
 }
 
-void TxDatabase::reset_timestamp(bc::hash_digest tx_hash)
+void TxDatabase::reset_timestamp(bc::hash_digest tx_id)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    auto i = rows_.find(tx_hash);
-    if (i != rows_.end())
-        i->second.timestamp = time(nullptr);
+    std::vector<TxRow *> txRows = findByTxID(tx_id);
+
+    for (auto i = txRows.begin(); i != txRows.end(); ++i) {
+        (*i)->timestamp = time(nullptr);
+    }
 }
 
 void TxDatabase::foreach_unconfirmed(HashFn &&f)

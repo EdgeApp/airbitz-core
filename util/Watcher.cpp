@@ -54,7 +54,8 @@ private:
     void cmd_disconnect(std::stringstream &args);
     void cmd_watch(std::stringstream &args);
     void cmd_height();
-    void cmd_tx_height(std::stringstream &args);
+    void cmd_txid_height(std::stringstream &args);
+    void cmd_txhash_height(std::stringstream &args);
     void cmd_tx_dump(std::stringstream &args);
     void cmd_tx_send(std::stringstream &args);
     void cmd_utxos(std::stringstream &args);
@@ -147,7 +148,8 @@ void Cli::command()
     else if (command == "disconnect")   cmd_disconnect(reader);
     else if (command == "height")       cmd_height();
     else if (command == "watch")        cmd_watch(reader);
-    else if (command == "txheight")     cmd_tx_height(reader);
+    else if (command == "txidheight")   cmd_txid_height(reader);
+    else if (command == "txhashheight") cmd_txhash_height(reader);
     else if (command == "txdump")       cmd_tx_dump(reader);
     else if (command == "txsend")       cmd_tx_send(reader);
     else if (command == "utxos")        cmd_utxos(reader);
@@ -170,19 +172,20 @@ void Cli::cmd_exit()
 void Cli::cmd_help()
 {
     std::cout << "commands:" << std::endl;
-    std::cout << "  exit              - leave the program" << std::endl;
-    std::cout << "  help              - this menu" << std::endl;
-    std::cout << "  connect <server>  - connect to obelisk server" << std::endl;
-    std::cout << "  disconnect        - stop talking to the obelisk server" << std::endl;
-    std::cout << "  height            - get the current blockchain height" << std::endl;
+    std::cout << "  exit                - leave the program" << std::endl;
+    std::cout << "  help                - this menu" << std::endl;
+    std::cout << "  connect <server>    - connect to obelisk server" << std::endl;
+    std::cout << "  disconnect          - stop talking to the obelisk server" << std::endl;
+    std::cout << "  height              - get the current blockchain height" << std::endl;
     std::cout << "  watch <address> [poll ms] - watch an address" << std::endl;
-    std::cout << "  txheight <hash>   - get a transaction's height" << std::endl;
-    std::cout << "  txdump <hash>     - show the contents of a transaction" << std::endl;
-    std::cout << "  txsend <hash>     - push a transaction to the server" << std::endl;
-    std::cout << "  utxos [address]   - get utxos for an address" << std::endl;
-    std::cout << "  save <filename>   - dump the database to disk" << std::endl;
-    std::cout << "  load <filename>   - load the database from disk" << std::endl;
-    std::cout << "  dump [filename]   - display the database contents" << std::endl;
+    std::cout << "  txidheight <hash>   - get a transaction's height with normalized txid" << std::endl;
+    std::cout << "  txhashheight <hash> - get a transaction's height with tx hash" << std::endl;
+    std::cout << "  txdump <hash>       - show the contents of a transaction" << std::endl;
+    std::cout << "  txsend <hash>       - push a transaction to the server" << std::endl;
+    std::cout << "  utxos [address]     - get utxos for an address" << std::endl;
+    std::cout << "  save <filename>     - dump the database to disk" << std::endl;
+    std::cout << "  load <filename>     - load the database from disk" << std::endl;
+    std::cout << "  dump [filename]     - display the database contents" << std::endl;
 }
 
 void Cli::cmd_connect(std::stringstream &args)
@@ -218,14 +221,26 @@ void Cli::cmd_height()
     std::cout << db_.last_height() << std::endl;
 }
 
-void Cli::cmd_tx_height(std::stringstream &args)
+void Cli::cmd_txid_height(std::stringstream &args)
 {
     bc::hash_digest txid = read_txid(args);
     if (txid == bc::null_hash)
         return;
 
-    if (db_.has_tx(txid))
-        std::cout << db_.get_tx_height(txid) << std::endl;
+    if (db_.has_tx_id(txid))
+        std::cout << db_.get_txid_height(txid) << std::endl;
+    else
+        std::cout << "transaction not in database" << std::endl;
+}
+
+void Cli::cmd_txhash_height(std::stringstream &args)
+{
+    bc::hash_digest txhash = read_txid(args);
+    if (txhash == bc::null_hash)
+        return;
+
+    if (db_.has_tx_hash(txhash))
+        std::cout << db_.get_txhash_height(txhash) << std::endl;
     else
         std::cout << "transaction not in database" << std::endl;
 }

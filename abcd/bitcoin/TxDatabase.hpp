@@ -37,7 +37,7 @@ struct TxRow
     // The transaction itself:
     bc::transaction_type tx;
     bc::hash_digest tx_hash;
-    std::string txID;
+    bc::hash_digest tx_id;
 
     // State machine:
     TxState state;
@@ -71,22 +71,39 @@ public:
     /**
      * Returns the highest block that this database has seen.
      */
-    size_t last_height();
+    long long last_height();
 
     /**
-     * Returns true if the database contains a transaction.
+     * Returns true if the database contains a transaction matching malleable tx_hash.
      */
-    bool has_tx(bc::hash_digest tx_hash);
+    bool has_tx_hash(bc::hash_digest tx_hash);
 
     /**
-     * Obtains a transaction from the database.
+     * Returns true if the database contains a transaction matching non-malleable tx_id.
      */
-    bc::transaction_type get_tx(bc::hash_digest tx_hash);
+    bool has_tx_id(bc::hash_digest tx_id);
+
+    /**
+     * Obtains a transaction from the database using the malleable tx_hash.
+     */
+    bc::transaction_type get_tx_hash(bc::hash_digest tx_hash);
+
+    /**
+     * Obtains a transaction from the database using the non-malleable tx_id.
+     */
+    bc::transaction_type get_tx_id(bc::hash_digest tx_id);
 
     /**
      * Finds a transaction's height, or 0 if it isn't in a block.
+     * Uses non-malleable tx_id
      */
-    long long get_tx_height(bc::hash_digest tx_hash);
+    long long get_txid_height(bc::hash_digest tx_id);
+
+    /**
+     * Finds a transaction's height, or 0 if it isn't in a block.
+     * Uses malleable tx hash
+     */
+    long long get_txhash_height(bc::hash_digest tx_hash);
 
     /**
      * Returns true if all inputs are addresses in the list control.
@@ -129,6 +146,11 @@ public:
      * @return true if the callback should be fired.
      */
     bool insert(const bc::transaction_type &tx, TxState state);
+
+    /*
+     * Convert a transaction hash into a non-malleable tx_id hash
+     */
+    bc::hash_digest get_non_malleable_txid(bc::transaction_type tx);
 
 private:
     // - Updater: ----------------------
@@ -182,7 +204,7 @@ private:
     /*
      * Returns a vector of TxRow that match the unmalleable txid
      */
-    std::vector<TxRow *>  findByTxID(std::string txID);
+    std::vector<TxRow *> findByTxID(bc::hash_digest tx_id);
 
     // Number of seconds an unconfirmed transaction must remain unseen
     // before we stop saving it:

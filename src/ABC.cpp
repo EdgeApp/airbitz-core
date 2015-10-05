@@ -2729,7 +2729,7 @@ exit:
  * Lookup the transaction height
  *
  * @param szWalletUUID Used to lookup the watcher with the data
- * @param szTxId The "malleable" transaction id
+ * @param szTxId The "non-malleable" transaction id
  * @param height Pointer to integer to store the results
  */
 tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,

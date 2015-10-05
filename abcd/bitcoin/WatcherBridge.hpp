@@ -114,7 +114,7 @@ ABC_BridgeNonMalleableTxId(libbitcoin::transaction_type tx);
  * Pulls a raw transaction out of the watcher database.
  */
 Status
-watcherBridgeRawTx(Wallet &self, const char *szTxID,
+watcherBridgeRawTx(Wallet &self, const char *szTxHash,
     DataChunk &result);
 
 } // namespace abcd
