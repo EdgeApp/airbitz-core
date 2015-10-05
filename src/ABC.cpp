@@ -209,7 +209,7 @@ tABC_CC ABC_AccountAvailable(const char *szUserName,
 
     {
         ABC_GET_LOBBY();
-        ABC_CHECK_RET(ABC_LoginServerAvailable(*lobby, pError));
+        ABC_CHECK_NEW(loginServerAvailable(*lobby));
     }
 
 exit:
@@ -2507,15 +2507,14 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         ABC_CHECK_NEW(account->login.authKey(authKey));
 
         // Has the password changed?
-        tABC_Error error;
         LoginPackage loginPackage;
-        cc = ABC_LoginServerGetLoginPackage(account->login.lobby, authKey, DataChunk(), loginPackage, &error);
+        Status s = loginServerGetLoginPackage(account->login.lobby, authKey, DataChunk(), loginPackage);
 
-        if (cc == ABC_CC_InvalidOTP)
+        if (s.value() == ABC_CC_InvalidOTP)
         {
-            ABC_CHECK_RET(cc);
+            ABC_RET_ERROR(s.value(), s.message().c_str());
         }
-        else if (cc == ABC_CC_BadPassword)
+        else if (s.value() == ABC_CC_BadPassword)
         {
             if (fAsyncBitCoinEventCallback)
             {
@@ -2530,6 +2529,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         }
 
         // Non-critical general information update:
+        tABC_Error error;
         ABC_GeneralUpdateInfo(&error);
     }
 
@@ -2965,7 +2965,7 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
         std::shared_ptr<Account> account;
         cacheAccount(account, szUserName);
 
-        ABC_CHECK_RET(ABC_LoginServerUploadLogs(account.get(), pError));
+        ABC_CHECK_NEW(loginServerUploadLogs(account.get()));
     }
 
 exit:

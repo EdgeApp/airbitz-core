@@ -124,14 +124,14 @@ tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(loginPackage.syncKeyBoxSet(box));
 
     // Create the account and repo on server:
-    ABC_CHECK_RET(ABC_LoginServerCreate(lobby, authKey,
-        carePackage, loginPackage, base16Encode(syncKey), pError));
+    ABC_CHECK_NEW(loginServerCreate(lobby, authKey,
+        carePackage, loginPackage, base16Encode(syncKey)));
 
     // Create the Login object:
     ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
 
     // Latch the account:
-    ABC_CHECK_RET(ABC_LoginServerActivate(*out, pError));
+    ABC_CHECK_NEW(loginServerActivate(*out));
 
     // Set up the on-disk login:
     ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()));

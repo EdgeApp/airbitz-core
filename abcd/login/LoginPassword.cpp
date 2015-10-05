@@ -63,12 +63,12 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     std::string LP = lobby.username() + szPassword;
 
     // Get the CarePackage:
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(lobby, carePackage, pError));
+    ABC_CHECK_NEW(loginServerGetCarePackage(lobby, carePackage));
 
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP));
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(lobby,
-        authKey, U08Buf(), loginPackage, pError));
+    ABC_CHECK_NEW(loginServerGetLoginPackage(lobby,
+        authKey, U08Buf(), loginPackage));
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP));
@@ -158,8 +158,8 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     ABC_CHECK_NEW(loginPackage.authKeyBoxSet(box));
 
     // Change the server login:
-    ABC_CHECK_RET(ABC_LoginServerChangePassword(login,
-        newAuthKey, oldLRA1, carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(loginServerChangePassword(login,
+        newAuthKey, oldLRA1, carePackage, loginPackage));
 
     // Change the on-disk login:
     ABC_CHECK_NEW(carePackage.save(login.lobby.carePackageName()));

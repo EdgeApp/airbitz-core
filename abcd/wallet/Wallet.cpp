@@ -203,9 +203,9 @@ Wallet::createNew(const std::string &name, int currency)
 
     // Push the wallet to the server:
     bool dirty = false;
-    ABC_CHECK(LoginServerWalletCreate(account.login, syncKey_));
+    ABC_CHECK(loginServerWalletCreate(account.login, syncKey_));
     ABC_CHECK(syncRepo(syncDir(), syncKey_, dirty));
-    ABC_CHECK(LoginServerWalletActivate(account.login, syncKey_));
+    ABC_CHECK(loginServerWalletActivate(account.login, syncKey_));
 
     // If everything worked, add the wallet to the account:
     WalletJson json;

@@ -31,7 +31,7 @@ tABC_CC ABC_LoginGetRQ(Lobby &lobby,
     DataChunk questions;
 
     // Load CarePackage:
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(lobby, carePackage, pError));
+    ABC_CHECK_NEW(loginServerGetCarePackage(lobby, carePackage));
 
     // Verify that the questions exist:
     ABC_CHECK_ASSERT(carePackage.questionBox(), ABC_CC_NoRecoveryQuestions, "No recovery questions");
@@ -73,12 +73,12 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     std::string LRA = lobby.username() + szRecoveryAnswers;
 
     // Get the CarePackage:
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(lobby, carePackage, pError));
+    ABC_CHECK_NEW(loginServerGetCarePackage(lobby, carePackage));
 
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(recoveryAuthKey, LRA));
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(lobby,
-        U08Buf(), recoveryAuthKey, loginPackage, pError));
+    ABC_CHECK_NEW(loginServerGetLoginPackage(lobby,
+        U08Buf(), recoveryAuthKey, loginPackage));
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp3().hash(recoveryKey, LRA));
@@ -149,8 +149,8 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_NEW(loginPackage.ELRA1Set(box));
 
     // Change the server login:
-    ABC_CHECK_RET(ABC_LoginServerChangePassword(login,
-        authKey, recoveryAuthKey, carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(loginServerChangePassword(login,
+        authKey, recoveryAuthKey, carePackage, loginPackage));
 
     // Change the on-disk login:
     ABC_CHECK_NEW(carePackage.save(login.lobby.carePackageName()));

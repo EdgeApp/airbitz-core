@@ -115,8 +115,7 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
 
     // Get EPINK from the server:
     ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN));
-    ABC_CHECK_RET(ABC_LoginServerGetPinPackage(
-        pinAuthId, pinAuthKey, EPINK, pError));
+    ABC_CHECK_NEW(loginServerGetPinPackage(pinAuthId, pinAuthKey, EPINK));
     ABC_CHECK_NEW(pinKeyBox.decode(EPINK));
 
     // Decrypt MK:
@@ -170,9 +169,9 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 
     // Set up the server:
     ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN));
-    ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(login,
+    ABC_CHECK_NEW(loginServerUpdatePinPackage(login,
         pinAuthId, pinAuthKey, pinKeyBox.encode(),
-        expires, pError));
+        expires));
 
     // Save the local file:
     ABC_CHECK_NEW(local.pinBoxSet(pinBox));

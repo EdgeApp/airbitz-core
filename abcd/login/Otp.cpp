@@ -15,9 +15,7 @@ namespace abcd {
 Status
 otpAuthGet(Login &login, bool &enabled, long &timeout)
 {
-    ABC_CHECK_OLD(ABC_LoginServerOtpStatus(login, enabled, timeout, &error));
-
-    return Status();
+    return loginServerOtpStatus(login, enabled, timeout);
 }
 
 Status
@@ -31,8 +29,8 @@ otpAuthSet(Login &login, long timeout)
         login.lobby.otpKeySet(random);
     }
 
-    ABC_CHECK_OLD(ABC_LoginServerOtpEnable(login,
-        login.lobby.otpKey()->encodeBase32(), timeout, &error));
+    ABC_CHECK(loginServerOtpEnable(login,
+        login.lobby.otpKey()->encodeBase32(), timeout));
 
     return Status();
 }
@@ -40,8 +38,7 @@ otpAuthSet(Login &login, long timeout)
 Status
 otpAuthRemove(Login &login)
 {
-    ABC_CHECK_OLD(ABC_LoginServerOtpDisable(login, &error));
-    return Status();
+    return loginServerOtpDisable(login);
 }
 
 Status
@@ -60,7 +57,7 @@ otpResetGet(std::list<std::string> &result,
 
     // Make the request:
     std::list<bool> flags;
-    ABC_CHECK_OLD(ABC_LoginServerOtpPending(authIds, flags, &error));
+    ABC_CHECK(loginServerOtpPending(authIds, flags));
 
     // Smush the results:
     result.clear();
@@ -79,15 +76,13 @@ otpResetGet(std::list<std::string> &result,
 Status
 otpResetSet(Lobby &lobby)
 {
-    ABC_CHECK_OLD(ABC_LoginServerOtpReset(lobby, &error));
-    return Status();
+    return loginServerOtpReset(lobby);
 }
 
 Status
 otpResetRemove(Login &login)
 {
-    ABC_CHECK_OLD(ABC_LoginServerOtpResetCancelPending(login, &error));
-    return Status();
+    return loginServerOtpResetCancelPending(login);
 }
 
 } // namespace abcd

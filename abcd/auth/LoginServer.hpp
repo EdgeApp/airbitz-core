@@ -35,67 +35,109 @@ loginServerGetGeneral(JsonPtr &result);
 Status
 loginServerGetQuestions(JsonPtr &result);
 
-tABC_CC ABC_LoginServerCreate(const Lobby &lobby,
-                              DataSlice LP1,
-                              const CarePackage &carePackage,
-                              const LoginPackage &loginPackage,
-                              const std::string &syncKey,
-                              tABC_Error *pError);
+/**
+ * Creates an account on the server.
+ */
+Status
+loginServerCreate(const Lobby &lobby, DataSlice LP1,
+    const CarePackage &carePackage, const LoginPackage &loginPackage,
+    const std::string &syncKey);
 
-tABC_CC ABC_LoginServerActivate(const Login &login,
-                                tABC_Error *pError);
+/**
+ * Activate an account on the server.
+ * Should be called once the initial git sync is complete.
+ */
+Status
+loginServerActivate(const Login &login);
 
-tABC_CC ABC_LoginServerAvailable(const Lobby &lobby,
-                                 tABC_Error *pError);
+/**
+ * Queries the server to determine if a username is available.
+ */
+Status
+loginServerAvailable(const Lobby &lobby);
 
-tABC_CC ABC_LoginServerChangePassword(const Login &login,
-                                      DataSlice newLP1,
-                                      DataSlice newLRA1,
-                                      const CarePackage &carePackage,
-                                      const LoginPackage &loginPackage,
-                                      tABC_Error *pError);
+/**
+ * Changes the password for an account on the server.
+ */
+Status
+loginServerChangePassword(const Login &login,
+    DataSlice newLP1, DataSlice newLRA1,
+    const CarePackage &carePackage, const LoginPackage &loginPackage);
 
-tABC_CC ABC_LoginServerGetCarePackage(const Lobby &lobby,
-                                      CarePackage &result,
-                                      tABC_Error *pError);
+Status
+loginServerGetCarePackage(const Lobby &lobby, CarePackage &result);
 
-tABC_CC ABC_LoginServerGetLoginPackage(const Lobby &lobby,
-                                       DataSlice LP1,
-                                       DataSlice LRA1,
-                                       LoginPackage &result,
-                                       tABC_Error *pError);
+Status
+loginServerGetLoginPackage(const Lobby &lobby,
+    DataSlice LP1, DataSlice LRA1, LoginPackage &result);
 
-tABC_CC ABC_LoginServerGetPinPackage(DataSlice DID,
-                                     DataSlice LPIN1,
-                                     std::string &result,
-                                     tABC_Error *pError);
+Status
+loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result);
 
-tABC_CC ABC_LoginServerUpdatePinPackage(const Login &login,
-                                        DataSlice DID,
-                                        DataSlice LPIN1,
-                                        const std::string &pinPackage,
-                                        time_t ali,
-                                        tABC_Error *pError);
+/**
+ * Uploads the pin package.
+ * @param DID           Device id
+ * @param LPIN1         Hashed pin
+ * @param ali           Auto-logout interval
+ */
+Status
+loginServerUpdatePinPackage(const Login &login,
+    DataSlice DID, DataSlice LPIN1, const std::string &pinPackage,
+    time_t ali);
+
 /**
  * Create a git repository on the server, suitable for holding a wallet.
  */
 Status
-LoginServerWalletCreate(const Login &login, const std::string &syncKey);
+loginServerWalletCreate(const Login &login, const std::string &syncKey);
 
 /**
  * Lock the server wallet repository, so it is not automatically deleted.
  */
 Status
-LoginServerWalletActivate(const Login &login, const std::string &syncKey);
+loginServerWalletActivate(const Login &login, const std::string &syncKey);
 
-tABC_CC ABC_LoginServerOtpEnable(const Login &login, const std::string &otpToken, const long timeout, tABC_Error *pError);
-tABC_CC ABC_LoginServerOtpDisable(const Login &login, tABC_Error *pError);
-tABC_CC ABC_LoginServerOtpStatus(const Login &login, bool &on, long &timeout, tABC_Error *pError);
-tABC_CC ABC_LoginServerOtpReset(const Lobby &lobby, tABC_Error *pError);
-tABC_CC ABC_LoginServerOtpPending(std::list<DataChunk> users, std::list<bool> &isPending, tABC_Error *pError);
-tABC_CC ABC_LoginServerOtpResetCancelPending(const Login &login, tABC_Error *pError);
+/**
+ * Apply 2-factor authentication to the account.
+ */
+Status
+loginServerOtpEnable(const Login &login, const std::string &otpToken, const long timeout);
 
-tABC_CC ABC_LoginServerUploadLogs(const Account *account, tABC_Error *pError);
+/**
+ * Remove 2-factor authentication from the account.
+ */
+Status
+loginServerOtpDisable(const Login &login);
+
+/**
+ * Determine whether this account requires 2-factor authentication.
+ */
+Status
+loginServerOtpStatus(const Login &login, bool &on, long &timeout);
+
+/**
+ * Request a 2-factor authentication reset.
+ */
+Status
+loginServerOtpReset(const Lobby &lobby);
+
+/**
+ * Determine which accounts have pending 2-factor authentication resets.
+ */
+Status
+loginServerOtpPending(std::list<DataChunk> users, std::list<bool> &isPending);
+
+/**
+ * Cancel a pending 2-factor authentication reset.
+ */
+Status
+loginServerOtpResetCancelPending(const Login &login);
+
+/**
+ * Upload files to auth server for debugging.
+ */
+Status
+loginServerUploadLogs(const Account *account);
 
 } // namespace abcd
 
