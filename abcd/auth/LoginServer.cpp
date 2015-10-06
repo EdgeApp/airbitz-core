@@ -444,26 +444,19 @@ tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby,
     const auto url = ABC_SERVER_ROOT "/" + std::string(szPath);
     HttpReply reply;
     ServerReplyJson replyJson;
-    char *szPost    = NULL;
-    json_t *pJSON_Root = NULL;
 
-    // create the post data
-    pJSON_Root = json_pack("{ssssss}",
+    JsonPtr json(json_pack("{ssssss}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
         ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
-        ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey.c_str());
-    szPost = ABC_UtilStringFromJSONObject(pJSON_Root, JSON_COMPACT);
+        ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey.c_str()));
 
     // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, szPost));
+    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, json.encode()));
 
     ABC_CHECK_NEW(replyJson.decode(reply.body));
     ABC_CHECK_NEW(replyJson.ok());
 
 exit:
-    ABC_FREE_STR(szPost);
-    if (pJSON_Root)     json_decref(pJSON_Root);
-
     return cc;
 }
 
