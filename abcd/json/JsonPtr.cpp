@@ -98,6 +98,7 @@ JsonPtr::decode(const std::string &data)
 Status
 JsonPtr::save(const std::string &filename) const
 {
+    ABC_DebugLog("Writing JSON file %s", filename.c_str());
     if (json_dump_file(root_, filename.c_str(), saveFlags))
         return ABC_ERROR(ABC_CC_JSONError, "Cannot write JSON file " + filename);
     return Status();
