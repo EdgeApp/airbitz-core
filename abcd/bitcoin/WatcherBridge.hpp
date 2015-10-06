@@ -58,6 +58,9 @@ Status
 watcherFind(Watcher *&result, Wallet &self);
 
 Status
+watcherDeleteCache(Wallet &self);
+
+Status
 watcherSave(Wallet &self);
 
 std::string
