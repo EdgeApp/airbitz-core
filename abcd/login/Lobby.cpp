@@ -7,7 +7,7 @@
 
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
-#include "LoginServer.hpp"
+#include "../auth/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/FileIO.hpp"

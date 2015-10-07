@@ -15,8 +15,7 @@
 
 #include "General.hpp"
 #include "Context.hpp"
-#include "http/AirbitzRequest.hpp"
-#include "login/LoginServer.hpp"
+#include "auth/LoginServer.hpp"
 #include "json/JsonObject.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"

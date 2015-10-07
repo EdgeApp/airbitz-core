@@ -6,7 +6,7 @@
 #ifndef ABCD_HTTP_HTTP_AIRBITZ_HPP
 #define ABCD_HTTP_HTTP_AIRBITZ_HPP
 
-#include "HttpRequest.hpp"
+#include "../http/HttpRequest.hpp"
 
 namespace abcd {
 

@@ -40,6 +40,7 @@
 #include "../abcd/account/AccountSettings.hpp"
 #include "../abcd/account/AccountCategories.hpp"
 #include "../abcd/account/PluginData.hpp"
+#include "../abcd/auth/LoginServer.hpp"
 #include "../abcd/bitcoin/Testnet.hpp"
 #include "../abcd/bitcoin/Text.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
@@ -54,7 +55,6 @@
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
-#include "../abcd/login/LoginServer.hpp"
 #include "../abcd/login/Otp.hpp"
 #include "../abcd/spend/PaymentProto.hpp"
 #include "../abcd/spend/Spend.hpp"
@@ -209,7 +209,7 @@ tABC_CC ABC_AccountAvailable(const char *szUserName,
 
     {
         ABC_GET_LOBBY();
-        ABC_CHECK_RET(ABC_LoginServerAvailable(*lobby, pError));
+        ABC_CHECK_NEW(loginServerAvailable(*lobby));
     }
 
 exit:
@@ -2503,19 +2503,18 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         }
 
         // Get the server keys:
-        AutoU08Buf LP1;
-        ABC_CHECK_RET(ABC_LoginGetServerKey(account->login, &LP1, pError));
+        DataChunk authKey;      // Unlocks the server
+        ABC_CHECK_NEW(account->login.authKey(authKey));
 
         // Has the password changed?
-        tABC_Error error;
         LoginPackage loginPackage;
-        cc = ABC_LoginServerGetLoginPackage(account->login.lobby, LP1, U08Buf(), loginPackage, &error);
+        Status s = loginServerGetLoginPackage(account->login.lobby, authKey, DataChunk(), loginPackage);
 
-        if (cc == ABC_CC_InvalidOTP)
+        if (s.value() == ABC_CC_InvalidOTP)
         {
-            ABC_CHECK_RET(cc);
+            ABC_RET_ERROR(s.value(), s.message().c_str());
         }
-        else if (cc == ABC_CC_BadPassword)
+        else if (s.value() == ABC_CC_BadPassword)
         {
             if (fAsyncBitCoinEventCallback)
             {
@@ -2530,6 +2529,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         }
 
         // Non-critical general information update:
+        tABC_Error error;
         ABC_GeneralUpdateInfo(&error);
     }
 
@@ -2965,7 +2965,7 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
         std::shared_ptr<Account> account;
         cacheAccount(account, szUserName);
 
-        ABC_CHECK_RET(ABC_LoginServerUploadLogs(account.get(), pError));
+        ABC_CHECK_NEW(loginServerUploadLogs(account.get()));
     }
 
 exit:

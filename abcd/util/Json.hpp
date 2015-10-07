@@ -32,8 +32,6 @@ void *ABC_UtilJanssonSecureMalloc(size_t size);
 
 void ABC_UtilJanssonSecureFree(void *ptr);
 
-char *ABC_UtilStringFromJSONObject(const json_t *pJSON_Data, size_t flags);
-
 } // namespace abcd
 
 #endif
