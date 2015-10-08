@@ -1,15 +1,12 @@
 depends="libsodium"
 inherit lib
 
-version="4.0.5"
+version="4.1.3"
 source="https://github.com/zeromq/cppzmq.git#ac705f604701e2ca1643fa31bae240f9da8b9b9a
-        http://download.zeromq.org/zeromq-$version.tar.gz#a664ec63661a848ef46114029156a0a6006feecd"
+        http://download.zeromq.org/zeromq-$version.tar.gz#b7185724f2fd56d0face50047757ac2a04d26ca4"
 
 build() {
     cd zeromq-$version
-
-    echo Patching...
-    patch -p1 < $recipe_dir/notest.patch
 
     echo Building...
     ./autogen.sh
