@@ -10,23 +10,25 @@
 
 namespace abcd {
 
+std::ostream &operator<<(std::ostream &output, const ErrorLocation &s)
+{
+    output << s.file << ":" << s.line << ": " << s.function;
+    return output;
+}
+
 Status::Status() :
-    value_(ABC_CC_Ok),
-    line_(0)
+    value_(ABC_CC_Ok)
 {
 }
 
-Status::Status(tABC_CC value, std::string message,
-    const char *file, const char *function, size_t line) :
+Status::Status(tABC_CC value, std::string message, ErrorLocation here):
     value_(value),
-    message_(message),
-    file_(file),
-    function_(function),
-    line_(line)
+    message_(message)
 {
+    backtrace_.push_back(here);
 }
 
-void Status::toError(tABC_Error &error)
+void Status::toError(tABC_Error &error, ErrorLocation here) const
 {
     std::stringstream s;
     s << *this;
@@ -34,16 +36,16 @@ void Status::toError(tABC_Error &error)
 
     error.code = value_;
     strncpy(error.szDescription, message_.c_str(), ABC_MAX_STRING_LENGTH);
-    strncpy(error.szSourceFunc, function_, ABC_MAX_STRING_LENGTH);
-    strncpy(error.szSourceFile, file_, ABC_MAX_STRING_LENGTH);
-    error.nSourceLine = line_;
+    strncpy(error.szSourceFunc, here.function, ABC_MAX_STRING_LENGTH);
+    strncpy(error.szSourceFile, here.file, ABC_MAX_STRING_LENGTH);
+    error.nSourceLine = here.line;
 
     error.szDescription[ABC_MAX_STRING_LENGTH] = 0;
     error.szSourceFunc[ABC_MAX_STRING_LENGTH] = 0;
     error.szSourceFile[ABC_MAX_STRING_LENGTH] = 0;
 }
 
-Status Status::fromError(const tABC_Error &error)
+Status Status::fromError(const tABC_Error &error, ErrorLocation here)
 {
     static char file[ABC_MAX_STRING_LENGTH + 1];
     static char function[ABC_MAX_STRING_LENGTH + 1];
@@ -51,16 +53,23 @@ Status Status::fromError(const tABC_Error &error)
     strncpy(function, error.szSourceFunc, ABC_MAX_STRING_LENGTH);
     file[ABC_MAX_STRING_LENGTH] = 0;
     function[ABC_MAX_STRING_LENGTH] = 0;
+    ErrorLocation location{function, file, static_cast<size_t>(error.nSourceLine)};
 
-    return Status(error.code, error.szDescription, \
-        file, function, error.nSourceLine); \
+    return Status(error.code, error.szDescription, location).at(here);
+}
+
+Status &
+Status::at(ErrorLocation here)
+{
+    backtrace_.push_back(here);
+    return *this;
 }
 
 std::ostream &operator<<(std::ostream &output, const Status &s)
 {
-    output <<
-        s.file() << ":" << s.line() << ": " << s.function() <<
-        " returned error " << s.value() << " (" << s.message() << ")";
+    output << "Error " << s.value() << " (" << s.message() << ")";
+    for (const auto &i: s.backtrace())
+        output << std::endl << "  at " << i;
     return output;
 }
 

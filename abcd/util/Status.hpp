@@ -7,10 +7,27 @@
 
 // We need tABC_CC and tABC_Error:
 #include "../../src/ABC.h"
+#include <list>
 #include <ostream>
 #include <string>
 
 namespace abcd {
+
+/**
+ * A source location for reporting errors.
+ * The members can be plain pointers,
+ * since the strings are statically allocated by the compiler.
+ */
+struct ErrorLocation
+{
+    const char *function;
+    const char *file;
+    size_t line;
+};
+
+std::ostream &operator<<(std::ostream &output, const ErrorLocation &s);
+
+#define ABC_HERE() ErrorLocation{__FUNCTION__, __FILE__, __LINE__}
 
 /**
  * Describes the results of calling a core function,
@@ -27,15 +44,12 @@ public:
     /**
      * Constructs an error status.
      */
-    Status(tABC_CC value, std::string message,
-        const char *file, const char *function, size_t line);
+    Status(tABC_CC value, std::string message, ErrorLocation here);
 
     // Read accessors:
     tABC_CC value()             const { return value_; }
     std::string message()       const { return message_; }
-    std::string file()          const { return file_; }
-    std::string function()      const { return function_; }
-    size_t line()               const { return line_; }
+    const std::list<ErrorLocation> &backtrace() const { return backtrace_; }
 
     /**
      * Returns true if the status code represents success.
@@ -45,22 +59,25 @@ public:
     /**
      * Unpacks this status into a tABC_Error structure.
      */
-    void toError(tABC_Error &error);
+    void toError(tABC_Error &error, ErrorLocation here) const;
 
     /**
      * Converts a tABC_Error structure into a Status.
      */
-    static Status fromError(const tABC_Error &error);
+    static Status fromError(const tABC_Error &error, ErrorLocation here);
+
+    /**
+     * Adds a source location to the backtrace.
+     */
+    Status &
+    at(ErrorLocation here);
 
 private:
     // Error information:
     tABC_CC value_;
     std::string message_;
 
-    // Error location:
-    const char *file_;
-    const char *function_;
-    size_t line_;
+    std::list<ErrorLocation> backtrace_;
 };
 
 std::ostream &operator<<(std::ostream &output, const Status &s);
@@ -69,7 +86,7 @@ std::ostream &operator<<(std::ostream &output, const Status &s);
  * Constructs an error status using the current source location.
  */
 #define ABC_ERROR(value, message) \
-    Status(value, message, __FILE__, __FUNCTION__, __LINE__)
+    Status(value, message, ABC_HERE())
 
 /**
  * Checks a status code, and returns if it represents an error.
@@ -78,7 +95,7 @@ std::ostream &operator<<(std::ostream &output, const Status &s);
     do { \
         Status ABC_status = (f); \
         if (!ABC_status) \
-            return ABC_status; \
+            return ABC_status.at(ABC_HERE()); \
     } while (false)
 
 /**
@@ -91,7 +108,7 @@ std::ostream &operator<<(std::ostream &output, const Status &s);
         error.code = ABC_CC_Ok; \
         cc = f; \
         if (ABC_CC_Ok != cc) \
-            return Status::fromError(error); \
+            return Status::fromError(error, ABC_HERE()); \
     } while (false)
 
 /**
@@ -101,7 +118,7 @@ std::ostream &operator<<(std::ostream &output, const Status &s);
     do { \
         Status ABC_status = (f); \
         if (!ABC_status) { \
-            ABC_status.toError(*pError); \
+            ABC_status.toError(*pError, ABC_HERE()); \
             cc = ABC_status.value(); \
             goto exit; \
         } \

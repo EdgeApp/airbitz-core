@@ -982,9 +982,7 @@ tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
         }
         else
         {
-            s.toError(*pError);
-            cc = s.value();
-            goto exit;
+            ABC_CHECK_NEW(s);
         }
     }
 
