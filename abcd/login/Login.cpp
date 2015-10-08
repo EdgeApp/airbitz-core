@@ -23,125 +23,130 @@ Status
 Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
     const LoginPackage &loginPackage)
 {
-    DataChunk syncKey;
-    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey, dataKey));
-    ABC_CHECK(lobby.dirCreate());
+    std::shared_ptr<Login> out(new Login(lobby, dataKey));
+    ABC_CHECK(out->loadKeys(loginPackage));
 
-    DataChunk rootKey;
+    result = std::move(out);
+    return Status();
+}
+
+Status
+Login::createNew(std::shared_ptr<Login> &result, Lobby &lobby,
+    const char *password)
+{
+    DataChunk dataKey;
+    ABC_CHECK(randomData(dataKey, DATA_KEY_LENGTH));
+    std::shared_ptr<Login> out(new Login(lobby, dataKey));
+    ABC_CHECK(out->createNew(password));
+
+    result = std::move(out);
+    return Status();
+}
+
+std::string
+Login::syncKey() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return base16Encode(syncKey_);
+}
+
+DataChunk
+Login::authKey() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return authKey_;
+}
+
+Status
+Login::authKeySet(DataSlice authKey)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    authKey_ = DataChunk(authKey.begin(), authKey.end());
+    return Status();
+}
+
+Login::Login(Lobby &lobby, DataSlice dataKey):
+    lobby(lobby),
+    parent_(lobby.shared_from_this()),
+    dataKey_(dataKey.begin(), dataKey.end())
+{}
+
+Status
+Login::createNew(const char *password)
+{
+    LoginPackage loginPackage;
+    JsonBox box;
+    JsonSnrp snrp;
+
+    // Set up care package:
+    CarePackage carePackage;
+    ABC_CHECK(snrp.create());
+    ABC_CHECK(carePackage.snrp2Set(snrp));
+
+    // Set up syncKey:
+    ABC_CHECK(randomData(syncKey_, SYNC_KEY_LENGTH));
+    ABC_CHECK(box.encrypt(syncKey_, dataKey_));
+    ABC_CHECK(loginPackage.syncKeyBoxSet(box));
+
+    // Set up authKey (LP1):
+    if (password)
+    {
+        std::string LP = lobby.username() + password;
+
+        // Generate authKey:
+        ABC_CHECK(usernameSnrp().hash(authKey_, LP));
+
+        // We have a password, so use it to encrypt dataKey:
+        DataChunk passwordKey;
+        ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
+        ABC_CHECK(box.encrypt(dataKey_, passwordKey));
+        ABC_CHECK(loginPackage.passwordBoxSet(box));
+    }
+    else
+    {
+        // Generate authKey:
+        ABC_CHECK(randomData(authKey_, scryptDefaultSize));
+    }
+    ABC_CHECK(box.encrypt(authKey_, dataKey_));
+    ABC_CHECK(loginPackage.authKeyBoxSet(box));
+
+    // Create the account and repo on server:
+    ABC_CHECK(loginServerCreate(lobby, authKey_,
+        carePackage, loginPackage, base16Encode(syncKey_)));
+
+    // Set up the on-disk login:
+    ABC_CHECK(lobby.dirCreate());
+    ABC_CHECK(carePackage.save(lobby.carePackageName()));
+    ABC_CHECK(loginPackage.save(lobby.loginPackageName()));
+
+    // Latch the account:
+    ABC_CHECK(loginServerActivate(*this));
+
+    return Status();
+}
+
+Status
+Login::loadKeys(const LoginPackage &loginPackage)
+{
+    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey_, dataKey_));
+    ABC_CHECK(loginPackage.authKeyBox().decrypt(authKey_, dataKey_));
+
+    ABC_CHECK(lobby.dirCreate());
     if (fileExists(lobby.dir() + "tempRootKey.json"))
     {
         JsonBox box;
         ABC_CHECK(box.load(lobby.dir() + "tempRootKey.json"));
-        ABC_CHECK(box.decrypt(rootKey, dataKey));
+        ABC_CHECK(box.decrypt(rootKey_, dataKey_));
     }
     else
     {
         JsonBox box;
-        ABC_CHECK(randomData(rootKey, 256));
-        ABC_CHECK(box.encrypt(rootKey, dataKey));
+        ABC_CHECK(randomData(rootKey_, 256));
+        ABC_CHECK(box.encrypt(rootKey_, dataKey_));
         ABC_CHECK(box.save(lobby.dir() + "tempRootKey.json"));
     }
 
-    result.reset(new Login(lobby, rootKey, dataKey, base16Encode(syncKey)));
     return Status();
-}
-
-Login::Login(Lobby &lobby, DataSlice rootKey, DataSlice dataKey, std::string syncKey):
-    lobby(lobby),
-    parent_(lobby.shared_from_this()),
-    rootKey_(rootKey.begin(), rootKey.end()),
-    dataKey_(dataKey.begin(), dataKey.end()),
-    syncKey_(syncKey)
-{}
-
-Status
-Login::authKey(DataChunk &result) const
-{
-    LoginPackage loginPackage;
-    ABC_CHECK(loginPackage.load(lobby.loginPackageName()));
-    ABC_CHECK(loginPackage.authKeyBox().decrypt(result, dataKey()));
-    return Status();
-}
-
-/**
- * Creates a new login account, both on-disk and on the server.
- *
- * @param szUserName    The user name for the account.
- * @param szPassword    The password for the account.
- * @param ppSelf        The returned login object.
- */
-tABC_CC ABC_LoginCreate(std::shared_ptr<Login> &result,
-                        Lobby &lobby,
-                        const char *szPassword,
-                        tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    std::shared_ptr<Login> out;
-    CarePackage carePackage;
-    LoginPackage loginPackage;
-    DataChunk authKey;          // Unlocks the server
-    DataChunk passwordKey;      // Unlocks dataKey
-    DataChunk dataKey;          // Unlocks the account
-    DataChunk syncKey;
-    JsonBox box;
-    JsonSnrp snrp;
-
-    // Generate SNRP2:
-    ABC_CHECK_NEW(snrp.create());
-    ABC_CHECK_NEW(carePackage.snrp2Set(snrp));
-
-    // Generate MK:
-    ABC_CHECK_NEW(randomData(dataKey, DATA_KEY_LENGTH));
-
-    // Generate SyncKey:
-    ABC_CHECK_NEW(randomData(syncKey, SYNC_KEY_LENGTH));
-
-    if (szPassword)
-    {
-        std::string LP = lobby.username() + szPassword;
-
-        // Generate authKey:
-        ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP));
-
-        // Set up EMK_LP2:
-        ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP));
-        ABC_CHECK_NEW(box.encrypt(dataKey, passwordKey));
-        ABC_CHECK_NEW(loginPackage.passwordBoxSet(box));
-    }
-    else
-    {
-        // Generate authKey:
-        ABC_CHECK_NEW(randomData(authKey, scryptDefaultSize));
-    }
-
-    // Encrypt authKey:
-    ABC_CHECK_NEW(box.encrypt(authKey, dataKey));
-    ABC_CHECK_NEW(loginPackage.authKeyBoxSet(box));
-
-    // Set up ESyncKey:
-    ABC_CHECK_NEW(box.encrypt(syncKey, dataKey));
-    ABC_CHECK_NEW(loginPackage.syncKeyBoxSet(box));
-
-    // Create the account and repo on server:
-    ABC_CHECK_NEW(loginServerCreate(lobby, authKey,
-        carePackage, loginPackage, base16Encode(syncKey)));
-
-    // Create the Login object:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
-
-    // Latch the account:
-    ABC_CHECK_NEW(loginServerActivate(*out));
-
-    // Set up the on-disk login:
-    ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()));
-    ABC_CHECK_NEW(loginPackage.save(lobby.loginPackageName()));
-
-    // Assign the result:
-    result = std::move(out);
-
-exit:
-    return cc;
 }
 
 } // namespace abcd

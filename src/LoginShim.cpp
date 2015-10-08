@@ -88,7 +88,7 @@ cacheLoginNew(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginCreate(gLoginCache, *lobby, szPassword, &error));
+        ABC_CHECK(Login::createNew(gLoginCache, *lobby, szPassword));
     }
 
     result = gLoginCache;

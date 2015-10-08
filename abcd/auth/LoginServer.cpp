@@ -178,9 +178,7 @@ Status
 ServerRequestJson::setup(const Login &login)
 {
     ABC_CHECK(setup(login.lobby));
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
-    ABC_CHECK(authKeySet(base64Encode(authKey)));
+    ABC_CHECK(authKeySet(base64Encode(login.authKey())));
     return Status();
 }
 
@@ -274,13 +272,9 @@ loginServerChangePassword(const Login &login,
     const CarePackage &carePackage, const LoginPackage &loginPackage)
 {
     const auto url = ABC_SERVER_ROOT "/account/password/update";
-
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
-
     JsonPtr json(json_pack("{ss, ss, ss, ss, ss}",
         ABC_SERVER_JSON_L1_FIELD,      base64Encode(login.lobby.authId()).c_str(),
-        ABC_SERVER_JSON_LP1_FIELD,     base64Encode(authKey).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD,     base64Encode(login.authKey()).c_str(),
         ABC_SERVER_JSON_NEW_LP1_FIELD, base64Encode(newLP1).c_str(),
         ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  carePackage.encode().c_str(),
         ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode().c_str()));
@@ -387,9 +381,6 @@ loginServerUpdatePinPackage(const Login &login,
 {
     const auto url = ABC_SERVER_ROOT "/account/pinpackage/update";
 
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
-
     // format the ali
     char szALI[DATETIME_LENGTH];
     strftime(szALI, DATETIME_LENGTH, "%Y-%m-%dT%H:%M:%S", gmtime(&ali));
@@ -397,7 +388,7 @@ loginServerUpdatePinPackage(const Login &login,
     // Encode those:
     JsonPtr json(json_pack("{ss, ss, ss, ss, ss, ss}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(login.lobby.authId()).c_str(),
-        ABC_SERVER_JSON_LP1_FIELD, base64Encode(authKey).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(login.authKey()).c_str(),
         ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
         ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1).c_str(),
         JSON_ACCT_PIN_PACKAGE, pinPackage.c_str(),
@@ -415,20 +406,16 @@ loginServerUpdatePinPackage(const Login &login,
 Status
 loginServerWalletCreate(const Login &login, const std::string &syncKey)
 {
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
-    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, authKey, syncKey,
-        "wallet/create", &error));
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, login.authKey(),
+        syncKey, "wallet/create", &error));
     return Status();
 }
 
 Status
 loginServerWalletActivate(const Login &login, const std::string &syncKey)
 {
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
-    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, authKey, syncKey,
-        "wallet/activate", &error));
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, login.authKey(),
+        syncKey, "wallet/activate", &error));
     return Status();
 }
 
@@ -464,12 +451,9 @@ Status
 loginServerOtpEnable(const Login &login, const std::string &otpToken, const long timeout)
 {
     const auto url = ABC_SERVER_ROOT "/otp/on";
-
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
     JsonPtr json(json_pack("{sssssssi}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(login.lobby.authId()).c_str(),
-        ABC_SERVER_JSON_LP1_FIELD, base64Encode(authKey).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(login.authKey()).c_str(),
         ABC_SERVER_JSON_OTP_SECRET_FIELD, otpToken.c_str(),
         ABC_SERVER_JSON_OTP_TIMEOUT, timeout));
 
@@ -639,9 +623,6 @@ loginServerUploadLogs(const Account *account)
 
     if (account)
     {
-        DataChunk authKey;      // Unlocks the server
-        ABC_CHECK(account->login.authKey(authKey));
-
         JsonArray jsonArray;
         auto ids = account->wallets.list();
         for (const auto &id: ids)
@@ -657,7 +638,7 @@ loginServerUploadLogs(const Account *account)
 
         json.reset(json_pack("{ss, ss, ss}",
             ABC_SERVER_JSON_L1_FIELD, base64Encode(account->login.lobby.authId()).c_str(),
-            ABC_SERVER_JSON_LP1_FIELD, base64Encode(authKey).c_str(),
+            ABC_SERVER_JSON_LP1_FIELD, base64Encode(account->login.authKey()).c_str(),
             "log", base64Encode(logData).c_str()));
         if (jsonArray)
             json_object_set(json.get(), "watchers", jsonArray.get());

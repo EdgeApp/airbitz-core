@@ -137,7 +137,7 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     ABC_CHECK_NEW(loginPackage.load(login.lobby.loginPackageName()));
 
     // Load the old keys:
-    ABC_CHECK_NEW(login.authKey(authKey));
+    authKey = login.authKey();
     if (loginPackage.ELRA1())
     {
         ABC_CHECK_NEW(loginPackage.ELRA1().decrypt(oldLRA1, login.dataKey()));
@@ -162,6 +162,7 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
         newAuthKey, oldLRA1, carePackage, loginPackage));
 
     // Change the on-disk login:
+    ABC_CHECK_NEW(login.authKeySet(newAuthKey));
     ABC_CHECK_NEW(carePackage.save(login.lobby.carePackageName()));
     ABC_CHECK_NEW(loginPackage.save(login.lobby.loginPackageName()));
 

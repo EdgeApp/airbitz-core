@@ -123,7 +123,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_NEW(loginPackage.load(login.lobby.loginPackageName()));
 
     // Load the old keys:
-    ABC_CHECK_NEW(login.authKey(authKey));
+    authKey = login.authKey();
 
     // Update scrypt parameters:
     ABC_CHECK_NEW(snrp.create());
