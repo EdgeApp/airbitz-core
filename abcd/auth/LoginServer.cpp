@@ -267,6 +267,32 @@ loginServerAvailable(const Lobby &lobby)
 }
 
 Status
+loginServerAccountUpgrade(const Login &login,
+    JsonPtr rootKeyBox, JsonPtr mnemonicBox, JsonPtr dataKeyBox)
+{
+    const auto url = ABC_SERVER_ROOT "/account/upgrade";
+    struct RequestJson:
+        public ServerRequestJson
+    {
+        ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonPtr)
+        ABC_JSON_VALUE(mnemonicBox, "mnemonicBox", JsonPtr)
+        ABC_JSON_VALUE(dataKeyBox, "syncDataKeyBox", JsonPtr)
+    } json;
+    ABC_CHECK(json.setup(login));
+    ABC_CHECK(json.rootKeyBoxSet(rootKeyBox));
+    ABC_CHECK(json.mnemonicBoxSet(mnemonicBox));
+    ABC_CHECK(json.dataKeyBoxSet(dataKeyBox));
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply.body));
+    ABC_CHECK(replyJson.ok());
+
+    return Status();
+}
+
+Status
 loginServerChangePassword(const Login &login,
     DataSlice newLP1, DataSlice newLRA1,
     const CarePackage &carePackage, const LoginPackage &loginPackage)
@@ -320,7 +346,7 @@ loginServerGetCarePackage(const Lobby &lobby, CarePackage &result)
 
 Status
 loginServerGetLoginPackage(const Lobby &lobby,
-    DataSlice LP1, DataSlice LRA1, LoginPackage &result)
+    DataSlice LP1, DataSlice LRA1, LoginPackage &result, JsonPtr &rootKeyBox)
 {
     const auto url = ABC_SERVER_ROOT "/account/loginpackage/get";
     ServerRequestJson json;
@@ -341,10 +367,12 @@ loginServerGetLoginPackage(const Lobby &lobby,
     {
         ABC_JSON_CONSTRUCTORS(ResultJson, JsonObject)
         ABC_JSON_STRING(package, "login_package", nullptr)
+        ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonPtr)
     } resultJson(replyJson.results());
 
     ABC_CHECK(resultJson.packageOk());
     ABC_CHECK(result.decode(resultJson.package()));
+    rootKeyBox = resultJson.rootKeyBox();
     return Status();
 }
 

@@ -57,6 +57,7 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     std::shared_ptr<Login> out;
     CarePackage carePackage;
     LoginPackage loginPackage;
+    JsonPtr rootKeyBox;
     DataChunk authKey;          // Unlocks the server
     DataChunk passwordKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
@@ -68,7 +69,7 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP));
     ABC_CHECK_NEW(loginServerGetLoginPackage(lobby,
-        authKey, U08Buf(), loginPackage));
+        authKey, U08Buf(), loginPackage, rootKeyBox));
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP));

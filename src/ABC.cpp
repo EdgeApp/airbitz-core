@@ -2502,8 +2502,9 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
 
         // Has the password changed?
         LoginPackage loginPackage;
+        JsonPtr rootKeyBox;
         Status s = loginServerGetLoginPackage(account->login.lobby,
-            account->login.authKey(), DataChunk(), loginPackage);
+            account->login.authKey(), DataChunk(), loginPackage, rootKeyBox);
 
         if (s.value() == ABC_CC_InvalidOTP)
         {
