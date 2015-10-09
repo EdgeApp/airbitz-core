@@ -124,7 +124,7 @@ Lobby::init(const std::string &username)
     // Create authId:
     // TODO: Make this lazy!
     ABC_CHECK(usernameSnrp().hash(authId_, username_));
-    ABC_DebugLog("authId: %s", base16Encode(authId()).c_str());
+    ABC_DebugLog("authId: %s", base64Encode(authId()).c_str());
 
     // Load the OTP key, if possible:
     OtpFile file;
