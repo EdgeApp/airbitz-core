@@ -2500,13 +2500,11 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
             ABC_FREE_STR(info.szDescription);
         }
 
-        // Get the server keys:
-        DataChunk authKey;      // Unlocks the server
-        ABC_CHECK_NEW(account->login.authKey(authKey));
-
         // Has the password changed?
         LoginPackage loginPackage;
-        Status s = loginServerGetLoginPackage(account->login.lobby, authKey, DataChunk(), loginPackage);
+        JsonPtr rootKeyBox;
+        Status s = loginServerGetLoginPackage(account->login.lobby,
+            account->login.authKey(), DataChunk(), loginPackage, rootKeyBox);
 
         if (s.value() == ABC_CC_InvalidOTP)
         {

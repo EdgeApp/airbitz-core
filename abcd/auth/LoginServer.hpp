@@ -57,6 +57,16 @@ Status
 loginServerAvailable(const Lobby &lobby);
 
 /**
+ * Saves a rootKey into the account.
+ * @param rootKeyBox The new rootKey, encrypted with dataKey
+ * @param mnemonicBox The new mnemonic, encrypted with infoKey
+ * @param dataKeyBox The old dataKey, encrypted with infoKey
+ */
+Status
+loginServerAccountUpgrade(const Login &login,
+    JsonPtr rootKeyBox, JsonPtr mnemonicBox, JsonPtr dataKeyBox);
+
+/**
  * Changes the password for an account on the server.
  */
 Status
@@ -67,9 +77,15 @@ loginServerChangePassword(const Login &login,
 Status
 loginServerGetCarePackage(const Lobby &lobby, CarePackage &result);
 
+/**
+ * Retrieves the LoginPackage for the account.
+ * The caller must supply at least one form of credentials (LP1/LRA1).
+ * @param rootKeyBox Returns the rootKey encrypted with the dataKey,
+ * but only on accounts that have already been upgraded.
+ */
 Status
 loginServerGetLoginPackage(const Lobby &lobby,
-    DataSlice LP1, DataSlice LRA1, LoginPackage &result);
+    DataSlice LP1, DataSlice LRA1, LoginPackage &result, JsonPtr &rootKeyBox);
 
 Status
 loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result);

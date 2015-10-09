@@ -178,9 +178,7 @@ Status
 ServerRequestJson::setup(const Login &login)
 {
     ABC_CHECK(setup(login.lobby));
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
-    ABC_CHECK(authKeySet(base64Encode(authKey)));
+    ABC_CHECK(authKeySet(base64Encode(login.authKey())));
     return Status();
 }
 
@@ -269,18 +267,40 @@ loginServerAvailable(const Lobby &lobby)
 }
 
 Status
+loginServerAccountUpgrade(const Login &login,
+    JsonPtr rootKeyBox, JsonPtr mnemonicBox, JsonPtr dataKeyBox)
+{
+    const auto url = ABC_SERVER_ROOT "/account/upgrade";
+    struct RequestJson:
+        public ServerRequestJson
+    {
+        ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonPtr)
+        ABC_JSON_VALUE(mnemonicBox, "mnemonicBox", JsonPtr)
+        ABC_JSON_VALUE(dataKeyBox, "syncDataKeyBox", JsonPtr)
+    } json;
+    ABC_CHECK(json.setup(login));
+    ABC_CHECK(json.rootKeyBoxSet(rootKeyBox));
+    ABC_CHECK(json.mnemonicBoxSet(mnemonicBox));
+    ABC_CHECK(json.dataKeyBoxSet(dataKeyBox));
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply.body));
+    ABC_CHECK(replyJson.ok());
+
+    return Status();
+}
+
+Status
 loginServerChangePassword(const Login &login,
     DataSlice newLP1, DataSlice newLRA1,
     const CarePackage &carePackage, const LoginPackage &loginPackage)
 {
     const auto url = ABC_SERVER_ROOT "/account/password/update";
-
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
-
     JsonPtr json(json_pack("{ss, ss, ss, ss, ss}",
         ABC_SERVER_JSON_L1_FIELD,      base64Encode(login.lobby.authId()).c_str(),
-        ABC_SERVER_JSON_LP1_FIELD,     base64Encode(authKey).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD,     base64Encode(login.authKey()).c_str(),
         ABC_SERVER_JSON_NEW_LP1_FIELD, base64Encode(newLP1).c_str(),
         ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  carePackage.encode().c_str(),
         ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode().c_str()));
@@ -326,7 +346,7 @@ loginServerGetCarePackage(const Lobby &lobby, CarePackage &result)
 
 Status
 loginServerGetLoginPackage(const Lobby &lobby,
-    DataSlice LP1, DataSlice LRA1, LoginPackage &result)
+    DataSlice LP1, DataSlice LRA1, LoginPackage &result, JsonPtr &rootKeyBox)
 {
     const auto url = ABC_SERVER_ROOT "/account/loginpackage/get";
     ServerRequestJson json;
@@ -347,10 +367,13 @@ loginServerGetLoginPackage(const Lobby &lobby,
     {
         ABC_JSON_CONSTRUCTORS(ResultJson, JsonObject)
         ABC_JSON_STRING(package, "login_package", nullptr)
+        ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonPtr)
     } resultJson(replyJson.results());
 
     ABC_CHECK(resultJson.packageOk());
     ABC_CHECK(result.decode(resultJson.package()));
+    if (json_is_object(resultJson.rootKeyBox().get()))
+        rootKeyBox = resultJson.rootKeyBox();
     return Status();
 }
 
@@ -387,9 +410,6 @@ loginServerUpdatePinPackage(const Login &login,
 {
     const auto url = ABC_SERVER_ROOT "/account/pinpackage/update";
 
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
-
     // format the ali
     char szALI[DATETIME_LENGTH];
     strftime(szALI, DATETIME_LENGTH, "%Y-%m-%dT%H:%M:%S", gmtime(&ali));
@@ -397,7 +417,7 @@ loginServerUpdatePinPackage(const Login &login,
     // Encode those:
     JsonPtr json(json_pack("{ss, ss, ss, ss, ss, ss}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(login.lobby.authId()).c_str(),
-        ABC_SERVER_JSON_LP1_FIELD, base64Encode(authKey).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(login.authKey()).c_str(),
         ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
         ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1).c_str(),
         JSON_ACCT_PIN_PACKAGE, pinPackage.c_str(),
@@ -415,20 +435,16 @@ loginServerUpdatePinPackage(const Login &login,
 Status
 loginServerWalletCreate(const Login &login, const std::string &syncKey)
 {
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
-    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, authKey, syncKey,
-        "wallet/create", &error));
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, login.authKey(),
+        syncKey, "wallet/create", &error));
     return Status();
 }
 
 Status
 loginServerWalletActivate(const Login &login, const std::string &syncKey)
 {
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
-    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, authKey, syncKey,
-        "wallet/activate", &error));
+    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, login.authKey(),
+        syncKey, "wallet/activate", &error));
     return Status();
 }
 
@@ -464,12 +480,9 @@ Status
 loginServerOtpEnable(const Login &login, const std::string &otpToken, const long timeout)
 {
     const auto url = ABC_SERVER_ROOT "/otp/on";
-
-    DataChunk authKey;
-    ABC_CHECK(login.authKey(authKey));
     JsonPtr json(json_pack("{sssssssi}",
         ABC_SERVER_JSON_L1_FIELD, base64Encode(login.lobby.authId()).c_str(),
-        ABC_SERVER_JSON_LP1_FIELD, base64Encode(authKey).c_str(),
+        ABC_SERVER_JSON_LP1_FIELD, base64Encode(login.authKey()).c_str(),
         ABC_SERVER_JSON_OTP_SECRET_FIELD, otpToken.c_str(),
         ABC_SERVER_JSON_OTP_TIMEOUT, timeout));
 
@@ -639,9 +652,6 @@ loginServerUploadLogs(const Account *account)
 
     if (account)
     {
-        DataChunk authKey;      // Unlocks the server
-        ABC_CHECK(account->login.authKey(authKey));
-
         JsonArray jsonArray;
         auto ids = account->wallets.list();
         for (const auto &id: ids)
@@ -657,7 +667,7 @@ loginServerUploadLogs(const Account *account)
 
         json.reset(json_pack("{ss, ss, ss}",
             ABC_SERVER_JSON_L1_FIELD, base64Encode(account->login.lobby.authId()).c_str(),
-            ABC_SERVER_JSON_LP1_FIELD, base64Encode(authKey).c_str(),
+            ABC_SERVER_JSON_LP1_FIELD, base64Encode(account->login.authKey()).c_str(),
             "log", base64Encode(logData).c_str()));
         if (jsonArray)
             json_object_set(json.get(), "watchers", jsonArray.get());

@@ -44,6 +44,7 @@ public:
 
     std::string carePackageName() { return dir() + "CarePackage.json"; }
     std::string loginPackageName() { return dir() + "LoginPackage.json"; }
+    std::string rootKeyPath() { return dir() + "RootKey.json"; }
 
     /**
      * Creates a directory for the account if one does not already exist.

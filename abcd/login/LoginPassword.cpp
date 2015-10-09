@@ -39,7 +39,7 @@ tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(loginPackage.passwordBox().decrypt(dataKey, passwordKey));
 
     // Decrypt SyncKey:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, JsonBox(), true));
     result = std::move(out);
 
 exit:
@@ -57,6 +57,7 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     std::shared_ptr<Login> out;
     CarePackage carePackage;
     LoginPackage loginPackage;
+    JsonPtr rootKeyBox;
     DataChunk authKey;          // Unlocks the server
     DataChunk passwordKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
@@ -68,14 +69,14 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP));
     ABC_CHECK_NEW(loginServerGetLoginPackage(lobby,
-        authKey, U08Buf(), loginPackage));
+        authKey, U08Buf(), loginPackage, rootKeyBox));
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP));
     ABC_CHECK_NEW(loginPackage.passwordBox().decrypt(dataKey, passwordKey));
 
     // Decrypt SyncKey:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, rootKeyBox, false));
 
     // Set up the on-disk login:
     ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()));
@@ -137,7 +138,7 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
     ABC_CHECK_NEW(loginPackage.load(login.lobby.loginPackageName()));
 
     // Load the old keys:
-    ABC_CHECK_NEW(login.authKey(authKey));
+    authKey = login.authKey();
     if (loginPackage.ELRA1())
     {
         ABC_CHECK_NEW(loginPackage.ELRA1().decrypt(oldLRA1, login.dataKey()));
@@ -162,6 +163,7 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
         newAuthKey, oldLRA1, carePackage, loginPackage));
 
     // Change the on-disk login:
+    ABC_CHECK_NEW(login.authKeySet(newAuthKey));
     ABC_CHECK_NEW(carePackage.save(login.lobby.carePackageName()));
     ABC_CHECK_NEW(loginPackage.save(login.lobby.loginPackageName()));
 

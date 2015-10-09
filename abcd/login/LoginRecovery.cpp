@@ -67,6 +67,7 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     std::shared_ptr<Login> out;
     CarePackage carePackage;
     LoginPackage loginPackage;
+    JsonPtr rootKeyBox;
     DataChunk recoveryAuthKey;  // Unlocks the server
     DataChunk recoveryKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
@@ -78,14 +79,14 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(recoveryAuthKey, LRA));
     ABC_CHECK_NEW(loginServerGetLoginPackage(lobby,
-        U08Buf(), recoveryAuthKey, loginPackage));
+        U08Buf(), recoveryAuthKey, loginPackage, rootKeyBox));
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp3().hash(recoveryKey, LRA));
     ABC_CHECK_NEW(loginPackage.recoveryBox().decrypt(dataKey, recoveryKey));
 
     // Decrypt SyncKey:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, rootKeyBox, false));
 
     // Set up the on-disk login:
     ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()));
@@ -123,7 +124,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_NEW(loginPackage.load(login.lobby.loginPackageName()));
 
     // Load the old keys:
-    ABC_CHECK_NEW(login.authKey(authKey));
+    authKey = login.authKey();
 
     // Update scrypt parameters:
     ABC_CHECK_NEW(snrp.create());
