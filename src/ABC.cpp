@@ -173,6 +173,11 @@ void ABC_Terminate()
     }
 }
 
+void ABC_Log(const char *szMessage)
+{
+    ABC_DebugLog("%s", szMessage);
+}
+
 /**
  * Create a new account.
  *
