@@ -13,7 +13,6 @@
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
-#include "../abcd/login/LoginServer.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include <map>
 #include <mutex>
@@ -89,7 +88,7 @@ cacheLoginNew(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginCreate(gLoginCache, *lobby, szPassword, &error));
+        ABC_CHECK(Login::createNew(gLoginCache, *lobby, szPassword));
     }
 
     result = gLoginCache;

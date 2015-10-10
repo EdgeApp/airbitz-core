@@ -8,18 +8,14 @@
 #include "Otp.hpp"
 #include "Lobby.hpp"
 #include "Login.hpp"
-#include "LoginServer.hpp"
+#include "../auth/LoginServer.hpp"
 
 namespace abcd {
 
 Status
 otpAuthGet(Login &login, bool &enabled, long &timeout)
 {
-    AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpStatus(login.lobby, LP1, &enabled, &timeout, &error));
-
-    return Status();
+    return loginServerOtpStatus(login, enabled, timeout);
 }
 
 Status
@@ -33,10 +29,8 @@ otpAuthSet(Login &login, long timeout)
         login.lobby.otpKeySet(random);
     }
 
-    AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpEnable(login.lobby, LP1,
-        login.lobby.otpKey()->encodeBase32().c_str(), timeout, &error));
+    ABC_CHECK(loginServerOtpEnable(login,
+        login.lobby.otpKey()->encodeBase32(), timeout));
 
     return Status();
 }
@@ -44,11 +38,7 @@ otpAuthSet(Login &login, long timeout)
 Status
 otpAuthRemove(Login &login)
 {
-    AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpDisable(login.lobby, LP1, &error));
-
-    return Status();
+    return loginServerOtpDisable(login);
 }
 
 Status
@@ -67,7 +57,7 @@ otpResetGet(std::list<std::string> &result,
 
     // Make the request:
     std::list<bool> flags;
-    ABC_CHECK_OLD(ABC_LoginServerOtpPending(authIds, flags, &error));
+    ABC_CHECK(loginServerOtpPending(authIds, flags));
 
     // Smush the results:
     result.clear();
@@ -86,19 +76,13 @@ otpResetGet(std::list<std::string> &result,
 Status
 otpResetSet(Lobby &lobby)
 {
-    ABC_CHECK_OLD(ABC_LoginServerOtpReset(lobby, &error));
-
-    return Status();
+    return loginServerOtpReset(lobby);
 }
 
 Status
 otpResetRemove(Login &login)
 {
-    AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKey(login, &LP1, &error));
-    ABC_CHECK_OLD(ABC_LoginServerOtpResetCancelPending(login.lobby, LP1, &error));
-
-    return Status();
+    return loginServerOtpResetCancelPending(login);
 }
 
 } // namespace abcd

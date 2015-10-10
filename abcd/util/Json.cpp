@@ -148,40 +148,4 @@ void ABC_UtilJanssonSecureFree(void *ptr)
     }
 }
 
-/**
- * Generates the JSON string for a jansson object.
- * Note: the given string is allocated and must be free'd by the caller
- *
- * The reason for this function is because we have overridden the alloc and
- * free for jansson so that we can memset it on free.
- * In order to do this, the size of the data must be stored in the beginning
- * of the allocated data.
- * Therefore, any memory allocated by jansson must be free'd with the matching
- * free function.
- * This includes json_dumps and we don't want to make users of strings that are
- * generated via json_dumps to have to know this. They should be able to treat
- * them as regular strings.
- */
-char *ABC_UtilStringFromJSONObject(const json_t *pJSON_Data, size_t flags)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_Error error;
-    tABC_Error *pError = &error;
-    char *strJanssonJSON = NULL;
-    char *strJSON = NULL;
-
-    ABC_CHECK_NULL(pJSON_Data);
-    strJanssonJSON = json_dumps(pJSON_Data, flags);
-
-    if (strJanssonJSON != NULL)
-    {
-        strJSON = stringCopy(strJanssonJSON);
-    }
-
-exit:
-    ABC_UtilJanssonSecureFree(strJanssonJSON);
-
-    return strJSON;
-}
-
 } // namespace abcd

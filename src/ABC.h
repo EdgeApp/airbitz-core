@@ -513,6 +513,8 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
 void ABC_Terminate();
 
+void ABC_Log(const char *szMessage);
+
 tABC_CC ABC_Version(char **szVersion, tABC_Error *pError);
 
 tABC_CC ABC_IsTestNet(bool *pResult, tABC_Error *pError);

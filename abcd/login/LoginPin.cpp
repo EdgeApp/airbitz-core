@@ -9,7 +9,7 @@
 #include "Lobby.hpp"
 #include "Login.hpp"
 #include "LoginDir.hpp"
-#include "LoginServer.hpp"
+#include "../auth/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
 #include "../json/JsonBox.hpp"
@@ -98,7 +98,7 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     CarePackage carePackage;
     LoginPackage loginPackage;
     PinLocal local;
-    char *              szEPINK         = NULL;
+    std::string EPINK;
     DataChunk pinAuthId;
     DataChunk pinAuthKey;       // Unlocks the server
     DataChunk pinKeyKey;        // Unlocks pinKey
@@ -115,9 +115,8 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
 
     // Get EPINK from the server:
     ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN));
-    ABC_CHECK_RET(ABC_LoginServerGetPinPackage(
-        toU08Buf(pinAuthId), toU08Buf(pinAuthKey), &szEPINK, pError));
-    ABC_CHECK_NEW(pinKeyBox.decode(szEPINK));
+    ABC_CHECK_NEW(loginServerGetPinPackage(pinAuthId, pinAuthKey, EPINK));
+    ABC_CHECK_NEW(pinKeyBox.decode(EPINK));
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp2().hash(pinKeyKey, LPIN));
@@ -125,11 +124,10 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(local.pinBox().decrypt(dataKey, pinKey));
 
     // Create the Login object:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, JsonBox(), true));
     result = std::move(out);
 
 exit:
-    ABC_FREE_STR(szEPINK);
     return cc;
 }
 
@@ -145,7 +143,6 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 
     CarePackage carePackage;
     PinLocal local;
-    AutoU08Buf          LP1;
     DataChunk pinAuthId;
     DataChunk pinAuthKey;       // Unlocks the server
     DataChunk pinKeyKey;        // Unlocks pinKey
@@ -156,7 +153,6 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 
     // Get login stuff:
     ABC_CHECK_NEW(carePackage.load(login.lobby.carePackageName()));
-    ABC_CHECK_RET(ABC_LoginGetServerKey(login, &LP1, pError));
 
     // Set up DID:
     if (!local.load(login.lobby.dir() + PIN_FILENAME) ||
@@ -173,9 +169,9 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 
     // Set up the server:
     ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN));
-    ABC_CHECK_RET(ABC_LoginServerUpdatePinPackage(login.lobby, LP1,
-        toU08Buf(pinAuthId), toU08Buf(pinAuthKey), pinKeyBox.encode(),
-        expires, pError));
+    ABC_CHECK_NEW(loginServerUpdatePinPackage(login,
+        pinAuthId, pinAuthKey, pinKeyBox.encode(),
+        expires));
 
     // Save the local file:
     ABC_CHECK_NEW(local.pinBoxSet(pinBox));

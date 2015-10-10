@@ -194,6 +194,7 @@ Status
 fileSave(DataSlice data, const std::string &filename)
 {
     AutoFileLock lock(gFileMutex);
+    ABC_DebugLog("Writing file %s", filename.c_str());
 
     FILE *fp = fopen(filename.c_str(), "wb");
     if (!fp)

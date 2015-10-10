@@ -9,7 +9,7 @@
 #include "Lobby.hpp"
 #include "Login.hpp"
 #include "LoginDir.hpp"
-#include "LoginServer.hpp"
+#include "../auth/LoginServer.hpp"
 #include "../json/JsonBox.hpp"
 #include "../util/Util.hpp"
 
@@ -31,7 +31,7 @@ tABC_CC ABC_LoginGetRQ(Lobby &lobby,
     DataChunk questions;
 
     // Load CarePackage:
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(lobby, carePackage, pError));
+    ABC_CHECK_NEW(loginServerGetCarePackage(lobby, carePackage));
 
     // Verify that the questions exist:
     ABC_CHECK_ASSERT(carePackage.questionBox(), ABC_CC_NoRecoveryQuestions, "No recovery questions");
@@ -67,25 +67,26 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     std::shared_ptr<Login> out;
     CarePackage carePackage;
     LoginPackage loginPackage;
+    JsonPtr rootKeyBox;
     DataChunk recoveryAuthKey;  // Unlocks the server
     DataChunk recoveryKey;      // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
     std::string LRA = lobby.username() + szRecoveryAnswers;
 
     // Get the CarePackage:
-    ABC_CHECK_RET(ABC_LoginServerGetCarePackage(lobby, carePackage, pError));
+    ABC_CHECK_NEW(loginServerGetCarePackage(lobby, carePackage));
 
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(recoveryAuthKey, LRA));
-    ABC_CHECK_RET(ABC_LoginServerGetLoginPackage(lobby,
-        U08Buf(), toU08Buf(recoveryAuthKey), loginPackage, pError));
+    ABC_CHECK_NEW(loginServerGetLoginPackage(lobby,
+        U08Buf(), recoveryAuthKey, loginPackage, rootKeyBox));
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp3().hash(recoveryKey, LRA));
     ABC_CHECK_NEW(loginPackage.recoveryBox().decrypt(dataKey, recoveryKey));
 
     // Decrypt SyncKey:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, rootKeyBox, false));
 
     // Set up the on-disk login:
     ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()));
@@ -110,7 +111,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
 
     CarePackage carePackage;
     LoginPackage loginPackage;
-    AutoU08Buf oldLP1;
+    DataChunk authKey;          // Unlocks the server
     DataChunk questionKey;      // Unlocks questions
     DataChunk recoveryAuthKey;  // Unlocks the server
     DataChunk recoveryKey;      // Unlocks dataKey
@@ -123,7 +124,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_NEW(loginPackage.load(login.lobby.loginPackageName()));
 
     // Load the old keys:
-    ABC_CHECK_RET(ABC_LoginGetServerKey(login, &oldLP1, pError));
+    authKey = login.authKey();
 
     // Update scrypt parameters:
     ABC_CHECK_NEW(snrp.create());
@@ -149,8 +150,8 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
     ABC_CHECK_NEW(loginPackage.ELRA1Set(box));
 
     // Change the server login:
-    ABC_CHECK_RET(ABC_LoginServerChangePassword(login.lobby, oldLP1,
-        oldLP1, toU08Buf(recoveryAuthKey), carePackage, loginPackage, pError));
+    ABC_CHECK_NEW(loginServerChangePassword(login,
+        authKey, recoveryAuthKey, carePackage, loginPackage));
 
     // Change the on-disk login:
     ABC_CHECK_NEW(carePackage.save(login.lobby.carePackageName()));

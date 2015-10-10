@@ -47,7 +47,7 @@ namespace abcd {
 
 #ifdef DEBUG
 
-#define MAX_LOG_SIZE 102400 // Max size 100 KiB
+#define MAX_LOG_SIZE (1 << 20) // Max size 1 MiB
 
 static std::recursive_mutex gDebugMutex;
 static std::string gLogFilename;

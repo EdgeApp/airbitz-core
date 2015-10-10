@@ -9,12 +9,12 @@
 #include "../Context.hpp"
 #include "../Tx.hpp"
 #include "../account/Account.hpp"
+#include "../auth/LoginServer.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
 #include "../json/JsonObject.hpp"
 #include "../login/Login.hpp"
-#include "../login/LoginServer.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Sync.hpp"
 #include <assert.h>
@@ -203,11 +203,9 @@ Wallet::createNew(const std::string &name, int currency)
 
     // Push the wallet to the server:
     bool dirty = false;
-    AutoU08Buf LP1;
-    ABC_CHECK_OLD(ABC_LoginGetServerKey(account.login, &LP1, &error));
-    ABC_CHECK(LoginServerWalletCreate(account.login.lobby, LP1, syncKey_.c_str()));
+    ABC_CHECK(loginServerWalletCreate(account.login, syncKey_));
     ABC_CHECK(syncRepo(syncDir(), syncKey_, dirty));
-    ABC_CHECK(LoginServerWalletActivate(account.login.lobby, LP1, syncKey_.c_str()));
+    ABC_CHECK(loginServerWalletActivate(account.login, syncKey_));
 
     // If everything worked, add the wallet to the account:
     WalletJson json;
