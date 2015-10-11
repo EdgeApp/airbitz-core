@@ -259,7 +259,7 @@ tABC_CC ABC_TxSend(Wallet &self,
 
         // Mark the outputs as spent:
         watcher->send_tx(tx);
-        watcherSave(self); // Failure is not fatal
+        watcherSave(self).log(); // Failure is not fatal
     }
 
     // Update the ABC db
