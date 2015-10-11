@@ -320,9 +320,15 @@ bool TxDatabase::load(const bc::data_chunk &data)
         // Header bytes:
         auto magic = serial.read_4_bytes();
         if (old_serial_magic == magic)
+        {
+            ABC_DebugLog("TxDatabase::load old_serial_magic != magic - return true");
             return true;
+        }
         if (serial_magic != magic)
+        {
+            ABC_DebugLog("TxDatabase::load serial_magic != magic - return false");
             return false;
+        }
 
         // Last block height:
         last_height = serial.read_8_bytes();
@@ -331,7 +337,10 @@ bool TxDatabase::load(const bc::data_chunk &data)
         while (serial.iterator() != data.end())
         {
             if (serial.read_byte() != serial_tx)
+            {
+                ABC_DebugLog("TxDatabase::load serial.read_byte() != serial_tx - return false");
                 return false;
+            }
 
             bc::hash_digest hash = serial.read_hash();
             TxRow row;
@@ -355,10 +364,12 @@ bool TxDatabase::load(const bc::data_chunk &data)
     }
     catch (bc::end_of_stream)
     {
+        ABC_DebugLog("TxDatabase::load try->catch() - return false");
         return false;
     }
     last_height_ = last_height;
     rows_ = rows;
+    ABC_DebugLog("TxDatabase::load last_eight=%d - return true", last_height);
     return true;
 }
 
