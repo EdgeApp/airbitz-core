@@ -30,9 +30,7 @@ Status::Status(tABC_CC value, std::string message, ErrorLocation here):
 
 void Status::toError(tABC_Error &error, ErrorLocation here) const
 {
-    std::stringstream s;
-    s << *this;
-    ABC_DebugLog("%s", s.str().c_str());
+    log();
 
     error.code = value_;
     strncpy(error.szDescription, message_.c_str(), ABC_MAX_STRING_LENGTH);
@@ -56,6 +54,17 @@ Status Status::fromError(const tABC_Error &error, ErrorLocation here)
     ErrorLocation location{function, file, static_cast<size_t>(error.nSourceLine)};
 
     return Status(error.code, error.szDescription, location).at(here);
+}
+
+void
+Status::log() const
+{
+    if (!*this)
+    {
+        std::stringstream s;
+        s << *this;
+        ABC_DebugLog("%s", s.str().c_str());
+    }
 }
 
 Status &

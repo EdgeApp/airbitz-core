@@ -67,6 +67,12 @@ public:
     static Status fromError(const tABC_Error &error, ErrorLocation here);
 
     /**
+     * Prints this status to the ABC log if it is an error.
+     */
+    void
+    log() const;
+
+    /**
      * Adds a source location to the backtrace.
      */
     Status &
