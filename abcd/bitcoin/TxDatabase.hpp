@@ -17,6 +17,8 @@
 
 namespace abcd {
 
+#define TXID_HEIGHT_NOT_FOUND -9999
+
 enum class TxState
 {
     /// The transaction has not been broadcast to the network.

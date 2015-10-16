@@ -215,7 +215,7 @@ size_t Watcher::get_last_block_height()
 bool Watcher::get_txid_height(hash_digest tx_id, int& height)
 {
     height = db_.get_txid_height(tx_id);
-    return db_.has_tx_id(tx_id);
+    return (height != TXID_HEIGHT_NOT_FOUND);
 }
 
 void Watcher::dump(std::ostream& out)

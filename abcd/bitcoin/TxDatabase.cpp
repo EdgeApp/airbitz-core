@@ -43,9 +43,9 @@ bool TxDatabase::has_tx_id(bc::hash_digest tx_id)
 
     std::vector<TxRow *> txRows = findByTxID(tx_id);
 
-    for (auto i = txRows.begin(); i != txRows.end(); ++i) {
+    if (txRows.size())
         return true;
-    }
+
     return false;
 }
 
@@ -131,7 +131,7 @@ long long TxDatabase::get_txid_height(bc::hash_digest tx_id)
 
     std::vector<TxRow *> txRows = findByTxID(tx_id);
 
-    long long height = -1;
+    long long height = TXID_HEIGHT_NOT_FOUND;
 
     int numFound = 0;
 
@@ -266,6 +266,7 @@ bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses)
 
 bc::data_chunk TxDatabase::serialize()
 {
+    ABC_DebugLog("ENTER TxDatabase::serialize");
     std::lock_guard<std::mutex> lock(mutex_);
 
     std::basic_ostringstream<uint8_t> stream;
@@ -282,8 +283,11 @@ bc::data_chunk TxDatabase::serialize()
     for (const auto &row: rows_)
     {
         // Don't save old unconfirmed transactions:
-        if (row.second.timestamp + unconfirmed_timeout_ < now)
+        if (row.second.timestamp + unconfirmed_timeout_ < now &&
+                TxState::unconfirmed == row.second.state) {
+            ABC_DebugLog("TxDatabase::serialize Purging unconfirmed tx");
             continue;
+        }
 
         auto height = row.second.block_height;
         if (TxState::unconfirmed == row.second.state)
@@ -597,15 +601,17 @@ void TxDatabase::forget(bc::hash_digest tx_hash)
     rows_.erase(tx_hash);
 }
 
-void TxDatabase::reset_timestamp(bc::hash_digest tx_id)
+void TxDatabase::reset_timestamp(bc::hash_digest tx_hash)
 {
+//    ABC_DebugLog("ENTER reset_timestamp");
     std::lock_guard<std::mutex> lock(mutex_);
 
-    std::vector<TxRow *> txRows = findByTxID(tx_id);
+    auto i = rows_.find(tx_hash);
+    if (i != rows_.end())
+        i->second.timestamp = time(nullptr);
 
-    for (auto i = txRows.begin(); i != txRows.end(); ++i) {
-        (*i)->timestamp = time(nullptr);
-    }
+//    ABC_DebugLog("EXIT reset_timestamp");
+
 }
 
 void TxDatabase::foreach_unconfirmed(HashFn &&f)
