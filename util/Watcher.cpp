@@ -227,8 +227,10 @@ void Cli::cmd_txid_height(std::stringstream &args)
     if (txid == bc::null_hash)
         return;
 
-    if (db_.has_tx_id(txid))
-        std::cout << db_.get_txid_height(txid) << std::endl;
+    long long height = db_.get_txid_height(txid);
+
+    if (height != TXID_HEIGHT_NOT_FOUND)
+        std::cout << height << std::endl;
     else
         std::cout << "transaction not in database" << std::endl;
 }

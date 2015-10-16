@@ -203,7 +203,7 @@ tABC_CC ABC_BridgeWatcherStart(Wallet &self,
 
     watchers_[id].reset(new WatcherInfo(self));
 
-    watcherLoad(self); // Failure is not fatal
+    watcherLoad(self).log(); // Failure is not fatal
 
 exit:
     return cc;
@@ -242,7 +242,7 @@ tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
             info.szDescription = "Block height change";
             fAsyncCallback(&info);
         }
-        watcherSave(watcherInfo->wallet); // Failure is not fatal
+        watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
     };
     watcherInfo->watcher.set_height_callback(heightCallback);
 
@@ -379,7 +379,7 @@ tABC_CC ABC_BridgeWatcherDelete(Wallet &self, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    watcherSave(self); // Failure is not fatal
+    watcherSave(self).log(); // Failure is not fatal
     watchers_.erase(self.id());
 
     return cc;
@@ -843,7 +843,7 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
             fAsyncBitCoinEventCallback,
             pData,
             &error));
-    watcherSave(watcherInfo->wallet); // Failure is not fatal
+    watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 
 exit:
     ABC_FREE(oarr);
