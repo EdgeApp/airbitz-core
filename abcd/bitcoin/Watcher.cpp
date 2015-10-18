@@ -141,6 +141,8 @@ void Watcher::loop()
     int linger = 0;
     socket.setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
 
+    txu_.connect().log();
+
     bool done = false;
     while (!done)
     {

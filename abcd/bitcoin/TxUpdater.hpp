@@ -13,6 +13,10 @@
 
 namespace abcd {
 
+#define ALL_SERVERS    -1
+#define NO_SERVERS     -9999
+#define NUM_CONNECT_SERVERS    3
+
 /**
  * Interface containing the events the updater can trigger.
  */
@@ -66,18 +70,36 @@ public:
     pollitems();
 
 private:
-    void watch_tx(bc::hash_digest txid, bool want_inputs);
-    void get_inputs(const bc::transaction_type &tx);
-    void query_done();
-    void queue_get_indices();
+    struct Connection
+    {
+        Connection(void *ctx, long server_index);
+
+        bool operator==(const Connection& l)
+        {
+            return server_index == l.server_index;
+        };
+
+        bc::client::zeromq_socket bc_socket;
+        bc::client::obelisk_codec bc_codec;
+        int queued_queries_;
+        int queued_get_indices_;
+        int queued_get_height_;
+
+        long server_index;
+    };
+
+    void watch_tx(bc::hash_digest txid, bool want_inputs, int idx);
+    void get_inputs(const bc::transaction_type &tx, int idx);
+    void query_done(int idx, Connection &bconn);
+    void queue_get_indices(int idx);
 
     // Server queries:
     void get_height();
-    void get_tx(bc::hash_digest txid, bool want_inputs);
-    void get_tx_mem(bc::hash_digest txid, bool want_inputs);
-    void get_index(bc::hash_digest txid);
+    void get_tx(bc::hash_digest txid, bool want_inputs, int idx);
+    void get_tx_mem(bc::hash_digest txid, bool want_inputs, int idx);
+    void get_index(bc::hash_digest txid, int idx);
     void send_tx(const bc::transaction_type &tx);
-    void query_address(const bc::payment_address &address);
+    void query_address(const bc::payment_address &address, int server_index);
 
     TxDatabase &db_;
     void *ctx_;
@@ -91,19 +113,14 @@ private:
     std::unordered_map<bc::payment_address, AddressRow> rows_;
 
     bool failed_;
-    size_t queued_queries_;
-    size_t queued_get_indices_;
+    long failed_server_idx_;
     std::chrono::steady_clock::time_point last_wakeup_;
 
-    // Active connection (if any):
-    struct Connection
-    {
-        Connection(void *ctx);
-
-        bc::client::zeromq_socket socket;
-        bc::client::obelisk_codec codec;
-    };
-    Connection *connection_;
+    bool wantConnection = false;
+    std::vector<Connection *> connections_;
+    std::vector<std::string> vStrServers_;
+    std::vector<int> serverConnections_;
+    std::vector<int> serverBlacklist_;
 };
 
 } // namespace abcd
