@@ -407,7 +407,8 @@ void TxDatabase::dump(std::ostream &out) const
     }
 }
 
-std::vector<TxRow *> TxDatabase::ntxidLookupAll(bc::hash_digest ntxid)
+std::vector<TxDatabase::TxRow *>
+TxDatabase::ntxidLookupAll(bc::hash_digest ntxid)
 {
     std::vector<TxRow *> out;
     for (auto &row: rows_)

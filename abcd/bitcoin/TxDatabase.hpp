@@ -32,29 +32,6 @@ enum class TxState
 typedef std::unordered_set<bc::payment_address> AddressSet;
 
 /**
- * A single row in the transaction database.
- */
-struct TxRow
-{
-    // The transaction itself:
-    bc::transaction_type tx;
-    bc::hash_digest txid;
-    bc::hash_digest ntxid;
-
-    // State machine:
-    TxState state;
-    long long block_height;
-    time_t timestamp;
-    bool bMalleated;
-    bool bMasterConfirm;
-    //bc::hash_digest block_hash; // TODO: Fix obelisk to return this
-
-    // The transaction is certainly in a block, but there is some
-    // question whether or not that block is on the main chain:
-    bool need_check;
-};
-
-/**
  * A list of transactions.
  *
  * This will eventually become a full database with queires mirroring what
@@ -144,6 +121,29 @@ public:
 private:
     // - Updater: ----------------------
     friend class TxUpdater;
+
+    /**
+     * A single row in the transaction database.
+     */
+    struct TxRow
+    {
+        // The transaction itself:
+        bc::transaction_type tx;
+        bc::hash_digest txid;
+        bc::hash_digest ntxid;
+
+        // State machine:
+        TxState state;
+        long long block_height;
+        time_t timestamp;
+        bool bMalleated;
+        bool bMasterConfirm;
+        //bc::hash_digest block_hash; // TODO: Fix obelisk to return this
+
+        // The transaction is certainly in a block, but there is some
+        // question whether or not that block is on the main chain:
+        bool need_check;
+    };
 
     /**
      * Updates the block height.
