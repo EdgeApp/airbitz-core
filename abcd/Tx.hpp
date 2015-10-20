@@ -51,9 +51,9 @@ class Wallet;
 typedef struct sABC_UnsavedTx
 {
     /** Tx Id we use internally */
-    char *szTxId;
+    char *szNtxid;
     /** block chain tx id**/
-    char *szTxMalleableId;
+    char *szTxid;
     /** Number for outputs **/
     unsigned int countOutputs;
     /** The output information **/
@@ -72,13 +72,14 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
                                  uint64_t amountSatoshi, uint64_t feeSatoshi,
                                  tABC_TxOutput **paInAddress, unsigned int inAddressCount,
                                  tABC_TxOutput **paOutAddresses, unsigned int outAddressCount,
-                                 const char *szTxId, const char *szMalTxId,
+                                 const std::string &ntxid,
+                                 const std::string &txid,
                                  tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
                                  void *pData,
                                  tABC_Error *pError);
 
 tABC_CC ABC_TxGetTransaction(Wallet &self,
-                             const char *szID,
+                             const std::string &ntxid,
                              tABC_TxInfo **ppTransaction,
                              tABC_Error *pError);
 
@@ -101,18 +102,18 @@ void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
                             unsigned int count);
 
 tABC_CC ABC_TxSetTransactionDetails(Wallet &self,
-                                    const char *szID,
+                                    const std::string &ntxid,
                                     tABC_TxDetails *pDetails,
                                     tABC_Error *pError);
 
 tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
-                                    const char *szID,
+                                    const std::string &ntxid,
                                     tABC_TxDetails **ppDetails,
                                     tABC_Error *pError);
 
 tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
-                                   const char *txId,
-                                   const char *malTxId,
+                                   const std::string &ntxid,
+                                   const std::string &txid,
                                    uint64_t funds,
                                    tABC_TxDetails *pDetails,
                                    tABC_Error *pError);

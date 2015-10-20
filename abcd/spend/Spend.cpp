@@ -66,8 +66,8 @@ ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
     ABC_CHECK_NEW(watcherFind(watcher, self));
 
     // Fill in tABC_UnsavedTx structure:
-    pUtx->szTxId = stringCopy(ntxid);
-    pUtx->szTxMalleableId = stringCopy(txid);
+    pUtx->szNtxid = stringCopy(ntxid);
+    pUtx->szTxid = stringCopy(txid);
     pUtx->countOutputs = tx.inputs.size() + tx.outputs.size();
     ABC_ARRAY_NEW(pUtx->aOutputs, pUtx->countOutputs, tABC_TxOutput*)
 
@@ -83,7 +83,7 @@ ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
         out->szTxId = stringCopy(bc::encode_hash(prev.hash));
         out->szAddress = stringCopy(addr.encoded());
 
-        auto tx = watcher->find_tx_hash(prev.hash);
+        auto tx = watcher->db().txidLookup(prev.hash);
         if (prev.index < tx.outputs.size())
         {
             out->value = tx.outputs[prev.index].value;
@@ -193,7 +193,7 @@ exit:
  */
 tABC_CC ABC_TxSend(Wallet &self,
                    SendInfo         *pInfo,
-                   char             **pszTxID,
+                   char             **pszNtxid,
                    tABC_Error       *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -267,7 +267,7 @@ tABC_CC ABC_TxSend(Wallet &self,
     ABC_CHECK_RET(ABC_TxSendComplete(self, pInfo, unsaved, pError));
 
     // return the new tx id
-    *pszTxID = stringCopy(unsaved->szTxId);
+    *pszNtxid = stringCopy(unsaved->szNtxid);
 
 exit:
     return cc;

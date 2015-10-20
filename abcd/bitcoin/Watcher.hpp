@@ -41,9 +41,7 @@ public:
 
     // - Transactions: -----------------
     void send_tx(const bc::transaction_type& tx);
-    bc::transaction_type find_tx_hash(bc::hash_digest tx_hash);
-    bc::transaction_type find_tx_id(bc::hash_digest tx_id);
-    bool get_txid_height(bc::hash_digest txid, int& height);
+    bool ntxidHeight(bc::hash_digest txid, int &height);
     bc::output_info_list get_utxos(const bc::payment_address& address);
     bc::output_info_list get_utxos(bool filter=false);
 
@@ -83,9 +81,6 @@ public:
 
     Watcher(const Watcher& copy) = delete;
     Watcher& operator=(const Watcher& copy) = delete;
-
-    // Debugging code:
-    void dump(std::ostream& out=std::cout);
 
     /**
      * Accesses the real database.

@@ -2041,7 +2041,7 @@ exit:
 tABC_CC ABC_GetRawTransaction(const char *szUserName,
                               const char *szPassword,
                               const char *szWalletUUID,
-                              const char *szID,
+                              const char *szNtxid,
                               char **pszHex,
                               tABC_Error *pError)
 {
@@ -2050,11 +2050,8 @@ tABC_CC ABC_GetRawTransaction(const char *szUserName,
     {
         ABC_GET_WALLET();
 
-        AutoFree<tABC_TxInfo, ABC_FreeTransaction> info;
-        ABC_CHECK_RET(ABC_TxGetTransaction(*wallet, szID, &info.get(), pError));
-
         DataChunk tx;
-        ABC_CHECK_NEW(watcherBridgeRawTx(*wallet, info->szMalleableTxId, tx));
+        ABC_CHECK_NEW(watcherBridgeRawTx(*wallet, szNtxid, tx));
         *pszHex = stringCopy(base16Encode(tx));
     }
 
@@ -2749,7 +2746,7 @@ exit:
  * @param szTxId The "non-malleable" transaction id
  * @param height Pointer to integer to store the results
  */
-tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
+tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szNtxid,
                      int *height, tABC_Error *pError)
 {
     // Cannot use ABC_PROLOG - too much debug spew
@@ -2757,12 +2754,11 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NULL(szTxId);
-    ABC_CHECK_ASSERT(strlen(szTxId) > 0, ABC_CC_Error, "No tx id provided");
+    ABC_CHECK_NULL(szNtxid);
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeTxHeight(*wallet, szTxId, height, pError));
+        ABC_CHECK_RET(ABC_BridgeTxHeight(*wallet, szNtxid, height, pError));
     }
 
 exit:

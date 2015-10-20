@@ -111,16 +111,6 @@ void Watcher::prioritize_address(const payment_address& address)
     }
 }
 
-transaction_type Watcher::find_tx_hash(hash_digest tx_hash)
-{
-    return db_.get_tx_hash(tx_hash);
-}
-
-transaction_type Watcher::find_tx_id(hash_digest tx_id)
-{
-    return db_.get_tx_id(tx_id);
-}
-
 /**
  * Sets up the new-transaction callback. This callback will be called from
  * some random thread, so be sure to handle that with a mutex or such.
@@ -197,7 +187,7 @@ output_info_list Watcher::get_utxos(bool filter)
         output_info_list out;
         for (auto& utxo: utxos)
         {
-            if (db_.get_txhash_height(utxo.point.hash) ||
+            if (db_.txidHeight(utxo.point.hash) ||
                 db_.is_spend(utxo.point.hash, addresses))
                 out.push_back(utxo);
         }
@@ -212,15 +202,10 @@ size_t Watcher::get_last_block_height()
     return db_.last_height();
 }
 
-bool Watcher::get_txid_height(hash_digest tx_id, int& height)
+bool Watcher::ntxidHeight(hash_digest tx_id, int &height)
 {
-    height = db_.get_txid_height(tx_id);
-    return (height != TXID_HEIGHT_NOT_FOUND);
-}
-
-void Watcher::dump(std::ostream& out)
-{
-    db_.dump(out);
+    height = db_.ntxidHeight(tx_id);
+    return (height != NTXID_HEIGHT_NOT_FOUND);
 }
 
 void Watcher::stop()

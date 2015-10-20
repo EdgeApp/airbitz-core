@@ -134,19 +134,19 @@ bc::client::sleep_time TxUpdater::wakeup()
     return next_wakeup;
 }
 
-void TxUpdater::watch_tx_hash(bc::hash_digest tx_hash, bool want_inputs)
+void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs)
 {
-    db_.reset_timestamp(tx_hash);
-    if (!db_.has_tx_hash(tx_hash))
-        get_tx(tx_hash, want_inputs);
+    db_.reset_timestamp(txid);
+    if (!db_.txidExists(txid))
+        get_tx(txid, want_inputs);
     else if (want_inputs)
-        get_inputs(db_.get_tx_hash(tx_hash));
+        get_inputs(db_.txidLookup(txid));
 }
 
 void TxUpdater::get_inputs(const bc::transaction_type &tx)
 {
     for (auto &input: tx.inputs)
-        watch_tx_hash(input.previous_output.hash, false);
+        watch_tx(input.previous_output.hash, false);
 }
 
 void TxUpdater::query_done()
@@ -191,33 +191,33 @@ void TxUpdater::get_height()
     codec_.fetch_last_height(on_error, on_done);
 }
 
-void TxUpdater::get_tx(bc::hash_digest tx_hash, bool want_inputs)
+void TxUpdater::get_tx(bc::hash_digest txid, bool want_inputs)
 {
     ++queued_queries_;
 
-    auto on_error = [this, tx_hash, want_inputs](const std::error_code &error)
+    auto on_error = [this, txid, want_inputs](const std::error_code &error)
     {
         // A failure means the transaction might be in the mempool:
         (void)error;
-        get_tx_mem(tx_hash, want_inputs);
+        get_tx_mem(txid, want_inputs);
         query_done();
     };
 
-    auto on_done = [this, tx_hash, want_inputs](const bc::transaction_type &tx)
+    auto on_done = [this, txid, want_inputs](const bc::transaction_type &tx)
     {
-        BITCOIN_ASSERT(tx_hash == bc::hash_transaction(tx));
+        BITCOIN_ASSERT(txid == bc::hash_transaction(tx));
         if (db_.insert(tx, TxState::unconfirmed))
             callbacks_.on_add(tx);
         if (want_inputs)
             get_inputs(tx);
-        get_index(tx_hash);
+        get_index(txid);
         query_done();
     };
 
-    codec_.fetch_transaction(on_error, on_done, tx_hash);
+    codec_.fetch_transaction(on_error, on_done, txid);
 }
 
-void TxUpdater::get_tx_mem(bc::hash_digest tx_hash, bool want_inputs)
+void TxUpdater::get_tx_mem(bc::hash_digest txid, bool want_inputs)
 {
     ++queued_queries_;
 
@@ -230,46 +230,46 @@ void TxUpdater::get_tx_mem(bc::hash_digest tx_hash, bool want_inputs)
         query_done();
     };
 
-    auto on_done = [this, tx_hash, want_inputs](const bc::transaction_type &tx)
+    auto on_done = [this, txid, want_inputs](const bc::transaction_type &tx)
     {
-        BITCOIN_ASSERT(tx_hash == bc::hash_transaction(tx));
+        BITCOIN_ASSERT(txid == bc::hash_transaction(tx));
         if (db_.insert(tx, TxState::unconfirmed))
             callbacks_.on_add(tx);
         if (want_inputs)
             get_inputs(tx);
-        get_index(tx_hash);
+        get_index(txid);
         query_done();
     };
 
-    codec_.fetch_unconfirmed_transaction(on_error, on_done, tx_hash);
+    codec_.fetch_unconfirmed_transaction(on_error, on_done, txid);
 }
 
-void TxUpdater::get_index(bc::hash_digest tx_hash)
+void TxUpdater::get_index(bc::hash_digest txid)
 {
     ++queued_get_indices_;
 
-    auto on_error = [this, tx_hash](const std::error_code &error)
+    auto on_error = [this, txid](const std::error_code &error)
     {
         // A failure means that the transaction is unconfirmed:
         (void)error;
-        db_.unconfirmed(tx_hash);
+        db_.unconfirmed(txid);
 
         --queued_get_indices_;
         queue_get_indices();
     };
 
-    auto on_done = [this, tx_hash](size_t block_height, size_t index)
+    auto on_done = [this, txid](size_t block_height, size_t index)
     {
         // The transaction is confirmed:
         (void)index;
 
-        db_.confirmed(tx_hash, block_height);
+        db_.confirmed(txid, block_height);
 
         --queued_get_indices_;
         queue_get_indices();
     };
 
-    codec_.fetch_transaction_index(on_error, on_done, tx_hash);
+    codec_.fetch_transaction_index(on_error, on_done, txid);
 }
 
 void TxUpdater::send_tx(const bc::transaction_type &tx)
@@ -309,9 +309,9 @@ void TxUpdater::query_address(const bc::payment_address &address)
     {
         for (auto &row: history)
         {
-            watch_tx_hash(row.output.hash, true);
+            watch_tx(row.output.hash, true);
             if (row.spend.hash != bc::null_hash)
-                watch_tx_hash(row.spend.hash, true);
+                watch_tx(row.spend.hash, true);
         }
         query_done();
     };

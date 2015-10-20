@@ -43,7 +43,7 @@ tABC_CC ABC_BridgeMaxSpendable(Wallet &self,
 
 tABC_CC  ABC_TxSend(Wallet &self,
                     SendInfo *pInfo,
-                    char **pszTxID,
+                    char **pszNtxid,
                     tABC_Error *pError);
 
 } // namespace abcd
