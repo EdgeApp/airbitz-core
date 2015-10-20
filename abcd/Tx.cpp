@@ -34,6 +34,7 @@
 #include "account/Account.hpp"
 #include "account/AccountSettings.hpp"
 #include "bitcoin/Text.hpp"
+#include "bitcoin/Watcher.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"
 #include "spend/Spend.hpp"
@@ -84,13 +85,12 @@ typedef struct sABC_Tx
     char            *szNtxid;
     tABC_TxDetails  *pDetails;
     tTxStateInfo    *pStateInfo;
-    unsigned int    countOutputs;
-    tABC_TxOutput   **aOutputs;
 } tABC_Tx;
 
 static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *pbEquivalent, tABC_Error *pError);
 static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pType, char **pszBasename, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransactionInfo(Wallet &self, const char *szFilename, tABC_TxInfo **ppTransaction, tABC_Error *pError);
+static Status   txGetOutputs(Wallet &self, const std::string &ntxid, tABC_TxOutput ***paOutputs, unsigned int *pCount);
 static tABC_CC  ABC_TxLoadTxAndAppendToArray(Wallet &self, int64_t startTime, int64_t endTime, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateTxFilename(Wallet &self, char **pszFilename, const std::string &ntxid, bool bInternal, tABC_Error *pError);
 static tABC_CC  ABC_TxLoadTransaction(Wallet &self, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
@@ -102,13 +102,14 @@ static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
 static tABC_CC  ABC_TxTransactionExists(Wallet &self, const std::string &ntxid, tABC_Tx **pTx, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
-static int      ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError);
-static tABC_CC  ABC_TxSaveNewTx(Wallet &self, tABC_Tx *pTx, bool bOutside, tABC_Error *pError);
+static tABC_CC  ABC_TxSaveNewTx(Wallet &self, tABC_Tx *pTx, const std::vector<std::string> &addresses, bool bOutside, tABC_Error *pError);
 static tABC_CC  ABC_TxCalcCurrency(Wallet &self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
 
 tABC_CC ABC_TxSendComplete(Wallet &self,
                            SendInfo         *pInfo,
-                           tABC_UnsavedTx   *pUtx,
+                           const std::string &ntxid,
+                           const std::string &txid,
+                           const std::vector<std::string> &addresses,
                            tABC_Error       *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -125,18 +126,16 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
     pTx->pStateInfo = structAlloc<tTxStateInfo>();
     pTx->pStateInfo->timeCreation = time(NULL);
     pTx->pStateInfo->bInternal = true;
-    pTx->pStateInfo->szTxid = stringCopy(pUtx->szTxid);
-    // Copy outputs
-    ABC_TxCopyOuputs(pTx, pUtx->aOutputs, pUtx->countOutputs, pError);
+    pTx->pStateInfo->szTxid = stringCopy(txid);
+
     // copy the details
     ABC_CHECK_RET(ABC_TxDetailsCopy(&(pTx->pDetails), pInfo->pDetails, pError));
-    // Add in tx fees to the amount of the tx
 
+    // Add in tx fees to the amount of the tx
     if (pInfo->szDestAddress && self.addresses.get(address, pInfo->szDestAddress))
     {
         pTx->pDetails->amountSatoshi = pInfo->pDetails->amountFeesAirbitzSatoshi
                                         + pInfo->pDetails->amountFeesMinersSatoshi;
-
     }
     else
     {
@@ -155,10 +154,10 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
         pTx->pDetails->amountCurrency *= -1.0;
 
     // Store transaction ID
-    pTx->szNtxid = stringCopy(pUtx->szNtxid);
+    pTx->szNtxid = stringCopy(ntxid);
 
     // Save the transaction:
-    ABC_CHECK_RET(ABC_TxSaveNewTx(self, pTx, false, pError));
+    ABC_CHECK_RET(ABC_TxSaveNewTx(self, pTx, addresses, false, pError));
 
     if (pInfo->bTransfer)
     {
@@ -168,9 +167,8 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
         // set the state
         pReceiveTx->pStateInfo->timeCreation = time(NULL);
         pReceiveTx->pStateInfo->bInternal = true;
-        pReceiveTx->pStateInfo->szTxid = stringCopy(pUtx->szTxid);
-        // Copy outputs
-        ABC_TxCopyOuputs(pReceiveTx, pUtx->aOutputs, pUtx->countOutputs, pError);
+        pReceiveTx->pStateInfo->szTxid = stringCopy(txid);
+
         // copy the details
         ABC_CHECK_RET(ABC_TxDetailsCopy(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
 
@@ -195,10 +193,10 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
             pReceiveTx->pDetails->amountCurrency *= -1.0;
 
         // Store transaction ID
-        pReceiveTx->szNtxid = stringCopy(pUtx->szNtxid);
+        pReceiveTx->szNtxid = stringCopy(ntxid);
 
         // save the transaction
-        ABC_CHECK_RET(ABC_TxSaveNewTx(*pInfo->walletDest, pReceiveTx, false, pError));
+        ABC_CHECK_RET(ABC_TxSaveNewTx(*pInfo->walletDest, pReceiveTx, addresses, false, pError));
     }
 
 exit:
@@ -212,10 +210,9 @@ exit:
  */
 tABC_CC ABC_TxReceiveTransaction(Wallet &self,
                                  uint64_t amountSatoshi, uint64_t feeSatoshi,
-                                 tABC_TxOutput **paInAddresses, unsigned int inAddressCount,
-                                 tABC_TxOutput **paOutAddresses, unsigned int outAddressCount,
                                  const std::string &ntxid,
                                  const std::string &txid,
+                                 const std::vector<std::string> &addresses,
                                  tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
                                  void *pData,
                                  tABC_Error *pError)
@@ -252,32 +249,9 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
 
         // store transaction id
         pTx->szNtxid = stringCopy(ntxid);
-        // store the input addresses
-        pTx->countOutputs = inAddressCount + outAddressCount;
-        ABC_ARRAY_NEW(pTx->aOutputs, pTx->countOutputs, tABC_TxOutput*);
-        for (unsigned i = 0; i < inAddressCount; ++i)
-        {
-            ABC_DebugLog("Saving Input address: %s\n", paInAddresses[i]->szAddress);
-
-            pTx->aOutputs[i] = structAlloc<tABC_TxOutput>();
-            pTx->aOutputs[i]->szAddress = stringCopy(paInAddresses[i]->szAddress);
-            pTx->aOutputs[i]->szTxId = stringCopy(paInAddresses[i]->szTxId);
-            pTx->aOutputs[i]->input = paInAddresses[i]->input;
-            pTx->aOutputs[i]->value = paInAddresses[i]->value;
-        }
-        for (unsigned i = 0; i < outAddressCount; ++i)
-        {
-            ABC_DebugLog("Saving Output address: %s\n", paOutAddresses[i]->szAddress);
-            int newi = i + inAddressCount;
-            pTx->aOutputs[newi] = structAlloc<tABC_TxOutput>();
-            pTx->aOutputs[newi]->szAddress = stringCopy(paOutAddresses[i]->szAddress);
-            pTx->aOutputs[newi]->szTxId = stringCopy(paOutAddresses[i]->szTxId);
-            pTx->aOutputs[newi]->input = paOutAddresses[i]->input;
-            pTx->aOutputs[newi]->value = paOutAddresses[i]->value;
-        }
 
         // add the transaction to the address
-        ABC_CHECK_RET(ABC_TxSaveNewTx(self, pTx, true, pError));
+        ABC_CHECK_RET(ABC_TxSaveNewTx(self, pTx, addresses, true, pError));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
         self.balanceDirty();
@@ -331,6 +305,7 @@ exit:
 tABC_CC
 ABC_TxSaveNewTx(Wallet &self,
                 tABC_Tx *pTx,
+                const std::vector<std::string> &addresses,
                 bool bOutside,
                 tABC_Error *pError)
 {
@@ -338,13 +313,10 @@ ABC_TxSaveNewTx(Wallet &self,
 
     // Mark addresses as used:
     TxMetadata metadata;
-    for (unsigned i = 0; i < pTx->countOutputs; ++i)
+    for (const auto &i: addresses)
     {
-        if (pTx->aOutputs[i]->input)
-            continue;
-
         Address address;
-        if (self.addresses.get(address, pTx->aOutputs[i]->szAddress))
+        if (self.addresses.get(address, i))
         {
             // Update the transaction:
             if (address.recyclable)
@@ -750,6 +722,69 @@ exit:
 }
 
 /**
+ * Prepares transaction outputs for the advanced details screen.
+ */
+static Status
+txGetOutputs(Wallet &self, const std::string &ntxid,
+    tABC_TxOutput ***paOutputs, unsigned int *pCount)
+{
+    Watcher *watcher = nullptr;
+    ABC_CHECK(watcherFind(watcher, self));
+
+    bc::hash_digest hash;
+    if (!bc::decode_hash(hash, ntxid))
+        return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
+    auto tx = watcher->db().ntxidLookup(hash);
+    auto txid = bc::encode_hash(bc::hash_transaction(tx));
+
+    // Create the array:
+    size_t count = tx.inputs.size() + tx.outputs.size();
+    tABC_TxOutput **aOutputs = (tABC_TxOutput**)calloc(count, sizeof(tABC_TxOutput*));
+    if (!aOutputs)
+        return ABC_ERROR(ABC_CC_NULLPtr, "out of memory");
+
+    // Build output entries:
+    int i = 0;
+    for (const auto &input: tx.inputs)
+    {
+        auto prev = input.previous_output;
+        bc::payment_address addr;
+        bc::extract(addr, input.script);
+
+        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
+        out->input = true;
+        out->szTxId = stringCopy(bc::encode_hash(prev.hash));
+        out->szAddress = stringCopy(addr.encoded());
+
+        auto tx = watcher->db().txidLookup(prev.hash);
+        if (prev.index < tx.outputs.size())
+        {
+            out->value = tx.outputs[prev.index].value;
+        }
+        aOutputs[i] = out;
+        i++;
+    }
+    for (const auto &output: tx.outputs)
+    {
+        bc::payment_address addr;
+        bc::extract(addr, output.script);
+
+        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
+        out->input = false;
+        out->value = output.value;
+        out->szTxId = stringCopy(txid);
+        out->szAddress = stringCopy(addr.encoded());
+
+        aOutputs[i] = out;
+        i++;
+    }
+
+    *paOutputs = aOutputs;
+    *pCount = count;
+    return Status();
+}
+
+/**
  * Load the specified transaction info.
  *
  * @param szFilename        Filename of the transaction
@@ -782,10 +817,8 @@ tABC_CC ABC_TxLoadTransactionInfo(Wallet &self,
     pTransaction->timeCreation = pTx->pStateInfo->timeCreation;
     pTransaction->pDetails = pTx->pDetails;
     pTx->pDetails = NULL;
-    pTransaction->countOutputs = pTx->countOutputs;
-    pTx->countOutputs = 0;
-    pTransaction->aOutputs = pTx->aOutputs;
-    pTx->aOutputs = NULL;
+    ABC_CHECK_NEW(txGetOutputs(self, pTx->szNtxid,
+        &pTransaction->aOutputs, &pTransaction->countOutputs));
 
     // assign final result
     *ppTransaction = pTransaction;
@@ -1110,7 +1143,6 @@ tABC_CC ABC_TxLoadTransaction(Wallet &self,
     // get advanced details
     ABC_CHECK_RET(
         ABC_BridgeTxDetails(self, pTx->szNtxid,
-                            &(pTx->aOutputs), &(pTx->countOutputs),
                             &(pTx->pDetails->amountSatoshi),
                             &(pTx->pDetails->amountFeesMinersSatoshi),
                             pError));
@@ -1187,7 +1219,6 @@ void ABC_TxFreeTx(tABC_Tx *pTx)
         ABC_FREE_STR(pTx->szNtxid);
         ABC_TxDetailsFree(pTx->pDetails);
         ABC_CLEAR_FREE(pTx->pStateInfo, sizeof(tTxStateInfo));
-        ABC_TxFreeOutputs(pTx->aOutputs, pTx->countOutputs);
         ABC_CLEAR_FREE(pTx, sizeof(tABC_Tx));
     }
 }
@@ -1314,18 +1345,6 @@ int ABC_TxInfoPtrCompare (const void * a, const void * b)
     if (pInfoA->timeCreation > pInfoB->timeCreation) return 1;
 
     return 0;
-}
-
-void ABC_UnsavedTxFree(tABC_UnsavedTx *pUtx)
-{
-    if (pUtx)
-    {
-        ABC_FREE_STR(pUtx->szNtxid);
-        ABC_FREE_STR(pUtx->szTxid);
-        ABC_TxFreeOutputs(pUtx->aOutputs, pUtx->countOutputs);
-
-        ABC_CLEAR_FREE(pUtx, sizeof(tABC_UnsavedTx));
-    }
 }
 
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count)
@@ -1477,33 +1496,6 @@ int ABC_TxStrStr(const char *haystack, const char *needle,
 exit:
     ABC_FREE(table);
     return result > -1 ? 1 : 0;
-}
-
-static int
-ABC_TxCopyOuputs(tABC_Tx *pTx, tABC_TxOutput **aOutputs, int countOutputs, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    int i;
-
-    ABC_CHECK_NULL(pTx);
-    ABC_CHECK_NULL(aOutputs);
-
-    pTx->countOutputs = countOutputs;
-    if (pTx->countOutputs > 0)
-    {
-        ABC_ARRAY_NEW(pTx->aOutputs, pTx->countOutputs, tABC_TxOutput*);
-        for (i = 0; i < countOutputs; ++i)
-        {
-            ABC_DebugLog("Saving Outputs: %s\n", aOutputs[i]->szAddress);
-            pTx->aOutputs[i] = structAlloc<tABC_TxOutput>();
-            pTx->aOutputs[i]->szAddress = stringCopy(aOutputs[i]->szAddress);
-            pTx->aOutputs[i]->szTxId = stringCopy(aOutputs[i]->szTxId);
-            pTx->aOutputs[i]->input = aOutputs[i]->input;
-            pTx->aOutputs[i]->value = aOutputs[i]->value;
-        }
-    }
-exit:
-    return cc;
 }
 
 } // namespace abcd

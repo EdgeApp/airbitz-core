@@ -46,72 +46,6 @@ spendMakeTx(libbitcoin::transaction_type &result, Wallet &self,
     return Status();
 }
 
-/**
- * Fills in the tABC_UnsavedTx structure.
- */
-static tABC_CC
-ABC_BridgeExtractOutputs(Wallet &self, tABC_UnsavedTx **ppUtx,
-                         const libbitcoin::transaction_type &tx,
-                         tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    auto txid = bc::encode_hash(bc::hash_transaction(tx));
-    auto ntxid = ABC_BridgeNonMalleableTxId(tx);
-    int i = 0;
-    AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree>
-        pUtx(structAlloc<tABC_UnsavedTx>());
-
-    Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self));
-
-    // Fill in tABC_UnsavedTx structure:
-    pUtx->szNtxid = stringCopy(ntxid);
-    pUtx->szTxid = stringCopy(txid);
-    pUtx->countOutputs = tx.inputs.size() + tx.outputs.size();
-    ABC_ARRAY_NEW(pUtx->aOutputs, pUtx->countOutputs, tABC_TxOutput*)
-
-    // Build output entries:
-    for (const auto &input: tx.inputs)
-    {
-        auto prev = input.previous_output;
-        bc::payment_address addr;
-        bc::extract(addr, input.script);
-
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = true;
-        out->szTxId = stringCopy(bc::encode_hash(prev.hash));
-        out->szAddress = stringCopy(addr.encoded());
-
-        auto tx = watcher->db().txidLookup(prev.hash);
-        if (prev.index < tx.outputs.size())
-        {
-            out->value = tx.outputs[prev.index].value;
-        }
-        pUtx->aOutputs[i] = out;
-        i++;
-    }
-    for (const auto &output: tx.outputs)
-    {
-        bc::payment_address addr;
-        bc::extract(addr, output.script);
-
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = false;
-        out->value = output.value;
-        out->szTxId = stringCopy(txid);
-        out->szAddress = stringCopy(addr.encoded());
-
-        pUtx->aOutputs[i] = out;
-        i++;
-    }
-
-    *ppUtx = pUtx.release();
-
-exit:
-    return cc;
-}
-
 SendInfo::~SendInfo()
 {
     ABC_FREE_STR(szDestAddress);
@@ -201,7 +135,6 @@ tABC_CC ABC_TxSend(Wallet &self,
 
     Address changeAddress;
     bc::transaction_type tx;
-    AutoFree<tABC_UnsavedTx, ABC_UnsavedTxFree> unsaved;
 
     ABC_CHECK_NULL(pInfo);
 
@@ -263,11 +196,22 @@ tABC_CC ABC_TxSend(Wallet &self,
     }
 
     // Update the ABC db
-    ABC_CHECK_RET(ABC_BridgeExtractOutputs(self, &unsaved.get(), tx, pError));
-    ABC_CHECK_RET(ABC_TxSendComplete(self, pInfo, unsaved, pError));
+    {
+        auto txid = bc::encode_hash(bc::hash_transaction(tx));
+        auto ntxid = ABC_BridgeNonMalleableTxId(tx);
 
-    // return the new tx id
-    *pszNtxid = stringCopy(unsaved->szNtxid);
+        std::vector<std::string> addresses;
+        for (const auto &output: tx.outputs)
+        {
+            bc::payment_address addr;
+            bc::extract(addr, output.script);
+            addresses.push_back(addr.encoded());
+        }
+        ABC_CHECK_RET(ABC_TxSendComplete(self, pInfo, ntxid, txid, addresses, pError));
+
+        // return the new tx id
+        *pszNtxid = stringCopy(ntxid);
+    }
 
 exit:
     return cc;

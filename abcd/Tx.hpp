@@ -38,42 +38,27 @@
 
 #include "util/Status.hpp"
 #include <map>
+#include <vector>
 
 namespace abcd {
 
 struct SendInfo;
 class Wallet;
 
-/**
- * Information about a transaction that has been sent
- * but not yet saved to the database.
- */
-typedef struct sABC_UnsavedTx
-{
-    /** Tx Id we use internally */
-    char *szNtxid;
-    /** block chain tx id**/
-    char *szTxid;
-    /** Number for outputs **/
-    unsigned int countOutputs;
-    /** The output information **/
-    tABC_TxOutput **aOutputs;
-} tABC_UnsavedTx;
-
-void ABC_UnsavedTxFree(tABC_UnsavedTx *pUtx);
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
 tABC_CC ABC_TxSendComplete(Wallet &self,
                            SendInfo         *pInfo,
-                           tABC_UnsavedTx   *pUtx,
+                           const std::string &ntxid,
+                           const std::string &txid,
+                           const std::vector<std::string> &addresses,
                            tABC_Error       *pError);
 
 tABC_CC ABC_TxReceiveTransaction(Wallet &self,
                                  uint64_t amountSatoshi, uint64_t feeSatoshi,
-                                 tABC_TxOutput **paInAddress, unsigned int inAddressCount,
-                                 tABC_TxOutput **paOutAddresses, unsigned int outAddressCount,
                                  const std::string &ntxid,
                                  const std::string &txid,
+                                 const std::vector<std::string> &addresses,
                                  tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
                                  void *pData,
                                  tABC_Error *pError);

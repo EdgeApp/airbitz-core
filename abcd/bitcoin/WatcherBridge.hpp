@@ -101,9 +101,7 @@ tABC_CC ABC_BridgeTxHeight(Wallet &self, const std::string &ntxid, int *height, 
 tABC_CC ABC_BridgeTxBlockHeight(Wallet &self, int *height, tABC_Error *pError);
 
 tABC_CC ABC_BridgeTxDetails(Wallet &self, const std::string &ntxid,
-                            tABC_TxOutput ***paOutputs, unsigned int *pCount,
                             int64_t *pAmount, int64_t *pFees, tABC_Error *pError);
-
 
 tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
                                      tABC_TxInfo **aTransactions,
