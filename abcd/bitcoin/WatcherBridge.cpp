@@ -33,7 +33,6 @@
 #include "TxUpdater.hpp"
 #include "Testnet.hpp"
 #include "Watcher.hpp"
-#include "../General.hpp"
 #include "../Tx.hpp"
 #include "../spend/Broadcast.hpp"
 #include "../spend/Inputs.hpp"
@@ -49,9 +48,6 @@
 #include <unordered_map>
 
 namespace abcd {
-
-#define FALLBACK_OBELISK "tcp://obelisk.airbitz.co:9091"
-#define TESTNET_OBELISK "tcp://obelisk-testnet.airbitz.co:9091"
 
 struct PendingSweep
 {
@@ -85,9 +81,6 @@ private:
 };
 
 static std::map<std::string, std::unique_ptr<WatcherInfo>> watchers_;
-
-// The last obelisk server we connected to:
-static unsigned gLastObelisk = 0;
 
 static tABC_CC     ABC_BridgeTxDetailsSplit(Wallet &self, const std::string &ntxid, tABC_TxOutput ***iarr, unsigned int *pInCount, tABC_TxOutput ***oarr, unsigned int *pOutCount, int64_t *pAmount, int64_t *pFees, tABC_Error *pError);
 static tABC_CC     ABC_BridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep& sweep, tABC_Error *pError);
@@ -218,7 +211,6 @@ tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
     Watcher::block_height_callback heightCallback;
     Watcher::tx_callback txCallback;
     Watcher::quiet_callback on_quiet;
-    Watcher::fail_callback failCallback;
 
     WatcherInfo *watcherInfo = nullptr;
     ABC_CHECK_NEW(watcherFind(watcherInfo, self));
@@ -251,13 +243,6 @@ tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
     };
     watcherInfo->watcher.set_quiet_callback(on_quiet);
 
-    failCallback = [watcherInfo]()
-    {
-        tABC_Error error;
-        ABC_BridgeWatcherConnect(watcherInfo->wallet, &error);
-    };
-    watcherInfo->watcher.set_fail_callback(failCallback);
-
     watcherInfo->watcher.loop();
 
 exit:
@@ -267,32 +252,12 @@ exit:
 tABC_CC ABC_BridgeWatcherConnect(Wallet &self, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_GeneralInfo *ppInfo = NULL;
-    const char *szServer = FALLBACK_OBELISK;
 
     Watcher *watcher = nullptr;
     ABC_CHECK_NEW(watcherFind(watcher, self));
-
-    // Pick a server:
-    if (isTestnet())
-    {
-        szServer = TESTNET_OBELISK;
-    }
-    else if (ABC_CC_Ok == ABC_GeneralGetInfo(&ppInfo, pError) &&
-        0 < ppInfo->countObeliskServers)
-    {
-        ++gLastObelisk;
-        if (ppInfo->countObeliskServers <= gLastObelisk)
-            gLastObelisk = 0;
-        szServer = ppInfo->aszObeliskServers[gLastObelisk];
-    }
-
-    // Connect:
-    ABC_DebugLog("Wallet %s connecting to %s", self.id().c_str(), szServer);
-    watcher->connect(szServer);
+    watcher->connect();
 
 exit:
-    ABC_GeneralFreeInfo(ppInfo);
     return cc;
 }
 

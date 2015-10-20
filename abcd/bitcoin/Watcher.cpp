@@ -6,6 +6,7 @@
  */
 
 #include "Watcher.hpp"
+#include "../General.hpp"
 #include "../util/Debug.hpp"
 #include <sstream>
 
@@ -20,6 +21,9 @@ constexpr unsigned default_poll = 10000;
 constexpr unsigned priority_poll = 1000;
 
 static unsigned watcher_id = 0;
+
+// The last obelisk server we connected to:
+static unsigned gLastObelisk = 0;
 
 enum {
     msg_quit,
@@ -55,9 +59,9 @@ static bool is_valid(const payment_address& address)
     return address.version() != payment_address::invalid_version;
 }
 
-void Watcher::connect(const std::string& server)
+void Watcher::connect()
 {
-    send_connect(server);
+    send_connect();
     for (auto& address: addresses_)
         send_watch_addr(address.first, address.second);
     if (is_valid(priority_address_))
@@ -123,15 +127,6 @@ void Watcher::set_quiet_callback(quiet_callback cb)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     quiet_cb_ = std::move(cb);
-}
-
-/**
- * Sets up the server failure callback
- */
-void Watcher::set_fail_callback(fail_callback cb)
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    fail_cb_ = std::move(cb);
 }
 
 /**
@@ -254,16 +249,12 @@ void Watcher::send_disconnect()
     socket_.send(&req, 1);
 }
 
-void Watcher::send_connect(std::string server)
+void Watcher::send_connect()
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
-    std::basic_ostringstream<uint8_t> stream;
-    auto serial = bc::make_serializer(std::ostreambuf_iterator<uint8_t>(stream));
-    serial.write_byte(msg_connect);
-    serial.write_data(server);
-    auto str = stream.str();
-    socket_.send(str.data(), str.size());
+    uint8_t req = msg_connect;
+    socket_.send(&req, 1);
 }
 
 void Watcher::send_watch_addr(payment_address address, unsigned poll_ms)
@@ -309,29 +300,7 @@ bool Watcher::command(uint8_t* data, size_t size)
         return true;
 
     case msg_connect:
-        {
-            std::string server(data + 1, data + size);
-            std::string key;
-
-            // Parse out the key part:
-            size_t key_start = server.find(' ');
-            if (key_start != std::string::npos)
-            {
-                key = server.substr(key_start + 1);
-                server.erase(key_start);
-            }
-
-            delete connection_;
-            connection_ = new connection(db_, ctx_, *this);
-            if (!connection_->socket.connect(server, key))
-            {
-                delete connection_;
-                connection_ = nullptr;
-                Watcher::on_fail();
-                return true;
-            }
-            connection_->txu.start();
-        }
+        doConnect().log();
         return true;
 
     case msg_watch_addr:
@@ -361,6 +330,40 @@ bool Watcher::command(uint8_t* data, size_t size)
     }
 }
 
+Status
+Watcher::doConnect()
+{
+    // Pick a server:
+    auto servers = generalBitcoinServers();
+    ++gLastObelisk;
+    if (servers.size() <= gLastObelisk)
+        gLastObelisk = 0;
+    auto server = servers[gLastObelisk];
+
+    // Parse out the key part:
+    std::string key;
+    size_t key_start = server.find(' ');
+    if (key_start != std::string::npos)
+    {
+        key = server.substr(key_start + 1);
+        server.erase(key_start);
+    }
+
+    ABC_DebugLog("Connecting to %s", server.c_str());
+    delete connection_;
+    connection_ = new connection(db_, ctx_, *this);
+    if (!connection_->socket.connect(server, key))
+    {
+        delete connection_;
+        connection_ = nullptr;
+        connect();
+        return ABC_ERROR(ABC_CC_SysError, "Cannot connect to " + server);
+    }
+    connection_->txu.start();
+
+    return Status();
+}
+
 void Watcher::on_add(const transaction_type& tx)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
@@ -388,9 +391,7 @@ void Watcher::on_quiet()
 
 void Watcher::on_fail()
 {
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    if (fail_cb_)
-        fail_cb_();
+    connect();
 }
 
 Watcher::connection::~connection()

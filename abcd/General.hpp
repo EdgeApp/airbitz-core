@@ -16,7 +16,8 @@
 #ifndef ABC_General_h
 #define ABC_General_h
 
-#include "../src/ABC.h"
+#include "util/Status.hpp"
+#include <vector>
 
 namespace abcd {
 
@@ -67,6 +68,14 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices **ppQuestionChoices,
                                       tABC_Error *pError);
 
 tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError);
+
+/**
+ * Obtains a list of libbitcoin servers for the current network
+ * (either testnet or mainnet).
+ * Returns a fallback server if something goes wrong.
+ */
+std::vector<std::string>
+generalBitcoinServers();
 
 } // namespace abcd
 

@@ -9,6 +9,7 @@
 #define ABCD_BITCOIN_WATCHER_HPP
 
 #include "TxUpdater.hpp"
+#include "../util/Status.hpp"
 #include "../../minilibs/libbitcoin-client/client.hpp"
 #include <zmq.hpp>
 #include <iostream>
@@ -29,7 +30,7 @@ public:
 
     // - Server: -----------------------
     void disconnect();
-    void connect(const std::string& server);
+    void connect();
 
     // - Addresses: --------------------
     void watch_address(const bc::payment_address& address, unsigned poll_ms=10000);
@@ -50,9 +51,6 @@ public:
 
     typedef std::function<void ()> quiet_callback;
     void set_quiet_callback(quiet_callback cb);
-
-    typedef std::function<void ()> fail_callback;
-    void set_fail_callback(fail_callback cb);
 
     // - Thread implementation: --------
 
@@ -93,7 +91,7 @@ private:
 
     // Methods for sending messages on that socket:
     void send_disconnect();
-    void send_connect(std::string server);
+    void send_connect();
     void send_watch_addr(bc::payment_address address, unsigned poll_ms);
     void send_send(const bc::transaction_type& tx);
 
@@ -102,7 +100,6 @@ private:
     tx_callback cb_;
     block_height_callback height_cb_;
     quiet_callback quiet_cb_;
-    fail_callback fail_cb_;
 
     // Everything below this point is only touched by the thread:
 
@@ -119,6 +116,7 @@ private:
     connection* connection_;
 
     bool command(uint8_t* data, size_t size);
+    Status doConnect();
 
     // TxCallbacks interface:
     virtual void on_add(const bc::transaction_type& tx) override;

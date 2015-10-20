@@ -16,6 +16,7 @@
 #include "General.hpp"
 #include "Context.hpp"
 #include "auth/LoginServer.hpp"
+#include "bitcoin/Testnet.hpp"
 #include "json/JsonObject.hpp"
 #include "util/Debug.hpp"
 #include "util/FileIO.hpp"
@@ -28,6 +29,9 @@
 #include <jansson.h>
 
 namespace abcd {
+
+#define FALLBACK_OBELISK "tcp://obelisk.airbitz.co:9091"
+#define TESTNET_OBELISK "tcp://obelisk-testnet.airbitz.co:9091"
 
 #define GENERAL_INFO_FILENAME                   "Servers.json"
 #define GENERAL_QUESTIONS_FILENAME              "Questions.json"
@@ -458,6 +462,27 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
 
 exit:
     return cc;
+}
+
+std::vector<std::string>
+generalBitcoinServers()
+{
+    if (isTestnet())
+        return std::vector<std::string>{TESTNET_OBELISK};
+
+    AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> info;
+    tABC_Error error;
+    if (ABC_CC_Ok == ABC_GeneralGetInfo(&info.get(), &error) &&
+        0 < info->countObeliskServers)
+    {
+        std::vector<std::string> out;
+        out.reserve(info->countObeliskServers);
+        for (size_t i = 0; i < info->countObeliskServers; ++i)
+            out.push_back(info->aszObeliskServers[i]);
+        return out;
+    }
+
+    return std::vector<std::string>{FALLBACK_OBELISK};
 }
 
 } // namespace abcd
