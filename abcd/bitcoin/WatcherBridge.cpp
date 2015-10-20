@@ -124,7 +124,7 @@ watcherLoad(Wallet &self)
 
     DataChunk data;
     ABC_CHECK(fileLoad(data, watcherPath(self)));
-    if (!watcher->load(data))
+    if (!watcher->db().load(data))
         return ABC_ERROR(ABC_CC_Error, "Unable to load serialized watcher");
 
     return Status();
@@ -143,7 +143,7 @@ watcherSave(Wallet &self)
     Watcher *watcher = nullptr;
     ABC_CHECK(watcherFind(watcher, self));
 
-    auto data = watcher->serialize();;
+    auto data = watcher->db().serialize();;
     ABC_CHECK(fileSave(data, watcherPath(self)));
 
     return Status();
@@ -217,7 +217,6 @@ tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     Watcher::block_height_callback heightCallback;
     Watcher::tx_callback txCallback;
-    Watcher::tx_sent_callback sendCallback;
     Watcher::quiet_callback on_quiet;
     Watcher::fail_callback failCallback;
 
@@ -414,7 +413,7 @@ ABC_BridgeTxBlockHeight(Wallet &self, int *height, tABC_Error *pError)
     Watcher *watcher = nullptr;
     ABC_CHECK_NEW(watcherFind(watcher, self));
 
-    *height = watcher->get_last_block_height();
+    *height = watcher->db().last_height();
     if (*height == 0)
     {
         cc = ABC_CC_Synchronizing;

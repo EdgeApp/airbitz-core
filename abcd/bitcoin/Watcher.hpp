@@ -31,10 +31,6 @@ public:
     void disconnect();
     void connect(const std::string& server);
 
-    // - Serialization: ----------------
-    bc::data_chunk serialize();
-    bool load(const bc::data_chunk& data);
-
     // - Addresses: --------------------
     void watch_address(const bc::payment_address& address, unsigned poll_ms=10000);
     void prioritize_address(const bc::payment_address& address);
@@ -45,15 +41,9 @@ public:
     bc::output_info_list get_utxos(const bc::payment_address& address);
     bc::output_info_list get_utxos(bool filter=false);
 
-    // - Chain height: -----------------
-    size_t get_last_block_height();
-
     // - Callbacks: --------------------
     typedef std::function<void (const bc::transaction_type&)> tx_callback;
     void set_tx_callback(tx_callback cb);
-
-    typedef std::function<void (std::error_code, const bc::transaction_type&)> tx_sent_callback;
-    void set_tx_sent_callback(tx_sent_callback cb);
 
     typedef std::function<void (const size_t)> block_height_callback;
     void set_height_callback(block_height_callback cb);
@@ -111,7 +101,6 @@ private:
     std::mutex cb_mutex_;
     tx_callback cb_;
     block_height_callback height_cb_;
-    tx_sent_callback tx_send_cb_;
     quiet_callback quiet_cb_;
     fail_callback fail_cb_;
 

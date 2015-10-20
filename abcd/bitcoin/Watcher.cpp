@@ -25,7 +25,6 @@ enum {
     msg_quit,
     msg_disconnect,
     msg_connect,
-    msg_watch_tx,
     msg_watch_addr,
     msg_send
 };
@@ -68,19 +67,6 @@ void Watcher::connect(const std::string& server)
 void Watcher::send_tx(const transaction_type& tx)
 {
     send_send(tx);
-}
-
-/**
- * Serializes the database for storage while the app is off.
- */
-data_chunk Watcher::serialize()
-{
-    return db_.serialize();
-}
-
-bool Watcher::load(const data_chunk& data)
-{
-    return db_.load(data);
 }
 
 void Watcher::watch_address(const payment_address& address, unsigned poll_ms)
@@ -128,15 +114,6 @@ void Watcher::set_height_callback(block_height_callback cb)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     height_cb_ = std::move(cb);
-}
-
-/**
- * Sets up the tx sent callback
- */
-void Watcher::set_tx_sent_callback(tx_sent_callback cb)
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    tx_send_cb_ = std::move(cb);
 }
 
 /**
@@ -195,11 +172,6 @@ output_info_list Watcher::get_utxos(bool filter)
     }
 
     return utxos;
-}
-
-size_t Watcher::get_last_block_height()
-{
-    return db_.last_height();
 }
 
 bool Watcher::ntxidHeight(hash_digest tx_id, int &height)
@@ -405,9 +377,6 @@ void Watcher::on_height(size_t height)
 
 void Watcher::on_send(const std::error_code& error, const transaction_type& tx)
 {
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    if (tx_send_cb_)
-        tx_send_cb_(error, tx);
 }
 
 void Watcher::on_quiet()
