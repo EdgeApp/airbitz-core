@@ -43,6 +43,7 @@
 namespace abcd {
 
 struct SendInfo;
+struct TxMetadata;
 class Wallet;
 
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
@@ -88,19 +89,19 @@ void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
 
 tABC_CC ABC_TxSetTransactionDetails(Wallet &self,
                                     const std::string &ntxid,
-                                    tABC_TxDetails *pDetails,
+                                    const TxMetadata &metadata,
                                     tABC_Error *pError);
 
 tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
                                     const std::string &ntxid,
-                                    tABC_TxDetails **ppDetails,
+                                    TxMetadata &result,
                                     tABC_Error *pError);
 
 tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
                                    const std::string &ntxid,
                                    const std::string &txid,
                                    uint64_t funds,
-                                   tABC_TxDetails *pDetails,
+                                   const TxMetadata &metadata,
                                    tABC_Error *pError);
 
 } // namespace abcd

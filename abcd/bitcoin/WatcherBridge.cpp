@@ -530,20 +530,11 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     }
 
     // There are some utxos, so send them to ourselves:
-    tABC_TxDetails details;
-    memset(&details, 0, sizeof(tABC_TxDetails));
-    details.amountSatoshi = 0;
-    details.amountCurrency = 0;
-    details.amountFeesAirbitzSatoshi = 0;
-    details.amountFeesMinersSatoshi = 0;
-    details.szName = const_cast<char*>("");
-    details.szCategory = const_cast<char*>("");
-    details.szNotes = const_cast<char*>("");
-    details.attributes = 0x2;
+    TxMetadata metadata;
 
     // Create a new receive request:
     ABC_CHECK_RET(ABC_TxCreateReceiveRequest(watcherInfo->wallet,
-        &details, &szID, false, pError));
+        metadata, &szID, false, pError));
     ABC_CHECK_RET(ABC_TxGetRequestAddress(watcherInfo->wallet, szID,
         &szAddress, pError));
 
@@ -581,7 +572,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     malTxId = bc::encode_hash(bc::hash_transaction(utx.tx));
     txId = ABC_BridgeNonMalleableTxId(utx.tx);
     ABC_CHECK_RET(ABC_TxSweepSaveTransaction(watcherInfo->wallet,
-        txId.c_str(), malTxId.c_str(), funds, &details, pError));
+        txId.c_str(), malTxId.c_str(), funds, metadata, pError));
 
     // Done:
     if (sweep.fCallback)

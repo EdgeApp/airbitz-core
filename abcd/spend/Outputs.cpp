@@ -69,13 +69,13 @@ outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
     {
         // Otherwise, make an output for the ordinary address:
         bc::transaction_output_type output;
-        output.value = pInfo->pDetails->amountSatoshi;
+        output.value = pInfo->metadata.amountSatoshi;
         ABC_CHECK(outputScriptForAddress(output.script, pInfo->szDestAddress));
         out.push_back(output);
     }
 
     // Handle the Airbitz fees:
-    pInfo->pDetails->amountFeesAirbitzSatoshi = 0;
+    pInfo->metadata.amountFeesAirbitzSatoshi = 0;
     if (!pInfo->bTransfer)
     {
         // We would normally add an output for the fee

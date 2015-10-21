@@ -37,14 +37,9 @@ exit:
 
 /**
  * Creates a receive request.
- *
- * @param szUserName    UserName for the account associated with this request
- * @param pDetails      Pointer to transaction details
- * @param pszRequestID  Pointer to store allocated ID for this request
- * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
-                                   tABC_TxDetails *pDetails,
+                                   const TxMetadata &metadata,
                                    char **pszRequestID,
                                    bool bTransfer,
                                    tABC_Error *pError)
@@ -54,7 +49,7 @@ tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
     Address address;
     ABC_CHECK_NEW(self.addresses.getNew(address));
     address.time = time(nullptr);
-    address.metadata = pDetails;
+    address.metadata = metadata;
     ABC_CHECK_NEW(self.addresses.save(address));
 
     // set the id for the caller
@@ -68,14 +63,10 @@ exit:
  * Modifies a previously created receive request.
  * Note: the previous details will be free'ed so if the user is using the previous details for this request
  * they should not assume they will be valid after this call.
- *
- * @param szRequestID   ID of this request
- * @param pDetails      Pointer to transaction details
- * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
                                    const char *szRequestID,
-                                   tABC_TxDetails *pDetails,
+                                   const TxMetadata &metadata,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -83,7 +74,7 @@ tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
 
     Address address;
     ABC_CHECK_NEW(self.addresses.get(address, szRequestID));
-    address.metadata = pDetails;
+    address.metadata = metadata;
     ABC_CHECK_NEW(self.addresses.save(address));
 
 exit:

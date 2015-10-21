@@ -118,19 +118,19 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
     tx.txid = txid;
     tx.timeCreation = time(nullptr);
     tx.internal = true;
-    tx.metadata = pInfo->pDetails;
+    tx.metadata = pInfo->metadata;
 
     // Add in tx fees to the amount of the tx
     if (pInfo->szDestAddress && self.addresses.get(address, pInfo->szDestAddress))
     {
-        tx.metadata.amountSatoshi = pInfo->pDetails->amountFeesAirbitzSatoshi
-                                        + pInfo->pDetails->amountFeesMinersSatoshi;
+        tx.metadata.amountSatoshi = pInfo->metadata.amountFeesAirbitzSatoshi
+                                        + pInfo->metadata.amountFeesMinersSatoshi;
     }
     else
     {
-        tx.metadata.amountSatoshi = pInfo->pDetails->amountSatoshi
-                                        + pInfo->pDetails->amountFeesAirbitzSatoshi
-                                        + pInfo->pDetails->amountFeesMinersSatoshi;
+        tx.metadata.amountSatoshi = pInfo->metadata.amountSatoshi
+                                        + pInfo->metadata.amountFeesAirbitzSatoshi
+                                        + pInfo->metadata.amountFeesMinersSatoshi;
     }
 
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
@@ -152,7 +152,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
         receiveTx.txid = txid;
         receiveTx.timeCreation = time(nullptr);
         receiveTx.internal = true;
-        receiveTx.metadata = pInfo->pDetails;
+        receiveTx.metadata = pInfo->metadata;
 
         // Set the payee name:
         receiveTx.metadata.name = self.name();
@@ -863,11 +863,10 @@ void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
 
 /**
  * Sets the details for a specific existing transaction.
- * @param pDetails          Details for the transaction
  */
 tABC_CC ABC_TxSetTransactionDetails(Wallet &self,
                                     const std::string &ntxid,
-                                    tABC_TxDetails *pDetails,
+                                    const TxMetadata &metadata,
                                     tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -893,7 +892,7 @@ tABC_CC ABC_TxSetTransactionDetails(Wallet &self,
     ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, tx, pError));
 
     // modify the details
-    tx.metadata = pDetails;
+    tx.metadata = metadata;
 
     // re-save the transaction
     ABC_CHECK_RET(ABC_TxSaveTransaction(self, tx, pError));
@@ -906,12 +905,10 @@ exit:
 
 /**
  * Gets the details for a specific existing transaction.
- * @param ppDetails         Location to store allocated details for the transaction
- *                          (caller must free)
  */
 tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
                                     const std::string &ntxid,
-                                    tABC_TxDetails **ppDetails,
+                                    TxMetadata &result,
                                     tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -937,7 +934,7 @@ tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
     ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, tx, pError));
 
     // assign final result
-    *ppDetails = tx.metadata.toDetails();
+    result = tx.metadata;
 
 exit:
     ABC_FREE_STR(szFilename);
@@ -958,7 +955,7 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
                                    const std::string &ntxid,
                                    const std::string &txid,
                                    uint64_t funds,
-                                   tABC_TxDetails *pDetails,
+                                   const TxMetadata &metadata,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -969,7 +966,7 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
     tx.txid = txid;
     tx.timeCreation = time(nullptr);
     tx.internal = true;
-    tx.metadata = pDetails;
+    tx.metadata = metadata;
     tx.metadata.amountSatoshi = funds;
     tx.metadata.amountFeesAirbitzSatoshi = 0;
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(

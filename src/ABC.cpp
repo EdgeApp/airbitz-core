@@ -1703,15 +1703,13 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
             pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        pInfo->pDetails = structAlloc<tABC_TxDetails>();
-        auto *pDetails = pInfo->pDetails;
 
         // Parse the URI:
         AutoFree<tABC_BitcoinURIInfo, ABC_BridgeFreeURIInfo> pUri;
         ABC_CHECK_RET(ABC_BridgeParseBitcoinURI(szText, &pUri.get(), pError));
         if (pUri->szRet)
             pSpend->szRet = stringCopy(pUri->szRet);
-        pDetails->szCategory = stringCopy(pUri->szCategory ? pUri->szCategory : "");
+        pInfo->metadata.category = pUri->szCategory ? pUri->szCategory : "";
 
         // If this is a payment request, fill those details in:
         if (pUri->szR)
@@ -1730,9 +1728,9 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
             pSpend->bSigned = true;
 
             // Fill in the details:
-            pDetails->szName = stringCopy(request->merchant(signer));
-            pDetails->szNotes = stringCopy(request->memo(
-                pUri->szMessage ? pUri->szMessage : ""));
+            pInfo->metadata.name = request->merchant(signer);
+            pInfo->metadata.notes = request->memo(
+                pUri->szMessage ? pUri->szMessage : "");
         }
         else if (pUri->szAddress)
         {
@@ -1745,8 +1743,8 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
             pSpend->szName = stringCopy(pUri->szAddress);
 
             // Fill in the details:
-            pDetails->szName = stringCopy(pUri->szLabel ? pUri->szLabel : "");
-            pDetails->szNotes = stringCopy(pUri->szMessage ? pUri->szMessage : "");
+            pInfo->metadata.name = pUri->szLabel ? pUri->szLabel : "";
+            pInfo->metadata.notes = pUri->szMessage ? pUri->szMessage : "";
         }
         else
         {
@@ -1777,8 +1775,6 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
             pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        pInfo->pDetails = structAlloc<tABC_TxDetails>();
-        auto *pDetails = pInfo->pDetails;
 
         // Fill in the spend target:
         pSpend->amount = amount;
@@ -1787,14 +1783,12 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         pSpend->szDestUUID = stringCopy(szWalletUUID);
 
         // Fill in the details:
-        pDetails->szName = stringCopy(pSpend->szName);
-        pDetails->szCategory = stringCopy("");
-        pDetails->szNotes = stringCopy("");
+        pInfo->metadata.name = pSpend->szName;
 
         // Fill in the send info:
         AutoString szRequestId;
         AutoString szRequestAddress;
-        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(*wallet, pDetails, &szRequestId.get(), true, pError));
+        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(*wallet, pInfo->metadata, &szRequestId.get(), true, pError));
         ABC_CHECK_RET(ABC_TxGetRequestAddress(*wallet, szRequestId, &pInfo->szDestAddress, pError));
         pInfo->walletDest = wallet.get();
         pInfo->bTransfer = true;
@@ -1824,8 +1818,6 @@ tABC_CC ABC_SpendNewInternal(const char *szAddress,
             pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        pInfo->pDetails = structAlloc<tABC_TxDetails>();
-        auto *pDetails = pInfo->pDetails;
 
         // Fill in the spend target:
         pSpend->amount = amount;
@@ -1833,9 +1825,9 @@ tABC_CC ABC_SpendNewInternal(const char *szAddress,
         pSpend->szName = stringCopy(szName ? szName : szAddress);
 
         // Fill in the details:
-        pDetails->szName = stringCopy(szName ? szName : "");
-        pDetails->szCategory = stringCopy(szCategory ? szCategory : "");
-        pDetails->szNotes = stringCopy(szNotes ? szNotes : "");
+        pInfo->metadata.name = szName ? szName : "";
+        pInfo->metadata.category = szCategory ? szCategory : "";
+        pInfo->metadata.notes = szNotes ? szNotes : "";
 
         // Fill in the send info:
         pInfo->szDestAddress = stringCopy(szAddress);
@@ -1860,7 +1852,7 @@ tABC_CC ABC_SpendGetFee(const char *szUserName,
         ABC_GET_WALLET();
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
-        pInfo->pDetails->amountSatoshi = pSpend->amount;
+        pInfo->metadata.amountSatoshi = pSpend->amount;
         ABC_CHECK_RET(ABC_TxCalcSendFees(*wallet, pInfo, pFee, pError));
     }
 
@@ -1880,7 +1872,7 @@ tABC_CC ABC_SpendGetMax(const char *szUserName,
         ABC_GET_WALLET();
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
-        pInfo->pDetails->amountSatoshi = pSpend->amount;
+        pInfo->metadata.amountSatoshi = pSpend->amount;
         ABC_CHECK_RET(ABC_BridgeMaxSpendable(*wallet, pInfo, pMax, pError));
     }
 
@@ -1901,7 +1893,7 @@ tABC_CC ABC_SpendApprove(const char *szUserName,
         ABC_GET_WALLET();
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
-        pInfo->pDetails->amountSatoshi = pSpend->amount;
+        pInfo->metadata.amountSatoshi = pSpend->amount;
         ABC_CHECK_RET(ABC_TxSend(*wallet, pInfo, pszTxId, pError));
     }
 
@@ -2137,7 +2129,9 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGetTransactionDetails(*wallet, szID, ppDetails, pError));
+        TxMetadata metadata;
+        ABC_CHECK_RET(ABC_TxGetTransactionDetails(*wallet, szID, metadata, pError));
+        *ppDetails = metadata.toDetails();
     }
 
 exit:

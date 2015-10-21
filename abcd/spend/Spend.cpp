@@ -40,7 +40,7 @@ spendMakeTx(libbitcoin::transaction_type &result, Wallet &self,
     uint64_t fee, change;
     ABC_CHECK(inputsPickOptimal(fee, change, tx, utxos, pFeeInfo));
     ABC_CHECK(outputsFinalize(tx.outputs, change, changeAddress));
-    pInfo->pDetails->amountFeesMinersSatoshi = fee;
+    pInfo->metadata.amountFeesMinersSatoshi = fee;
 
     result = std::move(tx);
     return Status();
@@ -50,14 +50,12 @@ SendInfo::~SendInfo()
 {
     ABC_FREE_STR(szDestAddress);
     delete paymentRequest;
-    ABC_TxDetailsFree(pDetails);
 }
 
 SendInfo::SendInfo()
 {
     szDestAddress = nullptr;
     paymentRequest = nullptr;
-    pDetails = nullptr;
     bTransfer = false;
 }
 
@@ -70,15 +68,15 @@ tABC_CC  ABC_TxCalcSendFees(Wallet &self, SendInfo *pInfo, uint64_t *pTotalFees,
 
     ABC_CHECK_NULL(pInfo);
 
-    pInfo->pDetails->amountFeesAirbitzSatoshi = 0;
-    pInfo->pDetails->amountFeesMinersSatoshi = 0;
+    pInfo->metadata.amountFeesAirbitzSatoshi = 0;
+    pInfo->metadata.amountFeesMinersSatoshi = 0;
 
     // Make an unsigned transaction
     ABC_CHECK_NEW(self.addresses.getNew(changeAddress));
     ABC_CHECK_NEW(spendMakeTx(tx, self, pInfo, changeAddress.address));
 
-    *pTotalFees = pInfo->pDetails->amountFeesAirbitzSatoshi
-                + pInfo->pDetails->amountFeesMinersSatoshi;
+    *pTotalFees = pInfo->metadata.amountFeesAirbitzSatoshi
+                + pInfo->metadata.amountFeesMinersSatoshi;
 
 exit:
     return cc;
@@ -103,10 +101,10 @@ tABC_CC ABC_BridgeMaxSpendable(Wallet &self,
         tx.version = 1;
         tx.locktime = 0;
 
-        auto oldAmount = pInfo->pDetails->amountSatoshi;
-        pInfo->pDetails->amountSatoshi = 0;
+        auto oldAmount = pInfo->metadata.amountSatoshi;
+        pInfo->metadata.amountSatoshi = 0;
         ABC_CHECK_NEW(outputsForSendInfo(tx.outputs, pInfo));
-        pInfo->pDetails->amountSatoshi = oldAmount;
+        pInfo->metadata.amountSatoshi = oldAmount;
 
         uint64_t fee, change;
         if (inputsPickMaximum(fee, change, tx, utxos, pFeeInfo))
@@ -153,7 +151,7 @@ tABC_CC ABC_TxSend(Wallet &self,
 
         ABC_DebugLog("Change: %s, Amount: %s, Contents: %s",
             changeAddress.address.c_str(),
-            std::to_string(pInfo->pDetails->amountSatoshi).c_str(),
+            std::to_string(pInfo->metadata.amountSatoshi).c_str(),
             bc::pretty(tx).c_str());
 
         // Send to the network:
@@ -168,7 +166,7 @@ tABC_CC ABC_TxSend(Wallet &self,
             Address refundAddress;
             ABC_CHECK_NEW(self.addresses.getNew(refundAddress));
             refundAddress.time = time(nullptr);
-            refundAddress.metadata = pInfo->pDetails;
+            refundAddress.metadata = pInfo->metadata;
             ABC_CHECK_NEW(self.addresses.save(refundAddress));
 
             bc::script_type refundScript;
@@ -181,12 +179,11 @@ tABC_CC ABC_TxSend(Wallet &self,
             // Append the receipt memo to the notes field:
             if (receipt.ack.has_memo())
             {
-                std::string notes = pInfo->pDetails->szNotes;
+                std::string notes = pInfo->metadata.notes;
                 if (!notes.empty())
                     notes += '\n';
                 notes += receipt.ack.memo();
-                ABC_FREE_STR(pInfo->pDetails->szNotes);
-                pInfo->pDetails->szNotes = stringCopy(notes);
+                pInfo->metadata.notes = notes;
             }
         }
 
