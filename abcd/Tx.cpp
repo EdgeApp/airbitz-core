@@ -342,19 +342,35 @@ ABC_TxSaveNewTx(Wallet &self,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pDetails;
-
-    ABC_CHECK_RET(ABC_TxTrashAddresses(self, &pDetails.get(),
-        pTx->aOutputs, pTx->countOutputs, pError));
-
-    if (bOutside && pDetails.get())
+    // Mark addresses as used:
+    TxMetadata metadata;
+    for (unsigned i = 0; i < pTx->countOutputs; ++i)
     {
-        if (ABC_STRLEN(pDetails->szName) && !ABC_STRLEN(pTx->pDetails->szName))
-            pTx->pDetails->szName = stringCopy(pDetails->szName);
-        if (ABC_STRLEN(pDetails->szNotes) && !ABC_STRLEN(pTx->pDetails->szNotes))
-            pTx->pDetails->szNotes = stringCopy(pDetails->szNotes);
-        if (ABC_STRLEN(pDetails->szCategory) && !ABC_STRLEN(pTx->pDetails->szCategory))
-            pTx->pDetails->szCategory = stringCopy(pDetails->szCategory);
+        if (pTx->aOutputs[i]->input)
+            continue;
+
+        Address address;
+        if (self.addresses.get(address, pTx->aOutputs[i]->szAddress))
+        {
+            // Update the transaction:
+            if (address.recyclable)
+            {
+                address.recyclable = false;
+                ABC_CHECK_NEW(self.addresses.save(address));
+            }
+            metadata = address.metadata;
+        }
+    }
+
+    // Copy the metadata (if any):
+    if (bOutside)
+    {
+        if (!ABC_STRLEN(pTx->pDetails->szName) && !metadata.name.empty())
+            pTx->pDetails->szName = stringCopy(metadata.name);
+        if (!ABC_STRLEN(pTx->pDetails->szNotes) && !metadata.notes.empty())
+            pTx->pDetails->szNotes = stringCopy(metadata.notes);
+        if (!ABC_STRLEN(pTx->pDetails->szCategory) && !metadata.category.empty())
+            pTx->pDetails->szCategory = stringCopy(metadata.category);
     }
     ABC_CHECK_RET(ABC_TxSaveTransaction(self, pTx, pError));
 

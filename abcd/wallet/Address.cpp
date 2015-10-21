@@ -36,47 +36,6 @@ exit:
 }
 
 /**
- * Marks the address as unusable and returns its metadata.
- *
- * @param ppDetails     Metadata extracted from the address database
- * @param paAddress     Addresses that will be updated
- * @param addressCount  Number of address in paAddress
- */
-tABC_CC ABC_TxTrashAddresses(Wallet &self,
-                             tABC_TxDetails **ppDetails,
-                             tABC_TxOutput **paAddresses,
-                             unsigned int addressCount,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    *ppDetails = nullptr;
-    for (unsigned i = 0; i < addressCount; ++i)
-    {
-        if (paAddresses[i]->input)
-            continue;
-
-        Address address;
-        if (self.addresses.get(address, paAddresses[i]->szAddress))
-        {
-            // Update the transaction:
-            if (address.recyclable)
-            {
-                address.recyclable = false;
-                ABC_CHECK_NEW(self.addresses.save(address));
-            }
-
-            // Return our details:
-            ABC_TxDetailsFree(*ppDetails);
-            *ppDetails = address.metadata.toDetails();
-        }
-    }
-
-exit:
-    return cc;
-}
-
-/**
  * Creates a receive request.
  *
  * @param szUserName    UserName for the account associated with this request
