@@ -73,14 +73,14 @@ typedef enum eTxType
     TxType_External
 } tTxType;
 
-typedef struct sABC_Tx
+struct Tx
 {
-    char *szNtxid;
-    char *szTxid;
+    std::string ntxid;
+    std::string txid;
     int64_t timeCreation;
-    bool bInternal;
-    tABC_TxDetails  *pDetails;
-} tABC_Tx;
+    bool internal;
+    TxMetadata metadata;
+};
 
 static tABC_CC  ABC_TxCheckForInternalEquivalent(const char *szFilename, bool *pbEquivalent, tABC_Error *pError);
 static tABC_CC  ABC_TxGetTxTypeAndBasename(const char *szFilename, tTxType *pType, char **pszBasename, tABC_Error *pError);
@@ -88,17 +88,15 @@ static tABC_CC  ABC_TxLoadTransactionInfo(Wallet &self, const char *szFilename, 
 static Status   txGetOutputs(Wallet &self, const std::string &ntxid, tABC_TxOutput ***paOutputs, unsigned int *pCount);
 static tABC_CC  ABC_TxLoadTxAndAppendToArray(Wallet &self, int64_t startTime, int64_t endTime, const char *szFilename, tABC_TxInfo ***paTransactions, unsigned int *pCount, tABC_Error *pError);
 static tABC_CC  ABC_TxCreateTxFilename(Wallet &self, char **pszFilename, const std::string &ntxid, bool bInternal, tABC_Error *pError);
-static tABC_CC  ABC_TxLoadTransaction(Wallet &self, const char *szFilename, tABC_Tx **ppTx, tABC_Error *pError);
-static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, tABC_Tx *pTx, tABC_Error *pError);
-static void     ABC_TxFreeTx(tABC_Tx *pTx);
-static tABC_CC  ABC_TxSaveTransaction(Wallet &self, const tABC_Tx *pTx, tABC_Error *pError);
-static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, const tABC_Tx *pTx, tABC_Error *pError);
+static tABC_CC  ABC_TxLoadTransaction(Wallet &self, const char *szFilename, Tx &tx, tABC_Error *pError);
+static tABC_CC  ABC_TxDecodeTxState(json_t *pJSON_Obj, Tx &tx, tABC_Error *pError);
+static tABC_CC  ABC_TxSaveTransaction(Wallet &self, const Tx &tx, tABC_Error *pError);
+static tABC_CC  ABC_TxEncodeTxState(json_t *pJSON_Obj, const Tx &tx, tABC_Error *pError);
 static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
-static tABC_CC  ABC_TxTransactionExists(Wallet &self, const std::string &ntxid, tABC_Tx **pTx, tABC_Error *pError);
+static tABC_CC  ABC_TxTransactionExists(Wallet &self, const std::string &ntxid, bool &result, tABC_Error *pError);
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
-static tABC_CC  ABC_TxSaveNewTx(Wallet &self, tABC_Tx *pTx, const std::vector<std::string> &addresses, bool bOutside, tABC_Error *pError);
-static tABC_CC  ABC_TxCalcCurrency(Wallet &self, int64_t amountSatoshi, double *pCurrency, tABC_Error *pError);
+static tABC_CC  ABC_TxSaveNewTx(Wallet &self, Tx &tx, const std::vector<std::string> &addresses, bool bOutside, tABC_Error *pError);
 
 tABC_CC ABC_TxSendComplete(Wallet &self,
                            SendInfo         *pInfo,
@@ -109,86 +107,76 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
-    tABC_Tx *pTx = structAlloc<tABC_Tx>();
-    tABC_Tx *pReceiveTx = NULL;
-    double currency;
+    Tx tx;
     Address address;
 
     // Start watching all addresses incuding new change addres
     ABC_CHECK_RET(ABC_TxWatchAddresses(self, pError));
 
     // set the state
-    pTx->szNtxid = stringCopy(ntxid);
-    pTx->szTxid = stringCopy(txid);
-    pTx->timeCreation = time(NULL);
-    pTx->bInternal = true;
-
-    // copy the details
-    ABC_CHECK_RET(ABC_TxDetailsCopy(&(pTx->pDetails), pInfo->pDetails, pError));
+    tx.ntxid = ntxid;
+    tx.txid = txid;
+    tx.timeCreation = time(nullptr);
+    tx.internal = true;
+    tx.metadata = pInfo->pDetails;
 
     // Add in tx fees to the amount of the tx
     if (pInfo->szDestAddress && self.addresses.get(address, pInfo->szDestAddress))
     {
-        pTx->pDetails->amountSatoshi = pInfo->pDetails->amountFeesAirbitzSatoshi
+        tx.metadata.amountSatoshi = pInfo->pDetails->amountFeesAirbitzSatoshi
                                         + pInfo->pDetails->amountFeesMinersSatoshi;
     }
     else
     {
-        pTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi
+        tx.metadata.amountSatoshi = pInfo->pDetails->amountSatoshi
                                         + pInfo->pDetails->amountFeesAirbitzSatoshi
                                         + pInfo->pDetails->amountFeesMinersSatoshi;
     }
 
-    ABC_CHECK_RET(ABC_TxCalcCurrency(
-        self, pTx->pDetails->amountSatoshi, &currency, pError));
-    pTx->pDetails->amountCurrency = currency;
+    ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
+        tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
+        static_cast<Currency>(self.currency())));
 
-    if (pTx->pDetails->amountSatoshi > 0)
-        pTx->pDetails->amountSatoshi *= -1;
-    if (pTx->pDetails->amountCurrency > 0)
-        pTx->pDetails->amountCurrency *= -1.0;
+    if (tx.metadata.amountSatoshi > 0)
+        tx.metadata.amountSatoshi *= -1;
+    if (tx.metadata.amountCurrency > 0)
+        tx.metadata.amountCurrency *= -1.0;
 
     // Save the transaction:
-    ABC_CHECK_RET(ABC_TxSaveNewTx(self, pTx, addresses, false, pError));
+    ABC_CHECK_RET(ABC_TxSaveNewTx(self, tx, addresses, false, pError));
 
     if (pInfo->bTransfer)
     {
-        pReceiveTx = structAlloc<tABC_Tx>();
-        pReceiveTx->szNtxid = stringCopy(ntxid);
-        pReceiveTx->szTxid = stringCopy(txid);
-        pReceiveTx->timeCreation = time(NULL);
-        pReceiveTx->bInternal = true;
-
-        // copy the details
-        ABC_CHECK_RET(ABC_TxDetailsCopy(&(pReceiveTx->pDetails), pInfo->pDetails, pError));
+        Tx receiveTx;
+        receiveTx.ntxid = ntxid;
+        receiveTx.txid = txid;
+        receiveTx.timeCreation = time(nullptr);
+        receiveTx.internal = true;
+        receiveTx.metadata = pInfo->pDetails;
 
         // Set the payee name:
-        ABC_FREE_STR(pReceiveTx->pDetails->szName);
-        pReceiveTx->pDetails->szName = stringCopy(self.name());
-
-        pReceiveTx->pDetails->amountSatoshi = pInfo->pDetails->amountSatoshi;
+        receiveTx.metadata.name = self.name();
 
         //
         // Since this wallet is receiving, it didn't really get charged AB fees
         // This should really be an assert since no transfers should have AB fees
         //
-        pReceiveTx->pDetails->amountFeesAirbitzSatoshi = 0;
+        receiveTx.metadata.amountFeesAirbitzSatoshi = 0;
 
-        ABC_CHECK_RET(ABC_TxCalcCurrency(*pInfo->walletDest,
-            pReceiveTx->pDetails->amountSatoshi, &pReceiveTx->pDetails->amountCurrency, pError));
+        ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
+            receiveTx.metadata.amountCurrency, receiveTx.metadata.amountSatoshi,
+            static_cast<Currency>(self.currency())));
 
-        if (pReceiveTx->pDetails->amountSatoshi < 0)
-            pReceiveTx->pDetails->amountSatoshi *= -1;
-        if (pReceiveTx->pDetails->amountCurrency < 0)
-            pReceiveTx->pDetails->amountCurrency *= -1.0;
+        if (receiveTx.metadata.amountSatoshi < 0)
+            receiveTx.metadata.amountSatoshi *= -1;
+        if (receiveTx.metadata.amountCurrency < 0)
+            receiveTx.metadata.amountCurrency *= -1.0;
 
         // save the transaction
-        ABC_CHECK_RET(ABC_TxSaveNewTx(*pInfo->walletDest, pReceiveTx, addresses, false, pError));
+        ABC_CHECK_RET(ABC_TxSaveNewTx(*pInfo->walletDest, receiveTx, addresses, false, pError));
     }
 
 exit:
-    ABC_TxFreeTx(pTx);
-    ABC_TxFreeTx(pReceiveTx);
     return cc;
 }
 
@@ -206,33 +194,25 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
-    tABC_Tx *pTx = NULL;
-    double currency = 0.0;
+    bool exists;
 
     // Does the transaction already exist?
-    ABC_TxTransactionExists(self, ntxid, &pTx, pError);
-    if (pTx == NULL)
+    ABC_TxTransactionExists(self, ntxid, exists, pError);
+    if (!exists)
     {
-        ABC_CHECK_RET(ABC_TxCalcCurrency(self, amountSatoshi, &currency, pError));
-
-        // create a transaction
-        pTx = structAlloc<tABC_Tx>();
-        pTx->pDetails = structAlloc<tABC_TxDetails>();
-
-        pTx->szNtxid = stringCopy(ntxid);
-        pTx->szTxid = stringCopy(txid);
-        pTx->timeCreation = time(NULL);
-        pTx->bInternal = false;
-        pTx->pDetails->amountSatoshi = amountSatoshi;
-        pTx->pDetails->amountCurrency = currency;
-        pTx->pDetails->amountFeesMinersSatoshi = feeSatoshi;
-
-        pTx->pDetails->szName = stringCopy("");
-        pTx->pDetails->szCategory = stringCopy("");
-        pTx->pDetails->szNotes = stringCopy("");
+        Tx tx;
+        tx.ntxid = ntxid;
+        tx.txid = txid;
+        tx.timeCreation = time(nullptr);
+        tx.internal = false;
+        tx.metadata.amountSatoshi = amountSatoshi;
+        tx.metadata.amountFeesMinersSatoshi = feeSatoshi;
+        ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
+            tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
+            static_cast<Currency>(self.currency())));
 
         // add the transaction to the address
-        ABC_CHECK_RET(ABC_TxSaveNewTx(self, pTx, addresses, true, pError));
+        ABC_CHECK_RET(ABC_TxSaveNewTx(self, tx, addresses, true, pError));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
         self.balanceDirty();
@@ -242,12 +222,10 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
             tABC_AsyncBitCoinInfo info;
             info.pData = pData;
             info.eventType = ABC_AsyncEventType_IncomingBitCoin;
-            info.szTxID = stringCopy(pTx->szNtxid);
-            info.szWalletUUID = stringCopy(self.id());
-            info.szDescription = stringCopy("Received funds");
+            info.szTxID = ntxid.c_str();
+            info.szWalletUUID = self.id().c_str();
+            info.szDescription = "Received funds";
             fAsyncBitCoinEventCallback(&info);
-            ABC_FREE_STR(info.szTxID);
-            ABC_FREE_STR(info.szDescription);
         }
     }
     else
@@ -262,17 +240,14 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
             tABC_AsyncBitCoinInfo info;
             info.pData = pData;
             info.eventType = ABC_AsyncEventType_DataSyncUpdate;
-            info.szTxID = stringCopy(pTx->szNtxid);
-            info.szWalletUUID = stringCopy(self.id());
-            info.szDescription = stringCopy("Updated balance");
+            info.szTxID = ntxid.c_str();
+            info.szWalletUUID = self.id().c_str();
+            info.szDescription = "Updated balance";
             fAsyncBitCoinEventCallback(&info);
-            ABC_FREE_STR(info.szTxID);
-            ABC_FREE_STR(info.szDescription);
         }
     }
-exit:
-    ABC_TxFreeTx(pTx);
 
+exit:
     return cc;
 }
 
@@ -285,7 +260,7 @@ exit:
  */
 tABC_CC
 ABC_TxSaveNewTx(Wallet &self,
-                tABC_Tx *pTx,
+                Tx &tx,
                 const std::vector<std::string> &addresses,
                 bool bOutside,
                 tABC_Error *pError)
@@ -312,33 +287,14 @@ ABC_TxSaveNewTx(Wallet &self,
     // Copy the metadata (if any):
     if (bOutside)
     {
-        if (!ABC_STRLEN(pTx->pDetails->szName) && !metadata.name.empty())
-            pTx->pDetails->szName = stringCopy(metadata.name);
-        if (!ABC_STRLEN(pTx->pDetails->szNotes) && !metadata.notes.empty())
-            pTx->pDetails->szNotes = stringCopy(metadata.notes);
-        if (!ABC_STRLEN(pTx->pDetails->szCategory) && !metadata.category.empty())
-            pTx->pDetails->szCategory = stringCopy(metadata.category);
+        if (tx.metadata.name.empty() && !metadata.name.empty())
+            tx.metadata.name = metadata.name;
+        if (tx.metadata.notes.empty() && !metadata.notes.empty())
+            tx.metadata.notes = metadata.notes;
+        if (tx.metadata.category.empty() && !metadata.category.empty())
+            tx.metadata.category = metadata.category;
     }
-    ABC_CHECK_RET(ABC_TxSaveTransaction(self, pTx, pError));
-
-exit:
-    return cc;
-}
-
-/**
- * Calculates the amount of currency based off of Wallet's currency code
- */
-static
-tABC_CC ABC_TxCalcCurrency(Wallet &self, int64_t amountSatoshi,
-                           double *pCurrency, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    double currency = 0.0;
-
-    ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
-        currency, amountSatoshi, static_cast<Currency>(self.currency())));
-
-    *pCurrency = currency;
+    ABC_CHECK_RET(ABC_TxSaveTransaction(self, tx, pError));
 
 exit:
     return cc;
@@ -358,7 +314,6 @@ tABC_CC ABC_TxGetTransaction(Wallet &self,
     AutoCoreLock lock(gCoreMutex);
 
     char *szFilename = NULL;
-    tABC_Tx *pTx = NULL;
     tABC_TxInfo *pTransaction = NULL;
 
     *ppTransaction = NULL;
@@ -385,7 +340,6 @@ tABC_CC ABC_TxGetTransaction(Wallet &self,
 
 exit:
     ABC_FREE_STR(szFilename);
-    ABC_TxFreeTx(pTx);
     ABC_TxFreeTransaction(pTransaction);
 
     return cc;
@@ -782,22 +736,20 @@ tABC_CC ABC_TxLoadTransactionInfo(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
-    tABC_Tx *pTx = NULL;
+    Tx tx;
     tABC_TxInfo *pTransaction = structAlloc<tABC_TxInfo>();
 
     *ppTransaction = NULL;
 
     // load the transaction
-    ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, &pTx, pError));
-    ABC_CHECK_NULL(pTx->pDetails);
+    ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, tx, pError));
 
     // steal the data and assign it to our new struct
-    pTransaction->szID = stringCopy(pTx->szNtxid);
-    pTransaction->szMalleableTxId = stringCopy(pTx->szTxid);
-    pTransaction->timeCreation = pTx->timeCreation;
-    pTransaction->pDetails = pTx->pDetails;
-    pTx->pDetails = NULL;
-    ABC_CHECK_NEW(txGetOutputs(self, pTx->szNtxid,
+    pTransaction->szID = stringCopy(tx.ntxid);
+    pTransaction->szMalleableTxId = stringCopy(tx.txid);
+    pTransaction->timeCreation = tx.timeCreation;
+    pTransaction->pDetails = tx.metadata.toDetails();
+    ABC_CHECK_NEW(txGetOutputs(self, tx.ntxid,
         &pTransaction->aOutputs, &pTransaction->countOutputs));
 
     // assign final result
@@ -805,7 +757,6 @@ tABC_CC ABC_TxLoadTransactionInfo(Wallet &self,
     pTransaction = NULL;
 
 exit:
-    ABC_TxFreeTx(pTx);
     ABC_TxFreeTransaction(pTransaction);
 
     return cc;
@@ -923,7 +874,7 @@ tABC_CC ABC_TxSetTransactionDetails(Wallet &self,
     AutoCoreLock lock(gCoreMutex);
 
     char *szFilename = NULL;
-    tABC_Tx *pTx = NULL;
+    Tx tx;
 
     // find the filename of the existing transaction
 
@@ -939,29 +890,16 @@ tABC_CC ABC_TxSetTransactionDetails(Wallet &self,
     ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoTransaction, "Transaction does not exist");
 
     // load the existing transaction
-    ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, &pTx, pError));
-    ABC_CHECK_NULL(pTx->pDetails);
+    ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, tx, pError));
 
     // modify the details
-    pTx->pDetails->amountSatoshi = pDetails->amountSatoshi;
-    pTx->pDetails->amountFeesAirbitzSatoshi = pDetails->amountFeesAirbitzSatoshi;
-    pTx->pDetails->amountFeesMinersSatoshi = pDetails->amountFeesMinersSatoshi;
-    pTx->pDetails->amountCurrency = pDetails->amountCurrency;
-    pTx->pDetails->bizId = pDetails->bizId;
-    pTx->pDetails->attributes = pDetails->attributes;
-    ABC_FREE_STR(pTx->pDetails->szName);
-    pTx->pDetails->szName = stringCopy(pDetails->szName);
-    ABC_FREE_STR(pTx->pDetails->szCategory);
-    pTx->pDetails->szCategory = stringCopy(pDetails->szCategory);
-    ABC_FREE_STR(pTx->pDetails->szNotes);
-    pTx->pDetails->szNotes = stringCopy(pDetails->szNotes);
+    tx.metadata = pDetails;
 
     // re-save the transaction
-    ABC_CHECK_RET(ABC_TxSaveTransaction(self, pTx, pError));
+    ABC_CHECK_RET(ABC_TxSaveTransaction(self, tx, pError));
 
 exit:
     ABC_FREE_STR(szFilename);
-    ABC_TxFreeTx(pTx);
 
     return cc;
 }
@@ -980,8 +918,7 @@ tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
     AutoCoreLock lock(gCoreMutex);
 
     char *szFilename = NULL;
-    tABC_Tx *pTx = NULL;
-    tABC_TxDetails *pDetails = NULL;
+    Tx tx;
 
     // find the filename of the existing transaction
 
@@ -997,21 +934,13 @@ tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
     ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoTransaction, "Transaction does not exist");
 
     // load the existing transaction
-    ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, &pTx, pError));
-    ABC_CHECK_NULL(pTx->pDetails);
-
-    // duplicate the details
-    ABC_CHECK_RET(ABC_TxDetailsCopy(&pDetails, pTx->pDetails, pError));
+    ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, tx, pError));
 
     // assign final result
-    *ppDetails = pDetails;
-    pDetails = NULL;
-
+    *ppDetails = tx.metadata.toDetails();
 
 exit:
     ABC_FREE_STR(szFilename);
-    ABC_TxFreeTx(pTx);
-    ABC_TxDetailsFree(pDetails);
 
     return cc;
 }
@@ -1033,30 +962,24 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_Tx *pTx = structAlloc<tABC_Tx>();
-    double currency;
+    Tx tx;
 
     // set the state
-    pTx->szNtxid = stringCopy(ntxid);
-    pTx->szTxid = stringCopy(txid);
-    pTx->timeCreation = time(NULL);
-    pTx->bInternal = true;
-
-    // Copy the details
-    ABC_CHECK_RET(ABC_TxDetailsCopy(&(pTx->pDetails), pDetails, pError));
-    pTx->pDetails->amountSatoshi = funds;
-    pTx->pDetails->amountFeesAirbitzSatoshi = 0;
-
+    tx.ntxid = ntxid;
+    tx.txid = txid;
+    tx.timeCreation = time(nullptr);
+    tx.internal = true;
+    tx.metadata = pDetails;
+    tx.metadata.amountSatoshi = funds;
+    tx.metadata.amountFeesAirbitzSatoshi = 0;
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
-        currency, pTx->pDetails->amountSatoshi,
+        tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
         static_cast<Currency>(wallet.currency())));
-    pTx->pDetails->amountCurrency = currency;
 
     // save the transaction
-    ABC_CHECK_RET(ABC_TxSaveTransaction(wallet, pTx, pError));
+    ABC_CHECK_RET(ABC_TxSaveTransaction(wallet, tx, pError));
 
 exit:
-    ABC_TxFreeTx(pTx);
     return cc;
 }
 
@@ -1088,17 +1011,16 @@ tABC_CC ABC_TxCreateTxFilename(Wallet &self, char **pszFilename, const std::stri
 static
 tABC_CC ABC_TxLoadTransaction(Wallet &self,
                               const char *szFilename,
-                              tABC_Tx **ppTx,
+                              Tx &result,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
 
     json_t *pJSON_Root = NULL;
-    tABC_Tx *pTx = structAlloc<tABC_Tx>();
     json_t *jsonVal = NULL;
-
-    *ppTx = NULL;
+    AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pDetails;
+    Tx tx;
 
     // make sure the transaction exists
     ABC_CHECK_ASSERT(fileExists(szFilename), ABC_CC_NoTransaction, "Transaction does not exist");
@@ -1109,27 +1031,26 @@ tABC_CC ABC_TxLoadTransaction(Wallet &self,
     // get the id
     jsonVal = json_object_get(pJSON_Root, JSON_TX_NTXID_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing id");
-    pTx->szNtxid = stringCopy(json_string_value(jsonVal));
+    tx.ntxid = json_string_value(jsonVal);
 
     // get the state object
-    ABC_CHECK_RET(ABC_TxDecodeTxState(pJSON_Root, pTx, pError));
+    ABC_CHECK_RET(ABC_TxDecodeTxState(pJSON_Root, tx, pError));
 
     // get the details object
-    ABC_CHECK_RET(ABC_TxDetailsDecode(pJSON_Root, &(pTx->pDetails), pError));
+    ABC_CHECK_RET(ABC_TxDetailsDecode(pJSON_Root, &pDetails.get(), pError));
+    tx.metadata = pDetails.get();
 
     // get advanced details
     ABC_CHECK_RET(
-        ABC_BridgeTxDetails(self, pTx->szNtxid,
-                            &(pTx->pDetails->amountSatoshi),
-                            &(pTx->pDetails->amountFeesMinersSatoshi),
+        ABC_BridgeTxDetails(self, tx.ntxid,
+                            &(tx.metadata.amountSatoshi),
+                            &(tx.metadata.amountFeesMinersSatoshi),
                             pError));
     // assign final result
-    *ppTx = pTx;
-    pTx = NULL;
+    result = tx;
 
 exit:
     if (pJSON_Root) json_decref(pJSON_Root);
-    ABC_TxFreeTx(pTx);
 
     return cc;
 }
@@ -1141,7 +1062,7 @@ exit:
  *               (it is the callers responsiblity to free this)
  */
 static
-tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tABC_Tx *pTx, tABC_Error *pError)
+tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, Tx &tx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -1158,37 +1079,22 @@ tABC_CC ABC_TxDecodeTxState(json_t *pJSON_Obj, tABC_Tx *pTx, tABC_Error *pError)
     // get the creation date
     jsonVal = json_object_get(jsonState, JSON_CREATION_DATE_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing creation date");
-    pTx->timeCreation = json_integer_value(jsonVal);
+    tx.timeCreation = json_integer_value(jsonVal);
 
     jsonVal = json_object_get(jsonState, JSON_MALLEABLE_TX_ID);
     if (jsonVal)
     {
         ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing malleable tx id");
-        pTx->szTxid = stringCopy(json_string_value(jsonVal));
+        tx.txid = json_string_value(jsonVal);
     }
 
     // get the internal boolean
     jsonVal = json_object_get(jsonState, JSON_TX_INTERNAL_FIELD);
     ABC_CHECK_ASSERT((jsonVal && json_is_boolean(jsonVal)), ABC_CC_JSONError, "Error parsing JSON transaction package - missing internal boolean");
-    pTx->bInternal = json_is_true(jsonVal) ? true : false;
+    tx.internal = json_is_true(jsonVal) ? true : false;
 
 exit:
     return cc;
-}
-
-/**
- * Free's a tABC_Tx struct and all its elements
- */
-static
-void ABC_TxFreeTx(tABC_Tx *pTx)
-{
-    if (pTx)
-    {
-        ABC_FREE_STR(pTx->szNtxid);
-        ABC_FREE_STR(pTx->szTxid);
-        ABC_TxDetailsFree(pTx->pDetails);
-        ABC_CLEAR_FREE(pTx, sizeof(tABC_Tx));
-    }
 }
 
 /**
@@ -1198,7 +1104,7 @@ void ABC_TxFreeTx(tABC_Tx *pTx)
  */
 static
 tABC_CC ABC_TxSaveTransaction(Wallet &self,
-                              const tABC_Tx *pTx,
+                              const Tx &tx,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1206,27 +1112,27 @@ tABC_CC ABC_TxSaveTransaction(Wallet &self,
 
     char *szFilename = NULL;
     json_t *pJSON_Root = NULL;
-
-    ABC_CHECK_NULL(pTx->szNtxid);
+    AutoFree<tABC_TxDetails, ABC_TxDetailsFree> pDetails;
 
     // create the json for the transaction
     pJSON_Root = json_object();
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_Error, "Could not create transaction JSON object");
 
     // set the ID
-    json_object_set_new(pJSON_Root, JSON_TX_NTXID_FIELD, json_string(pTx->szNtxid));
+    json_object_set_new(pJSON_Root, JSON_TX_NTXID_FIELD, json_string(tx.ntxid.c_str()));
 
     // set the state info
-    ABC_CHECK_RET(ABC_TxEncodeTxState(pJSON_Root, pTx, pError));
+    ABC_CHECK_RET(ABC_TxEncodeTxState(pJSON_Root, tx, pError));
 
     // set the details
-    ABC_CHECK_RET(ABC_TxDetailsEncode(pJSON_Root, pTx->pDetails, pError));
+    pDetails.get() = tx.metadata.toDetails();
+    ABC_CHECK_RET(ABC_TxDetailsEncode(pJSON_Root, pDetails, pError));
 
     // create the transaction directory if needed
     ABC_CHECK_NEW(fileEnsureDir(self.txDir()));
 
     // get the filename for this transaction
-    ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, pTx->szNtxid, pTx->bInternal, pError));
+    ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, tx.ntxid, tx.internal, pError));
 
     // save out the transaction object to a file encrypted with the master key
     ABC_CHECK_RET(ABC_CryptoEncryptJSONFileObject(pJSON_Root, toU08Buf(self.dataKey()), ABC_CryptoType_AES256, szFilename, pError));
@@ -1247,7 +1153,7 @@ exit:
  * @param pInfo     Pointer to the state data to store in the json object.
  */
 static
-tABC_CC ABC_TxEncodeTxState(json_t *pJSON_Obj, const tABC_Tx *pTx, tABC_Error *pError)
+tABC_CC ABC_TxEncodeTxState(json_t *pJSON_Obj, const Tx &tx, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -1261,15 +1167,15 @@ tABC_CC ABC_TxEncodeTxState(json_t *pJSON_Obj, const tABC_Tx *pTx, tABC_Error *p
     pJSON_State = json_object();
 
     // add the creation date to the state object
-    retVal = json_object_set_new(pJSON_State, JSON_CREATION_DATE_FIELD, json_integer(pTx->timeCreation));
+    retVal = json_object_set_new(pJSON_State, JSON_CREATION_DATE_FIELD, json_integer(tx.timeCreation));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the creation date to the state object
-    retVal = json_object_set_new(pJSON_State, JSON_MALLEABLE_TX_ID, json_string(pTx->szTxid));
+    retVal = json_object_set_new(pJSON_State, JSON_MALLEABLE_TX_ID, json_string(tx.txid.c_str()));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the internal boolean (internally created or created due to bitcoin event)
-    retVal = json_object_set_new(pJSON_State, JSON_TX_INTERNAL_FIELD, json_boolean(pTx->bInternal));
+    retVal = json_object_set_new(pJSON_State, JSON_TX_INTERNAL_FIELD, json_boolean(tx.internal));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the state object to the master object
@@ -1333,7 +1239,7 @@ void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count)
 
 tABC_CC ABC_TxTransactionExists(Wallet &self,
                                 const std::string &ntxid,
-                                tABC_Tx **pTx,
+                                bool &result,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -1349,14 +1255,7 @@ tABC_CC ABC_TxTransactionExists(Wallet &self,
         ABC_CHECK_RET(ABC_TxCreateTxFilename(self, &szFilename, ntxid, false, pError));
     }
 
-    if (fileExists(szFilename))
-    {
-        ABC_CHECK_RET(ABC_TxLoadTransaction(self, szFilename, pTx, pError));
-    }
-    else
-    {
-        *pTx = NULL;
-    }
+    result = fileExists(szFilename);
 
 exit:
     ABC_FREE_STR(szFilename);
