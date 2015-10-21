@@ -55,7 +55,7 @@ class Wallet;
 class Watcher;
 
 Status
-watcherFind(Watcher *&result, Wallet &self);
+watcherFind(Watcher *&result, const Wallet &self);
 
 Status
 watcherDeleteCache(Wallet &self);
@@ -89,7 +89,7 @@ tABC_CC ABC_BridgeWatcherStop(Wallet &self, tABC_Error *pError);
 
 tABC_CC ABC_BridgeWatcherDelete(Wallet &self, tABC_Error *pError);
 
-tABC_CC ABC_BridgeWatchAddr(Wallet &self, const char *address,
+tABC_CC ABC_BridgeWatchAddr(const Wallet &self, const char *address,
                             tABC_Error *pError);
 
 tABC_CC ABC_BridgePrioritizeAddress(Wallet &self,

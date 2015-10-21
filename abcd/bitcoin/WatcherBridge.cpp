@@ -87,7 +87,7 @@ static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
 
 static Status
-watcherFind(WatcherInfo *&result, Wallet &self)
+watcherFind(WatcherInfo *&result, const Wallet &self)
 {
     std::string id = self.id();
     auto row = watchers_.find(id);
@@ -99,7 +99,7 @@ watcherFind(WatcherInfo *&result, Wallet &self)
 }
 
 Status
-watcherFind(Watcher *&result, Wallet &self)
+watcherFind(Watcher *&result, const Wallet &self)
 {
     WatcherInfo *watcherInfo = nullptr;
     ABC_CHECK(watcherFind(watcherInfo, self));
@@ -260,7 +260,7 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeWatchAddr(Wallet &self,
+tABC_CC ABC_BridgeWatchAddr(const Wallet &self,
                             const char *pubAddress,
                             tABC_Error *pError)
 {
