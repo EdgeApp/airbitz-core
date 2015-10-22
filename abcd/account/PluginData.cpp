@@ -83,7 +83,7 @@ pluginDataRemove(const Account &account, const std::string &plugin,
     std::string filename = keyFilename(account, plugin, key);
 
     if (fileExists(filename))
-        ABC_CHECK_OLD(ABC_FileIODeleteFile(filename.c_str(), &error));
+        ABC_CHECK(fileDelete(filename));
 
     return Status();
 }
@@ -94,7 +94,7 @@ pluginDataClear(const Account &account, const std::string &plugin)
     std::string directory = pluginDirectory(account, plugin);
 
     if (fileExists(directory))
-        ABC_CHECK_OLD(ABC_FileIODeleteRecursive(directory.c_str(), &error));
+        ABC_CHECK(fileDelete(directory));
 
     return Status();
 }

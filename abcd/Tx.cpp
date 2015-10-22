@@ -639,7 +639,7 @@ tABC_CC ABC_TxCheckForInternalEquivalent(const char *szFilename,
         if (fileExists(name))
         {
             // delete the external version (this one)
-            ABC_CHECK_RET(ABC_FileIODeleteFile(szFilename, pError));
+            ABC_CHECK_NEW(fileDelete(szFilename));
 
             *pbEquivalent = true;
         }

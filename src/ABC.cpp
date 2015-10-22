@@ -264,7 +264,7 @@ tABC_CC ABC_AccountDelete(const char *szUserName,
         std::string directory;
         directory = loginDirFind(username);
         ABC_CHECK_ASSERT(!directory.empty(), ABC_CC_AccountDoesNotExist, "Account not found on disk");
-        ABC_CHECK_RET(ABC_FileIODeleteRecursive(directory.c_str(), pError));
+        ABC_CHECK_NEW(fileDelete(directory));
     }
 
 exit:

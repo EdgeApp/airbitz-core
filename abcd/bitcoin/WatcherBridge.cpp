@@ -126,7 +126,7 @@ watcherLoad(Wallet &self)
 Status
 watcherDeleteCache(Wallet &self)
 {
-    ABC_CHECK_OLD(ABC_FileIODeleteFile(watcherPath(self).c_str(), &error));
+    ABC_CHECK(fileDelete(watcherPath(self)));
     return Status();
 }
 

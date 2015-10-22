@@ -173,13 +173,13 @@ void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList)
 }
 
 Status
-fileLoad(DataChunk &result, const std::string &filename)
+fileLoad(DataChunk &result, const std::string &path)
 {
     AutoFileLock lock(gFileMutex);
 
-    FILE *fp = fopen(filename.c_str(), "rb");
+    FILE *fp = fopen(path.c_str(), "rb");
     if (!fp)
-        return ABC_ERROR(ABC_CC_FileOpenError, "Cannot open for reading: " + filename);
+        return ABC_ERROR(ABC_CC_FileOpenError, "Cannot open for reading: " + path);
 
     fseek(fp, 0, SEEK_END);
     size_t size = ftell(fp);
@@ -189,7 +189,7 @@ fileLoad(DataChunk &result, const std::string &filename)
     if (fread(result.data(), 1, size, fp) != size)
     {
         fclose(fp);
-        return ABC_ERROR(ABC_CC_FileReadError, "Cannot read file: " + filename);
+        return ABC_ERROR(ABC_CC_FileReadError, "Cannot read file: " + path);
     }
 
     fclose(fp);
@@ -197,102 +197,72 @@ fileLoad(DataChunk &result, const std::string &filename)
 }
 
 Status
-fileSave(DataSlice data, const std::string &filename)
+fileSave(DataSlice data, const std::string &path)
 {
     AutoFileLock lock(gFileMutex);
-    ABC_DebugLog("Writing file %s", filename.c_str());
+    ABC_DebugLog("Writing file %s", path.c_str());
 
-    FILE *fp = fopen(filename.c_str(), "wb");
+    FILE *fp = fopen(path.c_str(), "wb");
     if (!fp)
-        return ABC_ERROR(ABC_CC_FileOpenError, "Cannot open for writing: " + filename);
+        return ABC_ERROR(ABC_CC_FileOpenError, "Cannot open for writing: " + path);
 
     if (1 != fwrite(data.data(), data.size(), 1, fp))
     {
         fclose(fp);
-        return ABC_ERROR(ABC_CC_FileReadError, "Cannot write file: " + filename);
+        return ABC_ERROR(ABC_CC_FileReadError, "Cannot write file: " + path);
     }
 
     fclose(fp);
     return Status();
 }
 
-/**
- * Deletes the specified file
- *
- */
-tABC_CC ABC_FileIODeleteFile(const char *szFilename,
-                             tABC_Error *pError)
+static Status
+fileDeleteRecursive(const std::string &path)
 {
-    tABC_CC cc = ABC_CC_Ok;
-
-    ABC_CHECK_NULL(szFilename);
-    ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No filename provided");
-
-    // delete it
-    if (0 != unlink(szFilename))
-    {
-        ABC_RET_ERROR(ABC_CC_Error, "Could not delete file");
-    }
-
-exit:
-    return cc;
-}
-
-/**
- * Recursively deletes a directory or a file.
- */
-tABC_CC ABC_FileIODeleteRecursive(const char *szFilename, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    DIR *pDir = NULL;
-    char *szPath = NULL;
+    // It would be better if we could use the POSIX `nftw` function here,
+    // but that is not available on all platforms we support.
 
     // First, be sure the file exists:
     struct stat statbuf;
-    if (!stat(szFilename, &statbuf))
+    if (stat(path.c_str(), &statbuf))
+        return Status();
+
+    // If this is a directory, delete the contents:
+    if (S_ISDIR(statbuf.st_mode))
     {
-        // If this is a directory, delete the contents:
-        if (S_ISDIR(statbuf.st_mode))
+        DIR *dir = opendir(path.c_str());
+        if (!dir)
+            return ABC_ERROR(ABC_CC_SysError, "Cannot open directory for deletion");
+
+        struct dirent *de;
+        while (nullptr != (de = readdir(dir)))
         {
-            struct dirent *pEntry = NULL;
-            size_t baseSize = strlen(szFilename);
-            size_t pathSize;
+            // These two are not real entries:
+            if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, ".."))
+                continue;
 
-            pDir = opendir(szFilename);
-            ABC_CHECK_SYS(pDir, "opendir");
-
-            pEntry = readdir(pDir);
-            while (pEntry)
+            Status s = fileDeleteRecursive(fileSlashify(path) + de->d_name);
+            if (!s)
             {
-                // These two are not real entries:
-                if (strcmp(pEntry->d_name, ".") && strcmp(pEntry->d_name, ".."))
-                {
-                    // Delete the entry:
-                    pathSize = baseSize + strlen(pEntry->d_name) + 2;
-                    ABC_STR_NEW(szPath, pathSize);
-                    snprintf(szPath, pathSize, "%s/%s", szFilename, pEntry->d_name);
-
-                    ABC_CHECK_RET(ABC_FileIODeleteRecursive(szPath, pError));
-
-                    ABC_FREE(szPath);
-                }
-                pEntry = readdir(pDir);
+                closedir(dir);
+                return s.at(ABC_HERE());
             }
-
-            closedir(pDir);
-            pDir = NULL;
         }
-
-        // Actually remove the thing:
-        ABC_CHECK_SYS(!remove(szFilename), "remove");
+        closedir(dir);
     }
 
-exit:
-    if (pDir) closedir(pDir);
-    ABC_FREE(szPath);
+    // Actually remove the thing:
+    if (remove(path.c_str()))
+        return ABC_ERROR(ABC_CC_SysError, "Cannot delete file");
 
-    return cc;
+    return Status();
+}
+
+Status
+fileDelete(const std::string &path)
+{
+    ABC_DebugLog("Deleting %s", path.c_str());
+    return fileDeleteRecursive(path);
 }
 
 /**

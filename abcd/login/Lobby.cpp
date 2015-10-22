@@ -66,8 +66,7 @@ Lobby::otpKeyRemove()
 
     if (!dir_.empty())
     {
-        auto filename = dir_ + otpFilename;
-        ABC_CHECK_OLD(ABC_FileIODeleteFile(filename.c_str(), &error));
+        ABC_CHECK(fileDelete(dir_ + otpFilename));
     }
     otpKeyOk_ = false;
     return Status();

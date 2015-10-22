@@ -124,7 +124,7 @@ syncEnsureRepo(const std::string &syncDir, const std::string &tempDir,
     if (!fileExists(syncDir))
     {
         if (fileExists(tempDir))
-            ABC_CHECK_OLD(ABC_FileIODeleteRecursive(tempDir.c_str(), &error));
+            ABC_CHECK(fileDelete(tempDir));
         ABC_CHECK(syncMakeRepo(tempDir));
         bool dirty = false;
         ABC_CHECK(syncRepo(tempDir, syncKey, dirty));

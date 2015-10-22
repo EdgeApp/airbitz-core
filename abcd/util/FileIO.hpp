@@ -101,19 +101,19 @@ void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList);
  * Reads a file from disk.
  */
 Status
-fileLoad(DataChunk &result, const std::string &filename);
+fileLoad(DataChunk &result, const std::string &path);
 
 /**
  * Writes a file to disk.
  */
 Status
-fileSave(DataSlice data, const std::string &filename);
+fileSave(DataSlice data, const std::string &path);
 
-tABC_CC ABC_FileIODeleteFile(const char *szFilename,
-                             tABC_Error *pError);
-
-tABC_CC ABC_FileIODeleteRecursive(const char *szFilename,
-                                  tABC_Error *pError);
+/**
+ * Deletes a file recursively.
+ */
+Status
+fileDelete(const std::string &path);
 
 tABC_CC ABC_FileIOFileModTime(const char *szFilename,
                               time_t *pTime,
