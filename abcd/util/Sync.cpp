@@ -47,12 +47,6 @@ syncGitError(int e)
     return out;
 }
 
-static std::string
-slashify(const std::string &s)
-{
-    return s.back() == '/' ? s : s + '/';
-}
-
 /**
  * Builds a URL for the current git server.
  */
@@ -66,7 +60,7 @@ syncUrl(std::string &result, const std::string &syncKey, bool rotate=false)
 
         syncServerIndex++;
         syncServerIndex %= pInfo->countSyncServers;
-        syncServerName = slashify(pInfo->aszSyncServers[syncServerIndex]);
+        syncServerName = fileSlashify(pInfo->aszSyncServers[syncServerIndex]);
     }
 
     result = syncServerName + syncKey;

@@ -68,6 +68,12 @@ typedef struct sABC_FileIOFileList
 } tABC_FileIOList;
 
 /**
+ * Puts a slash on the end of a filename (if necessary).
+ */
+std::string
+fileSlashify(const std::string &path);
+
+/**
  * Ensures that a directory exists, creating it if not.
  */
 Status

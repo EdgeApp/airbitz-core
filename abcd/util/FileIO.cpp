@@ -44,6 +44,12 @@ namespace abcd {
 
 std::recursive_mutex gFileMutex;
 
+std::string
+fileSlashify(const std::string &path)
+{
+    return path.back() == '/' ? path : path + '/';
+}
+
 Status
 fileEnsureDir(const std::string &dir)
 {
