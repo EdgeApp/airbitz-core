@@ -124,18 +124,14 @@ AddressDb::load()
             // Try to load the address:
             Address address;
             AddressJson json;
-            if (json.load(dir_ + de->d_name, wallet_.dataKey()) &&
-                json.unpack(address))
+            if (json.load(dir_ + de->d_name, wallet_.dataKey()).log() &&
+                json.unpack(address).log())
             {
                 if (path(address) != dir_ + de->d_name)
                     ABC_DebugLog("Filename %s does not match address", de->d_name);
 
                 addresses_[address.address] = address;
                 files_[address.address] = json;
-            }
-            else
-            {
-                ABC_DebugLog("Cannot load address file %s", de->d_name);
             }
         }
         closedir(dir);
@@ -158,6 +154,7 @@ AddressDb::save(const Address &address)
     AddressJson json(files_[address.address]);
     ABC_CHECK(json.pack(address));
     ABC_CHECK(json.save(path(address), wallet_.dataKey()));
+    files_[address.address] = json;
 
     ABC_CHECK(stockpile());
     return Status();
