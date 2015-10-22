@@ -136,7 +136,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
         gContext.reset(new Context(szRootDir, szCaCertPath));
 
         // initialize logging
-        ABC_CHECK_RET(ABC_DebugInitialize(pError));
+        ABC_CHECK_NEW(debugInitialize());
 
         // override the alloc and free of janson so we can have a secure method
         json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
@@ -168,7 +168,7 @@ void ABC_Terminate()
 
         syncTerminate();
 
-        ABC_DebugTerminate();
+        debugTerminate();
     }
 }
 

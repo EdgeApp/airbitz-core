@@ -1,36 +1,12 @@
-/**
- *  Copyright (c) 2014, Airbitz
+/*
+ *  Copyright (c) 2015, AirBitz, Inc.
  *  All rights reserved.
  *
- *  Redistribution and use in source and binary forms are permitted provided that
- *  the following conditions are met:
- *
- *  1. Redistributions of source code must retain the above copyright notice, this
- *  list of conditions and the following disclaimer.
- *  2. Redistributions in binary form must reproduce the above copyright notice,
- *  this list of conditions and the following disclaimer in the documentation
- *  and/or other materials provided with the distribution.
- *  3. Redistribution or use of modified source code requires the express written
- *  permission of Airbitz Inc.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- *  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- *  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- *  The views and conclusions contained in the software and documentation are those
- *  of the authors and should not be interpreted as representing official policies,
- *  either expressed or implied, of the Airbitz Project.
+ * See the LICENSE file for more information.
  */
 
 #include "Debug.hpp"
-#include "Util.hpp"
+#include "FileIO.hpp"
 #include "../Context.hpp"
 #include <stdarg.h>
 #include <stdio.h>
@@ -45,48 +21,50 @@
 
 namespace abcd {
 
-#ifdef DEBUG
-
 #define MAX_LOG_SIZE (1 << 20) // Max size 1 MiB
 
-static std::recursive_mutex gDebugMutex;
-static std::string gLogFilename;
+static std::mutex gDebugMutex;
 static FILE *gLogFile = nullptr;
 
-static void ABC_DebugAppendToLog(const char *szOut);
-
-tABC_CC ABC_DebugInitialize(tABC_Error *pError)
+static std::string
+debugLogPath()
 {
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    gLogFilename = gContext->rootDir() + "abc.log";
-
-    gLogFile = fopen(gLogFilename.c_str(), "a");
-    ABC_CHECK_SYS(gLogFile, "fopen(log file)");
-    fseek(gLogFile, 0L, SEEK_END);
-
-exit:
-    return cc;
+    return gContext->rootDir() + "abc.log";
 }
 
-void ABC_DebugTerminate()
+Status
+debugInitialize()
 {
+#ifdef DEBUG
+    std::lock_guard<std::mutex> lock(gDebugMutex);
+    auto path = debugLogPath()
+    gLogFile = fopen(path.c_str(), "w");
+    if (!gLogFile)
+        return ABC_ERROR(ABC_CC_SysError, "Cannot open " + path);
+#endif
+
+    return Status();
+}
+
+void
+debugTerminate()
+{
+    std::lock_guard<std::mutex> lock(gDebugMutex);
     if (gLogFile)
         fclose(gLogFile);
 }
 
-tABC_CC ABC_DebugLogFilename(char **szFilename, tABC_Error *pError)
+DataChunk
+debugLogLoad()
 {
-    tABC_CC cc = ABC_CC_Ok;
-
-    *szFilename = stringCopy(gLogFilename);
-
-    return cc;
+    DataChunk out;
+    fileLoad(out, debugLogPath()).log();
+    return out;
 }
 
 void ABC_DebugLog(const char *format, ...)
 {
+#ifdef DEBUG
     time_t t = time(nullptr);
     struct tm *utc = gmtime(&t);
 
@@ -125,43 +103,20 @@ void ABC_DebugLog(const char *format, ...)
 #else
     printf("%s", out.c_str());
 #endif
-    ABC_DebugAppendToLog(out.c_str());
-}
 
-static void ABC_DebugAppendToLog(const char *szOut)
-{
+    std::lock_guard<std::mutex> lock(gDebugMutex);
     if (gLogFile)
     {
-        std::lock_guard<std::recursive_mutex> lock(gDebugMutex);
-        size_t size = ftell(gLogFile);
-        if (size > MAX_LOG_SIZE)
+        if (MAX_LOG_SIZE < ftell(gLogFile))
         {
             fclose(gLogFile);
-            gLogFile = fopen(gLogFilename.c_str(), "w");
+            gLogFile = fopen(debugLogPath().c_str(), "w");
         }
 
-        fwrite(szOut, 1, strlen(szOut), gLogFile);
+        fwrite(out.c_str(), 1, out.size(), gLogFile);
         fflush(gLogFile);
     }
-}
-
-#else
-
-tABC_CC ABC_DebugInitialize(const char *szRootDir, tABC_Error *pError)
-{
-}
-
-void ABC_DebugTerminate()
-{
-}
-
-/**
- * Log string placeholder for non-debug build
- */
-void ABC_DebugLog(const char * format, ...)
-{
-}
-
 #endif
+}
 
 } // namespace abcd
