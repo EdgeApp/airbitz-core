@@ -69,7 +69,7 @@ public:
     /**
      * Prints this status to the ABC log if it is an error.
      */
-    void
+    const Status &
     log() const;
 
     /**
