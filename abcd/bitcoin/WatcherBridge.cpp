@@ -82,7 +82,6 @@ private:
 
 static std::map<std::string, std::unique_ptr<WatcherInfo>> watchers_;
 
-static tABC_CC     ABC_BridgeTxDetailsSplit(Wallet &self, const std::string &ntxid, tABC_TxOutput ***iarr, unsigned int *pInCount, tABC_TxOutput ***oarr, unsigned int *pOutCount, int64_t *pAmount, int64_t *pFees, tABC_Error *pError);
 static tABC_CC     ABC_BridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep& sweep, tABC_Error *pError);
 static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
 static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
@@ -388,54 +387,11 @@ exit:
 }
 
 tABC_CC ABC_BridgeTxDetails(Wallet &self, const std::string &ntxid,
-                            tABC_TxOutput ***paOutputs, unsigned int *pCount,
                             int64_t *pAmount, int64_t *pFees, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    tABC_TxOutput **paInArr = NULL;
-    tABC_TxOutput **paOutArr = NULL;
-    tABC_TxOutput **farr = NULL;
-    unsigned int outCount = 0;
-    unsigned int inCount = 0;
-    unsigned int totalCount = 0;
-
-    ABC_CHECK_RET(ABC_BridgeTxDetailsSplit(self, ntxid,
-                                           &paInArr, &inCount,
-                                           &paOutArr, &outCount,
-                                           pAmount, pFees, pError));
-    farr = (tABC_TxOutput **) malloc(sizeof(tABC_TxOutput *) * (inCount + outCount));
-    totalCount = outCount + inCount;
-    for (unsigned i = 0; i < totalCount; ++i) {
-        if (i < inCount) {
-            farr[i] = paInArr[i];
-            paInArr[i] = NULL;
-        } else {
-            farr[i] = paOutArr[i - inCount];
-            paOutArr[i - inCount] = NULL;
-        }
-    }
-    *paOutputs = farr;
-    *pCount = totalCount;
-    farr = NULL;
-exit:
-    ABC_TxFreeOutputs(farr, inCount + outCount);
-    ABC_TxFreeOutputs(paInArr, inCount);
-    ABC_TxFreeOutputs(paOutArr, outCount);
-    return cc;
-}
-
-tABC_CC ABC_BridgeTxDetailsSplit(Wallet &self, const std::string &ntxid,
-                                 tABC_TxOutput ***paInputs, unsigned int *pInCount,
-                                 tABC_TxOutput ***paOutputs, unsigned int *pOutCount,
-                                 int64_t *pAmount, int64_t *pFees,
-                                 tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_TxOutput **paInArr = NULL;
-    tABC_TxOutput **paOutArr = NULL;
     bc::transaction_type tx;
     std::string txid;
-    unsigned int idx = 0, iCount = 0, oCount = 0;
     int64_t fees = 0;
     int64_t totalInSatoshi = 0, totalOutSatoshi = 0, totalMeSatoshi = 0, totalMeInSatoshi = 0;
 
@@ -449,49 +405,26 @@ tABC_CC ABC_BridgeTxDetailsSplit(Wallet &self, const std::string &ntxid,
     tx = watcherInfo->watcher.db().ntxidLookup(hash);
     txid = bc::encode_hash(bc::hash_transaction(tx));
 
-    idx = 0;
-    iCount = tx.inputs.size();
-    paInArr = (tABC_TxOutput **) malloc(sizeof(tABC_TxOutput *) * iCount);
     for (auto i : tx.inputs)
     {
         bc::payment_address addr;
         bc::extract(addr, i.script);
         auto prev = i.previous_output;
 
-        // Create output
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = true;
-        out->szTxId = stringCopy(bc::encode_hash(prev.hash));
-        out->szAddress = stringCopy(addr.encoded());
-
         auto tx = watcherInfo->watcher.db().txidLookup(prev.hash);
         if (prev.index < tx.outputs.size())
         {
-            out->value = tx.outputs[prev.index].value;
             totalInSatoshi += tx.outputs[prev.index].value;
             auto row = watcherInfo->addresses.find(addr.encoded());
             if  (row != watcherInfo->addresses.end())
                 totalMeInSatoshi += tx.outputs[prev.index].value;
-        } else {
-            out->value = 0;
         }
-        paInArr[idx] = out;
-        idx++;
     }
 
-    idx = 0;
-    oCount = tx.outputs.size();
-    paOutArr = (tABC_TxOutput **) malloc(sizeof(tABC_TxOutput *) * oCount);
     for (auto o : tx.outputs)
     {
         bc::payment_address addr;
         bc::extract(addr, o.script);
-        // Create output
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = false;
-        out->value = o.value;
-        out->szAddress = stringCopy(addr.encoded());
-        out->szTxId = stringCopy(txid);
 
         // Do we own this address?
         auto row = watcherInfo->addresses.find(addr.encoded());
@@ -500,23 +433,14 @@ tABC_CC ABC_BridgeTxDetailsSplit(Wallet &self, const std::string &ntxid,
             totalMeSatoshi += o.value;
         }
         totalOutSatoshi += o.value;
-        paOutArr[idx] = out;
-        idx++;
     }
     fees = totalInSatoshi - totalOutSatoshi;
     totalMeSatoshi -= totalMeInSatoshi;
 
-    *paInputs = paInArr;
-    *pInCount = iCount;
-    *paOutputs = paOutArr;
-    *pOutCount = oCount;
     *pAmount = totalMeSatoshi;
     *pFees = fees;
-    paInArr = NULL;
-    paOutArr = NULL;
+
 exit:
-    ABC_TxFreeOutputs(paInArr, iCount);
-    ABC_TxFreeOutputs(paOutArr, oCount);
     return cc;
 }
 
@@ -606,20 +530,11 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     }
 
     // There are some utxos, so send them to ourselves:
-    tABC_TxDetails details;
-    memset(&details, 0, sizeof(tABC_TxDetails));
-    details.amountSatoshi = 0;
-    details.amountCurrency = 0;
-    details.amountFeesAirbitzSatoshi = 0;
-    details.amountFeesMinersSatoshi = 0;
-    details.szName = const_cast<char*>("");
-    details.szCategory = const_cast<char*>("");
-    details.szNotes = const_cast<char*>("");
-    details.attributes = 0x2;
+    TxMetadata metadata;
 
     // Create a new receive request:
     ABC_CHECK_RET(ABC_TxCreateReceiveRequest(watcherInfo->wallet,
-        &details, &szID, false, pError));
+        metadata, &szID, false, pError));
     ABC_CHECK_RET(ABC_TxGetRequestAddress(watcherInfo->wallet, szID,
         &szAddress, pError));
 
@@ -657,7 +572,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     malTxId = bc::encode_hash(bc::hash_transaction(utx.tx));
     txId = ABC_BridgeNonMalleableTxId(utx.tx);
     ABC_CHECK_RET(ABC_TxSweepSaveTransaction(watcherInfo->wallet,
-        txId.c_str(), malTxId.c_str(), funds, &details, pError));
+        txId.c_str(), malTxId.c_str(), funds, metadata, pError));
 
     // Done:
     if (sweep.fCallback)
@@ -718,9 +633,9 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
     tABC_Error error;
     int64_t fees = 0;
     int64_t totalInSatoshi = 0, totalOutSatoshi = 0, totalMeSatoshi = 0, totalMeInSatoshi = 0;
-    tABC_TxOutput **iarr = NULL, **oarr = NULL;
     unsigned int idx = 0, iCount = 0, oCount = 0;
     std::string txId, malTxId;
+    std::vector<std::string> addresses;
 
     if (watcherInfo == NULL)
     {
@@ -733,7 +648,6 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
 
     idx = 0;
     iCount = tx.inputs.size();
-    iarr = (tABC_TxOutput **) malloc(sizeof(tABC_TxOutput *) * iCount);
     for (auto i : tx.inputs)
     {
         bc::payment_address addr;
@@ -756,13 +670,11 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
             if  (row != watcherInfo->addresses.end())
                 totalMeInSatoshi += tx.outputs[prev.index].value;
         }
-        iarr[idx] = out;
         idx++;
     }
 
     idx = 0;
     oCount = tx.outputs.size();
-    oarr = (tABC_TxOutput **) malloc(sizeof(tABC_TxOutput *) * oCount);
     for (auto o : tx.outputs)
     {
         bc::payment_address addr;
@@ -782,7 +694,7 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
         }
         totalOutSatoshi += o.value;
 
-        oarr[idx] = out;
+        addresses.push_back(addr.encoded());
         idx++;
     }
     if (totalMeSatoshi == 0 && totalMeInSatoshi == 0)
@@ -803,17 +715,14 @@ void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transactio
         ABC_TxReceiveTransaction(
             watcherInfo->wallet,
             totalMeSatoshi, fees,
-            iarr, iCount,
-            oarr, oCount,
-            txId.c_str(), malTxId.c_str(),
+            txId.c_str(), malTxId.c_str(), addresses,
             fAsyncBitCoinEventCallback,
             pData,
             &error));
     watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 
 exit:
-    ABC_FREE(oarr);
-    ABC_FREE(iarr);
+    return;
 }
 
 std::string

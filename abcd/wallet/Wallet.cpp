@@ -176,7 +176,8 @@ Wallet::Wallet(Account &account, const std::string &id):
     id_(id),
     dir_(gContext->walletsDir() + id + "/"),
     balanceDirty_(true),
-    addresses(*this)
+    addresses(*this),
+    txs(*this)
 {}
 
 Status
@@ -255,6 +256,7 @@ Wallet::loadSync()
 
     // Load the databases:
     ABC_CHECK(addresses.load());
+    ABC_CHECK(txs.load());
 
     return Status();
 }

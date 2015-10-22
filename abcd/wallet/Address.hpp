@@ -12,26 +12,21 @@
 
 namespace abcd {
 
+struct TxMetadata;
 class Wallet;
 
 tABC_CC ABC_TxWatchAddresses(Wallet &self,
                              tABC_Error *pError);
 
-tABC_CC ABC_TxTrashAddresses(Wallet &self,
-                             tABC_TxDetails **ppDetails,
-                             tABC_TxOutput **paAddresses,
-                             unsigned int addressCount,
-                             tABC_Error *pError);
-
 tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
-                                   tABC_TxDetails *pDetails,
+                                   const TxMetadata &metadata,
                                    char **pszRequestID,
                                    bool bTransfer,
                                    tABC_Error *pError);
 
 tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
                                    const char *szRequestID,
-                                   tABC_TxDetails *pDetails,
+                                   const TxMetadata &metadata,
                                    tABC_Error *pError);
 
 tABC_CC ABC_TxFinalizeReceiveRequest(Wallet &self,

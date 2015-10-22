@@ -36,56 +36,10 @@ exit:
 }
 
 /**
- * Marks the address as unusable and returns its metadata.
- *
- * @param ppDetails     Metadata extracted from the address database
- * @param paAddress     Addresses that will be updated
- * @param addressCount  Number of address in paAddress
- */
-tABC_CC ABC_TxTrashAddresses(Wallet &self,
-                             tABC_TxDetails **ppDetails,
-                             tABC_TxOutput **paAddresses,
-                             unsigned int addressCount,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    *ppDetails = nullptr;
-    for (unsigned i = 0; i < addressCount; ++i)
-    {
-        if (paAddresses[i]->input)
-            continue;
-
-        Address address;
-        if (self.addresses.get(address, paAddresses[i]->szAddress))
-        {
-            // Update the transaction:
-            if (address.recyclable)
-            {
-                address.recyclable = false;
-                ABC_CHECK_NEW(self.addresses.save(address));
-            }
-
-            // Return our details:
-            ABC_TxDetailsFree(*ppDetails);
-            *ppDetails = address.metadata.toDetails();
-        }
-    }
-
-exit:
-    return cc;
-}
-
-/**
  * Creates a receive request.
- *
- * @param szUserName    UserName for the account associated with this request
- * @param pDetails      Pointer to transaction details
- * @param pszRequestID  Pointer to store allocated ID for this request
- * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
-                                   tABC_TxDetails *pDetails,
+                                   const TxMetadata &metadata,
                                    char **pszRequestID,
                                    bool bTransfer,
                                    tABC_Error *pError)
@@ -95,7 +49,7 @@ tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
     Address address;
     ABC_CHECK_NEW(self.addresses.getNew(address));
     address.time = time(nullptr);
-    address.metadata = pDetails;
+    address.metadata = metadata;
     ABC_CHECK_NEW(self.addresses.save(address));
 
     // set the id for the caller
@@ -109,14 +63,10 @@ exit:
  * Modifies a previously created receive request.
  * Note: the previous details will be free'ed so if the user is using the previous details for this request
  * they should not assume they will be valid after this call.
- *
- * @param szRequestID   ID of this request
- * @param pDetails      Pointer to transaction details
- * @param pError        A pointer to the location to store the error if there is one
  */
 tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
                                    const char *szRequestID,
-                                   tABC_TxDetails *pDetails,
+                                   const TxMetadata &metadata,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -124,7 +74,7 @@ tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
 
     Address address;
     ABC_CHECK_NEW(self.addresses.get(address, szRequestID));
-    address.metadata = pDetails;
+    address.metadata = metadata;
     ABC_CHECK_NEW(self.addresses.save(address));
 
 exit:
