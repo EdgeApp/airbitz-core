@@ -141,8 +141,7 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
         // override the alloc and free of janson so we can have a secure method
         json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
-        DataSlice Seed(pSeedData, pSeedData + seedLength);
-        ABC_CHECK_RET(ABC_CryptoSetRandomSeed(toU08Buf(Seed), pError));
+        ABC_CHECK_NEW(randomInitialize(DataSlice(pSeedData, pSeedData + seedLength)));
 
         ABC_CHECK_NEW(httpInit());
         ABC_CHECK_NEW(syncInit(szCaCertPath));
