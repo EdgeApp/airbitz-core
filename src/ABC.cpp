@@ -827,7 +827,19 @@ tABC_CC ABC_GetCategories(const char *szUserName,
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_AccountCategoriesLoad(*account, paszCategories, pCount, pError));
+        AccountCategories categories;
+        ABC_CHECK_NEW(accountCategoriesLoad(categories, *account));
+
+        char **aszCategories;
+        ABC_ARRAY_NEW(aszCategories, categories.size(), char *);
+        size_t i = 0;
+        for (const auto &category: categories)
+        {
+            aszCategories[i++] = stringCopy(category);
+        }
+
+        *paszCategories = aszCategories;
+        *pCount = categories.size();
     }
 
 exit:
@@ -854,7 +866,7 @@ tABC_CC ABC_AddCategory(const char *szUserName,
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_AccountCategoriesAdd(*account, szCategory, pError));
+        ABC_CHECK_NEW(accountCategoriesAdd(*account, szCategory));
     }
 
 exit:
@@ -882,7 +894,7 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_AccountCategoriesRemove(*account, szCategory, pError));
+        ABC_CHECK_NEW(accountCategoriesRemove(*account, szCategory));
     }
 
 exit:

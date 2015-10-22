@@ -163,23 +163,6 @@ COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
     return Status();
 }
 
-COMMAND(InitLevel::account, GetCategories, "get-categories")
-{
-    if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... get-categories <user> <pass>");
-
-    AutoStringArray categories;
-    ABC_CHECK_OLD(ABC_GetCategories(session.username, session.password, &categories.data, &categories.size, &error));
-
-    printf("Categories:\n");
-    for (unsigned i = 0; i < categories.size; ++i)
-    {
-        printf("\t%s\n", categories.data[i]);
-    }
-
-    return Status();
-}
-
 COMMAND(InitLevel::context, GetQuestionChoices, "get-question-choices")
 {
     if (argc != 0)
