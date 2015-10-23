@@ -17,7 +17,6 @@
 
 namespace abcd {
 
-static tABC_CC  ABC_TxSetAddressRecycle(Wallet &self, const char *szAddress, bool bRecyclable, tABC_Error *pError);
 static tABC_CC  ABC_TxBuildFromLabel(Wallet &self, const char **pszLabel, tABC_Error *pError);
 
 tABC_CC ABC_TxWatchAddresses(Wallet &self,
@@ -37,102 +36,11 @@ exit:
 }
 
 /**
- * Creates a receive request.
- */
-tABC_CC ABC_TxCreateReceiveRequest(Wallet &self,
-                                   const TxMetadata &metadata,
-                                   char **pszRequestID,
-                                   bool bTransfer,
-                                   tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    Address address;
-    ABC_CHECK_NEW(self.addresses.getNew(address));
-    address.time = time(nullptr);
-    address.metadata = metadata;
-    ABC_CHECK_NEW(self.addresses.save(address));
-
-    // set the id for the caller
-    *pszRequestID = stringCopy(address.address);
-
-exit:
-    return cc;
-}
-
-/**
- * Modifies a previously created receive request.
- * Note: the previous details will be free'ed so if the user is using the previous details for this request
- * they should not assume they will be valid after this call.
- */
-tABC_CC ABC_TxModifyReceiveRequest(Wallet &self,
-                                   const char *szRequestID,
-                                   const TxMetadata &metadata,
-                                   tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
-
-    Address address;
-    ABC_CHECK_NEW(self.addresses.get(address, szRequestID));
-    address.metadata = metadata;
-    ABC_CHECK_NEW(self.addresses.save(address));
-
-exit:
-    return cc;
-}
-
-/**
- * Finalizes a previously created receive request.
- * This is done by setting the recycle bit to false so that the address is not used again.
- *
- * @param szRequestID   ID of this request
- * @param pError        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_TxFinalizeReceiveRequest(Wallet &self,
-                                     const char *szRequestID,
-                                     tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    // set the recycle bool to false (not that the request is actually an address internally)
-    ABC_CHECK_RET(ABC_TxSetAddressRecycle(self, szRequestID, false, pError));
-
-exit:
-
-    return cc;
-}
-
-/**
- * Cancels a previously created receive request.
- * This is done by setting the recycle bit to true so that the address can be used again.
- *
- * @param szRequestID   ID of this request
- * @param pError        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_TxCancelReceiveRequest(Wallet &self,
-                                   const char *szRequestID,
-                                   tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    // set the recycle bool to true (not that the request is actually an address internally)
-    ABC_CHECK_RET(ABC_TxSetAddressRecycle(self, szRequestID, true, pError));
-
-exit:
-
-    return cc;
-}
-
-/**
  * Sets the recycle status on an address as specified
  *
  * @param szAddress     ID of the address
  * @param pError        A pointer to the location to store the error if there is one
  */
-static
 tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
                                 const char *szAddress,
                                 bool bRecyclable,
@@ -221,28 +129,6 @@ exit:
     QRcode_free(qr);
     ABC_CLEAR_FREE(aData, length);
 
-    return cc;
-}
-
-/**
- * Gets the bit coin public address for a specified request
- *
- * @param szRequestID       ID of request
- * @param pszAddress        Location to store allocated address string (caller must free)
- * @param pError            A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_TxGetRequestAddress(Wallet &self,
-                                const char *szRequestID,
-                                char **pszAddress,
-                                tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    Address address;
-    ABC_CHECK_NEW(self.addresses.get(address, szRequestID));
-    *pszAddress = stringCopy(address.address);
-
-exit:
     return cc;
 }
 

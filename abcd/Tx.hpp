@@ -101,7 +101,6 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
                                    const std::string &ntxid,
                                    const std::string &txid,
                                    uint64_t funds,
-                                   const TxMetadata &metadata,
                                    tABC_Error *pError);
 
 } // namespace abcd

@@ -618,7 +618,6 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
                                    const std::string &ntxid,
                                    const std::string &txid,
                                    uint64_t funds,
-                                   const TxMetadata &metadata,
                                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -629,7 +628,6 @@ tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
     tx.txid = txid;
     tx.timeCreation = time(nullptr);
     tx.internal = true;
-    tx.metadata = metadata;
     tx.metadata.amountSatoshi = funds;
     tx.metadata.amountFeesAirbitzSatoshi = 0;
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(

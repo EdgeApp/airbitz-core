@@ -492,8 +492,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
                           tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    char *szID = NULL;
-    char *szAddress = NULL;
+    Address address;
     uint64_t funds = 0;
     abcd::unsigned_transaction utx;
     bc::transaction_output_type output;
@@ -529,14 +528,8 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
         return ABC_CC_Ok;
     }
 
-    // There are some utxos, so send them to ourselves:
-    TxMetadata metadata;
-
     // Create a new receive request:
-    ABC_CHECK_RET(ABC_TxCreateReceiveRequest(watcherInfo->wallet,
-        metadata, &szID, false, pError));
-    ABC_CHECK_RET(ABC_TxGetRequestAddress(watcherInfo->wallet, szID,
-        &szAddress, pError));
+    watcherInfo->wallet.addresses.getNew(address);
 
     // Build a transaction:
     utx.tx.version = 1;
@@ -553,7 +546,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
         funds -= 10000; // Ugh, hard-coded mining fee
     ABC_CHECK_ASSERT(!outputIsDust(funds), ABC_CC_InsufficientFunds, "Not enough funds");
     output.value = funds;
-    ABC_CHECK_NEW(outputScriptForAddress(output.script, szAddress));
+    ABC_CHECK_NEW(outputScriptForAddress(output.script, address.address));
     utx.tx.outputs.push_back(output);
 
     // Now sign that:
@@ -572,7 +565,7 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     malTxId = bc::encode_hash(bc::hash_transaction(utx.tx));
     txId = ABC_BridgeNonMalleableTxId(utx.tx);
     ABC_CHECK_RET(ABC_TxSweepSaveTransaction(watcherInfo->wallet,
-        txId.c_str(), malTxId.c_str(), funds, metadata, pError));
+        txId.c_str(), malTxId.c_str(), funds, pError));
 
     // Done:
     if (sweep.fCallback)
@@ -595,9 +588,6 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     watcherInfo->watcher.send_tx(utx.tx);
 
 exit:
-    ABC_FREE_STR(szID);
-    ABC_FREE_STR(szAddress);
-
     return cc;
 }
 

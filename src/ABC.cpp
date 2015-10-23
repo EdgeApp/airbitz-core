@@ -1565,7 +1565,10 @@ tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(*wallet, pDetails, pszRequestID, false, pError));
+
+        Address address;
+        ABC_CHECK_NEW(wallet->addresses.getNew(address));
+        *pszRequestID = stringCopy(address.address);
     }
 
 exit:
@@ -1595,7 +1598,12 @@ tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxModifyReceiveRequest(*wallet, szRequestID, pDetails, pError));
+
+        Address address;
+        ABC_CHECK_NEW(wallet->addresses.get(address, szRequestID));
+        address.metadata = pDetails;
+        address.time = time(nullptr);
+        ABC_CHECK_NEW(wallet->addresses.save(address));
     }
 
 exit:
@@ -1621,7 +1629,7 @@ tABC_CC ABC_FinalizeReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxFinalizeReceiveRequest(*wallet, szRequestID, pError));
+        ABC_CHECK_RET(ABC_TxSetAddressRecycle(*wallet, szRequestID, false, pError));
     }
 
 exit:
@@ -1647,7 +1655,7 @@ tABC_CC ABC_CancelReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxCancelReceiveRequest(*wallet, szRequestID, pError));
+        ABC_CHECK_RET(ABC_TxSetAddressRecycle(*wallet, szRequestID, true, pError));
     }
 
 exit:
@@ -1797,10 +1805,9 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         pInfo->metadata.name = pSpend->szName;
 
         // Fill in the send info:
-        AutoString szRequestId;
-        AutoString szRequestAddress;
-        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(*wallet, pInfo->metadata, &szRequestId.get(), true, pError));
-        ABC_CHECK_RET(ABC_TxGetRequestAddress(*wallet, szRequestId, &pInfo->szDestAddress, pError));
+        Address address;
+        ABC_CHECK_NEW(wallet->addresses.getNew(address));
+        pInfo->szDestAddress = stringCopy(address.address);
         pInfo->walletDest = wallet.get();
         pInfo->bTransfer = true;
 
@@ -2150,7 +2157,8 @@ exit:
 }
 
 /**
- * Gets the bit coin public address for a specified request
+ * Gets the bit coin public address for a specified request.
+ * DEPRECATED, since the address ID *is* the address.
  *
  * @param szUserName        UserName for the account associated with the requests
  * @param szPassword        Password for the account associated with the requests
@@ -2168,10 +2176,7 @@ tABC_CC ABC_GetRequestAddress(const char *szUserName,
 {
     ABC_PROLOG();
 
-    {
-        ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGetRequestAddress(*wallet, szRequestID, pszAddress, pError));
-    }
+    *pszAddress = stringCopy(szRequestID);
 
 exit:
     return cc;
