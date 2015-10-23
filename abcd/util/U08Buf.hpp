@@ -11,8 +11,7 @@
 #ifndef ABCD_UTIL_U08BUF_H
 #define ABCD_UTIL_U08BUF_H
 
-// TODO: Eliminate macros, so we don't need to pull this in:
-#include "Util.hpp"
+#include <string.h>
 
 namespace abcd {
 

@@ -5,6 +5,7 @@
 
 #include "TxDatabase.hpp"
 #include "WatcherBridge.hpp"
+#include "../util/Debug.hpp"
 
 namespace abcd {
 

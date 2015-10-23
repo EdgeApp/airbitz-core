@@ -12,6 +12,7 @@
 #include "../bitcoin/Text.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/Mutex.hpp"
+#include "../util/Util.hpp"
 #include <qrencode.h>
 
 namespace abcd {

@@ -31,6 +31,7 @@
 
 #include "WalletShim.hpp"
 #include "../abcd/account/Account.hpp"
+#include "../abcd/util/Util.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 
 namespace abcd {

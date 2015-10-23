@@ -13,6 +13,7 @@
 #include "../bitcoin/Watcher.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/Mutex.hpp"
+#include "../util/Util.hpp"
 #include "../wallet/Details.hpp"
 #include "../wallet/Wallet.hpp"
 #include <bitcoin/bitcoin.hpp>

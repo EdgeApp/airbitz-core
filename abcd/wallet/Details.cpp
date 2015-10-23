@@ -6,6 +6,7 @@
  */
 
 #include "Details.hpp"
+#include "../util/Util.hpp"
 
 namespace abcd {
 

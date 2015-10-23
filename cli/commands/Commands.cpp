@@ -11,6 +11,7 @@
 #include "../../abcd/json/JsonBox.hpp"
 #include "../../abcd/login/Login.hpp"
 #include "../../abcd/util/FileIO.hpp"
+#include "../../abcd/util/Util.hpp"
 #include "../../abcd/wallet/Wallet.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <iostream>

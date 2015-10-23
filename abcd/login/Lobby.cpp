@@ -10,6 +10,7 @@
 #include "../auth/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../json/JsonObject.hpp"
+#include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
 
 namespace abcd {

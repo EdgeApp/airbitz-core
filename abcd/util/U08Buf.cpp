@@ -6,6 +6,7 @@
  */
 
 #include "U08Buf.hpp"
+#include "Util.hpp"
 
 namespace abcd {
 

@@ -7,6 +7,7 @@
 
 #include "JsonPtr.hpp"
 #include "../crypto/Crypto.hpp"
+#include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Json.hpp"
 #include <new>

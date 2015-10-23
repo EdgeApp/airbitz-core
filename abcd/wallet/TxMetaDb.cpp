@@ -10,6 +10,8 @@
 #include "Wallet.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
+#include "../util/AutoFree.hpp"
+#include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
 #include <dirent.h>
 
