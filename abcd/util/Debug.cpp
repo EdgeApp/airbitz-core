@@ -21,7 +21,7 @@
 
 namespace abcd {
 
-#define MAX_LOG_SIZE (1 << 20) // Max size 1 MiB
+#define MAX_LOG_SIZE (1 << 19) // Max size 512 KiB
 
 static std::mutex gDebugMutex;
 static FILE *gLogFile = nullptr;
@@ -32,15 +32,35 @@ debugLogPath()
     return gContext->rootDir() + "abc.log";
 }
 
+static std::string
+debugLogOldPath()
+{
+    return gContext->rootDir() + "abc-prev.log";
+}
+
+Status
+debugLogRotate()
+{
+    if (gLogFile)
+        fclose(gLogFile);
+
+    auto path = debugLogPath();
+    if (fileExists(path))
+        rename(path.c_str(), debugLogOldPath().c_str());
+
+    gLogFile = fopen(path.c_str(), "w");
+    if (!gLogFile)
+        return ABC_ERROR(ABC_CC_SysError, "Cannot open " + path);
+
+    return Status();
+}
+
 Status
 debugInitialize()
 {
 #ifdef DEBUG
     std::lock_guard<std::mutex> lock(gDebugMutex);
-    auto path = debugLogPath()
-    gLogFile = fopen(path.c_str(), "w");
-    if (!gLogFile)
-        return ABC_ERROR(ABC_CC_SysError, "Cannot open " + path);
+    ABC_CHECK(debugLogRotate());
 #endif
 
     return Status();
@@ -57,9 +77,13 @@ debugTerminate()
 DataChunk
 debugLogLoad()
 {
-    DataChunk out;
-    fileLoad(out, debugLogPath()).log();
-    return out;
+    DataChunk out1;
+    fileLoad(out1, debugLogOldPath()).log();
+
+    DataChunk out2;
+    fileLoad(out2, debugLogPath()).log();
+
+    return buildData({out1, out2});
 }
 
 void ABC_DebugLog(const char *format, ...)
@@ -105,14 +129,11 @@ void ABC_DebugLog(const char *format, ...)
 #endif
 
     std::lock_guard<std::mutex> lock(gDebugMutex);
+    if (gLogFile && MAX_LOG_SIZE < ftell(gLogFile))
+        debugLogRotate().log();
+
     if (gLogFile)
     {
-        if (MAX_LOG_SIZE < ftell(gLogFile))
-        {
-            fclose(gLogFile);
-            gLogFile = fopen(debugLogPath().c_str(), "w");
-        }
-
         fwrite(out.c_str(), 1, out.size(), gLogFile);
         fflush(gLogFile);
     }
