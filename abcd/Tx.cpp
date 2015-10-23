@@ -299,6 +299,10 @@ tABC_CC ABC_TxGetTransaction(Wallet &self,
     pTransaction->szMalleableTxId = stringCopy(tx.txid);
     pTransaction->timeCreation = tx.timeCreation;
     pTransaction->pDetails = tx.metadata.toDetails();
+    ABC_CHECK_RET(ABC_BridgeTxDetails(self, tx.ntxid,
+        &(pTransaction->pDetails->amountSatoshi),
+        &(pTransaction->pDetails->amountFeesMinersSatoshi),
+        pError));
     ABC_CHECK_NEW(txGetOutputs(self, tx.ntxid,
         &pTransaction->aOutputs, &pTransaction->countOutputs));
 
