@@ -19,6 +19,7 @@
 namespace abcd {
 
 class Account;
+class TxDatabase;
 
 /**
  * Manages the information stored in the top-level wallet sync directory.
@@ -27,6 +28,8 @@ class Wallet:
     public std::enable_shared_from_this<Wallet>
 {
 public:
+    ~Wallet();
+
     Account &account;
 
     static Status
@@ -98,6 +101,7 @@ private:
 public:
     AddressDb addresses;
     TxMetaDb txs;
+    TxDatabase &txdb;
 };
 
 } // namespace abcd

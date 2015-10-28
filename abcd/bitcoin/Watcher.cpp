@@ -37,8 +37,9 @@ Watcher::~Watcher()
 {
 }
 
-Watcher::Watcher()
-  : socket_(ctx_, ZMQ_PAIR),
+Watcher::Watcher(TxDatabase &db):
+    db_(db),
+    socket_(ctx_, ZMQ_PAIR),
     connection_(nullptr)
 {
     std::stringstream name;

@@ -62,6 +62,7 @@ struct PendingSweep
 struct WatcherInfo
 {
     WatcherInfo(Wallet &wallet):
+        watcher(wallet.txdb),
         wallet(wallet),
         parent_(wallet.shared_from_this())
     {

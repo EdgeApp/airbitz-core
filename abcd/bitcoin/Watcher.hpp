@@ -26,7 +26,7 @@ class Watcher:
 {
 public:
     ~Watcher();
-    Watcher();
+    Watcher(TxDatabase &db);
 
     // - Server: -----------------------
     void disconnect();
@@ -77,7 +77,7 @@ public:
     TxDatabase &db() { return db_; }
 
 private:
-    TxDatabase db_;
+    TxDatabase &db_;
     zmq::context_t ctx_;
 
     // Cached addresses, for when we are disconnected:
