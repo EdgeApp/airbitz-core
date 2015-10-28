@@ -73,24 +73,24 @@ public:
     /**
      * Returns the highest block that this database has seen.
      */
-    long long last_height();
+    long long last_height() const;
 
     /**
      * Returns true if the database contains the transaction.
      */
-    bool txidExists(bc::hash_digest txid);
+    bool txidExists(bc::hash_digest txid) const;
     bool ntxidExists(bc::hash_digest ntxid);
 
     /**
      * Obtains a transaction from the database.
      */
-    bc::transaction_type txidLookup(bc::hash_digest txid);
+    bc::transaction_type txidLookup(bc::hash_digest txid) const;
     bc::transaction_type ntxidLookup(bc::hash_digest ntxid);
 
     /**
      * Finds a transaction's height, or 0 if it is unconfirmed.
      */
-    long long txidHeight(bc::hash_digest txid);
+    long long txidHeight(bc::hash_digest txid) const;
 
     /**
      * Finds a transaction's height, or 0 if it is unconfirmed.
@@ -103,27 +103,27 @@ public:
      * Returns true if all inputs are addresses in the list control.
      */
     bool is_spend(bc::hash_digest txid,
-        const AddressSet &addresses);
+        const AddressSet &addresses) const;
 
     /**
      * Returns true if this address has received any funds.
      */
-    bool has_history(const bc::payment_address &address);
+    bool has_history(const bc::payment_address &address) const;
 
     /**
      * Get all unspent outputs in the database.
      */
-    bc::output_info_list get_utxos();
+    bc::output_info_list get_utxos() const;
 
     /**
      * Get just the utxos corresponding to a set of addresses.
      */
-    bc::output_info_list get_utxos(const AddressSet &addresses);
+    bc::output_info_list get_utxos(const AddressSet &addresses) const;
 
     /**
      * Write the database to an in-memory blob.
      */
-    bc::data_chunk serialize();
+    bc::data_chunk serialize() const;
 
     /**
      * Reconstitute the database from an in-memory blob.
@@ -133,18 +133,13 @@ public:
     /**
      * Debug dump to show db contents.
      */
-    void dump(std::ostream &out);
+    void dump(std::ostream &out) const;
 
     /**
      * Insert a new transaction into the database.
      * @return true if the callback should be fired.
      */
     bool insert(const bc::transaction_type &tx, TxState state);
-
-    /*
-     * Calculate the ntxid for a transaction.
-     */
-    bc::hash_digest get_non_malleable_txid(bc::transaction_type tx);
 
 private:
     // - Updater: ----------------------
@@ -188,7 +183,7 @@ private:
     void check_fork(size_t height);
 
     // Guards access to object state:
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
 
     // The last block seen on the network:
     size_t last_height_;
