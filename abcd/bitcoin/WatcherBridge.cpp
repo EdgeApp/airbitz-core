@@ -380,64 +380,6 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeTxDetails(Wallet &self, const std::string &ntxid,
-                            int64_t *pAmount, int64_t *pFees, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    bc::transaction_type tx;
-    std::string txid;
-    int64_t fees = 0;
-    int64_t totalInSatoshi = 0, totalOutSatoshi = 0, totalMeSatoshi = 0, totalMeInSatoshi = 0;
-
-    WatcherInfo *watcherInfo = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcherInfo, self));
-
-    bc::hash_digest hash;
-    if (!bc::decode_hash(hash, ntxid))
-        ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
-
-    tx = watcherInfo->watcher.db().ntxidLookup(hash);
-    txid = bc::encode_hash(bc::hash_transaction(tx));
-
-    for (auto i : tx.inputs)
-    {
-        bc::payment_address addr;
-        bc::extract(addr, i.script);
-        auto prev = i.previous_output;
-
-        auto tx = watcherInfo->watcher.db().txidLookup(prev.hash);
-        if (prev.index < tx.outputs.size())
-        {
-            totalInSatoshi += tx.outputs[prev.index].value;
-            auto row = watcherInfo->addresses.find(addr.encoded());
-            if  (row != watcherInfo->addresses.end())
-                totalMeInSatoshi += tx.outputs[prev.index].value;
-        }
-    }
-
-    for (auto o : tx.outputs)
-    {
-        bc::payment_address addr;
-        bc::extract(addr, o.script);
-
-        // Do we own this address?
-        auto row = watcherInfo->addresses.find(addr.encoded());
-        if  (row != watcherInfo->addresses.end())
-        {
-            totalMeSatoshi += o.value;
-        }
-        totalOutSatoshi += o.value;
-    }
-    fees = totalInSatoshi - totalOutSatoshi;
-    totalMeSatoshi -= totalMeInSatoshi;
-
-    *pAmount = totalMeSatoshi;
-    *pFees = fees;
-
-exit:
-    return cc;
-}
-
 /**
  * Filters a transaction list, removing any that aren't found in the
  * watcher database.
@@ -679,7 +621,6 @@ bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &t
         std::to_string(totalOutSatoshi).c_str(),
         std::to_string(fees).c_str());
     ABC_CHECK(txReceiveTransaction(watcherInfo->wallet,
-        totalMeSatoshi, fees,
         txId, malTxId, addresses, fAsyncCallback, pData));
     watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 

@@ -60,7 +60,6 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
  */
 Status
 txReceiveTransaction(Wallet &self,
-    uint64_t amountSatoshi, uint64_t feeSatoshi,
     const std::string &ntxid, const std::string &txid,
     const std::vector<std::string> &addresses,
     tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
