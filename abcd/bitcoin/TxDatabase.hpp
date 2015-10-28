@@ -94,8 +94,10 @@ public:
 
     /**
      * Get just the utxos corresponding to a set of addresses.
+     * @param filter true to filter out unconfirmed outputs.
      */
-    bc::output_info_list get_utxos(const AddressSet &addresses) const;
+    bc::output_info_list get_utxos(const AddressSet &addresses,
+        bool filter=false) const;
 
     /**
      * Write the database to an in-memory blob.

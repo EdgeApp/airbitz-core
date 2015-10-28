@@ -34,7 +34,7 @@
 #include "account/Account.hpp"
 #include "account/AccountSettings.hpp"
 #include "bitcoin/Text.hpp"
-#include "bitcoin/Watcher.hpp"
+#include "bitcoin/TxDatabase.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"
 #include "spend/Spend.hpp"
@@ -472,16 +472,13 @@ txGetAmounts(Wallet &self, const std::string &ntxid,
     int64_t totalInSatoshi = 0, totalOutSatoshi = 0;
     int64_t totalMeSatoshi = 0, totalMeInSatoshi = 0;
 
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
-
     auto addressStrings = self.addresses.list();
     AddressSet addresses(addressStrings.begin(), addressStrings.end());
 
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, ntxid))
         return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
-    auto tx = watcher->db().ntxidLookup(hash);
+    auto tx = self.txdb.ntxidLookup(hash);
 
     for (const auto &i: tx.inputs)
     {
@@ -489,7 +486,7 @@ txGetAmounts(Wallet &self, const std::string &ntxid,
         bc::extract(address, i.script);
 
         auto prev = i.previous_output;
-        auto tx = watcher->db().txidLookup(prev.hash);
+        auto tx = self.txdb.txidLookup(prev.hash);
         if (prev.index < tx.outputs.size())
         {
             if (addresses.end() != addresses.find(address))
@@ -521,13 +518,10 @@ static Status
 txGetOutputs(Wallet &self, const std::string &ntxid,
     tABC_TxOutput ***paOutputs, unsigned int *pCount)
 {
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
-
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, ntxid))
         return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
-    auto tx = watcher->db().ntxidLookup(hash);
+    auto tx = self.txdb.ntxidLookup(hash);
     auto txid = bc::encode_hash(bc::hash_transaction(tx));
 
     // Create the array:
@@ -549,7 +543,7 @@ txGetOutputs(Wallet &self, const std::string &ntxid,
         out->szTxId = stringCopy(bc::encode_hash(prev.hash));
         out->szAddress = stringCopy(addr.encoded());
 
-        auto tx = watcher->db().txidLookup(prev.hash);
+        auto tx = self.txdb.txidLookup(prev.hash);
         if (prev.index < tx.outputs.size())
         {
             out->value = tx.outputs[prev.index].value;

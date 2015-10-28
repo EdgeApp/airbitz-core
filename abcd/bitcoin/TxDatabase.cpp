@@ -230,7 +230,8 @@ bc::output_info_list TxDatabase::get_utxos() const
     return out;
 }
 
-bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses) const
+bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses,
+    bool filter) const
 {
     auto raw = get_utxos();
 
@@ -247,6 +248,19 @@ bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses) const
         if (bc::extract(to_address, output.script))
             if (addresses.find(to_address) != addresses.end())
                 utxos.push_back(utxo);
+    }
+
+    // Filter out unconfirmed ones:
+    if (filter)
+    {
+        bc::output_info_list out;
+        for (auto &utxo: utxos)
+        {
+            if (txidHeight(utxo.point.hash) ||
+                is_spend(utxo.point.hash, addresses))
+                out.push_back(utxo);
+        }
+        utxos = std::move(out);
     }
 
     return utxos;

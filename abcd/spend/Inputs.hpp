@@ -15,7 +15,7 @@
 
 namespace abcd {
 
-class Watcher;
+class Wallet;
 typedef struct sABC_GeneralInfo tABC_GeneralInfo;
 
 /**
@@ -24,7 +24,7 @@ typedef struct sABC_GeneralInfo tABC_GeneralInfo;
 typedef std::map<const std::string, std::string> KeyTable;
 
 Status
-signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys);
+signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys);
 
 /**
  * A fully-formed transaction, but possibly missing its signature scripts.
@@ -55,7 +55,7 @@ typedef std::unordered_map<bc::payment_address, wif_key> key_table;
 /**
  * Finds the challenges for a set up utxos in the watcher database.
  */
-bool gather_challenges(unsigned_transaction& utx, Watcher& watcher);
+bool gather_challenges(unsigned_transaction& utx, Wallet &wallet);
 
 /**
  * Signs as many transaction inputs as possible using the given keys.
