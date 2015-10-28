@@ -95,10 +95,6 @@ tABC_CC ABC_BridgePrioritizeAddress(Wallet &self,
 Status
 watcherSend(Wallet &self, libbitcoin::transaction_type &tx);
 
-tABC_CC ABC_BridgeTxHeight(Wallet &self, const std::string &ntxid, int *height, tABC_Error *pError);
-
-tABC_CC ABC_BridgeTxBlockHeight(Wallet &self, int *height, tABC_Error *pError);
-
 tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
                                      tABC_TxInfo **aTransactions,
                                      unsigned int *pCount,
@@ -106,12 +102,6 @@ tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
 
 std::string
 ABC_BridgeNonMalleableTxId(libbitcoin::transaction_type tx);
-
-/**
- * Pulls a raw transaction out of the watcher database.
- */
-Status
-watcherBridgeRawTx(Wallet &self, const std::string &ntxid, DataChunk &result);
 
 } // namespace abcd
 

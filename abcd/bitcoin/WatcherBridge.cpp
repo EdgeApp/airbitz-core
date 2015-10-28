@@ -339,38 +339,6 @@ tABC_CC ABC_BridgeWatcherDelete(Wallet &self, tABC_Error *pError)
     return cc;
 }
 
-tABC_CC
-ABC_BridgeTxHeight(Wallet &self, const std::string &ntxid, int *height, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    bc::hash_digest hash;
-    if (!bc::decode_hash(hash, ntxid))
-        ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
-    *height = self.txdb.ntxidHeight(hash);
-    if (NTXID_HEIGHT_NOT_FOUND == *height)
-    {
-        cc = ABC_CC_Synchronizing;
-    }
-
-exit:
-    return cc;
-}
-
-tABC_CC
-ABC_BridgeTxBlockHeight(Wallet &self, int *height, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    *height = self.txdb.last_height();
-    if (*height == 0)
-    {
-        cc = ABC_CC_Synchronizing;
-    }
-
-    return cc;
-}
-
 /**
  * Filters a transaction list, removing any that aren't found in the
  * watcher database.
@@ -582,19 +550,6 @@ ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
     for (auto& input: tx.inputs)
         input.script = bc::script_type();
     return bc::encode_hash(bc::hash_transaction(tx, bc::sighash::all));
-}
-
-Status
-watcherBridgeRawTx(Wallet &self, const std::string &ntxid, DataChunk &result)
-{
-    bc::hash_digest hash;
-    if (!bc::decode_hash(hash, ntxid))
-        return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
-    auto tx = self.txdb.ntxidLookup(hash);
-    result.resize(satoshi_raw_size(tx));
-    bc::satoshi_save(tx, result.begin());
-
-    return Status();
 }
 
 } // namespace abcd
