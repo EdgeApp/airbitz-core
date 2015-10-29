@@ -11,7 +11,6 @@
 #include "../account/AccountSettings.hpp"
 #include "../bitcoin/Text.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
-#include "../util/Mutex.hpp"
 #include "../util/Util.hpp"
 #include <qrencode.h>
 
@@ -23,7 +22,6 @@ tABC_CC ABC_TxWatchAddresses(Wallet &self,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
 
     auto addresses = self.addresses.list();
     for (const auto &i: addresses)
@@ -47,7 +45,6 @@ tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
 
     Address address;
     ABC_CHECK_NEW(self.addresses.get(address, szAddress));
@@ -78,7 +75,6 @@ tABC_CC ABC_TxGenerateRequestQRCode(Wallet &self,
                                     tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
 
     QRcode *qr = NULL;
     unsigned char *aData = NULL;

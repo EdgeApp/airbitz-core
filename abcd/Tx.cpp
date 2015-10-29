@@ -34,7 +34,6 @@
 #include "bitcoin/TxDatabase.hpp"
 #include "spend/Spend.hpp"
 #include "util/Debug.hpp"
-#include "util/Mutex.hpp"
 #include "util/Util.hpp"
 #include "wallet/Details.hpp"
 #include "wallet/TxMetadata.hpp"
@@ -60,7 +59,6 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
                            tABC_Error       *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
     Tx tx;
     Address address;
 
@@ -137,7 +135,6 @@ txReceiveTransaction(Wallet &self,
     const std::vector<std::string> &addresses,
     tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    AutoCoreLock lock(gCoreMutex);
     Tx temp;
 
     // Does the transaction already exist?
@@ -254,7 +251,6 @@ tABC_CC ABC_TxGetTransaction(Wallet &self,
                              tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
 
     Tx tx;
     tABC_TxInfo *pTransaction = structAlloc<tABC_TxInfo>();
@@ -302,7 +298,6 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
                               tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
 
     tABC_TxInfo *pTransaction = NULL;
     tABC_TxInfo **aTransactions = NULL;

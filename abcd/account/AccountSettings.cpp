@@ -12,7 +12,6 @@
 #include "../login/Login.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Json.hpp"
-#include "../util/Mutex.hpp"
 #include "../util/Util.hpp"
 
 namespace abcd {
@@ -103,7 +102,6 @@ tABC_CC ABC_AccountSettingsLoad(const Account &account,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
 
     tABC_AccountSettings *pSettings = NULL;
     json_t *pJSON_Root = NULL;
@@ -380,7 +378,6 @@ tABC_CC ABC_AccountSettingsSave(const Account &account,
                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
 
     json_t *pJSON_Root = NULL;
     json_t *pJSON_Denom = NULL;

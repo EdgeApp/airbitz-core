@@ -9,7 +9,6 @@
 #include "AutoFree.hpp"
 #include "Debug.hpp"
 #include "FileIO.hpp"
-#include "Mutex.hpp"
 #include "../General.hpp"
 #include "../../minilibs/git-sync/sync.h"
 #include <stdlib.h>
@@ -152,10 +151,7 @@ syncRepo(const std::string &syncDir, const std::string &syncKey, bool &dirty)
     }
 
     int files_changed, need_push;
-    {
-        AutoCoreLock lock(gCoreMutex);
-        ABC_CHECK_GIT(sync_master(repo, &files_changed, &need_push));
-    }
+    ABC_CHECK_GIT(sync_master(repo, &files_changed, &need_push));
 
     if (need_push)
         ABC_CHECK_GIT(sync_push(repo, url.c_str()));

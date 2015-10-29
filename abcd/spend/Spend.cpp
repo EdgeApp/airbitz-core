@@ -12,7 +12,6 @@
 #include "../Tx.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
-#include "../util/Mutex.hpp"
 #include "../util/Util.hpp"
 #include "../wallet/Details.hpp"
 #include "../wallet/Wallet.hpp"
@@ -71,7 +70,6 @@ SendInfo::SendInfo()
 tABC_CC  ABC_TxCalcSendFees(Wallet &self, SendInfo *pInfo, uint64_t *pTotalFees, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
     bc::transaction_type tx;
     Address changeAddress;
 
@@ -137,7 +135,6 @@ tABC_CC ABC_TxSend(Wallet &self,
                    tABC_Error       *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    AutoCoreLock lock(gCoreMutex);
 
     Address changeAddress;
     bc::transaction_type tx;
