@@ -55,14 +55,15 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
                            const std::vector<std::string> &addresses,
                            tABC_Error       *pError);
 
-tABC_CC ABC_TxReceiveTransaction(Wallet &self,
-                                 uint64_t amountSatoshi, uint64_t feeSatoshi,
-                                 const std::string &ntxid,
-                                 const std::string &txid,
-                                 const std::vector<std::string> &addresses,
-                                 tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                                 void *pData,
-                                 tABC_Error *pError);
+/**
+ * Handles creating or updating when we receive a transaction
+ */
+Status
+txReceiveTransaction(Wallet &self,
+    uint64_t amountSatoshi, uint64_t feeSatoshi,
+    const std::string &ntxid, const std::string &txid,
+    const std::vector<std::string> &addresses,
+    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
 
 tABC_CC ABC_TxGetTransaction(Wallet &self,
                              const std::string &ntxid,

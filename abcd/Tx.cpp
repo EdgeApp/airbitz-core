@@ -154,19 +154,13 @@ exit:
     return cc;
 }
 
-/**
- * Handles creating or updating when we receive a transaction
- */
-tABC_CC ABC_TxReceiveTransaction(Wallet &self,
-                                 uint64_t amountSatoshi, uint64_t feeSatoshi,
-                                 const std::string &ntxid,
-                                 const std::string &txid,
-                                 const std::vector<std::string> &addresses,
-                                 tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                                 void *pData,
-                                 tABC_Error *pError)
+Status
+txReceiveTransaction(Wallet &self,
+    uint64_t amountSatoshi, uint64_t feeSatoshi,
+    const std::string &ntxid, const std::string &txid,
+    const std::vector<std::string> &addresses,
+    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
     Tx temp;
 
@@ -180,17 +174,17 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
         tx.internal = false;
         tx.metadata.amountSatoshi = amountSatoshi;
         tx.metadata.amountFeesMinersSatoshi = feeSatoshi;
-        ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
+        ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
             tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
             static_cast<Currency>(self.currency())));
 
         // add the transaction to the address
-        ABC_CHECK_RET(ABC_TxSaveNewTx(self, tx, addresses, true, pError));
+        ABC_CHECK_OLD(ABC_TxSaveNewTx(self, tx, addresses, true, &error));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
         self.balanceDirty();
 
-        if (fAsyncBitCoinEventCallback)
+        if (fAsyncCallback)
         {
             tABC_AsyncBitCoinInfo info;
             info.pData = pData;
@@ -198,7 +192,7 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
             info.szTxID = ntxid.c_str();
             info.szWalletUUID = self.id().c_str();
             info.szDescription = "Received funds";
-            fAsyncBitCoinEventCallback(&info);
+            fAsyncCallback(&info);
         }
     }
     else
@@ -208,7 +202,7 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
         self.balanceDirty();
 
-        if (fAsyncBitCoinEventCallback)
+        if (fAsyncCallback)
         {
             tABC_AsyncBitCoinInfo info;
             info.pData = pData;
@@ -216,12 +210,11 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
             info.szTxID = ntxid.c_str();
             info.szWalletUUID = self.id().c_str();
             info.szDescription = "Updated balance";
-            fAsyncBitCoinEventCallback(&info);
+            fAsyncCallback(&info);
         }
     }
 
-exit:
-    return cc;
+    return Status();
 }
 
 /**
