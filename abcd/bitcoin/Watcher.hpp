@@ -65,8 +65,6 @@ private:
     zmq::context_t ctx_;
     TxUpdater txu_;
 
-    // Cached addresses, for when we are disconnected:
-    std::unordered_map<bc::payment_address, unsigned> addresses_;
     bc::payment_address priority_address_;
 
     // Socket for talking to the thread:

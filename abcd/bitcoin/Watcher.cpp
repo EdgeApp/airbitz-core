@@ -29,6 +29,11 @@ enum {
     msg_send
 };
 
+static bool is_valid(const payment_address& address)
+{
+    return address.version() != payment_address::invalid_version;
+}
+
 Watcher::Watcher(TxDatabase &db):
     txu_(db, ctx_, *this),
     socket_(ctx_, ZMQ_PAIR)
@@ -46,18 +51,9 @@ void Watcher::disconnect()
     send_disconnect();
 }
 
-static bool is_valid(const payment_address& address)
-{
-    return address.version() != payment_address::invalid_version;
-}
-
 void Watcher::connect()
 {
     send_connect();
-    for (auto& address: addresses_)
-        send_watch_addr(address.first, address.second);
-    if (is_valid(priority_address_))
-        send_watch_addr(priority_address_, priority_poll);
 }
 
 void Watcher::send_tx(const transaction_type& tx)
@@ -67,18 +63,14 @@ void Watcher::send_tx(const transaction_type& tx)
 
 void Watcher::watch_address(const payment_address& address, unsigned poll_ms)
 {
-    auto a = addresses_.find(address);
-    if (a != addresses_.end() && a->second == poll_ms)
-        return;
-    addresses_[address] = poll_ms;
     send_watch_addr(address, poll_ms);
 }
 
 /**
- * Checks a particular address more frequently (every other poll). To go back
- * to normal mode, pass an empty address.
+ * Checks a particular address more frequently.
+ * To go back to normal mode, pass an empty address.
  */
-void Watcher::prioritize_address(const payment_address& address)
+void Watcher::prioritize_address(const payment_address &address)
 {
     if (is_valid(priority_address_))
     {
