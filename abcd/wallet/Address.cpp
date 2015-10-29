@@ -28,7 +28,7 @@ tABC_CC ABC_TxWatchAddresses(Wallet &self,
     auto addresses = self.addresses.list();
     for (const auto &i: addresses)
     {
-        ABC_CHECK_RET(ABC_BridgeWatchAddr(self, i.c_str(), pError));
+        ABC_CHECK_NEW(bridgeWatchAddress(self, i));
     }
 
 exit:

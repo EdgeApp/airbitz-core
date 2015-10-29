@@ -264,7 +264,7 @@ AddressDb::stockpile()
                 ABC_CHECK(json.pack(address));
                 ABC_CHECK(json.save(path(address), wallet_.dataKey()));
 
-                ABC_CHECK_OLD(ABC_BridgeWatchAddr(wallet_, address.address.c_str(), &error));
+                bridgeWatchAddress(wallet_, address.address).log();
             }
         }
         else if (!index->second)

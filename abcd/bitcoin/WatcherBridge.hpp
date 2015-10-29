@@ -85,8 +85,8 @@ tABC_CC ABC_BridgeWatcherStop(Wallet &self, tABC_Error *pError);
 
 tABC_CC ABC_BridgeWatcherDelete(Wallet &self, tABC_Error *pError);
 
-tABC_CC ABC_BridgeWatchAddr(const Wallet &self, const char *address,
-                            tABC_Error *pError);
+Status
+bridgeWatchAddress(const Wallet &self, const std::string &address);
 
 tABC_CC ABC_BridgePrioritizeAddress(Wallet &self,
                                     const char *szAddress,

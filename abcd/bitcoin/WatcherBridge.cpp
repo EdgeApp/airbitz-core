@@ -248,24 +248,20 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_BridgeWatchAddr(const Wallet &self,
-                            const char *pubAddress,
-                            tABC_Error *pError)
+Status
+bridgeWatchAddress(const Wallet &self, const std::string &address)
 {
-    tABC_CC cc = ABC_CC_Ok;
+    ABC_DebugLog("Watching %s for %s", address.c_str(), self.id().c_str());
 
-    ABC_DebugLog("Watching %s for %s", pubAddress, self.id().c_str());
     bc::payment_address addr;
+    if (!addr.set_encoded(address))
+        return ABC_ERROR(ABC_CC_ParseError, "Invalid address");
 
     WatcherInfo *watcherInfo = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcherInfo, self));
-
-    if (!addr.set_encoded(pubAddress))
-        ABC_RET_ERROR(ABC_CC_ParseError, "Invalid address");
+    ABC_CHECK(watcherFind(watcherInfo, self));
     watcherInfo->watcher.watch_address(addr);
 
-exit:
-    return cc;
+    return Status();
 }
 
 tABC_CC ABC_BridgePrioritizeAddress(Wallet &self,
