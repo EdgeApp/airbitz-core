@@ -4,12 +4,16 @@
  */
 
 #include "TxUpdater.hpp"
+#include "../General.hpp"
 #include "../util/Debug.hpp"
 #include <list>
 
 namespace abcd {
 
 constexpr unsigned max_queries = 10;
+
+// The last obelisk server we connected to:
+static unsigned gLastObelisk = 0;
 
 /**
  * An address that needs to be checked.
@@ -31,21 +35,58 @@ using std::placeholders::_1;
 
 TxUpdater::~TxUpdater()
 {
+    delete connection_;
 }
 
-TxUpdater::TxUpdater(TxDatabase &db, bc::client::obelisk_codec &codec,
-    TxCallbacks &callbacks):
-    db_(db), codec_(codec),
+TxUpdater::TxUpdater(TxDatabase &db, void *ctx, TxCallbacks &callbacks):
+    db_(db),
+    ctx_(ctx),
     callbacks_(callbacks),
     failed_(false),
     queued_queries_(0),
     queued_get_indices_(0),
-    last_wakeup_(std::chrono::steady_clock::now())
+    last_wakeup_(std::chrono::steady_clock::now()),
+    connection_(nullptr)
 {
 }
 
-void TxUpdater::start()
+void
+TxUpdater::disconnect()
 {
+    delete connection_;
+    connection_ = nullptr;
+}
+
+Status
+TxUpdater::connect()
+{
+    // Pick a server:
+    auto servers = generalBitcoinServers();
+    ++gLastObelisk;
+    if (servers.size() <= gLastObelisk)
+        gLastObelisk = 0;
+    auto server = servers[gLastObelisk];
+
+    // Parse out the key part:
+    std::string key;
+    size_t key_start = server.find(' ');
+    if (key_start != std::string::npos)
+    {
+        key = server.substr(key_start + 1);
+        server.erase(key_start);
+    }
+
+    ABC_DebugLog("Connecting to %s", server.c_str());
+    delete connection_;
+    connection_ = new Connection(ctx_);
+    if (!connection_->socket.connect(server, key))
+    {
+        delete connection_;
+        connection_ = nullptr;
+        failed_ = true;
+        return ABC_ERROR(ABC_CC_SysError, "Cannot connect to " + server);
+    }
+
     // Check for new blocks:
     get_height();
 
@@ -55,6 +96,8 @@ void TxUpdater::start()
 
     // Transmit all unsent transactions:
     db_.foreach_unsent(std::bind(&TxUpdater::send_tx, this, _1));
+
+    return Status();
 }
 
 void TxUpdater::watch(const bc::payment_address &address,
@@ -62,7 +105,7 @@ void TxUpdater::watch(const bc::payment_address &address,
 {
     // Only insert if it isn't already present:
     rows_[address] = AddressRow{poll, std::chrono::steady_clock::now() - poll};
-    if (queued_queries_ < max_queries)
+    if (connection_ && queued_queries_ < max_queries)
         query_address(address);
 }
 
@@ -70,7 +113,8 @@ void TxUpdater::send(bc::transaction_type tx)
 {
     if (db_.insert(tx, TxState::unsent))
         callbacks_.on_add(tx);
-    send_tx(tx);
+    if (connection_)
+        send_tx(tx);
 }
 
 AddressSet TxUpdater::watching()
@@ -86,52 +130,70 @@ bc::client::sleep_time TxUpdater::wakeup()
     bc::client::sleep_time next_wakeup(0);
     auto now = std::chrono::steady_clock::now();
 
-    // Figure out when our next block check is:
-    auto period = std::chrono::seconds(30);
-    auto elapsed = std::chrono::duration_cast<bc::client::sleep_time>(
-        now - last_wakeup_);
-    if (period <= elapsed)
+    if (connection_)
     {
-        get_height();
-        last_wakeup_ = now;
-        elapsed = bc::client::sleep_time::zero();
-    }
-    next_wakeup = period - elapsed;
-
-    // Build a list of all the addresses that are due for a checkup:
-    std::list<ToCheck> toCheck;
-    for (auto &row: rows_)
-    {
-        auto poll_time = row.second.poll_time;
+        // Figure out when our next block check is:
+        auto period = std::chrono::seconds(30);
         auto elapsed = std::chrono::duration_cast<bc::client::sleep_time>(
-            now - row.second.last_check);
-        if (poll_time <= elapsed)
-            toCheck.push_back(ToCheck{elapsed - poll_time, row.first});
-        else
-            next_wakeup = bc::client::min_sleep(next_wakeup, poll_time - elapsed);
-    }
-
-    // Process the most outdated addresses first:
-    toCheck.sort();
-    for (const auto &i: toCheck)
-    {
-        auto &row = rows_[i.address];
-        if (queued_queries_ < max_queries ||
-            row.poll_time < std::chrono::seconds(2))
+            now - last_wakeup_);
+        if (period <= elapsed)
         {
-            next_wakeup = bc::client::min_sleep(next_wakeup, row.poll_time);
-            query_address(i.address);
+            get_height();
+            last_wakeup_ = now;
+            elapsed = bc::client::sleep_time::zero();
         }
+        next_wakeup = period - elapsed;
+
+        // Build a list of all the addresses that are due for a checkup:
+        std::list<ToCheck> toCheck;
+        for (auto &row: rows_)
+        {
+            auto poll_time = row.second.poll_time;
+            auto elapsed = std::chrono::duration_cast<bc::client::sleep_time>(
+                now - row.second.last_check);
+            if (poll_time <= elapsed)
+                toCheck.push_back(ToCheck{elapsed - poll_time, row.first});
+            else
+                next_wakeup = bc::client::min_sleep(next_wakeup, poll_time - elapsed);
+        }
+
+        // Process the most outdated addresses first:
+        toCheck.sort();
+        for (const auto &i: toCheck)
+        {
+            auto &row = rows_[i.address];
+            if (queued_queries_ < max_queries ||
+                row.poll_time < std::chrono::seconds(2))
+            {
+                next_wakeup = bc::client::min_sleep(next_wakeup, row.poll_time);
+                query_address(i.address);
+            }
+        }
+
+        // Update the socket (if any):
+        connection_->socket.forward(connection_->codec);
+        next_wakeup = bc::client::min_sleep(next_wakeup,
+            connection_->codec.wakeup());
     }
 
     // Report the last server failure:
     if (failed_)
     {
+        connect().log();
         callbacks_.on_fail();
         failed_ = false;
     }
 
     return next_wakeup;
+}
+
+std::vector<zmq_pollitem_t>
+TxUpdater::pollitems()
+{
+    std::vector<zmq_pollitem_t> out;
+    if (connection_)
+        out.push_back(connection_->socket.pollitem());
+    return out;
 }
 
 void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs)
@@ -188,7 +250,7 @@ void TxUpdater::get_height()
         }
     };
 
-    codec_.fetch_last_height(on_error, on_done);
+    connection_->codec.fetch_last_height(on_error, on_done);
 }
 
 void TxUpdater::get_tx(bc::hash_digest txid, bool want_inputs)
@@ -214,7 +276,7 @@ void TxUpdater::get_tx(bc::hash_digest txid, bool want_inputs)
         query_done();
     };
 
-    codec_.fetch_transaction(on_error, on_done, txid);
+    connection_->codec.fetch_transaction(on_error, on_done, txid);
 }
 
 void TxUpdater::get_tx_mem(bc::hash_digest txid, bool want_inputs)
@@ -241,7 +303,7 @@ void TxUpdater::get_tx_mem(bc::hash_digest txid, bool want_inputs)
         query_done();
     };
 
-    codec_.fetch_unconfirmed_transaction(on_error, on_done, txid);
+    connection_->codec.fetch_unconfirmed_transaction(on_error, on_done, txid);
 }
 
 void TxUpdater::get_index(bc::hash_digest txid)
@@ -269,7 +331,7 @@ void TxUpdater::get_index(bc::hash_digest txid)
         queue_get_indices();
     };
 
-    codec_.fetch_transaction_index(on_error, on_done, txid);
+    connection_->codec.fetch_transaction_index(on_error, on_done, txid);
 }
 
 void TxUpdater::send_tx(const bc::transaction_type &tx)
@@ -288,7 +350,7 @@ void TxUpdater::send_tx(const bc::transaction_type &tx)
         callbacks_.on_send(error, tx);
     };
 
-    codec_.broadcast_transaction(on_error, on_done, tx);
+    connection_->codec.broadcast_transaction(on_error, on_done, tx);
 }
 
 void TxUpdater::query_address(const bc::payment_address &address)
@@ -316,7 +378,17 @@ void TxUpdater::query_address(const bc::payment_address &address)
         query_done();
     };
 
-    codec_.address_fetch_history(on_error, on_done, address);
+    connection_->codec.address_fetch_history(on_error, on_done, address);
+}
+
+static void on_unknown_nop(const std::string &)
+{
+}
+
+TxUpdater::Connection::Connection(void *ctx):
+    socket(ctx),
+    codec(socket, on_unknown_nop, std::chrono::seconds(10), 0)
+{
 }
 
 } // namespace abcd

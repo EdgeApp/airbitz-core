@@ -7,6 +7,7 @@
 #define ABCD_BITCOIN_TX_UPDATER_HPP
 
 #include "TxDatabase.hpp"
+#include "../util/Status.hpp"
 #include "../../minilibs/libbitcoin-client/client.hpp"
 #include <unordered_map>
 
@@ -56,10 +57,10 @@ class TxUpdater:
 {
 public:
     ~TxUpdater();
-    TxUpdater(TxDatabase &db, bc::client::obelisk_codec &codec,
-        TxCallbacks &callbacks);
-    void start();
+    TxUpdater(TxDatabase &db, void *ctx, TxCallbacks &callbacks);
 
+    void disconnect();
+    Status connect();
     void watch(const bc::payment_address &address,
         bc::client::sleep_time poll);
     void send(bc::transaction_type tx);
@@ -68,6 +69,12 @@ public:
 
     // Sleeper interface:
     virtual bc::client::sleep_time wakeup();
+
+    /**
+     * Obtains a list of sockets that the main loop should sleep on.
+     */
+    std::vector<zmq_pollitem_t>
+    pollitems();
 
 private:
     void watch_tx(bc::hash_digest txid, bool want_inputs);
@@ -84,7 +91,7 @@ private:
     void query_address(const bc::payment_address &address);
 
     TxDatabase &db_;
-    bc::client::obelisk_codec &codec_;
+    void *ctx_;
     TxCallbacks &callbacks_;
 
     struct AddressRow
@@ -98,6 +105,16 @@ private:
     size_t queued_queries_;
     size_t queued_get_indices_;
     std::chrono::steady_clock::time_point last_wakeup_;
+
+    // Active connection (if any):
+    struct Connection
+    {
+        Connection(void *ctx);
+
+        bc::client::zeromq_socket socket;
+        bc::client::obelisk_codec codec;
+    };
+    Connection *connection_;
 };
 
 } // namespace abcd

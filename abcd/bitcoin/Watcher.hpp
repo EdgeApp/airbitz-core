@@ -24,7 +24,6 @@ class Watcher:
     public TxCallbacks
 {
 public:
-    ~Watcher();
     Watcher(TxDatabase &db);
 
     // - Updater messages: -------------
@@ -63,8 +62,8 @@ public:
     Watcher& operator=(const Watcher& copy) = delete;
 
 private:
-    TxDatabase &db_;
     zmq::context_t ctx_;
+    TxUpdater txu_;
 
     // Cached addresses, for when we are disconnected:
     std::unordered_map<bc::payment_address, unsigned> addresses_;
@@ -88,21 +87,7 @@ private:
     quiet_callback quiet_cb_;
 
     // Everything below this point is only touched by the thread:
-
-    // Active connection (if any):
-    struct connection
-    {
-        ~connection();
-        connection(TxDatabase &db, void *ctx, TxCallbacks &cb);
-
-        bc::client::zeromq_socket socket;
-        bc::client::obelisk_codec codec;
-        TxUpdater txu;
-    };
-    connection* connection_;
-
     bool command(uint8_t* data, size_t size);
-    Status doConnect();
 
     // TxCallbacks interface:
     virtual void on_add(const bc::transaction_type& tx) override;

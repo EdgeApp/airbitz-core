@@ -15,33 +15,12 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 
 /**
- * A dynamically-allocated structure holding the resources needed for a
- * connection to a bitcoin server.
- */
-class Connection
-{
-public:
-    Connection(zmq::context_t &context,
-        abcd::TxDatabase &db, abcd::TxCallbacks &cb):
-        socket_(context),
-        codec_(socket_),
-        updater_(db, codec_, cb)
-    {
-    }
-
-    bc::client::zeromq_socket socket_;
-    bc::client::obelisk_codec codec_;
-    abcd::TxUpdater updater_;
-};
-
-/**
  * Command-line interface to the wallet watcher service.
  */
 class Cli:
     public abcd::TxCallbacks
 {
 public:
-    ~Cli();
     Cli();
 
     int run();
@@ -69,8 +48,6 @@ private:
     virtual void on_quiet() override;
     virtual void on_fail() override;
 
-    bool check_connection();
-
     // Argument loading:
     bool read_string(std::stringstream &args, std::string &out,
         const std::string &error_message);
@@ -80,21 +57,16 @@ private:
     // Networking:
     zmq::context_t context_;
     ReadLine terminal_;
-    Connection *connection_;
 
     // State:
     abcd::TxDatabase db_;
+    abcd::TxUpdater updater_;
     bool done_;
 };
 
-Cli::~Cli()
-{
-    delete connection_;
-}
-
-Cli::Cli()
-  : terminal_(context_),
-    connection_(nullptr),
+Cli::Cli():
+    terminal_(context_),
+    updater_(db_, context_, *this),
     done_(false)
 {
 }
@@ -110,23 +82,18 @@ int Cli::run()
 
     while (!done_)
     {
-        int delay = -1;
         std::vector<zmq_pollitem_t> items;
-        items.reserve(2);
         items.push_back(terminal_.pollitem());
-        if (connection_)
-        {
-            items.push_back(connection_->socket_.pollitem());
-            auto next_wakeup = connection_->codec_.wakeup();
-            if (next_wakeup.count())
-                delay = next_wakeup.count();
-        }
+        auto updaterItems = updater_.pollitems();
+        items.insert(items.end(), updaterItems.begin(), updaterItems.end());
+
+        auto nextWakeup = updater_.wakeup();
+        int delay = nextWakeup.count() ? nextWakeup.count() : -1;
+
         zmq::poll(items.data(), items.size(), delay);
 
         if (items[0].revents)
             command();
-        if (connection_ && items[1].revents)
-            connection_->socket_.forward(connection_->codec_);
     }
     return 0;
 }
@@ -187,30 +154,12 @@ void Cli::cmd_help()
 
 void Cli::cmd_connect(std::stringstream &args)
 {
-    std::string server;
-    if (!read_string(args, server, "error: no server given"))
-        return;
-    std::cout << "connecting to " << server << std::endl;
-
-    delete connection_;
-    connection_ = new Connection(context_, db_, *this);
-    if (!connection_->socket_.connect(server))
-    {
-        std::cout << "error: failed to connect" << std::endl;
-        delete connection_;
-        connection_ = nullptr;
-        return;
-    }
-    connection_->updater_.start();
+    updater_.connect().log();
 }
 
 void Cli::cmd_disconnect(std::stringstream &args)
 {
-    if (!check_connection())
-        return;
-
-    delete connection_;
-    connection_ = nullptr;
+    updater_.disconnect();
 }
 
 void Cli::cmd_height()
@@ -247,9 +196,6 @@ void Cli::cmd_tx_dump(std::stringstream &args)
 
 void Cli::cmd_tx_send(std::stringstream &args)
 {
-    if (!check_connection())
-        return;
-
     std::string arg;
     args >> arg;
     bc::data_chunk data = bc::decode_hex(arg);
@@ -263,14 +209,11 @@ void Cli::cmd_tx_send(std::stringstream &args)
         std::cout << "not a valid transaction" << std::endl;
         return;
     }
-    connection_->updater_.send(tx);
+    updater_.send(tx);
 }
 
 void Cli::cmd_watch(std::stringstream &args)
 {
-    if (!check_connection())
-        return;
-
     bc::payment_address address;
     if (!read_address(args, address))
         return;
@@ -281,16 +224,13 @@ void Cli::cmd_watch(std::stringstream &args)
         std::cout << "warning: poll too short, setting to 500ms" << std::endl;
         poll_ms = 500;
     }
-    connection_->updater_.watch(address, bc::client::sleep_time(poll_ms));
+    updater_.watch(address, bc::client::sleep_time(poll_ms));
 }
 
 void Cli::cmd_utxos(std::stringstream &args)
 {
     bc::output_info_list utxos;
-    if (connection_)
-        utxos = db_.get_utxos(connection_->updater_.watching());
-    else
-        utxos = db_.get_utxos();
+    utxos = db_.get_utxos(updater_.watching());
 
     // Display the output:
     size_t total = 0;
@@ -396,19 +336,6 @@ void Cli::on_quiet()
 void Cli::on_fail()
 {
     std::cout << "server error!" << std::endl;
-}
-
-/**
- * Verifies that a connection exists, and prints an error message otherwise.
- */
-bool Cli::check_connection()
-{
-    if (!connection_)
-    {
-        std::cout << "error: no connection" << std::endl;
-        return false;
-    }
-    return true;
 }
 
 /**

@@ -6,7 +6,6 @@
  */
 
 #include "Watcher.hpp"
-#include "../General.hpp"
 #include "../util/Debug.hpp"
 #include <sstream>
 
@@ -22,9 +21,6 @@ constexpr unsigned priority_poll = 1000;
 
 static unsigned watcher_id = 0;
 
-// The last obelisk server we connected to:
-static unsigned gLastObelisk = 0;
-
 enum {
     msg_quit,
     msg_disconnect,
@@ -33,14 +29,9 @@ enum {
     msg_send
 };
 
-Watcher::~Watcher()
-{
-}
-
 Watcher::Watcher(TxDatabase &db):
-    db_(db),
-    socket_(ctx_, ZMQ_PAIR),
-    connection_(nullptr)
+    txu_(db, ctx_, *this),
+    socket_(ctx_, ZMQ_PAIR)
 {
     std::stringstream name;
     name << "inproc://watcher-" << watcher_id++;
@@ -161,20 +152,14 @@ void Watcher::loop()
     bool done = false;
     while (!done)
     {
-        int delay = -1;
         std::vector<zmq_pollitem_t> items;
-        items.reserve(2);
-        zmq_pollitem_t inproc_item = { socket, 0, ZMQ_POLLIN, 0 };
-        items.push_back(inproc_item);
-        if (connection_)
-        {
-            items.push_back(connection_->socket.pollitem());
-            auto next_wakeup = connection_->codec.wakeup();
-            next_wakeup = bc::client::min_sleep(next_wakeup,
-                connection_->txu.wakeup());
-            if (next_wakeup.count())
-                delay = next_wakeup.count();
-        }
+        items.push_back(zmq_pollitem_t{ socket, 0, ZMQ_POLLIN, 0 });
+        auto txuItems = txu_.pollitems();
+        items.insert(items.end(), txuItems.begin(), txuItems.end());
+
+        auto nextWakeup = txu_.wakeup();
+        int delay = nextWakeup.count() ? nextWakeup.count() : -1;
+
         if (zmq_poll(items.data(), items.size(), delay) < 0)
             switch (errno)
             {
@@ -183,8 +168,6 @@ void Watcher::loop()
             case EINTR:  throw_intr();  break;
             }
 
-        if (connection_ && items[1].revents)
-            connection_->socket.forward(connection_->codec);
         if (items[0].revents)
         {
             zmq::message_t msg;
@@ -193,7 +176,7 @@ void Watcher::loop()
                 done = true;
         }
     }
-    delete connection_;
+    txu_.disconnect();
 }
 
 void Watcher::send_disconnect()
@@ -245,17 +228,15 @@ bool Watcher::command(uint8_t* data, size_t size)
     {
     default:
     case msg_quit:
-        delete connection_;
-        connection_ = nullptr;
+        txu_.disconnect();
         return false;
 
     case msg_disconnect:
-        delete connection_;
-        connection_ = nullptr;
+        txu_.disconnect();
         return true;
 
     case msg_connect:
-        doConnect().log();
+        txu_.connect().log();
         return true;
 
     case msg_watch_addr:
@@ -264,8 +245,7 @@ bool Watcher::command(uint8_t* data, size_t size)
             auto hash = serial.read_short_hash();
             payment_address address(version, hash);
             bc::client::sleep_time poll_time(serial.read_4_bytes());
-            if (connection_)
-                connection_->txu.watch(address, poll_time);
+            txu_.watch(address, poll_time);
         }
         return true;
 
@@ -273,50 +253,10 @@ bool Watcher::command(uint8_t* data, size_t size)
         {
             transaction_type tx;
             bc::satoshi_load(serial.iterator(), data + size, tx);
-            if (connection_)
-                connection_->txu.send(tx);
-            else
-            {
-                db_.insert(tx, TxState::unsent);
-                on_add(tx);
-            }
+            txu_.send(tx);
         }
         return true;
     }
-}
-
-Status
-Watcher::doConnect()
-{
-    // Pick a server:
-    auto servers = generalBitcoinServers();
-    ++gLastObelisk;
-    if (servers.size() <= gLastObelisk)
-        gLastObelisk = 0;
-    auto server = servers[gLastObelisk];
-
-    // Parse out the key part:
-    std::string key;
-    size_t key_start = server.find(' ');
-    if (key_start != std::string::npos)
-    {
-        key = server.substr(key_start + 1);
-        server.erase(key_start);
-    }
-
-    ABC_DebugLog("Connecting to %s", server.c_str());
-    delete connection_;
-    connection_ = new connection(db_, ctx_, *this);
-    if (!connection_->socket.connect(server, key))
-    {
-        delete connection_;
-        connection_ = nullptr;
-        connect();
-        return ABC_ERROR(ABC_CC_SysError, "Cannot connect to " + server);
-    }
-    connection_->txu.start();
-
-    return Status();
 }
 
 void Watcher::on_add(const transaction_type& tx)
@@ -345,22 +285,6 @@ void Watcher::on_quiet()
 }
 
 void Watcher::on_fail()
-{
-    connect();
-}
-
-Watcher::connection::~connection()
-{
-}
-
-static void on_unknown_nop(const std::string&)
-{
-}
-
-Watcher::connection::connection(TxDatabase &db, void *ctx, TxCallbacks &cb)
-  : socket(ctx),
-    codec(socket, on_unknown_nop, std::chrono::seconds(10), 0),
-    txu(db, codec, cb)
 {
 }
 
