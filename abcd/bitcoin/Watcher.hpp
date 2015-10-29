@@ -92,9 +92,7 @@ private:
     // TxCallbacks interface:
     virtual void on_add(const bc::transaction_type& tx) override;
     virtual void on_height(size_t height) override;
-    virtual void on_send(const std::error_code& error, const bc::transaction_type& tx) override;
     virtual void on_quiet() override;
-    virtual void on_fail() override;
 };
 
 } // namespace abcd

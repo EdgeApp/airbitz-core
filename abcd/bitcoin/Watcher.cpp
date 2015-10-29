@@ -273,19 +273,11 @@ void Watcher::on_height(size_t height)
         height_cb_(height);
 }
 
-void Watcher::on_send(const std::error_code& error, const transaction_type& tx)
-{
-}
-
 void Watcher::on_quiet()
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     if (quiet_cb_)
         quiet_cb_();
-}
-
-void Watcher::on_fail()
-{
 }
 
 } // namespace abcd

@@ -44,9 +44,7 @@ private:
     // tx_callbacks interface:
     virtual void on_add(const bc::transaction_type &tx) override;
     virtual void on_height(size_t height) override;
-    virtual void on_send(const std::error_code &error, const bc::transaction_type &tx) override;
     virtual void on_quiet() override;
-    virtual void on_fail() override;
 
     // Argument loading:
     bool read_string(std::stringstream &args, std::string &out,
@@ -319,23 +317,10 @@ void Cli::on_height(size_t height)
     std::cout << "got block " << height << std::endl;
 }
 
-void Cli::on_send(const std::error_code &error, const bc::transaction_type &tx)
-{
-    if (error)
-        std::cout << "failed to send transaction" << std::endl;
-    else
-        std::cout << "sent transaction" << std::endl;
-}
-
 void Cli::on_quiet()
 {
     std::cout << "query done" << std::endl;
     std::cout << "> " << std::flush;
-}
-
-void Cli::on_fail()
-{
-    std::cout << "server error!" << std::endl;
 }
 
 /**

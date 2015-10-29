@@ -32,21 +32,10 @@ public:
     virtual void on_height(size_t height) = 0;
 
     /**
-     * Called when the updater has validated a transaction for send.
-     */
-    virtual void on_send(const std::error_code &error,
-        const bc::transaction_type &tx) = 0;
-
-    /**
      * Called when the updater has finished all its address queries,
      * and balances should now be up-to-date.
      */
     virtual void on_quiet() {}
-
-    /**
-     * Called when the updater sees an unexpected obelisk server failure.
-     */
-    virtual void on_fail() = 0;
 };
 
 /**

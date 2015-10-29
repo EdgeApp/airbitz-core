@@ -180,7 +180,6 @@ bc::client::sleep_time TxUpdater::wakeup()
     if (failed_)
     {
         connect().log();
-        callbacks_.on_fail();
         failed_ = false;
     }
 
@@ -338,16 +337,13 @@ void TxUpdater::send_tx(const bc::transaction_type &tx)
 {
     auto on_error = [this, tx](const std::error_code &error)
     {
-        //server_fail(error);
         db_.forget(bc::hash_transaction(tx));
-        callbacks_.on_send(error, tx);
     };
 
     auto on_done = [this, tx]()
     {
         std::error_code error;
         db_.unconfirmed(bc::hash_transaction(tx));
-        callbacks_.on_send(error, tx);
     };
 
     connection_->codec.broadcast_transaction(on_error, on_done, tx);
