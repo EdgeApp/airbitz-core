@@ -31,40 +31,19 @@
 
 #include "Tx.hpp"
 #include "Context.hpp"
-#include "account/Account.hpp"
-#include "account/AccountSettings.hpp"
-#include "bitcoin/Text.hpp"
 #include "bitcoin/TxDatabase.hpp"
-#include "bitcoin/WatcherBridge.hpp"
-#include "crypto/Crypto.hpp"
 #include "spend/Spend.hpp"
 #include "util/Debug.hpp"
-#include "util/FileIO.hpp"
 #include "util/Mutex.hpp"
 #include "util/Util.hpp"
-#include "wallet/Address.hpp"
 #include "wallet/Details.hpp"
 #include "wallet/TxMetadata.hpp"
 #include "wallet/Wallet.hpp"
 #include <bitcoin/bitcoin.hpp>
-#include <stdio.h>
-#include <stdlib.h>
 #include <ctype.h>
 #include <time.h>
-#include <string.h>
-#include <string>
 
 namespace abcd {
-
-#define TX_INTERNAL_SUFFIX                      "-int.json" // the transaction was created by our direct action (i.e., send)
-#define TX_EXTERNAL_SUFFIX                      "-ext.json" // the transaction was created due to events in the block-chain (usually receives)
-
-#define JSON_CREATION_DATE_FIELD                "creationDate"
-#define JSON_MALLEABLE_TX_ID                    "malleableTxId"
-
-#define JSON_TX_NTXID_FIELD                     "ntxid"
-#define JSON_TX_STATE_FIELD                     "state"
-#define JSON_TX_INTERNAL_FIELD                  "internal"
 
 static Status   txGetAmounts(Wallet &self, const std::string &ntxid, int64_t *pAmount, int64_t *pFees);
 static Status   txGetOutputs(Wallet &self, const std::string &ntxid, tABC_TxOutput ***paOutputs, unsigned int *pCount);
@@ -84,9 +63,6 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
     AutoCoreLock lock(gCoreMutex);
     Tx tx;
     Address address;
-
-    // Start watching all addresses incuding new change addres
-    ABC_CHECK_RET(ABC_TxWatchAddresses(self, pError));
 
     // set the state
     tx.ntxid = ntxid;
