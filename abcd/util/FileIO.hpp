@@ -48,25 +48,6 @@ namespace abcd {
 extern std::recursive_mutex gFileMutex;
 typedef std::lock_guard<std::recursive_mutex> AutoFileLock;
 
-typedef enum eABC_FileIOFileType
-{
-    ABC_FileIOFileType_Unknown,
-    ABC_FileIOFileType_Regular,
-    ABC_FILEIOFileType_Directory
-} tABC_FileIOFileType;
-
-typedef struct sABC_FileIOFileInfo
-{
-    tABC_FileIOFileType type;
-    char *szName;
-} tABC_FileIOFileInfo;
-
-typedef struct sABC_FileIOFileList
-{
-    int nCount;
-    tABC_FileIOFileInfo **apFiles;
-} tABC_FileIOList;
-
 /**
  * Puts a slash on the end of a filename (if necessary).
  */
@@ -90,12 +71,6 @@ fileExists(const std::string &path);
  */
 bool
 fileIsJson(const std::string &name);
-
-tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
-                                 const char *szDir,
-                                 tABC_Error *pError);
-
-void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList);
 
 /**
  * Reads a file from disk.
