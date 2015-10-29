@@ -37,8 +37,9 @@ Watcher::~Watcher()
 {
 }
 
-Watcher::Watcher()
-  : socket_(ctx_, ZMQ_PAIR),
+Watcher::Watcher(TxDatabase &db):
+    db_(db),
+    socket_(ctx_, ZMQ_PAIR),
     connection_(nullptr)
 {
     std::stringstream name;
@@ -127,52 +128,6 @@ void Watcher::set_quiet_callback(quiet_callback cb)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     quiet_cb_ = std::move(cb);
-}
-
-/**
- * Obtains a list of unspent outputs for an address. This is needed to spend
- * funds.
- */
-output_info_list Watcher::get_utxos(const payment_address& address)
-{
-    AddressSet watching;
-    watching.insert(address);
-
-    return db_.get_utxos(watching);
-}
-
-/**
- * Returns all the unspent transaction outputs in the wallet.
- * @param filter true to filter out unconfirmed outputs.
- */
-output_info_list Watcher::get_utxos(bool filter)
-{
-    AddressSet addresses;
-    for (auto& row: addresses_)
-        addresses.insert(row.first);
-
-    auto utxos = db_.get_utxos(addresses);
-
-    // Filter out unconfirmed ones:
-    if (filter)
-    {
-        output_info_list out;
-        for (auto& utxo: utxos)
-        {
-            if (db_.txidHeight(utxo.point.hash) ||
-                db_.is_spend(utxo.point.hash, addresses))
-                out.push_back(utxo);
-        }
-        utxos = std::move(out);
-    }
-
-    return utxos;
-}
-
-bool Watcher::ntxidHeight(hash_digest tx_id, int &height)
-{
-    height = db_.ntxidHeight(tx_id);
-    return (height != NTXID_HEIGHT_NOT_FOUND);
 }
 
 void Watcher::stop()

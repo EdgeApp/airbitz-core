@@ -18,29 +18,21 @@
 namespace abcd {
 
 /**
- * Maintains a connection to an obelisk server, and uses that connection to
- * watch one or more bitcoin addresses for activity.
+ * Provides threading support for the TxUpdater object.
  */
 class Watcher:
     public TxCallbacks
 {
 public:
     ~Watcher();
-    Watcher();
+    Watcher(TxDatabase &db);
 
-    // - Server: -----------------------
+    // - Updater messages: -------------
     void disconnect();
     void connect();
-
-    // - Addresses: --------------------
     void watch_address(const bc::payment_address& address, unsigned poll_ms=10000);
     void prioritize_address(const bc::payment_address& address);
-
-    // - Transactions: -----------------
     void send_tx(const bc::transaction_type& tx);
-    bool ntxidHeight(bc::hash_digest txid, int &height);
-    bc::output_info_list get_utxos(const bc::payment_address& address);
-    bc::output_info_list get_utxos(bool filter=false);
 
     // - Callbacks: --------------------
     typedef std::function<void (const bc::transaction_type&)> tx_callback;
@@ -70,14 +62,8 @@ public:
     Watcher(const Watcher& copy) = delete;
     Watcher& operator=(const Watcher& copy) = delete;
 
-    /**
-     * Accesses the real database.
-     * This should be const, but the db is not const-safe due to mutexes.
-     */
-    TxDatabase &db() { return db_; }
-
 private:
-    TxDatabase db_;
+    TxDatabase &db_;
     zmq::context_t ctx_;
 
     // Cached addresses, for when we are disconnected:

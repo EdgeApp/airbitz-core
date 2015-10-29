@@ -32,29 +32,6 @@ enum class TxState
 typedef std::unordered_set<bc::payment_address> AddressSet;
 
 /**
- * A single row in the transaction database.
- */
-struct TxRow
-{
-    // The transaction itself:
-    bc::transaction_type tx;
-    bc::hash_digest txid;
-    bc::hash_digest ntxid;
-
-    // State machine:
-    TxState state;
-    long long block_height;
-    time_t timestamp;
-    bool bMalleated;
-    bool bMasterConfirm;
-    //bc::hash_digest block_hash; // TODO: Fix obelisk to return this
-
-    // The transaction is certainly in a block, but there is some
-    // question whether or not that block is on the main chain:
-    bool need_check;
-};
-
-/**
  * A list of transactions.
  *
  * This will eventually become a full database with queires mirroring what
@@ -73,24 +50,24 @@ public:
     /**
      * Returns the highest block that this database has seen.
      */
-    long long last_height();
+    long long last_height() const;
 
     /**
      * Returns true if the database contains the transaction.
      */
-    bool txidExists(bc::hash_digest txid);
+    bool txidExists(bc::hash_digest txid) const;
     bool ntxidExists(bc::hash_digest ntxid);
 
     /**
      * Obtains a transaction from the database.
      */
-    bc::transaction_type txidLookup(bc::hash_digest txid);
+    bc::transaction_type txidLookup(bc::hash_digest txid) const;
     bc::transaction_type ntxidLookup(bc::hash_digest ntxid);
 
     /**
      * Finds a transaction's height, or 0 if it is unconfirmed.
      */
-    long long txidHeight(bc::hash_digest txid);
+    long long txidHeight(bc::hash_digest txid) const;
 
     /**
      * Finds a transaction's height, or 0 if it is unconfirmed.
@@ -103,27 +80,29 @@ public:
      * Returns true if all inputs are addresses in the list control.
      */
     bool is_spend(bc::hash_digest txid,
-        const AddressSet &addresses);
+        const AddressSet &addresses) const;
 
     /**
      * Returns true if this address has received any funds.
      */
-    bool has_history(const bc::payment_address &address);
+    bool has_history(const bc::payment_address &address) const;
 
     /**
      * Get all unspent outputs in the database.
      */
-    bc::output_info_list get_utxos();
+    bc::output_info_list get_utxos() const;
 
     /**
      * Get just the utxos corresponding to a set of addresses.
+     * @param filter true to filter out unconfirmed outputs.
      */
-    bc::output_info_list get_utxos(const AddressSet &addresses);
+    bc::output_info_list get_utxos(const AddressSet &addresses,
+        bool filter=false) const;
 
     /**
      * Write the database to an in-memory blob.
      */
-    bc::data_chunk serialize();
+    bc::data_chunk serialize() const;
 
     /**
      * Reconstitute the database from an in-memory blob.
@@ -133,7 +112,7 @@ public:
     /**
      * Debug dump to show db contents.
      */
-    void dump(std::ostream &out);
+    void dump(std::ostream &out) const;
 
     /**
      * Insert a new transaction into the database.
@@ -141,14 +120,32 @@ public:
      */
     bool insert(const bc::transaction_type &tx, TxState state);
 
-    /*
-     * Calculate the ntxid for a transaction.
-     */
-    bc::hash_digest get_non_malleable_txid(bc::transaction_type tx);
-
 private:
     // - Updater: ----------------------
     friend class TxUpdater;
+
+    /**
+     * A single row in the transaction database.
+     */
+    struct TxRow
+    {
+        // The transaction itself:
+        bc::transaction_type tx;
+        bc::hash_digest txid;
+        bc::hash_digest ntxid;
+
+        // State machine:
+        TxState state;
+        long long block_height;
+        time_t timestamp;
+        bool bMalleated;
+        bool bMasterConfirm;
+        //bc::hash_digest block_hash; // TODO: Fix obelisk to return this
+
+        // The transaction is certainly in a block, but there is some
+        // question whether or not that block is on the main chain:
+        bool need_check;
+    };
 
     /**
      * Updates the block height.
@@ -188,7 +185,7 @@ private:
     void check_fork(size_t height);
 
     // Guards access to object state:
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
 
     // The last block seen on the network:
     size_t last_height_;

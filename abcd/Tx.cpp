@@ -34,7 +34,7 @@
 #include "account/Account.hpp"
 #include "account/AccountSettings.hpp"
 #include "bitcoin/Text.hpp"
-#include "bitcoin/Watcher.hpp"
+#include "bitcoin/TxDatabase.hpp"
 #include "bitcoin/WatcherBridge.hpp"
 #include "crypto/Crypto.hpp"
 #include "spend/Spend.hpp"
@@ -66,6 +66,7 @@ namespace abcd {
 #define JSON_TX_STATE_FIELD                     "state"
 #define JSON_TX_INTERNAL_FIELD                  "internal"
 
+static Status   txGetAmounts(Wallet &self, const std::string &ntxid, int64_t *pAmount, int64_t *pFees);
 static Status   txGetOutputs(Wallet &self, const std::string &ntxid, tABC_TxOutput ***paOutputs, unsigned int *pCount);
 static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
 static void     ABC_TxStrTable(const char *needle, int *table);
@@ -154,19 +155,12 @@ exit:
     return cc;
 }
 
-/**
- * Handles creating or updating when we receive a transaction
- */
-tABC_CC ABC_TxReceiveTransaction(Wallet &self,
-                                 uint64_t amountSatoshi, uint64_t feeSatoshi,
-                                 const std::string &ntxid,
-                                 const std::string &txid,
-                                 const std::vector<std::string> &addresses,
-                                 tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                                 void *pData,
-                                 tABC_Error *pError)
+Status
+txReceiveTransaction(Wallet &self,
+    const std::string &ntxid, const std::string &txid,
+    const std::vector<std::string> &addresses,
+    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    tABC_CC cc = ABC_CC_Ok;
     AutoCoreLock lock(gCoreMutex);
     Tx temp;
 
@@ -178,19 +172,20 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
         tx.txid = txid;
         tx.timeCreation = time(nullptr);
         tx.internal = false;
-        tx.metadata.amountSatoshi = amountSatoshi;
-        tx.metadata.amountFeesMinersSatoshi = feeSatoshi;
-        ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
+        ABC_CHECK(txGetAmounts(self, ntxid,
+            &tx.metadata.amountSatoshi,
+            &tx.metadata.amountFeesMinersSatoshi));
+        ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
             tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
             static_cast<Currency>(self.currency())));
 
         // add the transaction to the address
-        ABC_CHECK_RET(ABC_TxSaveNewTx(self, tx, addresses, true, pError));
+        ABC_CHECK_OLD(ABC_TxSaveNewTx(self, tx, addresses, true, &error));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
         self.balanceDirty();
 
-        if (fAsyncBitCoinEventCallback)
+        if (fAsyncCallback)
         {
             tABC_AsyncBitCoinInfo info;
             info.pData = pData;
@@ -198,7 +193,7 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
             info.szTxID = ntxid.c_str();
             info.szWalletUUID = self.id().c_str();
             info.szDescription = "Received funds";
-            fAsyncBitCoinEventCallback(&info);
+            fAsyncCallback(&info);
         }
     }
     else
@@ -208,7 +203,7 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
         self.balanceDirty();
 
-        if (fAsyncBitCoinEventCallback)
+        if (fAsyncCallback)
         {
             tABC_AsyncBitCoinInfo info;
             info.pData = pData;
@@ -216,12 +211,11 @@ tABC_CC ABC_TxReceiveTransaction(Wallet &self,
             info.szTxID = ntxid.c_str();
             info.szWalletUUID = self.id().c_str();
             info.szDescription = "Updated balance";
-            fAsyncBitCoinEventCallback(&info);
+            fAsyncCallback(&info);
         }
     }
 
-exit:
-    return cc;
+    return Status();
 }
 
 /**
@@ -299,10 +293,9 @@ tABC_CC ABC_TxGetTransaction(Wallet &self,
     pTransaction->szMalleableTxId = stringCopy(tx.txid);
     pTransaction->timeCreation = tx.timeCreation;
     pTransaction->pDetails = tx.metadata.toDetails();
-    ABC_CHECK_RET(ABC_BridgeTxDetails(self, tx.ntxid,
+    ABC_CHECK_NEW(txGetAmounts(self, tx.ntxid,
         &(pTransaction->pDetails->amountSatoshi),
-        &(pTransaction->pDetails->amountFeesMinersSatoshi),
-        pError));
+        &(pTransaction->pDetails->amountFeesMinersSatoshi)));
     ABC_CHECK_NEW(txGetOutputs(self, tx.ntxid,
         &pTransaction->aOutputs, &pTransaction->countOutputs));
 
@@ -470,19 +463,65 @@ exit:
 }
 
 /**
+ * Calculates transaction balances
+ */
+static Status
+txGetAmounts(Wallet &self, const std::string &ntxid,
+    int64_t *pAmount, int64_t *pFees)
+{
+    int64_t totalInSatoshi = 0, totalOutSatoshi = 0;
+    int64_t totalMeSatoshi = 0, totalMeInSatoshi = 0;
+
+    auto addressStrings = self.addresses.list();
+    AddressSet addresses(addressStrings.begin(), addressStrings.end());
+
+    bc::hash_digest hash;
+    if (!bc::decode_hash(hash, ntxid))
+        return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
+    auto tx = self.txdb.ntxidLookup(hash);
+
+    for (const auto &i: tx.inputs)
+    {
+        bc::payment_address address;
+        bc::extract(address, i.script);
+
+        auto prev = i.previous_output;
+        auto tx = self.txdb.txidLookup(prev.hash);
+        if (prev.index < tx.outputs.size())
+        {
+            if (addresses.end() != addresses.find(address))
+                totalMeInSatoshi += tx.outputs[prev.index].value;
+            totalInSatoshi += tx.outputs[prev.index].value;
+        }
+    }
+
+    for (const auto &o: tx.outputs)
+    {
+        bc::payment_address address;
+        bc::extract(address, o.script);
+
+        // Do we own this address?
+        if (addresses.end() != addresses.find(address))
+            totalMeSatoshi += o.value;
+        totalOutSatoshi += o.value;
+    }
+
+    *pAmount = totalMeSatoshi - totalMeInSatoshi;
+    *pFees = totalInSatoshi - totalOutSatoshi;
+    return Status();
+}
+
+/**
  * Prepares transaction outputs for the advanced details screen.
  */
 static Status
 txGetOutputs(Wallet &self, const std::string &ntxid,
     tABC_TxOutput ***paOutputs, unsigned int *pCount)
 {
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
-
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, ntxid))
         return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
-    auto tx = watcher->db().ntxidLookup(hash);
+    auto tx = self.txdb.ntxidLookup(hash);
     auto txid = bc::encode_hash(bc::hash_transaction(tx));
 
     // Create the array:
@@ -504,7 +543,7 @@ txGetOutputs(Wallet &self, const std::string &ntxid,
         out->szTxId = stringCopy(bc::encode_hash(prev.hash));
         out->szAddress = stringCopy(addr.encoded());
 
-        auto tx = watcher->db().txidLookup(prev.hash);
+        auto tx = self.txdb.txidLookup(prev.hash);
         if (prev.index < tx.outputs.size())
         {
             out->value = tx.outputs[prev.index].value;

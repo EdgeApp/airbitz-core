@@ -23,12 +23,20 @@ namespace abcd {
 #define NO_AB_FEES
 
 static Status
+getUtxos(bc::output_info_list &result, const Wallet &self)
+{
+    auto addresses = self.addresses.list();
+    result = self.txdb.get_utxos(
+        AddressSet(addresses.begin(), addresses.end()), true);
+    return Status();
+}
+
+static Status
 spendMakeTx(libbitcoin::transaction_type &result, Wallet &self,
     SendInfo *pInfo, const std::string &changeAddress)
 {
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
-    auto utxos = watcher->get_utxos(true);
+    bc::output_info_list utxos;
+    ABC_CHECK(getUtxos(utxos, self));
 
     AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> pFeeInfo;
     ABC_CHECK_OLD(ABC_GeneralGetInfo(&pFeeInfo.get(), &error));
@@ -91,9 +99,8 @@ tABC_CC ABC_BridgeMaxSpendable(Wallet &self,
     tABC_CC cc = ABC_CC_Ok;
 
     {
-        Watcher *watcher = nullptr;
-        ABC_CHECK_NEW(watcherFind(watcher, self));
-        auto utxos = watcher->get_utxos(true);
+        bc::output_info_list utxos;
+        ABC_CHECK_NEW(getUtxos(utxos, self));
 
         AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> pFeeInfo;
         ABC_CHECK_RET(ABC_GeneralGetInfo(&pFeeInfo.get(), pError));
@@ -143,12 +150,9 @@ tABC_CC ABC_TxSend(Wallet &self,
 
     // Sign and send transaction:
     {
-        Watcher *watcher = nullptr;
-        ABC_CHECK_NEW(watcherFind(watcher, self));
-
         // Sign the transaction:
         KeyTable keys = self.addresses.keyTable();
-        ABC_CHECK_NEW(signTx(tx, *watcher, keys));
+        ABC_CHECK_NEW(signTx(tx, self, keys));
 
         ABC_DebugLog("Change: %s, Amount: %s, Contents: %s",
             changeAddress.address.c_str(),
@@ -189,8 +193,7 @@ tABC_CC ABC_TxSend(Wallet &self,
         }
 
         // Mark the outputs as spent:
-        watcher->send_tx(tx);
-        watcherSave(self).log(); // Failure is not fatal
+        watcherSend(self, tx).log();
     }
 
     // Update the ABC db

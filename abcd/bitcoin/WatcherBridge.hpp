@@ -52,10 +52,6 @@ namespace libbitcoin
 namespace abcd {
 
 class Wallet;
-class Watcher;
-
-Status
-watcherFind(Watcher *&result, const Wallet &self);
 
 Status
 watcherDeleteCache(Wallet &self);
@@ -96,12 +92,8 @@ tABC_CC ABC_BridgePrioritizeAddress(Wallet &self,
                                     const char *szAddress,
                                     tABC_Error *pError);
 
-tABC_CC ABC_BridgeTxHeight(Wallet &self, const std::string &ntxid, int *height, tABC_Error *pError);
-
-tABC_CC ABC_BridgeTxBlockHeight(Wallet &self, int *height, tABC_Error *pError);
-
-tABC_CC ABC_BridgeTxDetails(Wallet &self, const std::string &ntxid,
-                            int64_t *pAmount, int64_t *pFees, tABC_Error *pError);
+Status
+watcherSend(Wallet &self, libbitcoin::transaction_type &tx);
 
 tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
                                      tABC_TxInfo **aTransactions,
@@ -110,12 +102,6 @@ tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
 
 std::string
 ABC_BridgeNonMalleableTxId(libbitcoin::transaction_type tx);
-
-/**
- * Pulls a raw transaction out of the watcher database.
- */
-Status
-watcherBridgeRawTx(Wallet &self, const std::string &ntxid, DataChunk &result);
 
 } // namespace abcd
 

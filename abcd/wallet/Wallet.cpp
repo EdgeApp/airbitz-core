@@ -10,6 +10,7 @@
 #include "../Tx.hpp"
 #include "../account/Account.hpp"
 #include "../auth/LoginServer.hpp"
+#include "../bitcoin/TxDatabase.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
@@ -43,6 +44,11 @@ struct NameJson:
 {
     ABC_JSON_STRING(name, "walletName", "")
 };
+
+Wallet::~Wallet()
+{
+    delete &txdb;
+}
 
 Status
 Wallet::create(std::shared_ptr<Wallet> &result, Account &account,
@@ -177,7 +183,8 @@ Wallet::Wallet(Account &account, const std::string &id):
     dir_(gContext->walletsDir() + id + "/"),
     balanceDirty_(true),
     addresses(*this),
-    txs(*this)
+    txs(*this),
+    txdb(*new TxDatabase())
 {}
 
 Status

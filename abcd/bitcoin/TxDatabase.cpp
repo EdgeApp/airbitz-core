@@ -14,6 +14,14 @@ constexpr uint32_t old_serial_magic = 0x3eab61c3; // From the watcher
 constexpr uint32_t serial_magic = 0xfecdb763;
 constexpr uint8_t serial_tx = 0x42;
 
+static bc::hash_digest
+get_non_malleable_txid(bc::transaction_type tx)
+{
+    for (auto &input: tx.inputs)
+        input.script = bc::script_type();
+    return bc::hash_transaction(tx, bc::sighash::all);
+}
+
 TxDatabase::~TxDatabase()
 {
 }
@@ -24,14 +32,14 @@ TxDatabase::TxDatabase(unsigned unconfirmed_timeout):
 {
 }
 
-long long TxDatabase::last_height()
+long long TxDatabase::last_height() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
     return last_height_;
 }
 
-bool TxDatabase::txidExists(bc::hash_digest txid)
+bool TxDatabase::txidExists(bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -46,7 +54,7 @@ bool TxDatabase::ntxidExists(bc::hash_digest ntxid)
     return !txRows.empty();
 }
 
-bc::transaction_type TxDatabase::txidLookup(bc::hash_digest txid)
+bc::transaction_type TxDatabase::txidLookup(bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -101,7 +109,7 @@ const char * stateToString(TxState state)
 
 }
 
-long long TxDatabase::txidHeight(bc::hash_digest txid)
+long long TxDatabase::txidHeight(bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -141,7 +149,7 @@ long long TxDatabase::ntxidHeight(bc::hash_digest ntxid)
     return height;
 }
 
-bool TxDatabase::is_spend(bc::hash_digest txid, const AddressSet &addresses)
+bool TxDatabase::is_spend(bc::hash_digest txid, const AddressSet &addresses) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -161,7 +169,7 @@ bool TxDatabase::is_spend(bc::hash_digest txid, const AddressSet &addresses)
     return true;
 }
 
-bool TxDatabase::has_history(const bc::payment_address &address)
+bool TxDatabase::has_history(const bc::payment_address &address) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -179,7 +187,7 @@ bool TxDatabase::has_history(const bc::payment_address &address)
     return false;
 }
 
-bc::output_info_list TxDatabase::get_utxos()
+bc::output_info_list TxDatabase::get_utxos() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -222,7 +230,8 @@ bc::output_info_list TxDatabase::get_utxos()
     return out;
 }
 
-bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses)
+bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses,
+    bool filter) const
 {
     auto raw = get_utxos();
 
@@ -241,10 +250,23 @@ bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses)
                 utxos.push_back(utxo);
     }
 
+    // Filter out unconfirmed ones:
+    if (filter)
+    {
+        bc::output_info_list out;
+        for (auto &utxo: utxos)
+        {
+            if (txidHeight(utxo.point.hash) ||
+                is_spend(utxo.point.hash, addresses))
+                out.push_back(utxo);
+        }
+        utxos = std::move(out);
+    }
+
     return utxos;
 }
 
-bc::data_chunk TxDatabase::serialize()
+bc::data_chunk TxDatabase::serialize() const
 {
     ABC_DebugLog("ENTER TxDatabase::serialize");
     std::lock_guard<std::mutex> lock(mutex_);
@@ -357,7 +379,7 @@ bool TxDatabase::load(const bc::data_chunk &data)
     return true;
 }
 
-void TxDatabase::dump(std::ostream &out)
+void TxDatabase::dump(std::ostream &out) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -399,7 +421,8 @@ void TxDatabase::dump(std::ostream &out)
     }
 }
 
-std::vector<TxRow *> TxDatabase::ntxidLookupAll(bc::hash_digest ntxid)
+std::vector<TxDatabase::TxRow *>
+TxDatabase::ntxidLookupAll(bc::hash_digest ntxid)
 {
     std::vector<TxRow *> out;
     for (auto &row: rows_)
@@ -408,13 +431,6 @@ std::vector<TxRow *> TxDatabase::ntxidLookupAll(bc::hash_digest ntxid)
             out.push_back(&row.second);
     }
     return out;
-}
-
-bc::hash_digest TxDatabase::get_non_malleable_txid(bc::transaction_type tx)
-{
-    for (auto& input: tx.inputs)
-        input.script = bc::script_type();
-    return bc::hash_transaction(tx, bc::sighash::all);
 }
 
 bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)

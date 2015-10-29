@@ -43,6 +43,7 @@
 #include "../abcd/auth/LoginServer.hpp"
 #include "../abcd/bitcoin/Testnet.hpp"
 #include "../abcd/bitcoin/Text.hpp"
+#include "../abcd/bitcoin/TxDatabase.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
@@ -2060,9 +2061,15 @@ tABC_CC ABC_GetRawTransaction(const char *szUserName,
     {
         ABC_GET_WALLET();
 
-        DataChunk tx;
-        ABC_CHECK_NEW(watcherBridgeRawTx(*wallet, szNtxid, tx));
-        *pszHex = stringCopy(base16Encode(tx));
+        bc::hash_digest hash;
+        if (!bc::decode_hash(hash, szNtxid))
+            ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
+
+        auto tx = wallet->txdb.ntxidLookup(hash);
+        DataChunk out;
+        out.resize(satoshi_raw_size(tx));
+        bc::satoshi_save(tx, out.begin());
+        *pszHex = stringCopy(base16Encode(out));
     }
 
 exit:
@@ -2768,7 +2775,16 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szNtxid,
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeTxHeight(*wallet, szNtxid, height, pError));
+
+        bc::hash_digest hash;
+        if (!bc::decode_hash(hash, szNtxid))
+            ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
+
+        *height = wallet->txdb.ntxidHeight(hash);
+        if (NTXID_HEIGHT_NOT_FOUND == *height)
+        {
+            cc = ABC_CC_Synchronizing;
+        }
     }
 
 exit:
@@ -2790,7 +2806,12 @@ tABC_CC ABC_BlockHeight(const char *szWalletUUID, int *height, tABC_Error *pErro
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeTxBlockHeight(*wallet, height, pError));
+
+        *height = wallet->txdb.last_height();
+        if (*height == 0)
+        {
+            cc = ABC_CC_Synchronizing;
+        }
     }
 
 exit:

@@ -62,19 +62,15 @@ struct PendingSweep
 struct WatcherInfo
 {
     WatcherInfo(Wallet &wallet):
+        watcher(wallet.txdb),
         wallet(wallet),
         parent_(wallet.shared_from_this())
     {
     }
 
     Watcher watcher;
-    std::set<std::string> addresses;
     std::list<PendingSweep> sweeping;
     Wallet &wallet;
-
-    // Callback:
-    tABC_BitCoin_Event_Callback fAsyncCallback;
-    void *pData;
 
 private:
     std::shared_ptr<Wallet> parent_;
@@ -82,9 +78,9 @@ private:
 
 static std::map<std::string, std::unique_ptr<WatcherInfo>> watchers_;
 
-static tABC_CC     ABC_BridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep& sweep, tABC_Error *pError);
-static void        ABC_BridgeQuietCallback(WatcherInfo *watcherInfo);
-static void        ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx, tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback, void *pData);
+static Status   bridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep &sweep, tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
+static void     bridgeQuietCallback(WatcherInfo *watcherInfo, tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
+static Status   bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &tx, tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
 
 static Status
 watcherFind(WatcherInfo *&result, const Wallet &self)
@@ -98,7 +94,7 @@ watcherFind(WatcherInfo *&result, const Wallet &self)
     return Status();
 }
 
-Status
+static Status
 watcherFind(Watcher *&result, const Wallet &self)
 {
     WatcherInfo *watcherInfo = nullptr;
@@ -111,12 +107,9 @@ watcherFind(Watcher *&result, const Wallet &self)
 static Status
 watcherLoad(Wallet &self)
 {
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
-
     DataChunk data;
     ABC_CHECK(fileLoad(data, watcherPath(self)));
-    if (!watcher->db().load(data))
+    if (!self.txdb.load(data))
         return ABC_ERROR(ABC_CC_Error, "Unable to load serialized watcher");
 
     return Status();
@@ -132,10 +125,7 @@ watcherDeleteCache(Wallet &self)
 Status
 watcherSave(Wallet &self)
 {
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
-
-    auto data = watcher->db().serialize();;
+    auto data = self.txdb.serialize();
     ABC_CHECK(fileSave(data, watcherPath(self)));
 
     return Status();
@@ -213,12 +203,10 @@ tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
 
     WatcherInfo *watcherInfo = nullptr;
     ABC_CHECK_NEW(watcherFind(watcherInfo, self));
-    watcherInfo->fAsyncCallback = fAsyncCallback;
-    watcherInfo->pData = pData;
 
-    txCallback = [watcherInfo, fAsyncCallback, pData] (const libbitcoin::transaction_type& tx)
+    txCallback = [watcherInfo, fAsyncCallback, pData](const libbitcoin::transaction_type &tx)
     {
-        ABC_BridgeTxCallback(watcherInfo, tx, fAsyncCallback, pData);
+        bridgeTxCallback(watcherInfo, tx, fAsyncCallback, pData).log();
     };
     watcherInfo->watcher.set_tx_callback(txCallback);
 
@@ -236,9 +224,9 @@ tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
     };
     watcherInfo->watcher.set_height_callback(heightCallback);
 
-    on_quiet = [watcherInfo]()
+    on_quiet = [watcherInfo, fAsyncCallback, pData]()
     {
-        ABC_BridgeQuietCallback(watcherInfo);
+        bridgeQuietCallback(watcherInfo, fAsyncCallback, pData);
     };
     watcherInfo->watcher.set_quiet_callback(on_quiet);
 
@@ -273,12 +261,7 @@ tABC_CC ABC_BridgeWatchAddr(const Wallet &self,
     ABC_CHECK_NEW(watcherFind(watcherInfo, self));
 
     if (!addr.set_encoded(pubAddress))
-    {
-        cc = ABC_CC_Error;
-        ABC_DebugLog("Invalid pubAddress %s\n", pubAddress);
-        goto exit;
-    }
-    watcherInfo->addresses.insert(pubAddress);
+        ABC_RET_ERROR(ABC_CC_ParseError, "Invalid address");
     watcherInfo->watcher.watch_address(addr);
 
 exit:
@@ -298,17 +281,25 @@ tABC_CC ABC_BridgePrioritizeAddress(Wallet &self,
     if (szAddress)
     {
         if (!addr.set_encoded(szAddress))
-        {
-            cc = ABC_CC_Error;
-            ABC_DebugLog("Invalid szAddress %s\n", szAddress);
-            goto exit;
-        }
+            ABC_RET_ERROR(ABC_CC_ParseError, "Invalid address");
     }
 
     watcher->prioritize_address(addr);
 
 exit:
     return cc;
+}
+
+Status
+watcherSend(Wallet &self, libbitcoin::transaction_type &tx)
+{
+    Watcher *watcher = nullptr;
+    ABC_CHECK(watcherFind(watcher, self));
+
+    watcher->send_tx(tx);
+    watcherSave(self).log(); // Failure is not fatal
+
+    return Status();
 }
 
 tABC_CC ABC_BridgeWatcherDisconnect(Wallet &self, tABC_Error *pError)
@@ -348,102 +339,6 @@ tABC_CC ABC_BridgeWatcherDelete(Wallet &self, tABC_Error *pError)
     return cc;
 }
 
-tABC_CC
-ABC_BridgeTxHeight(Wallet &self, const std::string &ntxid, int *height, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    int height_;
-    bc::hash_digest hash;
-
-    Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self));
-
-    if (!bc::decode_hash(hash, ntxid))
-        ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
-    if (!watcher->ntxidHeight(hash, height_))
-    {
-        cc = ABC_CC_Synchronizing;
-    }
-    *height = height_;
-exit:
-    return cc;
-}
-
-tABC_CC
-ABC_BridgeTxBlockHeight(Wallet &self, int *height, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self));
-
-    *height = watcher->db().last_height();
-    if (*height == 0)
-    {
-        cc = ABC_CC_Synchronizing;
-    }
-exit:
-    return cc;
-}
-
-tABC_CC ABC_BridgeTxDetails(Wallet &self, const std::string &ntxid,
-                            int64_t *pAmount, int64_t *pFees, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    bc::transaction_type tx;
-    std::string txid;
-    int64_t fees = 0;
-    int64_t totalInSatoshi = 0, totalOutSatoshi = 0, totalMeSatoshi = 0, totalMeInSatoshi = 0;
-
-    WatcherInfo *watcherInfo = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcherInfo, self));
-
-    bc::hash_digest hash;
-    if (!bc::decode_hash(hash, ntxid))
-        ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
-
-    tx = watcherInfo->watcher.db().ntxidLookup(hash);
-    txid = bc::encode_hash(bc::hash_transaction(tx));
-
-    for (auto i : tx.inputs)
-    {
-        bc::payment_address addr;
-        bc::extract(addr, i.script);
-        auto prev = i.previous_output;
-
-        auto tx = watcherInfo->watcher.db().txidLookup(prev.hash);
-        if (prev.index < tx.outputs.size())
-        {
-            totalInSatoshi += tx.outputs[prev.index].value;
-            auto row = watcherInfo->addresses.find(addr.encoded());
-            if  (row != watcherInfo->addresses.end())
-                totalMeInSatoshi += tx.outputs[prev.index].value;
-        }
-    }
-
-    for (auto o : tx.outputs)
-    {
-        bc::payment_address addr;
-        bc::extract(addr, o.script);
-
-        // Do we own this address?
-        auto row = watcherInfo->addresses.find(addr.encoded());
-        if  (row != watcherInfo->addresses.end())
-        {
-            totalMeSatoshi += o.value;
-        }
-        totalOutSatoshi += o.value;
-    }
-    fees = totalInSatoshi - totalOutSatoshi;
-    totalMeSatoshi -= totalMeInSatoshi;
-
-    *pAmount = totalMeSatoshi;
-    *pFees = fees;
-
-exit:
-    return cc;
-}
-
 /**
  * Filters a transaction list, removing any that aren't found in the
  * watcher database.
@@ -460,18 +355,14 @@ tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
     tABC_TxInfo *const *si = aTransactions;
     tABC_TxInfo **di = aTransactions;
 
-    Watcher *watcher = nullptr;
-    ABC_CHECK_NEW(watcherFind(watcher, self));
-
     while (si < end)
     {
         tABC_TxInfo *pTx = *si++;
 
-        int height;
-        bc::hash_digest txid;
-        if (!bc::decode_hash(txid, pTx->szID))
-            ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
-        if (watcher->ntxidHeight(txid, height))
+        bc::hash_digest ntxid;
+        if (!bc::decode_hash(ntxid, pTx->szID))
+            ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
+        if (self.txdb.ntxidExists(ntxid))
         {
             *di++ = pTx;
         }
@@ -486,12 +377,11 @@ exit:
     return cc;
 }
 
-static
-tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
-                          PendingSweep& sweep,
-                          tABC_Error *pError)
+static Status
+bridgeDoSweep(WatcherInfo *watcherInfo,
+    PendingSweep &sweep,
+    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    tABC_CC cc = ABC_CC_Ok;
     Address address;
     uint64_t funds = 0;
     abcd::unsigned_transaction utx;
@@ -500,32 +390,32 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     std::string malTxId, txId;
 
     // Find utxos for this address:
-    auto utxos = watcherInfo->watcher.get_utxos(sweep.address);
+    AddressSet addresses;
+    addresses.insert(sweep.address);
+    auto utxos = watcherInfo->wallet.txdb.get_utxos(addresses);
 
     // Bail out if there are no funds to sweep:
     if (!utxos.size())
     {
         // Tell the GUI if there were funds in the past:
-        if (watcherInfo->watcher.db().has_history(sweep.address))
+        if (watcherInfo->wallet.txdb.has_history(sweep.address))
         {
             if (sweep.fCallback)
             {
                 sweep.fCallback(ABC_CC_Ok, NULL, 0);
             }
-            else
+            else if (fAsyncCallback)
             {
-                if (watcherInfo->fAsyncCallback)
-                {
-                    tABC_AsyncBitCoinInfo info;
-                    info.eventType = ABC_AsyncEventType_IncomingSweep;
-                    info.sweepSatoshi = 0;
-                    info.szTxID = NULL;
-                    watcherInfo->fAsyncCallback(&info);
-                }
+                tABC_AsyncBitCoinInfo info;
+                info.pData = pData;
+                info.eventType = ABC_AsyncEventType_IncomingSweep;
+                info.sweepSatoshi = 0;
+                info.szTxID = nullptr;
+                fAsyncCallback(&info);
             }
             sweep.done = true;
         }
-        return ABC_CC_Ok;
+        return Status();
     }
 
     // Create a new receive request:
@@ -544,67 +434,62 @@ tABC_CC ABC_BridgeDoSweep(WatcherInfo *watcherInfo,
     }
     if (10000 < funds)
         funds -= 10000; // Ugh, hard-coded mining fee
-    ABC_CHECK_ASSERT(!outputIsDust(funds), ABC_CC_InsufficientFunds, "Not enough funds");
+    if (outputIsDust(funds))
+        return ABC_ERROR(ABC_CC_InsufficientFunds, "Not enough funds");
     output.value = funds;
-    ABC_CHECK_NEW(outputScriptForAddress(output.script, address.address));
+    ABC_CHECK(outputScriptForAddress(output.script, address.address));
     utx.tx.outputs.push_back(output);
 
     // Now sign that:
     keys[sweep.address] = sweep.key;
-    ABC_CHECK_SYS(abcd::gather_challenges(utx, watcherInfo->watcher), "gather_challenges");
-    ABC_CHECK_SYS(abcd::sign_tx(utx, keys), "sign_tx");
+    if (!gather_challenges(utx, watcherInfo->wallet))
+        return ABC_ERROR(ABC_CC_SysError, "gather_challenges failed");
+    if (!sign_tx(utx, keys))
+        return ABC_ERROR(ABC_CC_SysError, "sign_tx failed");
 
     // Send:
-    {
-        bc::data_chunk raw_tx(satoshi_raw_size(utx.tx));
-        bc::satoshi_save(utx.tx, raw_tx.begin());
-        ABC_CHECK_NEW(broadcastTx(raw_tx));
-    }
+    bc::data_chunk raw_tx(satoshi_raw_size(utx.tx));
+    bc::satoshi_save(utx.tx, raw_tx.begin());
+    ABC_CHECK(broadcastTx(raw_tx));
 
     // Save the transaction in the database:
     malTxId = bc::encode_hash(bc::hash_transaction(utx.tx));
     txId = ABC_BridgeNonMalleableTxId(utx.tx);
-    ABC_CHECK_RET(ABC_TxSweepSaveTransaction(watcherInfo->wallet,
-        txId.c_str(), malTxId.c_str(), funds, pError));
+    ABC_CHECK_OLD(ABC_TxSweepSaveTransaction(watcherInfo->wallet,
+        txId.c_str(), malTxId.c_str(), funds, &error));
 
     // Done:
     if (sweep.fCallback)
     {
         sweep.fCallback(ABC_CC_Ok, txId.c_str(), output.value);
     }
-    else
+    else if (fAsyncCallback)
     {
-        if (watcherInfo->fAsyncCallback)
-        {
-            tABC_AsyncBitCoinInfo info;
-            info.eventType = ABC_AsyncEventType_IncomingSweep;
-            info.sweepSatoshi = output.value;
-            info.szTxID = stringCopy(txId);
-            watcherInfo->fAsyncCallback(&info);
-            ABC_FREE_STR(info.szTxID);
-        }
+        tABC_AsyncBitCoinInfo info;
+        info.pData = pData;
+        info.eventType = ABC_AsyncEventType_IncomingSweep;
+        info.sweepSatoshi = output.value;
+        info.szTxID = txId.c_str();
+        fAsyncCallback(&info);
     }
     sweep.done = true;
-    watcherInfo->watcher.send_tx(utx.tx);
+    watcherSend(watcherInfo->wallet, utx.tx).log();
 
-exit:
-    return cc;
+    return Status();
 }
 
-static
-void ABC_BridgeQuietCallback(WatcherInfo *watcherInfo)
+static void
+bridgeQuietCallback(WatcherInfo *watcherInfo,
+    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
     // If we are sweeping any keys, do that now:
-    for (auto& sweep: watcherInfo->sweeping)
+    for (auto &sweep: watcherInfo->sweeping)
     {
-        tABC_CC cc;
-        tABC_Error error;
-
-        cc = ABC_BridgeDoSweep(watcherInfo, sweep, &error);
-        if (cc != ABC_CC_Ok)
+        auto s = bridgeDoSweep(watcherInfo, sweep, fAsyncCallback, pData).log();
+        if (!s)
         {
             if (sweep.fCallback)
-                sweep.fCallback(cc, NULL, 0);
+                sweep.fCallback(s.value(), NULL, 0);
             sweep.done = true;
         }
     }
@@ -614,105 +499,49 @@ void ABC_BridgeQuietCallback(WatcherInfo *watcherInfo)
         return sweep.done; });
 }
 
-static
-void ABC_BridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type& tx,
-                          tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                          void *pData)
+static Status
+bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &tx,
+    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    tABC_CC cc = ABC_CC_Ok;
-    tABC_Error error;
-    int64_t fees = 0;
-    int64_t totalInSatoshi = 0, totalOutSatoshi = 0, totalMeSatoshi = 0, totalMeInSatoshi = 0;
-    unsigned int idx = 0, iCount = 0, oCount = 0;
-    std::string txId, malTxId;
+    auto addressStrings = watcherInfo->wallet.addresses.list();
+    AddressSet myAddresses(addressStrings.begin(), addressStrings.end());
+
+    bool relevant = false;
+    for (const auto &i: tx.inputs)
+    {
+        bc::payment_address address;
+        bc::extract(address, i.script);
+        if (myAddresses.end() != myAddresses.find(address))
+            relevant = true;
+    }
+
     std::vector<std::string> addresses;
-
-    if (watcherInfo == NULL)
+    for (const auto &o: tx.outputs)
     {
-        cc = ABC_CC_Error;
-        goto exit;
+        bc::payment_address address;
+        bc::extract(address, o.script);
+        if (myAddresses.end() != myAddresses.find(address))
+            relevant = true;
+
+        addresses.push_back(address.encoded());
     }
 
-    txId = ABC_BridgeNonMalleableTxId(tx);
-    malTxId = bc::encode_hash(bc::hash_transaction(tx));
+    const auto ntxid = ABC_BridgeNonMalleableTxId(tx);
+    const auto txid = bc::encode_hash(bc::hash_transaction(tx));
 
-    idx = 0;
-    iCount = tx.inputs.size();
-    for (auto i : tx.inputs)
+    if (relevant)
     {
-        bc::payment_address addr;
-        bc::extract(addr, i.script);
-        auto prev = i.previous_output;
-
-        // Create output
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = true;
-        out->szTxId = stringCopy(bc::encode_hash(prev.hash));
-        out->szAddress = stringCopy(addr.encoded());
-
-        // Check prevouts for values
-        auto tx = watcherInfo->watcher.db().txidLookup(prev.hash);
-        if (prev.index < tx.outputs.size())
-        {
-            out->value = tx.outputs[prev.index].value;
-            totalInSatoshi += tx.outputs[prev.index].value;
-            auto row = watcherInfo->addresses.find(addr.encoded());
-            if  (row != watcherInfo->addresses.end())
-                totalMeInSatoshi += tx.outputs[prev.index].value;
-        }
-        idx++;
+        ABC_DebugLog("New transaction %s", txid.c_str());
+        ABC_CHECK(txReceiveTransaction(watcherInfo->wallet,
+            ntxid, txid, addresses, fAsyncCallback, pData));
     }
-
-    idx = 0;
-    oCount = tx.outputs.size();
-    for (auto o : tx.outputs)
+    else
     {
-        bc::payment_address addr;
-        bc::extract(addr, o.script);
-        // Create output
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = false;
-        out->value = o.value;
-        out->szAddress = stringCopy(addr.encoded());
-        out->szTxId = stringCopy(malTxId);
-
-        // Do we own this address?
-        auto row = watcherInfo->addresses.find(addr.encoded());
-        if  (row != watcherInfo->addresses.end())
-        {
-            totalMeSatoshi += o.value;
-        }
-        totalOutSatoshi += o.value;
-
-        addresses.push_back(addr.encoded());
-        idx++;
+        ABC_DebugLog("New (irrelevant) transaction %s", txid.c_str());
     }
-    if (totalMeSatoshi == 0 && totalMeInSatoshi == 0)
-    {
-        ABC_DebugLog("values == 0, this tx does not concern me.\n");
-        goto exit;
-    }
-    fees = totalInSatoshi - totalOutSatoshi;
-    totalMeSatoshi -= totalMeInSatoshi;
-
-    ABC_DebugLog("calling ABC_TxReceiveTransaction");
-    ABC_DebugLog("Total Me: %s, Total In: %s, Total Out: %s, Fees: %s",
-        std::to_string(totalMeSatoshi).c_str(),
-        std::to_string(totalInSatoshi).c_str(),
-        std::to_string(totalOutSatoshi).c_str(),
-        std::to_string(fees).c_str());
-    ABC_CHECK_RET(
-        ABC_TxReceiveTransaction(
-            watcherInfo->wallet,
-            totalMeSatoshi, fees,
-            txId.c_str(), malTxId.c_str(), addresses,
-            fAsyncBitCoinEventCallback,
-            pData,
-            &error));
     watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 
-exit:
-    return;
+    return Status();
 }
 
 std::string
@@ -721,22 +550,6 @@ ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
     for (auto& input: tx.inputs)
         input.script = bc::script_type();
     return bc::encode_hash(bc::hash_transaction(tx, bc::sighash::all));
-}
-
-Status
-watcherBridgeRawTx(Wallet &self, const std::string &ntxid, DataChunk &result)
-{
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
-
-    bc::hash_digest hash;
-    if (!bc::decode_hash(hash, ntxid))
-        return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
-    auto tx = watcher->db().ntxidLookup(hash);
-    result.resize(satoshi_raw_size(tx));
-    bc::satoshi_save(tx, result.begin());
-
-    return Status();
 }
 
 } // namespace abcd

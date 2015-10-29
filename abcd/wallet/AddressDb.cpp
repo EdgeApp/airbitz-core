@@ -164,7 +164,7 @@ AddressDb::save(const Address &address)
 }
 
 AddressList
-AddressDb::list()
+AddressDb::list() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
