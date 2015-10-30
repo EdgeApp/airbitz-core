@@ -77,12 +77,6 @@ public:
     long long ntxidHeight(bc::hash_digest ntxid);
 
     /**
-     * Returns true if all inputs are addresses in the list control.
-     */
-    bool is_spend(bc::hash_digest txid,
-        const AddressSet &addresses) const;
-
-    /**
      * Returns true if this address has received any funds.
      */
     bool has_history(const bc::payment_address &address) const;
@@ -183,6 +177,13 @@ private:
 
     // - Internal: ---------------------
     void check_fork(size_t height);
+
+    /**
+     * Returns true if the transaction is either confirmed or
+     * is one of our own spends (according to the address list).
+     */
+    bool
+    isSpendable(bc::hash_digest txid, const AddressSet &addresses) const;
 
     // Guards access to object state:
     mutable std::mutex mutex_;

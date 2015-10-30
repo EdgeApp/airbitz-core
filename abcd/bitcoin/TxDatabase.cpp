@@ -149,26 +149,6 @@ long long TxDatabase::ntxidHeight(bc::hash_digest ntxid)
     return height;
 }
 
-bool TxDatabase::is_spend(bc::hash_digest txid, const AddressSet &addresses) const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    auto i = rows_.find(txid);
-    if (i == rows_.end())
-        return false;
-    auto tx = i->second.tx;
-
-    for (auto &input: tx.inputs)
-    {
-        bc::payment_address address;
-        if (!bc::extract(address, input.script))
-            return false;
-        if (addresses.find(address) == addresses.end())
-            return false;
-    }
-    return true;
-}
-
 bool TxDatabase::has_history(const bc::payment_address &address) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -256,8 +236,7 @@ bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses,
         bc::output_info_list out;
         for (auto &utxo: utxos)
         {
-            if (txidHeight(utxo.point.hash) ||
-                is_spend(utxo.point.hash, addresses))
+            if (isSpendable(utxo.point.hash, addresses))
                 out.push_back(utxo);
         }
         utxos = std::move(out);
@@ -627,6 +606,28 @@ void TxDatabase::check_fork(size_t height)
         if (row.second.state == TxState::confirmed &&
             row.second.block_height == prev_height)
             row.second.need_check = true;
+}
+
+bool
+TxDatabase::isSpendable(bc::hash_digest txid, const AddressSet &addresses) const
+{
+    auto i = rows_.find(txid);
+    if (i == rows_.end())
+        return false;
+
+    if (TxState::confirmed == i->second.state)
+        return true;
+
+    // This is a spend if we control all the inputs:
+    for (auto &input: i->second.tx.inputs)
+    {
+        bc::payment_address address;
+        if (!bc::extract(address, input.script))
+            return false;
+        if (addresses.find(address) == addresses.end())
+            return false;
+    }
+    return true;
 }
 
 } // namespace abcd
