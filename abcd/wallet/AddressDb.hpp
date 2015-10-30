@@ -55,7 +55,7 @@ public:
      * Lists all the addresses in the wallet.
      */
     AddressList
-    list();
+    list() const;
 
     /**
      * Returns the private keys for the wallet's addresses.

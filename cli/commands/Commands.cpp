@@ -11,6 +11,7 @@
 #include "../../abcd/json/JsonBox.hpp"
 #include "../../abcd/login/Login.hpp"
 #include "../../abcd/util/FileIO.hpp"
+#include "../../abcd/util/Util.hpp"
 #include "../../abcd/wallet/Wallet.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <iostream>
@@ -158,23 +159,6 @@ COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
     {
         bc::hd_private_key m00n = m00.generate_private_key(i);
         std::cout << "watch " << m00n.address().encoded() << std::endl;
-    }
-
-    return Status();
-}
-
-COMMAND(InitLevel::account, GetCategories, "get-categories")
-{
-    if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... get-categories <user> <pass>");
-
-    AutoStringArray categories;
-    ABC_CHECK_OLD(ABC_GetCategories(session.username, session.password, &categories.data, &categories.size, &error));
-
-    printf("Categories:\n");
-    for (unsigned i = 0; i < categories.size; ++i)
-    {
-        printf("\t%s\n", categories.data[i]);
     }
 
     return Status();

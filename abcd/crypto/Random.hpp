@@ -16,8 +16,11 @@ namespace abcd {
 #define DATA_KEY_LENGTH 32
 #define BITCOIN_SEED_LENGTH 32
 
-tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
-                                tABC_Error        *pError);
+/**
+ * Sets the seed for the random number generator.
+ */
+Status
+randomInitialize(DataSlice seed);
 
 /**
  * Generates cryptographically-secure random data.

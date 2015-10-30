@@ -76,8 +76,7 @@ tABC_CC ABC_LoginPinDelete(const Lobby &lobby,
 
     if (!lobby.dir().empty())
     {
-        std::string filename = lobby.dir() + PIN_FILENAME;
-        ABC_CHECK_RET(ABC_FileIODeleteFile(filename.c_str(), pError));
+        ABC_CHECK_NEW(fileDelete(lobby.dir() + PIN_FILENAME));
     }
 
 exit:

@@ -8,6 +8,7 @@
 #include "Text.hpp"
 #include "Testnet.hpp"
 #include "../config.h"
+#include "../util/Util.hpp"
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {

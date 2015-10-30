@@ -43,6 +43,7 @@
 #include "../abcd/auth/LoginServer.hpp"
 #include "../abcd/bitcoin/Testnet.hpp"
 #include "../abcd/bitcoin/Text.hpp"
+#include "../abcd/bitcoin/TxDatabase.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
@@ -136,13 +137,12 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
         gContext.reset(new Context(szRootDir, szCaCertPath));
 
         // initialize logging
-        ABC_CHECK_RET(ABC_DebugInitialize(pError));
+        ABC_CHECK_NEW(debugInitialize());
 
         // override the alloc and free of janson so we can have a secure method
         json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
-        DataSlice Seed(pSeedData, pSeedData + seedLength);
-        ABC_CHECK_RET(ABC_CryptoSetRandomSeed(toU08Buf(Seed), pError));
+        ABC_CHECK_NEW(randomInitialize(DataSlice(pSeedData, pSeedData + seedLength)));
 
         ABC_CHECK_NEW(httpInit());
         ABC_CHECK_NEW(syncInit(szCaCertPath));
@@ -169,7 +169,7 @@ void ABC_Terminate()
 
         syncTerminate();
 
-        ABC_DebugTerminate();
+        debugTerminate();
     }
 }
 
@@ -264,7 +264,7 @@ tABC_CC ABC_AccountDelete(const char *szUserName,
         std::string directory;
         directory = loginDirFind(username);
         ABC_CHECK_ASSERT(!directory.empty(), ABC_CC_AccountDoesNotExist, "Account not found on disk");
-        ABC_CHECK_RET(ABC_FileIODeleteRecursive(directory.c_str(), pError));
+        ABC_CHECK_NEW(fileDelete(directory));
     }
 
 exit:
@@ -827,7 +827,19 @@ tABC_CC ABC_GetCategories(const char *szUserName,
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_AccountCategoriesLoad(*account, paszCategories, pCount, pError));
+        AccountCategories categories;
+        ABC_CHECK_NEW(accountCategoriesLoad(categories, *account));
+
+        char **aszCategories;
+        ABC_ARRAY_NEW(aszCategories, categories.size(), char *);
+        size_t i = 0;
+        for (const auto &category: categories)
+        {
+            aszCategories[i++] = stringCopy(category);
+        }
+
+        *paszCategories = aszCategories;
+        *pCount = categories.size();
     }
 
 exit:
@@ -854,7 +866,7 @@ tABC_CC ABC_AddCategory(const char *szUserName,
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_AccountCategoriesAdd(*account, szCategory, pError));
+        ABC_CHECK_NEW(accountCategoriesAdd(*account, szCategory));
     }
 
 exit:
@@ -882,7 +894,7 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_AccountCategoriesRemove(*account, szCategory, pError));
+        ABC_CHECK_NEW(accountCategoriesRemove(*account, szCategory));
     }
 
 exit:
@@ -1554,7 +1566,10 @@ tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(*wallet, pDetails, pszRequestID, false, pError));
+
+        Address address;
+        ABC_CHECK_NEW(wallet->addresses.getNew(address));
+        *pszRequestID = stringCopy(address.address);
     }
 
 exit:
@@ -1584,7 +1599,12 @@ tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxModifyReceiveRequest(*wallet, szRequestID, pDetails, pError));
+
+        Address address;
+        ABC_CHECK_NEW(wallet->addresses.get(address, szRequestID));
+        address.metadata = pDetails;
+        address.time = time(nullptr);
+        ABC_CHECK_NEW(wallet->addresses.save(address));
     }
 
 exit:
@@ -1610,7 +1630,7 @@ tABC_CC ABC_FinalizeReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxFinalizeReceiveRequest(*wallet, szRequestID, pError));
+        ABC_CHECK_RET(ABC_TxSetAddressRecycle(*wallet, szRequestID, false, pError));
     }
 
 exit:
@@ -1636,7 +1656,7 @@ tABC_CC ABC_CancelReceiveRequest(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxCancelReceiveRequest(*wallet, szRequestID, pError));
+        ABC_CHECK_RET(ABC_TxSetAddressRecycle(*wallet, szRequestID, true, pError));
     }
 
 exit:
@@ -1703,15 +1723,13 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
             pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        pInfo->pDetails = structAlloc<tABC_TxDetails>();
-        auto *pDetails = pInfo->pDetails;
 
         // Parse the URI:
         AutoFree<tABC_BitcoinURIInfo, ABC_BridgeFreeURIInfo> pUri;
         ABC_CHECK_RET(ABC_BridgeParseBitcoinURI(szText, &pUri.get(), pError));
         if (pUri->szRet)
             pSpend->szRet = stringCopy(pUri->szRet);
-        pDetails->szCategory = stringCopy(pUri->szCategory ? pUri->szCategory : "");
+        pInfo->metadata.category = pUri->szCategory ? pUri->szCategory : "";
 
         // If this is a payment request, fill those details in:
         if (pUri->szR)
@@ -1730,9 +1748,9 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
             pSpend->bSigned = true;
 
             // Fill in the details:
-            pDetails->szName = stringCopy(request->merchant(signer));
-            pDetails->szNotes = stringCopy(request->memo(
-                pUri->szMessage ? pUri->szMessage : ""));
+            pInfo->metadata.name = request->merchant(signer);
+            pInfo->metadata.notes = request->memo(
+                pUri->szMessage ? pUri->szMessage : "");
         }
         else if (pUri->szAddress)
         {
@@ -1745,8 +1763,8 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
             pSpend->szName = stringCopy(pUri->szAddress);
 
             // Fill in the details:
-            pDetails->szName = stringCopy(pUri->szLabel ? pUri->szLabel : "");
-            pDetails->szNotes = stringCopy(pUri->szMessage ? pUri->szMessage : "");
+            pInfo->metadata.name = pUri->szLabel ? pUri->szLabel : "";
+            pInfo->metadata.notes = pUri->szMessage ? pUri->szMessage : "";
         }
         else
         {
@@ -1777,8 +1795,6 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
             pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        pInfo->pDetails = structAlloc<tABC_TxDetails>();
-        auto *pDetails = pInfo->pDetails;
 
         // Fill in the spend target:
         pSpend->amount = amount;
@@ -1787,15 +1803,12 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         pSpend->szDestUUID = stringCopy(szWalletUUID);
 
         // Fill in the details:
-        pDetails->szName = stringCopy(pSpend->szName);
-        pDetails->szCategory = stringCopy("");
-        pDetails->szNotes = stringCopy("");
+        pInfo->metadata.name = pSpend->szName;
 
         // Fill in the send info:
-        AutoString szRequestId;
-        AutoString szRequestAddress;
-        ABC_CHECK_RET(ABC_TxCreateReceiveRequest(*wallet, pDetails, &szRequestId.get(), true, pError));
-        ABC_CHECK_RET(ABC_TxGetRequestAddress(*wallet, szRequestId, &pInfo->szDestAddress, pError));
+        Address address;
+        ABC_CHECK_NEW(wallet->addresses.getNew(address));
+        pInfo->szDestAddress = stringCopy(address.address);
         pInfo->walletDest = wallet.get();
         pInfo->bTransfer = true;
 
@@ -1824,8 +1837,6 @@ tABC_CC ABC_SpendNewInternal(const char *szAddress,
             pSpend(structAlloc<tABC_SpendTarget>());
         SendInfo *pInfo = new SendInfo;
         pSpend->pData = pInfo;
-        pInfo->pDetails = structAlloc<tABC_TxDetails>();
-        auto *pDetails = pInfo->pDetails;
 
         // Fill in the spend target:
         pSpend->amount = amount;
@@ -1833,9 +1844,9 @@ tABC_CC ABC_SpendNewInternal(const char *szAddress,
         pSpend->szName = stringCopy(szName ? szName : szAddress);
 
         // Fill in the details:
-        pDetails->szName = stringCopy(szName ? szName : "");
-        pDetails->szCategory = stringCopy(szCategory ? szCategory : "");
-        pDetails->szNotes = stringCopy(szNotes ? szNotes : "");
+        pInfo->metadata.name = szName ? szName : "";
+        pInfo->metadata.category = szCategory ? szCategory : "";
+        pInfo->metadata.notes = szNotes ? szNotes : "";
 
         // Fill in the send info:
         pInfo->szDestAddress = stringCopy(szAddress);
@@ -1860,7 +1871,7 @@ tABC_CC ABC_SpendGetFee(const char *szUserName,
         ABC_GET_WALLET();
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
-        pInfo->pDetails->amountSatoshi = pSpend->amount;
+        pInfo->metadata.amountSatoshi = pSpend->amount;
         ABC_CHECK_RET(ABC_TxCalcSendFees(*wallet, pInfo, pFee, pError));
     }
 
@@ -1880,7 +1891,7 @@ tABC_CC ABC_SpendGetMax(const char *szUserName,
         ABC_GET_WALLET();
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
-        pInfo->pDetails->amountSatoshi = pSpend->amount;
+        pInfo->metadata.amountSatoshi = pSpend->amount;
         ABC_CHECK_RET(ABC_BridgeMaxSpendable(*wallet, pInfo, pMax, pError));
     }
 
@@ -1901,7 +1912,7 @@ tABC_CC ABC_SpendApprove(const char *szUserName,
         ABC_GET_WALLET();
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
-        pInfo->pDetails->amountSatoshi = pSpend->amount;
+        pInfo->metadata.amountSatoshi = pSpend->amount;
         ABC_CHECK_RET(ABC_TxSend(*wallet, pInfo, pszTxId, pError));
     }
 
@@ -2041,7 +2052,7 @@ exit:
 tABC_CC ABC_GetRawTransaction(const char *szUserName,
                               const char *szPassword,
                               const char *szWalletUUID,
-                              const char *szID,
+                              const char *szNtxid,
                               char **pszHex,
                               tABC_Error *pError)
 {
@@ -2050,12 +2061,15 @@ tABC_CC ABC_GetRawTransaction(const char *szUserName,
     {
         ABC_GET_WALLET();
 
-        AutoFree<tABC_TxInfo, ABC_FreeTransaction> info;
-        ABC_CHECK_RET(ABC_TxGetTransaction(*wallet, szID, &info.get(), pError));
+        bc::hash_digest hash;
+        if (!bc::decode_hash(hash, szNtxid))
+            ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
 
-        DataChunk tx;
-        ABC_CHECK_NEW(watcherBridgeRawTx(*wallet, info->szMalleableTxId, tx));
-        *pszHex = stringCopy(base16Encode(tx));
+        auto tx = wallet->txdb.ntxidLookup(hash);
+        DataChunk out;
+        out.resize(satoshi_raw_size(tx));
+        bc::satoshi_save(tx, out.begin());
+        *pszHex = stringCopy(base16Encode(out));
     }
 
 exit:
@@ -2140,7 +2154,9 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGetTransactionDetails(*wallet, szID, ppDetails, pError));
+        TxMetadata metadata;
+        ABC_CHECK_RET(ABC_TxGetTransactionDetails(*wallet, szID, metadata, pError));
+        *ppDetails = metadata.toDetails();
     }
 
 exit:
@@ -2148,7 +2164,8 @@ exit:
 }
 
 /**
- * Gets the bit coin public address for a specified request
+ * Gets the bit coin public address for a specified request.
+ * DEPRECATED, since the address ID *is* the address.
  *
  * @param szUserName        UserName for the account associated with the requests
  * @param szPassword        Password for the account associated with the requests
@@ -2166,10 +2183,7 @@ tABC_CC ABC_GetRequestAddress(const char *szUserName,
 {
     ABC_PROLOG();
 
-    {
-        ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGetRequestAddress(*wallet, szRequestID, pszAddress, pError));
-    }
+    *pszAddress = stringCopy(szRequestID);
 
 exit:
     return cc;
@@ -2749,7 +2763,7 @@ exit:
  * @param szTxId The "non-malleable" transaction id
  * @param height Pointer to integer to store the results
  */
-tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
+tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szNtxid,
                      int *height, tABC_Error *pError)
 {
     // Cannot use ABC_PROLOG - too much debug spew
@@ -2757,12 +2771,20 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId,
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
     ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized");
 
-    ABC_CHECK_NULL(szTxId);
-    ABC_CHECK_ASSERT(strlen(szTxId) > 0, ABC_CC_Error, "No tx id provided");
+    ABC_CHECK_NULL(szNtxid);
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeTxHeight(*wallet, szTxId, height, pError));
+
+        bc::hash_digest hash;
+        if (!bc::decode_hash(hash, szNtxid))
+            ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
+
+        *height = wallet->txdb.ntxidHeight(hash);
+        if (NTXID_HEIGHT_NOT_FOUND == *height)
+        {
+            cc = ABC_CC_Synchronizing;
+        }
     }
 
 exit:
@@ -2784,7 +2806,12 @@ tABC_CC ABC_BlockHeight(const char *szWalletUUID, int *height, tABC_Error *pErro
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeTxBlockHeight(*wallet, height, pError));
+
+        *height = wallet->txdb.last_height();
+        if (*height == 0)
+        {
+            cc = ABC_CC_Synchronizing;
+        }
     }
 
 exit:

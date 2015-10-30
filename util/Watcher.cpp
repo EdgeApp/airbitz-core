@@ -54,8 +54,7 @@ private:
     void cmd_disconnect(std::stringstream &args);
     void cmd_watch(std::stringstream &args);
     void cmd_height();
-    void cmd_txid_height(std::stringstream &args);
-    void cmd_txhash_height(std::stringstream &args);
+    void cmd_tx_height(std::stringstream &args);
     void cmd_tx_dump(std::stringstream &args);
     void cmd_tx_send(std::stringstream &args);
     void cmd_utxos(std::stringstream &args);
@@ -148,8 +147,7 @@ void Cli::command()
     else if (command == "disconnect")   cmd_disconnect(reader);
     else if (command == "height")       cmd_height();
     else if (command == "watch")        cmd_watch(reader);
-    else if (command == "txidheight")   cmd_txid_height(reader);
-    else if (command == "txhashheight") cmd_txhash_height(reader);
+    else if (command == "txheight")     cmd_tx_height(reader);
     else if (command == "txdump")       cmd_tx_dump(reader);
     else if (command == "txsend")       cmd_tx_send(reader);
     else if (command == "utxos")        cmd_utxos(reader);
@@ -178,8 +176,7 @@ void Cli::cmd_help()
     std::cout << "  disconnect          - stop talking to the obelisk server" << std::endl;
     std::cout << "  height              - get the current blockchain height" << std::endl;
     std::cout << "  watch <address> [poll ms] - watch an address" << std::endl;
-    std::cout << "  txidheight <hash>   - get a transaction's height with normalized txid" << std::endl;
-    std::cout << "  txhashheight <hash> - get a transaction's height with tx hash" << std::endl;
+    std::cout << "  txheight <hash>     - get a transaction's height" << std::endl;
     std::cout << "  txdump <hash>       - show the contents of a transaction" << std::endl;
     std::cout << "  txsend <hash>       - push a transaction to the server" << std::endl;
     std::cout << "  utxos [address]     - get utxos for an address" << std::endl;
@@ -221,28 +218,15 @@ void Cli::cmd_height()
     std::cout << db_.last_height() << std::endl;
 }
 
-void Cli::cmd_txid_height(std::stringstream &args)
+void Cli::cmd_tx_height(std::stringstream &args)
 {
     bc::hash_digest txid = read_txid(args);
     if (txid == bc::null_hash)
         return;
 
-    long long height = db_.get_txid_height(txid);
-
-    if (height != TXID_HEIGHT_NOT_FOUND)
+    auto height = db_.txidHeight(txid);
+    if (height != NTXID_HEIGHT_NOT_FOUND)
         std::cout << height << std::endl;
-    else
-        std::cout << "transaction not in database" << std::endl;
-}
-
-void Cli::cmd_txhash_height(std::stringstream &args)
-{
-    bc::hash_digest txhash = read_txid(args);
-    if (txhash == bc::null_hash)
-        return;
-
-    if (db_.has_tx_hash(txhash))
-        std::cout << db_.get_txhash_height(txhash) << std::endl;
     else
         std::cout << "transaction not in database" << std::endl;
 }
@@ -252,7 +236,7 @@ void Cli::cmd_tx_dump(std::stringstream &args)
     bc::hash_digest txid = read_txid(args);
     if (txid == bc::null_hash)
         return;
-    bc::transaction_type tx = db_.get_tx_hash(txid);
+    bc::transaction_type tx = db_.txidLookup(txid);
 
     std::basic_ostringstream<uint8_t> stream;
     auto serial = bc::make_serializer(std::ostreambuf_iterator<uint8_t>(stream));
@@ -314,7 +298,7 @@ void Cli::cmd_utxos(std::stringstream &args)
     {
         std::cout << bc::encode_hash(utxo.point.hash) << ":" <<
             utxo.point.index << std::endl;
-        auto tx = db_.get_tx_hash(utxo.point.hash);
+        auto tx = db_.txidLookup(utxo.point.hash);
         auto &output = tx.outputs[utxo.point.index];
         bc::payment_address to_address;
         if (bc::extract(to_address, output.script))

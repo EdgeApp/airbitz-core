@@ -6,6 +6,7 @@
  */
 
 #include "Watcher.hpp"
+#include "../General.hpp"
 #include "../util/Debug.hpp"
 #include <sstream>
 
@@ -21,11 +22,13 @@ constexpr unsigned priority_poll = 1000;
 
 static unsigned watcher_id = 0;
 
+// The last obelisk server we connected to:
+static unsigned gLastObelisk = 0;
+
 enum {
     msg_quit,
     msg_disconnect,
     msg_connect,
-    msg_watch_tx,
     msg_watch_addr,
     msg_send
 };
@@ -34,8 +37,9 @@ Watcher::~Watcher()
 {
 }
 
-Watcher::Watcher()
-  : socket_(ctx_, ZMQ_PAIR),
+Watcher::Watcher(TxDatabase &db):
+    db_(db),
+    socket_(ctx_, ZMQ_PAIR),
     connection_(nullptr)
 {
     std::stringstream name;
@@ -56,9 +60,9 @@ static bool is_valid(const payment_address& address)
     return address.version() != payment_address::invalid_version;
 }
 
-void Watcher::connect(const std::string& server)
+void Watcher::connect()
 {
-    send_connect(server);
+    send_connect();
     for (auto& address: addresses_)
         send_watch_addr(address.first, address.second);
     if (is_valid(priority_address_))
@@ -68,19 +72,6 @@ void Watcher::connect(const std::string& server)
 void Watcher::send_tx(const transaction_type& tx)
 {
     send_send(tx);
-}
-
-/**
- * Serializes the database for storage while the app is off.
- */
-data_chunk Watcher::serialize()
-{
-    return db_.serialize();
-}
-
-bool Watcher::load(const data_chunk& data)
-{
-    return db_.load(data);
 }
 
 void Watcher::watch_address(const payment_address& address, unsigned poll_ms)
@@ -111,16 +102,6 @@ void Watcher::prioritize_address(const payment_address& address)
     }
 }
 
-transaction_type Watcher::find_tx_hash(hash_digest tx_hash)
-{
-    return db_.get_tx_hash(tx_hash);
-}
-
-transaction_type Watcher::find_tx_id(hash_digest tx_id)
-{
-    return db_.get_tx_id(tx_id);
-}
-
 /**
  * Sets up the new-transaction callback. This callback will be called from
  * some random thread, so be sure to handle that with a mutex or such.
@@ -141,86 +122,12 @@ void Watcher::set_height_callback(block_height_callback cb)
 }
 
 /**
- * Sets up the tx sent callback
- */
-void Watcher::set_tx_sent_callback(tx_sent_callback cb)
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    tx_send_cb_ = std::move(cb);
-}
-
-/**
  * Sets up the server failure callback
  */
 void Watcher::set_quiet_callback(quiet_callback cb)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     quiet_cb_ = std::move(cb);
-}
-
-/**
- * Sets up the server failure callback
- */
-void Watcher::set_fail_callback(fail_callback cb)
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    fail_cb_ = std::move(cb);
-}
-
-/**
- * Obtains a list of unspent outputs for an address. This is needed to spend
- * funds.
- */
-output_info_list Watcher::get_utxos(const payment_address& address)
-{
-    AddressSet watching;
-    watching.insert(address);
-
-    return db_.get_utxos(watching);
-}
-
-/**
- * Returns all the unspent transaction outputs in the wallet.
- * @param filter true to filter out unconfirmed outputs.
- */
-output_info_list Watcher::get_utxos(bool filter)
-{
-    AddressSet addresses;
-    for (auto& row: addresses_)
-        addresses.insert(row.first);
-
-    auto utxos = db_.get_utxos(addresses);
-
-    // Filter out unconfirmed ones:
-    if (filter)
-    {
-        output_info_list out;
-        for (auto& utxo: utxos)
-        {
-            if (db_.get_txhash_height(utxo.point.hash) ||
-                db_.is_spend(utxo.point.hash, addresses))
-                out.push_back(utxo);
-        }
-        utxos = std::move(out);
-    }
-
-    return utxos;
-}
-
-size_t Watcher::get_last_block_height()
-{
-    return db_.last_height();
-}
-
-bool Watcher::get_txid_height(hash_digest tx_id, int& height)
-{
-    height = db_.get_txid_height(tx_id);
-    return (height != TXID_HEIGHT_NOT_FOUND);
-}
-
-void Watcher::dump(std::ostream& out)
-{
-    db_.dump(out);
 }
 
 void Watcher::stop()
@@ -297,16 +204,12 @@ void Watcher::send_disconnect()
     socket_.send(&req, 1);
 }
 
-void Watcher::send_connect(std::string server)
+void Watcher::send_connect()
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
-    std::basic_ostringstream<uint8_t> stream;
-    auto serial = bc::make_serializer(std::ostreambuf_iterator<uint8_t>(stream));
-    serial.write_byte(msg_connect);
-    serial.write_data(server);
-    auto str = stream.str();
-    socket_.send(str.data(), str.size());
+    uint8_t req = msg_connect;
+    socket_.send(&req, 1);
 }
 
 void Watcher::send_watch_addr(payment_address address, unsigned poll_ms)
@@ -352,29 +255,7 @@ bool Watcher::command(uint8_t* data, size_t size)
         return true;
 
     case msg_connect:
-        {
-            std::string server(data + 1, data + size);
-            std::string key;
-
-            // Parse out the key part:
-            size_t key_start = server.find(' ');
-            if (key_start != std::string::npos)
-            {
-                key = server.substr(key_start + 1);
-                server.erase(key_start);
-            }
-
-            delete connection_;
-            connection_ = new connection(db_, ctx_, *this);
-            if (!connection_->socket.connect(server, key))
-            {
-                delete connection_;
-                connection_ = nullptr;
-                Watcher::on_fail();
-                return true;
-            }
-            connection_->txu.start();
-        }
+        doConnect().log();
         return true;
 
     case msg_watch_addr:
@@ -404,6 +285,40 @@ bool Watcher::command(uint8_t* data, size_t size)
     }
 }
 
+Status
+Watcher::doConnect()
+{
+    // Pick a server:
+    auto servers = generalBitcoinServers();
+    ++gLastObelisk;
+    if (servers.size() <= gLastObelisk)
+        gLastObelisk = 0;
+    auto server = servers[gLastObelisk];
+
+    // Parse out the key part:
+    std::string key;
+    size_t key_start = server.find(' ');
+    if (key_start != std::string::npos)
+    {
+        key = server.substr(key_start + 1);
+        server.erase(key_start);
+    }
+
+    ABC_DebugLog("Connecting to %s", server.c_str());
+    delete connection_;
+    connection_ = new connection(db_, ctx_, *this);
+    if (!connection_->socket.connect(server, key))
+    {
+        delete connection_;
+        connection_ = nullptr;
+        connect();
+        return ABC_ERROR(ABC_CC_SysError, "Cannot connect to " + server);
+    }
+    connection_->txu.start();
+
+    return Status();
+}
+
 void Watcher::on_add(const transaction_type& tx)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
@@ -420,9 +335,6 @@ void Watcher::on_height(size_t height)
 
 void Watcher::on_send(const std::error_code& error, const transaction_type& tx)
 {
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    if (tx_send_cb_)
-        tx_send_cb_(error, tx);
 }
 
 void Watcher::on_quiet()
@@ -434,9 +346,7 @@ void Watcher::on_quiet()
 
 void Watcher::on_fail()
 {
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    if (fail_cb_)
-        fail_cb_();
+    connect();
 }
 
 Watcher::connection::~connection()

@@ -5,6 +5,7 @@
 
 #include "TxDatabase.hpp"
 #include "WatcherBridge.hpp"
+#include "../util/Debug.hpp"
 
 namespace abcd {
 
@@ -12,6 +13,14 @@ namespace abcd {
 constexpr uint32_t old_serial_magic = 0x3eab61c3; // From the watcher
 constexpr uint32_t serial_magic = 0xfecdb763;
 constexpr uint8_t serial_tx = 0x42;
+
+static bc::hash_digest
+get_non_malleable_txid(bc::transaction_type tx)
+{
+    for (auto &input: tx.inputs)
+        input.script = bc::script_type();
+    return bc::hash_transaction(tx, bc::sighash::all);
+}
 
 TxDatabase::~TxDatabase()
 {
@@ -23,54 +32,50 @@ TxDatabase::TxDatabase(unsigned unconfirmed_timeout):
 {
 }
 
-long long TxDatabase::last_height()
+long long TxDatabase::last_height() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
     return last_height_;
 }
 
-bool TxDatabase::has_tx_hash(bc::hash_digest tx_hash)
+bool TxDatabase::txidExists(bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    return rows_.find(tx_hash) != rows_.end();
+    return rows_.find(txid) != rows_.end();
 }
 
-bool TxDatabase::has_tx_id(bc::hash_digest tx_id)
+bool TxDatabase::ntxidExists(bc::hash_digest ntxid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    std::vector<TxRow *> txRows = findByTxID(tx_id);
-
-    if (txRows.size())
-        return true;
-
-    return false;
+    auto txRows = ntxidLookupAll(ntxid);
+    return !txRows.empty();
 }
 
-bc::transaction_type TxDatabase::get_tx_hash(bc::hash_digest tx_hash)
+bc::transaction_type TxDatabase::txidLookup(bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    auto i = rows_.find(tx_hash);
+    auto i = rows_.find(txid);
     if (i == rows_.end())
         return bc::transaction_type();
     return i->second.tx;
 }
 
-bc::transaction_type TxDatabase::get_tx_id(bc::hash_digest tx_id)
+bc::transaction_type TxDatabase::ntxidLookup(bc::hash_digest ntxid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    std::vector<TxRow *> txRows = findByTxID(tx_id);
+    std::vector<TxRow *> txRows = ntxidLookupAll(ntxid);
 
     bc::transaction_type tx;
     bool foundTx = false;
 
     for (auto i = txRows.begin(); i != txRows.end(); ++i) {
-        // Try to return the master confirmed tx_hash if possible
-        // Otherwise return any confirmed tx_hash
+        // Try to return the master confirmed txid if possible
+        // Otherwise return any confirmed txid
         // Otherwise return any match
         if (!foundTx) {
             tx = (*i)->tx;
@@ -104,78 +109,47 @@ const char * stateToString(TxState state)
 
 }
 
-long long TxDatabase::get_txhash_height(bc::hash_digest tx_hash)
+long long TxDatabase::txidHeight(bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    auto i = rows_.find(tx_hash);
+    auto i = rows_.find(txid);
     if (i == rows_.end())
         return 0;
-
-//    std::string malTxID = bc::encode_hash(bc::hash_transaction(i->second.tx));
-//    std::string txID    = bc::encode_hash(i->second.tx_id);
-//
-//    ABC_DebugLog("get_txhash_height maltxid=%s txid=%s st=%s height=%d",
-//                 malTxID.c_str(),txID.c_str(), stateToString(i->second.state), i->second.block_height);
 
     if (i->second.state != TxState::confirmed) {
         return 0;
     }
     return i->second.block_height;
-
 }
 
-long long TxDatabase::get_txid_height(bc::hash_digest tx_id)
+long long TxDatabase::ntxidHeight(bc::hash_digest ntxid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    std::vector<TxRow *> txRows = findByTxID(tx_id);
+    std::vector<TxRow *> txRows = ntxidLookupAll(ntxid);
+    if (txRows.empty())
+        return NTXID_HEIGHT_NOT_FOUND;
 
-    long long height = TXID_HEIGHT_NOT_FOUND;
-
-    int numFound = 0;
-
-    for (auto i = txRows.begin(); i != txRows.end(); ++i) {
-        numFound++;
-        if (numFound > 1)
+    long long height = 0;
+    for (auto row: txRows)
+    {
+        if (TxState::confirmed == row->state)
         {
-            ABC_DebugLog("Found double spend / malleated transaction");
-        }
-        if (TxState::confirmed == (*i)->state) {
-            if (height < (*i)->block_height)
-                height = (*i)->block_height;
-        } else {
-            height = 0;
+            if (height < row->block_height)
+                height = row->block_height;
         }
     }
 
-    if (numFound > 1 && height <= 0)
+    // Special signal to the GUI that the transaction is both
+    // malleated and unconfirmed:
+    if (1 < txRows.size() && !height)
         return -1;
 
     return height;
 }
 
-bool TxDatabase::is_spend(bc::hash_digest tx_hash, const AddressSet &addresses)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    auto i = rows_.find(tx_hash);
-    if (i == rows_.end())
-        return false;
-    auto tx = i->second.tx;
-
-    for (auto &input: tx.inputs)
-    {
-        bc::payment_address address;
-        if (!bc::extract(address, input.script))
-            return false;
-        if (addresses.find(address) == addresses.end())
-            return false;
-    }
-    return true;
-}
-
-bool TxDatabase::has_history(const bc::payment_address &address)
+bool TxDatabase::has_history(const bc::payment_address &address) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -193,7 +167,7 @@ bool TxDatabase::has_history(const bc::payment_address &address)
     return false;
 }
 
-bc::output_info_list TxDatabase::get_utxos()
+bc::output_info_list TxDatabase::get_utxos() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -231,18 +205,13 @@ bc::output_info_list TxDatabase::get_utxos()
                     out.push_back(info);
                 }
             }
-        } else {
-//            std::string malTxID = bc::encode_hash(bc::hash_transaction(row.second.tx));
-//            std::string txID    = bc::encode_hash(row.second.tx_id);
-//
-//            ABC_DebugLog("Tx Excluded from UTXO mall=%d maltxid=%s txid=%s hash=%x st=%s mastc=%d",
-//                         row.second.bMalleated,malTxID.c_str(),txID.c_str(), row.second.tx_hash, stateToString(row.second.state), row.second.bMasterConfirm);
         }
     }
     return out;
 }
 
-bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses)
+bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses,
+    bool filter) const
 {
     auto raw = get_utxos();
 
@@ -261,10 +230,22 @@ bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses)
                 utxos.push_back(utxo);
     }
 
+    // Filter out unconfirmed ones:
+    if (filter)
+    {
+        bc::output_info_list out;
+        for (auto &utxo: utxos)
+        {
+            if (isSpendable(utxo.point.hash, addresses))
+                out.push_back(utxo);
+        }
+        utxos = std::move(out);
+    }
+
     return utxos;
 }
 
-bc::data_chunk TxDatabase::serialize()
+bc::data_chunk TxDatabase::serialize() const
 {
     ABC_DebugLog("ENTER TxDatabase::serialize");
     std::lock_guard<std::mutex> lock(mutex_);
@@ -299,8 +280,8 @@ bc::data_chunk TxDatabase::serialize()
         serial.write_byte(static_cast<uint8_t>(row.second.state));
         serial.write_8_bytes(height);
         serial.write_byte(row.second.need_check);
-        serial.write_hash(row.second.tx_hash);
-        serial.write_hash(row.second.tx_id);
+        serial.write_hash(row.second.txid);
+        serial.write_hash(row.second.ntxid);
         serial.write_byte(row.second.bMalleated);
         serial.write_byte(row.second.bMasterConfirm);
 
@@ -358,8 +339,8 @@ bool TxDatabase::load(const bc::data_chunk &data)
                 row.timestamp = row.block_height;
             row.need_check = serial.read_byte();
 
-            row.tx_hash        = serial.read_hash();
-            row.tx_id          = serial.read_hash();
+            row.txid           = serial.read_hash();
+            row.ntxid          = serial.read_hash();
             row.bMalleated     = serial.read_byte();
             row.bMasterConfirm = serial.read_byte();
 
@@ -377,7 +358,7 @@ bool TxDatabase::load(const bc::data_chunk &data)
     return true;
 }
 
-void TxDatabase::dump(std::ostream &out)
+void TxDatabase::dump(std::ostream &out) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -419,29 +400,16 @@ void TxDatabase::dump(std::ostream &out)
     }
 }
 
-//
-// Find a transaction by the non-malleable txid. Since this can map to multiple
-// malleable txids, return a vector of results
-//
-std::vector<TxRow *> TxDatabase::findByTxID(bc::hash_digest tx_id)
+std::vector<TxDatabase::TxRow *>
+TxDatabase::ntxidLookupAll(bc::hash_digest ntxid)
 {
-    std::vector<TxRow *> txVector;
-
-    for (auto it = rows_.begin(); it != rows_.end(); ++it) {
-        TxRow *txRow = &it->second;
-        if (txRow->tx_id == tx_id) {
-            txVector.push_back(txRow);
-        }
+    std::vector<TxRow *> out;
+    for (auto &row: rows_)
+    {
+        if (row.second.ntxid == ntxid)
+            out.push_back(&row.second);
     }
-
-    return txVector;
-}
-
-bc::hash_digest TxDatabase::get_non_malleable_txid(bc::transaction_type tx)
-{
-    for (auto& input: tx.inputs)
-        input.script = bc::script_type();
-    return bc::hash_transaction(tx, bc::sighash::all);
+    return out;
 }
 
 bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
@@ -452,11 +420,11 @@ bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
     //
     // Yuck. Maybe this func should be in transaction.cpp
     //
-    bc::hash_digest tx_id = get_non_malleable_txid(tx);
+    bc::hash_digest ntxid = get_non_malleable_txid(tx);
 
     // Do not stomp existing tx's:
-    auto tx_hash = bc::hash_transaction(tx);
-    if (rows_.find(tx_hash) == rows_.end()) {
+    auto txid = bc::hash_transaction(tx);
+    if (rows_.find(txid) == rows_.end()) {
 
         TxState state = TxState::unconfirmed;
         long long height = 0;
@@ -465,23 +433,17 @@ bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
         // Check if there are other transactions with same txid.
         // If so, mark all malleated and copy block height and state to
         // new tx
-        std::vector<TxRow *> txRows = findByTxID(tx_id);
+        std::vector<TxRow *> txRows = ntxidLookupAll(ntxid);
 
         for (auto i = txRows.begin(); i != txRows.end(); ++i) {
-            if (tx_hash != (*i)->tx_hash) {
+            if (txid != (*i)->txid) {
                 height = (*i)->block_height;
                 state = (*i)->state;
                 bMalleated = (*i)->bMalleated = true;
             }
         }
 
-        rows_[tx_hash] = TxRow{tx, tx_hash, tx_id, state, height, time(nullptr), bMalleated, false, false};
-//        std::string malTxID = bc::encode_hash(bc::hash_transaction(tx));
-//        std::string txID    = bc::encode_hash(tx_id);
-//
-//        ABC_DebugLog("Tx Inserted mall=%d maltxid=%s txid=%s hash=%x st=%s",
-//                     bMalleated,malTxID.c_str(),txID.c_str(), tx_hash, stateToString(state));
-
+        rows_[txid] = TxRow{tx, txid, ntxid, state, height, time(nullptr), bMalleated, false, false};
         return true;
     }
 
@@ -498,11 +460,11 @@ void TxDatabase::at_height(size_t height)
     check_fork(height);
 }
 
-void TxDatabase::confirmed(bc::hash_digest tx_hash, long long block_height)
+void TxDatabase::confirmed(bc::hash_digest txid, long long block_height)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    auto it = rows_.find(tx_hash);
+    auto it = rows_.find(txid);
     BITCOIN_ASSERT(it != rows_.end());
     auto &row = it->second;
 
@@ -516,37 +478,29 @@ void TxDatabase::confirmed(bc::hash_digest tx_hash, long long block_height)
 
     // Check if there are other malleated transactions.
     // If so, mark them all confirmed
-    std::vector<TxRow *> txRows = findByTxID(it->second.tx_id);
+    std::vector<TxRow *> txRows = ntxidLookupAll(it->second.ntxid);
 
     row.state = TxState::confirmed;
     row.block_height = block_height;
     row.bMasterConfirm = true;
 
-//    std::string txID     = bc::encode_hash(it->second.tx_id);
-//    std::string malTxID1 = bc::encode_hash(bc::hash_transaction(row.tx));
-
-    for (auto i = txRows.begin(); i != txRows.end(); ++i) {
-        if (tx_hash != (*i)->tx_hash) {
+    for (auto i = txRows.begin(); i != txRows.end(); ++i)
+    {
+        if (txid != (*i)->txid)
+        {
             (*i)->block_height = block_height;
             (*i)->state = TxState::confirmed;
             (*i)->bMalleated = true;
             row.bMalleated = true;
-//            std::string malTxID2 = bc::encode_hash(bc::hash_transaction((*i)->tx));
-//            ABC_DebugLog("Tx Confirmed: TxMalleability txid=%s maltxid1=%s maltxid2=%s", txID.c_str(), malTxID1.c_str(), malTxID2.c_str());
-        } else {
-//            ABC_DebugLog("Tx Confirmed: mall=%d maltxid=%s txid=%s hash=%x st=%s",
-//                         row.bMalleated, malTxID1.c_str(), txID.c_str(), tx_hash, stateToString(row.state));
         }
     }
-
-
 }
 
-void TxDatabase::unconfirmed(bc::hash_digest tx_hash)
+void TxDatabase::unconfirmed(bc::hash_digest txid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    auto it = rows_.find(tx_hash);
+    auto it = rows_.find(txid);
     BITCOIN_ASSERT(it != rows_.end());
     auto &row = it->second;
 
@@ -562,23 +516,21 @@ void TxDatabase::unconfirmed(bc::hash_digest tx_hash)
 
         // Check if there are other malleated transactions.
         // If so, mark them all unconfirmed_malleated
-        std::vector<TxRow *> txRows = findByTxID(it->second.tx_id);
+        std::vector<TxRow *> txRows = ntxidLookupAll(it->second.ntxid);
 
         for (auto i = txRows.begin(); i != txRows.end(); ++i) {
-            if (tx_hash != (*i)->tx_hash) {
-//                std::string malTxID2 = bc::encode_hash(bc::hash_transaction((*i)->tx));
-//                std::string txID = bc::encode_hash((*i)->tx_id);
-                if ((*i)->bMasterConfirm) {
+            if (txid != (*i)->txid)
+            {
+                if ((*i)->bMasterConfirm)
+                {
                     height = (*i)->block_height;
                     state = (*i)->state;
-
-//                    ABC_DebugLog("Tx Unconfirmed: TxMalleability txid=%s maltxid1=%s maltxid2MASTER=%s", txID.c_str(), malTxID1.c_str(), malTxID2.c_str());
-                } else {
+                }
+                else
+                {
                     (*i)->block_height = height = -1;
                     (*i)->state = TxState::unconfirmed;
                     (*i)->bMalleated = bMalleated = true;
-
-//                    ABC_DebugLog("Tx Unconfirmed: TxMalleability txid=%s maltxid1=%s maltxid2=%s", txID.c_str(), malTxID1.c_str(), malTxID2.c_str());
                 }
             }
         }
@@ -590,28 +542,22 @@ void TxDatabase::unconfirmed(bc::hash_digest tx_hash)
     row.block_height = height;
     row.state = state;
     row.bMalleated = bMalleated;
-
-//    ABC_DebugLog("Tx Unconfirmed Finished mall=%d hash=%x height=%d st=%s", bMalleated, tx_hash, height, stateToString(row.state));
 }
 
-void TxDatabase::forget(bc::hash_digest tx_hash)
+void TxDatabase::forget(bc::hash_digest txid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    rows_.erase(tx_hash);
+    rows_.erase(txid);
 }
 
-void TxDatabase::reset_timestamp(bc::hash_digest tx_hash)
+void TxDatabase::reset_timestamp(bc::hash_digest txid)
 {
-//    ABC_DebugLog("ENTER reset_timestamp");
     std::lock_guard<std::mutex> lock(mutex_);
 
-    auto i = rows_.find(tx_hash);
+    auto i = rows_.find(txid);
     if (i != rows_.end())
         i->second.timestamp = time(nullptr);
-
-//    ABC_DebugLog("EXIT reset_timestamp");
-
 }
 
 void TxDatabase::foreach_unconfirmed(HashFn &&f)
@@ -660,6 +606,28 @@ void TxDatabase::check_fork(size_t height)
         if (row.second.state == TxState::confirmed &&
             row.second.block_height == prev_height)
             row.second.need_check = true;
+}
+
+bool
+TxDatabase::isSpendable(bc::hash_digest txid, const AddressSet &addresses) const
+{
+    auto i = rows_.find(txid);
+    if (i == rows_.end())
+        return false;
+
+    if (TxState::confirmed == i->second.state)
+        return true;
+
+    // This is a spend if we control all the inputs:
+    for (auto &input: i->second.tx.inputs)
+    {
+        bc::payment_address address;
+        if (!bc::extract(address, input.script))
+            return false;
+        if (addresses.find(address) == addresses.end())
+            return false;
+    }
+    return true;
 }
 
 } // namespace abcd

@@ -56,7 +56,7 @@ Status Status::fromError(const tABC_Error &error, ErrorLocation here)
     return Status(error.code, error.szDescription, location).at(here);
 }
 
-void
+const Status &
 Status::log() const
 {
     if (!*this)
@@ -65,6 +65,7 @@ Status::log() const
         s << *this;
         ABC_DebugLog("%s", s.str().c_str());
     }
+    return *this;
 }
 
 Status &

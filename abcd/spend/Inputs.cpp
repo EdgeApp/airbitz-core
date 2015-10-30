@@ -8,7 +8,8 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "../General.hpp"
-#include "../bitcoin/Watcher.hpp"
+#include "../bitcoin/TxDatabase.hpp"
+#include "../wallet/Wallet.hpp"
 #include <unistd.h>
 #include <bitcoin/bitcoin.hpp>
 
@@ -20,13 +21,13 @@ static std::map<data_chunk, std::string> address_map;
 static operation create_data_operation(data_chunk& data);
 
 Status
-signTx(bc::transaction_type &result, Watcher &watcher, const KeyTable &keys)
+signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
 {
     for (size_t i = 0; i < result.inputs.size(); ++i)
     {
         // Find the utxo this input refers to:
         bc::input_point& point = result.inputs[i].previous_output;
-        bc::transaction_type tx = watcher.find_tx_hash(point.hash);
+        bc::transaction_type tx = wallet.txdb.txidLookup(point.hash);
 
         // Find the address for that utxo:
         bc::payment_address pa;
@@ -82,16 +83,16 @@ static operation create_data_operation(data_chunk& data)
     return op;
 }
 
-bool gather_challenges(unsigned_transaction& utx, Watcher& watcher)
+bool gather_challenges(unsigned_transaction& utx, Wallet &wallet)
 {
     utx.challenges.resize(utx.tx.inputs.size());
 
     for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
     {
         bc::input_point& point = utx.tx.inputs[i].previous_output;
-        if (!watcher.db().has_tx_hash(point.hash))
+        if (!wallet.txdb.txidExists(point.hash))
             return false;
-        bc::transaction_type tx = watcher.find_tx_hash(point.hash);
+        bc::transaction_type tx = wallet.txdb.txidLookup(point.hash);
         utx.challenges[i] = tx.outputs[point.index].script;
     }
 

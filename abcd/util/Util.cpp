@@ -59,23 +59,6 @@ stringCopy(const std::string &string)
 }
 
 /**
- * Free's array of strings
- * note: the strings are first zero'ed out before being freed
- */
-void ABC_UtilFreeStringArray(char **aszStrings,
-                             unsigned int count)
-{
-    if (aszStrings)
-    {
-        for (unsigned i = 0; i < count; i++)
-        {
-            ABC_FREE_STR(aszStrings[i]);
-        }
-        ABC_FREE(aszStrings);
-    }
-}
-
-/**
  * For security reasons, it is important that we always make sure memory is set the way we expect
  * this function should ensure that
  * reference: http://www.dwheeler.com/secure-programs/Secure-Programs-HOWTO/protect-secrets.html

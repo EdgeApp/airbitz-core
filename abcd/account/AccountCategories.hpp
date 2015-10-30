@@ -8,24 +8,32 @@
 #ifndef ABCD_ACCOUNT_ACCOUNT_CATEGORIES_HPP
 #define ABCD_ACCOUNT_ACCOUNT_CATEGORIES_HPP
 
-#include "../../src/ABC.h"
+#include "../util/Status.hpp"
+#include <set>
 
 namespace abcd {
 
 class Account;
 
-tABC_CC ABC_AccountCategoriesLoad(const Account &account,
-                                  char ***paszCategories,
-                                  unsigned int *pCount,
-                                  tABC_Error *pError);
+typedef std::set<std::string> AccountCategories;
 
-tABC_CC ABC_AccountCategoriesAdd(const Account &account,
-                                 char *szCategory,
-                                 tABC_Error *pError);
+/**
+ * Loads the categories from an account.
+ */
+Status
+accountCategoriesLoad(AccountCategories &result, const Account &account);
 
-tABC_CC ABC_AccountCategoriesRemove(const Account &account,
-                                    char *szCategory,
-                                    tABC_Error *pError);
+/**
+ * Adds a category to the account.
+ */
+Status
+accountCategoriesAdd(const Account &account, const std::string &category);
+
+/**
+ * Removes a category from the account.
+ */
+Status
+accountCategoriesRemove(const Account &account, const std::string &category);
 
 } // namespace abcd
 

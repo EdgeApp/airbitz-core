@@ -48,24 +48,11 @@ namespace abcd {
 extern std::recursive_mutex gFileMutex;
 typedef std::lock_guard<std::recursive_mutex> AutoFileLock;
 
-typedef enum eABC_FileIOFileType
-{
-    ABC_FileIOFileType_Unknown,
-    ABC_FileIOFileType_Regular,
-    ABC_FILEIOFileType_Directory
-} tABC_FileIOFileType;
-
-typedef struct sABC_FileIOFileInfo
-{
-    tABC_FileIOFileType type;
-    char *szName;
-} tABC_FileIOFileInfo;
-
-typedef struct sABC_FileIOFileList
-{
-    int nCount;
-    tABC_FileIOFileInfo **apFiles;
-} tABC_FileIOList;
+/**
+ * Puts a slash on the end of a filename (if necessary).
+ */
+std::string
+fileSlashify(const std::string &path);
 
 /**
  * Ensures that a directory exists, creating it if not.
@@ -85,29 +72,23 @@ fileExists(const std::string &path);
 bool
 fileIsJson(const std::string &name);
 
-tABC_CC ABC_FileIOCreateFileList(tABC_FileIOList **ppFileList,
-                                 const char *szDir,
-                                 tABC_Error *pError);
-
-void ABC_FileIOFreeFileList(tABC_FileIOList *pFileList);
-
 /**
  * Reads a file from disk.
  */
 Status
-fileLoad(DataChunk &result, const std::string &filename);
+fileLoad(DataChunk &result, const std::string &path);
 
 /**
  * Writes a file to disk.
  */
 Status
-fileSave(DataSlice data, const std::string &filename);
+fileSave(DataSlice data, const std::string &path);
 
-tABC_CC ABC_FileIODeleteFile(const char *szFilename,
-                             tABC_Error *pError);
-
-tABC_CC ABC_FileIODeleteRecursive(const char *szFilename,
-                                  tABC_Error *pError);
+/**
+ * Deletes a file recursively.
+ */
+Status
+fileDelete(const std::string &path);
 
 tABC_CC ABC_FileIOFileModTime(const char *szFilename,
                               time_t *pTime,

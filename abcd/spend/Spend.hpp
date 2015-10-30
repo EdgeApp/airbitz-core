@@ -7,6 +7,7 @@
 #define ABCD_SPEND_SPEND_HPP
 
 #include "../util/Status.hpp"
+#include "../wallet/TxMetadata.hpp"
 
 namespace abcd {
 
@@ -23,7 +24,7 @@ struct SendInfo
 
     char                    *szDestAddress;
     PaymentRequest          *paymentRequest;
-    tABC_TxDetails          *pDetails;
+    TxMetadata              metadata;
 
     // Transfer from one wallet to another:
     bool                    bTransfer;
@@ -43,7 +44,7 @@ tABC_CC ABC_BridgeMaxSpendable(Wallet &self,
 
 tABC_CC  ABC_TxSend(Wallet &self,
                     SendInfo *pInfo,
-                    char **pszTxID,
+                    char **pszNtxid,
                     tABC_Error *pError);
 
 } // namespace abcd

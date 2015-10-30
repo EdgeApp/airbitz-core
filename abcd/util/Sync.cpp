@@ -9,7 +9,6 @@
 #include "AutoFree.hpp"
 #include "Debug.hpp"
 #include "FileIO.hpp"
-#include "Mutex.hpp"
 #include "../General.hpp"
 #include "../../minilibs/git-sync/sync.h"
 #include <stdlib.h>
@@ -47,12 +46,6 @@ syncGitError(int e)
     return out;
 }
 
-static std::string
-slashify(const std::string &s)
-{
-    return s.back() == '/' ? s : s + '/';
-}
-
 /**
  * Builds a URL for the current git server.
  */
@@ -66,7 +59,7 @@ syncUrl(std::string &result, const std::string &syncKey, bool rotate=false)
 
         syncServerIndex++;
         syncServerIndex %= pInfo->countSyncServers;
-        syncServerName = slashify(pInfo->aszSyncServers[syncServerIndex]);
+        syncServerName = fileSlashify(pInfo->aszSyncServers[syncServerIndex]);
     }
 
     result = syncServerName + syncKey;
@@ -130,7 +123,7 @@ syncEnsureRepo(const std::string &syncDir, const std::string &tempDir,
     if (!fileExists(syncDir))
     {
         if (fileExists(tempDir))
-            ABC_CHECK_OLD(ABC_FileIODeleteRecursive(tempDir.c_str(), &error));
+            ABC_CHECK(fileDelete(tempDir));
         ABC_CHECK(syncMakeRepo(tempDir));
         bool dirty = false;
         ABC_CHECK(syncRepo(tempDir, syncKey, dirty));
@@ -158,10 +151,7 @@ syncRepo(const std::string &syncDir, const std::string &syncKey, bool &dirty)
     }
 
     int files_changed, need_push;
-    {
-        AutoCoreLock lock(gCoreMutex);
-        ABC_CHECK_GIT(sync_master(repo, &files_changed, &need_push));
-    }
+    ABC_CHECK_GIT(sync_master(repo, &files_changed, &need_push));
 
     if (need_push)
         ABC_CHECK_GIT(sync_push(repo, url.c_str()));

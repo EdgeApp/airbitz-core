@@ -643,12 +643,7 @@ loginServerUploadLogs(const Account *account)
     const auto url = ABC_SERVER_ROOT "/account/debug";
     JsonPtr json;
     HttpReply reply;
-    DataChunk logData;
-    DataChunk watchData;
-
-    AutoString szLogFilename;
-    ABC_CHECK_OLD(ABC_DebugLogFilename(&szLogFilename.get(), &error));
-    ABC_CHECK(fileLoad(logData, szLogFilename.get()));
+    DataChunk logData = debugLogLoad();
 
     if (account)
     {
@@ -659,6 +654,7 @@ loginServerUploadLogs(const Account *account)
             std::shared_ptr<Wallet> wallet;
             if (cacheWallet(wallet, nullptr, id.c_str()))
             {
+                DataChunk watchData;
                 ABC_CHECK(fileLoad(watchData, watcherPath(*wallet)));
                 jsonArray.append(
                     json_string(base64Encode(watchData).c_str()));

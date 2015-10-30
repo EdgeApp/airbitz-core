@@ -22,13 +22,9 @@ namespace abcd {
 /**
  * Sets the seed for the random number generator
  */
-tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
-                                tABC_Error        *pError)
+Status
+randomInitialize(DataSlice seed)
 {
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    char *szFileIORootDir = NULL;
     unsigned long timeVal;
     time_t timeResult;
     clock_t clockVal;
@@ -37,10 +33,8 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
 
     AutoU08Buf NewSeed;
 
-    ABC_CHECK_NULL_BUF(Seed);
-
     // create our own copy so we can add to it
-    ABC_BUF_DUP(NewSeed, Seed);
+    ABC_BUF_DUP(NewSeed, seed);
 
     // mix in some info on our file system
 #ifndef __ANDROID__
@@ -49,11 +43,6 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     if ((statvfs(rootDir.c_str(), &fiData)) >= 0 )
     {
         ABC_BUF_APPEND_PTR(NewSeed, (unsigned char *)&fiData, sizeof(struct statvfs));
-
-        //printf("Disk %s: \n", szRootDir);
-        //printf("\tblock size: %lu\n", fiData.f_bsize);
-        //printf("\ttotal no blocks: %i\n", fiData.f_blocks);
-        //printf("\tfree blocks: %i\n", fiData.f_bfree);
     }
 #endif
 
@@ -84,10 +73,7 @@ tABC_CC ABC_CryptoSetRandomSeed(const tABC_U08Buf Seed,
     // seed it
     RAND_seed(NewSeed.data(), NewSeed.size());
 
-exit:
-    ABC_FREE_STR(szFileIORootDir);
-
-    return cc;
+    return Status();
 }
 
 Status
