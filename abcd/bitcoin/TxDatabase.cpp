@@ -144,7 +144,10 @@ long long TxDatabase::ntxidHeight(bc::hash_digest ntxid)
     // Special signal to the GUI that the transaction is both
     // malleated and unconfirmed:
     if (1 < txRows.size() && !height)
+    {
+        ABC_DebugLevel(1, "ntxidHeight returning -1 (malleated)");
         return -1;
+    }
 
     return height;
 }
@@ -528,6 +531,11 @@ void TxDatabase::unconfirmed(bc::hash_digest txid)
                 }
                 else
                 {
+                    ABC_DebugLevel(1, "Setting tx unconfirmed on malleated ntxid");
+                    ABC_DebugLevel(1, "   ntxid=%s", (bc::encode_hash(it->second.ntxid)).c_str());
+                    ABC_DebugLevel(1, "   txid =%s", (bc::encode_hash(txid)).c_str());
+                    ABC_DebugLevel(1, "   txid =%s", (bc::encode_hash((*i)->txid)).c_str());
+
                     (*i)->block_height = height = -1;
                     (*i)->state = TxState::unconfirmed;
                     (*i)->bMalleated = bMalleated = true;
