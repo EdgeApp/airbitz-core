@@ -443,8 +443,7 @@ txGetAmounts(Wallet &self, const std::string &ntxid,
     int64_t totalInSatoshi = 0, totalOutSatoshi = 0;
     int64_t totalMeSatoshi = 0, totalMeInSatoshi = 0;
 
-    auto addressStrings = self.addresses.list();
-    AddressSet addresses(addressStrings.begin(), addressStrings.end());
+    AddressSet addresses = self.addresses.list();
 
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, ntxid))
@@ -460,7 +459,7 @@ txGetAmounts(Wallet &self, const std::string &ntxid,
         auto tx = self.txdb.txidLookup(prev.hash);
         if (prev.index < tx.outputs.size())
         {
-            if (addresses.end() != addresses.find(address))
+            if (addresses.end() != addresses.find(address.encoded()))
                 totalMeInSatoshi += tx.outputs[prev.index].value;
             totalInSatoshi += tx.outputs[prev.index].value;
         }
@@ -472,7 +471,7 @@ txGetAmounts(Wallet &self, const std::string &ntxid,
         bc::extract(address, o.script);
 
         // Do we own this address?
-        if (addresses.end() != addresses.find(address))
+        if (addresses.end() != addresses.find(address.encoded()))
             totalMeSatoshi += o.value;
         totalOutSatoshi += o.value;
     }

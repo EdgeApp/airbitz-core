@@ -229,7 +229,7 @@ bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses,
 
         bc::payment_address to_address;
         if (bc::extract(to_address, output.script))
-            if (addresses.find(to_address) != addresses.end())
+            if (addresses.find(to_address.encoded()) != addresses.end())
                 utxos.push_back(utxo);
     }
 
@@ -632,7 +632,7 @@ TxDatabase::isSpendable(bc::hash_digest txid, const AddressSet &addresses) const
         bc::payment_address address;
         if (!bc::extract(address, input.script))
             return false;
-        if (addresses.find(address) == addresses.end())
+        if (addresses.find(address.encoded()) == addresses.end())
             return false;
     }
     return true;

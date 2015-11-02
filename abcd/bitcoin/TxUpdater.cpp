@@ -77,7 +77,7 @@ AddressSet TxUpdater::watching()
 {
     AddressSet out;
     for (auto &row: rows_)
-        out.insert(row.first);
+        out.insert(row.first.encoded());
     return out;
 }
 

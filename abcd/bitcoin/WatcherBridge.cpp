@@ -51,7 +51,7 @@ namespace abcd {
 
 struct PendingSweep
 {
-    bc::payment_address address;
+    std::string address;
     abcd::wif_key key;
     bool done;
 
@@ -161,7 +161,7 @@ tABC_CC ABC_BridgeSweepKey(Wallet &self,
     address.set(pubkeyVersion(), bc::bitcoin_short_hash(ec_addr));
 
     // Start the sweep:
-    sweep.address = address;
+    sweep.address = address.encoded();
     sweep.key = abcd::wif_key{ec_key, compressed};
     sweep.done = false;
     sweep.fCallback = fCallback;
@@ -499,15 +499,14 @@ static Status
 bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &tx,
     tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    auto addressStrings = watcherInfo->wallet.addresses.list();
-    AddressSet myAddresses(addressStrings.begin(), addressStrings.end());
+    AddressSet myAddresses = watcherInfo->wallet.addresses.list();
 
     bool relevant = false;
     for (const auto &i: tx.inputs)
     {
         bc::payment_address address;
         bc::extract(address, i.script);
-        if (myAddresses.end() != myAddresses.find(address))
+        if (myAddresses.end() != myAddresses.find(address.encoded()))
             relevant = true;
     }
 
@@ -516,7 +515,7 @@ bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &t
     {
         bc::payment_address address;
         bc::extract(address, o.script);
-        if (myAddresses.end() != myAddresses.find(address))
+        if (myAddresses.end() != myAddresses.find(address.encoded()))
             relevant = true;
 
         addresses.push_back(address.encoded());
