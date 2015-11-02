@@ -64,6 +64,12 @@ public:
     keyTable();
 
     /**
+     * Returns true if the database contains the given address.
+     */
+    bool
+    has(const std::string &address);
+
+    /**
      * Looks up a particular address in the wallet.
      */
     Status

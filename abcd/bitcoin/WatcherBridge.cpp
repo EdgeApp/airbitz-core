@@ -499,14 +499,12 @@ static Status
 bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &tx,
     tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    AddressSet myAddresses = watcherInfo->wallet.addresses.list();
-
     bool relevant = false;
     for (const auto &i: tx.inputs)
     {
         bc::payment_address address;
         bc::extract(address, i.script);
-        if (myAddresses.end() != myAddresses.find(address.encoded()))
+        if (watcherInfo->wallet.addresses.has(address.encoded()))
             relevant = true;
     }
 
@@ -515,7 +513,7 @@ bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &t
     {
         bc::payment_address address;
         bc::extract(address, o.script);
-        if (myAddresses.end() != myAddresses.find(address.encoded()))
+        if (watcherInfo->wallet.addresses.has(address.encoded()))
             relevant = true;
 
         addresses.push_back(address.encoded());

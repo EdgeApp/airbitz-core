@@ -191,6 +191,14 @@ AddressDb::keyTable()
     return out;
 }
 
+bool
+AddressDb::has(const std::string &address)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    return addresses_.end() != addresses_.find(address);
+}
+
 Status
 AddressDb::get(Address &result, const std::string &address)
 {
