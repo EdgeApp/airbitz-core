@@ -62,7 +62,14 @@ tABC_CC ABC_WalletGetInfo(Wallet &self,
         ABC_CHECK_NEW(self.account.wallets.archived(archived, self.id()));
         pInfo->archived = archived;
     }
-    ABC_CHECK_NEW(self.balance(pInfo->balanceSatoshi));
+
+    //
+    // balanceSatoshi is deprecated from tABC_WalletInfo
+    // Getting the balance is too CPU intensive here. Users will need to
+    // call ABC_GetTransactions anyway so they can accumulate the balance there
+    //
+//    ABC_CHECK_NEW(self.balance(pInfo->balanceSatoshi));
+    pInfo->balanceSatoshi = 0;
 
     // assign it to the user's pointer
     *ppWalletInfo = pInfo.release();
