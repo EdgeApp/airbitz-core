@@ -8,6 +8,9 @@ source="https://github.com/zeromq/cppzmq.git#ac705f604701e2ca1643fa31bae240f9da8
 build() {
     cd zeromq-$version
 
+    echo Patching...
+    patch -p1 < $recipe_dir/ios-crash.patch
+
     echo Building...
     ./autogen.sh
     ./configure --disable-eventfd \
