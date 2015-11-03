@@ -104,17 +104,6 @@ watcherFind(Watcher *&result, const Wallet &self)
     return Status();
 }
 
-static Status
-watcherLoad(Wallet &self)
-{
-    DataChunk data;
-    ABC_CHECK(fileLoad(data, watcherPath(self)));
-    if (!self.txdb.load(data))
-        return ABC_ERROR(ABC_CC_Error, "Unable to load serialized watcher");
-
-    return Status();
-}
-
 Status
 watcherDeleteCache(Wallet &self)
 {
@@ -184,8 +173,6 @@ tABC_CC ABC_BridgeWatcherStart(Wallet &self,
         ABC_RET_ERROR(ABC_CC_Error, ("Watcher already exists for " + id).c_str());
 
     watchers_[id].reset(new WatcherInfo(self));
-
-    watcherLoad(self).log(); // Failure is not fatal
 
 exit:
     return cc;
