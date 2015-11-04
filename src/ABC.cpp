@@ -700,7 +700,12 @@ exit:
 
 tABC_CC ABC_GeneralInfoUpdate(tABC_Error *pError)
 {
-    return ABC_GeneralUpdateInfo(pError);
+    ABC_PROLOG();
+
+    ABC_CHECK_NEW(generalUpdate());
+
+exit:
+    return cc;
 }
 
 /**
@@ -2545,8 +2550,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         }
 
         // Non-critical general information update:
-        tABC_Error error;
-        ABC_GeneralUpdateInfo(&error);
+        generalUpdate().log();
     }
 
 exit:

@@ -47,6 +47,42 @@ namespace abcd {
 #define JSON_INFO_OBELISK_SERVERS_FIELD         "obeliskServers"
 #define JSON_INFO_SYNC_SERVERS_FIELD            "syncServers"
 
+/**
+ * Contains info on bitcoin miner fee
+ */
+typedef struct sABC_GeneralMinerFee
+{
+    uint64_t amountSatoshi;
+    uint64_t sizeTransaction;
+} tABC_GeneralMinerFee;
+
+/**
+ * Contains information on AirBitz fees
+ */
+typedef struct sABC_GeneralAirBitzFee
+{
+    double percentage; // maximum value 100.0
+    uint64_t minSatoshi;
+    uint64_t maxSatoshi;
+    char *szAddresss;
+} tABC_GeneralAirBitzFee;
+
+/**
+ * Contains general info from the server
+ */
+typedef struct sABC_GeneralInfo
+{
+    unsigned int            countMinersFees;
+    tABC_GeneralMinerFee    **aMinersFees;
+    tABC_GeneralAirBitzFee  *pAirBitzFee;
+    unsigned int            countObeliskServers;
+    char                    **aszObeliskServers;
+    unsigned int            countSyncServers;
+    char                    **aszSyncServers;
+} tABC_GeneralInfo;
+
+static void ABC_GeneralFreeInfo(tABC_GeneralInfo *pInfo);
+static tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo, tABC_Error *pError);
 static tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename, tABC_Error *pError);
 
 /**
@@ -124,7 +160,7 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
     if (!fileExists(szInfoFilename))
     {
         // pull it down from the server
-        ABC_CHECK_RET(ABC_GeneralUpdateInfo(pError));
+        ABC_CHECK_NEW(generalUpdate());
     }
 
     // load the json
@@ -251,38 +287,6 @@ exit:
     return cc;
 }
 
-/**
- * Update the general info from the server if needed and store it in the local file.
- *
- * This function will pull down info from the server including information on
- * Obelisk Servers, AirBitz fees and miners fees if the local file doesn't exist
- * or is out of date.
- */
-tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    time_t lastTime;
-    char    *szInfoFilename = NULL;
-
-    // get the info filename
-    ABC_CHECK_RET(ABC_GeneralGetInfoFilename(&szInfoFilename, pError));
-
-    // Update the file if it is too old or does not exist:
-    if (!fileTime(lastTime, szInfoFilename) ||
-        lastTime + GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS < time(nullptr))
-    {
-        JsonPtr infoJson;
-        ABC_CHECK_NEW(loginServerGetGeneral(infoJson));
-        ABC_CHECK_NEW(infoJson.save(szInfoFilename));
-    }
-
-exit:
-    ABC_FREE_STR(szInfoFilename);
-
-    return cc;
-}
-
 /*
  * Gets the general info filename
  *
@@ -302,6 +306,41 @@ tABC_CC ABC_GeneralGetInfoFilename(char **pszFilename,
 
 exit:
     return cc;
+}
+
+Status
+generalUpdate()
+{
+    const auto path = gContext->rootDir() + GENERAL_INFO_FILENAME;
+
+    time_t lastTime;
+    if (!fileTime(lastTime, path) ||
+        lastTime + GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS < time(nullptr))
+    {
+        JsonPtr infoJson;
+        ABC_CHECK(loginServerGetGeneral(infoJson));
+        ABC_CHECK(infoJson.save(path));
+    }
+
+    return Status();
+}
+
+BitcoinFeeInfo
+generalBitcoinFeeInfo()
+{
+    AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> info;
+    tABC_Error error;
+    if (ABC_CC_Ok == ABC_GeneralGetInfo(&info.get(), &error) &&
+        0 < info->countMinersFees)
+    {
+        BitcoinFeeInfo out;
+        for (size_t i = 0; i < info->countMinersFees; ++i)
+            out[info->aMinersFees[i]->sizeTransaction] =
+                info->aMinersFees[i]->amountSatoshi;
+        return out;
+    }
+
+    return BitcoinFeeInfo{{0, 10000}};
 }
 
 std::vector<std::string>
@@ -324,6 +363,28 @@ generalBitcoinServers()
     }
 
     return std::vector<std::string>{FALLBACK_OBELISK};
+}
+
+std::vector<std::string>
+generalSyncServers()
+{
+    AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> info;
+    tABC_Error error;
+    if (ABC_CC_Ok == ABC_GeneralGetInfo(&info.get(), &error) &&
+        0 < info->countSyncServers)
+    {
+        std::vector<std::string> out;
+        out.reserve(info->countSyncServers);
+        for (size_t i = 0; i < info->countSyncServers; ++i)
+            out.push_back(info->aszSyncServers[i]);
+        return out;
+    }
+
+    // Fallback:
+    return std::vector<std::string>{
+        "https://git3.sync.airbitz.co/repos",
+        "https://git4.sync.airbitz.co/repos"
+    };
 }
 
 } // namespace abcd

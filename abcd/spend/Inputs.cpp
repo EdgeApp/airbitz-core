@@ -156,25 +156,23 @@ bool sign_tx(unsigned_transaction& utx, const key_table& keys)
 
 static uint64_t
 minerFee(const bc::transaction_type &tx, uint64_t sourced,
-    tABC_GeneralInfo *pInfo)
+    const BitcoinFeeInfo &feeInfo)
 {
+    // Signature scripts have a 72-byte signature plus a 32-byte pubkey:
+    size_t size = satoshi_raw_size(tx) + 104 * tx.inputs.size();
+
     // Look up the size-based fees from the table:
     uint64_t sizeFee = 0;
-    if (pInfo->countMinersFees > 0)
+    for (const auto &row: feeInfo)
     {
-        // Signatures have a 72-byte signature plus a 32-byte pubkey:
-        size_t size = satoshi_raw_size(tx) + 104 * tx.inputs.size();
-        for (unsigned i = 0; i < pInfo->countMinersFees; ++i)
+        if (size <= row.first)
         {
-            if (size <= pInfo->aMinersFees[i]->sizeTransaction)
-            {
-                sizeFee = pInfo->aMinersFees[i]->amountSatoshi;
-                break;
-            }
+            sizeFee = row.second;
+            break;
         }
     }
     if (!sizeFee)
-        sizeFee = pInfo->aMinersFees[pInfo->countMinersFees - 1]->amountSatoshi;
+        sizeFee = feeInfo.rbegin()->second;
 
     // The amount-based fee is 0.1% of total funds sent:
     uint64_t amountFee = sourced / 1000;
@@ -190,11 +188,11 @@ minerFee(const bc::transaction_type &tx, uint64_t sourced,
 
 Status
 inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
-    bc::transaction_type &tx, bc::output_info_list &utxos,
-    tABC_GeneralInfo *pFeeInfo)
+    bc::transaction_type &tx, bc::output_info_list &utxos)
 {
     auto totalOut = outputsTotal(tx.outputs);
 
+    const auto feeInfo = generalBitcoinFeeInfo();
     uint64_t sourced = 0;
     uint64_t fee = 0;
     do
@@ -214,7 +212,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
             input.previous_output = point;
             tx.inputs.push_back(input);
         }
-        fee = minerFee(tx, sourced, pFeeInfo);
+        fee = minerFee(tx, sourced, feeInfo);
 
         // Guard against any potential fee insanity:
         fee = std::min<uint64_t>(1000000, fee);
@@ -228,8 +226,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
 
 Status
 inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
-    bc::transaction_type &tx, bc::output_info_list &utxos,
-    tABC_GeneralInfo *pFeeInfo)
+    bc::transaction_type &tx, bc::output_info_list &utxos)
 {
     auto totalOut = outputsTotal(tx.outputs);
 
@@ -244,7 +241,8 @@ inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
         tx.inputs.push_back(input);
         sourced += utxo.value;
     }
-    uint64_t fee = minerFee(tx, sourced, pFeeInfo);
+    const auto feeInfo = generalBitcoinFeeInfo();
+    uint64_t fee = minerFee(tx, sourced, feeInfo);
 
     // Verify that we have enough:
     uint64_t totalIn = 0;
