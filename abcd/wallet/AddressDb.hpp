@@ -13,13 +13,13 @@
 #include "TxMetadata.hpp"
 #include <map>
 #include <mutex>
-#include <vector>
+#include <set>
 
 namespace abcd {
 
 class Wallet;
 
-typedef std::vector<std::string> AddressList;
+typedef std::set<std::string> AddressSet;
 typedef std::map<const std::string, std::string> KeyTable;
 
 struct Address
@@ -54,7 +54,7 @@ public:
     /**
      * Lists all the addresses in the wallet.
      */
-    AddressList
+    AddressSet
     list() const;
 
     /**
@@ -62,6 +62,12 @@ public:
      */
     KeyTable
     keyTable();
+
+    /**
+     * Returns true if the database contains the given address.
+     */
+    bool
+    has(const std::string &address);
 
     /**
      * Looks up a particular address in the wallet.

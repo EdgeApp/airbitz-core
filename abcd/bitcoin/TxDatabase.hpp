@@ -9,11 +9,10 @@
 #include <bitcoin/bitcoin.hpp>
 #include <mutex>
 #include <ostream>
+#include <set>
 #include <unordered_map>
-#include <unordered_set>
-#include <time.h>
 #include <vector>
-#include <algorithm>
+#include <time.h>
 
 namespace abcd {
 
@@ -29,7 +28,7 @@ enum class TxState
     confirmed
 };
 
-typedef std::unordered_set<bc::payment_address> AddressSet;
+typedef std::set<std::string> AddressSet;
 
 /**
  * A list of transactions.

@@ -11,6 +11,16 @@
 #include "Status.hpp"
 #include "Data.hpp"
 
+#define DEBUG_LEVEL 1
+
+#define ABC_DebugLevel(level, ...)  \
+{                                   \
+    if (DEBUG_LEVEL >= level)       \
+    {                               \
+        ABC_DebugLog(__VA_ARGS__);  \
+    }                               \
+}
+
 namespace abcd {
 
 Status

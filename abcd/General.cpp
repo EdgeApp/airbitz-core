@@ -472,7 +472,8 @@ generalBitcoinServers()
 
     AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> info;
     tABC_Error error;
-    if (ABC_CC_Ok == ABC_GeneralGetInfo(&info.get(), &error) &&
+    if (gContext &&
+        ABC_CC_Ok == ABC_GeneralGetInfo(&info.get(), &error) &&
         0 < info->countObeliskServers)
     {
         std::vector<std::string> out;

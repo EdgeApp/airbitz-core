@@ -163,15 +163,14 @@ AddressDb::save(const Address &address)
     return Status();
 }
 
-AddressList
+AddressSet
 AddressDb::list() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    AddressList out;
-    out.reserve(addresses_.size());
+    AddressSet out;
     for (const auto &i: addresses_)
-        out.push_back(i.first);
+        out.insert(i.first);
 
     return out;
 }
@@ -190,6 +189,14 @@ AddressDb::keyTable()
     }
 
     return out;
+}
+
+bool
+AddressDb::has(const std::string &address)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    return addresses_.end() != addresses_.find(address);
 }
 
 Status

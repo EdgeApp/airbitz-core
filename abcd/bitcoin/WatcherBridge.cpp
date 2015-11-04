@@ -51,7 +51,7 @@ namespace abcd {
 
 struct PendingSweep
 {
-    bc::payment_address address;
+    std::string address;
     abcd::wif_key key;
     bool done;
 
@@ -104,17 +104,6 @@ watcherFind(Watcher *&result, const Wallet &self)
     return Status();
 }
 
-static Status
-watcherLoad(Wallet &self)
-{
-    DataChunk data;
-    ABC_CHECK(fileLoad(data, watcherPath(self)));
-    if (!self.txdb.load(data))
-        return ABC_ERROR(ABC_CC_Error, "Unable to load serialized watcher");
-
-    return Status();
-}
-
 Status
 watcherDeleteCache(Wallet &self)
 {
@@ -161,7 +150,7 @@ tABC_CC ABC_BridgeSweepKey(Wallet &self,
     address.set(pubkeyVersion(), bc::bitcoin_short_hash(ec_addr));
 
     // Start the sweep:
-    sweep.address = address;
+    sweep.address = address.encoded();
     sweep.key = abcd::wif_key{ec_key, compressed};
     sweep.done = false;
     sweep.fCallback = fCallback;
@@ -184,8 +173,6 @@ tABC_CC ABC_BridgeWatcherStart(Wallet &self,
         ABC_RET_ERROR(ABC_CC_Error, ("Watcher already exists for " + id).c_str());
 
     watchers_[id].reset(new WatcherInfo(self));
-
-    watcherLoad(self).log(); // Failure is not fatal
 
 exit:
     return cc;
@@ -499,15 +486,12 @@ static Status
 bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &tx,
     tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    auto addressStrings = watcherInfo->wallet.addresses.list();
-    AddressSet myAddresses(addressStrings.begin(), addressStrings.end());
-
     bool relevant = false;
     for (const auto &i: tx.inputs)
     {
         bc::payment_address address;
         bc::extract(address, i.script);
-        if (myAddresses.end() != myAddresses.find(address))
+        if (watcherInfo->wallet.addresses.has(address.encoded()))
             relevant = true;
     }
 
@@ -516,7 +500,7 @@ bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &t
     {
         bc::payment_address address;
         bc::extract(address, o.script);
-        if (myAddresses.end() != myAddresses.find(address))
+        if (watcherInfo->wallet.addresses.has(address.encoded()))
             relevant = true;
 
         addresses.push_back(address.encoded());
