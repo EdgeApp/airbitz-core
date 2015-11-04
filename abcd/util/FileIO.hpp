@@ -90,9 +90,11 @@ fileSave(DataSlice data, const std::string &path);
 Status
 fileDelete(const std::string &path);
 
-tABC_CC ABC_FileIOFileModTime(const char *szFilename,
-                              time_t *pTime,
-                              tABC_Error *pError);
+/**
+ * Determines a file's last-modification time.
+ */
+Status
+fileTime(time_t &result, const std::string &path);
 
 } // namespace abcd
 

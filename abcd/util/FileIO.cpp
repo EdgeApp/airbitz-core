@@ -179,37 +179,15 @@ fileDelete(const std::string &path)
     return fileDeleteRecursive(path);
 }
 
-/**
- * Finds the time the file was last modified
- *
- * @param pTime Location to store mode time measured in
- *              seconds since 00:00:00 UTC, Jan. 1, 1970
- *
- */
-tABC_CC ABC_FileIOFileModTime(const char *szFilename,
-                              time_t *pTime,
-                              tABC_Error *pError)
+Status
+fileTime(time_t &result, const std::string &path)
 {
-    tABC_CC cc = ABC_CC_Ok;
-
     struct stat statInfo;
+    if (0 != stat(path.c_str(), &statInfo))
+        return ABC_ERROR(ABC_CC_Error, "Could not stat file " + path);
 
-    ABC_CHECK_NULL(pTime);
-    *pTime = 0;
-    ABC_CHECK_NULL(szFilename);
-    ABC_CHECK_ASSERT(strlen(szFilename) > 0, ABC_CC_Error, "No filename provided");
-
-    // get stats on file
-    if (0 != stat(szFilename, &statInfo))
-    {
-        ABC_RET_ERROR(ABC_CC_Error, "Could not stat file");
-    }
-
-    // assign the time
-    *pTime = statInfo.st_mtime;
-
-exit:
-    return cc;
+    result = statInfo.st_mtime;
+    return Status();
 }
 
 } // namespace abcd

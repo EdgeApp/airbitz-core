@@ -273,35 +273,15 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    json_t  *pJSON_Root     = NULL;
+    time_t lastTime;
     char    *szInfoFilename = NULL;
-    char    *szJSON         = NULL;
-    bool    bUpdateRequired = true;
 
     // get the info filename
     ABC_CHECK_RET(ABC_GeneralGetInfoFilename(&szInfoFilename, pError));
 
-    // check to see if we have the file
-    if (fileExists(szInfoFilename))
-    {
-        // check to see if the file is too old
-
-        // get the current time
-        time_t timeNow = time(NULL);
-
-        // get the time the file was last changed
-        time_t timeFileMod;
-        ABC_CHECK_RET(ABC_FileIOFileModTime(szInfoFilename, &timeFileMod, pError));
-
-        // if it isn't too old then don't update
-        if ((timeNow - timeFileMod) < GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS)
-        {
-            bUpdateRequired = false;
-        }
-    }
-
-    // if we need to update
-    if (bUpdateRequired)
+    // Update the file if it is too old or does not exist:
+    if (!fileTime(lastTime, szInfoFilename) ||
+        lastTime + GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS < time(nullptr))
     {
         JsonPtr infoJson;
         ABC_CHECK_NEW(loginServerGetGeneral(infoJson));
@@ -309,9 +289,7 @@ tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError)
     }
 
 exit:
-    if (pJSON_Root)     json_decref(pJSON_Root);
     ABC_FREE_STR(szInfoFilename);
-    ABC_FREE_STR(szJSON);
 
     return cc;
 }
@@ -381,17 +359,21 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
     std::string filename = gContext->rootDir() + GENERAL_QUESTIONS_FILENAME;
     QuestionsFile file;
     json_t *pJSON_Value = NULL;
+    time_t lastTime;
     AutoFree<tABC_QuestionChoices, ABC_GeneralFreeQuestionChoices>
         pQuestionChoices(structAlloc<tABC_QuestionChoices>());
     unsigned int count = 0;
 
     ABC_CHECK_NULL(ppQuestionChoices);
 
-    // if the file doesn't exist
-    if (!fileExists(filename))
+    // Update the file if it is too old or does not exist:
+    if (!fileTime(lastTime, filename) ||
+        lastTime + GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS < time(nullptr))
     {
-        // get an update from the server
-        ABC_CHECK_RET(ABC_GeneralUpdateQuestionChoices(pError));
+        JsonPtr resultsJson;
+        ABC_CHECK_NEW(loginServerGetQuestions(resultsJson));
+        ABC_CHECK_NEW(file.questionsSet(resultsJson));
+        ABC_CHECK_NEW(file.save(gContext->rootDir() + GENERAL_QUESTIONS_FILENAME));
     }
 
     // Read in the recovery question choices json object
@@ -437,28 +419,6 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices    **ppQuestionChoice
 
     // assign final data
     *ppQuestionChoices = pQuestionChoices.release();
-
-exit:
-    return cc;
-}
-
-/**
- * Gets the recovery question choices from the server and saves them
- * to local storage.
- *
- * @param szUserName UserName for a valid account to retrieve questions
- */
-tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    JsonPtr resultsJson;
-    QuestionsFile file;
-
-    // get the questions from the server
-    ABC_CHECK_NEW(loginServerGetQuestions(resultsJson));
-    ABC_CHECK_NEW(file.questionsSet(resultsJson));
-    ABC_CHECK_NEW(file.save(gContext->rootDir() + GENERAL_QUESTIONS_FILENAME));
 
 exit:
     return cc;
