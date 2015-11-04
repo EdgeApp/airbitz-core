@@ -15,7 +15,6 @@
 #include "../json/JsonBox.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Sync.hpp"
-#include "../util/Util.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <ctype.h>
 

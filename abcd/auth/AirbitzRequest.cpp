@@ -6,7 +6,6 @@
 #include "AirbitzRequest.hpp"
 #include "Pinning.hpp"
 #include "../Context.hpp"
-#include "../util/Util.hpp"
 #include <openssl/ssl.h>
 
 namespace abcd {
