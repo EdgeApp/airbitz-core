@@ -62,11 +62,6 @@ tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
 
 tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError);
 
-void ABC_GeneralFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices);
-
-tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices **ppQuestionChoices,
-                                      tABC_Error *pError);
-
 /**
  * Obtains a list of libbitcoin servers for the current network
  * (either testnet or mainnet).

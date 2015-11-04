@@ -57,6 +57,7 @@
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/Otp.hpp"
+#include "../abcd/login/RecoveryQuestions.hpp"
 #include "../abcd/spend/PaymentProto.hpp"
 #include "../abcd/spend/Spend.hpp"
 #include "../abcd/util/Debug.hpp"
