@@ -7,10 +7,15 @@
 #define ABCD_BITCOIN_TX_UPDATER_HPP
 
 #include "TxDatabase.hpp"
+#include "../util/Status.hpp"
 #include "../../minilibs/libbitcoin-client/client.hpp"
 #include <unordered_map>
 
 namespace abcd {
+
+#define ALL_SERVERS    -1
+#define NO_SERVERS     -9999
+#define NUM_CONNECT_SERVERS    3
 
 /**
  * Interface containing the events the updater can trigger.
@@ -31,21 +36,10 @@ public:
     virtual void on_height(size_t height) = 0;
 
     /**
-     * Called when the updater has validated a transaction for send.
-     */
-    virtual void on_send(const std::error_code &error,
-        const bc::transaction_type &tx) = 0;
-
-    /**
      * Called when the updater has finished all its address queries,
      * and balances should now be up-to-date.
      */
     virtual void on_quiet() {}
-
-    /**
-     * Called when the updater sees an unexpected obelisk server failure.
-     */
-    virtual void on_fail() = 0;
 };
 
 /**
@@ -56,10 +50,10 @@ class TxUpdater:
 {
 public:
     ~TxUpdater();
-    TxUpdater(TxDatabase &db, bc::client::obelisk_codec &codec,
-        TxCallbacks &callbacks);
-    void start();
+    TxUpdater(TxDatabase &db, void *ctx, TxCallbacks &callbacks);
 
+    void disconnect();
+    Status connect();
     void watch(const bc::payment_address &address,
         bc::client::sleep_time poll);
     void send(bc::transaction_type tx);
@@ -69,22 +63,46 @@ public:
     // Sleeper interface:
     virtual bc::client::sleep_time wakeup();
 
+    /**
+     * Obtains a list of sockets that the main loop should sleep on.
+     */
+    std::vector<zmq_pollitem_t>
+    pollitems();
+
 private:
-    void watch_tx(bc::hash_digest txid, bool want_inputs);
-    void get_inputs(const bc::transaction_type &tx);
-    void query_done();
-    void queue_get_indices();
+    struct Connection
+    {
+        Connection(void *ctx, long server_index);
+
+        bool operator==(const Connection& l)
+        {
+            return server_index == l.server_index;
+        };
+
+        bc::client::zeromq_socket bc_socket;
+        bc::client::obelisk_codec bc_codec;
+        int queued_queries_;
+        int queued_get_indices_;
+        int queued_get_height_;
+
+        long server_index;
+    };
+
+    void watch_tx(bc::hash_digest txid, bool want_inputs, int idx);
+    void get_inputs(const bc::transaction_type &tx, int idx);
+    void query_done(int idx, Connection &bconn);
+    void queue_get_indices(int idx);
 
     // Server queries:
     void get_height();
-    void get_tx(bc::hash_digest txid, bool want_inputs);
-    void get_tx_mem(bc::hash_digest txid, bool want_inputs);
-    void get_index(bc::hash_digest txid);
+    void get_tx(bc::hash_digest txid, bool want_inputs, int idx);
+    void get_tx_mem(bc::hash_digest txid, bool want_inputs, int idx);
+    void get_index(bc::hash_digest txid, int idx);
     void send_tx(const bc::transaction_type &tx);
-    void query_address(const bc::payment_address &address);
+    void query_address(const bc::payment_address &address, int server_index);
 
     TxDatabase &db_;
-    bc::client::obelisk_codec &codec_;
+    void *ctx_;
     TxCallbacks &callbacks_;
 
     struct AddressRow
@@ -95,9 +113,14 @@ private:
     std::unordered_map<bc::payment_address, AddressRow> rows_;
 
     bool failed_;
-    size_t queued_queries_;
-    size_t queued_get_indices_;
+    long failed_server_idx_;
     std::chrono::steady_clock::time_point last_wakeup_;
+
+    bool wantConnection = false;
+    std::vector<Connection *> connections_;
+    std::vector<std::string> vStrServers_;
+    std::vector<int> serverConnections_;
+    std::vector<int> serverBlacklist_;
 };
 
 } // namespace abcd
