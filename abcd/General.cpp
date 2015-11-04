@@ -41,7 +41,7 @@ struct AirbitzFeesJson:
     public JsonObject
 {
     ABC_JSON_CONSTRUCTORS(AirbitzFeesJson, JsonObject)
-    ABC_JSON_STRING(address, "address", nullptr)
+    ABC_JSON_VALUE(addresses, "addresses", JsonArray)
     ABC_JSON_INTEGER(maxSatoshi, "maxSatoshi", 0)
     ABC_JSON_INTEGER(minSatoshi, "minSatoshi", 0)
     ABC_JSON_NUMBER(percentage, "percentage", 0)
@@ -106,6 +106,30 @@ generalBitcoinFeeInfo()
 
     if (!out.size())
         out[0] = fallbackFee;
+    return out;
+}
+
+AirbitzFeeInfo
+generalAirbitzFeeInfo()
+{
+    auto feeJson = generalLoad().airbitzFees();
+
+    AirbitzFeeInfo out;
+    out.minSatoshi = feeJson.minSatoshi();
+    out.maxSatoshi = feeJson.maxSatoshi();
+    out.rate = feeJson.percentage() / 100.0;
+
+    auto arrayJson = feeJson.addresses();
+    size_t size = arrayJson.size();
+    for (size_t i = 0; i < size; i++)
+    {
+        auto stringJson = arrayJson[i];
+        if (json_is_string(stringJson.get()))
+            out.addresses.insert(json_string_value(stringJson.get()));
+    }
+
+    if (!out.addresses.size())
+        return AirbitzFeeInfo{{}, 0, 0, 0};
     return out;
 }
 

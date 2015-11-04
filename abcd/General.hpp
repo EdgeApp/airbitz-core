@@ -18,14 +18,28 @@
 
 #include "util/Status.hpp"
 #include <map>
+#include <set>
 #include <vector>
 
 namespace abcd {
+
+typedef std::set<std::string> AddressSet;
 
 /**
  * Maps from transaction sizes to corresponding fees.
  */
 typedef std::map<size_t, uint64_t> BitcoinFeeInfo;
+
+/**
+ * Airbitz transaction fee information.
+ */
+struct AirbitzFeeInfo
+{
+    AddressSet addresses;
+    int64_t minSatoshi;
+    int64_t maxSatoshi;
+    double rate;
+};
 
 /**
  * Downloads general info from the server if the local file is out of date.
@@ -39,6 +53,13 @@ generalUpdate();
  */
 BitcoinFeeInfo
 generalBitcoinFeeInfo();
+
+/**
+ * Obtains the Airbitz fee information.
+ * The fees will be zero if something goes wrong.
+ */
+AirbitzFeeInfo
+generalAirbitzFeeInfo();
 
 /**
  * Obtains a list of libbitcoin servers for the current network
