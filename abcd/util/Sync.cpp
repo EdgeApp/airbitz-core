@@ -54,12 +54,11 @@ syncUrl(std::string &result, const std::string &syncKey, bool rotate=false)
 {
     if (rotate || syncServerName.empty())
     {
-        AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> pInfo;
-        ABC_CHECK_OLD(ABC_GeneralGetInfo(&pInfo.get(), &error));
+        auto servers = generalSyncServers();
 
         syncServerIndex++;
-        syncServerIndex %= pInfo->countSyncServers;
-        syncServerName = fileSlashify(pInfo->aszSyncServers[syncServerIndex]);
+        syncServerIndex %= servers.size();
+        syncServerName = fileSlashify(servers[syncServerIndex]);
     }
 
     result = syncServerName + syncKey;

@@ -57,6 +57,7 @@
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/Otp.hpp"
+#include "../abcd/login/RecoveryQuestions.hpp"
 #include "../abcd/spend/PaymentProto.hpp"
 #include "../abcd/spend/Spend.hpp"
 #include "../abcd/util/Debug.hpp"
@@ -699,7 +700,12 @@ exit:
 
 tABC_CC ABC_GeneralInfoUpdate(tABC_Error *pError)
 {
-    return ABC_GeneralUpdateInfo(pError);
+    ABC_PROLOG();
+
+    ABC_CHECK_NEW(generalUpdate());
+
+exit:
+    return cc;
 }
 
 /**
@@ -2544,8 +2550,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         }
 
         // Non-critical general information update:
-        tABC_Error error;
-        ABC_GeneralUpdateInfo(&error);
+        generalUpdate().log();
     }
 
 exit:

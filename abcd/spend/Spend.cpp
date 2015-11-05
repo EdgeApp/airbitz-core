@@ -37,16 +37,13 @@ spendMakeTx(libbitcoin::transaction_type &result, Wallet &self,
     bc::output_info_list utxos;
     ABC_CHECK(getUtxos(utxos, self));
 
-    AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> pFeeInfo;
-    ABC_CHECK_OLD(ABC_GeneralGetInfo(&pFeeInfo.get(), &error));
-
     bc::transaction_type tx;
     tx.version = 1;
     tx.locktime = 0;
     ABC_CHECK(outputsForSendInfo(tx.outputs, pInfo));
 
     uint64_t fee, change;
-    ABC_CHECK(inputsPickOptimal(fee, change, tx, utxos, pFeeInfo));
+    ABC_CHECK(inputsPickOptimal(fee, change, tx, utxos));
     ABC_CHECK(outputsFinalize(tx.outputs, change, changeAddress));
     pInfo->metadata.amountFeesMinersSatoshi = fee;
 
@@ -100,9 +97,6 @@ tABC_CC ABC_BridgeMaxSpendable(Wallet &self,
         bc::output_info_list utxos;
         ABC_CHECK_NEW(getUtxos(utxos, self));
 
-        AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> pFeeInfo;
-        ABC_CHECK_RET(ABC_GeneralGetInfo(&pFeeInfo.get(), pError));
-
         bc::transaction_type tx;
         tx.version = 1;
         tx.locktime = 0;
@@ -113,7 +107,7 @@ tABC_CC ABC_BridgeMaxSpendable(Wallet &self,
         pInfo->metadata.amountSatoshi = oldAmount;
 
         uint64_t fee, change;
-        if (inputsPickMaximum(fee, change, tx, utxos, pFeeInfo))
+        if (inputsPickMaximum(fee, change, tx, utxos))
             *pMaxSatoshi = change;
         else
             *pMaxSatoshi = 0;
