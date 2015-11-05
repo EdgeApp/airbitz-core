@@ -1760,7 +1760,7 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
         }
         else if (pUri->szAddress)
         {
-            pInfo->szDestAddress = stringCopy(pUri->szAddress);
+            pInfo->destAddress = pUri->szAddress;
 
             // Fill in the spend target:
             pSpend->amount = (ABC_INVALID_AMOUNT != pUri->amountSatoshi) ?
@@ -1814,7 +1814,7 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         // Fill in the send info:
         Address address;
         ABC_CHECK_NEW(wallet->addresses.getNew(address));
-        pInfo->szDestAddress = stringCopy(address.address);
+        pInfo->destAddress = address.address;
         pInfo->walletDest = wallet.get();
         pInfo->bTransfer = true;
 
@@ -1855,7 +1855,7 @@ tABC_CC ABC_SpendNewInternal(const char *szAddress,
         pInfo->metadata.notes = szNotes ? szNotes : "";
 
         // Fill in the send info:
-        pInfo->szDestAddress = stringCopy(szAddress);
+        pInfo->destAddress = szAddress;
 
         // Assign the output:
         *ppSpend = pSpend.release();
@@ -1878,7 +1878,7 @@ tABC_CC ABC_SpendGetFee(const char *szUserName,
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->metadata.amountSatoshi = pSpend->amount;
-        ABC_CHECK_RET(ABC_TxCalcSendFees(*wallet, pInfo, pFee, pError));
+        ABC_CHECK_NEW(spendCalculateFees(*wallet, pInfo, *pFee));
     }
 
 exit:
@@ -1898,7 +1898,7 @@ tABC_CC ABC_SpendGetMax(const char *szUserName,
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->metadata.amountSatoshi = pSpend->amount;
-        ABC_CHECK_RET(ABC_BridgeMaxSpendable(*wallet, pInfo, pMax, pError));
+        ABC_CHECK_NEW(spendCalculateMax(*wallet, pInfo, *pMax));
     }
 
 exit:
@@ -1919,7 +1919,9 @@ tABC_CC ABC_SpendApprove(const char *szUserName,
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->metadata.amountSatoshi = pSpend->amount;
-        ABC_CHECK_RET(ABC_TxSend(*wallet, pInfo, pszTxId, pError));
+        std::string ntxid;
+        ABC_CHECK_NEW(spendSend(*wallet, pInfo, ntxid));
+        *pszTxId = stringCopy(ntxid);
     }
 
 exit:

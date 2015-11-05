@@ -60,7 +60,6 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
 {
     tABC_CC cc = ABC_CC_Ok;
     Tx tx;
-    Address address;
 
     // set the state
     tx.ntxid = ntxid;
@@ -70,7 +69,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
     tx.metadata = pInfo->metadata;
 
     // Add in tx fees to the amount of the tx
-    if (pInfo->szDestAddress && self.addresses.get(address, pInfo->szDestAddress))
+    if (self.addresses.has(pInfo->destAddress))
     {
         tx.metadata.amountSatoshi = pInfo->metadata.amountFeesAirbitzSatoshi
                                         + pInfo->metadata.amountFeesMinersSatoshi;

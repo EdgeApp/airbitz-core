@@ -70,7 +70,7 @@ outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
         // Otherwise, make an output for the ordinary address:
         bc::transaction_output_type output;
         output.value = pInfo->metadata.amountSatoshi;
-        ABC_CHECK(outputScriptForAddress(output.script, pInfo->szDestAddress));
+        ABC_CHECK(outputScriptForAddress(output.script, pInfo->destAddress));
         out.push_back(output);
     }
 

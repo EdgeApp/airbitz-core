@@ -22,7 +22,7 @@ struct SendInfo
     ~SendInfo();
     SendInfo();
 
-    char                    *szDestAddress;
+    std::string             destAddress;
     PaymentRequest          *paymentRequest;
     TxMetadata              metadata;
 
@@ -32,20 +32,23 @@ struct SendInfo
 
 };
 
-tABC_CC  ABC_TxCalcSendFees(Wallet &self,
-                            SendInfo *pInfo,
-                            uint64_t *pTotalFees,
-                            tABC_Error *pError);
+/**
+ * Calculate the fees that will be required to perform this send.
+ */
+Status
+spendCalculateFees(Wallet &self, SendInfo *pInfo, uint64_t &totalFees);
 
-tABC_CC ABC_BridgeMaxSpendable(Wallet &self,
-                               SendInfo *pInfo,
-                               uint64_t *pMaxSatoshi,
-                               tABC_Error *pError);
+/**
+ * Calculate the maximum amount that can be sent.
+ */
+Status
+spendCalculateMax(Wallet &self, SendInfo *pInfo, uint64_t &maxSatoshi);
 
-tABC_CC  ABC_TxSend(Wallet &self,
-                    SendInfo *pInfo,
-                    char **pszNtxid,
-                    tABC_Error *pError);
+/**
+ * Creates and sends a transaction for the given info.
+ */
+Status
+spendSend(Wallet &self, SendInfo *pInfo, std::string &ntxidOut);
 
 } // namespace abcd
 
