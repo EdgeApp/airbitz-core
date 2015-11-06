@@ -8,6 +8,7 @@
 #include "Login.hpp"
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
+#include "LoginPackages.hpp"
 #include "../auth/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"

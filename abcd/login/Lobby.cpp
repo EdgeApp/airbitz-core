@@ -7,9 +7,9 @@
 
 #include "Lobby.hpp"
 #include "LoginDir.hpp"
+#include "LoginPackages.hpp"
 #include "../auth/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
-#include "../json/JsonObject.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
 
@@ -44,7 +44,7 @@ Status
 Lobby::dirCreate()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    ABC_CHECK_OLD(ABC_LoginDirCreate(dir_, username_.c_str(), &error));
+    ABC_CHECK(loginDirCreate(dir_, username_));
     ABC_CHECK(otpKeySave());
     return Status();
 }
