@@ -1,9 +1,28 @@
-diff --git a/src/netops.c b/src/netops.c
-index 8a60299..09ec8e2 100644
---- a/src/netops.c
-+++ b/src/netops.c
-@@ -429,6 +429,40 @@ static int gitno__close(GIT_SOCKET s)
- #endif
+commit 90a3f31976ef0ac1436d80003a83a3db055e9e88
+Author: William Swanson <swansontec@gmail.com>
+Date:   Thu Nov 5 16:27:12 2015 -0800
+
+    timeout.patch
+
+diff --git a/src/curl_stream.c b/src/curl_stream.c
+index ca06c20..d96c93a 100644
+--- a/src/curl_stream.c
++++ b/src/curl_stream.c
+@@ -35,6 +35,8 @@ static int curls_connect(git_stream *stream)
+ 	long sockextr;
+ 	int failed_cert = 0;
+ 	CURLcode res;
++
++	curl_easy_setopt(s->handle, CURLOPT_CONNECTTIMEOUT, 10);
+ 	res = curl_easy_perform(s->handle);
+ 
+ 	if (res != CURLE_OK && res != CURLE_PEER_FAILED_VERIFICATION)
+diff --git a/src/socket_stream.c b/src/socket_stream.c
+index 71f4911..7411b85 100644
+--- a/src/socket_stream.c
++++ b/src/socket_stream.c
+@@ -68,6 +68,40 @@ static int close_socket(GIT_SOCKET s)
+ 
  }
  
 +static
@@ -40,10 +59,10 @@ index 8a60299..09ec8e2 100644
 +	return 0;
 +}
 +
- int gitno_connect(gitno_socket *s_out, const char *host, const char *port, int flags)
+ int socket_connect(git_stream *stream)
  {
  	struct addrinfo *info = NULL, *p;
-@@ -436,6 +470,10 @@ int gitno_connect(gitno_socket *s_out, const char *host, const char *port, int f
+@@ -76,6 +110,10 @@ int socket_connect(git_stream *stream)
  	GIT_SOCKET s = INVALID_SOCKET;
  	int ret;
  
@@ -54,12 +73,12 @@ index 8a60299..09ec8e2 100644
  #ifdef GIT_WIN32
  	/* on win32, the WSA context needs to be initialized
  	 * before any socket calls can be performed */
-@@ -474,7 +512,7 @@ int gitno_connect(gitno_socket *s_out, const char *host, const char *port, int f
+@@ -111,7 +149,7 @@ int socket_connect(git_stream *stream)
  			break;
  		}
  
 -		if (connect(s, p->ai_addr, (socklen_t)p->ai_addrlen) == 0)
-+		if (timeout_connect(s, p->ai_addr, p->ai_addrlen, &sto) == 0)
++		if (timeout_connect(s, p->ai_addr, (socklen_t)p->ai_addrlen, &sto) == 0)
  			break;
  
  		/* If we can't connect, try the next one */

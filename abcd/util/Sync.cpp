@@ -74,7 +74,7 @@ syncInit(const char *szCaCertPath)
     if (gbInitialized)
         return ABC_ERROR(ABC_CC_Reinitialization, "ABC_Sync has already been initalized");
 
-    ABC_CHECK_GIT(git_threads_init());
+    ABC_CHECK_GIT(git_libgit2_init());
     gbInitialized = true;
 
     if (szCaCertPath)
@@ -93,7 +93,7 @@ syncTerminate()
 
     if (gbInitialized)
     {
-        git_threads_shutdown();
+        git_libgit2_shutdown();
         gbInitialized = false;
     }
 }
