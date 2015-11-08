@@ -10,10 +10,8 @@ build() {
     *)          output=libabc.a ;;
     esac
 
-    if [ -n ${DEBUG+x} ]; then
-        export CFLAGS="$CFLAGS -O0"
-        export CXXFLAGS="$CXXFLAGS -O0"
-    fi
+    export CFLAGS="$CFLAGS -O2"
+    export CXXFLAGS="$CXXFLAGS -O2"
 
     # Build:
     make $output V=1
