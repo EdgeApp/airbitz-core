@@ -403,21 +403,8 @@ void TxDatabase::dump(std::ostream &out) const
     }
 }
 
-std::vector<TxDatabase::TxRow *>
-TxDatabase::ntxidLookupAll(bc::hash_digest ntxid)
-{
-    std::vector<TxRow *> out;
-    for (auto &row: rows_)
-    {
-        if (row.second.ntxid == ntxid)
-            out.push_back(&row.second);
-    }
-    return out;
-}
-
 bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
 {
-
     std::lock_guard<std::mutex> lock(mutex_);
 
     //
@@ -452,6 +439,14 @@ bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
 
     return false;
 
+}
+
+void
+TxDatabase::clear()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    last_height_ = 0;
+    rows_.clear();
 }
 
 void TxDatabase::at_height(size_t height)
@@ -636,6 +631,18 @@ TxDatabase::isSpendable(bc::hash_digest txid, const AddressSet &addresses) const
             return false;
     }
     return true;
+}
+
+std::vector<TxDatabase::TxRow *>
+TxDatabase::ntxidLookupAll(bc::hash_digest ntxid)
+{
+    std::vector<TxRow *> out;
+    for (auto &row: rows_)
+    {
+        if (row.second.ntxid == ntxid)
+            out.push_back(&row.second);
+    }
+    return out;
 }
 
 } // namespace abcd
