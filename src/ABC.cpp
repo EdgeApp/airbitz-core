@@ -2758,6 +2758,7 @@ tABC_CC ABC_WatcherDeleteCache(const char *szWalletUUID, tABC_Error *pError)
     {
         ABC_GET_WALLET_N();
         ABC_CHECK_NEW(watcherDeleteCache(*wallet));
+        wallet->txdb.clear();
     }
 
 exit:

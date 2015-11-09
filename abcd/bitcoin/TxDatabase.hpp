@@ -113,6 +113,11 @@ public:
      */
     bool insert(const bc::transaction_type &tx, TxState state);
 
+    /**
+     * Clears the database for debugging purposes.
+     */
+    void clear();
+
 private:
     // - Updater: ----------------------
     friend class TxUpdater;
@@ -184,6 +189,11 @@ private:
     bool
     isSpendable(bc::hash_digest txid, const AddressSet &addresses) const;
 
+    /**
+     * Returns all the rows that match the given ntxid.
+     */
+    std::vector<TxRow *> ntxidLookupAll(bc::hash_digest ntxid);
+
     // Guards access to object state:
     mutable std::mutex mutex_;
 
@@ -191,11 +201,6 @@ private:
     size_t last_height_;
 
     std::unordered_map<bc::hash_digest, TxRow> rows_;
-
-    /**
-     * Returns all the rows that match the given ntxid.
-     */
-    std::vector<TxRow *> ntxidLookupAll(bc::hash_digest ntxid);
 
     // Number of seconds an unconfirmed transaction must remain unseen
     // before we stop saving it:
