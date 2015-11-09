@@ -2665,11 +2665,9 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szNtxid,
         if (!bc::decode_hash(hash, szNtxid))
             ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
 
-        *height = wallet->txdb.ntxidHeight(hash);
-        if (NTXID_HEIGHT_NOT_FOUND == *height)
-        {
-            cc = ABC_CC_Synchronizing;
-        }
+        long long out;
+        ABC_CHECK_NEW(wallet->txdb.ntxidHeight(out, hash));
+        *height = out;
     }
 
 exit:
