@@ -160,7 +160,7 @@ spendSend(Wallet &self, SendInfo *pInfo, std::string &ntxidOut)
         bc::extract(addr, output.script);
         addresses.push_back(addr.encoded());
     }
-    ABC_CHECK_OLD(ABC_TxSendComplete(self, pInfo, ntxid, txid, addresses, &error));
+    ABC_CHECK(txSendSave(self, ntxid, txid, addresses, pInfo));
 
     ntxidOut = ntxid;
     return Status();

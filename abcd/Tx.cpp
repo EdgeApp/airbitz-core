@@ -44,24 +44,42 @@
 
 namespace abcd {
 
+static Status   txSaveNewTx(Wallet &self, Tx &tx, const std::vector<std::string> &addresses, bool bOutside);
 static Status   txGetAmounts(Wallet &self, const std::string &ntxid, int64_t *pAmount, int64_t *pFees);
 static Status   txGetOutputs(Wallet &self, const std::string &ntxid, tABC_TxOutput ***paOutputs, unsigned int *pCount);
 static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
-static tABC_CC  ABC_TxSaveNewTx(Wallet &self, Tx &tx, const std::vector<std::string> &addresses, bool bOutside, tABC_Error *pError);
 
-tABC_CC ABC_TxSendComplete(Wallet &self,
-                           SendInfo         *pInfo,
-                           const std::string &ntxid,
-                           const std::string &txid,
-                           const std::vector<std::string> &addresses,
-                           tABC_Error       *pError)
+Status
+txSweepSave(Wallet &wallet,
+    const std::string &ntxid, const std::string &txid,
+    uint64_t funds)
 {
-    tABC_CC cc = ABC_CC_Ok;
     Tx tx;
+    tx.ntxid = ntxid;
+    tx.txid = txid;
+    tx.timeCreation = time(nullptr);
+    tx.internal = true;
+    tx.metadata.amountSatoshi = funds;
+    tx.metadata.amountFeesAirbitzSatoshi = 0;
+    ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
+        tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
+        static_cast<Currency>(wallet.currency())));
 
+    // save the transaction
+    ABC_CHECK(wallet.txs.save(tx));
+
+    return Status();
+}
+
+Status
+txSendSave(Wallet &self,
+    const std::string &ntxid, const std::string &txid,
+    const std::vector<std::string> &addresses, SendInfo *pInfo)
+{
     // set the state
+    Tx tx;
     tx.ntxid = ntxid;
     tx.txid = txid;
     tx.timeCreation = time(nullptr);
@@ -81,7 +99,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
                                         + pInfo->metadata.amountFeesMinersSatoshi;
     }
 
-    ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
+    ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
         tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
         static_cast<Currency>(self.currency())));
 
@@ -91,7 +109,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
         tx.metadata.amountCurrency *= -1.0;
 
     // Save the transaction:
-    ABC_CHECK_RET(ABC_TxSaveNewTx(self, tx, addresses, false, pError));
+    ABC_CHECK(txSaveNewTx(self, tx, addresses, false));
 
     if (pInfo->bTransfer)
     {
@@ -111,7 +129,7 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
         //
         receiveTx.metadata.amountFeesAirbitzSatoshi = 0;
 
-        ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
+        ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
             receiveTx.metadata.amountCurrency, receiveTx.metadata.amountSatoshi,
             static_cast<Currency>(self.currency())));
 
@@ -121,11 +139,10 @@ tABC_CC ABC_TxSendComplete(Wallet &self,
             receiveTx.metadata.amountCurrency *= -1.0;
 
         // save the transaction
-        ABC_CHECK_RET(ABC_TxSaveNewTx(*pInfo->walletDest, receiveTx, addresses, false, pError));
+        ABC_CHECK(txSaveNewTx(*pInfo->walletDest, receiveTx, addresses, false));
     }
 
-exit:
-    return cc;
+    return Status();
 }
 
 Status
@@ -152,7 +169,7 @@ txReceiveTransaction(Wallet &self,
             static_cast<Currency>(self.currency())));
 
         // add the transaction to the address
-        ABC_CHECK_OLD(ABC_TxSaveNewTx(self, tx, addresses, true, &error));
+        ABC_CHECK(txSaveNewTx(self, tx, addresses, true));
 
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
         self.balanceDirty();
@@ -197,15 +214,10 @@ txReceiveTransaction(Wallet &self,
  * @param bOutside true if this is an outside transaction that needs its
  * details populated from the address database.
  */
-tABC_CC
-ABC_TxSaveNewTx(Wallet &self,
-                Tx &tx,
-                const std::vector<std::string> &addresses,
-                bool bOutside,
-                tABC_Error *pError)
+Status
+txSaveNewTx(Wallet &self, Tx &tx,
+    const std::vector<std::string> &addresses, bool bOutside)
 {
-    tABC_CC cc = ABC_CC_Ok;
-
     // Mark addresses as used:
     TxMetadata metadata;
     for (const auto &i: addresses)
@@ -217,7 +229,7 @@ ABC_TxSaveNewTx(Wallet &self,
             if (address.recyclable)
             {
                 address.recyclable = false;
-                ABC_CHECK_NEW(self.addresses.save(address));
+                ABC_CHECK(self.addresses.save(address));
             }
             metadata = address.metadata;
         }
@@ -233,10 +245,9 @@ ABC_TxSaveNewTx(Wallet &self,
         if (tx.metadata.category.empty() && !metadata.category.empty())
             tx.metadata.category = metadata.category;
     }
-    ABC_CHECK_NEW(self.txs.save(tx));
+    ABC_CHECK(self.txs.save(tx));
 
-exit:
-    return cc;
+    return Status();
 }
 
 /**
@@ -606,42 +617,6 @@ tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
     Tx tx;
     ABC_CHECK_NEW(self.txs.get(tx, ntxid));
     result = tx.metadata;
-
-exit:
-    return cc;
-}
-
-/**
- * Creates a transaction as a result of a sweep.
- *
- * @param wallet    Wallet ID struct
- * @param txId      Non-Malleable Tx ID
- * @param malTxId   Malleable Tx ID
- * @param funds     Amount of funds swept
- * @param pDetails  Tx Details
- */
-tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
-                                   const std::string &ntxid,
-                                   const std::string &txid,
-                                   uint64_t funds,
-                                   tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    Tx tx;
-
-    // set the state
-    tx.ntxid = ntxid;
-    tx.txid = txid;
-    tx.timeCreation = time(nullptr);
-    tx.internal = true;
-    tx.metadata.amountSatoshi = funds;
-    tx.metadata.amountFeesAirbitzSatoshi = 0;
-    ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(
-        tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
-        static_cast<Currency>(wallet.currency())));
-
-    // save the transaction
-    ABC_CHECK_NEW(wallet.txs.save(tx));
 
 exit:
     return cc;

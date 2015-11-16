@@ -438,8 +438,8 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     // Save the transaction in the database:
     malTxId = bc::encode_hash(bc::hash_transaction(utx.tx));
     txId = ABC_BridgeNonMalleableTxId(utx.tx);
-    ABC_CHECK_OLD(ABC_TxSweepSaveTransaction(watcherInfo->wallet,
-        txId.c_str(), malTxId.c_str(), funds, &error));
+    ABC_CHECK(txSweepSave(watcherInfo->wallet,
+        txId.c_str(), malTxId.c_str(), funds));
 
     // Done:
     if (sweep.fCallback)
