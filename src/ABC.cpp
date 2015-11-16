@@ -1399,9 +1399,9 @@ tABC_CC ABC_ParseAmount(const char *szAmount,
     // Cannot use ABC_PROLOG - no pError
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_CHECK_RET(ABC_BridgeParseAmount(szAmount, pAmountOut, decimalPlaces));
+    if (!bc::decode_base10(*pAmountOut, szAmount, decimalPlaces))
+        *pAmountOut = ABC_INVALID_AMOUNT;
 
-exit:
     return cc;
 }
 
@@ -1420,9 +1420,23 @@ tABC_CC ABC_FormatAmount(int64_t amount,
                          bool bAddSign,
                          tABC_Error *pError)
 {
-    ABC_PROLOG();
+    // Cannot use ABC_PROLOG - too much debug output
+    tABC_CC cc = ABC_CC_Ok;
+    std::string out;
 
-    ABC_CHECK_RET(ABC_BridgeFormatAmount(amount, pszAmountOut, decimalPlaces, bAddSign, pError));
+    ABC_CHECK_NULL(pszAmountOut);
+
+    if (amount < 0)
+    {
+        out = bc::encode_base10(-amount, decimalPlaces);
+        if (bAddSign)
+            out.insert(0, 1, '-');
+    }
+    else
+    {
+        out = bc::encode_base10(amount, decimalPlaces);
+    }
+    *pszAmountOut = stringCopy(out);
 
 exit:
     return cc;

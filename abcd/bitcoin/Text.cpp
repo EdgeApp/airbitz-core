@@ -251,62 +251,6 @@ void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo)
 }
 
 /**
- * Parses a Bitcoin amount string to an integer.
- * @param the amount to parse, in bitcoins
- * @param the integer value, in satoshis, or ABC_INVALID_AMOUNT
- * if something goes wrong.
- * @param decimal_places set to ABC_BITCOIN_DECIMAL_PLACE to convert
- * bitcoin to satoshis.
- */
-tABC_CC ABC_BridgeParseAmount(const char *szAmount,
-                              uint64_t *pAmountOut,
-                              unsigned decimalPlaces)
-{
-    if (!bc::decode_base10(*pAmountOut, szAmount, decimalPlaces))
-        *pAmountOut = ABC_INVALID_AMOUNT;
-
-    return ABC_CC_Ok;
-}
-
-/**
- * Formats a Bitcoin integer amount as a string, avoiding the rounding
- * problems typical with floating-point math.
- * @param amount the number of satoshis
- * @param pszAmountOut a pointer that will hold the output string. The
- * caller frees the returned value.
- * @param decimal_places set to ABC_BITCOIN_DECIMAL_PLACE to convert
- * satoshis to bitcoins.
- * @param bAddSign set to 'true' to add negative symbol to string if
- * amount is negative
- */
-tABC_CC ABC_BridgeFormatAmount(int64_t amount,
-                               char **pszAmountOut,
-                               unsigned decimalPlaces,
-                               bool bAddSign,
-                               tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    std::string out;
-
-    ABC_CHECK_NULL(pszAmountOut);
-
-    if (amount < 0)
-    {
-        out = bc::encode_base10(-amount, decimalPlaces);
-        if (bAddSign)
-            out.insert(0, 1, '-');
-    }
-    else
-    {
-        out = bc::encode_base10(amount, decimalPlaces);
-    }
-    *pszAmountOut = stringCopy(out);
-
-exit:
-    return cc;
-}
-
-/**
  *
  */
 tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
