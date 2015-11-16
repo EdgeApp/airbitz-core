@@ -7,6 +7,7 @@
 
 #include "../Command.hpp"
 #include "../Util.hpp"
+#include "../../abcd/General.hpp"
 #include "../../abcd/account/Account.hpp"
 #include "../../abcd/json/JsonBox.hpp"
 #include "../../abcd/login/Login.hpp"
@@ -142,6 +143,16 @@ COMMAND(InitLevel::account, DataSync, "data-sync")
         return ABC_ERROR(ABC_CC_Error, "usage: ... data-sync <user> <pass>");
 
     ABC_CHECK(syncAll(*session.account));
+
+    return Status();
+}
+
+COMMAND(InitLevel::context, GeneralUpdate, "general-update")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... general-update");
+
+    ABC_CHECK(generalUpdate());
 
     return Status();
 }
