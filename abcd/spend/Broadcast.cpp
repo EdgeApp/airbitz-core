@@ -7,7 +7,7 @@
 
 #include "Broadcast.hpp"
 #include "../bitcoin/Testnet.hpp"
-#include "../config.h"
+#include "../Context.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../http/HttpRequest.hpp"
 #include "../json/JsonObject.hpp"
@@ -43,7 +43,7 @@ static Status
 chainPostTx(DataSlice tx)
 {
     static const std::string auth =
-        "Basic " + base64Encode(std::string(CHAIN_API_USERPWD));
+        "Basic " + base64Encode(gContext->chainApiUserPwd());
     const char *url = isTestnet() ?
                       "https://api.chain.com/v2/testnet3/transactions/send":
                       "https://api.chain.com/v2/bitcoin/transactions/send";

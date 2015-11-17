@@ -29,7 +29,6 @@ test_sources = $(wildcard test/*.cpp)
 watcher_sources = $(wildcard util/*.cpp)
 
 generated_headers = \
-	abcd/config.h \
 	codegen/paymentrequest.pb.h
 
 # Objects:
@@ -91,11 +90,6 @@ $(WORK_DIR)/%.o: %.cpp | $(generated_headers)
 include $(wildcard $(WORK_DIR)/*/*.d $(WORK_DIR)/*/*/*.d)
 %.h: ;
 %.hpp: ;
-
-# API key file:
-abcd/config.h:
-	@echo "error: Please copy abcd/config.h.example to abcd/config.h add you API keys."
-	@exit 1
 
 # Protobuf files:
 codegen/paymentrequest.pb.h codegen/paymentrequest.pb.cc: abcd/spend/paymentrequest.proto
