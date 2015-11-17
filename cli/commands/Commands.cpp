@@ -60,16 +60,6 @@ COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt")
     return Status();
 }
 
-COMMAND(InitLevel::account, AddCategory, "add-category")
-{
-    if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... add-category <user> <pass> <category>");
-
-    ABC_CHECK_OLD(ABC_AddCategory(session.username, session.password, argv[2], &error));
-
-    return Status();
-}
-
 COMMAND(InitLevel::login, ChangePassword, "change-password")
 {
     if (argc != 4)
@@ -287,16 +277,6 @@ COMMAND(InitLevel::login, RecoveryReminderSet, "recovery-reminder-set")
 
     pSettings->recoveryReminderCount = strtol(argv[2], 0, 10);
     ABC_CHECK_OLD(ABC_UpdateAccountSettings(session.username, session.password, pSettings, &error));
-
-    return Status();
-}
-
-COMMAND(InitLevel::account, RemoveCategory, "remove-category")
-{
-    if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... remove-category <user> <pass> <category>");
-
-    ABC_CHECK_OLD(ABC_RemoveCategory(session.username, session.password, argv[2], &error));
 
     return Status();
 }

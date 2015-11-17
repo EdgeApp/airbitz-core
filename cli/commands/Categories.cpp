@@ -27,7 +27,7 @@ COMMAND(InitLevel::account, CategoryList, "category-list")
 COMMAND(InitLevel::account, CategoryAdd, "category-add")
 {
     if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... categories-list <user> <pass> <category>");
+        return ABC_ERROR(ABC_CC_Error, "usage: ... category-add <user> <pass> <category>");
     std::string category = argv[2];
 
     ABC_CHECK(accountCategoriesAdd(*session.account, category));
@@ -37,7 +37,7 @@ COMMAND(InitLevel::account, CategoryAdd, "category-add")
 COMMAND(InitLevel::account, CategoryRemove, "category-remove")
 {
     if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... categories-list <user> <pass> <category>");
+        return ABC_ERROR(ABC_CC_Error, "usage: ... category-remove <user> <pass> <category>");
     std::string category = argv[2];
 
     ABC_CHECK(accountCategoriesRemove(*session.account, category));
