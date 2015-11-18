@@ -9,13 +9,55 @@
 #include "../crypto/Crypto.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
-#include "../util/Json.hpp"
+#include "../util/Util.hpp"
 #include <new>
 
 namespace abcd {
 
 constexpr size_t loadFlags = 0;
 constexpr size_t saveFlags = JSON_INDENT(4) | JSON_SORT_KEYS;
+
+/**
+ * Overrides the jansson malloc function so we can clear the memory on free.
+ * https://github.com/akheron/jansson/blob/master/doc/apiref.rst#id97
+ */
+static void *
+janssonSecureMalloc(size_t size)
+{
+    // Store the memory area size in the beginning of the block:
+    char *ptr = (char*)malloc(size + 8);
+    *((size_t *)ptr) = size;
+    return ptr + 8;
+}
+
+/**
+ * Overrides the jansson free function so we can clear the memory.
+ */
+static void
+janssonSecureFree(void *ptr)
+{
+    if (ptr)
+    {
+        ptr = (char*)ptr - 8;
+        size_t size = *((size_t *)ptr);
+        ABC_UtilGuaranteedMemset(ptr, 0, size + 8);
+        free(ptr);
+    }
+}
+
+/**
+ * Sets up the secure JSON free functions.
+ */
+class JsonInitializer
+{
+public:
+    JsonInitializer()
+    {
+        json_set_alloc_funcs(janssonSecureMalloc, janssonSecureFree);
+    }
+};
+
+JsonInitializer staticJsonInitializer;
 
 JsonPtr::~JsonPtr()
 {
@@ -121,7 +163,7 @@ JsonPtr::encode() const
     if (!raw)
         throw std::bad_alloc();
     std::string out(raw);
-    ABC_UtilJanssonSecureFree(raw);
+    janssonSecureFree(raw);
     return out;
 }
 

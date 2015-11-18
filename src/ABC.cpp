@@ -62,7 +62,6 @@
 #include "../abcd/spend/Spend.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
-#include "../abcd/util/Json.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/Util.hpp"
 #include "../abcd/wallet/Address.hpp"
@@ -72,7 +71,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <jansson.h>
 #include <math.h>
 
 using namespace abcd;
@@ -139,9 +137,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
         // initialize logging
         ABC_CHECK_NEW(debugInitialize());
-
-        // override the alloc and free of janson so we can have a secure method
-        json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
         ABC_CHECK_NEW(randomInitialize(DataSlice(pSeedData, pSeedData + seedLength)));
 
