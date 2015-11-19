@@ -805,11 +805,16 @@ tABC_CC ABC_SetPIN(const char *szUserName,
 {
     ABC_PROLOG();
     ABC_CHECK_NULL(szPin);
-    ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error,
-                     "Pin is too short");
 
     {
         ABC_GET_ACCOUNT();
+
+        ABC_CHECK_ASSERT(ABC_MIN_PIN_LENGTH <= strlen(szPin), ABC_CC_Error,
+                         "Pin is too short");
+        char *endstr = nullptr;
+        strtol(szPin, &endstr, 10);
+        ABC_CHECK_ASSERT('\0' == *endstr, ABC_CC_NonNumericPin,
+                         "The pin must be numeric.");
 
         AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
         ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));

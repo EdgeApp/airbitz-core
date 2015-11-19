@@ -428,14 +428,6 @@ tABC_CC ABC_AccountSettingsSave(const Account &account,
 
     ABC_CHECK_NULL(pSettings);
 
-    if (pSettings->szPIN)
-    {
-        char *endstr = NULL;
-        strtol(pSettings->szPIN, &endstr, 10);
-        ABC_CHECK_ASSERT(*endstr == '\0', ABC_CC_NonNumericPin,
-                         "The pin must be numeric.");
-    }
-
     // create the json for the settings
     pJSON_Root = json_object();
     ABC_CHECK_ASSERT(pJSON_Root != NULL, ABC_CC_Error,
