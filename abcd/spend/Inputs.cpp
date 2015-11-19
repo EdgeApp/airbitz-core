@@ -177,13 +177,14 @@ minerFee(const bc::transaction_type &tx, uint64_t sourced,
     // The amount-based fee is 0.1% of total funds sent:
     uint64_t amountFee = sourced / 1000;
 
-    // Clamp the amount fee between 10% and 100% of the size-based fee:
-    uint64_t minFee = sizeFee / 10;
+    // Clamp the amount fee between 50% and 100% of the size-based fee:
+    uint64_t minFee = sizeFee / 2;
+    uint64_t incFee = sizeFee / 10;
     amountFee = std::max(amountFee, minFee);
     amountFee = std::min(amountFee, sizeFee);
 
     // Make the result an integer multiple of the minimum fee:
-    return amountFee - amountFee % minFee;
+    return amountFee - amountFee % incFee;
 }
 
 Status
