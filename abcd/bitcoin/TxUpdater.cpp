@@ -180,8 +180,6 @@ void TxUpdater::watch(const bc::payment_address &address,
 
 void TxUpdater::send(bc::transaction_type tx)
 {
-    if (db_.insert(tx, TxState::unsent))
-        callbacks_.on_add(tx);
     send_tx(tx);
 }
 
@@ -572,15 +570,10 @@ void TxUpdater::send_tx(const bc::transaction_type &tx)
 {
     for (auto &it: connections_)
     {
-        auto idx = it->server_index;
-        auto on_error = [this, tx, idx](const std::error_code &error)
-        {
-            db_.forget(bc::hash_transaction(tx));
-        };
+        auto on_error = [](const std::error_code &error) {};
 
         auto on_done = [this, tx]()
         {
-            std::error_code error;
             db_.unconfirmed(bc::hash_transaction(tx));
         };
 

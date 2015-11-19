@@ -285,7 +285,6 @@ watcherSend(Wallet &self, libbitcoin::transaction_type &tx)
     ABC_CHECK(watcherFind(watcher, self));
 
     watcher->send_tx(tx);
-    watcherSave(self).log(); // Failure is not fatal
 
     return Status();
 }
@@ -375,7 +374,6 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     abcd::unsigned_transaction utx;
     bc::transaction_output_type output;
     abcd::key_table keys;
-    std::string malTxId, txId;
 
     // Find utxos for this address:
     AddressSet addresses;
@@ -439,17 +437,18 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     bc::data_chunk raw_tx(satoshi_raw_size(utx.tx));
     bc::satoshi_save(utx.tx, raw_tx.begin());
     ABC_CHECK(broadcastTx(raw_tx));
+    if (watcherInfo->wallet.txdb.insert(utx.tx, TxState::unconfirmed))
+        watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 
-    // Save the transaction in the database:
-    malTxId = bc::encode_hash(bc::hash_transaction(utx.tx));
-    txId = ABC_BridgeNonMalleableTxId(utx.tx);
-    ABC_CHECK(txSweepSave(watcherInfo->wallet,
-                          txId.c_str(), malTxId.c_str(), funds));
+    // Save the transaction in the metadatabase:
+    const auto txid = bc::encode_hash(bc::hash_transaction(utx.tx));
+    const auto ntxid = ABC_BridgeNonMalleableTxId(utx.tx);
+    ABC_CHECK(txSweepSave(watcherInfo->wallet, ntxid, txid, funds));
 
     // Done:
     if (sweep.fCallback)
     {
-        sweep.fCallback(ABC_CC_Ok, txId.c_str(), output.value);
+        sweep.fCallback(ABC_CC_Ok, ntxid.c_str(), output.value);
     }
     else if (fAsyncCallback)
     {
@@ -457,7 +456,7 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
         info.pData = pData;
         info.eventType = ABC_AsyncEventType_IncomingSweep;
         info.sweepSatoshi = output.value;
-        info.szTxID = txId.c_str();
+        info.szTxID = ntxid.c_str();
         fAsyncCallback(&info);
     }
     sweep.done = true;

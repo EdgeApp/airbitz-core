@@ -52,7 +52,7 @@ void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
  * Saves a transaction to the txdb after sweeping.
  */
 Status
-txSweepSave(Wallet &wallet,
+txSweepSave(Wallet &self,
             const std::string &ntxid, const std::string &txid,
             uint64_t funds);
 

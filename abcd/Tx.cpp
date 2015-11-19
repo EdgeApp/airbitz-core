@@ -56,7 +56,7 @@ static int      ABC_TxStrStr(const char *haystack, const char *needle,
                              tABC_Error *pError);
 
 Status
-txSweepSave(Wallet &wallet,
+txSweepSave(Wallet &self,
             const std::string &ntxid, const std::string &txid,
             uint64_t funds)
 {
@@ -69,10 +69,11 @@ txSweepSave(Wallet &wallet,
     tx.metadata.amountFeesAirbitzSatoshi = 0;
     ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
                   tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
-                  static_cast<Currency>(wallet.currency())));
+                  static_cast<Currency>(self.currency())));
 
     // save the transaction
-    ABC_CHECK(wallet.txs.save(tx));
+    ABC_CHECK(self.txs.save(tx));
+    self.balanceDirty();
 
     return Status();
 }
@@ -175,9 +176,6 @@ txReceiveTransaction(Wallet &self,
         // add the transaction to the address
         ABC_CHECK(txSaveNewTx(self, tx, addresses, true));
 
-        // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
-        self.balanceDirty();
-
         if (fAsyncCallback)
         {
             tABC_AsyncBitCoinInfo info;
@@ -250,6 +248,7 @@ txSaveNewTx(Wallet &self, Tx &tx,
             tx.metadata.category = metadata.category;
     }
     ABC_CHECK(self.txs.save(tx));
+    self.balanceDirty();
 
     return Status();
 }

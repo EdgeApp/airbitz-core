@@ -145,14 +145,13 @@ spendSend(Wallet &self, SendInfo *pInfo, std::string &ntxidOut)
 
     // Send to the network:
     ABC_CHECK(broadcastTx(rawTx));
-
-    // Mark the outputs as spent:
+    if (self.txdb.insert(tx, TxState::unconfirmed))
+        watcherSave(self).log(); // Failure is not fatal
     watcherSend(self, tx).log();
 
+    // Update the Airbitz metadata:
     auto txid = bc::encode_hash(bc::hash_transaction(tx));
     auto ntxid = ABC_BridgeNonMalleableTxId(tx);
-
-    // Update the Airbitz metadata:
     std::vector<std::string> addresses;
     for (const auto &output: tx.outputs)
     {
