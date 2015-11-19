@@ -598,6 +598,7 @@ tABC_CC ABC_TxSetTransactionDetails(Wallet &self,
     Tx tx;
     ABC_CHECK_NEW(self.txs.get(tx, ntxid));
     tx.metadata = metadata;
+    tx.internal = true;
     ABC_CHECK_NEW(self.txs.save(tx));
 
 exit:
