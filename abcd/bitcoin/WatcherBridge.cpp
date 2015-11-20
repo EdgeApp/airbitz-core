@@ -78,9 +78,13 @@ private:
 
 static std::map<std::string, std::unique_ptr<WatcherInfo>> watchers_;
 
-static Status   bridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep &sweep, tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
-static void     bridgeQuietCallback(WatcherInfo *watcherInfo, tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
-static Status   bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &tx, tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
+static Status   bridgeDoSweep(WatcherInfo *watcherInfo, PendingSweep &sweep,
+                              tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
+static void     bridgeQuietCallback(WatcherInfo *watcherInfo,
+                                    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
+static Status   bridgeTxCallback(WatcherInfo *watcherInfo,
+                                 const libbitcoin::transaction_type &tx,
+                                 tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
 
 static Status
 watcherFind(WatcherInfo *&result, const Wallet &self)
@@ -144,7 +148,7 @@ tABC_CC ABC_BridgeSweepKey(Wallet &self,
 
     // Decode key and address:
     ABC_CHECK_ASSERT(key.size() == ec_key.size(),
-        ABC_CC_Error, "Bad key size");
+                     ABC_CC_Error, "Bad key size");
     std::copy(key.begin(), key.end(), ec_key.data());
     ec_addr = bc::secret_to_public_key(ec_key, compressed);
     address.set(pubkeyVersion(), bc::bitcoin_short_hash(ec_addr));
@@ -191,7 +195,8 @@ tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
     WatcherInfo *watcherInfo = nullptr;
     ABC_CHECK_NEW(watcherFind(watcherInfo, self));
 
-    txCallback = [watcherInfo, fAsyncCallback, pData](const libbitcoin::transaction_type &tx)
+    txCallback = [watcherInfo, fAsyncCallback,
+                  pData](const libbitcoin::transaction_type &tx)
     {
         bridgeTxCallback(watcherInfo, tx, fAsyncCallback, pData).log();
     };
@@ -362,8 +367,8 @@ exit:
 
 static Status
 bridgeDoSweep(WatcherInfo *watcherInfo,
-    PendingSweep &sweep,
-    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
+              PendingSweep &sweep,
+              tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
     Address address;
     uint64_t funds = 0;
@@ -439,7 +444,7 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     malTxId = bc::encode_hash(bc::hash_transaction(utx.tx));
     txId = ABC_BridgeNonMalleableTxId(utx.tx);
     ABC_CHECK(txSweepSave(watcherInfo->wallet,
-        txId.c_str(), malTxId.c_str(), funds));
+                          txId.c_str(), malTxId.c_str(), funds));
 
     // Done:
     if (sweep.fCallback)
@@ -463,7 +468,7 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
 
 static void
 bridgeQuietCallback(WatcherInfo *watcherInfo,
-    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
+                    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
     // If we are sweeping any keys, do that now:
     for (auto &sweep: watcherInfo->sweeping)
@@ -478,13 +483,16 @@ bridgeQuietCallback(WatcherInfo *watcherInfo,
     }
 
     // Remove completed ones:
-    watcherInfo->sweeping.remove_if([](const PendingSweep& sweep) {
-        return sweep.done; });
+    watcherInfo->sweeping.remove_if([](const PendingSweep& sweep)
+    {
+        return sweep.done;
+    });
 }
 
 static Status
-bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &tx,
-    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
+bridgeTxCallback(WatcherInfo *watcherInfo,
+                 const libbitcoin::transaction_type &tx,
+                 tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
     bool relevant = false;
     for (const auto &i: tx.inputs)
@@ -513,7 +521,7 @@ bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &t
     {
         ABC_DebugLog("New transaction %s", txid.c_str());
         ABC_CHECK(txReceiveTransaction(watcherInfo->wallet,
-            ntxid, txid, addresses, fAsyncCallback, pData));
+                                       ntxid, txid, addresses, fAsyncCallback, pData));
     }
     else
     {
@@ -527,7 +535,7 @@ bridgeTxCallback(WatcherInfo *watcherInfo, const libbitcoin::transaction_type &t
 std::string
 ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
 {
-    for (auto& input: tx.inputs)
+    for (auto &input: tx.inputs)
         input.script = bc::script_type();
     return bc::encode_hash(bc::hash_transaction(tx, bc::sighash::all));
 }

@@ -74,9 +74,11 @@ Status
 WatcherThread::init(const Session &session)
 {
     uuid_ = session.uuid;
-    ABC_CHECK_OLD(ABC_WatcherStart(session.username, session.password, session.uuid, &error));
+    ABC_CHECK_OLD(ABC_WatcherStart(session.username, session.password, session.uuid,
+                                   &error));
     thread_ = new std::thread(watcherThread, session.uuid);
-    ABC_CHECK_OLD(ABC_WatchAddresses(session.username, session.password, session.uuid, &error));
+    ABC_CHECK_OLD(ABC_WatchAddresses(session.username, session.password,
+                                     session.uuid, &error));
     ABC_CHECK_OLD(ABC_WatcherConnect(session.uuid, &error));
     return Status();
 }

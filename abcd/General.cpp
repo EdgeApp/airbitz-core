@@ -81,7 +81,7 @@ generalUpdate()
 
     time_t lastTime;
     if (!fileTime(lastTime, path) ||
-        lastTime + GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS < time(nullptr))
+            lastTime + GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS < time(nullptr))
     {
         JsonPtr infoJson;
         ABC_CHECK(loginServerGetGeneral(infoJson));
@@ -138,7 +138,8 @@ generalBitcoinServers()
 {
     if (isTestnet())
     {
-        return std::vector<std::string>{
+        return std::vector<std::string>
+        {
             "tcp://obelisk-testnet.airbitz.co:9091"
         };
     }

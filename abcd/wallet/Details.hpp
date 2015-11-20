@@ -27,7 +27,8 @@ ABC_TxDetailsFree(tABC_TxDetails *pDetails);
  * Duplicate a TX details struct
  */
 tABC_CC
-ABC_TxDetailsCopy(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pOldDetails, tABC_Error *pError);
+ABC_TxDetailsCopy(tABC_TxDetails **ppNewDetails,
+                  const tABC_TxDetails *pOldDetails, tABC_Error *pError);
 
 /**
  * Decodes the transaction details data from a json transaction or address object
@@ -36,7 +37,8 @@ ABC_TxDetailsCopy(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pOldDetai
  *               (it is the callers responsiblity to free this)
  */
 tABC_CC
-ABC_TxDetailsDecode(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError);
+ABC_TxDetailsDecode(json_t *pJSON_Obj, tABC_TxDetails **ppDetails,
+                    tABC_Error *pError);
 
 /**
  * Encodes the transaction details data into the given json transaction object
@@ -45,7 +47,8 @@ ABC_TxDetailsDecode(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *p
  * @param pDetails  Pointer to the details to store in the json object.
  */
 tABC_CC
-ABC_TxDetailsEncode(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError);
+ABC_TxDetailsEncode(json_t *pJSON_Obj, tABC_TxDetails *pDetails,
+                    tABC_Error *pError);
 
 } // namespace abcd
 

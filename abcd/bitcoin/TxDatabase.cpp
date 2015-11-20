@@ -73,15 +73,20 @@ bc::transaction_type TxDatabase::ntxidLookup(bc::hash_digest ntxid)
     bc::transaction_type tx;
     bool foundTx = false;
 
-    for (auto i = txRows.begin(); i != txRows.end(); ++i) {
+    for (auto i = txRows.begin(); i != txRows.end(); ++i)
+    {
         // Try to return the master confirmed txid if possible
         // Otherwise return any confirmed txid
         // Otherwise return any match
-        if (!foundTx) {
+        if (!foundTx)
+        {
             tx = (*i)->tx;
             foundTx = true;
-        } else {
-            if (TxState::confirmed == (*i)->state) {
+        }
+        else
+        {
+            if (TxState::confirmed == (*i)->state)
+            {
                 tx = (*i)->tx;
             }
         }
@@ -96,15 +101,16 @@ static const char unsent[] = "unsent";
 static const char unconfirmed[] = "unconfirmed";
 static const char confirmed[] = "confirmed";
 
-const char * stateToString(TxState state)
+const char *stateToString(TxState state)
 {
-    switch (state) {
-        case TxState::unsent:
-            return unsent;
-        case TxState::unconfirmed:
-            return unconfirmed;
-        case TxState::confirmed:
-            return confirmed;
+    switch (state)
+    {
+    case TxState::unsent:
+        return unsent;
+    case TxState::unconfirmed:
+        return unconfirmed;
+    case TxState::confirmed:
+        return confirmed;
     }
 
 }
@@ -117,7 +123,8 @@ long long TxDatabase::txidHeight(bc::hash_digest txid) const
     if (i == rows_.end())
         return 0;
 
-    if (i->second.state != TxState::confirmed) {
+    if (i->second.state != TxState::confirmed)
+    {
         return 0;
     }
     return i->second.block_height;
@@ -176,7 +183,8 @@ bc::output_info_list TxDatabase::get_utxos() const
     std::lock_guard<std::mutex> lock(mutex_);
 
     // Allow inserting bc::output_point into std::set:
-    class point_cmp {
+    class point_cmp
+    {
     public:
         bool operator () (const bc::output_point &a, const bc::output_point &b)
         {
@@ -198,7 +206,9 @@ bc::output_info_list TxDatabase::get_utxos() const
     for (auto &row: rows_)
     {
         // Exclude unconfirmed malleated transactions from UTXO set.
-        if ((false == row.second.bMalleated) || (TxState::confirmed == row.second.state && row.second.bMasterConfirm)) {
+        if ((false == row.second.bMalleated) || (TxState::confirmed == row.second.state
+                && row.second.bMasterConfirm))
+        {
             for (uint32_t i = 0; i < row.second.tx.outputs.size(); ++i)
             {
                 auto &output = row.second.tx.outputs[i];
@@ -215,7 +225,7 @@ bc::output_info_list TxDatabase::get_utxos() const
 }
 
 bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses,
-    bool filter) const
+        bool filter) const
 {
     auto raw = get_utxos();
 
@@ -269,7 +279,8 @@ bc::data_chunk TxDatabase::serialize() const
     {
         // Don't save old unconfirmed transactions:
         if (row.second.timestamp + unconfirmed_timeout_ < now &&
-                TxState::unconfirmed == row.second.state) {
+                TxState::unconfirmed == row.second.state)
+        {
             ABC_DebugLog("TxDatabase::serialize Purging unconfirmed tx");
             continue;
         }
@@ -312,8 +323,8 @@ TxDatabase::load(const bc::data_chunk &data)
         if (serial_magic != magic)
         {
             return old_serial_magic == magic ?
-                ABC_ERROR(ABC_CC_ParseError, "Outdated transaction database format") :
-                ABC_ERROR(ABC_CC_ParseError, "Unknown transaction database header");
+                   ABC_ERROR(ABC_CC_ParseError, "Outdated transaction database format") :
+                   ABC_ERROR(ABC_CC_ParseError, "Unknown transaction database header");
         }
 
         // Last block height:
@@ -410,7 +421,8 @@ bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
 
     // Do not stomp existing tx's:
     auto txid = bc::hash_transaction(tx);
-    if (rows_.find(txid) == rows_.end()) {
+    if (rows_.find(txid) == rows_.end())
+    {
 
         TxState state = TxState::unconfirmed;
         long long height = 0;
@@ -421,8 +433,10 @@ bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
         // new tx
         std::vector<TxRow *> txRows = ntxidLookupAll(ntxid);
 
-        for (auto i = txRows.begin(); i != txRows.end(); ++i) {
-            if (txid != (*i)->txid) {
+        for (auto i = txRows.begin(); i != txRows.end(); ++i)
+        {
+            if (txid != (*i)->txid)
+            {
                 height = (*i)->block_height;
                 state = (*i)->state;
                 bMalleated = (*i)->bMalleated = true;
@@ -506,13 +520,15 @@ void TxDatabase::unconfirmed(bc::hash_digest txid)
     // we probably have a block fork:
 //    std::string malTxID1 = bc::encode_hash(bc::hash_transaction(row.tx));
 
-    if (row.state == TxState::confirmed) {
+    if (row.state == TxState::confirmed)
+    {
 
         // Check if there are other malleated transactions.
         // If so, mark them all unconfirmed_malleated
         std::vector<TxRow *> txRows = ntxidLookupAll(it->second.ntxid);
 
-        for (auto i = txRows.begin(); i != txRows.end(); ++i) {
+        for (auto i = txRows.begin(); i != txRows.end(); ++i)
+        {
             if (txid != (*i)->txid)
             {
                 if ((*i)->bMasterConfirm)
@@ -596,14 +612,14 @@ void TxDatabase::check_fork(size_t height)
     size_t prev_height = 0;
     for (auto row: rows_)
         if (row.second.state == TxState::confirmed &&
-            row.second.block_height < height &&
-            prev_height < row.second.block_height)
+                row.second.block_height < height &&
+                prev_height < row.second.block_height)
             prev_height = row.second.block_height;
 
     // Mark all transactions at that level as needing checked:
     for (auto row: rows_)
         if (row.second.state == TxState::confirmed &&
-            row.second.block_height == prev_height)
+                row.second.block_height == prev_height)
             row.second.need_check = true;
 }
 

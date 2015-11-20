@@ -68,7 +68,8 @@ COMMAND(InitLevel::login, OtpAuthGet, "otp-auth-get")
 COMMAND(InitLevel::login, OtpAuthSet, "otp-auth-set")
 {
     if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... otp-auth-set <user> <pass> <timeout-sec>");
+        return ABC_ERROR(ABC_CC_Error,
+                         "usage: ... otp-auth-set <user> <pass> <timeout-sec>");
 
     ABC_CHECK(otpAuthSet(*session.login, atol(argv[2])));
 

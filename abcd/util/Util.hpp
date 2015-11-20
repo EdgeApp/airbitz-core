@@ -82,7 +82,7 @@ structAlloc()
         ABC_DebugLog("Error: %s, code: %d, func: %s, source: %s, line: %d", err_string, code, __FUNCTION__, __FILE__, __LINE__); \
     }
 #else
-    #define ABC_LOG_ERROR(code, err_string) { }
+#define ABC_LOG_ERROR(code, err_string) { }
 #endif
 
 #define ABC_SET_ERR_CODE(err, set_code) \

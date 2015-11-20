@@ -55,7 +55,7 @@ public:
     void disconnect();
     Status connect();
     void watch(const bc::payment_address &address,
-        bc::client::sleep_time poll);
+               bc::client::sleep_time poll);
     void send(bc::transaction_type tx);
 
     AddressSet watching();
@@ -74,7 +74,7 @@ private:
     {
         Connection(void *ctx, long server_index);
 
-        bool operator==(const Connection& l)
+        bool operator==(const Connection &l)
         {
             return server_index == l.server_index;
         };

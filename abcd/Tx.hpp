@@ -53,25 +53,25 @@ void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
  */
 Status
 txSweepSave(Wallet &wallet,
-    const std::string &ntxid, const std::string &txid,
-    uint64_t funds);
+            const std::string &ntxid, const std::string &txid,
+            uint64_t funds);
 
 /**
  * Saves a transaction to the txdb after sending.
  */
 Status
 txSendSave(Wallet &self,
-    const std::string &ntxid, const std::string &txid,
-    const std::vector<std::string> &addresses, SendInfo *pInfo);
+           const std::string &ntxid, const std::string &txid,
+           const std::vector<std::string> &addresses, SendInfo *pInfo);
 
 /**
  * Handles creating or updating when we receive a transaction.
  */
 Status
 txReceiveTransaction(Wallet &self,
-    const std::string &ntxid, const std::string &txid,
-    const std::vector<std::string> &addresses,
-    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
+                     const std::string &ntxid, const std::string &txid,
+                     const std::vector<std::string> &addresses,
+                     tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
 
 tABC_CC ABC_TxGetTransaction(Wallet &self,
                              const std::string &ntxid,

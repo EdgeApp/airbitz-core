@@ -149,9 +149,11 @@ tABC_CC ABC_ExportGetAddresses(tABC_TxInfo *pData,
 
             ABC_STR_NEW(szAmount, MAX_AMOUNT_STRING_SIZE)
 
-            ABC_CHECK_RET(ABC_FormatAmount(pData->aOutputs[i]->value, &szAmount, ABC_BITCOIN_DECIMAL_PLACES, false, pError));
+            ABC_CHECK_RET(ABC_FormatAmount(pData->aOutputs[i]->value, &szAmount,
+                                           ABC_BITCOIN_DECIMAL_PLACES, false, pError));
 
-            lengthNeeded = ABC_STRLEN(*szAddresses) + ABC_STRLEN(pData->aOutputs[i]->szAddress) + ABC_STRLEN(szAmount) + 3;
+            lengthNeeded = ABC_STRLEN(*szAddresses) + ABC_STRLEN(
+                               pData->aOutputs[i]->szAddress) + ABC_STRLEN(szAmount) + 3;
 
             if (lengthNeeded > ABC_CSV_MAX_FLD_SZ) break;
 
@@ -159,11 +161,13 @@ tABC_CC ABC_ExportGetAddresses(tABC_TxInfo *pData,
 
             if (numAddr == 0)
             {
-                snprintf(*szAddresses, lengthNeeded, "%s:%s", pData->aOutputs[i]->szAddress, szAmount);
+                snprintf(*szAddresses, lengthNeeded, "%s:%s", pData->aOutputs[i]->szAddress,
+                         szAmount);
             }
             else
             {
-                snprintf(*szAddresses, lengthNeeded, "%s %s:%s", *szAddresses, pData->aOutputs[i]->szAddress, szAmount);
+                snprintf(*szAddresses, lengthNeeded, "%s %s:%s", *szAddresses,
+                         pData->aOutputs[i]->szAddress, szAmount);
             }
             numAddr++;
         }
@@ -174,7 +178,8 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error *pError)
+tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec,
+                                 tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
@@ -225,7 +230,8 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     ABC_CSV_INIT(tmpCsvVar, pData->pDetails->szName);
     ABC_CSV_FMT(tmpCsvVar, szName);
 
-    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountSatoshi,&pFormatted, ABC_BITCOIN_DECIMAL_PLACES, true, pError));
+    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountSatoshi,&pFormatted,
+                                   ABC_BITCOIN_DECIMAL_PLACES, true, pError));
     ABC_CSV_INIT(tmpCsvVar, pFormatted);
     ABC_CSV_FMT(tmpCsvVar, szAmtBTC);
 
@@ -238,11 +244,13 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec, tABC_Error 
     ABC_CSV_INIT(tmpCsvVar, pData->pDetails->szNotes);
     ABC_CSV_FMT(tmpCsvVar, szNotes);
 
-    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountFeesAirbitzSatoshi,&pFormatted, ABC_BITCOIN_DECIMAL_PLACES, true, pError));
+    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountFeesAirbitzSatoshi,
+                                   &pFormatted, ABC_BITCOIN_DECIMAL_PLACES, true, pError));
     ABC_CSV_INIT(tmpCsvVar, pFormatted);
     ABC_CSV_FMT(tmpCsvVar, szAmtAirbitzBTC);
 
-    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountFeesMinersSatoshi,&pFormatted, ABC_BITCOIN_DECIMAL_PLACES, true, pError));
+    ABC_CHECK_RET(ABC_FormatAmount(pData->pDetails->amountFeesMinersSatoshi,
+                                   &pFormatted, ABC_BITCOIN_DECIMAL_PLACES, true, pError));
     ABC_CSV_INIT(tmpCsvVar, pFormatted);
     ABC_CSV_FMT(tmpCsvVar, szAmtFeesMinersBTC);
 
@@ -316,7 +324,8 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
     for (unsigned i=0; i < iTransactionCount; i++)
     {
         AutoString szCurrRec;
-        ABC_CHECK_RET(ABC_ExportGenerateRecord(pTransactions[i], &szCurrRec.get(), pError));
+        ABC_CHECK_RET(ABC_ExportGenerateRecord(pTransactions[i], &szCurrRec.get(),
+                                               pError));
         out += szCurrRec;
     }
 

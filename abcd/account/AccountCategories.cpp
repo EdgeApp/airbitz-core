@@ -26,7 +26,8 @@ categoriesPath(const Account &account)
 }
 
 Status
-accountCategoriesSave(const Account &account, const AccountCategories &categories)
+accountCategoriesSave(const Account &account,
+                      const AccountCategories &categories)
 {
     JsonArray arrayJson;
     for (auto &i: categories)

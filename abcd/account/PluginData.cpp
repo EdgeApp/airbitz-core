@@ -34,23 +34,24 @@ static std::string
 pluginDirectory(const Account &account, const std::string &plugin)
 {
     return pluginsDirectory(account) +
-        cryptoFilename(account.login.dataKey(), plugin) + "/";
+           cryptoFilename(account.login.dataKey(), plugin) + "/";
 }
 
 static std::string
 keyFilename(const Account &account, const std::string &plugin,
-    const std::string &key)
+            const std::string &key)
 {
     return pluginDirectory(account, plugin) +
-        cryptoFilename(account.login.dataKey(), key) + ".json";
+           cryptoFilename(account.login.dataKey(), key) + ".json";
 }
 
 Status
 pluginDataGet(const Account &account, const std::string &plugin,
-    const std::string &key, std::string &data)
+              const std::string &key, std::string &data)
 {
     PluginDataFile json;
-    ABC_CHECK(json.load(keyFilename(account, plugin, key), account.login.dataKey()));
+    ABC_CHECK(json.load(keyFilename(account, plugin, key),
+                        account.login.dataKey()));
     ABC_CHECK(json.keyOk());
     ABC_CHECK(json.dataOk());
 
@@ -63,7 +64,7 @@ pluginDataGet(const Account &account, const std::string &plugin,
 
 Status
 pluginDataSet(const Account &account, const std::string &plugin,
-    const std::string &key, const std::string &data)
+              const std::string &key, const std::string &data)
 {
     ABC_CHECK(fileEnsureDir(pluginsDirectory(account)));
     ABC_CHECK(fileEnsureDir(pluginDirectory(account, plugin)));
@@ -71,14 +72,15 @@ pluginDataSet(const Account &account, const std::string &plugin,
     PluginDataFile json;
     json.keySet(key);
     json.dataSet(data);
-    ABC_CHECK(json.save(keyFilename(account, plugin, key), account.login.dataKey()));
+    ABC_CHECK(json.save(keyFilename(account, plugin, key),
+                        account.login.dataKey()));
 
     return Status();
 }
 
 Status
 pluginDataRemove(const Account &account, const std::string &plugin,
-    const std::string &key)
+                 const std::string &key)
 {
     std::string filename = keyFilename(account, plugin, key);
 

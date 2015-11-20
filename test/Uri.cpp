@@ -184,12 +184,12 @@ TEST_CASE("URI encoding test", "[util][uri]" )
     uri.fragmentSet("good evening");
 
     REQUIRE(uri.encode() ==
-        "test://user@hostname/some/path/%3F/%23?tacos=yummy#good%20evening");
+            "test://user@hostname/some/path/%3F/%23?tacos=yummy#good%20evening");
 
     uri.authorityRemove();
     uri.queryRemove();
     uri.fragmentRemove();
 
     REQUIRE(uri.encode() ==
-        "test:/some/path/%3F/%23");
+            "test:/some/path/%3F/%23");
 }

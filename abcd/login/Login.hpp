@@ -30,11 +30,11 @@ public:
 
     static Status
     create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
-        const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskBased);
+           const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskBased);
 
     static Status
     createNew(std::shared_ptr<Login> &result, Lobby &lobby,
-        const char *password);
+              const char *password);
 
     /**
      * Obtains the root key for the account.

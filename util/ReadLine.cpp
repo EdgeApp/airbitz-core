@@ -15,7 +15,7 @@ ReadLine::~ReadLine()
 }
 
 ReadLine::ReadLine(zmq::context_t &context)
-  : socket_(context, ZMQ_REQ)
+    : socket_(context, ZMQ_REQ)
 {
     socket_.bind("inproc://terminal");
     // The thread must be constructed after the socket is already bound.

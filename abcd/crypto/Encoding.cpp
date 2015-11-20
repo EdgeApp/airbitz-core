@@ -90,8 +90,8 @@ chunkDecode(DataChunk &result, const std::string &in)
     }
 
     // Any extra characters must be '=':
-    if (!std::all_of(i, in.end(), [](char c){ return '=' == c; }))
-        return ABC_ERROR(ABC_CC_ParseError, "Bad encoding");
+    if (!std::all_of(i, in.end(), [](char c) { return '=' == c; }))
+    return ABC_ERROR(ABC_CC_ParseError, "Bad encoding");
 
     // There cannot be extra padding:
     if (Chars <= in.end() - i || shift <= bits)
@@ -171,7 +171,7 @@ std::string
 base64Encode(DataSlice data)
 {
     return chunkEncode<3, 4>(data,
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
+                             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 }
 
 Status

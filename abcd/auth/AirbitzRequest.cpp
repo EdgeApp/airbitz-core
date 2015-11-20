@@ -15,7 +15,7 @@ static CURLcode
 curlSslCallback(CURL *curl, void *ssl_ctx, void *userptr)
 {
     SSL_CTX_set_verify((SSL_CTX *)ssl_ctx,
-        SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, ABC_PinCertCallback);
+                       SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, ABC_PinCertCallback);
     return CURLE_OK;
 }
 

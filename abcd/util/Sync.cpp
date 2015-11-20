@@ -72,13 +72,15 @@ syncInit(const char *szCaCertPath)
     AutoSyncLock lock(gSyncMutex);
 
     if (gbInitialized)
-        return ABC_ERROR(ABC_CC_Reinitialization, "ABC_Sync has already been initalized");
+        return ABC_ERROR(ABC_CC_Reinitialization,
+                         "ABC_Sync has already been initalized");
 
     ABC_CHECK_GIT(git_libgit2_init());
     gbInitialized = true;
 
     if (szCaCertPath)
-        ABC_CHECK_GIT(git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, szCaCertPath, nullptr));
+        ABC_CHECK_GIT(git_libgit2_opts(GIT_OPT_SET_SSL_CERT_LOCATIONS, szCaCertPath,
+                                       nullptr));
 
     // Choose a random server to start with:
     syncServerIndex = time(nullptr);
@@ -115,7 +117,7 @@ syncMakeRepo(const std::string &syncDir)
 
 Status
 syncEnsureRepo(const std::string &syncDir, const std::string &tempDir,
-    const std::string &syncKey)
+               const std::string &syncKey)
 {
     AutoSyncLock lock(gSyncMutex);
 

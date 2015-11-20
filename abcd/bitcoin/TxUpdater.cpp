@@ -76,10 +76,12 @@ TxUpdater::connect()
     do
     {
         // Make sure we're not already connected to this server index
-        if(std::find(serverConnections_.begin(), serverConnections_.end(), i) == serverConnections_.end())
+        if(std::find(serverConnections_.begin(), serverConnections_.end(),
+                     i) == serverConnections_.end())
         {
             // Make sure we're not blacklisted from failed connects prior
-            if(std::find(serverBlacklist_.begin(), serverBlacklist_.end(), i) == serverBlacklist_.end())
+            if(std::find(serverBlacklist_.begin(), serverBlacklist_.end(),
+                         i) == serverBlacklist_.end())
             {
                 std::string server = vStrServers_[i];
                 std::string key;
@@ -95,13 +97,15 @@ TxUpdater::connect()
                 Connection *bconn = new Connection(ctx_, i);
                 if(bconn->bc_socket.connect(server, key))
                 {
-                    ABC_DebugLevel(2,"TxUpdater::connect: Server idx=%d connected: %s", i, server.c_str());
+                    ABC_DebugLevel(2,"TxUpdater::connect: Server idx=%d connected: %s", i,
+                                   server.c_str());
                     connections_.push_back(bconn);
                     serverConnections_.push_back(i);
                 }
                 else
                 {
-                    ABC_DebugLevel(2,"TxUpdater::connect: Server idx=%d failed to connect: %s", i, server.c_str());
+                    ABC_DebugLevel(2,"TxUpdater::connect: Server idx=%d failed to connect: %s", i,
+                                   server.c_str());
                     delete bconn;
                 }
             }
@@ -112,14 +116,16 @@ TxUpdater::connect()
         }
         else
         {
-            ABC_DebugLevel(2,"TxUpdater::connect: skipping server %d. Already connected", i);
+            ABC_DebugLevel(2,"TxUpdater::connect: skipping server %d. Already connected",
+                           i);
         }
 
         i++;
         if (i >= vStrServers_.size())
             i = 0;
 
-    } while ((i != start) && (connections_.size() < NUM_CONNECT_SERVERS));
+    }
+    while ((i != start) && (connections_.size() < NUM_CONNECT_SERVERS));
 
     // If there we still don't have enough connected servers,
     // then unblacklist all the servers for the next time we come into this routine.
@@ -135,7 +141,8 @@ TxUpdater::connect()
         get_height();
 
         // Handle block-fork checks & unconfirmed transactions:
-        db_.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1, ALL_SERVERS));
+        db_.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1,
+                                          ALL_SERVERS));
         queue_get_indices(ALL_SERVERS);
 
         // Transmit all unsent transactions:
@@ -146,13 +153,15 @@ TxUpdater::connect()
         ABC_DebugLevel(1,"TxUpdater::connect: FAIL: Could not connect to any servers");
     }
 
-    ABC_DebugLevel(1,"TxUpdater::connect: %d ttl connected", serverConnections_.size());
+    ABC_DebugLevel(1,"TxUpdater::connect: %d ttl connected",
+                   serverConnections_.size());
 
     if (connections_.size())
     {
         for (auto &it: connections_)
         {
-            ABC_DebugLevel(1,"TxUpdater::connect: idx=%d currently connected", it->server_index);
+            ABC_DebugLevel(1,"TxUpdater::connect: idx=%d currently connected",
+                           it->server_index);
         }
     }
 
@@ -162,7 +171,7 @@ TxUpdater::connect()
 }
 
 void TxUpdater::watch(const bc::payment_address &address,
-    bc::client::sleep_time poll)
+                      bc::client::sleep_time poll)
 {
     ABC_DebugLevel(2,"watch() address=%s",address.encoded().c_str());
     // Only insert if it isn't already present:
@@ -194,7 +203,7 @@ bc::client::sleep_time TxUpdater::wakeup()
     // Figure out when our next block check is:
     auto period = std::chrono::seconds(30);
     auto elapsed = std::chrono::duration_cast<bc::client::sleep_time>(
-        now - last_wakeup_);
+                       now - last_wakeup_);
     if (period <= elapsed)
     {
         get_height();
@@ -209,7 +218,7 @@ bc::client::sleep_time TxUpdater::wakeup()
     {
         auto poll_time = row.second.poll_time;
         auto elapsed = std::chrono::duration_cast<bc::client::sleep_time>(
-            now - row.second.last_check);
+                           now - row.second.last_check);
         if (poll_time <= elapsed)
             toCheck.push_back(ToCheck{elapsed - poll_time, row.first});
         else
@@ -235,16 +244,18 @@ bc::client::sleep_time TxUpdater::wakeup()
         auto idx = bconn.server_index;
 
         if ((bconn.queued_queries_ < max_queries) ||
-            (row.poll_time < std::chrono::seconds(2)))
+                (row.poll_time < std::chrono::seconds(2)))
         {
-            ABC_DebugLevel(2,"wakeup() idx=%d Calling query_address %s", idx, i.address.encoded().c_str());
+            ABC_DebugLevel(2,"wakeup() idx=%d Calling query_address %s", idx,
+                           i.address.encoded().c_str());
             next_wakeup = bc::client::min_sleep(next_wakeup, row.poll_time);
             query_address(i.address, idx);
 
         }
         else
         {
-            ABC_DebugLevel(2,"wakeup() idx=%d Queues full cannot query_address %s", idx, i.address.encoded().c_str());
+            ABC_DebugLevel(2,"wakeup() idx=%d Queues full cannot query_address %s", idx,
+                           i.address.encoded().c_str());
         }
         it++;
         if (it == connections_.end())
@@ -256,18 +267,20 @@ bc::client::sleep_time TxUpdater::wakeup()
     {
         connection->bc_socket.forward(connection->bc_codec);
         next_wakeup = bc::client::min_sleep(next_wakeup,
-            connection->bc_codec.wakeup());
+                                            connection->bc_codec.wakeup());
     }
 
     // Report the last server failure:
     if (failed_)
     {
         // Remove the server that failed
-        auto it = std::find(serverConnections_.begin(), serverConnections_.end(), failed_server_idx_);
+        auto it = std::find(serverConnections_.begin(), serverConnections_.end(),
+                            failed_server_idx_);
         if (it != serverConnections_.end())
         {
             serverConnections_.erase(it);
-            ABC_DebugLevel(2,"Server Removed from serverConnections_ idx=%d: %s", failed_server_idx_, vStrServers_[failed_server_idx_].c_str());
+            ABC_DebugLevel(2,"Server Removed from serverConnections_ idx=%d: %s",
+                           failed_server_idx_, vStrServers_[failed_server_idx_].c_str());
         }
 
         for (auto it = connections_.begin(); it != connections_.end(); ++it)
@@ -277,7 +290,8 @@ bc::client::sleep_time TxUpdater::wakeup()
                 delete *it;
                 connections_.erase(it);
                 serverBlacklist_.push_back(failed_server_idx_);
-                ABC_DebugLevel(2,"Server Blacklisted idx=%d: %s", failed_server_idx_, vStrServers_[failed_server_idx_].c_str());
+                ABC_DebugLevel(2,"Server Blacklisted idx=%d: %s", failed_server_idx_,
+                               vStrServers_[failed_server_idx_].c_str());
                 break;
             }
         }
@@ -310,17 +324,22 @@ void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx)
     if (!db_.txidExists(txid))
     {
 
-        ABC_DebugLevel(1,"*************************************************************");
-        ABC_DebugLevel(1,"*** watch_tx idx=%d FOUND NEW TRANSACTION %s ****", idx, str.c_str());
-        ABC_DebugLevel(1,"*************************************************************");
+        ABC_DebugLevel(1,
+                       "*************************************************************");
+        ABC_DebugLevel(1,"*** watch_tx idx=%d FOUND NEW TRANSACTION %s ****", idx,
+                       str.c_str());
+        ABC_DebugLevel(1,
+                       "*************************************************************");
         get_tx(txid, want_inputs, idx);
     }
     else
     {
-        ABC_DebugLevel(2,"*** watch_tx idx=%d TRANSACTION %s already in DB ****", idx, str.c_str());
+        ABC_DebugLevel(2,"*** watch_tx idx=%d TRANSACTION %s already in DB ****", idx,
+                       str.c_str());
         if (want_inputs)
         {
-            ABC_DebugLevel(2,"*** watch_tx idx=%d getting inputs for tx=%s ****", idx, str.c_str());
+            ABC_DebugLevel(2,"*** watch_tx idx=%d getting inputs for tx=%s ****", idx,
+                           str.c_str());
             get_inputs(db_.txidLookup(txid), idx);
         }
     }
@@ -338,15 +357,18 @@ void TxUpdater::query_done(int idx, Connection &bconn)
 
     if (bconn.queued_queries_ < 0)
     {
-        ABC_DebugLevel(1,"query_done idx=%d queued_queries=%d GOING NEGATIVE!!", idx, bconn.queued_queries_);
+        ABC_DebugLevel(1,"query_done idx=%d queued_queries=%d GOING NEGATIVE!!", idx,
+                       bconn.queued_queries_);
     }
     else if (bconn.queued_queries_ == 0)
     {
-        ABC_DebugLevel(1,"query_done idx=%d queued_queries=%d CLEARED QUEUE", idx, bconn.queued_queries_);
+        ABC_DebugLevel(1,"query_done idx=%d queued_queries=%d CLEARED QUEUE", idx,
+                       bconn.queued_queries_);
     }
     else if (bconn.queued_queries_ >= max_queries - 1)
     {
-        ABC_DebugLevel(2,"query_done idx=%d queued_queries=%d NEAR MAX_QUERIES", idx, bconn.queued_queries_);
+        ABC_DebugLevel(2,"query_done idx=%d queued_queries=%d NEAR MAX_QUERIES", idx,
+                       bconn.queued_queries_);
     }
 
     // Iterate over all the connections. If empty, fire off the callback.
@@ -389,11 +411,12 @@ void TxUpdater::get_height()
     {
         if (!failed_)
             ABC_DebugLevel(1,"get_height server idx=%d failed: %s", idx,
-                         error.message().c_str());
+                           error.message().c_str());
         failed_ = true;
         failed_server_idx_ = idx;
         bconn.queued_get_height_--;
-        ABC_DebugLevel(1,"get_height on_error queued_get_height=%d", bconn.queued_get_height_);
+        ABC_DebugLevel(1,"get_height on_error queued_get_height=%d",
+                       bconn.queued_get_height_);
     };
 
     auto on_done = [this, idx, &bconn](size_t height)
@@ -409,7 +432,8 @@ void TxUpdater::get_height()
             ABC_DebugLevel(2,"get_height server idx=%d height=%d", idx, height);
         }
         bconn.queued_get_height_--;
-        ABC_DebugLevel(2,"get_height on_done queued_get_height=%d", bconn.queued_get_height_);
+        ABC_DebugLevel(2,"get_height on_done queued_get_height=%d",
+                       bconn.queued_get_height_);
     };
 
     bconn.queued_get_height_++;
@@ -434,16 +458,19 @@ void TxUpdater::get_tx(bc::hash_digest txid, bool want_inputs, int server_index)
 
         auto idx = bconn.server_index;
 
-        auto on_error = [this, txid, str, want_inputs, &bconn, idx](const std::error_code &error)
+        auto on_error = [this, txid, str, want_inputs, &bconn,
+                         idx](const std::error_code &error)
         {
             // A failure means the transaction might be in the mempool:
             (void)error;
-            ABC_DebugLevel(2,"get_tx ON_ERROR no idx=%d txid=%s calling get_tx_mem", idx, str.c_str());
+            ABC_DebugLevel(2,"get_tx ON_ERROR no idx=%d txid=%s calling get_tx_mem", idx,
+                           str.c_str());
             get_tx_mem(txid, want_inputs, idx);
             query_done(idx, bconn);
         };
 
-        auto on_done = [this, txid, str, want_inputs, &bconn, idx](const bc::transaction_type &tx)
+        auto on_done = [this, txid, str, want_inputs, &bconn,
+                        idx](const bc::transaction_type &tx)
         {
             ABC_DebugLevel(2,"get_tx ENTER ON_DONE idx=%d txid=%s", idx, str.c_str());
             BITCOIN_ASSERT(txid == bc::hash_transaction(tx));
@@ -451,10 +478,12 @@ void TxUpdater::get_tx(bc::hash_digest txid, bool want_inputs, int server_index)
                 callbacks_.on_add(tx);
             if (want_inputs)
             {
-                ABC_DebugLevel(2,"get_tx idx=%d found txid=%s calling get_inputs", idx, str.c_str());
+                ABC_DebugLevel(2,"get_tx idx=%d found txid=%s calling get_inputs", idx,
+                               str.c_str());
                 get_inputs(tx, idx);
             }
-            ABC_DebugLevel(2,"get_tx idx=%d found txid=%s calling get_index", idx, str.c_str());
+            ABC_DebugLevel(2,"get_tx idx=%d found txid=%s calling get_index", idx,
+                           str.c_str());
             get_index(txid, idx);
             query_done(idx, bconn);
             ABC_DebugLevel(2,"get_tx EXIT ON_DONE idx=%d txid=%s", idx, str.c_str());
@@ -466,7 +495,8 @@ void TxUpdater::get_tx(bc::hash_digest txid, bool want_inputs, int server_index)
     }
 }
 
-void TxUpdater::get_tx_mem(bc::hash_digest txid, bool want_inputs, int server_index)
+void TxUpdater::get_tx_mem(bc::hash_digest txid, bool want_inputs,
+                           int server_index)
 {
     std::string str = bc::encode_hash(txid);
 
@@ -485,25 +515,30 @@ void TxUpdater::get_tx_mem(bc::hash_digest txid, bool want_inputs, int server_in
 
         auto on_error = [this, idx, str, &bconn](const std::error_code &error)
         {
-            ABC_DebugLevel(1,"get_tx_mem ON_ERROR no idx=%d txid=%s NOT IN MEMPOOL", idx, str.c_str());
+            ABC_DebugLevel(1,"get_tx_mem ON_ERROR no idx=%d txid=%s NOT IN MEMPOOL", idx,
+                           str.c_str());
 
             failed_ = true;
             failed_server_idx_ = idx;
             query_done(idx, bconn);
         };
 
-        auto on_done = [this, txid, str, want_inputs, idx, &bconn](const bc::transaction_type &tx)
+        auto on_done = [this, txid, str, want_inputs, idx,
+                        &bconn](const bc::transaction_type &tx)
         {
-            ABC_DebugLevel(2,"get_tx_mem ENTER ON_DONE idx=%d txid=%s FOUND IN MEMPOOL", idx, str.c_str());
+            ABC_DebugLevel(2,"get_tx_mem ENTER ON_DONE idx=%d txid=%s FOUND IN MEMPOOL",
+                           idx, str.c_str());
             BITCOIN_ASSERT(txid == bc::hash_transaction(tx));
             if (db_.insert(tx, TxState::unconfirmed))
                 callbacks_.on_add(tx);
             if (want_inputs)
             {
-                ABC_DebugLevel(2,"get_tx_mem ON_DONE calling get_inputs idx=%d txid=%s", idx, str.c_str());
+                ABC_DebugLevel(2,"get_tx_mem ON_DONE calling get_inputs idx=%d txid=%s", idx,
+                               str.c_str());
                 get_inputs(tx, idx);
             }
-            ABC_DebugLevel(2,"get_tx_mem ON_DONE calling get_index idx=%d txid=%s", idx, str.c_str());
+            ABC_DebugLevel(2,"get_tx_mem ON_DONE calling get_index idx=%d txid=%s", idx,
+                           str.c_str());
             get_index(txid, idx);
             query_done(idx, bconn);
             ABC_DebugLevel(2,"get_tx_mem EXIT ON_DONE idx=%d txid=%s", idx, str.c_str());
@@ -576,7 +611,8 @@ void TxUpdater::send_tx(const bc::transaction_type &tx)
     }
 }
 
-void TxUpdater::query_address(const bc::payment_address &address, int server_index)
+void TxUpdater::query_address(const bc::payment_address &address,
+                              int server_index)
 {
     ABC_DebugLevel(2,"query_address ENTER %s", address.encoded().c_str());
     rows_[address].last_check = std::chrono::steady_clock::now();
@@ -609,7 +645,9 @@ void TxUpdater::query_address(const bc::payment_address &address, int server_ind
                 maxed_servers += " ";
             maxed_servers += std::to_string(idx);
             num_maxed_servers++;
-            ABC_DebugLevel(2,"TxUpdater::query_address() idx=%d (queued > max) for address=%s queued_queries=%d", idx, address.encoded().c_str(), bconn.queued_queries_);
+            ABC_DebugLevel(2,
+                           "TxUpdater::query_address() idx=%d (queued > max) for address=%s queued_queries=%d",
+                           idx, address.encoded().c_str(), bconn.queued_queries_);
             continue;
         }
 
@@ -620,39 +658,47 @@ void TxUpdater::query_address(const bc::payment_address &address, int server_ind
         auto on_error = [this, idx, address, &bconn](const std::error_code &error)
         {
             ABC_DebugLevel(1,"query_address ON_ERROR idx:%d addr:%s failed:%s",
-                         idx, address.encoded().c_str(), error.message().c_str());
+                           idx, address.encoded().c_str(), error.message().c_str());
             failed_ = true;
             failed_server_idx_ = idx;
             query_done(idx, bconn);
         };
 
-        auto on_done = [this, idx, address, &bconn](const bc::client::history_list &history)
+        auto on_done = [this, idx, address,
+                        &bconn](const bc::client::history_list &history)
         {
-            ABC_DebugLevel(2,"TxUpdater::query_address ENTER ON_DONE idx:%d addr:%s", idx, address.encoded().c_str());
+            ABC_DebugLevel(2,"TxUpdater::query_address ENTER ON_DONE idx:%d addr:%s", idx,
+                           address.encoded().c_str());
             ABC_DebugLevel(2,"   Looping over address transactions... ");
             for (auto &row: history)
             {
-                ABC_DebugLevel(2,"   Watching output tx=%s", bc::encode_hash(row.output.hash).c_str());
+                ABC_DebugLevel(2,"   Watching output tx=%s",
+                               bc::encode_hash(row.output.hash).c_str());
                 watch_tx(row.output.hash, true, idx);
                 if (row.spend.hash != bc::null_hash)
                 {
                     watch_tx(row.spend.hash, true, idx);
-                    ABC_DebugLevel(2,"   Watching spend tx=%s", bc::encode_hash(row.spend.hash).c_str());
+                    ABC_DebugLevel(2,"   Watching spend tx=%s",
+                                   bc::encode_hash(row.spend.hash).c_str());
                 }
             }
             query_done(idx, bconn);
-            ABC_DebugLevel(2,"TxUpdater::query_address EXIT ON_DONE idx:%d addr:%s", idx, address.encoded().c_str());
+            ABC_DebugLevel(2,"TxUpdater::query_address EXIT ON_DONE idx:%d addr:%s", idx,
+                           address.encoded().c_str());
         };
 
         bconn.queued_queries_++;
         num_servers++;
         total_queries += bconn.queued_queries_;
-        ABC_DebugLevel(2,"TxUpdater::query_address idx=%d queued_queries=%d %s", idx, bconn.queued_queries_, address.encoded().c_str());
+        ABC_DebugLevel(2,"TxUpdater::query_address idx=%d queued_queries=%d %s", idx,
+                       bconn.queued_queries_, address.encoded().c_str());
         bconn.bc_codec.address_fetch_history(on_error, on_done, address);
     }
 
     if (num_servers)
-        ABC_DebugLevel(2,"query_address svrs=[%s] maxed_svrs=[%s] avg_q=%.1f addr=%s", servers.c_str(), maxed_servers.c_str(), (float)total_queries/(float)num_servers, address.encoded().c_str());
+        ABC_DebugLevel(2,"query_address svrs=[%s] maxed_svrs=[%s] avg_q=%.1f addr=%s",
+                       servers.c_str(), maxed_servers.c_str(), (float)total_queries/(float)num_servers,
+                       address.encoded().c_str());
 
     ABC_DebugLevel(2,"query_address EXIT %s", address.encoded().c_str());
 

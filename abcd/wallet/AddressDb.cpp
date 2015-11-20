@@ -96,8 +96,8 @@ static bc::hd_private_key
 mainBranch(const Wallet &wallet)
 {
     return bc::hd_private_key(wallet.bitcoinKey()).
-        generate_private_key(0).
-        generate_private_key(0);
+           generate_private_key(0).
+           generate_private_key(0);
 }
 
 AddressDb::AddressDb(const Wallet &wallet):
@@ -128,7 +128,7 @@ AddressDb::load()
             Address address;
             AddressJson json;
             if (json.load(dir_ + de->d_name, wallet_.dataKey()).log() &&
-                json.unpack(address).log())
+                    json.unpack(address).log())
             {
                 if (path(address) != dir_ + de->d_name)
                     ABC_DebugLog("Filename %s does not match address", de->d_name);
@@ -185,7 +185,7 @@ AddressDb::keyTable()
     for (const auto &i: addresses_)
     {
         out[i.first] = bc::secret_to_wif(
-            m00.generate_private_key(i.second.index).private_key());
+                           m00.generate_private_key(i.second.index).private_key());
     }
 
     return out;
@@ -230,10 +230,10 @@ AddressDb::getNew(Address &result)
 
     // Verify that we can still re-derive the address:
     auto i = addresses_.find(mainBranch(wallet_).generate_private_key(index).
-        address().encoded());
+                             address().encoded());
     if (addresses_.end() == i)
         return ABC_ERROR(ABC_CC_Error,
-            "Address corruption at index " + std::to_string(index));
+                         "Address corruption at index " + std::to_string(index));
 
     result = i->second;
     return Status();
@@ -286,8 +286,8 @@ AddressDb::stockpile()
 std::string
 AddressDb::path(const Address &address)
 {
-   return dir_ + std::to_string(address.index) + "-" +
-        cryptoFilename(wallet_.dataKey(), address.address) + ".json";
+    return dir_ + std::to_string(address.index) + "-" +
+           cryptoFilename(wallet_.dataKey(), address.address) + ".json";
 }
 
 } // namespace abcd

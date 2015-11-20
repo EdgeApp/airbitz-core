@@ -109,7 +109,7 @@ outputIsDust(uint64_t amount)
 
 Status
 outputsFinalize(bc::transaction_output_list &outputs,
-    uint64_t change, const std::string &changeAddress)
+                uint64_t change, const std::string &changeAddress)
 {
     // Add change:
     if (!outputIsDust(change))
@@ -122,7 +122,7 @@ outputsFinalize(bc::transaction_output_list &outputs,
 
     // Sort:
     auto compare = [](const bc::transaction_output_type &a,
-        const bc::transaction_output_type &b)
+                      const bc::transaction_output_type &b)
     {
         return a.value < b.value;
     };
