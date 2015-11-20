@@ -31,6 +31,7 @@
 
 #include "ABC.h"
 #include "LoginShim.hpp"
+#include "Version.h"
 #include "../abcd/Context.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Export.hpp"

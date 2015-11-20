@@ -1,6 +1,19 @@
 # Build settings:
 WORK_DIR ?= build
 
+# Set latest Git revision as Version
+ifeq (,$(wildcard src/Version.h))
+$(shell cp "src/Version.h.in" "src/Version.h")
+endif
+
+GIT_REV = $(shell git rev-parse --short HEAD)
+SRC_REV = $(shell grep -o "\".*\"" src/Version.h)
+GIT_REV_COMPARE = $(shell [ $(GIT_REV) !=  $(SRC_REV) ] && echo true)
+
+ifeq ($(GIT_REV_COMPARE),true)
+$(shell sed -i '/#define ABC_VERSION ".*"/c\#define ABC_VERSION "$(GIT_REV)"' src/Version.h )
+endif
+
 # Compiler options:
 CFLAGS   += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c99
 CXXFLAGS += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c++11
