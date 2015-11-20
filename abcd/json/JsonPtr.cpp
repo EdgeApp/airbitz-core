@@ -16,6 +16,7 @@ namespace abcd {
 
 constexpr size_t loadFlags = 0;
 constexpr size_t saveFlags = JSON_INDENT(4) | JSON_SORT_KEYS;
+constexpr size_t saveFlagsCompact = JSON_COMPACT | JSON_SORT_KEYS;
 
 /**
  * Overrides the jansson malloc function so we can clear the memory on free.
@@ -157,9 +158,9 @@ JsonPtr::save(const std::string &filename, DataSlice dataKey) const
 }
 
 std::string
-JsonPtr::encode() const
+JsonPtr::encode(bool compact) const
 {
-    auto raw = json_dumps(root_, saveFlags);
+    auto raw = json_dumps(root_, compact ? saveFlagsCompact : saveFlags);
     if (!raw)
         throw std::bad_alloc();
     std::string out(raw);
