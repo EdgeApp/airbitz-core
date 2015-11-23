@@ -25,16 +25,22 @@ static Status
 spendMakeTx(libbitcoin::transaction_type &result, Wallet &self,
             SendInfo *pInfo, const std::string &changeAddress)
 {
-    bc::output_info_list utxos =
-        self.txdb.get_utxos(self.addresses.list(), true);
-
     bc::transaction_type tx;
     tx.version = 1;
     tx.locktime = 0;
     ABC_CHECK(outputsForSendInfo(tx.outputs, pInfo));
 
     uint64_t fee, change;
-    ABC_CHECK(inputsPickOptimal(fee, change, tx, utxos));
+    auto utxos = self.txdb.get_utxos(self.addresses.list(), true);
+
+    // Check if enough confirmed inputs are available,
+    // otherwise use unconfirmed inputs too:
+    if (!inputsPickOptimal(fee, change, tx, utxos))
+    {
+        auto utxos = self.txdb.get_utxos(self.addresses.list(), false);
+        ABC_CHECK(inputsPickOptimal(fee, change, tx, utxos));
+    }
+
     ABC_CHECK(outputsFinalize(tx.outputs, change, changeAddress));
     pInfo->metadata.amountFeesMinersSatoshi = fee;
 
