@@ -66,7 +66,7 @@ bitidSign(DataSlice rootKey, const std::string &message,
         key.private_key(), true);
 
     BitidSignature out;
-    out.address = key.address().encoded();
+    out.address = bc::payment_address(0x00, key.address().hash()).encoded();
     out.signature = base64Encode(signature);
     return out;
 }

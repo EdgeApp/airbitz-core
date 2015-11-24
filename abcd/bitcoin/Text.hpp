@@ -50,16 +50,6 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
 
 void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo);
 
-tABC_CC ABC_BridgeParseAmount(const char *szAmount,
-                              uint64_t *pAmountOut,
-                              unsigned decimalPlaces);
-
-tABC_CC ABC_BridgeFormatAmount(int64_t amount,
-                               char **pszAmountOut,
-                               unsigned decimalPlaces,
-                               bool bAddSign,
-                               tABC_Error *pError);
-
 tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
                                    tABC_BitcoinURIInfo *pInfo,
                                    tABC_Error *pError);

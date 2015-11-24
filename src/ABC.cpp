@@ -31,7 +31,6 @@
 
 #include "ABC.h"
 #include "LoginShim.hpp"
-#include "WalletShim.hpp"
 #include "../abcd/Context.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Export.hpp"
@@ -53,15 +52,16 @@
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/login/LoginDir.hpp"
+#include "../abcd/login/LoginPackages.hpp"
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/Otp.hpp"
+#include "../abcd/login/RecoveryQuestions.hpp"
 #include "../abcd/spend/PaymentProto.hpp"
 #include "../abcd/spend/Spend.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
-#include "../abcd/util/Json.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/Util.hpp"
 #include "../abcd/wallet/Address.hpp"
@@ -71,7 +71,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <jansson.h>
 #include <math.h>
 
 using namespace abcd;
@@ -138,9 +137,6 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
 
         // initialize logging
         ABC_CHECK_NEW(debugInitialize());
-
-        // override the alloc and free of janson so we can have a secure method
-        json_set_alloc_funcs(ABC_UtilJanssonSecureMalloc, ABC_UtilJanssonSecureFree);
 
         ABC_CHECK_NEW(randomInitialize(DataSlice(pSeedData, pSeedData + seedLength)));
 
@@ -699,7 +695,12 @@ exit:
 
 tABC_CC ABC_GeneralInfoUpdate(tABC_Error *pError)
 {
-    return ABC_GeneralUpdateInfo(pError);
+    ABC_PROLOG();
+
+    ABC_CHECK_NEW(generalUpdate());
+
+exit:
+    return cc;
 }
 
 /**
@@ -1110,46 +1111,6 @@ exit:
 }
 
 /**
- * Gets information on the given wallet.
- *
- * This function allocates and fills in a wallet info structure with the information
- * associated with the given wallet UUID
- *
- * @param ppWalletInfo          Pointer to store the pointer of the allocated wallet info struct
- */
-tABC_CC ABC_GetWalletInfo(const char *szUserName,
-                          const char *szPassword,
-                          const char *szWalletUUID,
-                          tABC_WalletInfo **ppWalletInfo,
-                          tABC_Error *pError)
-{
-    ABC_PROLOG();
-
-    {
-        ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_WalletGetInfo(*wallet, ppWalletInfo, pError));
-    }
-
-exit:
-    return cc;
-}
-
-/**
- * Free the wallet info.
- *
- * This function frees the wallet info struct returned from ABC_GetWalletInfo.
- *
- * @param pWalletInfo   Wallet info to be free'd
- */
-void ABC_FreeWalletInfo(tABC_WalletInfo *pWalletInfo)
-{
-    // Cannot use ABC_PROLOG - no pError
-    ABC_DebugLog("%s called", __FUNCTION__);
-
-    ABC_WalletFreeInfo(pWalletInfo);
-}
-
-/**
  * Export the private seed used to generate all addresses within a wallet.
  * For now, this uses a simple hex dump of the raw data.
  */
@@ -1201,89 +1162,6 @@ tABC_CC ABC_GetWalletUUIDs(const char *szUserName,
 
 exit:
     return cc;
-}
-
-/**
- * DEPRECATED - Gets wallets for a specified account.
- *
- * This function allocates and fills in an array of wallet info structures with the information
- * associated with the wallets of the given user
- *
- * @param szUserName            UserName for the account associated with this wallet
- * @param szPassword            Password for the account associated with this wallet
- * @param paWalletInfo          Pointer to store the allocated array of wallet info structs
- * @param pCount                Pointer to store number of wallets in the array
- * @param pError                A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_GetWallets(const char *szUserName,
-                       const char *szPassword,
-                       tABC_WalletInfo ***paWalletInfo,
-                       unsigned int *pCount,
-                       tABC_Error *pError)
-{
-    tABC_WalletInfo **aWalletInfo = NULL;
-
-    ABC_PROLOG();
-    ABC_CHECK_NULL(paWalletInfo);
-    ABC_CHECK_NULL(pCount);
-
-    {
-        ABC_GET_ACCOUNT();
-
-        // Return an empty list by default:
-        *paWalletInfo = nullptr;
-        *pCount = 0;
-
-        // Only build a list if we have stuff to put inside:
-        auto ids = account->wallets.list();
-        if (0 < ids.size())
-        {
-            ABC_ARRAY_NEW(aWalletInfo, ids.size(), tABC_WalletInfo*);
-
-            unsigned n = 0;
-            for (const auto &id: ids)
-            {
-                std::shared_ptr<Wallet> wallet;
-                ABC_CHECK_NEW(cacheWallet(wallet, szUserName, id.c_str()));
-
-                ABC_CHECK_RET(ABC_WalletGetInfo(*wallet, &aWalletInfo[n++], pError));
-            }
-
-            *paWalletInfo = aWalletInfo;
-            *pCount = ids.size();
-            aWalletInfo = NULL;
-        }
-    }
-
-exit:
-    ABC_FreeWalletInfoArray(aWalletInfo, *pCount);
-
-    return cc;
-}
-
-/**
- * DEPRECATED - Free the wallet info array.
- *
- * This function frees the wallet info array returned from ABC_GetWallets.
- *
- * @param aWalletInfo   Wallet info array to be free'd
- * @param nCount        Number of elements in the array
- */
-void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
-                             unsigned int nCount)
-{
-    // Cannot use ABC_PROLOG - no pError
-    ABC_DebugLog("%s called", __FUNCTION__);
-
-    if ((aWalletInfo != NULL) && (nCount > 0))
-    {
-        for (unsigned i = 0; i < nCount; i++)
-        {
-            ABC_WalletFreeInfo(aWalletInfo[i]);
-        }
-
-        ABC_FREE(aWalletInfo);
-    }
 }
 
 /**
@@ -1516,9 +1394,9 @@ tABC_CC ABC_ParseAmount(const char *szAmount,
     // Cannot use ABC_PROLOG - no pError
     tABC_CC cc = ABC_CC_Ok;
 
-    ABC_CHECK_RET(ABC_BridgeParseAmount(szAmount, pAmountOut, decimalPlaces));
+    if (!bc::decode_base10(*pAmountOut, szAmount, decimalPlaces))
+        *pAmountOut = ABC_INVALID_AMOUNT;
 
-exit:
     return cc;
 }
 
@@ -1537,9 +1415,23 @@ tABC_CC ABC_FormatAmount(int64_t amount,
                          bool bAddSign,
                          tABC_Error *pError)
 {
-    ABC_PROLOG();
+    // Cannot use ABC_PROLOG - too much debug output
+    tABC_CC cc = ABC_CC_Ok;
+    std::string out;
 
-    ABC_CHECK_RET(ABC_BridgeFormatAmount(amount, pszAmountOut, decimalPlaces, bAddSign, pError));
+    ABC_CHECK_NULL(pszAmountOut);
+
+    if (amount < 0)
+    {
+        out = bc::encode_base10(-amount, decimalPlaces);
+        if (bAddSign)
+            out.insert(0, 1, '-');
+    }
+    else
+    {
+        out = bc::encode_base10(amount, decimalPlaces);
+    }
+    *pszAmountOut = stringCopy(out);
 
 exit:
     return cc;
@@ -1754,7 +1646,7 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
         }
         else if (pUri->szAddress)
         {
-            pInfo->szDestAddress = stringCopy(pUri->szAddress);
+            pInfo->destAddress = pUri->szAddress;
 
             // Fill in the spend target:
             pSpend->amount = (ABC_INVALID_AMOUNT != pUri->amountSatoshi) ?
@@ -1808,7 +1700,7 @@ tABC_CC ABC_SpendNewTransfer(const char *szUserName,
         // Fill in the send info:
         Address address;
         ABC_CHECK_NEW(wallet->addresses.getNew(address));
-        pInfo->szDestAddress = stringCopy(address.address);
+        pInfo->destAddress = address.address;
         pInfo->walletDest = wallet.get();
         pInfo->bTransfer = true;
 
@@ -1849,7 +1741,7 @@ tABC_CC ABC_SpendNewInternal(const char *szAddress,
         pInfo->metadata.notes = szNotes ? szNotes : "";
 
         // Fill in the send info:
-        pInfo->szDestAddress = stringCopy(szAddress);
+        pInfo->destAddress = szAddress;
 
         // Assign the output:
         *ppSpend = pSpend.release();
@@ -1872,7 +1764,7 @@ tABC_CC ABC_SpendGetFee(const char *szUserName,
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->metadata.amountSatoshi = pSpend->amount;
-        ABC_CHECK_RET(ABC_TxCalcSendFees(*wallet, pInfo, pFee, pError));
+        ABC_CHECK_NEW(spendCalculateFees(*wallet, pInfo, *pFee));
     }
 
 exit:
@@ -1892,7 +1784,7 @@ tABC_CC ABC_SpendGetMax(const char *szUserName,
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->metadata.amountSatoshi = pSpend->amount;
-        ABC_CHECK_RET(ABC_BridgeMaxSpendable(*wallet, pInfo, pMax, pError));
+        ABC_CHECK_NEW(spendCalculateMax(*wallet, pInfo, *pMax));
     }
 
 exit:
@@ -1913,7 +1805,9 @@ tABC_CC ABC_SpendApprove(const char *szUserName,
 
         auto pInfo = static_cast<SendInfo*>(pSpend->pData);
         pInfo->metadata.amountSatoshi = pSpend->amount;
-        ABC_CHECK_RET(ABC_TxSend(*wallet, pInfo, pszTxId, pError));
+        std::string ntxid;
+        ABC_CHECK_NEW(spendSend(*wallet, pInfo, ntxid));
+        *pszTxId = stringCopy(ntxid);
     }
 
 exit:
@@ -2544,8 +2438,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         }
 
         // Non-critical general information update:
-        tABC_Error error;
-        ABC_GeneralUpdateInfo(&error);
+        generalUpdate().log();
     }
 
 exit:
@@ -2781,11 +2674,9 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szNtxid,
         if (!bc::decode_hash(hash, szNtxid))
             ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
 
-        *height = wallet->txdb.ntxidHeight(hash);
-        if (NTXID_HEIGHT_NOT_FOUND == *height)
-        {
-            cc = ABC_CC_Synchronizing;
-        }
+        long long out;
+        ABC_CHECK_NEW(wallet->txdb.ntxidHeight(out, hash));
+        *height = out;
     }
 
 exit:

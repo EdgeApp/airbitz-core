@@ -13,7 +13,6 @@
 #include "../crypto/Encoding.hpp"
 #include "../json/JsonObject.hpp"
 #include "../json/JsonArray.hpp"
-#include "../util/Json.hpp"
 #include "../util/Util.hpp"
 #include <map>
 
@@ -590,27 +589,24 @@ loginServerOtpPending(std::list<DataChunk> users, std::list<bool> &isPending)
     ABC_CHECK(replyJson.ok());
 
     JsonArray arrayJson = replyJson.results();
-    if (arrayJson)
+    size_t size = arrayJson.size();
+    for (size_t i = 0; i < size; i++)
     {
-        size_t rows = arrayJson.size();
-        for (size_t i = 0; i < rows; i++)
+        json_t *pJSON_Row = arrayJson[i].get();
+        if (!pJSON_Row || !json_is_object(pJSON_Row))
+            return ABC_ERROR(ABC_CC_JSONError, "Error parsing JSON array element object");
+
+        json_t *pJSON_Value = json_object_get(pJSON_Row, "login");
+        if (!pJSON_Value || !json_is_string(pJSON_Value))
+            return ABC_ERROR(ABC_CC_JSONError, "Error otp/pending/login JSON");
+        std::string username(json_string_value(pJSON_Value));
+
+        pJSON_Value = json_object_get(pJSON_Row, ABC_SERVER_JSON_OTP_PENDING);
+        if (!pJSON_Value || !json_is_boolean(pJSON_Value))
+            return ABC_ERROR(ABC_CC_JSONError, "Error otp/pending/pending JSON");
+        if (json_is_true(pJSON_Value))
         {
-            json_t *pJSON_Row = arrayJson[i].get();
-            if (!pJSON_Row || !json_is_object(pJSON_Row))
-                return ABC_ERROR(ABC_CC_JSONError, "Error parsing JSON array element object");
-
-            json_t *pJSON_Value = json_object_get(pJSON_Row, "login");
-            if (!pJSON_Value || !json_is_string(pJSON_Value))
-                return ABC_ERROR(ABC_CC_JSONError, "Error otp/pending/login JSON");
-            std::string username(json_string_value(pJSON_Value));
-
-            pJSON_Value = json_object_get(pJSON_Row, ABC_SERVER_JSON_OTP_PENDING);
-            if (!pJSON_Value || !json_is_boolean(pJSON_Value))
-                return ABC_ERROR(ABC_CC_JSONError, "Error otp/pending/pending JSON");
-            if (json_is_true(pJSON_Value))
-            {
-                userMap[username] = json_is_true(pJSON_Value);
-            }
+            userMap[username] = json_is_true(pJSON_Value);
         }
     }
     isPending.clear();

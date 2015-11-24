@@ -7,26 +7,19 @@
 
 #include "LoginDir.hpp"
 #include "../Context.hpp"
-#include "../bitcoin/Testnet.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/FileIO.hpp"
-#include "../util/Status.hpp"
-#include "../util/Sync.hpp"
-#include "../util/Util.hpp"
 #include <dirent.h>
-#include <jansson.h>
 
 namespace abcd {
 
-struct UsernameFile:
+struct UsernameJson:
     public JsonObject
 {
     ABC_JSON_STRING(username, "userName", nullptr)
 };
 
 #define ACCOUNT_NAME_FILENAME                   "UserName.json"
-#define ACCOUNT_CARE_PACKAGE_FILENAME           "CarePackage.json"
-#define ACCOUNT_LOGIN_PACKAGE_FILENAME          "LoginPackage.json"
 
 /**
  * Reads the username file from an account directory.
@@ -34,11 +27,11 @@ struct UsernameFile:
 static Status
 readUsername(const std::string &directory, std::string &result)
 {
-    UsernameFile f;
-    ABC_CHECK(f.load(directory + ACCOUNT_NAME_FILENAME));
-    ABC_CHECK(f.usernameOk());
+    UsernameJson json;
+    ABC_CHECK(json.load(directory + ACCOUNT_NAME_FILENAME));
+    ABC_CHECK(json.usernameOk());
 
-    result = f.username();
+    result = json.username();
     return Status();
 }
 
@@ -121,38 +114,26 @@ loginDirFind(const std::string &username)
     return out;
 }
 
-/**
- * If the login directory does not exist, create it.
- * This is meant to be called after `loginDirFind`,
- * and will do nothing if the account directory is already populated.
- */
-tABC_CC ABC_LoginDirCreate(std::string &directory,
-                           const char *szUserName,
-                           tABC_Error *pError)
+Status
+loginDirCreate(std::string &directory, const std::string &username)
 {
-    tABC_CC cc = ABC_CC_Ok;
-
-    UsernameFile f;
-
-    // make sure the accounts directory is in place:
-    ABC_CHECK_NEW(fileEnsureDir(gContext->accountsDir()));
+    // Make sure the accounts directory is in place:
+    ABC_CHECK(fileEnsureDir(gContext->accountsDir()));
 
     // We don't need to do anything if our directory already exists:
     if (!directory.empty())
-        goto exit;
+        return Status();
 
-    // Find next available account number:
-    ABC_CHECK_NEW(newDirName(directory));
+    // Create our own directory:
+    ABC_CHECK(newDirName(directory));
+    ABC_CHECK(fileEnsureDir(directory));
 
-    // Create main account directory:
-    ABC_CHECK_NEW(fileEnsureDir(directory));
+    // Write our user name:
+    UsernameJson json;
+    ABC_CHECK(json.usernameSet(username));
+    ABC_CHECK(json.save(directory + ACCOUNT_NAME_FILENAME));
 
-    // Write user name:
-    ABC_CHECK_NEW(f.usernameSet(szUserName));
-    ABC_CHECK_NEW(f.save(directory + ACCOUNT_NAME_FILENAME));
-
-exit:
-    return cc;
+    return Status();
 }
 
 } // namespace abcd

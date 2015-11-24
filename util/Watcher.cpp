@@ -171,11 +171,7 @@ void Cli::cmd_tx_height(std::stringstream &args)
     if (txid == bc::null_hash)
         return;
 
-    auto height = db_.txidHeight(txid);
-    if (height != NTXID_HEIGHT_NOT_FOUND)
-        std::cout << height << std::endl;
-    else
-        std::cout << "transaction not in database" << std::endl;
+    std::cout << db_.txidHeight(txid) << std::endl;
 }
 
 void Cli::cmd_tx_dump(std::stringstream &args)

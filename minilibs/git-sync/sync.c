@@ -9,12 +9,13 @@
  */
 
 #include "sync.h"
-#include <git2/sys/commit.h>
+#include <git2/sys/commit.h> /* For git_commit_create_from_ids */
 #include <string.h>
 
 #define git_check(f) if ((e = f) < 0) goto exit;
 
-#define SYNC_REFSPEC                    "refs/heads/master:refs/heads/incoming"
+#define SYNC_FETCH_REFSPEC              "refs/heads/master:refs/heads/incoming"
+#define SYNC_PUSH_REFSPEC               "refs/heads/master:refs/heads/master"
 #define SYNC_REF_REMOTE                 "refs/heads/incoming"
 #define SYNC_REF_MASTER                 "refs/heads/master"
 #define SYNC_GIT_NAME                   "wallet"
@@ -27,17 +28,14 @@ static int sync_checkout(git_repository *repo,
                          const char *name)
 {
     int e = 0;
-    git_signature *sig = NULL;
 
-    git_check(git_signature_now(&sig, SYNC_GIT_NAME, SYNC_GIT_EMAIL));
-    git_check(git_repository_set_head(repo, name, sig, "checkout"));
+    git_check(git_repository_set_head(repo, name));
 
     git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
     opts.checkout_strategy = GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
     git_check(git_checkout_head(repo, &opts));
 
 exit:
-    if (sig)            git_signature_free(sig);
     return e;
 }
 
@@ -74,23 +72,20 @@ static int sync_fast_forward(git_repository *repo,
                              git_oid *id)
 {
     int e = 0;
-    git_signature *sig = NULL;
     git_reference *old_ref = NULL;
     git_reference *new_ref = NULL;
 
-    git_check(git_signature_now(&sig, SYNC_GIT_NAME, SYNC_GIT_EMAIL));
     e = git_reference_lookup(&old_ref, repo, name);
     if (!e)
     {
-        git_reference_set_target(&new_ref, old_ref, id, sig, "fast-forward");
+        git_reference_set_target(&new_ref, old_ref, id, "fast-forward");
     }
     else if (e == GIT_ENOTFOUND)
     {
-        git_check(git_reference_create(&new_ref, repo, name, id, 0, sig, "create branch"));
+        git_check(git_reference_create(&new_ref, repo, name, id, 0, "create branch"));
     }
 
 exit:
-    if (sig)            git_signature_free(sig);
     if (old_ref)        git_reference_free(old_ref);
     if (new_ref)        git_reference_free(new_ref);
     return e;
@@ -110,8 +105,8 @@ static int sync_get_tree(git_oid *out,
 
     if (git_oid_iszero(commit_id))
     {
-        git_check(git_treebuilder_create(&tb, NULL));
-        git_check(git_treebuilder_write(out, repo, tb));
+        git_check(git_treebuilder_new(&tb, repo, NULL));
+        git_check(git_treebuilder_write(out, tb));
     }
     else
     {
@@ -200,7 +195,7 @@ static int sync_merge_trees(git_oid *out,
     git_check(git_tree_lookup(&base_tree, repo, base_id));
     git_check(git_tree_lookup(&tree1, repo, id1));
     git_check(git_tree_lookup(&tree2, repo, id2));
-    git_check(git_treebuilder_create(&tb, NULL));
+    git_check(git_treebuilder_new(&tb, repo, NULL));
     size1 = git_tree_entrycount(tree1);
     size2 = git_tree_entrycount(tree2);
 
@@ -271,7 +266,7 @@ static int sync_merge_trees(git_oid *out,
     }
 
     // Write tree:
-    git_check(git_treebuilder_write(out, repo, tb));
+    git_check(git_treebuilder_write(out, tb));
 
 exit:
     if (base_tree)      git_tree_free(base_tree);
@@ -312,15 +307,15 @@ int sync_fetch(git_repository *repo,
                const char *server)
 {
     int e = 0;
-    git_signature *sig = NULL;
     git_remote *remote = NULL;
+    git_fetch_options options= GIT_FETCH_OPTIONS_INIT;
+    char *refspec[] = {SYNC_FETCH_REFSPEC};
+    git_strarray refspecs = {refspec, 1};
 
-    git_check(git_signature_now(&sig, SYNC_GIT_NAME, SYNC_GIT_EMAIL));
-    git_check(git_remote_create_anonymous(&remote, repo, server, SYNC_REFSPEC));
-    git_check(git_remote_fetch(remote, sig, "fetch"));
+    git_check(git_remote_create_anonymous(&remote, repo, server));
+    git_check(git_remote_fetch(remote, &refspecs, &options, "fetch"));
 
 exit:
-    if (sig)        git_signature_free(sig);
     if (remote)     git_remote_free(remote);
     return e;
 }
@@ -430,16 +425,6 @@ exit:
     return e;
 }
 
-static int sync_push_cb(const char *ref, const char *msg, void *data)
-{
-    if (msg)
-    {
-        giterr_set_str(GITERR_REPOSITORY, msg);
-        return GIT_ENONFASTFORWARD;
-    }
-    return 0;
-}
-
 /**
  * Pushes the master branch to the server.
  */
@@ -448,25 +433,14 @@ int sync_push(git_repository *repo,
 {
     int e = 0;
     git_remote *remote = NULL;
-    git_push *push = NULL;
+    git_push_options options = GIT_PUSH_OPTIONS_INIT;
+    char *refspec[] = {SYNC_PUSH_REFSPEC};
+    git_strarray refspecs = {refspec, 1};
 
-    git_check(git_remote_create_anonymous(&remote, repo, server, SYNC_REFSPEC));
-    git_check(git_remote_connect(remote, GIT_DIRECTION_PUSH));
-
-    git_check(git_push_new(&push, remote));
-    git_check(git_push_add_refspec(push, "refs/heads/master"));
-    git_check(git_push_finish(push));
-
-    if (!git_push_unpack_ok(push))
-    {
-        giterr_set_str(GITERR_REPOSITORY, "Remote could not unpack objects");
-        e = GIT_ERROR;
-        goto exit;
-    }
-    git_check(git_push_status_foreach(push, sync_push_cb, NULL));
+    git_check(git_remote_create_anonymous(&remote, repo, server));
+    git_check(git_remote_push(remote, &refspecs, &options));
 
 exit:
     if (remote)     git_remote_free(remote);
-    if (push)       git_push_free(push);
     return e;
 }

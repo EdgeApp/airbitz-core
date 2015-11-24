@@ -50,17 +50,14 @@ accountCategoriesLoad(AccountCategories &result, const Account &account)
     ABC_CHECK(json.load(categoriesPath(account), account.login.dataKey()));
 
     auto arrayJson = json.categories();
-    if (arrayJson)
+    size_t size = arrayJson.size();
+    for (size_t i = 0; i < size; i++)
     {
-        size_t rows = arrayJson.size();
-        for (size_t i = 0; i < rows; i++)
-        {
-            auto string = arrayJson[i].get();
-            if (!json_is_string(string))
-                return ABC_ERROR(ABC_CC_JSONError, "Category is not a string");
+        auto stringJson = arrayJson[i];
+        if (!json_is_string(stringJson.get()))
+            return ABC_ERROR(ABC_CC_JSONError, "Category is not a string");
 
-            out.insert(json_string_value(string));
-        }
+        out.insert(json_string_value(stringJson.get()));
     }
 
     result = std::move(out);

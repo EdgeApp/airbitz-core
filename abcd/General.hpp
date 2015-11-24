@@ -6,68 +6,60 @@
  */
 /**
  * @file
- * AirBitz general, non-account-specific server-supplied data.
+ * Airbitz general, non-account-specific server-supplied data.
  *
  * The data handled in this file is basically just a local cache of various
- * settings that AirBitz would like to adjust from time-to-time without
+ * settings that Airbitz would like to adjust from time-to-time without
  * upgrading the entire app.
  */
 
-#ifndef ABC_General_h
-#define ABC_General_h
+#ifndef ABCD_GENERAL_HPP
+#define ABCD_GENERAL_HPP
 
 #include "util/Status.hpp"
+#include <map>
+#include <set>
 #include <vector>
 
 namespace abcd {
 
-/**
- * Contains info on bitcoin miner fee
- */
-typedef struct sABC_GeneralMinerFee
-{
-    uint64_t amountSatoshi;
-    uint64_t sizeTransaction;
-} tABC_GeneralMinerFee;
+typedef std::set<std::string> AddressSet;
 
 /**
- * Contains information on AirBitz fees
+ * Maps from transaction sizes to corresponding fees.
  */
-typedef struct sABC_GeneralAirBitzFee
-{
-    double percentage; // maximum value 100.0
-    uint64_t minSatoshi;
-    uint64_t maxSatoshi;
-    char *szAddresss;
-} tABC_GeneralAirBitzFee;
+typedef std::map<size_t, uint64_t> BitcoinFeeInfo;
 
 /**
- * Contains general info from the server
+ * Airbitz transaction fee information.
  */
-typedef struct sABC_GeneralInfo
+struct AirbitzFeeInfo
 {
-    unsigned int            countMinersFees;
-    tABC_GeneralMinerFee    **aMinersFees;
-    tABC_GeneralAirBitzFee  *pAirBitzFee;
-    unsigned int            countObeliskServers;
-    char                    **aszObeliskServers;
-    unsigned int            countSyncServers;
-    char                    **aszSyncServers;
-} tABC_GeneralInfo;
+    AddressSet addresses;
+    int64_t minSatoshi;
+    int64_t maxSatoshi;
+    double rate;
+};
 
-void ABC_GeneralFreeInfo(tABC_GeneralInfo *pInfo);
+/**
+ * Downloads general info from the server if the local file is out of date.
+ */
+Status
+generalUpdate();
 
-tABC_CC ABC_GeneralGetInfo(tABC_GeneralInfo **ppInfo,
-                           tABC_Error *pError);
+/**
+ * Obtains the Bitcoin mining fee information.
+ * The returned table always has at least one entry.
+ */
+BitcoinFeeInfo
+generalBitcoinFeeInfo();
 
-tABC_CC ABC_GeneralUpdateInfo(tABC_Error *pError);
-
-void ABC_GeneralFreeQuestionChoices(tABC_QuestionChoices *pQuestionChoices);
-
-tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices **ppQuestionChoices,
-                                      tABC_Error *pError);
-
-tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError);
+/**
+ * Obtains the Airbitz fee information.
+ * The fees will be zero if something goes wrong.
+ */
+AirbitzFeeInfo
+generalAirbitzFeeInfo();
 
 /**
  * Obtains a list of libbitcoin servers for the current network
@@ -76,6 +68,13 @@ tABC_CC ABC_GeneralUpdateQuestionChoices(tABC_Error *pError);
  */
 std::vector<std::string>
 generalBitcoinServers();
+
+/**
+ * Obtains a list of sync servers.
+ * Returns a fallback server if something goes wrong.
+ */
+std::vector<std::string>
+generalSyncServers();
 
 } // namespace abcd
 

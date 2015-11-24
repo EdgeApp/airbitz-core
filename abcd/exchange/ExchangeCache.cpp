@@ -108,12 +108,12 @@ ExchangeCache::load()
 
     CacheJson json;
     ABC_CHECK(json.load(path_));
-    auto rates = json.rates();
 
-    auto size = rates.size();
+    auto arrayJson = json.rates();
+    auto size = arrayJson.size();
     for (size_t i = 0; i < size; i++)
     {
-        CacheJsonRow row(rates[i]);
+        CacheJsonRow row(arrayJson[i]);
         ABC_CHECK(row.codeOk());
         ABC_CHECK(row.rateOk());
         ABC_CHECK(row.timestampOk());

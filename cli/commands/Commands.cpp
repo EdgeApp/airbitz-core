@@ -7,6 +7,7 @@
 
 #include "../Command.hpp"
 #include "../Util.hpp"
+#include "../../abcd/General.hpp"
 #include "../../abcd/account/Account.hpp"
 #include "../../abcd/json/JsonBox.hpp"
 #include "../../abcd/login/Login.hpp"
@@ -55,16 +56,6 @@ COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt")
     ABC_CHECK(box.encrypt(contents, session.login->dataKey()));
 
     std::cout << box.encode() << std::endl;
-
-    return Status();
-}
-
-COMMAND(InitLevel::account, AddCategory, "add-category")
-{
-    if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... add-category <user> <pass> <category>");
-
-    ABC_CHECK_OLD(ABC_AddCategory(session.username, session.password, argv[2], &error));
 
     return Status();
 }
@@ -142,6 +133,16 @@ COMMAND(InitLevel::account, DataSync, "data-sync")
         return ABC_ERROR(ABC_CC_Error, "usage: ... data-sync <user> <pass>");
 
     ABC_CHECK(syncAll(*session.account));
+
+    return Status();
+}
+
+COMMAND(InitLevel::context, GeneralUpdate, "general-update")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... general-update");
+
+    ABC_CHECK(generalUpdate());
 
     return Status();
 }
@@ -276,16 +277,6 @@ COMMAND(InitLevel::login, RecoveryReminderSet, "recovery-reminder-set")
 
     pSettings->recoveryReminderCount = strtol(argv[2], 0, 10);
     ABC_CHECK_OLD(ABC_UpdateAccountSettings(session.username, session.password, pSettings, &error));
-
-    return Status();
-}
-
-COMMAND(InitLevel::account, RemoveCategory, "remove-category")
-{
-    if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... remove-category <user> <pass> <category>");
-
-    ABC_CHECK_OLD(ABC_RemoveCategory(session.username, session.password, argv[2], &error));
 
     return Status();
 }

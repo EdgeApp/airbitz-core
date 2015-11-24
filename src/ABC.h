@@ -248,27 +248,6 @@ typedef struct sABC_Currency
 } tABC_Currency;
 
 /**
- * AirBitz Core Wallet Structure
- *
- * This structure contains wallet information.
- * All AirBitz Core functions should offer the
- *
- */
-typedef struct sABC_WalletInfo
-{
-    /** wallet UUID */
-    const char *szUUID;
-    /** wallet name */
-    const char *szName;
-    /** wallet ISO 4217 currency code */
-    int             currencyNum;
-    /** true if the wallet is archived */
-    unsigned        archived;
-    /** wallet balance */
-    int64_t         balanceSatoshi;
-} tABC_WalletInfo;
-
-/**
  * AirBitz Question Choice Structure
  *
  * This structure contains a recovery question choice.
@@ -888,24 +867,6 @@ tABC_CC ABC_CurrencyToSatoshi(const char *szUserName,
                               int currencyNum,
                               int64_t *pSatoshi,
                               tABC_Error *pError);
-
-/* === Deprecated wallet omnibus functions: === */
-tABC_CC ABC_GetWallets(const char *szUserName,
-                       const char *szPassword,
-                       tABC_WalletInfo ***paWalletInfo,
-                       unsigned int *pCount,
-                       tABC_Error *pError);
-
-void ABC_FreeWalletInfoArray(tABC_WalletInfo **aWalletInfo,
-                             unsigned int nCount);
-
-tABC_CC ABC_GetWalletInfo(const char *szUserName,
-                          const char *szPassword,
-                          const char *szUUID,
-                          tABC_WalletInfo **ppWalletInfo,
-                          tABC_Error *pError);
-
-void ABC_FreeWalletInfo(tABC_WalletInfo *pWalletInfo);
 
 /* === Wallet data: === */
 tABC_CC ABC_CreateWallet(const char *szUserName,

@@ -6,7 +6,9 @@
 #include "Outputs.hpp"
 #include "PaymentProto.hpp"
 #include "Spend.hpp"
+#include "../General.hpp"
 #include "../bitcoin/Testnet.hpp"
+#include <iterator>
 
 namespace abcd {
 
@@ -70,17 +72,29 @@ outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
         // Otherwise, make an output for the ordinary address:
         bc::transaction_output_type output;
         output.value = pInfo->metadata.amountSatoshi;
-        ABC_CHECK(outputScriptForAddress(output.script, pInfo->szDestAddress));
+        ABC_CHECK(outputScriptForAddress(output.script, pInfo->destAddress));
         out.push_back(output);
     }
 
     // Handle the Airbitz fees:
     pInfo->metadata.amountFeesAirbitzSatoshi = 0;
-    if (!pInfo->bTransfer)
+    const auto info = generalAirbitzFeeInfo();
+    int64_t airbitzFee = info.rate * outputsTotal(out);
+    if (airbitzFee < info.minSatoshi)
+        airbitzFee = info.minSatoshi;
+    if (airbitzFee > info.maxSatoshi)
+        airbitzFee = info.maxSatoshi;
+    if (airbitzFee && !pInfo->bTransfer)
     {
-        // We would normally add an output for the fee
-        // and adjust the transaction details to match here.
-        // Airbitz doesn't charge fees yet, so this is disabled.
+        auto i = info.addresses.begin();
+        std::advance(i, rand() % info.addresses.size());
+
+        bc::transaction_output_type output;
+        output.value = airbitzFee;
+        ABC_CHECK(outputScriptForAddress(output.script, *i));
+        out.push_back(output);
+
+        pInfo->metadata.amountFeesAirbitzSatoshi = airbitzFee;
     }
 
     result = std::move(out);

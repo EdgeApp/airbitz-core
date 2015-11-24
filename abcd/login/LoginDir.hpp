@@ -12,8 +12,7 @@
 #ifndef ABCD_LOGIN_LOGIN_DIR_HPP
 #define ABCD_LOGIN_LOGIN_DIR_HPP
 
-#include "LoginPackages.hpp"
-#include "../../src/ABC.h"
+#include "../util/Status.hpp"
 #include <list>
 #include <string>
 
@@ -32,9 +31,13 @@ loginDirList();
 std::string
 loginDirFind(const std::string &username);
 
-tABC_CC ABC_LoginDirCreate(std::string &directory,
-                           const char *szUserName,
-                           tABC_Error *pError);
+/**
+ * If the login directory does not exist, create it.
+ * This is meant to be called after `loginDirFind`,
+ * and will do nothing if the given directory is already populated.
+ */
+Status
+loginDirCreate(std::string &directory, const std::string &username);
 
 } // namespace abcd
 

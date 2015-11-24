@@ -16,7 +16,6 @@
 namespace abcd {
 
 class Wallet;
-typedef struct sABC_GeneralInfo tABC_GeneralInfo;
 
 /**
  * Maps from Bitcoin addresses to WIF-encoded private keys.
@@ -69,8 +68,7 @@ bool sign_tx(unsigned_transaction& utx, const key_table& keys);
  */
 Status
 inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
-    bc::transaction_type &tx, bc::output_info_list &utxos,
-    tABC_GeneralInfo *pFeeInfo);
+    bc::transaction_type &tx, bc::output_info_list &utxos);
 
 /**
  * Populate the transaction's input list with all the utxo's in the wallet,
@@ -78,8 +76,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
  */
 Status
 inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
-    bc::transaction_type &tx, bc::output_info_list &utxos,
-    tABC_GeneralInfo *pFeeInfo);
+    bc::transaction_type &tx, bc::output_info_list &utxos);
 
 } // namespace abcd
 

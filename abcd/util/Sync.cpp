@@ -54,12 +54,11 @@ syncUrl(std::string &result, const std::string &syncKey, bool rotate=false)
 {
     if (rotate || syncServerName.empty())
     {
-        AutoFree<tABC_GeneralInfo, ABC_GeneralFreeInfo> pInfo;
-        ABC_CHECK_OLD(ABC_GeneralGetInfo(&pInfo.get(), &error));
+        auto servers = generalSyncServers();
 
         syncServerIndex++;
-        syncServerIndex %= pInfo->countSyncServers;
-        syncServerName = fileSlashify(pInfo->aszSyncServers[syncServerIndex]);
+        syncServerIndex %= servers.size();
+        syncServerName = fileSlashify(servers[syncServerIndex]);
     }
 
     result = syncServerName + syncKey;
@@ -75,7 +74,7 @@ syncInit(const char *szCaCertPath)
     if (gbInitialized)
         return ABC_ERROR(ABC_CC_Reinitialization, "ABC_Sync has already been initalized");
 
-    ABC_CHECK_GIT(git_threads_init());
+    ABC_CHECK_GIT(git_libgit2_init());
     gbInitialized = true;
 
     if (szCaCertPath)
@@ -94,7 +93,7 @@ syncTerminate()
 
     if (gbInitialized)
     {
-        git_threads_shutdown();
+        git_libgit2_shutdown();
         gbInitialized = false;
     }
 }

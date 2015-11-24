@@ -48,15 +48,24 @@ class Wallet;
 
 void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 
-tABC_CC ABC_TxSendComplete(Wallet &self,
-                           SendInfo         *pInfo,
-                           const std::string &ntxid,
-                           const std::string &txid,
-                           const std::vector<std::string> &addresses,
-                           tABC_Error       *pError);
+/**
+ * Saves a transaction to the txdb after sweeping.
+ */
+Status
+txSweepSave(Wallet &wallet,
+    const std::string &ntxid, const std::string &txid,
+    uint64_t funds);
 
 /**
- * Handles creating or updating when we receive a transaction
+ * Saves a transaction to the txdb after sending.
+ */
+Status
+txSendSave(Wallet &self,
+    const std::string &ntxid, const std::string &txid,
+    const std::vector<std::string> &addresses, SendInfo *pInfo);
+
+/**
+ * Handles creating or updating when we receive a transaction.
  */
 Status
 txReceiveTransaction(Wallet &self,
@@ -96,12 +105,6 @@ tABC_CC ABC_TxGetTransactionDetails(Wallet &self,
                                     const std::string &ntxid,
                                     TxMetadata &result,
                                     tABC_Error *pError);
-
-tABC_CC ABC_TxSweepSaveTransaction(Wallet &wallet,
-                                   const std::string &ntxid,
-                                   const std::string &txid,
-                                   uint64_t funds,
-                                   tABC_Error *pError);
 
 } // namespace abcd
 
