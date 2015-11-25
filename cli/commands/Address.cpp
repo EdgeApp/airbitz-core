@@ -6,11 +6,39 @@
  */
 
 #include "../Command.hpp"
+#include "../../abcd/util/Util.hpp"
 #include "../../abcd/wallet/Wallet.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <iostream>
 
 using namespace abcd;
+
+COMMAND(InitLevel::wallet, CliAddressAllocate, "address-allocate",
+        "<count>")
+{
+    if (argc != 1)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto count = atol(argv[0]);
+
+    for(int i = 0; i < count; ++i)
+    {
+        tABC_TxDetails txDetails;
+        AutoString requestId;
+        ABC_CHECK_OLD(ABC_CreateReceiveRequest(session.username.c_str(),
+                                               session.password.c_str(),
+                                               session.uuid.c_str(),
+                                               &txDetails,
+                                               &requestId.get(),
+                                               &error));
+        ABC_CHECK_OLD(ABC_FinalizeReceiveRequest(session.username.c_str(),
+                      session.password.c_str(),
+                      session.uuid.c_str(),
+                      requestId, &error));
+
+        std::cout << requestId << std::endl;
+    }
+    return Status();
+}
 
 COMMAND(InitLevel::wallet, CliAddressList, "address-list",
         "")
