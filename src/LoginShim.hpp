@@ -94,6 +94,12 @@ Status
 cacheWallet(std::shared_ptr<Wallet> &result, const char *szUserName,
             const char *szUUID);
 
+/**
+ * Removes a wallet from file and cache.
+ */
+Status
+cacheWalletRemove(const char *szUserName, const char *szUUID);
+
 } // namespace abcd
 
 #endif

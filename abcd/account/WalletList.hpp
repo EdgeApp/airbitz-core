@@ -53,6 +53,12 @@ public:
     insert(const std::string &id, const JsonPtr &keys);
 
     /**
+     * Remove a wallet.
+     */
+    Status
+    remove(const std::string &id);
+
+    /**
      * Returns the meta-data file for a wallet.
      * The wallet stores its keys and seeds in here.
      */

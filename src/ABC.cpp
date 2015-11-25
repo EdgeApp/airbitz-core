@@ -639,6 +639,19 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_WalletRemove(const char *szUserName,
+                         const char *szWalletUUID,
+                         tABC_Error *pError)
+{
+    ABC_PROLOG();
+    {
+        ABC_CHECK_NEW(cacheWalletRemove(szUserName, szWalletUUID));
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_WalletName(const char *szUserName,
                        const char *szWalletUUID,
                        char **pszResult,

@@ -117,6 +117,21 @@ WalletList::insert(const std::string &id, const JsonPtr &keys)
 }
 
 Status
+WalletList::remove(const std::string &id)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    auto wallet = wallets_.find(id);
+    if (wallet == wallets_.end())
+        return ABC_ERROR(ABC_CC_InvalidWalletID, "No such wallet");
+    wallets_.erase(wallet);
+
+    ABC_CHECK(fileDelete(path(id)));
+
+    return Status();
+}
+
+Status
 WalletList::json(JsonPtr &result, const std::string &id) const
 {
     std::lock_guard<std::mutex> lock(mutex_);

@@ -166,3 +166,14 @@ COMMAND(InitLevel::wallet, CliWalletSeed, "wallet-seed",
 
     return Status();
 }
+
+COMMAND(InitLevel::wallet, CliWalletRemove, "wallet-remove",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    ABC_CHECK(cacheWalletRemove(session.username.c_str(), session.uuid.c_str()));
+    std::cout << "Removed wallet " << session.wallet->name() << std::endl;
+    return Status();
+}

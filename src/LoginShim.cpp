@@ -233,4 +233,25 @@ cacheWallet(std::shared_ptr<Wallet> &result, const char *szUserName,
     return Status();
 }
 
+Status
+cacheWalletRemove(const char *szUserName, const char *szUUID)
+{
+    std::shared_ptr<Account> account;
+    ABC_CHECK(cacheAccount(account, szUserName));
+
+    if (!szUUID)
+        return ABC_ERROR(ABC_CC_NULLPtr, "No wallet id");
+    std::string id = szUUID;
+
+    // remove the wallet from the cache:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+    auto i = gWalletCache.find(id);
+    if (i != gWalletCache.end())
+    {
+        ABC_CHECK(account->wallets.remove(id));
+        gWalletCache.erase(i);
+    }
+    return Status();
+}
+
 } // namespace abcd
