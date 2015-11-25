@@ -68,7 +68,7 @@ Status
 accountCategoriesAdd(const Account &account, const std::string &category)
 {
     AccountCategories categories;
-    ABC_CHECK(accountCategoriesLoad(categories, account));
+    accountCategoriesLoad(categories, account);
     categories.insert(category);
     ABC_CHECK(accountCategoriesSave(account, categories));
     return Status();
