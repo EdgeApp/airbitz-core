@@ -57,20 +57,19 @@ CommandRegistry::print()
 std::string
 helpString(const Command &command)
 {
-    std::string out = "usage: abc-cli ";
-    out += command.name();
+    std::string out = "usage: abc-cli";
 
     if (InitLevel::context <= command.level())
-        out += " <dir>";
+        out += " [-d <dir>]";
 
     if (InitLevel::lobby <= command.level())
-        out += " <username>";
+        out += " [-u <username>]";
 
     if (InitLevel::login <= command.level())
-        out += " <password>";
+        out += " [-p <password>]";
 
     if (InitLevel::wallet <= command.level())
-        out += " <wallet>";
+        out += " [-w <wallet>]";
 
-    return out + command.help();
+    return out + " " + command.name() + command.help();
 }

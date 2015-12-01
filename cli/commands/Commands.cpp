@@ -317,24 +317,11 @@ COMMAND(InitLevel::account, SetNickname, "set-nickname",
     return Status();
 }
 
-COMMAND(InitLevel::lobby, SignIn, "sign-in",
-        " <pass>")
+COMMAND(InitLevel::login, SignIn, "sign-in",
+        "")
 {
-    if (argc != 1)
+    if (argc != 0)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
-    const auto password = argv[0];
-
-    tABC_Error error;
-    tABC_CC cc = ABC_SignIn(session.username.c_str(), password, &error);
-    if (ABC_CC_InvalidOTP == cc)
-    {
-        AutoString date;
-        ABC_CHECK_OLD(ABC_OtpResetDate(&date.get(), &error));
-        if (strlen(date))
-            std::cout << "Pending OTP reset ends at " << date.get() << std::endl;
-        std::cout << "No OTP token, resetting account 2-factor auth." << std::endl;
-        ABC_CHECK_OLD(ABC_OtpResetSet(session.username.c_str(), &error));
-    }
 
     return Status();
 }
