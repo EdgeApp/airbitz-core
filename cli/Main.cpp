@@ -58,6 +58,7 @@ static Status run(int argc, char *argv[])
     // Parse out the command-line options:
     std::string workingDir;
     Session session;
+    bool wantHelp = false;
 
     static const struct option long_options[] =
     {
@@ -65,6 +66,7 @@ static Status run(int argc, char *argv[])
         {"username",    required_argument, nullptr, 'u'},
         {"password",    required_argument, nullptr, 'p'},
         {"wallet",      required_argument, nullptr, 'w'},
+        {"help",        no_argument,       nullptr, 'h'},
         {nullptr, 0, nullptr, 0}
     };
     opterr = 0;
@@ -75,6 +77,9 @@ static Status run(int argc, char *argv[])
         {
         case 'd':
             workingDir = optarg;
+            break;
+        case 'h':
+            wantHelp = true;
             break;
         case 'p':
             session.password = optarg;
@@ -119,6 +124,13 @@ static Status run(int argc, char *argv[])
     if (!command)
         return ABC_ERROR(ABC_CC_Error,
                          "unknown command " + std::string(commandName));
+
+    // If the user wants help, just print the string and return:
+    if (wantHelp)
+    {
+        std::cout << helpString(*command) << std::endl;
+        return Status();
+    }
 
     // Populate the session up to the required level:
     if (InitLevel::context <= command->level())
