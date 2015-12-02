@@ -58,6 +58,13 @@ TxUpdater::disconnect()
     serverBlacklist_.clear();
 }
 
+#define LIBBITCOIN_PREFIX           "tcp://"
+#define STRATUM_PREFIX              "stratum://"
+#define LIBBITCOIN_PREFIX_LENGTH    6
+#define STRATUM_PREFIX_LENGTH       10
+#define MINIMUM_STRATUM_SERVERS     1
+#define MINIMUM_LIBBITCOIN_SERVERS  1
+
 Status
 TxUpdater::connect()
 {
@@ -235,12 +242,11 @@ bc::client::sleep_time TxUpdater::wakeup()
         auto idx = bconn.server_index;
 
         if ((bconn.queued_queries_ < max_queries) ||
-            (row.poll_time < std::chrono::seconds(2)))
+            (row.poll_time < std::chrono::seconds(6)))
         {
             ABC_DebugLevel(2,"wakeup() idx=%d Calling query_address %s", idx, i.address.encoded().c_str());
             next_wakeup = bc::client::min_sleep(next_wakeup, row.poll_time);
-            query_address(i.address, idx);
-
+            query_address(i.address, ALL_SERVERS);
         }
         else
         {
