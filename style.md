@@ -68,3 +68,9 @@ immediately after the comment block.
 Source files do not need `@file` comments,
 since their matching header contains the necessary information.
 
+## Automatic formatting
+
+Please format the source code using [astyle](http://astyle.sourceforge.net/)
+along with the options provided in the `astyle-options` file.
+
+This can be done easily by invoking `make format`.

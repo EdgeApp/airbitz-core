@@ -1,0 +1,8 @@
+--style=allman
+--attach-namespaces
+--attach-extern-c
+--align-pointer=name
+--align-reference=name
+--keep-one-line-blocks
+--max-code-length=80
+--lineend=linux
