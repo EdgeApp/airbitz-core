@@ -15,10 +15,8 @@
 
 namespace abcd {
 
-using namespace libbitcoin;
-
-static std::map<data_chunk, std::string> address_map;
-static operation create_data_operation(data_chunk &data);
+static std::map<bc::data_chunk, std::string> address_map;
+static bc::operation create_data_operation(bc::data_chunk &data);
 
 Status
 signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
@@ -33,7 +31,7 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
         bc::payment_address pa;
         bc::script_type &script = tx.outputs[point.index].script;
         bc::extract(pa, script);
-        if (payment_address::invalid_version == pa.version())
+        if (bc::payment_address::invalid_version == pa.version())
             return ABC_ERROR(ABC_CC_Error, "Invalid address");
 
         // Find the elliptic curve key for this input:
@@ -46,19 +44,19 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
 
         // Gererate the previous output's signature:
         // TODO: We already have this; process it and use it
-        script_type sig_script = outputScriptForPubkey(pa.hash());
+        bc::script_type sig_script = outputScriptForPubkey(pa.hash());
 
         // Generate the signature for this input:
-        hash_digest sig_hash =
-            script_type::generate_signature_hash(result, i, sig_script, 1);
-        if (sig_hash == null_hash)
+        bc::hash_digest sig_hash =
+            bc::script_type::generate_signature_hash(result, i, sig_script, 1);
+        if (sig_hash == bc::null_hash)
             return ABC_ERROR(ABC_CC_Error, "Unable to sign");
-        data_chunk signature = sign(secret, sig_hash,
-                                    create_nonce(secret, sig_hash));
+        bc::data_chunk signature = bc::sign(secret, sig_hash,
+                                            bc::create_nonce(secret, sig_hash));
         signature.push_back(0x01);
 
         // Create out scriptsig:
-        script_type scriptsig;
+        bc::script_type scriptsig;
         scriptsig.push_operation(create_data_operation(signature));
         scriptsig.push_operation(create_data_operation(pubkey));
         result.inputs[i].script = scriptsig;
@@ -67,19 +65,19 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
     return Status();
 }
 
-static operation create_data_operation(data_chunk &data)
+static bc::operation create_data_operation(bc::data_chunk &data)
 {
     BITCOIN_ASSERT(data.size() < std::numeric_limits<uint32_t>::max());
-    operation op;
+    bc::operation op;
     op.data = data;
     if (data.size() <= 75)
-        op.code = opcode::special;
+        op.code = bc::opcode::special;
     else if (data.size() < std::numeric_limits<uint8_t>::max())
-        op.code = opcode::pushdata1;
+        op.code = bc::opcode::pushdata1;
     else if (data.size() < std::numeric_limits<uint16_t>::max())
-        op.code = opcode::pushdata2;
+        op.code = bc::opcode::pushdata2;
     else if (data.size() < std::numeric_limits<uint32_t>::max())
-        op.code = opcode::pushdata4;
+        op.code = bc::opcode::pushdata4;
     return op;
 }
 
@@ -131,21 +129,21 @@ bool sign_tx(unsigned_transaction &utx, const key_table &keys)
         auto pubkey = bc::secret_to_public_key(secret, key->second.compressed);
 
         // Create the sighash for this input:
-        hash_digest sighash =
-            script_type::generate_signature_hash(utx.tx, i, challenge, 1);
-        if (sighash == null_hash)
+        bc::hash_digest sighash =
+            bc::script_type::generate_signature_hash(utx.tx, i, challenge, 1);
+        if (sighash == bc::null_hash)
         {
             all_done = false;
             continue;
         }
 
         // Sign:
-        data_chunk signature = sign(secret, sighash,
-                                    create_nonce(secret, sighash));
+        bc::data_chunk signature = bc::sign(secret, sighash,
+                                            bc::create_nonce(secret, sighash));
         signature.push_back(0x01);
 
         // Save:
-        script_type scriptsig;
+        bc::script_type scriptsig;
         scriptsig.push_operation(create_data_operation(signature));
         scriptsig.push_operation(create_data_operation(pubkey));
         utx.tx.inputs[i].script = scriptsig;
@@ -208,7 +206,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
         tx.inputs.clear();
         for (auto &point: chosen.points)
         {
-            transaction_input_type input;
+            bc::transaction_input_type input;
             input.sequence = 4294967295;
             input.previous_output = point;
             tx.inputs.push_back(input);

@@ -9,8 +9,6 @@
 #include "../util/Debug.hpp"
 #include <sstream>
 
-using namespace libbitcoin;
-
 namespace abcd {
 
 using std::placeholders::_1;
@@ -30,9 +28,9 @@ enum
     msg_send
 };
 
-static bool is_valid(const payment_address &address)
+static bool is_valid(const bc::payment_address &address)
 {
-    return address.version() != payment_address::invalid_version;
+    return address.version() != bc::payment_address::invalid_version;
 }
 
 Watcher::Watcher(TxDatabase &db):
@@ -57,12 +55,13 @@ void Watcher::connect()
     send_connect();
 }
 
-void Watcher::send_tx(const transaction_type &tx)
+void Watcher::send_tx(const bc::transaction_type &tx)
 {
     send_send(tx);
 }
 
-void Watcher::watch_address(const payment_address &address, unsigned poll_ms)
+void
+Watcher::watch_address(const bc::payment_address &address, unsigned poll_ms)
 {
     send_watch_addr(address, poll_ms);
 }
@@ -71,7 +70,7 @@ void Watcher::watch_address(const payment_address &address, unsigned poll_ms)
  * Checks a particular address more frequently.
  * To go back to normal mode, pass an empty address.
  */
-void Watcher::prioritize_address(const payment_address &address)
+void Watcher::prioritize_address(const bc::payment_address &address)
 {
     if (is_valid(priority_address_))
     {
@@ -198,7 +197,7 @@ void Watcher::send_connect()
     socket_.send(&req, 1);
 }
 
-void Watcher::send_watch_addr(payment_address address, unsigned poll_ms)
+void Watcher::send_watch_addr(bc::payment_address address, unsigned poll_ms)
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
@@ -212,7 +211,7 @@ void Watcher::send_watch_addr(payment_address address, unsigned poll_ms)
     socket_.send(str.data(), str.size());
 }
 
-void Watcher::send_send(const transaction_type &tx)
+void Watcher::send_send(const bc::transaction_type &tx)
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
@@ -246,7 +245,7 @@ bool Watcher::command(uint8_t *data, size_t size)
     {
         auto version = serial.read_byte();
         auto hash = serial.read_short_hash();
-        payment_address address(version, hash);
+        bc::payment_address address(version, hash);
         bc::client::sleep_time poll_time(serial.read_4_bytes());
         txu_.watch(address, poll_time);
     }
@@ -254,7 +253,7 @@ bool Watcher::command(uint8_t *data, size_t size)
 
     case msg_send:
     {
-        transaction_type tx;
+        bc::transaction_type tx;
         bc::satoshi_load(serial.iterator(), data + size, tx);
         txu_.send(tx);
     }
@@ -262,7 +261,7 @@ bool Watcher::command(uint8_t *data, size_t size)
     }
 }
 
-void Watcher::on_add(const transaction_type &tx)
+void Watcher::on_add(const bc::transaction_type &tx)
 {
     std::lock_guard<std::mutex> lock(cb_mutex_);
     if (cb_)
