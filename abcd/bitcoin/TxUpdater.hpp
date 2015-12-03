@@ -10,12 +10,9 @@
 #include "../util/Status.hpp"
 #include "../../minilibs/libbitcoin-client/client.hpp"
 #include <unordered_map>
+#include "StratumConnection.hpp"
 
 namespace abcd {
-
-#define ALL_SERVERS    -1
-#define NO_SERVERS     -9999
-#define NUM_CONNECT_SERVERS    3
 
 /**
  * Interface containing the events the updater can trigger.
@@ -70,6 +67,12 @@ public:
     pollitems();
 
 private:
+    enum class ConnectionType
+    {
+        libbitcoin,
+        stratum
+    };
+
     struct Connection
     {
         Connection(void *ctx, long server_index);
@@ -79,6 +82,8 @@ private:
             return server_index == l.server_index;
         };
 
+        ConnectionType type;
+        StratumConnection stratumCodec;
         bc::client::zeromq_socket bc_socket;
         bc::client::obelisk_codec bc_codec;
         int queued_queries_;
