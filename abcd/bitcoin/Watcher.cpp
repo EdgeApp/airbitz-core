@@ -14,8 +14,8 @@ namespace abcd {
 using std::placeholders::_1;
 using std::placeholders::_2;
 
-constexpr unsigned default_poll = 10000;
-constexpr unsigned priority_poll = 1000;
+constexpr unsigned default_poll = 15000;
+constexpr unsigned priority_poll = 3000;
 
 static unsigned watcher_id = 0;
 

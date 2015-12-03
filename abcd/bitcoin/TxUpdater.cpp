@@ -225,7 +225,6 @@ bc::client::sleep_time TxUpdater::wakeup()
 
     // Process the most outdated addresses first:
     toCheck.sort();
-    auto it = connections_.begin();
 
     for (const auto &i: toCheck)
     {
@@ -234,30 +233,10 @@ bc::client::sleep_time TxUpdater::wakeup()
 
         auto &row = rows_[i.address];
 
-        //
-        // Put one address per server and rotate servers until server queues are full
-        //
-
-        Connection &bconn = **it;
-        auto idx = bconn.server_index;
-
-        if ((bconn.queued_queries_ < max_queries) ||
-                (row.poll_time < std::chrono::seconds(2)))
-        {
-            ABC_DebugLevel(2,"wakeup() idx=%d Calling query_address %s", idx,
-                           i.address.encoded().c_str());
-            next_wakeup = bc::client::min_sleep(next_wakeup, row.poll_time);
-            query_address(i.address, idx);
-
-        }
-        else
-        {
-            ABC_DebugLevel(2,"wakeup() idx=%d Queues full cannot query_address %s", idx,
-                           i.address.encoded().c_str());
-        }
-        it++;
-        if (it == connections_.end())
-            it = connections_.begin();
+        ABC_DebugLevel(2,"wakeup() Calling query_address %s",
+                       i.address.encoded().c_str());
+        next_wakeup = bc::client::min_sleep(next_wakeup, row.poll_time);
+        query_address(i.address, ALL_SERVERS);
     }
 
     // Update the sockets:
