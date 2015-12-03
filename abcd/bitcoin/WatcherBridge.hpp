@@ -44,9 +44,8 @@
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 
-namespace libbitcoin
-{
-    struct transaction_type;
+namespace libbitcoin {
+struct transaction_type;
 }
 
 namespace abcd {

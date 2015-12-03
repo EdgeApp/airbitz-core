@@ -23,7 +23,8 @@ class Wallet;
 typedef std::map<const std::string, std::string> KeyTable;
 
 Status
-signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys);
+signTx(bc::transaction_type &result, const Wallet &wallet,
+       const KeyTable &keys);
 
 /**
  * A fully-formed transaction, but possibly missing its signature scripts.
@@ -54,13 +55,13 @@ typedef std::unordered_map<bc::payment_address, wif_key> key_table;
 /**
  * Finds the challenges for a set up utxos in the watcher database.
  */
-bool gather_challenges(unsigned_transaction& utx, Wallet &wallet);
+bool gather_challenges(unsigned_transaction &utx, Wallet &wallet);
 
 /**
  * Signs as many transaction inputs as possible using the given keys.
  * @return true if all inputs are now signed.
  */
-bool sign_tx(unsigned_transaction& utx, const key_table& keys);
+bool sign_tx(unsigned_transaction &utx, const key_table &keys);
 
 /**
  * Select a utxo collection that will satisfy the outputs as best possible
@@ -68,7 +69,7 @@ bool sign_tx(unsigned_transaction& utx, const key_table& keys);
  */
 Status
 inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
-    bc::transaction_type &tx, bc::output_info_list &utxos);
+                  bc::transaction_type &tx, bc::output_info_list &utxos);
 
 /**
  * Populate the transaction's input list with all the utxo's in the wallet,
@@ -76,7 +77,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
  */
 Status
 inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
-    bc::transaction_type &tx, bc::output_info_list &utxos);
+                  bc::transaction_type &tx, bc::output_info_list &utxos);
 
 } // namespace abcd
 

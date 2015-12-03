@@ -12,7 +12,8 @@ namespace abcd {
 #define TIMEOUT 10
 
 static int
-curlDebugCallback(CURL *handle, curl_infotype type, char *data, size_t size, void *userp)
+curlDebugCallback(CURL *handle, curl_infotype type, char *data, size_t size,
+                  void *userp)
 {
     std::string payload(data, size);
     switch (type)
@@ -35,7 +36,8 @@ curlDebugCallback(CURL *handle, curl_infotype type, char *data, size_t size, voi
 }
 
 static size_t
-curlDataCallback(void *data, size_t memberSize, size_t numMembers, void *userData)
+curlDataCallback(void *data, size_t memberSize, size_t numMembers,
+                 void *userData)
 {
     auto size = numMembers * memberSize;
 
@@ -50,7 +52,7 @@ HttpReply::codeOk()
 {
     if (code < 200 || 300 <= code)
         return ABC_ERROR(ABC_CC_Error, "Bad HTTP status code " +
-            std::to_string(code));
+                         std::to_string(code));
     return Status();
 }
 
@@ -74,7 +76,7 @@ HttpRequest::debug()
         return *this;
 
     if (curl_easy_setopt(handle_, CURLOPT_DEBUGFUNCTION, curlDebugCallback) ||
-        curl_easy_setopt(handle_, CURLOPT_VERBOSE, 1L))
+            curl_easy_setopt(handle_, CURLOPT_VERBOSE, 1L))
         status_ = ABC_ERROR(ABC_CC_Error, "cURL failed to enable debug output");
 
     return *this;
@@ -124,26 +126,26 @@ HttpRequest::get(HttpReply &result, const std::string &url)
         ABC_DebugLog("%s (%d)", url.c_str(), result.code);
     else
         ABC_DebugLog("%s (%d)\n%s", url.c_str(), result.code,
-            result.body.c_str());
+                     result.body.c_str());
 
     return Status();
 }
 
 Status
 HttpRequest::post(HttpReply &result, const std::string &url,
-    const std::string body)
+                  const std::string body)
 {
     if (!status_)
         return status_;
     if (curl_easy_setopt(handle_, CURLOPT_POSTFIELDSIZE, body.size()) ||
-        curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, body.c_str()))
+            curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, body.c_str()))
         return ABC_ERROR(ABC_CC_Error, "cURL failed to set POST body");
     return get(result, url);
 }
 
 Status
 HttpRequest::put(HttpReply &result, const std::string &url,
-    const std::string body)
+                 const std::string body)
 {
     if (!status_)
         return status_;

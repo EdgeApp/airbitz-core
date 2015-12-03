@@ -116,7 +116,7 @@ TxMetaDb::load()
             Tx tx;
             TxJson json;
             if (json.load(dir_ + de->d_name, wallet_.dataKey()).log() &&
-                json.unpack(tx).log())
+                    json.unpack(tx).log())
             {
                 if (path(tx) != dir_ + de->d_name)
                     ABC_DebugLog("Filename %s does not match transaction", de->d_name);
@@ -191,7 +191,7 @@ std::string
 TxMetaDb::path(const Tx &tx)
 {
     return dir_ + cryptoFilename(wallet_.dataKey(), tx.ntxid) +
-        (tx.internal ? "-int.json" : "-ext.json");
+           (tx.internal ? "-int.json" : "-ext.json");
 }
 
 }

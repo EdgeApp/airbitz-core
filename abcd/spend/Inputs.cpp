@@ -18,7 +18,7 @@ namespace abcd {
 using namespace libbitcoin;
 
 static std::map<data_chunk, std::string> address_map;
-static operation create_data_operation(data_chunk& data);
+static operation create_data_operation(data_chunk &data);
 
 Status
 signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
@@ -26,12 +26,12 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
     for (size_t i = 0; i < result.inputs.size(); ++i)
     {
         // Find the utxo this input refers to:
-        bc::input_point& point = result.inputs[i].previous_output;
+        bc::input_point &point = result.inputs[i].previous_output;
         bc::transaction_type tx = wallet.txdb.txidLookup(point.hash);
 
         // Find the address for that utxo:
         bc::payment_address pa;
-        bc::script_type& script = tx.outputs[point.index].script;
+        bc::script_type &script = tx.outputs[point.index].script;
         bc::extract(pa, script);
         if (payment_address::invalid_version == pa.version())
             return ABC_ERROR(ABC_CC_Error, "Invalid address");
@@ -42,7 +42,7 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
             return ABC_ERROR(ABC_CC_Error, "Missing signing key");
         bc::ec_secret secret = bc::wif_to_secret(key->second);
         bc::ec_point pubkey = bc::secret_to_public_key(secret,
-            bc::is_wif_compressed(key->second));
+                              bc::is_wif_compressed(key->second));
 
         // Gererate the previous output's signature:
         // TODO: We already have this; process it and use it
@@ -54,7 +54,7 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
         if (sig_hash == null_hash)
             return ABC_ERROR(ABC_CC_Error, "Unable to sign");
         data_chunk signature = sign(secret, sig_hash,
-            create_nonce(secret, sig_hash));
+                                    create_nonce(secret, sig_hash));
         signature.push_back(0x01);
 
         // Create out scriptsig:
@@ -67,7 +67,7 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
     return Status();
 }
 
-static operation create_data_operation(data_chunk& data)
+static operation create_data_operation(data_chunk &data)
 {
     BITCOIN_ASSERT(data.size() < std::numeric_limits<uint32_t>::max());
     operation op;
@@ -83,13 +83,13 @@ static operation create_data_operation(data_chunk& data)
     return op;
 }
 
-bool gather_challenges(unsigned_transaction& utx, Wallet &wallet)
+bool gather_challenges(unsigned_transaction &utx, Wallet &wallet)
 {
     utx.challenges.resize(utx.tx.inputs.size());
 
     for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
     {
-        bc::input_point& point = utx.tx.inputs[i].previous_output;
+        bc::input_point &point = utx.tx.inputs[i].previous_output;
         if (!wallet.txdb.txidExists(point.hash))
             return false;
         bc::transaction_type tx = wallet.txdb.txidLookup(point.hash);
@@ -99,14 +99,14 @@ bool gather_challenges(unsigned_transaction& utx, Wallet &wallet)
     return true;
 }
 
-bool sign_tx(unsigned_transaction& utx, const key_table& keys)
+bool sign_tx(unsigned_transaction &utx, const key_table &keys)
 {
     bool all_done = true;
 
     for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
     {
-        auto& input = utx.tx.inputs[i];
-        auto& challenge = utx.challenges[i];
+        auto &input = utx.tx.inputs[i];
+        auto &challenge = utx.challenges[i];
 
         // Already signed?
         if (input.script.operations().size())
@@ -127,7 +127,7 @@ bool sign_tx(unsigned_transaction& utx, const key_table& keys)
             all_done = false;
             continue;
         }
-        auto& secret = key->second.secret;
+        auto &secret = key->second.secret;
         auto pubkey = bc::secret_to_public_key(secret, key->second.compressed);
 
         // Create the sighash for this input:
@@ -141,7 +141,7 @@ bool sign_tx(unsigned_transaction& utx, const key_table& keys)
 
         // Sign:
         data_chunk signature = sign(secret, sighash,
-            create_nonce(secret, sighash));
+                                    create_nonce(secret, sighash));
         signature.push_back(0x01);
 
         // Save:
@@ -156,7 +156,7 @@ bool sign_tx(unsigned_transaction& utx, const key_table& keys)
 
 static uint64_t
 minerFee(const bc::transaction_type &tx, uint64_t sourced,
-    const BitcoinFeeInfo &feeInfo)
+         const BitcoinFeeInfo &feeInfo)
 {
     // Signature scripts have a 72-byte signature plus a 32-byte pubkey:
     size_t size = satoshi_raw_size(tx) + 104 * tx.inputs.size();
@@ -189,7 +189,7 @@ minerFee(const bc::transaction_type &tx, uint64_t sourced,
 
 Status
 inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
-    bc::transaction_type &tx, bc::output_info_list &utxos)
+                  bc::transaction_type &tx, bc::output_info_list &utxos)
 {
     auto totalOut = outputsTotal(tx.outputs);
 
@@ -227,7 +227,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
 
 Status
 inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
-    bc::transaction_type &tx, bc::output_info_list &utxos)
+                  bc::transaction_type &tx, bc::output_info_list &utxos)
 {
     auto totalOut = outputsTotal(tx.outputs);
 

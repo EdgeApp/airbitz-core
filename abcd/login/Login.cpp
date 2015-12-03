@@ -25,7 +25,7 @@ const std::string infoKeyHmacKey("infoKey");
 
 Status
 Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
-    const LoginPackage &loginPackage, JsonBox rootKeyBox, bool offline)
+              const LoginPackage &loginPackage, JsonBox rootKeyBox, bool offline)
 {
     std::shared_ptr<Login> out(new Login(lobby, dataKey));
     ABC_CHECK(out->loadKeys(loginPackage, JsonBox(), true));
@@ -36,7 +36,7 @@ Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
 
 Status
 Login::createNew(std::shared_ptr<Login> &result, Lobby &lobby,
-    const char *password)
+                 const char *password)
 {
     DataChunk dataKey;
     ABC_CHECK(randomData(dataKey, DATA_KEY_LENGTH));
@@ -116,7 +116,7 @@ Login::createNew(const char *password)
 
     // Create the account and repo on server:
     ABC_CHECK(loginServerCreate(lobby, authKey_,
-        carePackage, loginPackage, base16Encode(syncKey_)));
+                                carePackage, loginPackage, base16Encode(syncKey_)));
 
     // Set up the on-disk login:
     ABC_CHECK(lobby.dirCreate());
@@ -131,7 +131,8 @@ Login::createNew(const char *password)
 }
 
 Status
-Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskBased)
+Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox,
+                bool diskBased)
 {
     ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey_, dataKey_));
     ABC_CHECK(loginPackage.authKeyBox().decrypt(authKey_, dataKey_));
@@ -146,14 +147,15 @@ Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskB
             if (diskBased)
                 ABC_CHECK(rootKeyBox.load(lobby.rootKeyPath()));
             else
-                return ABC_ERROR(ABC_CC_Error, "The account has a rootKey, but it's not on the server.");
+                return ABC_ERROR(ABC_CC_Error,
+                                 "The account has a rootKey, but it's not on the server.");
         }
         else if (diskBased)
         {
             // The server hasn't been asked yet, so do that now:
             LoginPackage unused;
             ABC_CHECK(loginServerGetLoginPackage(lobby, authKey_, DataChunk(),
-                unused, rootKeyBox));
+                                                 unused, rootKeyBox));
 
             // If the server had one, save it for the future:
             if (rootKeyBox)
@@ -191,7 +193,7 @@ Login::rootKeyUpgrade()
 
     // Upgrade the account on the server:
     ABC_CHECK(loginServerAccountUpgrade(*this,
-        rootKeyBox, mnemonicBox, dataKeyBox));
+                                        rootKeyBox, mnemonicBox, dataKeyBox));
     ABC_CHECK(rootKeyBox.save(lobby.rootKeyPath()));
 
     return Status();

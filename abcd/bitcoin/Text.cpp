@@ -24,7 +24,7 @@ wifToAddress(bc::payment_address &result, const std::string &wif)
     AutoString szAddress;
     bool bCompressed;
     ABC_CHECK_OLD(ABC_BridgeDecodeWIF(wif.c_str(),
-        &secret, &bCompressed, &szAddress.get(), &error));
+                                      &secret, &bCompressed, &szAddress.get(), &error));
 
     // Output:
     if (!result.set_encoded(szAddress.get()))
@@ -143,7 +143,7 @@ struct CustomResult:
     optional_string ret;
 
 protected:
-    virtual bool got_param(std::string& key, std::string& value)
+    virtual bool got_param(std::string &key, std::string &value)
     {
         if ("category" == key)
             category.reset(value);
@@ -169,7 +169,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
 
     CustomResult result;
     AutoFree<tABC_BitcoinURIInfo, ABC_BridgeFreeURIInfo>
-        pInfo(structAlloc<tABC_BitcoinURIInfo>());
+    pInfo(structAlloc<tABC_BitcoinURIInfo>());
 
     // Allow a double-slash in the "bitcoin:" URI schema
     // to work around limitations in email and SMS programs:
@@ -201,7 +201,7 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
     {
         auto address = result.address.get();
         if (address.version() == pubkeyVersion() ||
-            address.version() == scriptVersion())
+                address.version() == scriptVersion())
             pInfo->szAddress = stringCopy(address.encoded());
     }
     if (result.amount)
@@ -214,9 +214,9 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
     {
         auto category = result.category.get();
         if (0 == category.find("Expense:") ||
-            0 == category.find("Income:") ||
-            0 == category.find("Transfer:") ||
-            0 == category.find("Exchange:"))
+                0 == category.find("Income:") ||
+                0 == category.find("Transfer:") ||
+                0 == category.find("Exchange:"))
             pInfo->szCategory = stringCopy(category);
     }
     if (result.r)

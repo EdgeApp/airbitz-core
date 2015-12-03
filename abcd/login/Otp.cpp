@@ -30,7 +30,7 @@ otpAuthSet(Login &login, long timeout)
     }
 
     ABC_CHECK(loginServerOtpEnable(login,
-        login.lobby.otpKey()->encodeBase32(), timeout));
+                                   login.lobby.otpKey()->encodeBase32(), timeout));
 
     return Status();
 }
@@ -43,7 +43,7 @@ otpAuthRemove(Login &login)
 
 Status
 otpResetGet(std::list<std::string> &result,
-    const std::list<std::string> &usernames)
+            const std::list<std::string> &usernames)
 {
     // List the users:
     std::list<DataChunk> authIds;
@@ -67,7 +67,8 @@ otpResetGet(std::list<std::string> &result,
     {
         if (*i)
             result.push_back(*j);
-        ++i; ++j;
+        ++i;
+        ++j;
     }
 
     return Status();

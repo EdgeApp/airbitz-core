@@ -57,7 +57,7 @@ public:
      */
     Status
     post(HttpReply &result, const std::string &url,
-        const std::string body="");
+         const std::string body="");
 
     /**
      * Performs an HTTP PUT operation.

@@ -87,7 +87,7 @@ std::string
 cryptoFilename(DataSlice key, const std::string &name)
 {
     return bc::encode_base58(bc::to_data_chunk(
-        bc::hmac_sha256_hash(DataSlice(name), key)));
+                                 bc::hmac_sha256_hash(DataSlice(name), key)));
 }
 
 /**
@@ -108,23 +108,24 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
 
     ABC_CHECK_NULL_BUF(Data);
     ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_ASSERT(cryptoType < ABC_CryptoType_Count, ABC_CC_UnknownCryptoType, "Invalid encryption type");
+    ABC_CHECK_ASSERT(cryptoType < ABC_CryptoType_Count, ABC_CC_UnknownCryptoType,
+                     "Invalid encryption type");
     ABC_CHECK_NULL(ppJSON_Enc);
 
     if (cryptoType == ABC_CryptoType_AES256)
     {
         // encrypt
         ABC_CHECK_RET(ABC_CryptoEncryptAES256Package(Data,
-                                                     Key,
-                                                     &EncData,
-                                                     IV,
-                                                     pError));
+                      Key,
+                      &EncData,
+                      IV,
+                      pError));
 
         // Encoding
         jsonRoot = json_pack("{sissss}",
-            JSON_ENC_TYPE_FIELD, cryptoType,
-            JSON_ENC_IV_FIELD,   base16Encode(IV).c_str(),
-            JSON_ENC_DATA_FIELD, base64Encode(EncData).c_str());
+                             JSON_ENC_TYPE_FIELD, cryptoType,
+                             JSON_ENC_IV_FIELD,   base16Encode(IV).c_str(),
+                             JSON_ENC_DATA_FIELD, base64Encode(EncData).c_str());
 
         // assign our final result
         *ppJSON_Enc = jsonRoot;
@@ -159,7 +160,8 @@ tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
     ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(szFilename);
 
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(Data, Key, cryptoType, &root, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(Data, Key, cryptoType, &root,
+                  pError));
     ABC_CHECK_NEW(JsonPtr(root).save(szFilename));
 
 exit:
@@ -184,13 +186,14 @@ tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
     ABC_CHECK_NULL(szFilename);
     ABC_CHECK_NULL(pJSON_Data);
 
-     // Downstream decoders often forget to null-terminate their input.
-     // This is a bug, but we can save the app from crashing by
-     // including a null byte in the encrypted data.
+    // Downstream decoders often forget to null-terminate their input.
+    // This is a bug, but we can save the app from crashing by
+    // including a null byte in the encrypted data.
     data = JsonPtr(json_incref(pJSON_Data)).encode();
     data.push_back(0);
 
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(toU08Buf(data), Key, cryptoType, szFilename, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(toU08Buf(data), Key, cryptoType,
+                                            szFilename, pError));
 
 exit:
     return cc;
@@ -217,22 +220,30 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     ABC_CHECK_NULL(pData);
 
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_TYPE_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_number(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing type");
+    ABC_CHECK_ASSERT((jsonVal
+                      && json_is_number(jsonVal)), ABC_CC_DecryptError,
+                     "Error parsing JSON encrypt package - missing type");
     type = (int) json_integer_value(jsonVal);
-    ABC_CHECK_ASSERT(ABC_CryptoType_AES256 == type, ABC_CC_UnknownCryptoType, "Invalid encryption type");
+    ABC_CHECK_ASSERT(ABC_CryptoType_AES256 == type, ABC_CC_UnknownCryptoType,
+                     "Invalid encryption type");
 
     // get the IV
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_IV_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing iv");
+    ABC_CHECK_ASSERT((jsonVal
+                      && json_is_string(jsonVal)), ABC_CC_DecryptError,
+                     "Error parsing JSON encrypt package - missing iv");
     ABC_CHECK_NEW(base16Decode(iv, json_string_value(jsonVal)));
 
     // get the encrypted data
     jsonVal = json_object_get(pJSON_Enc, JSON_ENC_DATA_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_DecryptError, "Error parsing JSON encrypt package - missing data");
+    ABC_CHECK_ASSERT((jsonVal
+                      && json_is_string(jsonVal)), ABC_CC_DecryptError,
+                     "Error parsing JSON encrypt package - missing data");
     ABC_CHECK_NEW(base64Decode(data, json_string_value(jsonVal)));
 
     // decrypted the data
-    ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(toU08Buf(data), Key, toU08Buf(iv), pData, pError));
+    ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(toU08Buf(data), Key, toU08Buf(iv),
+                  pData, pError));
 
 exit:
     return cc;
@@ -393,12 +404,14 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     pCurUnencryptedData += nRandomFooterBytes;
 
     // add the sha256
-    SHA256(UnencryptedData.data(), totalSizeUnencrypted - SHA256_DIGEST_LENGTH, sha256Output);
+    SHA256(UnencryptedData.data(), totalSizeUnencrypted - SHA256_DIGEST_LENGTH,
+           sha256Output);
     memcpy(pCurUnencryptedData, sha256Output, SHA256_DIGEST_LENGTH);
     pCurUnencryptedData += SHA256_DIGEST_LENGTH;
 
     // encrypted our new unencrypted package
-    ABC_CHECK_RET(ABC_CryptoEncryptAES256(UnencryptedData, Key, toU08Buf(IV), pEncData, pError));
+    ABC_CHECK_RET(ABC_CryptoEncryptAES256(UnencryptedData, Key, toU08Buf(IV),
+                                          pEncData, pError));
 
 exit:
     return cc;
@@ -458,8 +471,10 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     headerLength = *Data.data();
 
     // check that we have enough data based upon this info
-    minSize = 1 + headerLength + 4 + 1 + 1 + SHA256_DIGEST_LENGTH; // decrypted package must be at least this big
-    ABC_CHECK_ASSERT(Data.size() >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
+    minSize = 1 + headerLength + 4 + 1 + 1 +
+              SHA256_DIGEST_LENGTH; // decrypted package must be at least this big
+    ABC_CHECK_ASSERT(Data.size() >= minSize, ABC_CC_DecryptFailure,
+                     "Decrypted data is not long enough");
 
     // get the size of the data section
     pDataLengthPos = Data.data() + (1 + headerLength);
@@ -472,18 +487,23 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     dataSecLength += ((unsigned int) *pDataLengthPos);
 
     // check that we have enough data based upon this info
-    minSize = 1 + headerLength + 4 + dataSecLength + 1 + SHA256_DIGEST_LENGTH; // decrypted package must be at least this big
-    ABC_CHECK_ASSERT(Data.size() >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
+    minSize = 1 + headerLength + 4 + dataSecLength + 1 +
+              SHA256_DIGEST_LENGTH; // decrypted package must be at least this big
+    ABC_CHECK_ASSERT(Data.size() >= minSize, ABC_CC_DecryptFailure,
+                     "Decrypted data is not long enough");
 
     // get the size of the random footer section
     footerLength = *(Data.data() + 1 + headerLength + 4 + dataSecLength);
 
     // check that we have enough data based upon this info
-    minSize = 1 + headerLength + 4 + dataSecLength + 1 + footerLength + SHA256_DIGEST_LENGTH; // decrypted package must be at least this big
-    ABC_CHECK_ASSERT(Data.size() >= minSize, ABC_CC_DecryptFailure, "Decrypted data is not long enough");
+    minSize = 1 + headerLength + 4 + dataSecLength + 1 + footerLength +
+              SHA256_DIGEST_LENGTH; // decrypted package must be at least this big
+    ABC_CHECK_ASSERT(Data.size() >= minSize, ABC_CC_DecryptFailure,
+                     "Decrypted data is not long enough");
 
     // set up for the SHA check
-    shaCheckLength = 1 + headerLength + 4 + dataSecLength + 1 + footerLength; // all but the sha
+    shaCheckLength = 1 + headerLength + 4 + dataSecLength + 1 +
+                     footerLength; // all but the sha
     pSHALoc = Data.data() + shaCheckLength;
 
     // calc the sha256
@@ -493,7 +513,8 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     if (!cryptoCompare(pSHALoc, sha256Output, SHA256_DIGEST_LENGTH))
     {
         // this can be specifically used by the caller to possibly determine whether the key was incorrect
-        ABC_RET_ERROR(ABC_CC_DecryptFailure, "Decrypted data failed checksum (SHA) check");
+        ABC_RET_ERROR(ABC_CC_DecryptFailure,
+                      "Decrypted data failed checksum (SHA) check");
     }
 
     // all is good, so create the final data

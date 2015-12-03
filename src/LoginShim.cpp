@@ -47,8 +47,8 @@ cacheClear()
 void
 cacheLogout()
 {
-   std::lock_guard<std::mutex> lock(gLoginMutex);
-   cacheClear();
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+    cacheClear();
 }
 
 Status
@@ -79,7 +79,7 @@ cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName)
 
 Status
 cacheLoginNew(std::shared_ptr<Login> &result,
-    const char *szUserName, const char *szPassword)
+              const char *szUserName, const char *szPassword)
 {
     std::shared_ptr<Lobby> lobby;
     ABC_CHECK(cacheLobby(lobby, szUserName));
@@ -97,7 +97,7 @@ cacheLoginNew(std::shared_ptr<Login> &result,
 
 Status
 cacheLoginPassword(std::shared_ptr<Login> &result,
-    const char *szUserName, const char *szPassword)
+                   const char *szUserName, const char *szPassword)
 {
     std::shared_ptr<Lobby> lobby;
     ABC_CHECK(cacheLobby(lobby, szUserName));
@@ -115,7 +115,7 @@ cacheLoginPassword(std::shared_ptr<Login> &result,
 
 Status
 cacheLoginRecovery(std::shared_ptr<Login> &result,
-    const char *szUserName, const char *szRecoveryAnswers)
+                   const char *szUserName, const char *szRecoveryAnswers)
 {
     std::shared_ptr<Lobby> lobby;
     ABC_CHECK(cacheLobby(lobby, szUserName));
@@ -124,7 +124,8 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginRecovery(gLoginCache, *lobby, szRecoveryAnswers, &error));
+        ABC_CHECK_OLD(ABC_LoginRecovery(gLoginCache, *lobby, szRecoveryAnswers,
+                                        &error));
     }
 
     result = gLoginCache;
@@ -133,7 +134,7 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
 
 Status
 cacheLoginPin(std::shared_ptr<Login> &result,
-    const char *szUserName, const char *szPin)
+              const char *szUserName, const char *szPin)
 {
     std::shared_ptr<Lobby> lobby;
     ABC_CHECK(cacheLobby(lobby, szUserName));
@@ -181,7 +182,7 @@ cacheAccount(std::shared_ptr<Account> &result, const char *szUserName)
 
 Status
 cacheWalletNew(std::shared_ptr<Wallet> &result, const char *szUserName,
-    const std::string &name, int currency)
+               const std::string &name, int currency)
 {
     std::shared_ptr<Account> account;
     ABC_CHECK(cacheAccount(account, szUserName));
@@ -200,7 +201,7 @@ cacheWalletNew(std::shared_ptr<Wallet> &result, const char *szUserName,
 
 Status
 cacheWallet(std::shared_ptr<Wallet> &result, const char *szUserName,
-    const char *szUUID)
+            const char *szUUID)
 {
     std::shared_ptr<Account> account;
     ABC_CHECK(cacheAccount(account, szUserName));

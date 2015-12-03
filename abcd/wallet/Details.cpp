@@ -35,12 +35,13 @@ ABC_TxDetailsFree(tABC_TxDetails *pDetails)
 }
 
 tABC_CC
-ABC_TxDetailsCopy(tABC_TxDetails **ppNewDetails, const tABC_TxDetails *pOldDetails, tABC_Error *pError)
+ABC_TxDetailsCopy(tABC_TxDetails **ppNewDetails,
+                  const tABC_TxDetails *pOldDetails, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     AutoFree<tABC_TxDetails, ABC_TxDetailsFree>
-        pNewDetails(structAlloc<tABC_TxDetails>());
+    pNewDetails(structAlloc<tABC_TxDetails>());
 
     ABC_CHECK_NULL(ppNewDetails);
     ABC_CHECK_NULL(pOldDetails);
@@ -66,13 +67,14 @@ exit:
 }
 
 tABC_CC
-ABC_TxDetailsDecode(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *pError)
+ABC_TxDetailsDecode(json_t *pJSON_Obj, tABC_TxDetails **ppDetails,
+                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
 
     AutoFree<tABC_TxDetails, ABC_TxDetailsFree>
-        pDetails(structAlloc<tABC_TxDetails>());
+    pDetails(structAlloc<tABC_TxDetails>());
     json_t *jsonDetails = NULL;
     json_t *jsonVal = NULL;
 
@@ -82,18 +84,23 @@ ABC_TxDetailsDecode(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *p
 
     // get the details object
     jsonDetails = json_object_get(pJSON_Obj, JSON_DETAILS_FIELD);
-    ABC_CHECK_ASSERT((jsonDetails && json_is_object(jsonDetails)), ABC_CC_JSONError, "Error parsing JSON details package - missing meta data (details)");
+    ABC_CHECK_ASSERT((jsonDetails
+                      && json_is_object(jsonDetails)), ABC_CC_JSONError,
+                     "Error parsing JSON details package - missing meta data (details)");
 
     // get the satoshi field
     jsonVal = json_object_get(jsonDetails, JSON_AMOUNT_SATOSHI_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing satoshi amount");
+    ABC_CHECK_ASSERT((jsonVal
+                      && json_is_integer(jsonVal)), ABC_CC_JSONError,
+                     "Error parsing JSON details package - missing satoshi amount");
     pDetails->amountSatoshi = json_integer_value(jsonVal);
 
     // get the airbitz fees satoshi field
     jsonVal = json_object_get(jsonDetails, JSON_AMOUNT_AIRBITZ_FEE_SATOSHI_FIELD);
     if (jsonVal)
     {
-        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError, "Error parsing JSON details package - malformed airbitz fees field");
+        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError,
+                         "Error parsing JSON details package - malformed airbitz fees field");
         pDetails->amountFeesAirbitzSatoshi = json_integer_value(jsonVal);
     }
 
@@ -101,41 +108,53 @@ ABC_TxDetailsDecode(json_t *pJSON_Obj, tABC_TxDetails **ppDetails, tABC_Error *p
     jsonVal = json_object_get(jsonDetails, JSON_AMOUNT_MINERS_FEE_SATOSHI_FIELD);
     if (jsonVal)
     {
-        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError, "Error parsing JSON details package - malformed miners fees field");
+        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError,
+                         "Error parsing JSON details package - malformed miners fees field");
         pDetails->amountFeesMinersSatoshi = json_integer_value(jsonVal);
     }
 
     // get the currency field
     jsonVal = json_object_get(jsonDetails, JSON_TX_AMOUNT_CURRENCY_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_real(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing currency amount");
+    ABC_CHECK_ASSERT((jsonVal
+                      && json_is_real(jsonVal)), ABC_CC_JSONError,
+                     "Error parsing JSON details package - missing currency amount");
     pDetails->amountCurrency = json_real_value(jsonVal);
 
     // get the name field
     jsonVal = json_object_get(jsonDetails, JSON_TX_NAME_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing name");
+    ABC_CHECK_ASSERT((jsonVal
+                      && json_is_string(jsonVal)), ABC_CC_JSONError,
+                     "Error parsing JSON details package - missing name");
     pDetails->szName = stringCopy(json_string_value(jsonVal));
 
     // get the business-directory id field
     jsonVal = json_object_get(jsonDetails, JSON_TX_BIZID_FIELD);
     if (jsonVal)
     {
-        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError, "Error parsing JSON details package - malformed directory bizId field");
+        ABC_CHECK_ASSERT(json_is_integer(jsonVal), ABC_CC_JSONError,
+                         "Error parsing JSON details package - malformed directory bizId field");
         pDetails->bizId = json_integer_value(jsonVal);
     }
 
     // get the category field
     jsonVal = json_object_get(jsonDetails, JSON_TX_CATEGORY_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing category");
+    ABC_CHECK_ASSERT((jsonVal
+                      && json_is_string(jsonVal)), ABC_CC_JSONError,
+                     "Error parsing JSON details package - missing category");
     pDetails->szCategory = stringCopy(json_string_value(jsonVal));
 
     // get the notes field
     jsonVal = json_object_get(jsonDetails, JSON_TX_NOTES_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_string(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing notes");
+    ABC_CHECK_ASSERT((jsonVal
+                      && json_is_string(jsonVal)), ABC_CC_JSONError,
+                     "Error parsing JSON details package - missing notes");
     pDetails->szNotes = stringCopy(json_string_value(jsonVal));
 
     // get the attributes field
     jsonVal = json_object_get(jsonDetails, JSON_TX_ATTRIBUTES_FIELD);
-    ABC_CHECK_ASSERT((jsonVal && json_is_integer(jsonVal)), ABC_CC_JSONError, "Error parsing JSON details package - missing attributes");
+    ABC_CHECK_ASSERT((jsonVal
+                      && json_is_integer(jsonVal)), ABC_CC_JSONError,
+                     "Error parsing JSON details package - missing attributes");
     pDetails->attributes = (unsigned int) json_integer_value(jsonVal);
 
     // assign final result
@@ -146,7 +165,8 @@ exit:
 }
 
 tABC_CC
-ABC_TxDetailsEncode(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pError)
+ABC_TxDetailsEncode(json_t *pJSON_Obj, tABC_TxDetails *pDetails,
+                    tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -161,39 +181,50 @@ ABC_TxDetailsEncode(json_t *pJSON_Obj, tABC_TxDetails *pDetails, tABC_Error *pEr
     pJSON_Details = json_object();
 
     // add the satoshi field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_AMOUNT_SATOSHI_FIELD, json_integer(pDetails->amountSatoshi));
+    retVal = json_object_set_new(pJSON_Details, JSON_AMOUNT_SATOSHI_FIELD,
+                                 json_integer(pDetails->amountSatoshi));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the airbitz fees satoshi field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_AMOUNT_AIRBITZ_FEE_SATOSHI_FIELD, json_integer(pDetails->amountFeesAirbitzSatoshi));
+    retVal = json_object_set_new(pJSON_Details,
+                                 JSON_AMOUNT_AIRBITZ_FEE_SATOSHI_FIELD,
+                                 json_integer(pDetails->amountFeesAirbitzSatoshi));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the miners fees satoshi field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_AMOUNT_MINERS_FEE_SATOSHI_FIELD, json_integer(pDetails->amountFeesMinersSatoshi));
+    retVal = json_object_set_new(pJSON_Details,
+                                 JSON_AMOUNT_MINERS_FEE_SATOSHI_FIELD,
+                                 json_integer(pDetails->amountFeesMinersSatoshi));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the currency field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_AMOUNT_CURRENCY_FIELD, json_real(pDetails->amountCurrency));
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_AMOUNT_CURRENCY_FIELD,
+                                 json_real(pDetails->amountCurrency));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the name field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_NAME_FIELD, json_string(pDetails->szName));
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_NAME_FIELD,
+                                 json_string(pDetails->szName));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the business-directory id field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_BIZID_FIELD, json_integer(pDetails->bizId));
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_BIZID_FIELD,
+                                 json_integer(pDetails->bizId));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the category field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_CATEGORY_FIELD, json_string(pDetails->szCategory));
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_CATEGORY_FIELD,
+                                 json_string(pDetails->szCategory));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the notes field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_NOTES_FIELD, json_string(pDetails->szNotes));
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_NOTES_FIELD,
+                                 json_string(pDetails->szNotes));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the attributes field to the details object
-    retVal = json_object_set_new(pJSON_Details, JSON_TX_ATTRIBUTES_FIELD, json_integer(pDetails->attributes));
+    retVal = json_object_set_new(pJSON_Details, JSON_TX_ATTRIBUTES_FIELD,
+                                 json_integer(pDetails->attributes));
     ABC_CHECK_ASSERT(retVal == 0, ABC_CC_JSONError, "Could not encode JSON value");
 
     // add the details object to the master object

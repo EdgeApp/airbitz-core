@@ -29,7 +29,7 @@ struct CacheJsonRow:
 };
 
 ExchangeCache::ExchangeCache(const std::string &dir):
-   path_(dir + "Exchange.json")
+    path_(dir + "Exchange.json")
 {
     load(); // Nothing bad happens if this fails
 }

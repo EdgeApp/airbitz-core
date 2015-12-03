@@ -25,7 +25,7 @@ static void *
 janssonSecureMalloc(size_t size)
 {
     // Store the memory area size in the beginning of the block:
-    char *ptr = (char*)malloc(size + 8);
+    char *ptr = (char *)malloc(size + 8);
     *((size_t *)ptr) = size;
     return ptr + 8;
 }
@@ -38,7 +38,7 @@ janssonSecureFree(void *ptr)
 {
     if (ptr)
     {
-        ptr = (char*)ptr - 8;
+        ptr = (char *)ptr - 8;
         size_t size = *((size_t *)ptr);
         ABC_UtilGuaranteedMemset(ptr, 0, size + 8);
         free(ptr);
@@ -122,7 +122,7 @@ JsonPtr::load(const std::string &filename, DataSlice dataKey)
 {
     json_t *root = nullptr;
     ABC_CHECK_OLD(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
-        toU08Buf(dataKey), &root, &error));
+                  toU08Buf(dataKey), &root, &error));
     reset(root);
     return Status();
 }
@@ -151,8 +151,8 @@ Status
 JsonPtr::save(const std::string &filename, DataSlice dataKey) const
 {
     ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(root_,
-        toU08Buf(dataKey), ABC_CryptoType_AES256,
-        filename.c_str(), &error));
+                  toU08Buf(dataKey), ABC_CryptoType_AES256,
+                  filename.c_str(), &error));
     return Status();
 }
 

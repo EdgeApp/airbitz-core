@@ -45,7 +45,7 @@ ifeq ($V,0)
 endif
 
 # Targets:
-all: $(WORK_DIR)/abc-cli check $(WORK_DIR)/abc-watcher
+all: $(WORK_DIR)/abc-cli check $(WORK_DIR)/abc-watcher format-check
 libabc.a:  $(WORK_DIR)/libabc.a
 libabc.so: $(WORK_DIR)/libabc.so
 
@@ -66,6 +66,15 @@ $(WORK_DIR)/abc-watcher: $(watcher_objects) $(WORK_DIR)/libabc.a
 
 check: $(WORK_DIR)/abc-test
 	$(RUN) $<
+
+format:
+	@astyle --options=astyle-options -Q --suffix=none --recursive --exclude=build --exclude=codegen --exclude=deps --exclude=minilibs "*.cpp" "*.hpp" "*.h"
+
+format-check:
+ifneq (, $(shell which astyle))
+	@astyle --options=astyle-options -Q --suffix=none --recursive --exclude=build --exclude=codegen --exclude=deps --exclude=minilibs "*.cpp" "*.hpp" "*.h" \
+	--dry-run | sed -n '/Formatted/s/Formatted/Needs formatting:/p'
+endif
 
 clean:
 	$(RM) -r $(WORK_DIR) codegen

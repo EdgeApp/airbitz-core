@@ -22,8 +22,8 @@ static Status
 blockcypherPostTx(DataSlice tx)
 {
     const char *url = isTestnet() ?
-        "https://api.blockcypher.com/v1/btc/test3/txs/push":
-        "https://api.blockcypher.com/v1/btc/main/txs/push";
+                      "https://api.blockcypher.com/v1/btc/test3/txs/push":
+                      "https://api.blockcypher.com/v1/btc/main/txs/push";
 
     struct BlockcypherJson:
         public JsonObject
@@ -45,8 +45,8 @@ chainPostTx(DataSlice tx)
     static const std::string auth =
         "Basic " + base64Encode(std::string(CHAIN_API_USERPWD));
     const char *url = isTestnet() ?
-        "https://api.chain.com/v2/testnet3/transactions/send":
-        "https://api.chain.com/v2/bitcoin/transactions/send";
+                      "https://api.chain.com/v2/testnet3/transactions/send":
+                      "https://api.chain.com/v2/bitcoin/transactions/send";
 
     struct ChainJson:
         public JsonObject
@@ -57,7 +57,7 @@ chainPostTx(DataSlice tx)
 
     HttpReply reply;
     ABC_CHECK(HttpRequest().header("Authorization", auth).
-        post(reply, url, json.encode()));
+              post(reply, url, json.encode()));
     ABC_CHECK(reply.codeOk());
 
     return Status();
@@ -72,7 +72,7 @@ blockchainPostTx(DataSlice tx)
 
     HttpReply reply;
     ABC_CHECK(HttpRequest().
-        post(reply, "https://blockchain.info/pushtx", body));
+              post(reply, "https://blockchain.info/pushtx", body));
     ABC_CHECK(reply.codeOk());
 
     return Status();
@@ -143,8 +143,8 @@ broadcastTx(DataSlice rawTx)
         cv->wait(lock);
         // Quit immediately if one has succeeded:
         if ((t1->done() && t1->status()) ||
-            (t2->done() && t2->status()) ||
-            (t3->done() && t3->status()))
+                (t2->done() && t2->status()) ||
+                (t3->done() && t3->status()))
             return Status();
     }
 

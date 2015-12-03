@@ -11,12 +11,11 @@
 #include "../abcd/util/Status.hpp"
 #include <memory>
 
-namespace abcd
-{
-    class Lobby;
-    class Login;
-    class Account;
-    class Wallet;
+namespace abcd {
+class Lobby;
+class Login;
+class Account;
+class Wallet;
 }
 
 /**

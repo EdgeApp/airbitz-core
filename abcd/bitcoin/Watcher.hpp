@@ -29,12 +29,12 @@ public:
     // - Updater messages: -------------
     void disconnect();
     void connect();
-    void watch_address(const bc::payment_address& address, unsigned poll_ms=10000);
-    void prioritize_address(const bc::payment_address& address);
-    void send_tx(const bc::transaction_type& tx);
+    void watch_address(const bc::payment_address &address, unsigned poll_ms=10000);
+    void prioritize_address(const bc::payment_address &address);
+    void send_tx(const bc::transaction_type &tx);
 
     // - Callbacks: --------------------
-    typedef std::function<void (const bc::transaction_type&)> tx_callback;
+    typedef std::function<void (const bc::transaction_type &)> tx_callback;
     void set_tx_callback(tx_callback cb);
 
     typedef std::function<void (const size_t)> block_height_callback;
@@ -58,8 +58,8 @@ public:
      */
     void loop();
 
-    Watcher(const Watcher& copy) = delete;
-    Watcher& operator=(const Watcher& copy) = delete;
+    Watcher(const Watcher &copy) = delete;
+    Watcher &operator=(const Watcher &copy) = delete;
 
 private:
     zmq::context_t ctx_;
@@ -76,7 +76,7 @@ private:
     void send_disconnect();
     void send_connect();
     void send_watch_addr(bc::payment_address address, unsigned poll_ms);
-    void send_send(const bc::transaction_type& tx);
+    void send_send(const bc::transaction_type &tx);
 
     // The thread uses these callbacks, so put them in a mutex:
     std::mutex cb_mutex_;
@@ -85,10 +85,10 @@ private:
     quiet_callback quiet_cb_;
 
     // Everything below this point is only touched by the thread:
-    bool command(uint8_t* data, size_t size);
+    bool command(uint8_t *data, size_t size);
 
     // TxCallbacks interface:
-    virtual void on_add(const bc::transaction_type& tx) override;
+    virtual void on_add(const bc::transaction_type &tx) override;
     virtual void on_height(size_t height) override;
     virtual void on_quiet() override;
 };

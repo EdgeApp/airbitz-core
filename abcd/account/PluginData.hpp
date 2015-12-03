@@ -24,21 +24,21 @@ class Account;
  */
 Status
 pluginDataGet(const Account &account, const std::string &plugin,
-    const std::string &key, std::string &data);
+              const std::string &key, std::string &data);
 
 /**
  * Saves an item to the plugin key/value store.
  */
 Status
 pluginDataSet(const Account &account, const std::string &plugin,
-    const std::string &key, const std::string &data);
+              const std::string &key, const std::string &data);
 
 /**
  * Deletes an item from the plugin key/value store.
  */
 Status
 pluginDataRemove(const Account &account, const std::string &plugin,
-    const std::string &key);
+                 const std::string &key);
 
 /**
  * Removes the entire key/value store for a particular plugin.

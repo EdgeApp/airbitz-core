@@ -48,7 +48,7 @@ private:
 
     // Argument loading:
     bool read_string(std::stringstream &args, std::string &out,
-        const std::string &error_message);
+                     const std::string &error_message);
     bc::hash_digest read_txid(std::stringstream &args);
     bool read_address(std::stringstream &args, bc::payment_address &out);
 
@@ -138,16 +138,21 @@ void Cli::cmd_help()
     std::cout << "  exit                - leave the program" << std::endl;
     std::cout << "  help                - this menu" << std::endl;
     std::cout << "  connect <server>    - connect to obelisk server" << std::endl;
-    std::cout << "  disconnect          - stop talking to the obelisk server" << std::endl;
-    std::cout << "  height              - get the current blockchain height" << std::endl;
+    std::cout << "  disconnect          - stop talking to the obelisk server" <<
+              std::endl;
+    std::cout << "  height              - get the current blockchain height" <<
+              std::endl;
     std::cout << "  watch <address> [poll ms] - watch an address" << std::endl;
     std::cout << "  txheight <hash>     - get a transaction's height" << std::endl;
-    std::cout << "  txdump <hash>       - show the contents of a transaction" << std::endl;
-    std::cout << "  txsend <hash>       - push a transaction to the server" << std::endl;
+    std::cout << "  txdump <hash>       - show the contents of a transaction" <<
+              std::endl;
+    std::cout << "  txsend <hash>       - push a transaction to the server" <<
+              std::endl;
     std::cout << "  utxos [address]     - get utxos for an address" << std::endl;
     std::cout << "  save <filename>     - dump the database to disk" << std::endl;
     std::cout << "  load <filename>     - load the database from disk" << std::endl;
-    std::cout << "  dump [filename]     - display the database contents" << std::endl;
+    std::cout << "  dump [filename]     - display the database contents" <<
+              std::endl;
 }
 
 void Cli::cmd_connect(std::stringstream &args)
@@ -231,7 +236,7 @@ void Cli::cmd_utxos(std::stringstream &args)
     for (auto &utxo: utxos)
     {
         std::cout << bc::encode_hash(utxo.point.hash) << ":" <<
-            utxo.point.index << std::endl;
+                  utxo.point.index << std::endl;
         auto tx = db_.txidLookup(utxo.point.hash);
         auto &output = tx.outputs[utxo.point.index];
         bc::payment_address to_address;
@@ -257,7 +262,7 @@ void Cli::cmd_save(std::stringstream &args)
     }
 
     auto db = db_.serialize();
-    file.write(reinterpret_cast<const char*>(db.data()), db.size());
+    file.write(reinterpret_cast<const char *>(db.data()), db.size());
     file.close();
 }
 
@@ -277,7 +282,7 @@ void Cli::cmd_load(std::stringstream &args)
     std::streampos size = file.tellg();
     uint8_t *data = new uint8_t[size];
     file.seekg(0, std::ios::beg);
-    file.read(reinterpret_cast<char*>(data), size);
+    file.read(reinterpret_cast<char *>(data), size);
     file.close();
 
     if (!db_.load(bc::data_chunk(data, data + size)))
@@ -324,7 +329,7 @@ void Cli::on_quiet()
  * or prints an error message if there is none.
  */
 bool Cli::read_string(std::stringstream &args, std::string &out,
-    const std::string &error_message)
+                      const std::string &error_message)
 {
     args >> out;
     if (!out.size())

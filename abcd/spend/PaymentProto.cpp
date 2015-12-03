@@ -23,7 +23,8 @@ namespace abcd {
 const char *USER_AGENT = "Airbitz";
 const char *BIP71_MIMETYPE_PAYMENT = "application/bitcoin-payment";
 const char *BIP71_MIMETYPE_PAYMENTACK = "application/bitcoin-paymentack";
-const char *BIP71_MIMETYPE_PAYMENTREQUEST = "application/bitcoin-paymentrequest";
+const char *BIP71_MIMETYPE_PAYMENTREQUEST =
+    "application/bitcoin-paymentrequest";
 
 class AutoX509:
     public std::vector<X509 *>
@@ -51,7 +52,7 @@ loadCerts(payments::X509Certificates certChain, AutoX509 &certs)
 }
 
 static bool
-isValidSignature(X509 *cert, const EVP_MD* alg, payments::PaymentRequest req)
+isValidSignature(X509 *cert, const EVP_MD *alg, payments::PaymentRequest req)
 {
     payments::PaymentRequest rcopy(req);
     rcopy.set_signature(std::string(""));
@@ -66,8 +67,8 @@ isValidSignature(X509 *cert, const EVP_MD* alg, payments::PaymentRequest req)
     if (!EVP_VerifyUpdate(&ctx, data.data(), data.size()))
         return false;
     if (!EVP_VerifyFinal(&ctx,
-            (const unsigned char*) req.signature().data(),
-            (unsigned int) req.signature().size(), pubkey))
+                         (const unsigned char *) req.signature().data(),
+                         (unsigned int) req.signature().size(), pubkey))
         return false;
     return true;
 }
@@ -78,9 +79,9 @@ PaymentRequest::fetch(const std::string &url)
     HttpReply reply;
 
     ABC_CHECK(HttpRequest()
-        .header("Accept", BIP71_MIMETYPE_PAYMENTREQUEST)
-        .header("User-Agent", USER_AGENT)
-        .get(reply, url));
+              .header("Accept", BIP71_MIMETYPE_PAYMENTREQUEST)
+              .header("User-Agent", USER_AGENT)
+              .get(reply, url));
     ABC_CHECK(reply.codeOk());
 
     if (!request_.ParseFromString(reply.body))
@@ -100,7 +101,7 @@ PaymentRequest::fetch(const std::string &url)
 Status
 PaymentRequest::signatureOk(std::string &result)
 {
-    const EVP_MD* alg = NULL;
+    const EVP_MD *alg = NULL;
     if (request_.pki_type() == "x509+sha256")
         alg = EVP_sha256();
     else if (request_.pki_type() == "x509+sha1")
@@ -122,7 +123,8 @@ PaymentRequest::signatureOk(std::string &result)
     // the rest are untrusted certs that chain
     // to a valid root authority. OpenSSL needs them separately.
     STACK_OF(X509) *chain = sk_X509_new_null();
-    for (int i = certs.size() - 1; i > 0; i--) {
+    for (int i = certs.size() - 1; i > 0; i--)
+    {
         sk_X509_push(chain, certs[i]);
     }
     X509 *signing_cert = certs[0];
@@ -132,24 +134,25 @@ PaymentRequest::signatureOk(std::string &result)
         return ABC_ERROR(ABC_CC_Error, "Error creating X509_STORE_CTX");
 
     AutoFree<SSL_CTX, SSL_CTX_free> sslContext(SSL_CTX_new(SSLv23_client_method()));
-    if (!SSL_CTX_load_verify_locations(sslContext.get(), gContext->certPath().c_str(), NULL))
+    if (!SSL_CTX_load_verify_locations(sslContext.get(),
+                                       gContext->certPath().c_str(), NULL))
         return ABC_ERROR(ABC_CC_Error, "Unable to load caCerts");
 
     if (!X509_STORE_CTX_init(store_ctx.get(),
-            SSL_CTX_get_cert_store(sslContext.get()), signing_cert, chain))
+                             SSL_CTX_get_cert_store(sslContext.get()), signing_cert, chain))
         return SSL_ERROR(ABC_CC_Error, store_ctx.get());
 
     if (1 != X509_verify_cert(store_ctx.get()))
         return SSL_ERROR(ABC_CC_Error, store_ctx.get())
 
-    if (!isValidSignature(signing_cert, alg, request_))
-        return ABC_ERROR(ABC_CC_Error, "Bad signature");
+               if (!isValidSignature(signing_cert, alg, request_))
+                   return ABC_ERROR(ABC_CC_Error, "Bad signature");
 
     X509_NAME *certname = X509_get_subject_name(signing_cert);
     int textlen = X509_NAME_get_text_by_NID(certname, NID_commonName, NULL, 0);
     std::vector<char> website(textlen + 1);
     if (X509_NAME_get_text_by_NID(certname, NID_commonName,
-        website.data(), website.size()) != textlen && 0 < textlen)
+                                  website.data(), website.size()) != textlen && 0 < textlen)
         return ABC_ERROR(ABC_CC_Error, "Missing common name");
 
     result = website.data();
@@ -213,7 +216,7 @@ PaymentRequest::pay(PaymentReceipt &result, DataSlice tx, DataSlice refund)
     payment.add_transactions(tx.data(), tx.size());
 
     // Added refund address
-    payments::Output* refund_to = payment.add_refund_to();
+    payments::Output *refund_to = payment.add_refund_to();
     refund_to->set_script(refund.data(), refund.size());
 
     std::string response;
@@ -228,10 +231,10 @@ PaymentRequest::pay(PaymentReceipt &result, DataSlice tx, DataSlice refund)
     if (details_.has_payment_url())
     {
         ABC_CHECK(HttpRequest()
-            .header("Accept", BIP71_MIMETYPE_PAYMENTACK)
-            .header("Content-Type", BIP71_MIMETYPE_PAYMENT)
-            .header("User-Agent", USER_AGENT)
-            .post(reply, details_.payment_url(), response));
+                  .header("Accept", BIP71_MIMETYPE_PAYMENTACK)
+                  .header("Content-Type", BIP71_MIMETYPE_PAYMENT)
+                  .header("User-Agent", USER_AGENT)
+                  .post(reply, details_.payment_url(), response));
         ABC_CHECK(reply.codeOk());
 
         if (!result.ack.ParseFromString(reply.body))

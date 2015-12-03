@@ -47,7 +47,7 @@ otpAuthRemove(Login &login);
  */
 Status
 otpResetGet(std::list<std::string> &result,
-    const std::list<std::string> &usernames);
+            const std::list<std::string> &usernames);
 
 /**
  * Launches an OTP reset timer on the server,

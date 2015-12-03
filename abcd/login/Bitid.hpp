@@ -37,7 +37,7 @@ struct BitidSignature
  */
 BitidSignature
 bitidSign(DataSlice rootKey, const std::string &message,
-    const std::string &callbackUri, uint32_t index=0);
+          const std::string &callbackUri, uint32_t index=0);
 
 /**
  * Performs a BitID login to the specified URI.

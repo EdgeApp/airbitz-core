@@ -132,7 +132,8 @@ static Status
 fetchCoinbase(ExchangeRates &result)
 {
     HttpReply reply;
-    ABC_CHECK(HttpRequest().get(reply, "https://coinbase.com/api/v1/currencies/exchange_rates"));
+    ABC_CHECK(HttpRequest().get(reply,
+                                "https://coinbase.com/api/v1/currencies/exchange_rates"));
     ABC_CHECK(reply.codeOk());
 
     JsonObject json;
@@ -141,8 +142,8 @@ fetchCoinbase(ExchangeRates &result)
     // Check for usable rates:
     ExchangeRates out;
     for (void *i = json_object_iter(json.get());
-        i;
-        i = json_object_iter_next(json.get(), i))
+            i;
+            i = json_object_iter_next(json.get(), i))
     {
         // Extract the three-letter currency code:
         const char *key = json_object_iter_key(i);

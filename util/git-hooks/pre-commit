@@ -1,0 +1,42 @@
+#!/bin/sh
+
+hasFormattingIssues=0
+
+if ! command -v astyle >/dev/null ; then
+    echo "error: please install astyle in order to be able" \
+         " to use this pre-commit git-hook"
+    exit 1
+fi
+
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    against=HEAD
+else
+    # Initial commit: diff against an empty tree object
+    against=2caab4551b305ab1e9e4b05145a4da5f51331e0d
+fi
+
+# Redirect output to stderr.
+exec 1>&2
+
+files=$(git diff --cached --name-only --diff-filter=AM $against | \
+        grep -E '^(abcd|cli|src|tests|util)' | grep -E '(c|h|cpp|hpp)$')
+
+for file in $files; do
+    astyle --options=astyle-options -Q $file
+    if [ -e "$file.orig" ]; then
+        mv $file "$file.formated"
+        mv "$file.orig" $file
+        git diff --no-index "$file" "$file.formated" | cat
+
+        isDiff=$(diff --brief "$file.formated" $file)
+        if [ "$isDiff" != "" ] ; then
+            hasFormattingIssues=1
+        fi
+        rm "$file.formated"
+    fi
+done
+
+if  [ $hasFormattingIssues -eq 1 ]  ; then
+    echo Found code style formatting issues.
+    exit 1
+fi

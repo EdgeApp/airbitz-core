@@ -16,7 +16,8 @@
 
 namespace abcd {
 
-static tABC_CC  ABC_TxBuildFromLabel(Wallet &self, const char **pszLabel, tABC_Error *pError);
+static tABC_CC  ABC_TxBuildFromLabel(Wallet &self, const char **pszLabel,
+                                     tABC_Error *pError);
 
 tABC_CC ABC_TxWatchAddresses(Wallet &self,
                              tABC_Error *pError)

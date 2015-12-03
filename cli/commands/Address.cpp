@@ -16,7 +16,8 @@ using namespace abcd;
 COMMAND(InitLevel::wallet, CliAddressList, "address-list")
 {
     if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... address-list <user> <pass> <wallet>");
+        return ABC_ERROR(ABC_CC_Error,
+                         "usage: ... address-list <user> <pass> <wallet>");
 
     auto list = session.wallet->addresses.list();
     for (const auto &i: list)
@@ -24,8 +25,8 @@ COMMAND(InitLevel::wallet, CliAddressList, "address-list")
         abcd::Address address;
         ABC_CHECK(session.wallet->addresses.get(address, i));
         std::cout << address.address << " #" <<
-            address.index << ", " <<
-            (address.recyclable ? "recyclable" : "used") << std::endl;
+                  address.index << ", " <<
+                  (address.recyclable ? "recyclable" : "used") << std::endl;
     }
 
     return Status();

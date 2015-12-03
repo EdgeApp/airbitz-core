@@ -129,8 +129,8 @@ Lobby::init(const std::string &username)
     // Load the OTP key, if possible:
     OtpFile file;
     otpKeyOk_ = !dir_.empty() &&
-        file.load(dir_ + otpFilename) &&
-        otpKey_.decodeBase32(file.key());
+                file.load(dir_ + otpFilename) &&
+                otpKey_.decodeBase32(file.key());
 
     return Status();
 }
