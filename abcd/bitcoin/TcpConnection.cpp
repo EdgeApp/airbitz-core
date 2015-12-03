@@ -7,12 +7,48 @@
 
 #include "TcpConnection.hpp"
 #include <errno.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 namespace abcd {
+
+static int
+timeoutConnect(int sock, struct sockaddr *addr,
+                socklen_t addr_len, struct timeval *tv)
+{
+    fd_set fdset;
+    int flags = 0;
+    int so_error;
+    socklen_t len = sizeof(so_error);
+
+    if ((flags = fcntl(sock, F_GETFL, 0)) < 0)
+        return -1;
+
+    if (fcntl(sock, F_SETFL, flags | O_NONBLOCK) < 0)
+        return -1;
+
+    if (connect(sock, addr, addr_len) == 0)
+        goto exit;
+
+    FD_ZERO(&fdset);
+    FD_SET(sock, &fdset);
+
+    if (select(sock + 1, NULL, &fdset, NULL, tv) > 0)
+    {
+        getsockopt(sock, SOL_SOCKET, SO_ERROR, &so_error, &len);
+        if (so_error == 0)
+            goto exit;
+    }
+    return -1;
+
+exit:
+    if (fcntl(sock, F_SETFL, flags) < 0)
+        return -1;
+    return 0;
+}
 
 TcpConnection::~TcpConnection()
 {
@@ -43,7 +79,10 @@ TcpConnection::connect(const std::string &hostname, unsigned port)
         if (fd_ < 0)
             return ABC_ERROR(ABC_CC_ServerError, "Cannot create socket");
 
-        if (0 == ::connect(fd_, p->ai_addr, p->ai_addrlen))
+        struct timeval sto;
+        sto.tv_sec = 10;
+        sto.tv_usec = 0;
+        if (0 == timeoutConnect(fd_, p->ai_addr, p->ai_addrlen, &sto))
             break;
 
         close(fd_);
