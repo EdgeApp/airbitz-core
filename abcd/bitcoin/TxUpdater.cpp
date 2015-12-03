@@ -68,9 +68,7 @@ TxUpdater::connect()
     if (vStrServers_.empty())
         vStrServers_ = generalBitcoinServers();
 
-    srand(time(NULL));
-    long start = rand() % vStrServers_.size();
-
+    long start = time(nullptr) % vStrServers_.size();
     long i = start;
 
     do
