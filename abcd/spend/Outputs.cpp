@@ -10,6 +10,8 @@
 #include "../bitcoin/Testnet.hpp"
 #include <iterator>
 
+#define MINIMUM_DUST_THRESHOLD 4000 // was 546
+
 namespace abcd {
 
 bc::script_type
@@ -104,7 +106,7 @@ outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
 bool
 outputIsDust(uint64_t amount)
 {
-    return amount < 546;
+    return amount < MINIMUM_DUST_THRESHOLD;
 }
 
 Status
