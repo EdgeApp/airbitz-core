@@ -17,7 +17,7 @@ namespace abcd {
 
 static int
 timeoutConnect(int sock, struct sockaddr *addr,
-                socklen_t addr_len, struct timeval *tv)
+               socklen_t addr_len, struct timeval *tv)
 {
     fd_set fdset;
     int flags = 0;

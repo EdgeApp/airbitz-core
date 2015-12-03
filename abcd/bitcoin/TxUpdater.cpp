@@ -303,18 +303,21 @@ bc::client::sleep_time TxUpdater::wakeup()
 
     // Process the most outdated addresses first:
     toCheck.sort();
-
     for (const auto &i: toCheck)
     {
-        if (connections_.empty())
-            break;
-
-        auto &row = rows_[i.address];
-
-        ABC_DebugLevel(2,"wakeup() Calling query_address %s",
-                       i.address.encoded().c_str());
-        next_wakeup = bc::client::min_sleep(next_wakeup, row.poll_time);
-        query_address(i.address, ALL_SERVERS);
+        for (const auto c: connections_)
+        {
+            auto &row = rows_[i.address];
+            if (c->queued_queries_ < max_queries ||
+                    row.poll_time < std::chrono::seconds(6))
+            {
+                ABC_DebugLevel(2,"wakeup() idx=%d Calling query_address %s",
+                               c->server_index,
+                               i.address.encoded().c_str());
+                next_wakeup = bc::client::min_sleep(next_wakeup, row.poll_time);
+                query_address(i.address, c->server_index);
+            }
+        }
     }
 
     // Update the sockets:
