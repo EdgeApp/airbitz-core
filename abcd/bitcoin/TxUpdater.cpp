@@ -10,6 +10,17 @@
 
 namespace abcd {
 
+#define LIBBITCOIN_PREFIX           "tcp://"
+#define STRATUM_PREFIX              "stratum://"
+#define LIBBITCOIN_PREFIX_LENGTH    6
+#define STRATUM_PREFIX_LENGTH       10
+
+#define ALL_SERVERS                 -1
+#define NO_SERVERS                  -9999
+#define NUM_CONNECT_SERVERS         3
+#define MINIMUM_LIBBITCOIN_SERVERS  2
+#define MINIMUM_STRATUM_SERVERS     1
+
 constexpr unsigned max_queries = 10;
 
 /**
@@ -63,13 +74,20 @@ TxUpdater::connect()
 {
     ABC_DebugLevel(2,"ENTER TxUpdater::connect()");
 
-    wantConnection = true;
-
     if (vStrServers_.empty())
         vStrServers_ = generalBitcoinServers();
 
     long start = time(nullptr) % vStrServers_.size();
     long i = start;
+
+    // If we have full connections then wipe them out and start over.
+    // This was likely due to a refresh
+    if (NUM_CONNECT_SERVERS <= connections_.size())
+    {
+        disconnect();
+    }
+
+    wantConnection = true;
 
     do
     {
@@ -92,18 +110,80 @@ TxUpdater::connect()
                     server.erase(key_start);
                 }
 
+                int numStratumConnections = 0;
+                int numLibbitcoinConnections = 0;
+                // Count the number of Stratum & Libbitcoin connections
+                for (auto &connection: connections_)
+                    if (ConnectionType::stratum == connection->type)
+                        numStratumConnections++;
+                for (auto &connection: connections_)
+                    if (ConnectionType::libbitcoin == connection->type)
+                        numLibbitcoinConnections++;
+                int numLibbitcoinNeeded = MINIMUM_LIBBITCOIN_SERVERS - numLibbitcoinConnections;
+                int numStratumNeeded    = MINIMUM_STRATUM_SERVERS - numStratumConnections;
+                int numSlotsRemaining   = NUM_CONNECT_SERVERS - connections_.size();
+
+                ABC_DebugLevel(1,
+                               "TxUpdater::connect: idx=%d size=%d lbNeed=%d stNeed=%d rem=%d", i,
+                               connections_.size(), numLibbitcoinNeeded, numStratumNeeded, numSlotsRemaining);
+
                 Connection *bconn = new Connection(ctx_, i);
-                if(bconn->bc_socket.connect(server, key))
+
+                // Check the connection type
+                if ((0 == server.compare(0, LIBBITCOIN_PREFIX_LENGTH, LIBBITCOIN_PREFIX)) &&
+                        (0 < numLibbitcoinNeeded ||
+                         (numStratumNeeded < numSlotsRemaining)))
                 {
-                    ABC_DebugLevel(2,"TxUpdater::connect: Server idx=%d connected: %s", i,
-                                   server.c_str());
-                    connections_.push_back(bconn);
-                    serverConnections_.push_back(i);
+                    // Libbitcoin server type
+                    bconn->type = ConnectionType::libbitcoin;
+                    if(bconn->bc_socket.connect(server, key))
+                    {
+                        ABC_DebugLevel(2,
+                                       "TxUpdater::connect: Servertype Libbitcoin idx=%d connected: %s", i,
+                                       server.c_str());
+                        connections_.push_back(bconn);
+                        serverConnections_.push_back(i);
+                    }
+                    else
+                    {
+                        ABC_DebugLevel(2,
+                                       "TxUpdater::connect: Servertype Libbitcoin idx=%d failed to connect: %s", i,
+                                       server.c_str());
+                        delete bconn;
+                    }
+                }
+                else if (0 == server.compare(0, STRATUM_PREFIX_LENGTH, STRATUM_PREFIX) &&
+                         (0 < numStratumNeeded ||
+                          numLibbitcoinNeeded < numSlotsRemaining ))
+                {
+                    // Stratum server type
+                    bconn->type = ConnectionType::stratum;
+
+                    // Extract the server name and port
+                    unsigned last  = server.find(":", STRATUM_PREFIX_LENGTH);
+                    std::string serverName = server.substr(STRATUM_PREFIX_LENGTH,
+                                                           last-STRATUM_PREFIX_LENGTH);
+                    std::string serverPort = server.substr(last + 1, std::string::npos);
+                    int iPort = atoi(serverPort.c_str());
+
+                    if (bconn->stratumCodec.connect(serverName, iPort))
+                    {
+                        ABC_DebugLevel(2,"TxUpdater::connect: Servertype Stratus idx=%d connected: %s",
+                                       i, server.c_str());
+                        connections_.push_back(bconn);
+                        serverConnections_.push_back(i);
+                    }
+                    else
+                    {
+                        ABC_DebugLevel(2,
+                                       "TxUpdater::connect: Servertype Stratus idx=%d failed to connect: %s", i,
+                                       server.c_str());
+                        delete bconn;
+                    }
                 }
                 else
                 {
-                    ABC_DebugLevel(2,"TxUpdater::connect: Server idx=%d failed to connect: %s", i,
-                                   server.c_str());
+                    ABC_DebugLevel(2,"TxUpdater::connect: skipping server. reason unknown", i);
                     delete bconn;
                 }
             }
@@ -240,9 +320,22 @@ bc::client::sleep_time TxUpdater::wakeup()
     // Update the sockets:
     for (auto &connection: connections_)
     {
-        connection->bc_socket.forward(connection->bc_codec);
-        next_wakeup = bc::client::min_sleep(next_wakeup,
-                                            connection->bc_codec.wakeup());
+        if (ConnectionType::libbitcoin == connection->type)
+        {
+            connection->bc_socket.forward(connection->bc_codec);
+            next_wakeup = bc::client::min_sleep(next_wakeup,
+                                                connection->bc_codec.wakeup());
+        }
+        else if (ConnectionType::stratum == connection->type)
+        {
+            SleepTime sleep;
+            if (!connection->stratumCodec.wakeup(sleep).log())
+            {
+                failed_server_idx_ = connection->server_index;
+                failed_ = true;
+            }
+            next_wakeup = bc::client::min_sleep(next_wakeup, sleep);
+        }
     }
 
     // Report the last server failure:
@@ -288,7 +381,20 @@ TxUpdater::pollitems()
 {
     std::vector<zmq_pollitem_t> out;
     for (const auto &connection: connections_)
-        out.push_back(connection->bc_socket.pollitem());
+    {
+        if (ConnectionType::libbitcoin == connection->type)
+        {
+            out.push_back(connection->bc_socket.pollitem());
+        }
+        else if (ConnectionType::stratum == connection->type)
+        {
+            zmq_pollitem_t pollitem =
+            {
+                nullptr, connection->stratumCodec.pollfd(), ZMQ_POLLIN, ZMQ_POLLOUT
+            };
+            out.push_back(pollitem);
+        }
+    }
     return out;
 }
 
@@ -340,7 +446,7 @@ void TxUpdater::query_done(int idx, Connection &bconn)
         ABC_DebugLevel(1,"query_done idx=%d queued_queries=%d CLEARED QUEUE", idx,
                        bconn.queued_queries_);
     }
-    else if (bconn.queued_queries_ >= max_queries - 1)
+    else if (bconn.queued_queries_ + 1 >= max_queries)
     {
         ABC_DebugLevel(2,"query_done idx=%d queued_queries=%d NEAR MAX_QUERIES", idx,
                        bconn.queued_queries_);
@@ -378,42 +484,50 @@ void TxUpdater::get_height()
     if (!connections_.size())
         return;
 
-    auto it = connections_.begin();
-    auto idx = (*it)->server_index;
-    Connection &bconn = **it;
-
-    auto on_error = [this, idx, &bconn](const std::error_code &error)
+    for (auto &it: connections_)
     {
-        if (!failed_)
-            ABC_DebugLevel(1,"get_height server idx=%d failed: %s", idx,
-                           error.message().c_str());
-        failed_ = true;
-        failed_server_idx_ = idx;
-        bconn.queued_get_height_--;
-        ABC_DebugLevel(1,"get_height on_error queued_get_height=%d",
-                       bconn.queued_get_height_);
-    };
+        // TODO: support get_height for Stratum
+        if (ConnectionType::stratum == it->type)
+            continue;
 
-    auto on_done = [this, idx, &bconn](size_t height)
-    {
-        if (height != db_.last_height())
+        Connection &bconn = *it;
+        auto idx = bconn.server_index;
+
+        auto on_error = [this, idx, &bconn](const std::error_code &error)
         {
-            db_.at_height(height);
-            callbacks_.on_height(height);
+            if (!failed_) ABC_DebugLevel(1, "get_height server idx=%d failed: %s", idx,
+                                             error.message().c_str());
+            failed_ = true;
+            failed_server_idx_ = idx;
+            bconn.queued_get_height_--;
+            ABC_DebugLevel(1, "get_height on_error queued_get_height=%d",
+                           bconn.queued_get_height_);
+        };
 
-            // Query all unconfirmed transactions:
-            db_.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1, idx));
-            queue_get_indices(idx);
-            ABC_DebugLevel(2,"get_height server idx=%d height=%d", idx, height);
-        }
-        bconn.queued_get_height_--;
-        ABC_DebugLevel(2,"get_height on_done queued_get_height=%d",
-                       bconn.queued_get_height_);
-    };
+        auto on_done = [this, idx, &bconn](size_t height)
+        {
+            if (height != db_.last_height())
+            {
+                db_.at_height(height);
+                callbacks_.on_height(height);
 
-    bconn.queued_get_height_++;
-    ABC_DebugLevel(2,"get_height queued_get_height=%d", bconn.queued_get_height_);
-    bconn.bc_codec.fetch_last_height(on_error, on_done);
+                // Query all unconfirmed transactions:
+                db_.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1, idx));
+                queue_get_indices(idx);
+                ABC_DebugLevel(2, "get_height server idx=%d height=%d", idx, height);
+            }
+            bconn.queued_get_height_--;
+            ABC_DebugLevel(2, "get_height on_done queued_get_height=%d",
+                           bconn.queued_get_height_);
+        };
+
+        bconn.queued_get_height_++;
+        ABC_DebugLevel(2, "get_height queued_get_height=%d", bconn.queued_get_height_);
+        bconn.bc_codec.fetch_last_height(on_error, on_done);
+
+        // Only use the first server response.
+        break;
+    }
 }
 
 void TxUpdater::get_tx(bc::hash_digest txid, bool want_inputs, int server_index)
@@ -466,7 +580,11 @@ void TxUpdater::get_tx(bc::hash_digest txid, bool want_inputs, int server_index)
 
         bconn.queued_queries_++;
         ABC_DebugLevel(2,"get_tx idx=%d queued_queries=%d", idx, bconn.queued_queries_);
-        bconn.bc_codec.fetch_transaction(on_error, on_done, txid);
+
+        if (ConnectionType::libbitcoin == bconn.type)
+            bconn.bc_codec.fetch_transaction(on_error, on_done, txid);
+        else if (ConnectionType::stratum == bconn.type)
+            bconn.stratumCodec.getTx(on_error, on_done, txid);
     }
 }
 
@@ -477,7 +595,6 @@ void TxUpdater::get_tx_mem(bc::hash_digest txid, bool want_inputs,
 
     for (auto &it: connections_)
     {
-
         Connection &bconn = *it;
 
         // If there is a preferred server index to use. Only query that server
@@ -486,6 +603,7 @@ void TxUpdater::get_tx_mem(bc::hash_digest txid, bool want_inputs,
             if (bconn.server_index != server_index)
                 continue;
         }
+
         auto idx = bconn.server_index;
 
         auto on_error = [this, idx, str, &bconn](const std::error_code &error)
@@ -520,7 +638,10 @@ void TxUpdater::get_tx_mem(bc::hash_digest txid, bool want_inputs,
         };
 
         bconn.queued_queries_++;
-        bconn.bc_codec.fetch_unconfirmed_transaction(on_error, on_done, txid);
+        if (ConnectionType::libbitcoin == bconn.type)
+            bconn.bc_codec.fetch_unconfirmed_transaction(on_error, on_done, txid);
+        else if (ConnectionType::stratum == bconn.type)
+            bconn.stratumCodec.getTx(on_error, on_done, txid);
     }
 }
 
@@ -529,15 +650,22 @@ void TxUpdater::get_index(bc::hash_digest txid, int server_index)
 
     for (auto &it: connections_)
     {
+        // TODO: support get_index for Stratum
+        if (ConnectionType::stratum == it->type)
+            continue;
+
         Connection &bconn = *it;
 
-        // If there is a preferred server index to use. Only query that server
-        if (ALL_SERVERS != server_index)
-        {
-            if (bconn.server_index != server_index)
-                continue;
-        }
+        // TODO: Removing the code below might cause unnecessary server load. Since Stratum can't query
+        // txid height using just a txid, we have to rely on Libbitcoin to do this.
 
+//        // If there is a preferred server index to use. Only query that server
+//        if (ALL_SERVERS != server_index)
+//        {
+//            if (bconn.server_index != server_index)
+//                continue;
+//        }
+//
         auto idx = bconn.server_index;
         auto on_error = [this, txid, idx, &bconn](const std::error_code &error)
         {
@@ -570,6 +698,10 @@ void TxUpdater::send_tx(const bc::transaction_type &tx)
 {
     for (auto &it: connections_)
     {
+        // TODO: support send_tx for Stratum
+        if (ConnectionType::stratum == it->type)
+            continue;
+
         auto on_error = [](const std::error_code &error) {};
 
         auto on_done = [this, tx]()
@@ -662,7 +794,11 @@ void TxUpdater::query_address(const bc::payment_address &address,
         total_queries += bconn.queued_queries_;
         ABC_DebugLevel(2,"TxUpdater::query_address idx=%d queued_queries=%d %s", idx,
                        bconn.queued_queries_, address.encoded().c_str());
-        bconn.bc_codec.address_fetch_history(on_error, on_done, address);
+
+        if (ConnectionType::libbitcoin == bconn.type)
+            bconn.bc_codec.address_fetch_history(on_error, on_done, address);
+        else if (ConnectionType::stratum == bconn.type)
+            bconn.stratumCodec.getAddressHistory(on_error, on_done, address);
     }
 
     if (num_servers)
