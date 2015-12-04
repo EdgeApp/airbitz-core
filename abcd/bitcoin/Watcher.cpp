@@ -143,8 +143,6 @@ void Watcher::loop()
     int linger = 0;
     socket.setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
 
-    txu_.connect().log();
-
     bool done = false;
     while (!done)
     {
@@ -178,7 +176,6 @@ void Watcher::loop()
                 done = true;
         }
     }
-    txu_.disconnect();
 }
 
 void Watcher::send_disconnect()
@@ -230,7 +227,6 @@ bool Watcher::command(uint8_t *data, size_t size)
     {
     default:
     case msg_quit:
-        txu_.disconnect();
         return false;
 
     case msg_disconnect:

@@ -64,21 +64,17 @@ TxUpdater::disconnect()
         delete i;
     connections_.clear();
 
-    // Clear any blacklisted servers. We'll start over and try them all
-    serverConnections_.clear();
-    serverBlacklist_.clear();
+    ABC_DebugLog("Disconnected from all servers.");
 }
 
 Status
 TxUpdater::connect()
 {
-    ABC_DebugLevel(2,"ENTER TxUpdater::connect()");
+    wantConnection = true;
 
-    if (vStrServers_.empty())
-        vStrServers_ = generalBitcoinServers();
-
-    long start = time(nullptr) % vStrServers_.size();
-    long i = start;
+    // This happens once, and never changes:
+    if (serverList_.empty())
+        serverList_ = generalBitcoinServers();
 
     // If we have full connections then wipe them out and start over.
     // This was likely due to a refresh
@@ -87,130 +83,61 @@ TxUpdater::connect()
         disconnect();
     }
 
-    wantConnection = true;
-
-    do
+    // If we are out of fresh libbitcoin servers, reload the list:
+    if (untriedLibbitcoin_.empty())
     {
-        // Make sure we're not already connected to this server index
-        if(std::find(serverConnections_.begin(), serverConnections_.end(),
-                     i) == serverConnections_.end())
+        for (size_t i = 0; i < serverList_.size(); ++i)
         {
-            // Make sure we're not blacklisted from failed connects prior
-            if(std::find(serverBlacklist_.begin(), serverBlacklist_.end(),
-                         i) == serverBlacklist_.end())
-            {
-                std::string server = vStrServers_[i];
-                std::string key;
-
-                // Parse out the key part:
-                size_t key_start = server.find(' ');
-                if (key_start != std::string::npos)
-                {
-                    key = server.substr(key_start + 1);
-                    server.erase(key_start);
-                }
-
-                int numStratumConnections = 0;
-                int numLibbitcoinConnections = 0;
-                // Count the number of Stratum & Libbitcoin connections
-                for (auto &connection: connections_)
-                    if (ConnectionType::stratum == connection->type)
-                        numStratumConnections++;
-                for (auto &connection: connections_)
-                    if (ConnectionType::libbitcoin == connection->type)
-                        numLibbitcoinConnections++;
-                int numLibbitcoinNeeded = MINIMUM_LIBBITCOIN_SERVERS - numLibbitcoinConnections;
-                int numStratumNeeded    = MINIMUM_STRATUM_SERVERS - numStratumConnections;
-                int numSlotsRemaining   = NUM_CONNECT_SERVERS - connections_.size();
-
-                ABC_DebugLevel(1,
-                               "TxUpdater::connect: idx=%d size=%d lbNeed=%d stNeed=%d rem=%d", i,
-                               connections_.size(), numLibbitcoinNeeded, numStratumNeeded, numSlotsRemaining);
-
-                Connection *bconn = new Connection(ctx_, i);
-
-                // Check the connection type
-                if ((0 == server.compare(0, LIBBITCOIN_PREFIX_LENGTH, LIBBITCOIN_PREFIX)) &&
-                        (0 < numLibbitcoinNeeded ||
-                         (numStratumNeeded < numSlotsRemaining)))
-                {
-                    // Libbitcoin server type
-                    bconn->type = ConnectionType::libbitcoin;
-                    if(bconn->bc_socket.connect(server, key))
-                    {
-                        ABC_DebugLevel(2,
-                                       "TxUpdater::connect: Servertype Libbitcoin idx=%d connected: %s", i,
-                                       server.c_str());
-                        connections_.push_back(bconn);
-                        serverConnections_.push_back(i);
-                    }
-                    else
-                    {
-                        ABC_DebugLevel(2,
-                                       "TxUpdater::connect: Servertype Libbitcoin idx=%d failed to connect: %s", i,
-                                       server.c_str());
-                        delete bconn;
-                    }
-                }
-                else if (0 == server.compare(0, STRATUM_PREFIX_LENGTH, STRATUM_PREFIX) &&
-                         (0 < numStratumNeeded ||
-                          numLibbitcoinNeeded < numSlotsRemaining ))
-                {
-                    // Stratum server type
-                    bconn->type = ConnectionType::stratum;
-
-                    // Extract the server name and port
-                    unsigned last  = server.find(":", STRATUM_PREFIX_LENGTH);
-                    std::string serverName = server.substr(STRATUM_PREFIX_LENGTH,
-                                                           last-STRATUM_PREFIX_LENGTH);
-                    std::string serverPort = server.substr(last + 1, std::string::npos);
-                    int iPort = atoi(serverPort.c_str());
-
-                    if (bconn->stratumCodec.connect(serverName, iPort))
-                    {
-                        ABC_DebugLevel(2,"TxUpdater::connect: Servertype Stratus idx=%d connected: %s",
-                                       i, server.c_str());
-                        connections_.push_back(bconn);
-                        serverConnections_.push_back(i);
-                    }
-                    else
-                    {
-                        ABC_DebugLevel(2,
-                                       "TxUpdater::connect: Servertype Stratus idx=%d failed to connect: %s", i,
-                                       server.c_str());
-                        delete bconn;
-                    }
-                }
-                else
-                {
-                    ABC_DebugLevel(2,"TxUpdater::connect: skipping server. reason unknown", i);
-                    delete bconn;
-                }
-            }
-            else
-            {
-                ABC_DebugLevel(2,"TxUpdater::connect: skipping server %d. Blacklisted", i);
-            }
+            const auto &server = serverList_[i];
+            if (0 == server.compare(0, LIBBITCOIN_PREFIX_LENGTH, LIBBITCOIN_PREFIX))
+                untriedLibbitcoin_.insert(i);
         }
-        else
-        {
-            ABC_DebugLevel(2,"TxUpdater::connect: skipping server %d. Already connected",
-                           i);
-        }
-
-        i++;
-        if (i >= vStrServers_.size())
-            i = 0;
-
     }
-    while ((i != start) && (connections_.size() < NUM_CONNECT_SERVERS));
 
-    // If there we still don't have enough connected servers,
-    // then unblacklist all the servers for the next time we come into this routine.
-    if (connections_.size() < NUM_CONNECT_SERVERS)
+    // If we are out of fresh stratum servers, reload the list:
+    if (untriedStratum_.empty())
     {
-        ABC_DebugLevel(2,"TxUpdater::connect: not enough servers, removing blacklists");
-        serverBlacklist_.clear();
+        for (size_t i = 0; i < serverList_.size(); ++i)
+        {
+            const auto &server = serverList_[i];
+            if (0 == server.compare(0, STRATUM_PREFIX_LENGTH, STRATUM_PREFIX))
+                untriedStratum_.insert(i);
+        }
+    }
+
+    ABC_DebugLevel(2,"%d libbitcoin untried, %d stratrum untried",
+                   untriedLibbitcoin_.size(), untriedStratum_.size());
+
+    // Count the number of existing connections:
+    auto stratumCount = std::count_if(connections_.begin(), connections_.end(),
+    [](Connection *c) { return c->type == ConnectionType::stratum; });
+    auto libbitcoinCount = std::count_if(connections_.begin(), connections_.end(),
+    [](Connection *c) { return c->type == ConnectionType::libbitcoin; });
+
+    // Let's make some connections:
+    srand(time(nullptr));
+    while (connections_.size() < NUM_CONNECT_SERVERS &&
+            (untriedLibbitcoin_.size() || untriedStratum_.size()))
+    {
+        // Connect to a stratum server,
+        // but only if we have enough libbitcoin servers,
+        // and we either need a stratum server or we get lucky:
+        if (untriedStratum_.size() &&
+                MINIMUM_LIBBITCOIN_SERVERS <= libbitcoinCount &&
+                (stratumCount < MINIMUM_STRATUM_SERVERS || (rand() & 8)))
+        {
+            auto i = untriedStratum_.begin();
+            std::advance(i, rand() % untriedStratum_.size());
+            if (connectTo(*i).log())
+                ++stratumCount;
+        }
+        else if (untriedLibbitcoin_.size())
+        {
+            auto i = untriedLibbitcoin_.begin();
+            std::advance(i, rand() % untriedLibbitcoin_.size());
+            if (connectTo(*i).log())
+                ++libbitcoinCount;
+        }
     }
 
     if (connections_.size())
@@ -226,24 +153,6 @@ TxUpdater::connect()
         // Transmit all unsent transactions:
         db_.foreach_unsent(std::bind(&TxUpdater::send_tx, this, _1));
     }
-    else
-    {
-        ABC_DebugLevel(1,"TxUpdater::connect: FAIL: Could not connect to any servers");
-    }
-
-    ABC_DebugLevel(1,"TxUpdater::connect: %d ttl connected",
-                   serverConnections_.size());
-
-    if (connections_.size())
-    {
-        for (auto &it: connections_)
-        {
-            ABC_DebugLevel(1,"TxUpdater::connect: idx=%d currently connected",
-                           it->server_index);
-        }
-    }
-
-    ABC_DebugLevel(2,"EXIT TxUpdater::connect");
 
     return Status();
 }
@@ -341,40 +250,25 @@ bc::client::sleep_time TxUpdater::wakeup()
         }
     }
 
-    // Report the last server failure:
+    // Handle the last server failure:
     if (failed_)
     {
-        // Remove the server that failed
-        auto it = std::find(serverConnections_.begin(), serverConnections_.end(),
-                            failed_server_idx_);
-        if (it != serverConnections_.end())
+        auto p = [this](Connection *c) { return failed_server_idx_ == c->server_index; };
+        auto i = std::find_if(connections_.begin(), connections_.end(), p);
+        if (connections_.end() != i)
         {
-            serverConnections_.erase(it);
-            ABC_DebugLevel(2,"Server Removed from serverConnections_ idx=%d: %s",
-                           failed_server_idx_, vStrServers_[failed_server_idx_].c_str());
-        }
-
-        for (auto it = connections_.begin(); it != connections_.end(); ++it)
-        {
-            if ((*it)->server_index == failed_server_idx_)
-            {
-                delete *it;
-                connections_.erase(it);
-                serverBlacklist_.push_back(failed_server_idx_);
-                ABC_DebugLevel(2,"Server Blacklisted idx=%d: %s", failed_server_idx_,
-                               vStrServers_[failed_server_idx_].c_str());
-                break;
-            }
+            delete *i;
+            connections_.erase(i);
+            ABC_DebugLog("Disconnected from %d (%s)", failed_server_idx_,
+                         serverList_[failed_server_idx_].c_str());
         }
         failed_server_idx_ = NO_SERVERS;
-
-        connect().log();
         failed_ = false;
     }
 
     // Connect to more servers:
     if (wantConnection && connections_.size() < NUM_CONNECT_SERVERS)
-        connect();
+        connect().log();
 
     return next_wakeup;
 }
@@ -399,6 +293,56 @@ TxUpdater::pollitems()
         }
     }
     return out;
+}
+
+Status
+TxUpdater::connectTo(long index)
+{
+    std::string server = serverList_[index];
+    std::string key;
+
+    // Parse out the key part:
+    size_t keyStart = server.find(' ');
+    if (keyStart != std::string::npos)
+    {
+        key = server.substr(keyStart + 1);
+        server.erase(keyStart);
+    }
+
+    // Make the connection:
+    std::unique_ptr<Connection> bconn(new Connection(ctx_, index));
+    if (0 == server.compare(0, LIBBITCOIN_PREFIX_LENGTH, LIBBITCOIN_PREFIX))
+    {
+        // Libbitcoin server:
+        untriedLibbitcoin_.erase(index);
+        bconn->type = ConnectionType::libbitcoin;
+        if(!bconn->bc_socket.connect(server, key))
+            return ABC_ERROR(ABC_CC_Error, "Could not connect to " + server);
+    }
+    else if (0 == server.compare(0, STRATUM_PREFIX_LENGTH, STRATUM_PREFIX))
+    {
+        // Stratum server:
+        untriedStratum_.erase(index);
+        bconn->type = ConnectionType::stratum;
+
+        // Extract the server name and port:
+        auto last = server.find(":", STRATUM_PREFIX_LENGTH);
+        std::string serverName = server.substr(STRATUM_PREFIX_LENGTH,
+                                               last - STRATUM_PREFIX_LENGTH);
+        std::string serverPort = server.substr(last + 1, std::string::npos);
+        int port = atoi(serverPort.c_str());
+
+        ABC_CHECK(bconn->stratumCodec.connect(serverName, port));
+    }
+    else
+    {
+        return ABC_ERROR(ABC_CC_Error, "Unknown server type " + server);
+    }
+
+    connections_.push_back(bconn.release());
+    ABC_DebugLog("Connected to %s as %d", server.c_str(), index);
+
+    return Status();
 }
 
 void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx)

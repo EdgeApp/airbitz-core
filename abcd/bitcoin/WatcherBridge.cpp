@@ -309,7 +309,6 @@ tABC_CC ABC_BridgeWatcherStop(Wallet &self, tABC_Error *pError)
     Watcher *watcher = nullptr;
     ABC_CHECK_NEW(watcherFind(watcher, self));
 
-    watcher->disconnect();
     watcher->stop();
 
 exit:

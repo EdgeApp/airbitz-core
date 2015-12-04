@@ -93,6 +93,8 @@ private:
         long server_index;
     };
 
+    Status connectTo(long index);
+
     void watch_tx(bc::hash_digest txid, bool want_inputs, int idx);
     void get_inputs(const bc::transaction_type &tx, int idx);
     void query_done(int idx, Connection &bconn);
@@ -123,9 +125,9 @@ private:
 
     bool wantConnection = false;
     std::vector<Connection *> connections_;
-    std::vector<std::string> vStrServers_;
-    std::vector<int> serverConnections_;
-    std::vector<int> serverBlacklist_;
+    std::vector<std::string> serverList_;
+    std::set<int> untriedLibbitcoin_;
+    std::set<int> untriedStratum_;
 };
 
 } // namespace abcd
