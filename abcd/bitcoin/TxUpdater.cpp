@@ -453,7 +453,7 @@ void TxUpdater::get_height()
 
         auto on_done = [this, idx, &bconn](size_t height)
         {
-            if (height != db_.last_height())
+            if (db_.last_height() < height)
             {
                 db_.at_height(height);
                 callbacks_.on_height(height);
