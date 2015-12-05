@@ -161,16 +161,21 @@ minerFee(const bc::transaction_type &tx, uint64_t sourced,
 
     // Look up the size-based fees from the table:
     uint64_t sizeFee = 0;
+    uint64_t bytesPerFee = 0;
     for (const auto &row: feeInfo)
     {
         if (size <= row.first)
         {
             sizeFee = row.second;
+            bytesPerFee = row.first;
             break;
         }
     }
     if (!sizeFee)
+    {
         sizeFee = feeInfo.rbegin()->second;
+        bytesPerFee = feeInfo.rbegin()->first;
+    }
 
     // The amount-based fee is 0.1% of total funds sent:
     uint64_t amountFee = sourced / 1000;
@@ -181,8 +186,16 @@ minerFee(const bc::transaction_type &tx, uint64_t sourced,
     amountFee = std::max(amountFee, minFee);
     amountFee = std::min(amountFee, sizeFee);
 
+    // Scale the fee by the size of the transaction
+    amountFee = (uint64_t) ((float)amountFee * ((float)size / (float)bytesPerFee));
+
+    // Still make sure amountFee is larger than the minimum
+    amountFee = std::max(amountFee, minFee);
+
     // Make the result an integer multiple of the minimum fee:
-    return amountFee - amountFee % incFee;
+    amountFee = amountFee - amountFee % incFee;
+
+    return amountFee;
 }
 
 Status
