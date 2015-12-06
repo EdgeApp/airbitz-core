@@ -246,6 +246,7 @@ txSaveNewTx(Wallet &self, Tx &tx,
             tx.metadata.notes = metadata.notes;
         if (tx.metadata.category.empty() && !metadata.category.empty())
             tx.metadata.category = metadata.category;
+        tx.metadata.bizId = metadata.bizId;
     }
     ABC_CHECK(self.txs.save(tx));
     self.balanceDirty();
