@@ -36,7 +36,7 @@ struct BraveNewCoinJsonRow:
 
 const ExchangeSources exchangeSources
 {
-    "BraveNewCoin", "Coinbase", "Bitstamp"
+    "Bitstamp", "BraveNewCoin", "Coinbase"
 };
 
 static Status
