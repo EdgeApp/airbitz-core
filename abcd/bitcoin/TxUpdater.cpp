@@ -19,7 +19,7 @@ namespace abcd {
 #define NO_SERVERS                  -9999
 #define NUM_CONNECT_SERVERS         4
 #define MINIMUM_LIBBITCOIN_SERVERS  1
-#define MINIMUM_STRATUM_SERVERS     1
+#define MINIMUM_STRATUM_SERVERS     2
 
 constexpr unsigned max_queries = 10;
 
