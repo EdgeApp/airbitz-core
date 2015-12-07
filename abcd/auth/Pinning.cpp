@@ -84,22 +84,22 @@ int ABC_PinCertCallback(int pok, X509_STORE_CTX *ctx)
     char *szCert = NULL;
 
     PIN_ASSERT((cert = ctx->current_cert) != NULL,
-        ABC_CC_Error, "Unable to retrieve certificate");
+               ABC_CC_Error, "Unable to retrieve certificate");
     PIN_ASSERT((b64 = BIO_new(BIO_s_mem())) != NULL,
-        ABC_CC_Error, "Unable to alloc BIO");
+               ABC_CC_Error, "Unable to alloc BIO");
     PIN_ASSERT(1 == PEM_write_bio_X509(b64, cert),
-        ABC_CC_Error, "Unable to write bio");
+               ABC_CC_Error, "Unable to write bio");
 
     BIO_get_mem_ptr(b64, &bptr);
 
-    PIN_ASSERT(NULL != (szCert = (char*)malloc(bptr->length + 1)),
-        ABC_CC_Error, "Unable to malloc");
+    PIN_ASSERT(NULL != (szCert = (char *)malloc(bptr->length + 1)),
+               ABC_CC_Error, "Unable to malloc");
     PIN_ASSERT(0 < BIO_read(b64, szCert, bptr->length),
-        ABC_CC_Error, "Unable to read into bio to char *");
+               ABC_CC_Error, "Unable to read into bio to char *");
 
     PIN_ASSERT(strncmp(szCert, AUTH_CERTIFICATE, strlen(AUTH_CERTIFICATE)) == 0
-        || strncmp(szCert, CA_CERTIFICATE, strlen(CA_CERTIFICATE)) == 0,
-        ABC_CC_Error, "Pinned certificate mismatch");
+               || strncmp(szCert, CA_CERTIFICATE, strlen(CA_CERTIFICATE)) == 0,
+               ABC_CC_Error, "Pinned certificate mismatch");
 exit:
     ABC_FREE(szCert);
     if (b64)

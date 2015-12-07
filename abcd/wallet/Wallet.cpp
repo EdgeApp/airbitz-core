@@ -52,7 +52,7 @@ Wallet::~Wallet()
 
 Status
 Wallet::create(std::shared_ptr<Wallet> &result, Account &account,
-    const std::string &id)
+               const std::string &id)
 {
     std::shared_ptr<Wallet> out(new Wallet(account, id));
     ABC_CHECK(out->loadKeys());
@@ -69,7 +69,7 @@ Wallet::create(std::shared_ptr<Wallet> &result, Account &account,
 
 Status
 Wallet::createNew(std::shared_ptr<Wallet> &result, Account &account,
-    const std::string &name, int currency)
+                  const std::string &name, int currency)
 {
     std::string id;
     ABC_CHECK(randomUuid(id));
@@ -145,10 +145,10 @@ Wallet::balance(int64_t &result)
         unsigned int nTxCount = 0;
 
         ABC_CHECK_OLD(ABC_TxGetTransactions(*this,
-            ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
-            &aTransactions, &nTxCount, &error));
+                                            ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
+                                            &aTransactions, &nTxCount, &error));
         ABC_CHECK_OLD(ABC_BridgeFilterTransactions(*this,
-            aTransactions, &nTxCount, &error));
+                      aTransactions, &nTxCount, &error));
 
         balance_ = 0;
         for (unsigned i = 0; i < nTxCount; ++i)

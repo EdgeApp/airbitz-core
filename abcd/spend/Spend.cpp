@@ -21,7 +21,7 @@ namespace abcd {
 
 static Status
 spendMakeTx(libbitcoin::transaction_type &result, Wallet &self,
-    SendInfo *pInfo, const std::string &changeAddress)
+            SendInfo *pInfo, const std::string &changeAddress)
 {
     bc::output_info_list utxos =
         self.txdb.get_utxos(self.addresses.list(), true);
@@ -65,7 +65,7 @@ spendCalculateFees(Wallet &self, SendInfo *pInfo, uint64_t &totalFees)
     ABC_CHECK(spendMakeTx(tx, self, pInfo, changeAddress.address));
 
     totalFees = pInfo->metadata.amountFeesAirbitzSatoshi +
-        pInfo->metadata.amountFeesMinersSatoshi;
+                pInfo->metadata.amountFeesMinersSatoshi;
 
     return Status();
 }
@@ -111,9 +111,9 @@ spendSend(Wallet &self, SendInfo *pInfo, std::string &ntxidOut)
     bc::satoshi_save(tx, rawTx.begin());
 
     ABC_DebugLog("Change: %s, Amount: %s, Contents: %s",
-        changeAddress.address.c_str(),
-        std::to_string(pInfo->metadata.amountSatoshi).c_str(),
-        bc::pretty(tx).c_str());
+                 changeAddress.address.c_str(),
+                 std::to_string(pInfo->metadata.amountSatoshi).c_str(),
+                 bc::pretty(tx).c_str());
 
     // Let the merchant broadcast the transaction:
     if (pInfo->paymentRequest)
@@ -145,14 +145,13 @@ spendSend(Wallet &self, SendInfo *pInfo, std::string &ntxidOut)
 
     // Send to the network:
     ABC_CHECK(broadcastTx(rawTx));
-
-    // Mark the outputs as spent:
+    if (self.txdb.insert(tx, TxState::unconfirmed))
+        watcherSave(self).log(); // Failure is not fatal
     watcherSend(self, tx).log();
 
+    // Update the Airbitz metadata:
     auto txid = bc::encode_hash(bc::hash_transaction(tx));
     auto ntxid = ABC_BridgeNonMalleableTxId(tx);
-
-    // Update the Airbitz metadata:
     std::vector<std::string> addresses;
     for (const auto &output: tx.outputs)
     {

@@ -44,17 +44,21 @@
 
 namespace abcd {
 
-static Status   txSaveNewTx(Wallet &self, Tx &tx, const std::vector<std::string> &addresses, bool bOutside);
-static Status   txGetAmounts(Wallet &self, const std::string &ntxid, int64_t *pAmount, int64_t *pFees);
-static Status   txGetOutputs(Wallet &self, const std::string &ntxid, tABC_TxOutput ***paOutputs, unsigned int *pCount);
-static int      ABC_TxInfoPtrCompare (const void * a, const void * b);
+static Status   txSaveNewTx(Wallet &self, Tx &tx,
+                            const std::vector<std::string> &addresses, bool bOutside);
+static Status   txGetAmounts(Wallet &self, const std::string &ntxid,
+                             int64_t *pAmount, int64_t *pFees);
+static Status   txGetOutputs(Wallet &self, const std::string &ntxid,
+                             tABC_TxOutput ***paOutputs, unsigned int *pCount);
+static int      ABC_TxInfoPtrCompare (const void *a, const void *b);
 static void     ABC_TxStrTable(const char *needle, int *table);
-static int      ABC_TxStrStr(const char *haystack, const char *needle, tABC_Error *pError);
+static int      ABC_TxStrStr(const char *haystack, const char *needle,
+                             tABC_Error *pError);
 
 Status
-txSweepSave(Wallet &wallet,
-    const std::string &ntxid, const std::string &txid,
-    uint64_t funds)
+txSweepSave(Wallet &self,
+            const std::string &ntxid, const std::string &txid,
+            uint64_t funds)
 {
     Tx tx;
     tx.ntxid = ntxid;
@@ -64,19 +68,20 @@ txSweepSave(Wallet &wallet,
     tx.metadata.amountSatoshi = funds;
     tx.metadata.amountFeesAirbitzSatoshi = 0;
     ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-        tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
-        static_cast<Currency>(wallet.currency())));
+                  tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
+                  static_cast<Currency>(self.currency())));
 
     // save the transaction
-    ABC_CHECK(wallet.txs.save(tx));
+    ABC_CHECK(self.txs.save(tx));
+    self.balanceDirty();
 
     return Status();
 }
 
 Status
 txSendSave(Wallet &self,
-    const std::string &ntxid, const std::string &txid,
-    const std::vector<std::string> &addresses, SendInfo *pInfo)
+           const std::string &ntxid, const std::string &txid,
+           const std::vector<std::string> &addresses, SendInfo *pInfo)
 {
     // set the state
     Tx tx;
@@ -90,18 +95,18 @@ txSendSave(Wallet &self,
     if (self.addresses.has(pInfo->destAddress))
     {
         tx.metadata.amountSatoshi = pInfo->metadata.amountFeesAirbitzSatoshi
-                                        + pInfo->metadata.amountFeesMinersSatoshi;
+                                    + pInfo->metadata.amountFeesMinersSatoshi;
     }
     else
     {
         tx.metadata.amountSatoshi = pInfo->metadata.amountSatoshi
-                                        + pInfo->metadata.amountFeesAirbitzSatoshi
-                                        + pInfo->metadata.amountFeesMinersSatoshi;
+                                    + pInfo->metadata.amountFeesAirbitzSatoshi
+                                    + pInfo->metadata.amountFeesMinersSatoshi;
     }
 
     ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-        tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
-        static_cast<Currency>(self.currency())));
+                  tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
+                  static_cast<Currency>(self.currency())));
 
     if (tx.metadata.amountSatoshi > 0)
         tx.metadata.amountSatoshi *= -1;
@@ -130,8 +135,8 @@ txSendSave(Wallet &self,
         receiveTx.metadata.amountFeesAirbitzSatoshi = 0;
 
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-            receiveTx.metadata.amountCurrency, receiveTx.metadata.amountSatoshi,
-            static_cast<Currency>(self.currency())));
+                      receiveTx.metadata.amountCurrency, receiveTx.metadata.amountSatoshi,
+                      static_cast<Currency>(self.currency())));
 
         if (receiveTx.metadata.amountSatoshi < 0)
             receiveTx.metadata.amountSatoshi *= -1;
@@ -147,9 +152,9 @@ txSendSave(Wallet &self,
 
 Status
 txReceiveTransaction(Wallet &self,
-    const std::string &ntxid, const std::string &txid,
-    const std::vector<std::string> &addresses,
-    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
+                     const std::string &ntxid, const std::string &txid,
+                     const std::vector<std::string> &addresses,
+                     tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
     Tx temp;
 
@@ -162,17 +167,14 @@ txReceiveTransaction(Wallet &self,
         tx.timeCreation = time(nullptr);
         tx.internal = false;
         ABC_CHECK(txGetAmounts(self, ntxid,
-            &tx.metadata.amountSatoshi,
-            &tx.metadata.amountFeesMinersSatoshi));
+                               &tx.metadata.amountSatoshi,
+                               &tx.metadata.amountFeesMinersSatoshi));
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-            tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
-            static_cast<Currency>(self.currency())));
+                      tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
+                      static_cast<Currency>(self.currency())));
 
         // add the transaction to the address
         ABC_CHECK(txSaveNewTx(self, tx, addresses, true));
-
-        // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
-        self.balanceDirty();
 
         if (fAsyncCallback)
         {
@@ -216,7 +218,7 @@ txReceiveTransaction(Wallet &self,
  */
 Status
 txSaveNewTx(Wallet &self, Tx &tx,
-    const std::vector<std::string> &addresses, bool bOutside)
+            const std::vector<std::string> &addresses, bool bOutside)
 {
     // Mark addresses as used:
     TxMetadata metadata;
@@ -244,8 +246,10 @@ txSaveNewTx(Wallet &self, Tx &tx,
             tx.metadata.notes = metadata.notes;
         if (tx.metadata.category.empty() && !metadata.category.empty())
             tx.metadata.category = metadata.category;
+        tx.metadata.bizId = metadata.bizId;
     }
     ABC_CHECK(self.txs.save(tx));
+    self.balanceDirty();
 
     return Status();
 }
@@ -276,10 +280,10 @@ tABC_CC ABC_TxGetTransaction(Wallet &self,
     pTransaction->timeCreation = tx.timeCreation;
     pTransaction->pDetails = tx.metadata.toDetails();
     ABC_CHECK_NEW(txGetAmounts(self, tx.ntxid,
-        &(pTransaction->pDetails->amountSatoshi),
-        &(pTransaction->pDetails->amountFeesMinersSatoshi)));
+                               &(pTransaction->pDetails->amountSatoshi),
+                               &(pTransaction->pDetails->amountFeesMinersSatoshi)));
     ABC_CHECK_NEW(txGetOutputs(self, tx.ntxid,
-        &pTransaction->aOutputs, &pTransaction->countOutputs));
+                               &pTransaction->aOutputs, &pTransaction->countOutputs));
 
     // assign final result
     *ppTransaction = pTransaction;
@@ -320,19 +324,19 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
         ABC_CHECK_RET(ABC_TxGetTransaction(self, ntxid, &pTransaction, pError));
 
         if ((endTime == ABC_GET_TX_ALL_TIMES) ||
-            (pTransaction->timeCreation >= startTime &&
-             pTransaction->timeCreation < endTime))
+                (pTransaction->timeCreation >= startTime &&
+                 pTransaction->timeCreation < endTime))
         {
             // create space for new entry
             if (aTransactions == NULL)
             {
-                ABC_ARRAY_NEW(aTransactions, 1, tABC_TxInfo*);
+                ABC_ARRAY_NEW(aTransactions, 1, tABC_TxInfo *);
                 count = 1;
             }
             else
             {
                 count++;
-                ABC_ARRAY_RESIZE(aTransactions, count, tABC_TxInfo*);
+                ABC_ARRAY_RESIZE(aTransactions, count, tABC_TxInfo *);
             }
 
             // add it to the array
@@ -390,7 +394,7 @@ tABC_CC ABC_TxSearchTransactions(Wallet &self,
 
     ABC_TxGetTransactions(self, ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
                           &aTransactions, &count, pError);
-    ABC_ARRAY_NEW(aSearchTransactions, count, tABC_TxInfo*);
+    ABC_ARRAY_NEW(aSearchTransactions, count, tABC_TxInfo *);
     for (i = 0; i < count; i++)
     {
         tABC_TxInfo *pInfo = aTransactions[i];
@@ -425,14 +429,16 @@ tABC_CC ABC_TxSearchTransactions(Wallet &self,
             aSearchTransactions[matchCount] = pInfo;
             matchCount++;
             continue;
-        } else {
+        }
+        else
+        {
             ABC_TxFreeTransaction(pInfo);
         }
         aTransactions[i] = NULL;
     }
     if (matchCount > 0)
     {
-        ABC_ARRAY_RESIZE(aSearchTransactions, matchCount, tABC_TxInfo*);
+        ABC_ARRAY_RESIZE(aSearchTransactions, matchCount, tABC_TxInfo *);
     }
 
     *paTransactions = aSearchTransactions;
@@ -448,7 +454,7 @@ exit:
  */
 static Status
 txGetAmounts(Wallet &self, const std::string &ntxid,
-    int64_t *pAmount, int64_t *pFees)
+             int64_t *pAmount, int64_t *pFees)
 {
     int64_t totalInSatoshi = 0, totalOutSatoshi = 0;
     int64_t totalMeSatoshi = 0, totalMeInSatoshi = 0;
@@ -494,7 +500,7 @@ txGetAmounts(Wallet &self, const std::string &ntxid,
  */
 static Status
 txGetOutputs(Wallet &self, const std::string &ntxid,
-    tABC_TxOutput ***paOutputs, unsigned int *pCount)
+             tABC_TxOutput ***paOutputs, unsigned int *pCount)
 {
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, ntxid))
@@ -504,7 +510,8 @@ txGetOutputs(Wallet &self, const std::string &ntxid,
 
     // Create the array:
     size_t count = tx.inputs.size() + tx.outputs.size();
-    tABC_TxOutput **aOutputs = (tABC_TxOutput**)calloc(count, sizeof(tABC_TxOutput*));
+    tABC_TxOutput **aOutputs = (tABC_TxOutput **)calloc(count,
+                               sizeof(tABC_TxOutput *));
     if (!aOutputs)
         return ABC_ERROR(ABC_CC_NULLPtr, "out of memory");
 
@@ -640,7 +647,7 @@ exit:
  *
  */
 static
-int ABC_TxInfoPtrCompare (const void * a, const void * b)
+int ABC_TxInfoPtrCompare (const void *a, const void *b)
 {
     tABC_TxInfo **ppInfoA = (tABC_TxInfo **)a;
     tABC_TxInfo *pInfoA = (tABC_TxInfo *)*ppInfoA;
@@ -723,7 +730,8 @@ int ABC_TxStrStr(const char *haystack, const char *needle,
                  tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
-    if (haystack == NULL || needle == NULL) {
+    if (haystack == NULL || needle == NULL)
+    {
         return 0;
     }
     int result = -1;
@@ -735,7 +743,8 @@ int ABC_TxStrStr(const char *haystack, const char *needle,
     haystack_size = strlen(haystack);
     needle_size = strlen(needle);
 
-    if (haystack_size == 0 || needle_size == 0) {
+    if (haystack_size == 0 || needle_size == 0)
+    {
         return 0;
     }
 

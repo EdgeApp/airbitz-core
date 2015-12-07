@@ -16,9 +16,8 @@
 #include <thread>
 
 struct Session;
-namespace abcd
-{
-    class Account;
+namespace abcd {
+class Account;
 }
 
 /**

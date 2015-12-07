@@ -40,7 +40,8 @@ tABC_CC ABC_LoginPasswordDisk(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(loginPackage.passwordBox().decrypt(dataKey, passwordKey));
 
     // Decrypt SyncKey:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, JsonBox(), true));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, JsonBox(),
+                                true));
     result = std::move(out);
 
 exit:
@@ -70,14 +71,15 @@ tABC_CC ABC_LoginPasswordServer(std::shared_ptr<Login> &result,
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(authKey, LP));
     ABC_CHECK_NEW(loginServerGetLoginPackage(lobby,
-        authKey, U08Buf(), loginPackage, rootKeyBox));
+                  authKey, U08Buf(), loginPackage, rootKeyBox));
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp2().hash(passwordKey, LP));
     ABC_CHECK_NEW(loginPackage.passwordBox().decrypt(dataKey, passwordKey));
 
     // Decrypt SyncKey:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, rootKeyBox, false));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, rootKeyBox,
+                                false));
 
     // Set up the on-disk login:
     ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()));
@@ -161,7 +163,7 @@ tABC_CC ABC_LoginPasswordSet(Login &login,
 
     // Change the server login:
     ABC_CHECK_NEW(loginServerChangePassword(login,
-        newAuthKey, oldLRA1, carePackage, loginPackage));
+                                            newAuthKey, oldLRA1, carePackage, loginPackage));
 
     // Change the on-disk login:
     ABC_CHECK_NEW(login.authKeySet(newAuthKey));

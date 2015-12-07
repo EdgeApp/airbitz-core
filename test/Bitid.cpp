@@ -33,13 +33,14 @@ TEST_CASE("BitID callback tests", "[login][bitid]")
 
 TEST_CASE("BitID key derivation", "[login][bitid]")
 {
-    bc::word_list mnemonic = {
+    bc::word_list mnemonic =
+    {
         "inhale", "praise", "target", "steak", "garlic", "cricket",
         "paper", "better", "evil", "almost", "sadness", "crawl",
         "city", "banner", "amused", "fringe", "fox", "insect",
         "roast", "aunt", "prefer", "hollow", "basic", "ladder"
     };
     const auto signature = abcd::bitidSign(bc::decode_mnemonic(mnemonic),
-        "test", "http://bitid.bitcoin.blue/callback", 0);
+                                           "test", "http://bitid.bitcoin.blue/callback", 0);
     REQUIRE(signature.address == "1J34vj4wowwPYafbeibZGht3zy3qERoUM1");
 }

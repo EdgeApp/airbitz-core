@@ -40,8 +40,8 @@ loginServerGetQuestions(JsonPtr &result);
  */
 Status
 loginServerCreate(const Lobby &lobby, DataSlice LP1,
-    const CarePackage &carePackage, const LoginPackage &loginPackage,
-    const std::string &syncKey);
+                  const CarePackage &carePackage, const LoginPackage &loginPackage,
+                  const std::string &syncKey);
 
 /**
  * Activate an account on the server.
@@ -64,15 +64,15 @@ loginServerAvailable(const Lobby &lobby);
  */
 Status
 loginServerAccountUpgrade(const Login &login,
-    JsonPtr rootKeyBox, JsonPtr mnemonicBox, JsonPtr dataKeyBox);
+                          JsonPtr rootKeyBox, JsonPtr mnemonicBox, JsonPtr dataKeyBox);
 
 /**
  * Changes the password for an account on the server.
  */
 Status
 loginServerChangePassword(const Login &login,
-    DataSlice newLP1, DataSlice newLRA1,
-    const CarePackage &carePackage, const LoginPackage &loginPackage);
+                          DataSlice newLP1, DataSlice newLRA1,
+                          const CarePackage &carePackage, const LoginPackage &loginPackage);
 
 Status
 loginServerGetCarePackage(const Lobby &lobby, CarePackage &result);
@@ -85,7 +85,7 @@ loginServerGetCarePackage(const Lobby &lobby, CarePackage &result);
  */
 Status
 loginServerGetLoginPackage(const Lobby &lobby,
-    DataSlice LP1, DataSlice LRA1, LoginPackage &result, JsonPtr &rootKeyBox);
+                           DataSlice LP1, DataSlice LRA1, LoginPackage &result, JsonPtr &rootKeyBox);
 
 Status
 loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result);
@@ -98,8 +98,8 @@ loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result);
  */
 Status
 loginServerUpdatePinPackage(const Login &login,
-    DataSlice DID, DataSlice LPIN1, const std::string &pinPackage,
-    time_t ali);
+                            DataSlice DID, DataSlice LPIN1, const std::string &pinPackage,
+                            time_t ali);
 
 /**
  * Create a git repository on the server, suitable for holding a wallet.
@@ -117,7 +117,8 @@ loginServerWalletActivate(const Login &login, const std::string &syncKey);
  * Apply 2-factor authentication to the account.
  */
 Status
-loginServerOtpEnable(const Login &login, const std::string &otpToken, const long timeout);
+loginServerOtpEnable(const Login &login, const std::string &otpToken,
+                     const long timeout);
 
 /**
  * Remove 2-factor authentication from the account.

@@ -63,7 +63,7 @@ static bool is_qchar(const char c)
  * and that all characters belong to the given class.
  */
 static bool
-validate(const std::string& in, bool (*is_valid)(const char))
+validate(const std::string &in, bool (*is_valid)(const char))
 {
     auto i = in.begin();
     while (in.end() != i)
@@ -88,7 +88,7 @@ validate(const std::string& in, bool (*is_valid)(const char))
  * Decodes all RFC 3986 escape sequences in a string.
  */
 static std::string
-unescape(const std::string& in)
+unescape(const std::string &in)
 {
     // Do the conversion:
     std::string out;
@@ -98,7 +98,7 @@ unescape(const std::string& in)
     while (in.end() != i)
     {
         if ('%' == *i &&
-            2 < in.end() - i && is_base16(i[1]) && is_base16(i[2]))
+                2 < in.end() - i && is_base16(i[1]) && is_base16(i[2]))
         {
             const char temp[] = {i[1], i[2], 0};
             DataChunk value;
@@ -120,7 +120,7 @@ unescape(const std::string& in)
  * @param is_valid a function returning true for acceptable characters.
  */
 static std::string
-escape(const std::string& in, bool (*is_valid)(char))
+escape(const std::string &in, bool (*is_valid)(char))
 {
     std::ostringstream stream;
     stream << std::hex << std::uppercase << std::setfill('0');
@@ -135,7 +135,7 @@ escape(const std::string& in, bool (*is_valid)(char))
 }
 
 bool
-Uri::decode(const std::string& in, bool strict)
+Uri::decode(const std::string &in, bool strict)
 {
     auto i = in.begin();
 
@@ -232,14 +232,14 @@ std::string
 Uri::scheme() const
 {
     auto out = scheme_;
-    for (auto& c: out)
+    for (auto &c: out)
         if ('A' <= c && c <= 'Z')
             c = c - 'A' + 'a';
     return out;
 }
 
 void
-Uri::schemeSet(const std::string& scheme)
+Uri::schemeSet(const std::string &scheme)
 {
     scheme_ = scheme;
 }
@@ -259,7 +259,7 @@ Uri::authorityOk() const
 }
 
 void
-Uri::authoritySet(const std::string& authority)
+Uri::authoritySet(const std::string &authority)
 {
     authorityOk_ = true;
     authority_ = escape(authority, is_pchar);
@@ -280,7 +280,7 @@ Uri::path() const
 }
 
 void
-Uri::pathSet(const std::string& path)
+Uri::pathSet(const std::string &path)
 {
     path_ = escape(path, is_path);
 }
@@ -300,7 +300,7 @@ Uri::queryOk() const
 }
 
 void
-Uri::querySet(const std::string& query)
+Uri::querySet(const std::string &query)
 {
     queryOk_ = true;
     query_ = escape(query, is_query);
@@ -327,7 +327,7 @@ Uri::fragmentOk() const
 }
 
 void
-Uri::fragmentSet(const std::string& fragment)
+Uri::fragmentSet(const std::string &fragment)
 {
     fragmentOk_ = true;
     fragment_ = escape(fragment, is_query);
@@ -374,12 +374,12 @@ Uri::queryDecode() const
 }
 
 void
-Uri::queryEncode(const QueryMap& map)
+Uri::queryEncode(const QueryMap &map)
 {
     bool first = true;
     std::ostringstream query;
 
-    for (const auto& i: map)
+    for (const auto &i: map)
     {
         if (!first)
             query << '&';

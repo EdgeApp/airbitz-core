@@ -31,7 +31,8 @@ COMMAND(InitLevel::login, BitidLogin, "bitid-login")
 COMMAND(InitLevel::login, BitidAddressSignature, "bitid-sign")
 {
     if (argc < 4 || 5 < argc)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... bitid-sign <user> <pass> <uri> <message> [<index>]");
+        return ABC_ERROR(ABC_CC_Error,
+                         "usage: ... bitid-sign <user> <pass> <uri> <message> [<index>]");
     const char *uri = argv[2];
     const char *message = argv[3];
     int index = argc == 5 ? atoi(argv[4]) : 0;
@@ -39,7 +40,7 @@ COMMAND(InitLevel::login, BitidAddressSignature, "bitid-sign")
     Uri callback;
     ABC_CHECK(bitidCallback(callback, uri, false));
     const auto signature = bitidSign(session.login->rootKey(),
-        message, callback.encode(), index);
+                                     message, callback.encode(), index);
 
     std::cout << "Address: " << signature.address << std::endl;
     std::cout << "Signature: " << signature.signature << std::endl;

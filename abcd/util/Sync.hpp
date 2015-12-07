@@ -47,7 +47,7 @@ syncMakeRepo(const std::string &syncDir);
  */
 Status
 syncEnsureRepo(const std::string &syncDir, const std::string &tempDir,
-    const std::string &syncKey);
+               const std::string &syncKey);
 
 /**
  * Synchronizes the directory with the server.

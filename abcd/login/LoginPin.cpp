@@ -123,7 +123,8 @@ tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
     ABC_CHECK_NEW(local.pinBox().decrypt(dataKey, pinKey));
 
     // Create the Login object:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, JsonBox(), true));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, JsonBox(),
+                                true));
     result = std::move(out);
 
 exit:
@@ -155,7 +156,7 @@ tABC_CC ABC_LoginPinSetup(Login &login,
 
     // Set up DID:
     if (!local.load(login.lobby.dir() + PIN_FILENAME) ||
-        !local.pinAuthIdDecode(pinAuthId))
+            !local.pinAuthIdDecode(pinAuthId))
         ABC_CHECK_NEW(randomData(pinAuthId, KEY_LENGTH));
 
     // Put dataKey in a box:
@@ -169,8 +170,8 @@ tABC_CC ABC_LoginPinSetup(Login &login,
     // Set up the server:
     ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN));
     ABC_CHECK_NEW(loginServerUpdatePinPackage(login,
-        pinAuthId, pinAuthKey, pinKeyBox.encode(),
-        expires));
+                  pinAuthId, pinAuthKey, pinKeyBox.encode(),
+                  expires));
 
     // Save the local file:
     ABC_CHECK_NEW(local.pinBoxSet(pinBox));

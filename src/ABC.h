@@ -153,7 +153,7 @@ typedef enum eABC_CC
     ABC_CC_NoAvailableAddress = 35,
     /** The user has entered a bad PIN, and must wait. */
     ABC_CC_InvalidPinWait = 36, ABC_CC_PinExpired = 36,
-     /** Two Factor required */
+    /** Two Factor required */
     ABC_CC_InvalidOTP = 37,
     /** Trying to send too little money. */
     ABC_CC_SpendDust = 38,
@@ -480,8 +480,8 @@ typedef void (*tABC_BitCoin_Event_Callback)(const tABC_AsyncBitCoinInfo *pInfo);
  * @param amount The number of satoshis swept into the wallet.
  */
 typedef void (*tABC_Sweep_Done_Callback)(tABC_CC cc,
-                                         const char *szID,
-                                         uint64_t amount);
+        const char *szID,
+        uint64_t amount);
 
 /* === Library lifetime: === */
 tABC_CC ABC_Initialize(const char                   *szRootDir,
@@ -549,7 +549,7 @@ tABC_CC ABC_SignIn(const char *szUserName,
                    tABC_Error *pError);
 
 tABC_CC ABC_AccountAvailable(const char *szUserName,
-                            tABC_Error *pError);
+                             tABC_Error *pError);
 
 tABC_CC ABC_CreateAccount(const char *szUserName,
                           const char *szPassword,
@@ -592,9 +592,9 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
                            tABC_Error *pError);
 
 tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
-                                              const char *szRecoveryAnswers,
-                                              const char *szNewPassword,
-                                              tABC_Error *pError);
+        const char *szRecoveryAnswers,
+        const char *szNewPassword,
+        tABC_Error *pError);
 
 tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                         const char *szPassword,
@@ -850,7 +850,8 @@ tABC_CC ABC_SetWalletArchived(const char *szUserName,
                               tABC_Error *pError);
 
 /* === Exchange rates: === */
-tABC_CC ABC_RequestExchangeRateUpdate(const char *szUserName, const char *szPassword,
+tABC_CC ABC_RequestExchangeRateUpdate(const char *szUserName,
+                                      const char *szPassword,
                                       int currencyNum,
                                       tABC_Error *pError);
 
@@ -928,11 +929,11 @@ tABC_CC ABC_CsvExport(const char *szUserName,
                       tABC_Error *pError);
 
 tABC_CC ABC_DataSyncWallet(const char *szUserName,
-                        const char *szPassword,
-                        const char *szWalletUUID,
-                        tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                        void *pData,
-                        tABC_Error *pError);
+                           const char *szPassword,
+                           const char *szWalletUUID,
+                           tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
+                           void *pData,
+                           tABC_Error *pError);
 
 /* === Receiving: === */
 tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
@@ -1102,16 +1103,16 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
                                   tABC_Error *pError);
 
 tABC_CC ABC_DuplicateTxDetails(tABC_TxDetails **ppNewDetails,
-                         const tABC_TxDetails *pOldDetails,
-                         tABC_Error *pError);
+                               const tABC_TxDetails *pOldDetails,
+                               tABC_Error *pError);
 
 void ABC_FreeTxDetails(tABC_TxDetails *pDetails);
 
 /* === Wallet watcher: === */
 tABC_CC ABC_WatcherStart(const char *szUserName,
-                            const char *szPassword,
-                            const char *szWalletUUID,
-                            tABC_Error *pError);
+                         const char *szPassword,
+                         const char *szWalletUUID,
+                         tABC_Error *pError);
 
 tABC_CC ABC_WatcherLoop(const char *szWalletUUID,
                         tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
@@ -1135,9 +1136,11 @@ tABC_CC ABC_WatcherDelete(const char *szWalletUUID, tABC_Error *pError);
 
 tABC_CC ABC_WatcherDeleteCache(const char *szWalletUUID, tABC_Error *pError);
 
-tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId, int *height, tABC_Error *pError);
+tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxId, int *height,
+                     tABC_Error *pError);
 
-tABC_CC ABC_BlockHeight(const char *szWalletUUID, int *height, tABC_Error *pError);
+tABC_CC ABC_BlockHeight(const char *szWalletUUID, int *height,
+                        tABC_Error *pError);
 
 #ifdef __cplusplus
 }

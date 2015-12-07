@@ -36,7 +36,7 @@ WalletList::load()
     // Step 1: reload any wallets we already have:
     for (auto &wallet: wallets_)
         ABC_CHECK(wallet.second.load(path(wallet.first),
-            account_.login.dataKey()));
+                                     account_.login.dataKey()));
 
     // Step 2: scan the directory for new wallets:
     DIR *dir = opendir(dir_.c_str());

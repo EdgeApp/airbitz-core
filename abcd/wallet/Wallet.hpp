@@ -34,11 +34,11 @@ public:
 
     static Status
     create(std::shared_ptr<Wallet> &result, Account &account,
-        const std::string &id);
+           const std::string &id);
 
     static Status
     createNew(std::shared_ptr<Wallet> &result, Account &account,
-        const std::string &name, int currency);
+              const std::string &name, int currency);
 
     const std::string &id() const { return id_; }
     const std::string &dir() const { return dir_; }

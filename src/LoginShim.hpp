@@ -44,28 +44,28 @@ cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName);
  */
 Status
 cacheLoginNew(std::shared_ptr<Login> &result,
-    const char *szUserName, const char *szPassword);
+              const char *szUserName, const char *szPassword);
 
 /**
  * Logs the user in with a password, if necessary.
  */
 Status
 cacheLoginPassword(std::shared_ptr<Login> &result,
-    const char *szUserName, const char *szPassword);
+                   const char *szUserName, const char *szPassword);
 
 /**
  * Logs the user in with their recovery answers, if necessary.
  */
 Status
 cacheLoginRecovery(std::shared_ptr<Login> &result,
-    const char *szUserName, const char *szRecoveryAnswers);
+                   const char *szUserName, const char *szRecoveryAnswers);
 
 /**
  * Logs the user in with their PIN, if necessary.
  */
 Status
 cacheLoginPin(std::shared_ptr<Login> &result,
-    const char *szUserName, const char *szPin);
+              const char *szUserName, const char *szPin);
 
 /**
  * Retrieves the cached login, assuming the username still matches.
@@ -84,7 +84,7 @@ cacheAccount(std::shared_ptr<Account> &result, const char *szUserName);
  */
 Status
 cacheWalletNew(std::shared_ptr<Wallet> &result, const char *szUserName,
-    const std::string &name, int currency);
+               const std::string &name, int currency);
 
 /**
  * Retrieves a wallet for the currently logged-in user.
@@ -92,7 +92,7 @@ cacheWalletNew(std::shared_ptr<Wallet> &result, const char *szUserName,
  */
 Status
 cacheWallet(std::shared_ptr<Wallet> &result, const char *szUserName,
-    const char *szUUID);
+            const char *szUUID);
 
 } // namespace abcd
 

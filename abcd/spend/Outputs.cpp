@@ -10,7 +10,7 @@
 #include "../bitcoin/Testnet.hpp"
 #include <iterator>
 
-#define MINIMUM_DUST_THRESHOLD 4000
+#define MINIMUM_DUST_THRESHOLD 4000 // was 546
 
 namespace abcd {
 
@@ -106,13 +106,12 @@ outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
 bool
 outputIsDust(uint64_t amount)
 {
-//    return amount < 546;
     return amount < MINIMUM_DUST_THRESHOLD;
 }
 
 Status
 outputsFinalize(bc::transaction_output_list &outputs,
-    uint64_t change, const std::string &changeAddress)
+                uint64_t change, const std::string &changeAddress)
 {
     // Add change:
     if (!outputIsDust(change))
@@ -125,7 +124,7 @@ outputsFinalize(bc::transaction_output_list &outputs,
 
     // Sort:
     auto compare = [](const bc::transaction_output_type &a,
-        const bc::transaction_output_type &b)
+                      const bc::transaction_output_type &b)
     {
         return a.value < b.value;
     };

@@ -35,7 +35,8 @@ tABC_CC ABC_LoginGetRQ(Lobby &lobby,
     ABC_CHECK_NEW(loginServerGetCarePackage(lobby, carePackage));
 
     // Verify that the questions exist:
-    ABC_CHECK_ASSERT(carePackage.questionBox(), ABC_CC_NoRecoveryQuestions, "No recovery questions");
+    ABC_CHECK_ASSERT(carePackage.questionBox(), ABC_CC_NoRecoveryQuestions,
+                     "No recovery questions");
 
     // Create L4:
     ABC_CHECK_NEW(carePackage.snrp4().hash(questionKey, lobby.username()));
@@ -80,14 +81,15 @@ tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
     // Get the LoginPackage:
     ABC_CHECK_NEW(usernameSnrp().hash(recoveryAuthKey, LRA));
     ABC_CHECK_NEW(loginServerGetLoginPackage(lobby,
-        U08Buf(), recoveryAuthKey, loginPackage, rootKeyBox));
+                  U08Buf(), recoveryAuthKey, loginPackage, rootKeyBox));
 
     // Decrypt MK:
     ABC_CHECK_NEW(carePackage.snrp3().hash(recoveryKey, LRA));
     ABC_CHECK_NEW(loginPackage.recoveryBox().decrypt(dataKey, recoveryKey));
 
     // Decrypt SyncKey:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, rootKeyBox, false));
+    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, rootKeyBox,
+                                false));
 
     // Set up the on-disk login:
     ABC_CHECK_NEW(carePackage.save(lobby.carePackageName()));
@@ -152,7 +154,7 @@ tABC_CC ABC_LoginRecoverySet(Login &login,
 
     // Change the server login:
     ABC_CHECK_NEW(loginServerChangePassword(login,
-        authKey, recoveryAuthKey, carePackage, loginPackage));
+                                            authKey, recoveryAuthKey, carePackage, loginPackage));
 
     // Change the on-disk login:
     ABC_CHECK_NEW(carePackage.save(login.lobby.carePackageName()));

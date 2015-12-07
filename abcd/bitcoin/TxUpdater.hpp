@@ -10,12 +10,9 @@
 #include "../util/Status.hpp"
 #include "../../minilibs/libbitcoin-client/client.hpp"
 #include <unordered_map>
+#include "StratumConnection.hpp"
 
 namespace abcd {
-
-#define ALL_SERVERS    -1
-#define NO_SERVERS     -9999
-#define NUM_CONNECT_SERVERS    3
 
 /**
  * Interface containing the events the updater can trigger.
@@ -55,7 +52,7 @@ public:
     void disconnect();
     Status connect();
     void watch(const bc::payment_address &address,
-        bc::client::sleep_time poll);
+               bc::client::sleep_time poll);
     void send(bc::transaction_type tx);
 
     AddressSet watching();
@@ -70,15 +67,23 @@ public:
     pollitems();
 
 private:
+    enum class ConnectionType
+    {
+        libbitcoin,
+        stratum
+    };
+
     struct Connection
     {
         Connection(void *ctx, long server_index);
 
-        bool operator==(const Connection& l)
+        bool operator==(const Connection &l)
         {
             return server_index == l.server_index;
         };
 
+        ConnectionType type;
+        StratumConnection stratumCodec;
         bc::client::zeromq_socket bc_socket;
         bc::client::obelisk_codec bc_codec;
         int queued_queries_;
@@ -87,6 +92,8 @@ private:
 
         long server_index;
     };
+
+    Status connectTo(long index);
 
     void watch_tx(bc::hash_digest txid, bool want_inputs, int idx);
     void get_inputs(const bc::transaction_type &tx, int idx);
@@ -118,9 +125,9 @@ private:
 
     bool wantConnection = false;
     std::vector<Connection *> connections_;
-    std::vector<std::string> vStrServers_;
-    std::vector<int> serverConnections_;
-    std::vector<int> serverBlacklist_;
+    std::vector<std::string> serverList_;
+    std::set<int> untriedLibbitcoin_;
+    std::set<int> untriedStratum_;
 };
 
 } // namespace abcd

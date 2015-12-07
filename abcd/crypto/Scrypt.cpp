@@ -52,7 +52,8 @@ ScryptSnrp::create()
     totalTime -= timerStart.tv_usec;
     int diffShift = 0;
 
-    ABC_DebugLevel(1, "Scrypt target:%d timing:%d", SCRYPT_TARGET_USECONDS, totalTime);
+    ABC_DebugLevel(1, "Scrypt target:%d timing:%d", SCRYPT_TARGET_USECONDS,
+                   totalTime);
 
     if (totalTime >= SCRYPT_TARGET_USECONDS)
     {
@@ -74,12 +75,14 @@ ScryptSnrp::create()
         r = SCRYPT_MAX_CLIENT_R;
 
         // Need to adjust scryptN to make scrypt even stronger:
-        unsigned int numShifts = (SCRYPT_TARGET_USECONDS / SCRYPT_MAX_CLIENT_R) / totalTime;
+        unsigned int numShifts = (SCRYPT_TARGET_USECONDS / SCRYPT_MAX_CLIENT_R) /
+                                 totalTime;
         numShifts--;
 
         if (SCRYPT_MAX_CLIENT_N_SHIFT < numShifts + SCRYPT_DEFAULT_CLIENT_N_SHIFT)
         {
-            diffShift = numShifts + SCRYPT_DEFAULT_CLIENT_N_SHIFT - SCRYPT_MAX_CLIENT_N_SHIFT;
+            diffShift = numShifts + SCRYPT_DEFAULT_CLIENT_N_SHIFT -
+                        SCRYPT_MAX_CLIENT_N_SHIFT;
             n = (1 << SCRYPT_MAX_CLIENT_N_SHIFT);
         }
         else
@@ -108,7 +111,7 @@ ScryptSnrp::hash(DataChunk &result, DataSlice data, size_t size) const
     DataChunk out(size);
 
     int rc = crypto_scrypt(data.data(), data.size(),
-        salt.data(), salt.size(), n, r, p, out.data(), size);
+                           salt.data(), salt.size(), n, r, p, out.data(), size);
     if (rc)
         return ABC_ERROR(ABC_CC_ScryptError, "Error calculating Scrypt hash");
 

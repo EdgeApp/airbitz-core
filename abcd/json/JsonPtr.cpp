@@ -16,6 +16,7 @@ namespace abcd {
 
 constexpr size_t loadFlags = 0;
 constexpr size_t saveFlags = JSON_INDENT(4) | JSON_SORT_KEYS;
+constexpr size_t saveFlagsCompact = JSON_COMPACT | JSON_SORT_KEYS;
 
 /**
  * Overrides the jansson malloc function so we can clear the memory on free.
@@ -25,7 +26,7 @@ static void *
 janssonSecureMalloc(size_t size)
 {
     // Store the memory area size in the beginning of the block:
-    char *ptr = (char*)malloc(size + 8);
+    char *ptr = (char *)malloc(size + 8);
     *((size_t *)ptr) = size;
     return ptr + 8;
 }
@@ -38,7 +39,7 @@ janssonSecureFree(void *ptr)
 {
     if (ptr)
     {
-        ptr = (char*)ptr - 8;
+        ptr = (char *)ptr - 8;
         size_t size = *((size_t *)ptr);
         ABC_UtilGuaranteedMemset(ptr, 0, size + 8);
         free(ptr);
@@ -122,7 +123,7 @@ JsonPtr::load(const std::string &filename, DataSlice dataKey)
 {
     json_t *root = nullptr;
     ABC_CHECK_OLD(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
-        toU08Buf(dataKey), &root, &error));
+                  toU08Buf(dataKey), &root, &error));
     reset(root);
     return Status();
 }
@@ -151,15 +152,15 @@ Status
 JsonPtr::save(const std::string &filename, DataSlice dataKey) const
 {
     ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(root_,
-        toU08Buf(dataKey), ABC_CryptoType_AES256,
-        filename.c_str(), &error));
+                  toU08Buf(dataKey), ABC_CryptoType_AES256,
+                  filename.c_str(), &error));
     return Status();
 }
 
 std::string
-JsonPtr::encode() const
+JsonPtr::encode(bool compact) const
 {
-    auto raw = json_dumps(root_, saveFlags);
+    auto raw = json_dumps(root_, compact ? saveFlagsCompact : saveFlags);
     if (!raw)
         throw std::bad_alloc();
     std::string out(raw);

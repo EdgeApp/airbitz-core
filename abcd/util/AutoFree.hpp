@@ -52,7 +52,7 @@ public:
         return out;
     }
 
-    operator T*() { return p_; }
+    operator T *() { return p_; }
     T *operator ->() { return p_; }
 
 private:

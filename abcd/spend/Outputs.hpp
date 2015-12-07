@@ -40,7 +40,7 @@ outputIsDust(uint64_t amount);
  */
 Status
 outputsFinalize(bc::transaction_output_list &outputs,
-    uint64_t change, const std::string &changeAddress);
+                uint64_t change, const std::string &changeAddress);
 
 uint64_t
 outputsTotal(const bc::transaction_output_list &outputs);

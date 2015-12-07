@@ -17,9 +17,10 @@ namespace abcd {
 
 static bc::hd_private_key
 bitidDerivedKey(const bc::hd_private_key &root,
-    const std::string &callbackUri, uint32_t index)
+                const std::string &callbackUri, uint32_t index)
 {
-    auto hash = bc::sha256_hash(bc::build_data({
+    auto hash = bc::sha256_hash(bc::build_data(
+    {
         bc::to_little_endian(index), DataSlice(callbackUri)
     }));
 
@@ -30,11 +31,11 @@ bitidDerivedKey(const bc::hd_private_key &root,
 
     // TODO: Use safe HD derivation to avoid problems here.
     return root.
-        generate_private_key(13 | bc::first_hardened_key).
-        generate_private_key(a | bc::first_hardened_key).
-        generate_private_key(b | bc::first_hardened_key).
-        generate_private_key(c | bc::first_hardened_key).
-        generate_private_key(d | bc::first_hardened_key);
+           generate_private_key(13 | bc::first_hardened_key).
+           generate_private_key(a | bc::first_hardened_key).
+           generate_private_key(b | bc::first_hardened_key).
+           generate_private_key(c | bc::first_hardened_key).
+           generate_private_key(d | bc::first_hardened_key);
 }
 
 Status
@@ -58,12 +59,12 @@ bitidCallback(Uri &result, const std::string &uri, bool strict)
 
 BitidSignature
 bitidSign(DataSlice rootKey, const std::string &message,
-    const std::string &callbackUri, uint32_t index)
+          const std::string &callbackUri, uint32_t index)
 {
     const auto key = bitidDerivedKey(bc::hd_private_key(rootKey),
-        callbackUri, index);
+                                     callbackUri, index);
     const auto signature = bc::sign_message(DataSlice(message),
-        key.private_key(), true);
+                                            key.private_key(), true);
 
     BitidSignature out;
     out.address = bc::payment_address(0x00, key.address().hash()).encoded();
@@ -94,7 +95,7 @@ bitidLogin(DataSlice rootKey, const std::string &bitidUri, uint32_t index)
 
     HttpReply reply;
     HttpRequest().header("Content-Type", "application/json").
-        post(reply, callback, json.encode());
+    post(reply, callback, json.encode());
     ABC_CHECK(reply.codeOk());
 
     return Status();
