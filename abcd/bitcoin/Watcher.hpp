@@ -31,7 +31,7 @@ public:
     void connect();
     void watch_address(const bc::payment_address &address, unsigned poll_ms=10000);
     void prioritize_address(const bc::payment_address &address);
-    void sendTx(DataSlice tx);
+    void sendTx(StatusCallback status, DataSlice tx);
 
     // - Callbacks: --------------------
     typedef std::function<void (const bc::transaction_type &)> tx_callback;
@@ -76,7 +76,7 @@ private:
     void send_disconnect();
     void send_connect();
     void send_watch_addr(bc::payment_address address, unsigned poll_ms);
-    void sendSend(DataSlice tx);
+    void sendSend(StatusCallback status, DataSlice tx);
 
     // The thread uses these callbacks, so put them in a mutex:
     std::mutex cb_mutex_;

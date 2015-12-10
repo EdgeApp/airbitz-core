@@ -55,9 +55,10 @@ void Watcher::connect()
     send_connect();
 }
 
-void Watcher::sendTx(DataSlice tx)
+void
+Watcher::sendTx(StatusCallback status, DataSlice tx)
 {
-    sendSend(tx);
+    sendSend(status, tx);
 }
 
 void
@@ -208,11 +209,17 @@ void Watcher::send_watch_addr(bc::payment_address address, unsigned poll_ms)
     socket_.send(str.data(), str.size());
 }
 
-void Watcher::sendSend(DataSlice tx)
+void
+Watcher::sendSend(StatusCallback status, DataSlice tx)
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
-    auto data = buildData({bc::to_byte(msg_send), tx});
+    auto statusCopy = new StatusCallback(std::move(status));
+    auto statusInt = reinterpret_cast<uintptr_t>(statusCopy);
+
+    auto data = buildData({bc::to_byte(msg_send),
+                           bc::to_little_endian(statusInt), tx
+                          });
     socket_.send(data.data(), data.size());
 }
 
@@ -245,9 +252,10 @@ bool Watcher::command(uint8_t *data, size_t size)
 
     case msg_send:
     {
-        bc::transaction_type tx;
-        bc::satoshi_load(serial.iterator(), data + size, tx);
-        txu_.send(tx);
+        auto statusInt = serial.read_little_endian<uintptr_t>();
+        auto statusCopy = reinterpret_cast<StatusCallback *>(statusInt);
+        txu_.send(*statusCopy, DataSlice(serial.iterator(), data + size));
+        delete statusCopy;
     }
     return true;
     }

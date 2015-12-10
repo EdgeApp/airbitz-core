@@ -12,6 +12,7 @@
 #include "../crypto/Encoding.hpp"
 #include "../http/HttpRequest.hpp"
 #include "../json/JsonObject.hpp"
+#include "../util/Debug.hpp"
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -100,11 +101,28 @@ broadcastTx(Wallet &self, DataSlice rawTx)
     auto syncer = std::make_shared<Syncer>();
     auto s1 = std::make_shared<DelayedStatus>();
     auto s2 = std::make_shared<DelayedStatus>();
+    auto s3 = std::make_shared<DelayedStatus>();
 
     // Launch the broadcasts:
     DataChunk tx(rawTx.begin(), rawTx.end());
     std::thread(broadcastTask<blockchainPostTx>, syncer, s1, tx).detach();
     std::thread(broadcastTask<insightPostTx>, syncer, s2, tx).detach();
+
+    // Queue up an async broadcast over the TxUpdater:
+    auto updaterDone = [syncer, s3](Status s)
+    {
+        {
+            std::lock_guard<std::mutex> lock(syncer->mutex);
+            s3->status = s;
+            s3->done = true;
+            if (s)
+                ABC_DebugLog("Stratum broadcast OK");
+            else
+                s.log();
+        }
+        syncer->cv.notify_all();
+    };
+    ABC_CHECK(watcherSend(self, updaterDone, rawTx));
 
     // Loop as long as any thread is still running:
     while (true)
@@ -118,14 +136,13 @@ broadcastTx(Wallet &self, DataSlice rawTx)
             break;
         if (s2->done && s2->status)
             break;
+        if (s3->done && s3->status)
+            break;
 
         // If they are all done, we have an error:
-        if (s1->done && s2->done)
+        if (s1->done && s2->done && s3->done)
             return s1->status;
     }
-
-    // Also send via TxUpdater:
-    watcherSend(self, rawTx);
 
     return Status();
 }

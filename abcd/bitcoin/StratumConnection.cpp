@@ -153,6 +153,36 @@ StratumConnection::getAddressHistory(
     pending_[query.id()] = Pending{ decoder };
 }
 
+Status
+StratumConnection::sendTx(StatusCallback status, DataSlice tx)
+{
+    JsonArray params;
+    params.append(json_string(base16Encode(tx).c_str()));
+
+    RequestJson query;
+    query.idSet(lastId++);
+    query.methodSet("blockchain.transaction.broadcast");
+    query.paramsSet(params);
+    ABC_CHECK(connection_.send(query.encode(true) + '\n'));
+
+    // Set up a decoder for the reply:
+    const auto hash = bc::encode_hash(bc::bitcoin_hash(tx));
+    auto decoder = [status, hash](ReplyJson message)
+    {
+        auto payload = message.result().get();
+        if (!json_is_string(payload))
+            return status(ABC_ERROR(ABC_CC_Error, "Bad reply format"));
+
+        if (json_string_value(payload) != hash)
+            return status(ABC_ERROR(ABC_CC_Error, json_string_value(payload)));
+
+        status(Status());
+    };
+    pending_[query.id()] = Pending{ decoder };
+
+    return Status();
+}
+
 void
 StratumConnection::getHeight(
     bc::client::obelisk_codec::error_handler onError,

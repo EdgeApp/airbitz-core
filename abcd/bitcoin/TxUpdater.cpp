@@ -192,9 +192,10 @@ void TxUpdater::watch(const bc::payment_address &address,
 
 }
 
-void TxUpdater::send(bc::transaction_type tx)
+void
+TxUpdater::send(StatusCallback status, DataSlice tx)
 {
-    send_tx(tx);
+    sendTx(status, tx);
 }
 
 AddressSet TxUpdater::watching()
@@ -675,23 +676,21 @@ void TxUpdater::get_index(bc::hash_digest txid, int server_index)
     }
 }
 
-void TxUpdater::send_tx(const bc::transaction_type &tx)
+void
+TxUpdater::sendTx(StatusCallback status, DataSlice tx)
 {
     for (auto &it: connections_)
     {
-        // TODO: support send_tx for Stratum
+        // Pick one (and only one) stratum server for the broadcast:
         if (ConnectionType::stratum == it->type)
-            continue;
-
-        auto on_error = [](const std::error_code &error) {};
-
-        auto on_done = [this, tx]()
         {
-            db_.unconfirmed(bc::hash_transaction(tx));
-        };
-
-        it->bc_codec.broadcast_transaction(on_error, on_done, tx);
+            it->stratumCodec.sendTx(status, tx);
+            return;
+        }
     }
+
+    // If we get here, there are no stratum connections:
+    status(ABC_ERROR(ABC_CC_Error, "No stratum connections"));
 }
 
 void TxUpdater::query_address(const bc::payment_address &address,

@@ -279,12 +279,12 @@ exit:
 }
 
 Status
-watcherSend(Wallet &self, DataSlice tx)
+watcherSend(Wallet &self, StatusCallback status, DataSlice tx)
 {
     Watcher *watcher = nullptr;
     ABC_CHECK(watcherFind(watcher, self));
 
-    watcher->sendTx(tx);
+    watcher->sendTx(status, tx);
 
     return Status();
 }
