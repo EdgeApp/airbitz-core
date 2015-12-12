@@ -89,7 +89,7 @@ outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
     if (airbitzFee && !pInfo->bTransfer)
     {
         auto i = info.addresses.begin();
-        std::advance(i, rand() % info.addresses.size());
+        std::advance(i, time(nullptr) % info.addresses.size());
 
         bc::transaction_output_type output;
         output.value = airbitzFee;
