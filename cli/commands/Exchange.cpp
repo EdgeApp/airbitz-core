@@ -11,8 +11,12 @@
 
 using namespace abcd;
 
-COMMAND(InitLevel::context, ExchangeFetch, "exchange-fetch")
+COMMAND(InitLevel::context, ExchangeFetch, "exchange-fetch",
+        "")
 {
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
     for (const auto &source: exchangeSources)
     {
         ExchangeRates rates;
@@ -32,15 +36,17 @@ COMMAND(InitLevel::context, ExchangeFetch, "exchange-fetch")
     return Status();
 }
 
-COMMAND(InitLevel::account, ExchangeUpdate, "exchange-update")
+COMMAND(InitLevel::account, ExchangeUpdate, "exchange-update",
+        " <currency>")
 {
-    if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... get-exchange-rate <user> <pass> <currency>");
+    if (argc != 1)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto currencyName = argv[0];
 
     Currency currency;
-    ABC_CHECK(currencyNumber(currency, argv[2]));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1],
+    ABC_CHECK(currencyNumber(currency, currencyName));
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(session.username.c_str(),
+                  session.password.c_str(),
                   static_cast<int>(currency), &error));
 
     double rate;
@@ -52,11 +58,13 @@ COMMAND(InitLevel::account, ExchangeUpdate, "exchange-update")
 
 #define CURRENCY_SET_ROW(code, number, name) Currency::code,
 
-/**
- * Verifies that all the currencies have sources.
- */
-COMMAND(InitLevel::context, ExchangeValidate, "exchange-validate")
+COMMAND(InitLevel::context, ExchangeValidate, "exchange-validate",
+        "\n"
+        "Validates that all currencies have sources.")
 {
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
     Currencies currencies
     {
         ABC_CURRENCY_LIST(CURRENCY_SET_ROW)

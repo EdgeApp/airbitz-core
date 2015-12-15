@@ -26,13 +26,16 @@ signalCallback(int dummy)
     running = false;
 }
 
-COMMAND(InitLevel::wallet, Watcher, "watcher")
+COMMAND(InitLevel::wallet, Watcher, "watcher",
+        "")
 {
-    if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... watcher <user> <pass> <wallet>");
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username, session.password,
-                                     session.uuid, syncCallback, nullptr, &error));
+    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
+                                     session.password.c_str(),
+                                     session.uuid.c_str(),
+                                     syncCallback, nullptr, &error));
     {
         WatcherThread thread;
         ABC_CHECK(thread.init(session));
@@ -42,8 +45,10 @@ COMMAND(InitLevel::wallet, Watcher, "watcher")
         while (running)
             sleep(1);
     }
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username, session.password,
-                                     session.uuid, syncCallback, nullptr, &error));
+    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
+                                     session.password.c_str(),
+                                     session.uuid.c_str(),
+                                     syncCallback, nullptr, &error));
 
     return Status();
 }

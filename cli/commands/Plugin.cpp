@@ -11,40 +11,52 @@
 
 using namespace abcd;
 
-COMMAND(InitLevel::account, PluginGet, "plugin-get")
+COMMAND(InitLevel::account, PluginGet, "plugin-get",
+        " <plugin> <key>")
 {
-    if (argc != 4)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... plugin-get <user> <pass> <plugin> <key>");
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto plugin = argv[0];
+    const auto key = argv[1];
+
     std::string value;
-    ABC_CHECK(pluginDataGet(*session.account, argv[2], argv[3], value));
+    ABC_CHECK(pluginDataGet(*session.account, plugin, key, value));
     std::cout << '"' << value << '"' << std::endl;
     return Status();
 }
 
-COMMAND(InitLevel::account, PluginSet, "plugin-set")
-{
-    if (argc != 5)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... plugin-set <user> <pass> <plugin> <key> <value>");
-    ABC_CHECK(pluginDataSet(*session.account, argv[2], argv[3], argv[4]));
-    return Status();
-}
-
-COMMAND(InitLevel::account, PluginRemove, "plugin-remove")
-{
-    if (argc != 4)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... plugin-remove <user> <pass> <plugin> <key>");
-    ABC_CHECK(pluginDataRemove(*session.account, argv[2], argv[3]));
-    return Status();
-}
-
-COMMAND(InitLevel::account, PluginClear, "plugin-clear")
+COMMAND(InitLevel::account, PluginSet, "plugin-set",
+        " <plugin> <key> <value>")
 {
     if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... plugin-clear <user> <pass> <plugin>");
-    ABC_CHECK(pluginDataClear(*session.account, argv[2]));
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto plugin = argv[0];
+    const auto key = argv[1];
+    const auto value = argv[2];
+
+    ABC_CHECK(pluginDataSet(*session.account, plugin, key, value));
+    return Status();
+}
+
+COMMAND(InitLevel::account, PluginRemove, "plugin-remove",
+        " <plugin> <key>")
+{
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto plugin = argv[0];
+    const auto key = argv[1];
+
+    ABC_CHECK(pluginDataRemove(*session.account, plugin, key));
+    return Status();
+}
+
+COMMAND(InitLevel::account, PluginClear, "plugin-clear",
+        " <plugin>")
+{
+    if (argc != 1)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto plugin = argv[0];
+
+    ABC_CHECK(pluginDataClear(*session.account, plugin));
     return Status();
 }
