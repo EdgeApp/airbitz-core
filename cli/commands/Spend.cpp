@@ -19,10 +19,10 @@ syncCallback(const tABC_AsyncBitCoinInfo *pInfo)
 
 COMMAND(InitLevel::wallet, SpendUri, "spend-uri")
 {
-    if (argc != 4)
+    if (argc != 1)
         return ABC_ERROR(ABC_CC_Error,
                          "usage: ... spend-uri <user> <pass> <wallet> <uri>");
-    const char *uri = argv[3];
+    const auto uri = argv[0];
 
     WatcherThread thread;
     ABC_CHECK(thread.init(session));
@@ -48,11 +48,11 @@ COMMAND(InitLevel::wallet, SpendUri, "spend-uri")
 
 COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer")
 {
-    if (argc != 5)
+    if (argc != 2)
         return ABC_ERROR(ABC_CC_Error,
                          "usage: ... spend-transfer <user> <pass> <wallet> <wallet-dest> <amount>");
-    const char *dest = argv[3];
-    int amount = atoi(argv[4]);
+    const auto dest = argv[0];
+    const auto amount = atol(argv[1]);
 
     Session sessionDest = session;
     sessionDest.uuid = dest;
@@ -87,11 +87,11 @@ COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer")
 
 COMMAND(InitLevel::wallet, SpendInternal, "spend-internal")
 {
-    if (argc != 5)
+    if (argc != 2)
         return ABC_ERROR(ABC_CC_Error,
                          "usage: ... spend-internal <user> <pass> <wallet> <address> <amount>");
-    const char *address = argv[3];
-    int amount = atoi(argv[4]);
+    const auto address = argv[0];
+    const auto amount = atol(argv[1]);
 
     WatcherThread thread;
     ABC_CHECK(thread.init(session));

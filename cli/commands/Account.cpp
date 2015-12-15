@@ -15,11 +15,12 @@
 
 using namespace abcd;
 
-COMMAND(InitLevel::context, AccountAvailable, "account-available")
+COMMAND(InitLevel::lobby, AccountAvailable, "account-available")
 {
-    if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... account-available <user>");
-    ABC_CHECK_OLD(ABC_AccountAvailable(argv[0], &error));
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, "usage: ... account-available");
+
+    ABC_CHECK_OLD(ABC_AccountAvailable(session.username.c_str(), &error));
     return Status();
 }
 
@@ -27,22 +28,25 @@ COMMAND(InitLevel::context, AccountCreate, "account-create")
 {
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... create-account <user> <pass>");
+    const auto username = argv[0];
+    const auto password = argv[1];
 
-    ABC_CHECK_OLD(ABC_CreateAccount(argv[0], argv[1], &error));
-    ABC_CHECK_OLD(ABC_SetPIN(argv[2], argv[3], "1234", &error));
+    ABC_CHECK_OLD(ABC_CreateAccount(username, password, &error));
+    ABC_CHECK_OLD(ABC_SetPIN(username, password, "1234", &error));
 
     return Status();
 }
 
 COMMAND(InitLevel::account, AccountDecrypt, "account-decrypt")
 {
-    if (argc != 3)
+    if (argc != 1)
         return ABC_ERROR(ABC_CC_Error,
                          "usage: ... account-decrypt <user> <pass> <filename>\n"
                          "note: The filename is account-relative.");
+    const auto filename = argv[0];
 
     JsonBox box;
-    ABC_CHECK(box.load(session.account->dir() + argv[2]));
+    ABC_CHECK(box.load(session.account->dir() + filename));
 
     DataChunk data;
     ABC_CHECK(box.decrypt(data, session.login->dataKey()));
@@ -53,13 +57,14 @@ COMMAND(InitLevel::account, AccountDecrypt, "account-decrypt")
 
 COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt")
 {
-    if (argc != 3)
+    if (argc != 1)
         return ABC_ERROR(ABC_CC_Error,
                          "usage: ... account-encrypt <user> <pass> <filename>\n"
                          "note: The filename is account-relative.");
+    const auto filename = argv[0];
 
     DataChunk contents;
-    ABC_CHECK(fileLoad(contents, session.account->dir() + argv[2]));
+    ABC_CHECK(fileLoad(contents, session.account->dir() + filename));
 
     JsonBox box;
     ABC_CHECK(box.encrypt(contents, session.login->dataKey()));

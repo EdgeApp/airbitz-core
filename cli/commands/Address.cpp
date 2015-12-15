@@ -15,7 +15,7 @@ using namespace abcd;
 
 COMMAND(InitLevel::wallet, CliAddressList, "address-list")
 {
-    if (argc != 3)
+    if (argc != 0)
         return ABC_ERROR(ABC_CC_Error,
                          "usage: ... address-list <user> <pass> <wallet>");
 

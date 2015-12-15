@@ -28,7 +28,7 @@ signalCallback(int dummy)
 
 COMMAND(InitLevel::wallet, Watcher, "watcher")
 {
-    if (argc != 3)
+    if (argc != 0)
         return ABC_ERROR(ABC_CC_Error, "usage: ... watcher <user> <pass> <wallet>");
 
     ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),

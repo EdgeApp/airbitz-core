@@ -49,26 +49,37 @@ static Status run(int argc, char *argv[])
     ABC_CHECK(json.chainKeyOk());
     ABC_CHECK(json.hiddenBitzKeyOk());
 
-    if (argc < 2)
+    // Drop our own name:
+    --argc;
+    ++argv;
+
+    // Find the command:
+    if (argc < 1)
     {
         CommandRegistry::print();
         return Status();
     }
+    const auto commandName = argv[0];
+    --argc;
+    ++argv;
 
-    // Find the command:
-    Command *command = CommandRegistry::find(argv[1]);
+    Command *command = CommandRegistry::find(commandName);
     if (!command)
-        return ABC_ERROR(ABC_CC_Error, "unknown command " + std::string(argv[1]));
+        return ABC_ERROR(ABC_CC_Error,
+                         "unknown command " + std::string(commandName));
 
     // Populate the session up to the required level:
     Session session;
     if (InitLevel::context <= command->level())
     {
-        if (argc < 3)
+        if (argc < 1)
             return ABC_ERROR(ABC_CC_Error, std::string("No working directory given"));
+        auto workingDir = argv[0];
+        --argc;
+        ++argv;
 
         unsigned char seed[] = {1, 2, 3};
-        ABC_CHECK_OLD(ABC_Initialize(argv[2],
+        ABC_CHECK_OLD(ABC_Initialize(workingDir,
                                      CA_CERT,
                                      json.apiKey(),
                                      json.chainKey(),
@@ -79,18 +90,22 @@ static Status run(int argc, char *argv[])
     }
     if (InitLevel::lobby <= command->level())
     {
-        if (argc < 4)
+        if (argc < 1)
             return ABC_ERROR(ABC_CC_Error, std::string("No username given"));
+        session.username = argv[0];
+        --argc;
+        ++argv;
 
-        session.username = argv[3];
         ABC_CHECK(cacheLobby(session.lobby, session.username.c_str()));
     }
     if (InitLevel::login <= command->level())
     {
-        if (argc < 5)
+        if (argc < 1)
             return ABC_ERROR(ABC_CC_Error, std::string("No password given"));
+        session.password = argv[0];
+        --argc;
+        ++argv;
 
-        session.password = argv[4];
         ABC_CHECK_OLD(ABC_SignIn(session.username.c_str(),
                                  session.password.c_str(),
                                  &error));
@@ -102,16 +117,18 @@ static Status run(int argc, char *argv[])
     }
     if (InitLevel::wallet <= command->level())
     {
-        if (argc < 6)
+        if (argc < 1)
             return ABC_ERROR(ABC_CC_Error, std::string("No wallet name given"));
+        session.uuid = argv[0];
+        --argc;
+        ++argv;
 
-        session.uuid = argv[5];
         ABC_CHECK(cacheWallet(session.wallet,
                               session.username.c_str(), session.uuid.c_str()));
     }
 
     // Invoke the command:
-    ABC_CHECK((*command)(session, argc-3, argv+3));
+    ABC_CHECK((*command)(session, argc, argv));
 
     // Clean up:
     ABC_Terminate();
