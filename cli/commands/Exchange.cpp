@@ -40,7 +40,8 @@ COMMAND(InitLevel::account, ExchangeUpdate, "exchange-update")
 
     Currency currency;
     ABC_CHECK(currencyNumber(currency, argv[2]));
-    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(argv[0], argv[1],
+    ABC_CHECK_OLD(ABC_RequestExchangeRateUpdate(session.username.c_str(),
+                  session.password.c_str(),
                   static_cast<int>(currency), &error));
 
     double rate;

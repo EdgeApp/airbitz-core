@@ -39,7 +39,7 @@ COMMAND(InitLevel::account, CliWalletCreate, "wallet-create")
     ABC_CHECK(currencyNumber(currency, argv[3]));
 
     std::shared_ptr<Wallet> wallet;
-    ABC_CHECK(cacheWalletNew(wallet, session.username, argv[2],
+    ABC_CHECK(cacheWalletNew(wallet, session.username.c_str(), argv[2],
                              static_cast<int>(currency)));
     std::cout << "Created wallet " << wallet->id() << std::endl;
 
@@ -141,7 +141,8 @@ COMMAND(InitLevel::account, CliWalletOrder, "wallet-order")
         ids += "\n";
     }
 
-    ABC_CHECK_OLD(ABC_SetWalletOrder(session.username, session.password,
+    ABC_CHECK_OLD(ABC_SetWalletOrder(session.username.c_str(),
+                                     session.password.c_str(),
                                      ids.c_str(), &error));
 
     return Status();

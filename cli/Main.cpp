@@ -83,7 +83,7 @@ static Status run(int argc, char *argv[])
             return ABC_ERROR(ABC_CC_Error, std::string("No username given"));
 
         session.username = argv[3];
-        ABC_CHECK(cacheLobby(session.lobby, session.username));
+        ABC_CHECK(cacheLobby(session.lobby, session.username.c_str()));
     }
     if (InitLevel::login <= command->level())
     {
@@ -91,12 +91,14 @@ static Status run(int argc, char *argv[])
             return ABC_ERROR(ABC_CC_Error, std::string("No password given"));
 
         session.password = argv[4];
-        ABC_CHECK_OLD(ABC_SignIn(session.username, session.password, &error));
-        ABC_CHECK(cacheLogin(session.login, session.username));
+        ABC_CHECK_OLD(ABC_SignIn(session.username.c_str(),
+                                 session.password.c_str(),
+                                 &error));
+        ABC_CHECK(cacheLogin(session.login, session.username.c_str()));
     }
     if (InitLevel::account <= command->level())
     {
-        ABC_CHECK(cacheAccount(session.account, session.username));
+        ABC_CHECK(cacheAccount(session.account, session.username.c_str()));
     }
     if (InitLevel::wallet <= command->level())
     {
@@ -104,7 +106,8 @@ static Status run(int argc, char *argv[])
             return ABC_ERROR(ABC_CC_Error, std::string("No wallet name given"));
 
         session.uuid = argv[5];
-        ABC_CHECK(cacheWallet(session.wallet, session.username, session.uuid));
+        ABC_CHECK(cacheWallet(session.wallet,
+                              session.username.c_str(), session.uuid.c_str()));
     }
 
     // Invoke the command:

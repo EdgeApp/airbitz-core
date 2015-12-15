@@ -43,9 +43,9 @@ struct Session
     std::shared_ptr<abcd::Wallet> wallet;
 
     // For legacy API:
-    const char *username;
-    const char *password;
-    const char *uuid;
+    std::string username;
+    std::string password;
+    std::string uuid;
 };
 
 /**

@@ -33,12 +33,15 @@ COMMAND(InitLevel::wallet, SpendUri, "spend-uri")
               << std::endl;
 
     AutoString szTxId;
-    ABC_CHECK_OLD(ABC_SpendApprove(session.username, session.uuid, pSpend,
-                                   &szTxId.get(), &error));
+    ABC_CHECK_OLD(ABC_SpendApprove(session.username.c_str(),
+                                   session.uuid.c_str(),
+                                   pSpend, &szTxId.get(), &error));
     std::cout << "Transaction id: " << szTxId.get() << std::endl;
 
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username, session.password,
-                                     session.uuid, syncCallback, nullptr, &error));
+    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
+                                     session.password.c_str(),
+                                     session.uuid.c_str(),
+                                     syncCallback, nullptr, &error));
 
     return Status();
 }
@@ -60,20 +63,24 @@ COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer")
     ABC_CHECK(thread.init(session));
 
     AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
-    ABC_CHECK_OLD(ABC_SpendNewTransfer(session.username, dest, amount,
-                                       &pSpend.get(), &error));
+    ABC_CHECK_OLD(ABC_SpendNewTransfer(session.username.c_str(),
+                                       dest, amount, &pSpend.get(), &error));
     std::cout << "Sending " << pSpend->amount << " satoshis to " << pSpend->szName
               << std::endl;
 
     AutoString szTxId;
-    ABC_CHECK_OLD(ABC_SpendApprove(session.username, session.uuid, pSpend,
-                                   &szTxId.get(), &error));
+    ABC_CHECK_OLD(ABC_SpendApprove(session.username.c_str(),
+                                   session.uuid.c_str(),
+                                   pSpend, &szTxId.get(), &error));
     std::cout << "Transaction id: " << szTxId.get() << std::endl;
 
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username, session.password,
-                                     session.uuid, syncCallback, nullptr, &error));
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username, session.password, dest,
+    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
+                                     session.password.c_str(),
+                                     session.uuid.c_str(),
                                      syncCallback, nullptr, &error));
+    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
+                                     session.password.c_str(),
+                                     dest, syncCallback, nullptr, &error));
 
     return Status();
 }
@@ -96,12 +103,15 @@ COMMAND(InitLevel::wallet, SpendInternal, "spend-internal")
               << std::endl;
 
     AutoString szTxId;
-    ABC_CHECK_OLD(ABC_SpendApprove(session.username, session.uuid, pSpend,
-                                   &szTxId.get(), &error));
+    ABC_CHECK_OLD(ABC_SpendApprove(session.username.c_str(),
+                                   session.uuid.c_str(),
+                                   pSpend, &szTxId.get(), &error));
     std::cout << "Transaction id: " << szTxId.get() << std::endl;
 
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username, session.password,
-                                     session.uuid, syncCallback, nullptr, &error));
+    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
+                                     session.password.c_str(),
+                                     session.uuid.c_str(),
+                                     syncCallback, nullptr, &error));
 
     return Status();
 }

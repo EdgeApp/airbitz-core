@@ -21,8 +21,9 @@ COMMAND(InitLevel::login, ChangePassword, "change-password")
         return ABC_ERROR(ABC_CC_Error,
                          "usage: ... change-password <user> <pass> <new-pass>");
 
-    ABC_CHECK_OLD(ABC_ChangePassword(session.username, session.password, argv[2],
-                                     &error));
+    ABC_CHECK_OLD(ABC_ChangePassword(session.username.c_str(),
+                                     session.password.c_str(),
+                                     argv[2], &error));
 
     return Status();
 }
@@ -33,8 +34,8 @@ COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery")
         return ABC_ERROR(ABC_CC_Error,
                          "usage: ... change-password-recovery <user> <ra> <new-pass>");
 
-    ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(session.username, argv[1],
-                  argv[2], &error));
+    ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(session.username.c_str(),
+                  argv[1], argv[2], &error));
 
     return Status();
 }
@@ -67,13 +68,13 @@ COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers")
                          "usage: ... check-recovery-answers <user> <ras>");
 
     AutoString szQuestions;
-    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(session.username, &szQuestions.get(),
-                                           &error));
+    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(session.username.c_str(),
+                                           &szQuestions.get(), &error));
     printf("%s\n", szQuestions.get());
 
     bool bValid = false;
-    ABC_CHECK_OLD(ABC_CheckRecoveryAnswers(session.username, argv[1], &bValid,
-                                           &error));
+    ABC_CHECK_OLD(ABC_CheckRecoveryAnswers(session.username.c_str(),
+                                           argv[1], &bValid, &error));
     printf("%s\n", bValid ? "Valid!" : "Invalid!");
 
     return Status();
@@ -143,8 +144,8 @@ COMMAND(InitLevel::lobby, GetQuestions, "get-questions")
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-questions <user>");
 
     AutoString questions;
-    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(session.username, &questions.get(),
-                                           &error));
+    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(session.username.c_str(),
+                                           &questions.get(), &error));
     printf("Questions: %s\n", questions.get());
 
     return Status();
@@ -156,7 +157,8 @@ COMMAND(InitLevel::login, GetSettings, "get-settings")
         return ABC_ERROR(ABC_CC_Error, "usage: ... get-settings <user> <pass>");
 
     AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username, session.password,
+    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username.c_str(),
+                                          session.password.c_str(),
                                           &pSettings.get(), &error));
 
     printf("First name: %s\n",
@@ -202,10 +204,11 @@ COMMAND(InitLevel::lobby, PinLogin, "pin-login")
         return ABC_ERROR(ABC_CC_Error, "usage: ... pin-login <user> <pin>");
 
     bool bExists;
-    ABC_CHECK_OLD(ABC_PinLoginExists(session.username, &bExists, &error));
+    ABC_CHECK_OLD(ABC_PinLoginExists(session.username.c_str(),
+                                     &bExists, &error));
     if (bExists)
     {
-        ABC_CHECK_OLD(ABC_PinLogin(session.username, argv[1], &error));
+        ABC_CHECK_OLD(ABC_PinLogin(session.username.c_str(), argv[1], &error));
     }
     else
     {
@@ -221,7 +224,8 @@ COMMAND(InitLevel::account, PinLoginSetup, "pin-login-setup")
     if (argc != 2)
         return ABC_ERROR(ABC_CC_Error, "usage: ... pin-login-setup <user> <pass>");
 
-    ABC_CHECK_OLD(ABC_PinSetup(session.username, session.password, &error));
+    ABC_CHECK_OLD(ABC_PinSetup(session.username.c_str(),
+                               session.password.c_str(), &error));
 
     return Status();
 }
@@ -233,12 +237,14 @@ COMMAND(InitLevel::login, RecoveryReminderSet, "recovery-reminder-set")
                          "usage: ... recovery-reminder-set <user> <pass> <n>");
 
     AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username, session.password,
+    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username.c_str(),
+                                          session.password.c_str(),
                                           &pSettings.get(), &error));
     printf("Old Reminder Count: %d\n", pSettings->recoveryReminderCount);
 
     pSettings->recoveryReminderCount = strtol(argv[2], 0, 10);
-    ABC_CHECK_OLD(ABC_UpdateAccountSettings(session.username, session.password,
+    ABC_CHECK_OLD(ABC_UpdateAccountSettings(session.username.c_str(),
+                                            session.password.c_str(),
                                             pSettings, &error));
 
     return Status();
@@ -282,11 +288,13 @@ COMMAND(InitLevel::account, SetNickname, "set-nickname")
         return ABC_ERROR(ABC_CC_Error, "usage: ... set-nickname <user> <pass> <name>");
 
     AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username, session.password,
+    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username.c_str(),
+                                          session.password.c_str(),
                                           &pSettings.get(), &error));
     free(pSettings->szNickname);
     pSettings->szNickname = strdup(argv[2]);
-    ABC_CHECK_OLD(ABC_UpdateAccountSettings(session.username, session.password,
+    ABC_CHECK_OLD(ABC_UpdateAccountSettings(session.username.c_str(),
+                                            session.password.c_str(),
                                             pSettings, &error));
 
     return Status();
@@ -298,7 +306,7 @@ COMMAND(InitLevel::lobby, SignIn, "sign-in")
         return ABC_ERROR(ABC_CC_Error, "usage: ... sign-in <user> <pass>");
 
     tABC_Error error;
-    tABC_CC cc = ABC_SignIn(session.username, argv[1], &error);
+    tABC_CC cc = ABC_SignIn(session.username.c_str(), argv[1], &error);
     if (ABC_CC_InvalidOTP == cc)
     {
         AutoString date;
@@ -306,7 +314,7 @@ COMMAND(InitLevel::lobby, SignIn, "sign-in")
         if (strlen(date))
             std::cout << "Pending OTP reset ends at " << date.get() << std::endl;
         std::cout << "No OTP token, resetting account 2-factor auth." << std::endl;
-        ABC_CHECK_OLD(ABC_OtpResetSet(session.username, &error));
+        ABC_CHECK_OLD(ABC_OtpResetSet(session.username.c_str(), &error));
     }
 
     return Status();
@@ -318,7 +326,8 @@ COMMAND(InitLevel::account, UploadLogs, "upload-logs")
         return ABC_ERROR(ABC_CC_Error, "usage: ... upload-logs <user> <pass>");
 
     // TODO: Command non-functional without a watcher thread!
-    ABC_CHECK_OLD(ABC_UploadLogs(session.username, session.password, &error));
+    ABC_CHECK_OLD(ABC_UploadLogs(session.username.c_str(),
+                                 session.password.c_str(), &error));
 
     return Status();
 }
