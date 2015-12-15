@@ -10,7 +10,6 @@
 #include "../../abcd/General.hpp"
 #include "../../abcd/util/Util.hpp"
 #include "../../abcd/wallet/Wallet.hpp"
-#include <bitcoin/bitcoin.hpp>
 #include <iostream>
 
 using namespace abcd;
@@ -104,25 +103,6 @@ COMMAND(InitLevel::context, GeneralUpdate, "general-update",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     ABC_CHECK(generalUpdate());
-
-    return Status();
-}
-
-COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses",
-        " <count>")
-{
-    if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-    const auto count = atol(argv[0]);
-
-    bc::hd_private_key m(session.wallet->bitcoinKey());
-    bc::hd_private_key m0 = m.generate_private_key(0);
-    bc::hd_private_key m00 = m0.generate_private_key(0);
-    for (int i = 0; i < count; ++i)
-    {
-        bc::hd_private_key m00n = m00.generate_private_key(i);
-        std::cout << "watch " << m00n.address().encoded() << std::endl;
-    }
 
     return Status();
 }
@@ -262,37 +242,6 @@ COMMAND(InitLevel::login, RecoveryReminderSet, "recovery-reminder-set",
     ABC_CHECK_OLD(ABC_UpdateAccountSettings(session.username.c_str(),
                                             session.password.c_str(),
                                             pSettings, &error));
-
-    return Status();
-}
-
-COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed",
-        " <addr> <start> <end>")
-{
-    if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-    const auto address = argv[0];
-    const auto start = atol(argv[1]);
-    const auto end = atol(argv[2]);
-
-    bc::hd_private_key m(session.wallet->bitcoinKey());
-    bc::hd_private_key m0 = m.generate_private_key(0);
-    bc::hd_private_key m00 = m0.generate_private_key(0);
-
-    for (long i = start, c = 0; i <= end; i++, ++c)
-    {
-        bc::hd_private_key m00n = m00.generate_private_key(i);
-        if (m00n.address().encoded() == address)
-        {
-            printf("Found %s at %ld\n", address, i);
-            break;
-        }
-        if (c == 100000)
-        {
-            printf("%ld\n", i);
-            c = 0;
-        }
-    }
 
     return Status();
 }
