@@ -17,11 +17,11 @@ syncCallback(const tABC_AsyncBitCoinInfo *pInfo)
 {
 }
 
-COMMAND(InitLevel::wallet, SpendUri, "spend-uri")
+COMMAND(InitLevel::wallet, SpendUri, "spend-uri",
+        " <uri>")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... spend-uri <user> <pass> <wallet> <uri>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto uri = argv[0];
 
     WatcherThread thread;
@@ -46,11 +46,11 @@ COMMAND(InitLevel::wallet, SpendUri, "spend-uri")
     return Status();
 }
 
-COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer")
+COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer",
+        " <wallet-dest> <amount>")
 {
     if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... spend-transfer <user> <pass> <wallet> <wallet-dest> <amount>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto dest = argv[0];
     const auto amount = atol(argv[1]);
 
@@ -85,11 +85,11 @@ COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer")
     return Status();
 }
 
-COMMAND(InitLevel::wallet, SpendInternal, "spend-internal")
+COMMAND(InitLevel::wallet, SpendInternal, "spend-internal",
+        " <address> <amount>")
 {
     if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... spend-internal <user> <pass> <wallet> <address> <amount>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto address = argv[0];
     const auto amount = atol(argv[1]);
 

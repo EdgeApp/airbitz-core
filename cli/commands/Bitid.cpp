@@ -12,10 +12,11 @@
 
 using namespace abcd;
 
-COMMAND(InitLevel::login, BitidLogin, "bitid-login")
+COMMAND(InitLevel::login, BitidLogin, "bitid-login",
+        " <uri>")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... bitid-login <user> <pass> <uri>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto uri = argv[0];
 
     Uri callback;
@@ -28,11 +29,11 @@ COMMAND(InitLevel::login, BitidLogin, "bitid-login")
     return Status();
 }
 
-COMMAND(InitLevel::login, BitidAddressSignature, "bitid-sign")
+COMMAND(InitLevel::login, BitidAddressSignature, "bitid-sign",
+        " <uri> <message> [<index>]")
 {
     if (argc < 2 || 3 < argc)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... bitid-sign <user> <pass> <uri> <message> [<index>]");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto uri = argv[0];
     const auto message = argv[1];
     int index = argc == 3 ? atoi(argv[2]) : 0;

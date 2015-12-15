@@ -18,11 +18,11 @@
 
 using namespace abcd;
 
-COMMAND(InitLevel::wallet, CliWalletArchive, "wallet-archive")
+COMMAND(InitLevel::wallet, CliWalletArchive, "wallet-archive",
+        " 0|1")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... wallet-archive <user> <pass> <wallet-id> 1|0");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto archive = atoi(argv[0]);
 
     ABC_CHECK(session.account->wallets.archivedSet(session.uuid, archive));
@@ -30,11 +30,11 @@ COMMAND(InitLevel::wallet, CliWalletArchive, "wallet-archive")
     return Status();
 }
 
-COMMAND(InitLevel::account, CliWalletCreate, "wallet-create")
+COMMAND(InitLevel::account, CliWalletCreate, "wallet-create",
+        " <name> <currency>")
 {
     if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... wallet-create <user> <pass> <wallet-name> <currency>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto name = argv[0];
     const auto currencyName = argv[1];
 
@@ -49,11 +49,12 @@ COMMAND(InitLevel::account, CliWalletCreate, "wallet-create")
     return Status();
 }
 
-COMMAND(InitLevel::wallet, CliWalletDecrypt, "wallet-decrypt")
+COMMAND(InitLevel::wallet, CliWalletDecrypt, "wallet-decrypt",
+        " <filename>\n"
+        "note: The filename is relative to the wallet sync directory.")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... wallet-decrypt <user> <pass> <wallet-id> <file>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto filename = argv[0];
 
     JsonBox box;
@@ -66,11 +67,12 @@ COMMAND(InitLevel::wallet, CliWalletDecrypt, "wallet-decrypt")
     return Status();
 }
 
-COMMAND(InitLevel::wallet, CliWalletEncrypt, "wallet-encrypt")
+COMMAND(InitLevel::wallet, CliWalletEncrypt, "wallet-encrypt",
+        " <filename>\n"
+        "note: The filename is relative to the wallet sync directory.")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... wallet-encrypt <user> <pass> <wallet-id> <file>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto filename = argv[0];
 
     DataChunk contents;
@@ -84,11 +86,11 @@ COMMAND(InitLevel::wallet, CliWalletEncrypt, "wallet-encrypt")
     return Status();
 }
 
-COMMAND(InitLevel::wallet, CliWalletInfo, "wallet-info")
+COMMAND(InitLevel::wallet, CliWalletInfo, "wallet-info",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... wallet-info <user> <pass> <wallet-id>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     // Obtain the balance:
     WatcherThread thread;
@@ -108,10 +110,11 @@ COMMAND(InitLevel::wallet, CliWalletInfo, "wallet-info")
     return Status();
 }
 
-COMMAND(InitLevel::account, CliWalletList, "wallet-list")
+COMMAND(InitLevel::account, CliWalletList, "wallet-list",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... wallet-list <user> <pass>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     // Iterate over wallets:
     auto ids = session.account->wallets.list();
@@ -132,11 +135,11 @@ COMMAND(InitLevel::account, CliWalletList, "wallet-list")
     return Status();
 }
 
-COMMAND(InitLevel::account, CliWalletOrder, "wallet-order")
+COMMAND(InitLevel::account, CliWalletOrder, "wallet-order",
+        " <wallet-ids>...")
 {
     if (argc < 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... wallet-order <user> <pass> <wallet-ids>...");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     std::string ids;
     size_t count = argc;
@@ -153,11 +156,11 @@ COMMAND(InitLevel::account, CliWalletOrder, "wallet-order")
     return Status();
 }
 
-COMMAND(InitLevel::wallet, CliWalletSeed, "wallet-seed")
+COMMAND(InitLevel::wallet, CliWalletSeed, "wallet-seed",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... wallet-seed <user> <pass> <wallet-id>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     std::cout << base16Encode(session.wallet->bitcoinKey()) << std::endl;
 

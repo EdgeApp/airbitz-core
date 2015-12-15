@@ -11,11 +11,11 @@
 
 using namespace abcd;
 
-COMMAND(InitLevel::account, PluginGet, "plugin-get")
+COMMAND(InitLevel::account, PluginGet, "plugin-get",
+        " <plugin> <key>")
 {
     if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... plugin-get <user> <pass> <plugin> <key>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto plugin = argv[0];
     const auto key = argv[1];
 
@@ -25,11 +25,11 @@ COMMAND(InitLevel::account, PluginGet, "plugin-get")
     return Status();
 }
 
-COMMAND(InitLevel::account, PluginSet, "plugin-set")
+COMMAND(InitLevel::account, PluginSet, "plugin-set",
+        " <plugin> <key> <value>")
 {
     if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... plugin-set <user> <pass> <plugin> <key> <value>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto plugin = argv[0];
     const auto key = argv[1];
     const auto value = argv[2];
@@ -38,11 +38,11 @@ COMMAND(InitLevel::account, PluginSet, "plugin-set")
     return Status();
 }
 
-COMMAND(InitLevel::account, PluginRemove, "plugin-remove")
+COMMAND(InitLevel::account, PluginRemove, "plugin-remove",
+        " <plugin> <key>")
 {
     if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... plugin-remove <user> <pass> <plugin> <key>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto plugin = argv[0];
     const auto key = argv[1];
 
@@ -50,11 +50,11 @@ COMMAND(InitLevel::account, PluginRemove, "plugin-remove")
     return Status();
 }
 
-COMMAND(InitLevel::account, PluginClear, "plugin-clear")
+COMMAND(InitLevel::account, PluginClear, "plugin-clear",
+        " <plugin>")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... plugin-clear <user> <pass> <plugin>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto plugin = argv[0];
 
     ABC_CHECK(pluginDataClear(*session.account, plugin));

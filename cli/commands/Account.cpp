@@ -15,19 +15,21 @@
 
 using namespace abcd;
 
-COMMAND(InitLevel::lobby, AccountAvailable, "account-available")
+COMMAND(InitLevel::lobby, AccountAvailable, "account-available",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... account-available");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     ABC_CHECK_OLD(ABC_AccountAvailable(session.username.c_str(), &error));
     return Status();
 }
 
-COMMAND(InitLevel::context, AccountCreate, "account-create")
+COMMAND(InitLevel::context, AccountCreate, "account-create",
+        " <user> <pass>")
 {
     if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... create-account <user> <pass>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto username = argv[0];
     const auto password = argv[1];
 
@@ -37,12 +39,12 @@ COMMAND(InitLevel::context, AccountCreate, "account-create")
     return Status();
 }
 
-COMMAND(InitLevel::account, AccountDecrypt, "account-decrypt")
+COMMAND(InitLevel::account, AccountDecrypt, "account-decrypt",
+        " <filename>\n"
+        "note: The filename is account-relative.")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... account-decrypt <user> <pass> <filename>\n"
-                         "note: The filename is account-relative.");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto filename = argv[0];
 
     JsonBox box;
@@ -55,12 +57,12 @@ COMMAND(InitLevel::account, AccountDecrypt, "account-decrypt")
     return Status();
 }
 
-COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt")
+COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt",
+        " <filename>\n"
+        "note: The filename is account-relative.")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... account-encrypt <user> <pass> <filename>\n"
-                         "note: The filename is account-relative.");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto filename = argv[0];
 
     DataChunk contents;

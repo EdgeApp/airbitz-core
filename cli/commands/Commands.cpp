@@ -15,11 +15,11 @@
 
 using namespace abcd;
 
-COMMAND(InitLevel::login, ChangePassword, "change-password")
+COMMAND(InitLevel::login, ChangePassword, "change-password",
+        " <new-pass>")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... change-password <user> <pass> <new-pass>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto newPassword = argv[0];
 
     ABC_CHECK_OLD(ABC_ChangePassword(session.username.c_str(),
@@ -29,11 +29,11 @@ COMMAND(InitLevel::login, ChangePassword, "change-password")
     return Status();
 }
 
-COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery")
+COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery",
+        " <ra> <new-pass>")
 {
     if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... change-password-recovery <user> <ra> <new-pass>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto answers = argv[0];
     const auto newPassword = argv[1];
 
@@ -43,10 +43,11 @@ COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery")
     return Status();
 }
 
-COMMAND(InitLevel::context, CheckPassword, "check-password")
+COMMAND(InitLevel::context, CheckPassword, "check-password",
+        " <pass>")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... check-password <pass>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto password = argv[0];
 
     double secondsToCrack;
@@ -65,11 +66,11 @@ COMMAND(InitLevel::context, CheckPassword, "check-password")
     return Status();
 }
 
-COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers")
+COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers",
+        " <answers>")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... check-recovery-answers <user> <ras>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto answers = argv[0];
 
     AutoString szQuestions;
@@ -85,31 +86,33 @@ COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers")
     return Status();
 }
 
-COMMAND(InitLevel::account, DataSync, "data-sync")
+COMMAND(InitLevel::account, DataSync, "data-sync",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... data-sync <user> <pass>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     ABC_CHECK(syncAll(*session.account));
 
     return Status();
 }
 
-COMMAND(InitLevel::context, GeneralUpdate, "general-update")
+COMMAND(InitLevel::context, GeneralUpdate, "general-update",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... general-update");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     ABC_CHECK(generalUpdate());
 
     return Status();
 }
 
-COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
+COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses",
+        " <count>")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... generate-addresses <user> <pass> <wallet-name> <count>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto count = atol(argv[0]);
 
     bc::hd_private_key m(session.wallet->bitcoinKey());
@@ -124,10 +127,11 @@ COMMAND(InitLevel::wallet, GenerateAddresses, "generate-addresses")
     return Status();
 }
 
-COMMAND(InitLevel::context, GetQuestionChoices, "get-question-choices")
+COMMAND(InitLevel::context, GetQuestionChoices, "get-question-choices",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... get-question-choices");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     AutoFree<tABC_QuestionChoices, ABC_FreeQuestionChoices> pChoices;
     ABC_CHECK_OLD(ABC_GetQuestionChoices(&pChoices.get(), &error));
@@ -143,10 +147,11 @@ COMMAND(InitLevel::context, GetQuestionChoices, "get-question-choices")
     return Status();
 }
 
-COMMAND(InitLevel::lobby, GetQuestions, "get-questions")
+COMMAND(InitLevel::lobby, GetQuestions, "get-questions",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... get-questions <user>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     AutoString questions;
     ABC_CHECK_OLD(ABC_GetRecoveryQuestions(session.username.c_str(),
@@ -156,10 +161,11 @@ COMMAND(InitLevel::lobby, GetQuestions, "get-questions")
     return Status();
 }
 
-COMMAND(InitLevel::login, GetSettings, "get-settings")
+COMMAND(InitLevel::login, GetSettings, "get-settings",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... get-settings <user> <pass>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
     ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username.c_str(),
@@ -191,10 +197,11 @@ COMMAND(InitLevel::login, GetSettings, "get-settings")
     return Status();
 }
 
-COMMAND(InitLevel::context, ListAccounts, "list-accounts")
+COMMAND(InitLevel::context, ListAccounts, "list-accounts",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... list-accounts");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     AutoString usernames;
     ABC_CHECK_OLD(ABC_ListAccounts(&usernames.get(), &error));
@@ -203,10 +210,11 @@ COMMAND(InitLevel::context, ListAccounts, "list-accounts")
     return Status();
 }
 
-COMMAND(InitLevel::lobby, PinLogin, "pin-login")
+COMMAND(InitLevel::lobby, PinLogin, "pin-login",
+        " pin>")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... pin-login <user> <pin>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto pin = argv[0];
 
     bool bExists;
@@ -225,10 +233,11 @@ COMMAND(InitLevel::lobby, PinLogin, "pin-login")
 }
 
 
-COMMAND(InitLevel::account, PinLoginSetup, "pin-login-setup")
+COMMAND(InitLevel::account, PinLoginSetup, "pin-login-setup",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... pin-login-setup <user> <pass>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     ABC_CHECK_OLD(ABC_PinSetup(session.username.c_str(),
                                session.password.c_str(), &error));
@@ -236,11 +245,11 @@ COMMAND(InitLevel::account, PinLoginSetup, "pin-login-setup")
     return Status();
 }
 
-COMMAND(InitLevel::login, RecoveryReminderSet, "recovery-reminder-set")
+COMMAND(InitLevel::login, RecoveryReminderSet, "recovery-reminder-set",
+        " <n>")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... recovery-reminder-set <user> <pass> <n>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto count = atol(argv[0]);
 
     AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
@@ -257,11 +266,11 @@ COMMAND(InitLevel::login, RecoveryReminderSet, "recovery-reminder-set")
     return Status();
 }
 
-COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed")
+COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed",
+        " <addr> <start> <end>")
 {
     if (argc != 3)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... search-bitcoin-seed <user> <pass> <wallet-name> <addr> <start> <end>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto address = argv[0];
     const auto start = atol(argv[1]);
     const auto end = atol(argv[2]);
@@ -288,10 +297,11 @@ COMMAND(InitLevel::wallet, SearchBitcoinSeed, "search-bitcoin-seed")
     return Status();
 }
 
-COMMAND(InitLevel::account, SetNickname, "set-nickname")
+COMMAND(InitLevel::account, SetNickname, "set-nickname",
+        " <name>")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... set-nickname <user> <pass> <name>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto name = argv[0];
 
     AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
@@ -307,10 +317,11 @@ COMMAND(InitLevel::account, SetNickname, "set-nickname")
     return Status();
 }
 
-COMMAND(InitLevel::lobby, SignIn, "sign-in")
+COMMAND(InitLevel::lobby, SignIn, "sign-in",
+        " <pass>")
 {
     if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... sign-in <user> <pass>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto password = argv[0];
 
     tABC_Error error;
@@ -328,10 +339,11 @@ COMMAND(InitLevel::lobby, SignIn, "sign-in")
     return Status();
 }
 
-COMMAND(InitLevel::account, UploadLogs, "upload-logs")
+COMMAND(InitLevel::account, UploadLogs, "upload-logs",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, "usage: ... upload-logs <user> <pass>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     // TODO: Command non-functional without a watcher thread!
     ABC_CHECK_OLD(ABC_UploadLogs(session.username.c_str(),
@@ -340,8 +352,12 @@ COMMAND(InitLevel::account, UploadLogs, "upload-logs")
     return Status();
 }
 
-COMMAND(InitLevel::none, Version, "version")
+COMMAND(InitLevel::none, Version, "version",
+        "")
 {
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
     AutoString version;
     ABC_CHECK_OLD(ABC_Version(&version.get(), &error));
     std::cout << "ABC version: " << version.get() << std::endl;

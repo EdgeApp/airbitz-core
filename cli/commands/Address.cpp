@@ -13,11 +13,11 @@
 
 using namespace abcd;
 
-COMMAND(InitLevel::wallet, CliAddressList, "address-list")
+COMMAND(InitLevel::wallet, CliAddressList, "address-list",
+        "")
 {
     if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error,
-                         "usage: ... address-list <user> <pass> <wallet>");
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     auto list = session.wallet->addresses.list();
     for (const auto &i: list)
