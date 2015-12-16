@@ -75,3 +75,16 @@ COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt",
 
     return Status();
 }
+
+COMMAND(InitLevel::context, AccountList, "account-list",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    AutoString usernames;
+    ABC_CHECK_OLD(ABC_ListAccounts(&usernames.get(), &error));
+    printf("Usernames:\n%s", usernames.get());
+
+    return Status();
+}

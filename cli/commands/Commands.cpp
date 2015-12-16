@@ -177,19 +177,6 @@ COMMAND(InitLevel::login, GetSettings, "get-settings",
     return Status();
 }
 
-COMMAND(InitLevel::context, ListAccounts, "list-accounts",
-        "")
-{
-    if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-
-    AutoString usernames;
-    ABC_CHECK_OLD(ABC_ListAccounts(&usernames.get(), &error));
-    printf("Usernames:\n%s", usernames.get());
-
-    return Status();
-}
-
 COMMAND(InitLevel::lobby, PinLogin, "pin-login",
         " pin>")
 {

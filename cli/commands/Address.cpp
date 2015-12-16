@@ -14,7 +14,7 @@
 using namespace abcd;
 
 COMMAND(InitLevel::wallet, CliAddressAllocate, "address-allocate",
-        "<count>")
+        " <count>")
 {
     if (argc != 1)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
