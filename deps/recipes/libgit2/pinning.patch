@@ -8,11 +8,11 @@ diff --git a/src/openssl_stream.c b/src/openssl_stream.c
 index 4df7c6b..94fcac1 100644
 --- a/src/openssl_stream.c
 +++ b/src/openssl_stream.c
-@@ -31,6 +31,66 @@
+@@ -31,6 +31,88 @@
  #include <openssl/x509v3.h>
  #include <openssl/bio.h>
  
-+const char *AB_AUTH_CERTIFICATE =
++const char *AB_OLD_AUTH_CERTIFICATE =
 +	"-----BEGIN CERTIFICATE-----\n"
 +	"MIIDWDCCAkACCQDt2oLI294DJTANBgkqhkiG9w0BAQsFADB0MQswCQYDVQQGEwJV\n"
 +	"UzETMBEGA1UECAwKQ2FsaWZvcm5pYTESMBAGA1UEBwwJU2FuIERpZWdvMRQwEgYD\n"
@@ -32,6 +32,27 @@ index 4df7c6b..94fcac1 100644
 +	"h9cDkg+nS4H42PBkCKnBYNHvaH/top4jBEUibnepYvpuoo4/evMli8T1C9fBVzpt\n"
 +	"K6dA2YjCJshu7qre/48QHx4FjBO9JbQnsiWmqYkMm0XwYJazyKOI6CXRLPCc5Qxl\n"
 +	"4ti9afAC70HaKNQsRMnOUlsCYKcyQ8Y0gXVPgaFBBq1BrZCfQTN6Gqo0WCo=\n"
++	"-----END CERTIFICATE-----\n";
++const char *AB_AUTH_CERTIFICATE =
++	"-----BEGIN CERTIFICATE-----\n"
++	"MIIDWDCCAkACCQDt2oLI294DKDANBgkqhkiG9w0BAQsFADB0MQswCQYDVQQGEwJV\n"
++	"UzETMBEGA1UECAwKQ2FsaWZvcm5pYTESMBAGA1UEBwwJU2FuIERpZWdvMRQwEgYD\n"
++	"VQQKDAtBaXJiaXR6IEluYzEmMCQGA1UEAwwdQWlyYml0eiBDZXJ0aWZpY2F0ZSBB\n"
++	"dXRob3JpdHkwHhcNMTUxMjE4MDAwNzU3WhcNMTkxMjE3MDAwNzU3WjBoMQswCQYD\n"
++	"VQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTESMBAGA1UEBxMJU2FuIERpZWdv\n"
++	"MRQwEgYDVQQKEwtBaXJiaXR6IEluYzEaMBgGA1UEAxQRKi5zeW5jLmFpcmJpdHou\n"
++	"Y28wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDTv4EnftlppFsRuCOg\n"
++	"PMrDEtWeD0h0s1uFh+QZ3RQxrmSavafUV2fjaXMNTV2r4kYLxz0iXHdFbZgqWlad\n"
++	"OWGKpqmCzI2mHi9fYmF7Hl+VOYD/mI5GuPhcGtiVat0lXf3WO5h1nsRPiEgvNGxs\n"
++	"0OMeyE3UktVunKZ0jIWH2AZ9yhzewhHbdnqeB9usFUDzNxxZKGu9mKR6y+VzuiGN\n"
++	"LDq4BdfV/mwgP0J73Xk35RDSDEcn9H6o9fzdol4I0vPP7YbyzSbIcB7xqEyAtC8e\n"
++	"Q0eOCjbYy8wlSgixM3saACdDWNSWbsUlqST+GoxhhrpuMwM7+BzuAq75vRwmNEPb\n"
++	"x+xNAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAFqqX/92SYvCd6N851XMQAQJQhl8\n"
++	"vx4zQV3TF8VvpYio0ohRA5kK7isowmpG/SSMVUjeD1sWO4oVFU3BL/LsQLOOeZr0\n"
++	"BoIDPG2ZnOoQ6JMK1olnHjNYxh7piUR2TO1YhDNFKGkGMSpNs8W2fRYO07NPHUK3\n"
++	"aaDvT/UHXX64m3ABFLqwk7M4qzvhMTT473UQ8odOiG06GxsSK/wNcSarsUbC8/5D\n"
++	"U55vFyNMssAc0czDVg25CxZ4i1OkvOsWdtEItATor8VAABFPfjErvAW6MvCDVddf\n"
++	"2U1f6EeVoIcLlnw+2o0YvNq+DTepM6KNAGMs5mDhXlaAKCa1qYvYvVdHimc=\n"
 +	"-----END CERTIFICATE-----\n";
 +
 +static int matches_pin(X509 *cert)
@@ -60,7 +81,8 @@ index 4df7c6b..94fcac1 100644
 +	{
 +		goto exit;
 +	}
-+	if (strncmp(pem_cert, AB_AUTH_CERTIFICATE, strlen(AB_AUTH_CERTIFICATE)) == 0)
++	if (strncmp(pem_cert, AB_AUTH_CERTIFICATE, strlen(AB_AUTH_CERTIFICATE)) == 0
++	||	strncmp(pem_cert, AB_OLD_AUTH_CERTIFICATE, strlen(AB_OLD_AUTH_CERTIFICATE)) == 0)
 +	{
 +		ret = 1;
 +	}
