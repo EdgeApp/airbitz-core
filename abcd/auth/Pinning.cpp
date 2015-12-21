@@ -52,7 +52,8 @@ const char *CA_CERTIFICATE =
     "FRphU1/lkdwUh7+d9balfXUHn9Jk7T67mhwvJUDo7FY6FScsZ4wZB2HPmbjhdGw=\n"
     "-----END CERTIFICATE-----\n";
 
-const char *AUTH_CERTIFICATE =
+// Deprecated...we need to support public key pinning rather than crt pinning
+const char *OLD_AUTH_CERTIFICATE =
     "-----BEGIN CERTIFICATE-----\n"
     "MIIDWDCCAkACCQDakf2Qe9pwfDANBgkqhkiG9w0BAQsFADB0MQswCQYDVQQGEwJV\n"
     "UzETMBEGA1UECAwKQ2FsaWZvcm5pYTESMBAGA1UEBwwJU2FuIERpZWdvMRQwEgYD\n"
@@ -72,6 +73,28 @@ const char *AUTH_CERTIFICATE =
     "x+9J64cv+9aLZ01iljYhdMm5Kj0v7l5RrzG8FmjamayoqPQh7O498SQOQCYtmqEX\n"
     "3u0tuFme7mX8bMWfMXiaLyxf+Ra6Ynl/I8GzFAy4aOz8m9guY33012V/gC0i7/d9\n"
     "AEhCYWQ4tLZOTiJI3YTG9i5jhbzfwWVVLS8g3LXfyq71V3AzjAb6amhUZ4Y=\n"
+    "-----END CERTIFICATE-----\n";
+
+const char *AUTH_CERTIFICATE =
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIDWDCCAkACCQDakf2Qe9pwgDANBgkqhkiG9w0BAQsFADB0MQswCQYDVQQGEwJV\n"
+    "UzETMBEGA1UECAwKQ2FsaWZvcm5pYTESMBAGA1UEBwwJU2FuIERpZWdvMRQwEgYD\n"
+    "VQQKDAtBaXJiaXR6IEluYzEmMCQGA1UEAwwdQWlyYml0eiBDZXJ0aWZpY2F0ZSBB\n"
+    "dXRob3JpdHkwHhcNMTUxMjE3MjMzNDA1WhcNMTkxMjE2MjMzNDA1WjBoMQswCQYD\n"
+    "VQQGEwJVUzETMBEGA1UECBMKQ2FsaWZvcm5pYTESMBAGA1UEBxMJU2FuIERpZWdv\n"
+    "MRQwEgYDVQQKEwtBaXJiaXR6IEluYzEaMBgGA1UEAxQRKi5hdXRoLmFpcmJpdHou\n"
+    "Y28wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDdr5sdJZF5pOzEOPr/\n"
+    "kE26UFaUVEMEFai2zu2xtrRfu56S9jfoKrA5Sqt+PeA5TJLJNEO+FC2zsb5YXyq7\n"
+    "RVJ5MkZQb/K+m+tFk9Gjh9fC2yrNh96K+LjpyNkSUCCynV/Hjn0UK8GcCA4m+rG4\n"
+    "gStAAOcuz1AcTrprmywj8pgy7XDTkjBHWom5lyeMG6roP5rWy8xQXpGnbKDKaahJ\n"
+    "uSiYRgWZUN1F4sy+ZQcGqNUxJ35l46w5k+tCGlb9ow7wx8rJyJrpsA7UgZ331vAK\n"
+    "SidRS0MxhpnELi0z2KvbuBDuUTYDQNroy5evii8XqIu8agxQmBt2ie2p+wnNZNfP\n"
+    "h+FXAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAA4CFHl47lc0hrCY7qp1oFpCByYF\n"
+    "WathfwzH6v+2orirS+lP2MB36ZnEupThvfW82xJm/YhqBXHeHoyjmfFt/AZ6Qda2\n"
+    "d4nJ2vMM8PA6IZlH+IB4Qpmo9S3c1SqDCMaKR1LTUxn5F1DWuXePOEZoUFGWTZUG\n"
+    "rmWE+pyNMJ9v3/0VUxr/lW15mco7CK3pWpL6fvWps5R8iKVfOuXd0uaD8QV0y7tc\n"
+    "wpqjghHH0LL06f7aT1u7J2NQmHsXFoUrNacEWxNy1eH1RmbVbR2GkTcSRghR88k/\n"
+    "SyfPC5XvSS5TSO5pIVaCUAbI5veBop1460axqRKH8PQQFZqj9PQppJmWcCY=\n"
     "-----END CERTIFICATE-----\n";
 
 int ABC_PinCertCallback(int pok, X509_STORE_CTX *ctx)
@@ -97,7 +120,8 @@ int ABC_PinCertCallback(int pok, X509_STORE_CTX *ctx)
     PIN_ASSERT(0 < BIO_read(b64, szCert, bptr->length),
                ABC_CC_Error, "Unable to read into bio to char *");
 
-    PIN_ASSERT(strncmp(szCert, AUTH_CERTIFICATE, strlen(AUTH_CERTIFICATE)) == 0
+    PIN_ASSERT(strncmp(szCert, OLD_AUTH_CERTIFICATE, strlen(OLD_AUTH_CERTIFICATE)) == 0
+               || strncmp(szCert, AUTH_CERTIFICATE, strlen(AUTH_CERTIFICATE)) == 0
                || strncmp(szCert, CA_CERTIFICATE, strlen(CA_CERTIFICATE)) == 0,
                ABC_CC_Error, "Pinned certificate mismatch");
 exit:
