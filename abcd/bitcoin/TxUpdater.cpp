@@ -117,21 +117,20 @@ TxUpdater::connect()
     // Let's make some connections:
     srand(time(nullptr));
     while (connections_.size() < NUM_CONNECT_SERVERS &&
-            (untriedLibbitcoin_.size() || untriedStratum_.size()))
+           (untriedLibbitcoin_.size() || untriedStratum_.size()))
     {
         // Connect to a stratum server,
         // but only if we have enough libbitcoin servers,
         // and we either need a stratum server or we get lucky:
-        if (untriedStratum_.size() &&
-                MINIMUM_LIBBITCOIN_SERVERS <= libbitcoinCount &&
-                (stratumCount < MINIMUM_STRATUM_SERVERS || (rand() & 8)))
+        if (untriedStratum_.size())
         {
             auto i = untriedStratum_.begin();
             std::advance(i, rand() % untriedStratum_.size());
             if (connectTo(*i).log())
                 ++stratumCount;
         }
-        else if (untriedLibbitcoin_.size())
+        else if (untriedLibbitcoin_.size() &&
+                 MINIMUM_STRATUM_SERVERS <= stratumCount)
         {
             auto i = untriedLibbitcoin_.begin();
             std::advance(i, rand() % untriedLibbitcoin_.size());
