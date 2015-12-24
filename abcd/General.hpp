@@ -38,6 +38,7 @@ struct AirbitzFeeInfo
     AddressSet addresses;
     int64_t minSatoshi;
     int64_t maxSatoshi;
+    int64_t noFeeMinSatoshi;
     double rate;
 };
 

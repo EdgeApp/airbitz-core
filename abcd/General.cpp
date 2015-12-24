@@ -44,6 +44,7 @@ struct AirbitzFeesJson:
     ABC_JSON_VALUE(addresses, "addresses", JsonArray)
     ABC_JSON_INTEGER(maxSatoshi, "maxSatoshi", 0)
     ABC_JSON_INTEGER(minSatoshi, "minSatoshi", 0)
+    ABC_JSON_INTEGER(noFeeMinSatoshi, "noFeeMinSatoshi", 0)
     ABC_JSON_NUMBER(percentage, "percentage", 0)
 };
 
@@ -117,6 +118,7 @@ generalAirbitzFeeInfo()
     AirbitzFeeInfo out;
     out.minSatoshi = feeJson.minSatoshi();
     out.maxSatoshi = feeJson.maxSatoshi();
+    out.noFeeMinSatoshi = feeJson.noFeeMinSatoshi();
     out.rate = feeJson.percentage() / 100.0;
 
     auto arrayJson = feeJson.addresses();

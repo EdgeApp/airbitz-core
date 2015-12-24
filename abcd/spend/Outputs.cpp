@@ -82,10 +82,17 @@ outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
     pInfo->metadata.amountFeesAirbitzSatoshi = 0;
     const auto info = generalAirbitzFeeInfo();
     int64_t airbitzFee = info.rate * outputsTotal(out);
-    if (airbitzFee < info.minSatoshi)
-        airbitzFee = info.minSatoshi;
-    if (airbitzFee > info.maxSatoshi)
-        airbitzFee = info.maxSatoshi;
+    if (airbitzFee < info.noFeeMinSatoshi)
+    {
+        airbitzFee = 0;
+    }
+    else
+    {
+        if (airbitzFee < info.minSatoshi)
+            airbitzFee = info.minSatoshi;
+        if (airbitzFee > info.maxSatoshi)
+            airbitzFee = info.maxSatoshi;
+    }
     if (airbitzFee && !pInfo->bTransfer)
     {
         auto i = info.addresses.begin();
