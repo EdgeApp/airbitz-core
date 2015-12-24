@@ -345,7 +345,7 @@ TxUpdater::connectTo(long index)
     return Status();
 }
 
-void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx)
+void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx, size_t index)
 {
     db_.reset_timestamp(txid);
     std::string str = bc::encode_hash(txid);
@@ -362,6 +362,14 @@ void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx)
     }
     else
     {
+        // XXX Hack. If we used a stratum server to find this Tx, then it may already have
+        // a block height index for this tx. In this case, write the block index into the
+        // tx database
+        if (index)
+        {
+            db_.confirmed(txid, index);
+        }
+
         ABC_DebugLevel(2,"*** watch_tx idx=%d TRANSACTION %s already in DB ****", idx,
                        str.c_str());
         if (want_inputs)
@@ -376,7 +384,7 @@ void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx)
 void TxUpdater::get_inputs(const bc::transaction_type &tx, int idx)
 {
     for (auto &input: tx.inputs)
-        watch_tx(input.previous_output.hash, false, idx);
+        watch_tx(input.previous_output.hash, false, idx, 0);
 }
 
 void TxUpdater::query_done(int idx, Connection &bconn)
@@ -723,10 +731,10 @@ void TxUpdater::query_address(const bc::payment_address &address,
             {
                 ABC_DebugLevel(2,"   Watching output tx=%s",
                                bc::encode_hash(row.output.hash).c_str());
-                watch_tx(row.output.hash, true, idx);
+                watch_tx(row.output.hash, true, idx, row.output_height);
                 if (row.spend.hash != bc::null_hash)
                 {
-                    watch_tx(row.spend.hash, true, idx);
+                    watch_tx(row.spend.hash, true, idx, 0);
                     ABC_DebugLevel(2,"   Watching spend tx=%s",
                                    bc::encode_hash(row.spend.hash).c_str());
                 }
