@@ -153,6 +153,28 @@ StratumConnection::getAddressHistory(
     pending_[query.id()] = Pending{ decoder };
 }
 
+void
+StratumConnection::getHeight(
+    bc::client::obelisk_codec::error_handler onError,
+    HeightHandler onReply)
+{
+    RequestJson query;
+    query.idSet(lastId++);
+    query.methodSet("blockchain.numblocks.subscribe");
+    connection_.send(query.encode(true) + '\n');
+
+    // Set up a decoder for the reply:
+    auto decoder = [onError, onReply](ReplyJson message)
+    {
+        auto payload = message.result().get();
+        if (!json_is_number(payload))
+            onError(std::make_error_code(std::errc::bad_message));
+        else
+            onReply(json_number_value(payload));
+    };
+    pending_[query.id()] = Pending{ decoder };
+}
+
 Status
 StratumConnection::connect(const std::string &hostname, int port)
 {

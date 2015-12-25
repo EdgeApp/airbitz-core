@@ -433,10 +433,6 @@ void TxUpdater::get_height()
 
     for (auto &it: connections_)
     {
-        // TODO: support get_height for Stratum
-        if (ConnectionType::stratum == it->type)
-            continue;
-
         Connection &bconn = *it;
         auto idx = bconn.server_index;
 
@@ -470,7 +466,11 @@ void TxUpdater::get_height()
 
         bconn.queued_get_height_++;
         ABC_DebugLevel(2, "get_height queued_get_height=%d", bconn.queued_get_height_);
-        bconn.bc_codec.fetch_last_height(on_error, on_done);
+
+        if (ConnectionType::stratum == it->type)
+            bconn.stratumCodec.getHeight(on_error, on_done);
+        else if (ConnectionType::libbitcoin == it->type)
+            bconn.bc_codec.fetch_last_height(on_error, on_done);
 
         // Only use the first server response.
         break;
