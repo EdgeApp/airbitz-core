@@ -116,26 +116,50 @@ TxUpdater::connect()
 
     // Let's make some connections:
     srand(time(nullptr));
+    int numConnections = 0;
     while (connections_.size() < NUM_CONNECT_SERVERS &&
            (untriedLibbitcoin_.size() || untriedStratum_.size()))
     {
-        // Connect to a stratum server,
-        // but only if we have enough libbitcoin servers,
-        // and we either need a stratum server or we get lucky:
-        if (untriedStratum_.size())
+        auto *untriedPrimary = &untriedStratum_;
+        auto *untriedSecondary = &untriedLibbitcoin_;
+        auto *primaryCount = &stratumCount;
+        auto *secondaryCount = &libbitcoinCount;
+        long minPrimary = MINIMUM_STRATUM_SERVERS;
+        long minSecondary = MINIMUM_LIBBITCOIN_SERVERS;
+
+        if (numConnections % 2 == 1)
         {
-            auto i = untriedStratum_.begin();
-            std::advance(i, rand() % untriedStratum_.size());
-            if (connectTo(*i).log())
-                ++stratumCount;
+            untriedPrimary = &untriedLibbitcoin_;
+            untriedSecondary = &untriedStratum_;
+            primaryCount = &libbitcoinCount;
+            secondaryCount = &stratumCount;
+            minPrimary = MINIMUM_LIBBITCOIN_SERVERS;
+            minSecondary = MINIMUM_STRATUM_SERVERS;
         }
-        else if (untriedLibbitcoin_.size() &&
-                 MINIMUM_STRATUM_SERVERS <= stratumCount)
+
+        if (untriedPrimary->size() &&
+            (minSecondary - *secondaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
+            (rand() & 8))
         {
-            auto i = untriedLibbitcoin_.begin();
-            std::advance(i, rand() % untriedLibbitcoin_.size());
+            auto i = untriedPrimary->begin();
+            std::advance(i, rand() % untriedPrimary->size());
             if (connectTo(*i).log())
-                ++libbitcoinCount;
+            {
+                (*primaryCount)++;
+                ++numConnections;
+            }
+        }
+        else if (untriedSecondary->size() &&
+                 (minPrimary - *primaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
+                 (rand() & 8))
+        {
+            auto i = untriedSecondary->begin();
+            std::advance(i, rand() % untriedSecondary->size());
+            if (connectTo(*i).log())
+            {
+                (*secondaryCount)++;
+                ++numConnections;
+            }
         }
     }
 
