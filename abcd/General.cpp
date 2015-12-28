@@ -26,6 +26,11 @@ namespace abcd {
 
 constexpr unsigned fallbackFee = 10000;
 
+#define FALLBACK_BITCOIN_SERVERS {  "tcp://obelisk.airbitz.co:9091", \
+                                    "stratum://stratum-az-wusa.airbitz.co:50001", \
+                                    "stratum://stratum-az-wjapan.airbitz.co:50001", \
+                                    "stratum://stratum-az-neuro.airbitz.co:50001" }
+#define TESTNET_BITCOIN_SERVERS {   "tcp://obelisk-testnet.airbitz.co:9091" }
 #define GENERAL_INFO_FILENAME                   "Servers.json"
 #define GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS   (24 * 60 * 60) // how many seconds old can the info file before it should be updated
 
@@ -138,28 +143,41 @@ generalAirbitzFeeInfo()
 std::vector<std::string>
 generalBitcoinServers()
 {
+    std::vector<std::string> out;
+
     if (isTestnet())
     {
-        return std::vector<std::string>
-        {
-            "tcp://obelisk-testnet.airbitz.co:9091"
-        };
+        std::string serverlist[] = TESTNET_BITCOIN_SERVERS;
+
+        size_t size = sizeof(serverlist) / sizeof(*serverlist);
+        for (int i = 0; i < size; i++)
+            out.push_back(serverlist[i]);
+
+        return out;
     }
 
     auto arrayJson = generalLoad().bitcoinServers();
 
-    std::vector<std::string> out;
     size_t size = arrayJson.size();
     out.reserve(size);
     for (size_t i = 0; i < size; i++)
     {
         auto stringJson = arrayJson[i];
         if (json_is_string(stringJson.get()))
-            out.push_back(json_string_value(stringJson.get()));
+        {
+            std::string servername = json_string_value(stringJson.get());
+            out.push_back(servername);
+        }
     }
 
     if (!out.size())
-        out.push_back("tcp://obelisk.airbitz.co:9091");
+    {
+        std::string serverlist[] = FALLBACK_BITCOIN_SERVERS;
+
+        size_t size = sizeof(serverlist) / sizeof(*serverlist);
+        for (int i = 0; i < size; i++)
+            out.push_back(serverlist[i]);
+    }
     return out;
 }
 

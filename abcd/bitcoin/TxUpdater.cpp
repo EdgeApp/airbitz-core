@@ -76,6 +76,11 @@ TxUpdater::connect()
     if (serverList_.empty())
         serverList_ = generalBitcoinServers();
 
+    for (int i = 0; i < serverList_.size(); i++)
+    {
+        ABC_DebugLevel(1, "serverList_[%d]=%s", i, serverList_[i].c_str());
+    }
+    
     // If we have full connections then wipe them out and start over.
     // This was likely due to a refresh
     if (NUM_CONNECT_SERVERS <= connections_.size())
