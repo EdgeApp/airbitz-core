@@ -19,21 +19,17 @@
 namespace abcd {
 
 static Status
-blockcypherPostTx(DataSlice tx)
+insightPostTx(DataSlice tx)
 {
-    const char *url = isTestnet() ?
-                      "https://api.blockcypher.com/v1/btc/test3/txs/push":
-                      "https://api.blockcypher.com/v1/btc/main/txs/push";
+    std::string body = "rawtx=" + base16Encode(tx);
 
-    struct BlockcypherJson:
-        public JsonObject
-    {
-        ABC_JSON_STRING(tx, "tx", nullptr);
-    } json;
-    json.txSet(base16Encode(tx));
+    const char *url = isTestnet() ?
+                      "https://test-insight.bitpay.com/api/tx/send":
+                      "https://insight.bitpay.com/api/tx/send";
 
     HttpReply reply;
-    ABC_CHECK(HttpRequest().post(reply, url, json.encode()));
+    ABC_CHECK(HttpRequest().
+              post(reply, url, body));
     ABC_CHECK(reply.codeOk());
 
     return Status();
@@ -109,7 +105,7 @@ broadcastTx(DataSlice rawTx)
     // Launch the broadcasts:
     DataChunk tx(rawTx.begin(), rawTx.end());
     std::thread(BroadcastThread::run<blockchainPostTx>, t1, tx).detach();
-    std::thread(BroadcastThread::run<blockcypherPostTx>, t2, tx).detach();
+    std::thread(BroadcastThread::run<insightPostTx>, t2, tx).detach();
 
     // Loop as long as any thread is still running:
     while (!t1->done() || !t2->done())
