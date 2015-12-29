@@ -19,6 +19,9 @@ namespace abcd {
 class JsonPtr;
 typedef std::chrono::milliseconds SleepTime;
 
+// Scheme used for stratum URI's:
+constexpr auto stratumScheme = "stratum";
+
 class StratumConnection
 {
 public:
@@ -69,7 +72,7 @@ public:
      * Connects to the specified stratum server.
      */
     Status
-    connect(const std::string &hostname, int port);
+    connect(const std::string &uri);
 
     /**
      * Performs any pending work,

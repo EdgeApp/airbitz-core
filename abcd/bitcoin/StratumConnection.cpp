@@ -7,6 +7,7 @@
 
 #include "StratumConnection.hpp"
 #include "../crypto/Encoding.hpp"
+#include "../http/Uri.hpp"
 #include "../json/JsonArray.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/Debug.hpp"
@@ -197,10 +198,26 @@ StratumConnection::getHeight(
 }
 
 Status
-StratumConnection::connect(const std::string &hostname, int port)
+StratumConnection::connect(const std::string &rawUri)
 {
-    ABC_CHECK(connection_.connect(hostname, port));
+    Uri uri;
+    if (!uri.decode(rawUri))
+        return ABC_ERROR(ABC_CC_ParseError, "Bad URI - wrong format");
+
+    if (stratumScheme != uri.scheme())
+        return ABC_ERROR(ABC_CC_ParseError, "Bad URI - wrong scheme");
+
+    auto server = uri.authority();
+    auto last = server.find(':');
+    if (std::string::npos == last)
+        return ABC_ERROR(ABC_CC_ParseError, "Bad URI - no port");
+    auto serverName = server.substr(0, last);
+    auto serverPort = server.substr(last + 1, std::string::npos);
+
+    // Connect to the server:
+    ABC_CHECK(connection_.connect(serverName, atoi(serverPort.c_str())));
     lastKeepalive_ = std::chrono::steady_clock::now();
+
     return Status();
 }
 

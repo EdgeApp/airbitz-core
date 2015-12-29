@@ -354,15 +354,7 @@ TxUpdater::connectTo(long index)
         // Stratum server:
         untriedStratum_.erase(index);
         bconn->type = ConnectionType::stratum;
-
-        // Extract the server name and port:
-        auto last = server.find(":", STRATUM_PREFIX_LENGTH);
-        std::string serverName = server.substr(STRATUM_PREFIX_LENGTH,
-                                               last - STRATUM_PREFIX_LENGTH);
-        std::string serverPort = server.substr(last + 1, std::string::npos);
-        int port = atoi(serverPort.c_str());
-
-        ABC_CHECK(bconn->stratumCodec.connect(serverName, port));
+        ABC_CHECK(bconn->stratumCodec.connect(server));
     }
     else
     {
