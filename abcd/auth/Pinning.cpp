@@ -120,7 +120,8 @@ int ABC_PinCertCallback(int pok, X509_STORE_CTX *ctx)
     PIN_ASSERT(0 < BIO_read(b64, szCert, bptr->length),
                ABC_CC_Error, "Unable to read into bio to char *");
 
-    PIN_ASSERT(strncmp(szCert, OLD_AUTH_CERTIFICATE, strlen(OLD_AUTH_CERTIFICATE)) == 0
+    PIN_ASSERT(strncmp(szCert, OLD_AUTH_CERTIFICATE,
+                       strlen(OLD_AUTH_CERTIFICATE)) == 0
                || strncmp(szCert, AUTH_CERTIFICATE, strlen(AUTH_CERTIFICATE)) == 0
                || strncmp(szCert, CA_CERTIFICATE, strlen(CA_CERTIFICATE)) == 0,
                ABC_CC_Error, "Pinned certificate mismatch");
