@@ -80,7 +80,7 @@ TxUpdater::connect()
     {
         ABC_DebugLevel(1, "serverList_[%d]=%s", i, serverList_[i].c_str());
     }
-    
+
     // If we have full connections then wipe them out and start over.
     // This was likely due to a refresh
     if (NUM_CONNECT_SERVERS <= connections_.size())
@@ -143,8 +143,8 @@ TxUpdater::connect()
         }
 
         if (untriedPrimary->size() &&
-            (minSecondary - *secondaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
-            (rand() & 8))
+            ((minSecondary - *secondaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
+             (rand() & 8)))
         {
             auto i = untriedPrimary->begin();
             std::advance(i, rand() % untriedPrimary->size());
@@ -155,8 +155,8 @@ TxUpdater::connect()
             }
         }
         else if (untriedSecondary->size() &&
-                 (minPrimary - *primaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
-                 (rand() & 8))
+                 ((minPrimary - *primaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
+                  (rand() & 8)))
         {
             auto i = untriedSecondary->begin();
             std::advance(i, rand() % untriedSecondary->size());
