@@ -839,6 +839,13 @@ tABC_CC ABC_SetWalletOrder(const char *szUserName,
                            tABC_Error *pError);
 
 /**
+ * Removes a wallet from the account wallet list.
+ */
+tABC_CC ABC_WalletRemove(const char *szUserName,
+                         const char *szWalletUUID,
+                         tABC_Error *pError);
+
+/**
  * Determines whether or not the wallet is archived.
  */
 tABC_CC ABC_WalletArchived(const char *szUserName,
