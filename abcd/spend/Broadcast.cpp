@@ -7,6 +7,7 @@
 
 #include "Broadcast.hpp"
 #include "../bitcoin/Testnet.hpp"
+#include "../bitcoin/WatcherBridge.hpp"
 #include "../Context.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../http/HttpRequest.hpp"
@@ -92,7 +93,7 @@ broadcastTask(std::shared_ptr<Syncer> syncer,
 }
 
 Status
-broadcastTx(DataSlice rawTx)
+broadcastTx(Wallet &self, DataSlice rawTx)
 {
     // Create communication resources:
     auto syncer = std::make_shared<Syncer>();
@@ -121,6 +122,9 @@ broadcastTx(DataSlice rawTx)
         if (s1->done && s2->done)
             return s1->status;
     }
+
+    // Also send via TxUpdater:
+    watcherSend(self, rawTx);
 
     return Status();
 }

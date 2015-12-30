@@ -55,9 +55,9 @@ void Watcher::connect()
     send_connect();
 }
 
-void Watcher::send_tx(const bc::transaction_type &tx)
+void Watcher::sendTx(DataSlice tx)
 {
-    send_send(tx);
+    sendSend(tx);
 }
 
 void
@@ -208,16 +208,12 @@ void Watcher::send_watch_addr(bc::payment_address address, unsigned poll_ms)
     socket_.send(str.data(), str.size());
 }
 
-void Watcher::send_send(const bc::transaction_type &tx)
+void Watcher::sendSend(DataSlice tx)
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
-    std::basic_ostringstream<uint8_t> stream;
-    auto serial = bc::make_serializer(std::ostreambuf_iterator<uint8_t>(stream));
-    serial.write_byte(msg_send);
-    serial.set_iterator(satoshi_save(tx, serial.iterator()));
-    auto str = stream.str();
-    socket_.send(str.data(), str.size());
+    auto data = buildData({bc::to_byte(msg_send), tx});
+    socket_.send(data.data(), data.size());
 }
 
 bool Watcher::command(uint8_t *data, size_t size)
