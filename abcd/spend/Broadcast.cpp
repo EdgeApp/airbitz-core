@@ -51,74 +51,78 @@ blockchainPostTx(DataSlice tx)
 }
 
 /**
- * Handles a broadcast in the background.
- * The BroadcastThread signals the condition variable when it is done.
- * The use of `std::shared_ptr` allows the thread to continue holding
- * resources even after the calling function has finished.
+ * Contains a condition variable and its associated mutex.
+ * The mutex protects access to some piece of shared data,
+ * and the condition variable triggers a wakeup when the data is modified.
  */
-class BroadcastThread
+struct Syncer
 {
-public:
-    BroadcastThread(std::shared_ptr<std::condition_variable> cv):
-        cv_(cv)
-    {}
-
-    Status status()
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return status_;
-    }
-
-    bool done()
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return done_;
-    }
-
-    template<Status (*f)(DataSlice tx)>
-    static void run(std::shared_ptr<BroadcastThread> self, DataChunk tx)
-    {
-        auto status = f(tx);
-        std::lock_guard<std::mutex> lock(self->mutex_);
-        self->status_ = status;
-        self->done_ = true;
-        self->cv_->notify_all();
-    }
-
-private:
-    std::shared_ptr<std::condition_variable> cv_;
-    std::mutex mutex_;
-    Status status_;
-    bool done_ = false;
+    std::condition_variable cv;
+    std::mutex mutex;
 };
+
+/**
+ * Holds the return value from a long-running background task,
+ * and a flag indicating if the task is done yet.
+ */
+struct DelayedStatus
+{
+    bool done = false;
+    Status status;
+};
+
+/**
+ * A long-running broadcast task.
+ * @param condition Guards access to the status,
+ * and signals when the task is done.
+ * @param status Holds the status of the task.
+ */
+template<Status (*f)(DataSlice tx)> static void
+broadcastTask(std::shared_ptr<Syncer> syncer,
+              std::shared_ptr<DelayedStatus> status, DataChunk tx)
+{
+    auto result = f(tx);
+
+    {
+        std::lock_guard<std::mutex> lock(syncer->mutex);
+        status->status = result;
+        status->done = true;
+    }
+    syncer->cv.notify_all();
+}
 
 Status
 broadcastTx(DataSlice rawTx)
 {
     // Create communication resources:
-    std::mutex mutex;
-    std::unique_lock<std::mutex> lock(mutex);
-    auto cv = std::make_shared<std::condition_variable>();
-    auto t1 = std::make_shared<BroadcastThread>(cv);
-    auto t2 = std::make_shared<BroadcastThread>(cv);
+    auto syncer = std::make_shared<Syncer>();
+    auto s1 = std::make_shared<DelayedStatus>();
+    auto s2 = std::make_shared<DelayedStatus>();
 
     // Launch the broadcasts:
     DataChunk tx(rawTx.begin(), rawTx.end());
-    std::thread(BroadcastThread::run<blockchainPostTx>, t1, tx).detach();
-    std::thread(BroadcastThread::run<insightPostTx>, t2, tx).detach();
+    std::thread(broadcastTask<blockchainPostTx>, syncer, s1, tx).detach();
+    std::thread(broadcastTask<insightPostTx>, syncer, s2, tx).detach();
 
     // Loop as long as any thread is still running:
-    while (!t1->done() || !t2->done())
+    while (true)
     {
-        cv->wait(lock);
-        // Quit immediately if one has succeeded:
-        if ((t1->done() && t1->status()) ||
-                (t2->done() && t2->status()))
-            return Status();
+        // Wait for the condition variable, which also acquires the lock:
+        std::unique_lock<std::mutex> lock(syncer->mutex);
+        syncer->cv.wait(lock);
+
+        // Stop waiting if any broadcast has succeeded:
+        if (s1->done && s1->status)
+            break;
+        if (s2->done && s2->status)
+            break;
+
+        // If they are all done, we have an error:
+        if (s1->done && s2->done)
+            return s1->status;
     }
 
-    // We only get here if all three have failed:
-    return t2->status();
+    return Status();
 }
 
 } // namespace abcd
