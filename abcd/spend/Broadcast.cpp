@@ -45,6 +45,7 @@ blockchainPostTx(DataSlice tx)
 
     HttpReply reply;
     ABC_CHECK(HttpRequest().
+              header("Content-Type", "application/x-www-form-urlencoded").
               post(reply, "https://blockchain.info/pushtx", body));
     ABC_CHECK(reply.codeOk());
 
