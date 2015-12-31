@@ -79,21 +79,11 @@ outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
     }
 
     // Handle the Airbitz fees:
-    pInfo->metadata.amountFeesAirbitzSatoshi = 0;
     const auto info = generalAirbitzFeeInfo();
-    int64_t airbitzFee = info.rate * outputsTotal(out);
-    if (airbitzFee < info.noFeeMinSatoshi)
-    {
-        airbitzFee = 0;
-    }
-    else
-    {
-        if (airbitzFee < info.minSatoshi)
-            airbitzFee = info.minSatoshi;
-        if (airbitzFee > info.maxSatoshi)
-            airbitzFee = info.maxSatoshi;
-    }
-    if (airbitzFee && !pInfo->bTransfer)
+    auto airbitzFee = generalAirbitzFee(info, outputsTotal(out),
+                                        pInfo->bTransfer);
+    pInfo->metadata.amountFeesAirbitzSatoshi = airbitzFee;
+    if (airbitzFee)
     {
         auto i = info.addresses.begin();
         std::advance(i, time(nullptr) % info.addresses.size());
@@ -102,8 +92,6 @@ outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
         output.value = airbitzFee;
         ABC_CHECK(outputScriptForAddress(output.script, *i));
         out.push_back(output);
-
-        pInfo->metadata.amountFeesAirbitzSatoshi = airbitzFee;
     }
 
     result = std::move(out);
