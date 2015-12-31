@@ -237,11 +237,9 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
 }
 
 Status
-inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
+inputsPickMaximum(uint64_t &resultFee, uint64_t &resultUsable,
                   bc::transaction_type &tx, bc::output_info_list &utxos)
 {
-    auto totalOut = outputsTotal(tx.outputs);
-
     // Calculate the fees for this input combination:
     tx.inputs.clear();
     uint64_t sourced = 0;
@@ -260,11 +258,11 @@ inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
     uint64_t totalIn = 0;
     for (auto &utxo: utxos)
         totalIn += utxo.value;
-    if (totalIn < totalOut + fee)
+    if (totalIn < fee)
         return ABC_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds");
 
     resultFee = fee;
-    resultChange = totalIn - (totalOut + fee);
+    resultUsable = totalIn - fee;
     return Status();
 }
 
