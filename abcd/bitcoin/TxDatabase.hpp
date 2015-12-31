@@ -19,8 +19,6 @@ namespace abcd {
 
 enum class TxState
 {
-    /// The transaction has not been broadcast to the network.
-    unsent,
     /// The network has seen this transaction, but not in a block.
     unconfirmed,
     /// The transaction is in a block.
@@ -175,9 +173,6 @@ private:
     typedef std::function<void (bc::hash_digest txid)> HashFn;
     void foreach_unconfirmed(HashFn &&f);
     void foreach_forked(HashFn &&f);
-
-    typedef std::function<void (const bc::transaction_type &tx)> TxFn;
-    void foreach_unsent(TxFn &&f);
 
     // - Internal: ---------------------
     void check_fork(size_t height);

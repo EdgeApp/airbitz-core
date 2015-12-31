@@ -279,12 +279,12 @@ exit:
 }
 
 Status
-watcherSend(Wallet &self, libbitcoin::transaction_type &tx)
+watcherSend(Wallet &self, DataSlice tx)
 {
     Watcher *watcher = nullptr;
     ABC_CHECK(watcherFind(watcher, self));
 
-    watcher->send_tx(tx);
+    watcher->sendTx(tx);
 
     return Status();
 }
@@ -435,7 +435,7 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     // Send:
     bc::data_chunk raw_tx(satoshi_raw_size(utx.tx));
     bc::satoshi_save(utx.tx, raw_tx.begin());
-    ABC_CHECK(broadcastTx(raw_tx));
+    ABC_CHECK(broadcastTx(watcherInfo->wallet, raw_tx));
     if (watcherInfo->wallet.txdb.insert(utx.tx, TxState::unconfirmed))
         watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 
@@ -459,7 +459,6 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
         fAsyncCallback(&info);
     }
     sweep.done = true;
-    watcherSend(watcherInfo->wallet, utx.tx).log();
 
     return Status();
 }
