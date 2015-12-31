@@ -485,10 +485,13 @@ typedef void (*tABC_Sweep_Done_Callback)(tABC_CC cc,
 
 /* === Library lifetime: === */
 tABC_CC ABC_Initialize(const char                   *szRootDir,
-                       const char                   *szCaCertPath,
-                       const unsigned char          *pSeedData,
-                       unsigned int                 seedLength,
-                       tABC_Error                   *pError);
+                       const char                    *szCaCertPath,
+                       const char                    *szApiKeyHeader,
+                       const char                    *szChainApiUserPwd,
+                       const char                    *szHiddenBitzKey,
+                       const unsigned char           *pSeedData,
+                       unsigned int                  seedLength,
+                       tABC_Error                    *pError);
 
 void ABC_Terminate();
 
@@ -834,6 +837,13 @@ tABC_CC ABC_SetWalletOrder(const char *szUserName,
                            const char *szPassword,
                            const char *szUUIDs,
                            tABC_Error *pError);
+
+/**
+ * Removes a wallet from the account wallet list.
+ */
+tABC_CC ABC_WalletRemove(const char *szUserName,
+                         const char *szWalletUUID,
+                         tABC_Error *pError);
 
 /**
  * Determines whether or not the wallet is archived.

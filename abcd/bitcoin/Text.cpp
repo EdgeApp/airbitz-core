@@ -7,7 +7,7 @@
 
 #include "Text.hpp"
 #include "Testnet.hpp"
-#include "../config.h"
+#include "../Context.hpp"
 #include "../util/Util.hpp"
 #include <bitcoin/bitcoin.hpp>
 
@@ -72,7 +72,7 @@ hbitsDecode(bc::ec_secret &result, const std::string &hbits)
     result = bc::sha256_hash(bc::to_data_chunk(trimmed));
 
     // XOR with our magic number:
-    auto mix = bc::decode_hex(HIDDENBITZ_KEY);
+    auto mix = bc::decode_hex(gContext->hiddenBitzKey());
     for (size_t i = 0; i < mix.size() && i < result.size(); ++i)
         result[i] ^= mix[i];
 

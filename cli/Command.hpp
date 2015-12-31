@@ -43,9 +43,9 @@ struct Session
     std::shared_ptr<abcd::Wallet> wallet;
 
     // For legacy API:
-    const char *username;
-    const char *password;
-    const char *uuid;
+    std::string username;
+    std::string password;
+    std::string uuid;
 };
 
 /**
@@ -62,8 +62,9 @@ class Command
 public:
     virtual ~Command();
     virtual abcd::Status COMMAND_PROTO = 0;
-    virtual InitLevel level() = 0;
-    virtual const char *name() = 0;
+    virtual InitLevel level() const = 0;
+    virtual const char *name() const = 0;
+    virtual const char *help() const = 0;
 };
 
 /**
@@ -91,13 +92,20 @@ public:
  * Registers and defines new command.
  * Should be followed by the command implementation in curly braces.
  */
-#define COMMAND(LEVEL, NAME, TEXT) \
+#define COMMAND(LEVEL, NAME, TEXT, HELP) \
     class NAME: public Command { \
         abcd::Status COMMAND_PROTO override; \
-        InitLevel level() override { return LEVEL; } \
-        const char *name() override { return TEXT; } \
+        InitLevel level() const override { return LEVEL; } \
+        const char *name() const override { return TEXT; } \
+        const char *help() const override { return HELP; } \
     } implement##NAME; \
     CommandRegistry register##NAME(TEXT, &implement##NAME); \
     abcd::Status NAME::COMMAND_PROTO
+
+/**
+ * Builds a documentation string for a command.
+ */
+std::string
+helpString(const Command &command);
 
 #endif

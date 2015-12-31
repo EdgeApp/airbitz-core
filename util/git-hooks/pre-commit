@@ -19,7 +19,7 @@ fi
 exec 1>&2
 
 files=$(git diff --cached --name-only --diff-filter=AM $against | \
-        grep -E '^(abcd|cli|src|tests|util)' | grep -E '(c|h|cpp|hpp)$')
+        grep -E '^(abcd|cli|src|tests|util)' | grep -E '\.(c|h|cpp|hpp)$')
 
 for file in $files; do
     astyle --options=astyle-options -Q $file

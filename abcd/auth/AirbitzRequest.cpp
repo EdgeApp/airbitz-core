@@ -5,7 +5,7 @@
 
 #include "AirbitzRequest.hpp"
 #include "Pinning.hpp"
-#include "../config.h"
+#include "../Context.hpp"
 #include "../util/Util.hpp"
 #include <openssl/ssl.h>
 
@@ -27,7 +27,7 @@ AirbitzRequest::AirbitzRequest()
     if (curl_easy_setopt(handle_, CURLOPT_SSL_CTX_FUNCTION, curlSslCallback))
         status_ = ABC_ERROR(ABC_CC_Error, "cURL failed to set SSL pinning");
     header("Content-Type", "application/json");
-    header("Authorization", API_KEY_HEADER + 15);
+    header("Authorization", "Token " + gContext->apiKeyHeader());
 }
 
 } // namespace abcd

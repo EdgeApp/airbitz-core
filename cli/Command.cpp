@@ -53,3 +53,23 @@ CommandRegistry::print()
     for (auto &i: *gMap)
         std::cout << i.second->name() << std::endl;
 }
+
+std::string
+helpString(const Command &command)
+{
+    std::string out = "usage: abc-cli";
+
+    if (InitLevel::context <= command.level())
+        out += " [-d <dir>]";
+
+    if (InitLevel::lobby <= command.level())
+        out += " [-u <username>]";
+
+    if (InitLevel::login <= command.level())
+        out += " [-p <password>]";
+
+    if (InitLevel::wallet <= command.level())
+        out += " [-w <wallet>]";
+
+    return out + " " + command.name() + command.help();
+}
