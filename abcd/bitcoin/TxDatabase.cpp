@@ -97,20 +97,14 @@ bc::transaction_type TxDatabase::ntxidLookup(bc::hash_digest ntxid)
     return tx;
 }
 
-static const char unsent[] = "unsent";
-static const char unconfirmed[] = "unconfirmed";
-static const char confirmed[] = "confirmed";
-
 const char *stateToString(TxState state)
 {
     switch (state)
     {
-    case TxState::unsent:
-        return unsent;
     case TxState::unconfirmed:
-        return unconfirmed;
+        return "unconfirmed";
     case TxState::confirmed:
-        return confirmed;
+        return "confirmed";
     }
 
 }
@@ -380,9 +374,6 @@ void TxDatabase::dump(std::ostream &out) const
         std::string state;
         switch (row.second.state)
         {
-        case TxState::unsent:
-            out << "state: unsent" << std::endl;
-            break;
         case TxState::unconfirmed:
             out << "state: unconfirmed" << std::endl;
             out << "timestamp: " << row.second.timestamp << std::endl;
@@ -591,15 +582,6 @@ void TxDatabase::foreach_forked(HashFn &&f)
     for (auto row: rows_)
         if (row.second.state == TxState::confirmed && row.second.need_check)
             f(row.first);
-}
-
-void TxDatabase::foreach_unsent(TxFn &&f)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    for (auto row: rows_)
-        if (row.second.state == TxState::unsent)
-            f(row.second.tx);
 }
 
 /**

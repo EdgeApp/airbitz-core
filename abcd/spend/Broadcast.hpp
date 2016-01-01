@@ -13,11 +13,13 @@
 
 namespace abcd {
 
+class Wallet;
+
 /**
  * Sends a transaction out to the Bitcoin network.
  */
 Status
-broadcastTx(DataSlice rawTx);
+broadcastTx(Wallet &self, DataSlice rawTx);
 
 } // namespace abcd
 

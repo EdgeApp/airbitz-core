@@ -92,7 +92,7 @@ tABC_CC ABC_BridgePrioritizeAddress(Wallet &self,
                                     tABC_Error *pError);
 
 Status
-watcherSend(Wallet &self, libbitcoin::transaction_type &tx);
+watcherSend(Wallet &self, DataSlice tx);
 
 tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
                                      tABC_TxInfo **aTransactions,

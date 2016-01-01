@@ -140,6 +140,41 @@ generalAirbitzFeeInfo()
     return out;
 }
 
+uint64_t
+generalAirbitzFee(const AirbitzFeeInfo &info, uint64_t spend, bool transfer)
+{
+    int64_t fee = info.rate * spend;
+
+    if (transfer)
+        return 0;
+    if (fee < info.noFeeMinSatoshi)
+        return 0;
+    if (fee < info.minSatoshi)
+        return info.minSatoshi;
+    if (info.maxSatoshi < fee)
+        return info.maxSatoshi;
+    return fee;
+}
+
+uint64_t
+generalAirbitzFeeSpendable(const AirbitzFeeInfo &info,
+                           uint64_t usable, bool transfer)
+{
+    uint64_t max = usable + 1; // Must always be more than we can spend
+    uint64_t min = 0;
+    while (min + 1 < max)
+    {
+        uint64_t guess = (min + max) / 2;
+
+        if (usable < guess + generalAirbitzFee(info, guess, transfer))
+            max = guess;
+        else
+            min = guess;
+    }
+
+    return min;
+}
+
 std::vector<std::string>
 generalBitcoinServers()
 {

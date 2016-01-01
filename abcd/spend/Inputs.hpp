@@ -76,7 +76,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
  * and calculate the mining fee using the already-present outputs.
  */
 Status
-inputsPickMaximum(uint64_t &resultFee, uint64_t &resultChange,
+inputsPickMaximum(uint64_t &resultFee, uint64_t &resultUsable,
                   bc::transaction_type &tx, bc::output_info_list &utxos);
 
 } // namespace abcd

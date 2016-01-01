@@ -123,7 +123,7 @@ TxUpdater::connect()
     srand(time(nullptr));
     int numConnections = 0;
     while (connections_.size() < NUM_CONNECT_SERVERS &&
-           (untriedLibbitcoin_.size() || untriedStratum_.size()))
+            (untriedLibbitcoin_.size() || untriedStratum_.size()))
     {
         auto *untriedPrimary = &untriedStratum_;
         auto *untriedSecondary = &untriedLibbitcoin_;
@@ -143,8 +143,8 @@ TxUpdater::connect()
         }
 
         if (untriedPrimary->size() &&
-            ((minSecondary - *secondaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
-             (rand() & 8)))
+                ((minSecondary - *secondaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
+                 (rand() & 8)))
         {
             auto i = untriedPrimary->begin();
             std::advance(i, rand() % untriedPrimary->size());
@@ -177,9 +177,6 @@ TxUpdater::connect()
         db_.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1,
                                           ALL_SERVERS));
         queue_get_indices(ALL_SERVERS);
-
-        // Transmit all unsent transactions:
-        db_.foreach_unsent(std::bind(&TxUpdater::send_tx, this, _1));
     }
 
     return Status();
@@ -373,7 +370,8 @@ TxUpdater::connectTo(long index)
     return Status();
 }
 
-void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx, size_t index)
+void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx,
+                         size_t index)
 {
     db_.reset_timestamp(txid);
     std::string str = bc::encode_hash(txid);
