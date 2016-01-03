@@ -34,9 +34,15 @@ struct BraveNewCoinJsonRow:
     ABC_JSON_STRING(crypto, "crypto",       "1")
 };
 
+struct CleverCoinJson:
+    public JsonObject
+{
+    ABC_JSON_STRING(rate, "last", nullptr)
+};
+
 const ExchangeSources exchangeSources
 {
-    "Bitstamp", "BraveNewCoin", "Coinbase"
+    "Bitstamp", "BraveNewCoin", "Coinbase", "CleverCoin"
 };
 
 static Status
@@ -172,12 +178,36 @@ fetchCoinbase(ExchangeRates &result)
     return Status();
 }
 
+/**
+ * Fetches exchange rates from the CleverCoin source.
+ */
+static Status
+fetchCleverCoin(ExchangeRates &result)
+{
+    HttpReply reply;
+    ABC_CHECK(HttpRequest().get(reply, "https://api.clevercoin.com/v1/ticker"));
+    ABC_CHECK(reply.codeOk());
+
+    CleverCoinJson json;
+    ABC_CHECK(json.decode(reply.body));
+    ABC_CHECK(json.rateOk());
+
+    double rate;
+    ABC_CHECK(doubleDecode(rate, json.rate()));
+    ExchangeRates out;
+    out[Currency::EUR] = rate;
+
+    result = std::move(out);
+    return Status();
+}
+
 Status
 exchangeSourceFetch(ExchangeRates &result, const std::string &source)
 {
     if (source == "Bitstamp")       return fetchBitstamp(result);
     if (source == "BraveNewCoin")   return fetchBraveNewCoin(result);
     if (source == "Coinbase")       return fetchCoinbase(result);
+    if (source == "CleverCoin")     return fetchCleverCoin(result);
     return ABC_ERROR(ABC_CC_ParseError, "No exchange-rate source " + source);
 }
 
