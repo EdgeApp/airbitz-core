@@ -147,13 +147,13 @@ void Watcher::loop()
     bool done = false;
     while (!done)
     {
+        auto nextWakeup = txu_.wakeup();
+        int delay = nextWakeup.count() ? nextWakeup.count() : -1;
+
         std::vector<zmq_pollitem_t> items;
         items.push_back(zmq_pollitem_t{ socket, 0, ZMQ_POLLIN, 0 });
         auto txuItems = txu_.pollitems();
         items.insert(items.end(), txuItems.begin(), txuItems.end());
-
-        auto nextWakeup = txu_.wakeup();
-        int delay = nextWakeup.count() ? nextWakeup.count() : -1;
 
         if (zmq_poll(items.data(), items.size(), delay) < 0)
             switch (errno)
