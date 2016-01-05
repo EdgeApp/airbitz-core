@@ -16,51 +16,63 @@
 
 namespace abcd {
 
-struct ReplyJson;
+class JsonPtr;
 typedef std::chrono::milliseconds SleepTime;
+
+// Scheme used for stratum URI's:
+constexpr auto stratumScheme = "stratum";
 
 class StratumConnection
 {
 public:
+    typedef std::function<void (Status)> StatusCallback;
     typedef std::function<void (const std::string &version)> VersionHandler;
     typedef std::function<void (const size_t &height)> HeightHandler;
-    typedef std::function<void(Status)> StatusCallback;
+
+    ~StratumConnection();
 
     /**
      * Requests the server version.
      */
-    void version(
-        bc::client::obelisk_codec::error_handler onError,
-        VersionHandler onReply);
+    void
+    version(const StatusCallback &onError, const VersionHandler &onReply);
 
     /**
      * Requests a transaction from the server.
      */
-    void getTx(
-        bc::client::obelisk_codec::error_handler onError,
-        bc::client::obelisk_codec::fetch_transaction_handler onReply,
+    void
+    getTx(
+        const bc::client::obelisk_codec::error_handler &onError,
+        const bc::client::obelisk_codec::fetch_transaction_handler &onReply,
         const bc::hash_digest &txid);
 
-    void getAddressHistory(
-        bc::client::obelisk_codec::error_handler onError,
-        bc::client::obelisk_codec::fetch_history_handler onReply,
+    void
+    getAddressHistory(
+        const bc::client::obelisk_codec::error_handler &onError,
+        const bc::client::obelisk_codec::fetch_history_handler &onReply,
         const bc::payment_address &address, size_t fromHeight=0);
 
-    Status sendTx(StatusCallback status, DataSlice tx);
+    /**
+     * Broadcasts a transaction over the Bitcoin network.
+     * @param onDone called when the broadcast is done,
+     * either successful or failed.
+     */
+    void
+    sendTx(const StatusCallback &onDone, DataSlice tx);
 
     /**
      * Requests current blockchain height from the server.
      */
     void
     getHeight(
-        bc::client::obelisk_codec::error_handler onError,
-        HeightHandler onReply);
+        const bc::client::obelisk_codec::error_handler &onError,
+        const HeightHandler &onReply);
 
     /**
      * Connects to the specified stratum server.
      */
     Status
-    connect(const std::string &hostname, int port);
+    connect(const std::string &uri);
 
     /**
      * Performs any pending work,
@@ -75,6 +87,8 @@ public:
     int pollfd() const { return connection_.pollfd(); }
 
 private:
+    typedef std::function<Status (JsonPtr payload)> Decoder;
+
     // Socket:
     TcpConnection connection_;
     std::string incoming_;
@@ -83,13 +97,26 @@ private:
     unsigned lastId = 0;
     struct Pending
     {
-        std::function<void (ReplyJson message)> decoder;
+        StatusCallback onError;
+        Decoder decoder;
         // TODO: Add timeout logic
     };
     std::map<unsigned, Pending> pending_;
 
+    // Timeout:
+    std::chrono::steady_clock::time_point lastProgress_;
+
     // Server heartbeat:
     std::chrono::steady_clock::time_point lastKeepalive_;
+
+    /**
+     * Sends a message and sets up the reply decoder.
+     * If anything goes wrong (including errors returned by the decoder),
+     * the error callback will be called.
+     */
+    void
+    sendMessage(const std::string &method, JsonPtr params,
+                const StatusCallback &onError, const Decoder &decoder);
 
     /**
      * Decodes and handles a complete message from the server.

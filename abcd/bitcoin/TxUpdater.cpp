@@ -60,9 +60,13 @@ TxUpdater::disconnect()
 {
     wantConnection = false;
 
-    for (auto &i: connections_)
-        delete i;
+    const auto temp = connections_;
     connections_.clear();
+
+    // The query_done callback might fire while doing these deletions,
+    // so the connections_ array must already be cleared:
+    for (auto &i: temp)
+        delete i;
 
     ABC_DebugLog("Disconnected from all servers.");
 }
@@ -350,15 +354,7 @@ TxUpdater::connectTo(long index)
         // Stratum server:
         untriedStratum_.erase(index);
         bconn->type = ConnectionType::stratum;
-
-        // Extract the server name and port:
-        auto last = server.find(":", STRATUM_PREFIX_LENGTH);
-        std::string serverName = server.substr(STRATUM_PREFIX_LENGTH,
-                                               last - STRATUM_PREFIX_LENGTH);
-        std::string serverPort = server.substr(last + 1, std::string::npos);
-        int port = atoi(serverPort.c_str());
-
-        ABC_CHECK(bconn->stratumCodec.connect(serverName, port));
+        ABC_CHECK(bconn->stratumCodec.connect(server));
     }
     else
     {

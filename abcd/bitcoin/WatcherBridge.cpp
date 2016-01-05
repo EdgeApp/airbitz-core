@@ -224,6 +224,10 @@ tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
 
     watcherInfo->watcher.loop();
 
+    watcherInfo->watcher.set_quiet_callback(nullptr);
+    watcherInfo->watcher.set_height_callback(nullptr);
+    watcherInfo->watcher.set_tx_callback(nullptr);
+
 exit:
     return cc;
 }
