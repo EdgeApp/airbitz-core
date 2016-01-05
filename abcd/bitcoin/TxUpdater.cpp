@@ -60,9 +60,13 @@ TxUpdater::disconnect()
 {
     wantConnection = false;
 
-    for (auto &i: connections_)
-        delete i;
+    const auto temp = connections_;
     connections_.clear();
+
+    // The query_done callback might fire while doing these deletions,
+    // so the connections_ array must already be cleared:
+    for (auto &i: temp)
+        delete i;
 
     ABC_DebugLog("Disconnected from all servers.");
 }
