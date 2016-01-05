@@ -1,0 +1,499 @@
+<?xml version="1.0" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title></title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rev="made" href="mailto:" />
+</head>
+
+<body>
+
+
+
+<h1 id="NAME">NAME</h1>
+
+<p>abc-cli - Airbitz command line tool</p>
+
+<h1 id="SYNOPSIS">SYNOPSIS</h1>
+
+<p><b>abc-cli</b> [ <i>general_arguments</i> ] <i>command</i> [ <i>command_args</i> ]</p>
+
+<h1 id="DESCRIPTION">DESCRIPTION</h1>
+
+<p>The Airbitz CLI implements a decentralized, secure, peer-to-peer synchronized, and backed up bitcoin wallet.</p>
+
+<p>The Airbitz wallet is a fully client-side wallet that creates, manages, and encrypts private keys, public keys, and transactions on the client device and uses server side assistance for backup and synchronization of encrypted data and for authenticating users. Airbitz users retain full control of their private keys at all times with neither Airbitz nor third parties having access to private keys or transaction data.</p>
+
+<p>The <b>abc-cli</b> program is a command line tool for using the various Bitcoin functions of the ABC library from the shell.</p>
+
+<h1 id="GENERAL-ARGUMENTS">GENERAL ARGUMENTS</h1>
+
+<p>Several commands require initial arguments that can be provided via command line or in the airbitz.conf file. Those arguments need to be set before the actual command.</p>
+
+<dl>
+
+<dt id="d-dir"><b>-d &lt;dir</b>&gt;</dt>
+<dd>
+
+<p>the working directory where the wallet information are stored.</p>
+
+</dd>
+<dt id="u-username"><b>-u &lt;username</b>&gt;</dt>
+<dd>
+
+<p>the account username.</p>
+
+</dd>
+<dt id="p-password"><b>-p &lt;password</b>&gt;</dt>
+<dd>
+
+<p>the account password.</p>
+
+</dd>
+<dt id="w-wallet"><b>-w &lt;wallet</b>&gt;</dt>
+<dd>
+
+<p>the wallets id.</p>
+
+</dd>
+</dl>
+
+<h1 id="COMMAND-SUMMARY">COMMAND SUMMARY</h1>
+
+<p>The <b>abc-cli</b> program provides a rich variety of commands (<i>command</i> in the SYNOPSIS above), each of which often has a wealth arguments (<i>command_args</i> in the SYNOPSIS).</p>
+
+<h2 id="GENERAL-COMMANDS">GENERAL COMMANDS</h2>
+
+<dl>
+
+<dt id="check-password-pass"><b>check-password</b> &lt;pass&gt;</dt>
+<dd>
+
+<p>Checks the password strength.</p>
+
+<p>Requires a working directory.</p>
+
+</dd>
+<dt id="general-update"><b>general-update</b></dt>
+<dd>
+
+<p>Downloads general info (Electrum / libbitcoin Servers, Sync Servers, mining fees etc.) from the server if the local file is out of date.</p>
+
+<p>Requires a working directory.</p>
+
+</dd>
+<dt id="get-question-choices"><b>get-question-choices</b></dt>
+<dd>
+
+<p>Returns the recovery questions choices.</p>
+
+<p>Requires a working directory.</p>
+
+</dd>
+<dt id="list-accounts"><b>list-accounts</b></dt>
+<dd>
+
+<p>List all accounts in the working directory.</p>
+
+<p>Requires a working directory.</p>
+
+</dd>
+<dt id="pin-login"><b>pin-login</b></dt>
+<dd>
+
+<p>Login using username + PIN instead of password.</p>
+
+<p>Requires a working directory and username.</p>
+
+</dd>
+<dt id="watcher"><b>watcher</b></dt>
+<dd>
+
+<p>Starts a endless watcher-loop that looks for new incoming transactions.</p>
+
+<p>Requires a working directory, username, password and wallet.</p>
+
+</dd>
+<dt id="version"><b>version</b></dt>
+<dd>
+
+<p>Returns the ABC Version.</p>
+
+</dd>
+</dl>
+
+<h2 id="ACCOUNT-COMMANDS">ACCOUNT COMMANDS</h2>
+
+<dl>
+
+<dt id="Laccount-available">L<b>account-available</b></dt>
+<dd>
+
+<p>Checks if the username is available.</p>
+
+<p>Requires a working directory and username.</p>
+
+</dd>
+<dt id="account-create-user-pass"><b>account-create</b> &lt;user&gt; &lt;pass&gt;</dt>
+<dd>
+
+<p>Creates a new account. Default PIN set is 1234.</p>
+
+<p>Requires a working directory.</p>
+
+</dd>
+<dt id="account-decrypt-filename"><b>account-decrypt</b> &lt;filename&gt;</dt>
+<dd>
+
+<p>The filename is account-relative.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="account-encrypt-filename"><b>account-encrypt</b> &lt;filename&gt;</dt>
+<dd>
+
+<p>The filename is account-relative.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="change-password-new-pass"><b>change-password</b> &lt;new-pass&gt;</dt>
+<dd>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="change-password-recovery-ra-new-pass"><b>change-password-recovery</b> &lt;ra&gt; &lt;new-pass&gt;</dt>
+<dd>
+
+<p>Changes the password to &lt;new-pass&gt; with the recovery answers.</p>
+
+<p>Requires a working directory and username.</p>
+
+</dd>
+<dt id="check-recovery-answers-answers"><b>check-recovery-answers</b> &lt;answers&gt;</dt>
+<dd>
+
+<p>Requires a working directory and username.</p>
+
+</dd>
+<dt id="data-sync"><b>data-sync</b></dt>
+<dd>
+
+<p>Syncs the account and all its wallets.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="get-question"><b>get-question</b></dt>
+<dd>
+
+<p>Returns the recovery questions.</p>
+
+<p>Requires a working directory and username.</p>
+
+</dd>
+<dt id="get-settings"><b>get-settings</b></dt>
+<dd>
+
+<p>Returns the accounts settings (first name, last name, nickname, language, etc.)</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="pin-login-setup"><b>pin-login-setup</b></dt>
+<dd>
+
+<p>Sets up the data for a pin-based login, both on disk and on the server.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="recovery-reminder-set-n"><b>recovery-reminder-set</b> &lt;n&gt;</dt>
+<dd>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="set-nickname-name"><b>set-nickname</b> &lt;name&gt;</dt>
+<dd>
+
+<p>Set the account nickname.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="sign-in"><b>sign-in</b></dt>
+<dd>
+
+<p>Sign-in an account.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="upload-logs"><b>upload-logs</b></dt>
+<dd>
+
+<p>Uploads the logs.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+</dl>
+
+<h2 id="SPEND-COMMANDS">SPEND COMMANDS</h2>
+
+<dl>
+
+<dt id="spend-uri-uri"><b>spend-uri</b> &lt;uri&gt;</dt>
+<dd>
+
+<p>Sends Bitcoin using a payment URI.</p>
+
+<p>Requires a working directory, username, password and wallet.</p>
+
+</dd>
+<dt id="spend-internal-address-amount"><b>spend-internal</b> &lt;address&gt; &lt;amount&gt;</dt>
+<dd>
+
+<p>Requires a working directory, username, password and wallet.</p>
+
+</dd>
+<dt id="spend-transfer-wallet-dest-amount"><b>spend-transfer</b> &lt;wallet-dest&gt; &lt;amount&gt;</dt>
+<dd>
+
+<p>Transfers Bitcoins from one wallet to another.</p>
+
+<p>Requires a working directory, username, password and wallet.</p>
+
+</dd>
+</dl>
+
+<h2 id="ADDRESS-COMMANDS">ADDRESS COMMANDS</h2>
+
+<dl>
+
+<dt id="address-allocate-count"><b>address-allocate</b> &lt;count&gt;</dt>
+<dd>
+
+<p>Returns new receive addresses and mark them as used.</p>
+
+<p>Requires a working directory, username, password and wallet.</p>
+
+</dd>
+<dt id="address-list"><b>address-list</b></dt>
+<dd>
+
+<p>List all addresses used by the wallet.</p>
+
+<p>Requires a working directory, username, password and wallet.</p>
+
+</dd>
+<dt id="address-search-addr-start-end"><b>address-search</b> &lt;addr&gt; &lt;start&gt; &lt;end&gt;</dt>
+<dd>
+
+<p>Searches if the address exists between start and end.</p>
+
+<p>Requires a working directory, username, password and wallet.</p>
+
+</dd>
+</dl>
+
+<h2 id="CATEGORIES-COMMANDS">CATEGORIES COMMANDS</h2>
+
+<dl>
+
+<dt id="category-list"><b>category-list</b></dt>
+<dd>
+
+<p>List all categories.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="category-add-category"><b>category-add</b> &lt;category&gt;</dt>
+<dd>
+
+<p>Add a new category.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="category-remove-category"><b>category-remove</b> &lt;category&gt;</dt>
+<dd>
+
+<p>Remove a category.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+</dl>
+
+<h2 id="EXCHANGE-COMMANDS">EXCHANGE COMMANDS</h2>
+
+<dl>
+
+<dt id="exchange-fetch"><b>exchange-fetch</b></dt>
+<dd>
+
+<p>Fetches all exchange rates.</p>
+
+<p>Requires a working directory.</p>
+
+</dd>
+<dt id="exchange-update-currency"><b>exchange-update</b> &lt;currency&gt;</dt>
+<dd>
+
+<p>Returns the current Bitcoin price in &lt;currency&gt;</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="exchange-validate-currency"><b>exchange-validate</b> &lt;currency&gt;</dt>
+<dd>
+
+<p>Validates that all currencies have sources.</p>
+
+<p>Requires a working directory.</p>
+
+</dd>
+</dl>
+
+<h2 id="OTP-COMMANDS">OTP COMMANDS</h2>
+
+<dl>
+
+<dt id="otp-key-get"><b>otp-key-get</b></dt>
+<dd>
+
+<p>Returns the OPT key.</p>
+
+<p>Requires a working directory and username.</p>
+
+</dd>
+<dt id="otp-key-set-key"><b>otp-key-set</b> &lt;key&gt;</dt>
+<dd>
+
+<p>Set the OPT key.</p>
+
+<p>Requires a working directory and username.</p>
+
+</dd>
+<dt id="otp-key-remove"><b>otp-key-remove</b></dt>
+<dd>
+
+<p>Remove the OPT key.</p>
+
+<p>Requires a working directory and username.</p>
+
+</dd>
+<dt id="otp-auth-get"><b>otp-auth-get</b></dt>
+<dd>
+
+<p>Returns the OPT Auth timeout.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="otp-auth-set-timeout-sec"><b>otp-auth-set</b> &lt;timeout-sec&gt;</dt>
+<dd>
+
+<p>Sets the OPT Auth timeout.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="otp-auth-remove"><b>otp-auth-remove</b></dt>
+<dd>
+
+<p>Remove the OPT key.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="otp-reset-get"><b>otp-reset-get</b></dt>
+<dd>
+
+<p>Returns the reset status for all accounts.</p>
+
+<p>Requires a working directory</p>
+
+</dd>
+<dt id="otp-reset-remove"><b>otp-reset-remove</b></dt>
+<dd>
+
+<p>Cancels an OTP reset timer.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+</dl>
+
+<h2 id="BitID-COMMANDS">BitID COMMANDS</h2>
+
+<dl>
+
+<dt id="bitid-login-uri"><b>bitid-login</b> &lt;uri&gt;</dt>
+<dd>
+
+<p>Performs a BitID login to the specified URI.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="bitid-sign-uri-message-index"><b>bitid-sign</b> &lt;uri&gt; &lt;message&gt; [&lt;index&gt;]</dt>
+<dd>
+
+<p>Signs a message.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+</dl>
+
+<h2 id="PLUGIN-COMMANDS">PLUGIN COMMANDS</h2>
+
+<dl>
+
+<dt id="plugin-get-plugin-key"><b>plugin-get</b> &lt;plugin&gt; &lt;key&gt;</dt>
+<dd>
+
+<p>Retrieves an item from the plugin key/value store.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="plugin-set-plugin-key-value"><b>plugin-set</b> &lt;plugin&gt; &lt;key&gt; &lt;value&gt;</dt>
+<dd>
+
+<p>Saves an item to the plugin key/value store.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="plugin-remove-plugin-key"><b>plugin-remove</b> &lt;plugin&gt; &lt;key&gt;</dt>
+<dd>
+
+<p>Deletes an item from the plugin key/value store.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+<dt id="plugin-clear-plugin"><b>plugin-clear</b> &lt;plugin&gt;</dt>
+<dd>
+
+<p>Removes the entire key/value store for a particular plugin.</p>
+
+<p>Requires a working directory, username and password.</p>
+
+</dd>
+</dl>
+
+
+</body>
+
+</html>
+
+

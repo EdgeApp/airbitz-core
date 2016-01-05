@@ -1,0 +1,393 @@
+
+=pod
+
+=head1 NAME
+
+abc-cli - Airbitz command line tool
+
+=head1 SYNOPSIS
+
+B<abc-cli>
+[ I<general_arguments> ]
+I<command>
+[ I<command_args> ]
+
+=head1 DESCRIPTION
+
+The Airbitz CLI implements a decentralized, secure, peer-to-peer synchronized,
+and backed up bitcoin wallet.
+
+The Airbitz wallet is a fully client-side wallet that creates, manages,
+and encrypts private keys, public keys, and transactions on the client device
+and uses server side assistance for backup and synchronization of encrypted data
+and for authenticating users. Airbitz users retain full control of their private keys
+at all times with neither Airbitz nor third parties having access to private keys or
+transaction data.
+
+The B<abc-cli> program is a command line tool for using the various
+Bitcoin functions of the ABC library from the shell.
+
+=head1 GENERAL ARGUMENTS
+
+Several commands require initial arguments that can be provided via command
+line or in the airbitz.conf file.
+Those arguments need to be set before the actual command.
+
+=over 10
+
+=item B<-d <dir>>
+
+the working directory where the wallet information are stored.
+
+=item B<-u <username>>
+
+the account username.
+
+=item B<-p <password>>
+
+the account password.
+
+=item B<-w <wallet>>
+
+the wallets id.
+
+=back
+
+=head1 COMMAND SUMMARY
+
+The B<abc-cli> program provides a rich variety of commands (I<command> in the
+SYNOPSIS above), each of which often has a wealth arguments
+(I<command_args> in the SYNOPSIS).
+
+=head2 GENERAL COMMANDS
+
+=over 10
+
+=item B<check-password> <pass>
+
+Checks the password strength.
+
+Requires a working directory.
+
+=item B<general-update>
+
+Downloads general info (Electrum / libbitcoin Servers, Sync Servers, mining fees etc.) from the server if the local file is out of date.
+
+Requires a working directory.
+
+=item B<get-question-choices>
+
+Returns the recovery questions choices.
+
+Requires a working directory.
+
+=item B<list-accounts>
+
+List all accounts in the working directory.
+
+Requires a working directory.
+
+=item B<pin-login>
+
+Login using username + PIN instead of password.
+
+Requires a working directory and username.
+
+=item B<watcher>
+
+Starts a endless watcher-loop that looks for new incoming transactions.
+
+Requires a working directory, username, password and wallet.
+
+=item B<version>
+
+Returns the ABC Version.
+
+=back
+
+=head2 ACCOUNT COMMANDS
+
+=over 10
+
+=item LB<account-available>
+
+Checks if the username is available.
+
+Requires a working directory and username.
+
+=item B<account-create> <user> <pass>
+
+Creates a new account.
+Default PIN set is 1234.
+
+Requires a working directory.
+
+=item B<account-decrypt> <filename>
+
+The filename is account-relative.
+
+Requires a working directory, username and password.
+
+=item B<account-encrypt>  <filename>
+
+The filename is account-relative.
+
+Requires a working directory, username and password.
+
+=item B<change-password>  <new-pass>
+
+Requires a working directory, username and password.
+
+=item B<change-password-recovery>  <ra> <new-pass>
+
+Changes the password to <new-pass> with the recovery answers.
+
+Requires a working directory and username.
+
+=item B<check-recovery-answers> <answers>
+
+Requires a working directory and username.
+
+=item B<data-sync>
+
+Syncs the account and all its wallets.
+
+Requires a working directory, username and password.
+
+=item B<get-question>
+
+Returns the recovery questions.
+
+Requires a working directory and username.
+
+=item B<get-settings>
+
+Returns the accounts settings (first name, last name, nickname, language, etc.)
+
+Requires a working directory, username and password.
+
+=item B<pin-login-setup>
+
+Sets up the data for a pin-based login, both on disk and on the server.
+
+Requires a working directory, username and password.
+
+=item B<recovery-reminder-set> <n>
+
+Requires a working directory, username and password.
+
+=item B<set-nickname> <name>
+
+Set the account nickname.
+
+Requires a working directory, username and password.
+
+=item B<sign-in>
+
+Sign-in an account.
+
+Requires a working directory, username and password.
+
+=item B<upload-logs>
+
+Uploads the logs.
+
+Requires a working directory, username and password.
+
+=back
+
+=head2 SPEND COMMANDS
+
+=over 10
+
+=item B<spend-uri> <uri>
+
+Sends Bitcoin using a payment URI.
+
+Requires a working directory, username, password and wallet.
+
+=item B<spend-internal> <address> <amount>
+
+Requires a working directory, username, password and wallet.
+
+=item B<spend-transfer> <wallet-dest> <amount>
+
+Transfers Bitcoins from one wallet to another.
+
+Requires a working directory, username, password and wallet.
+
+=back
+
+=head2 ADDRESS COMMANDS
+
+=over 10
+
+=item B<address-allocate> <count>
+
+Returns new receive addresses and mark them as used.
+
+Requires a working directory, username, password and wallet.
+
+=item B<address-list>
+
+List all addresses used by the wallet.
+
+Requires a working directory, username, password and wallet.
+
+=item B<address-search> <addr> <start> <end>
+
+Searches if the address exists between start and end.
+
+Requires a working directory, username, password and wallet.
+
+=back
+
+=head2 CATEGORIES COMMANDS
+
+=over 10
+
+=item B<category-list>
+
+List all categories.
+
+Requires a working directory, username and password.
+
+=item B<category-add> <category>
+
+Add a new category.
+
+Requires a working directory, username and password.
+
+=item B<category-remove> <category>
+
+Remove a category.
+
+Requires a working directory, username and password.
+
+=back
+
+=head2 EXCHANGE COMMANDS
+
+=over 10
+
+=item B<exchange-fetch>
+
+Fetches all exchange rates.
+
+Requires a working directory.
+
+=item B<exchange-update> <currency>
+
+Returns the current Bitcoin price in <currency>
+
+Requires a working directory, username and password.
+
+=item B<exchange-validate> <currency>
+
+Validates that all currencies have sources.
+
+Requires a working directory.
+
+=back
+
+=head2 OTP COMMANDS
+
+=over 10
+
+=item B<otp-key-get>
+
+Returns the OPT key.
+
+Requires a working directory and username.
+
+=item B<otp-key-set> <key>
+
+Set the OPT key.
+
+Requires a working directory and username.
+
+=item B<otp-key-remove>
+
+Remove the OPT key.
+
+Requires a working directory and username.
+
+=item B<otp-auth-get>
+
+Returns the OPT Auth timeout.
+
+Requires a working directory, username and password.
+
+=item B<otp-auth-set> <timeout-sec>
+
+Sets the OPT Auth timeout.
+
+Requires a working directory, username and password.
+
+=item B<otp-auth-remove>
+
+Remove the OPT key.
+
+Requires a working directory, username and password.
+
+=item B<otp-reset-get>
+
+Returns the reset status for all accounts.
+
+Requires a working directory
+
+=item B<otp-reset-remove>
+
+Cancels an OTP reset timer.
+
+Requires a working directory, username and password.
+
+=back
+
+=head2 BitID COMMANDS
+
+=over 10
+
+=item B<bitid-login> <uri>
+
+Performs a BitID login to the specified URI.
+
+Requires a working directory, username and password.
+
+=item B<bitid-sign> <uri> <message> [<index>]
+
+Signs a message.
+
+Requires a working directory, username and password.
+
+=back
+
+=head2 PLUGIN COMMANDS
+
+=over 10
+
+=item B<plugin-get> <plugin> <key>
+
+Retrieves an item from the plugin key/value store.
+
+Requires a working directory, username and password.
+
+=item B<plugin-set> <plugin> <key> <value>
+
+Saves an item to the plugin key/value store.
+
+Requires a working directory, username and password.
+
+=item B<plugin-remove> <plugin> <key>
+
+Deletes an item from the plugin key/value store.
+
+Requires a working directory, username and password.
+
+=item B<plugin-clear> <plugin>
+
+Removes the entire key/value store for a particular plugin.
+
+Requires a working directory, username and password.
+
+=back
