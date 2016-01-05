@@ -112,7 +112,6 @@ using namespace abcd;
  * @param szRootDir                     The root directory for all files to be saved
  * @param szCaCertPath                  CA Certificate Path
  * @param szApiKeyHeader                API Key for the AirBitz login servers
- * @param szChainApiUserPwd             API key for sending transactions via chain.com
  * @param szHiddenBitzKey               Private key for Hiddenbits promotion
  * @param pData                         Pointer to data to be returned back in callback
  * @param pSeedData                     Pointer to data to seed the random number generator
@@ -122,7 +121,6 @@ using namespace abcd;
 tABC_CC ABC_Initialize(const char                   *szRootDir,
                        const char                   *szCaCertPath,
                        const char                   *szApiKeyHeader,
-                       const char                   *szChainApiUserPwd,
                        const char                   *szHiddenBitzKey,
                        const unsigned char          *pSeedData,
                        unsigned int                 seedLength,
@@ -136,14 +134,13 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
                      "The core library has already been initalized");
     ABC_CHECK_NULL(szRootDir);
     ABC_CHECK_NULL(szApiKeyHeader);
-    ABC_CHECK_NULL(szChainApiUserPwd);
     ABC_CHECK_NULL(szHiddenBitzKey);
     ABC_CHECK_NULL(pSeedData);
 
     {
         // Initialize the global context object:
         gContext.reset(new Context(szRootDir, szCaCertPath, szApiKeyHeader,
-                                   szChainApiUserPwd, szHiddenBitzKey));
+                                   szHiddenBitzKey));
 
         // initialize logging
         ABC_CHECK_NEW(debugInitialize());
