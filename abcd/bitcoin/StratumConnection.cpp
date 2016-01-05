@@ -14,7 +14,8 @@
 
 namespace abcd {
 
-constexpr std::chrono::milliseconds keepaliveTime(60000);
+constexpr std::chrono::seconds keepaliveTime(60);
+constexpr std::chrono::seconds timeout(10);
 
 struct RequestJson:
     public JsonObject
@@ -226,9 +227,7 @@ StratumConnection::wakeup(SleepTime &sleep)
 
     // We need to wake up every minute:
     auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                       now - lastKeepalive_);
-    if (keepaliveTime < elapsed)
+    if (lastKeepalive_ + keepaliveTime < now)
     {
         auto onError = [](Status status) { };
         auto onReply = [](const std::string &version)
@@ -238,10 +237,19 @@ StratumConnection::wakeup(SleepTime &sleep)
         version(onError, onReply);
 
         lastKeepalive_ = now;
-        elapsed = elapsed.zero();
+    }
+    sleep = std::chrono::duration_cast<SleepTime>(
+                lastKeepalive_ + keepaliveTime - now);
+
+    // Check the timeout:
+    if (pending_.size())
+    {
+        if (lastProgress_ + timeout < now)
+            return ABC_ERROR(ABC_CC_ServerError, "Connection timed out");
+        sleep = std::min(sleep, std::chrono::duration_cast<SleepTime>(
+                             lastProgress_ + timeout - now));
     }
 
-    sleep = keepaliveTime - elapsed;
     return Status();
 }
 
@@ -260,6 +268,10 @@ StratumConnection::sendMessage(const std::string &method, JsonPtr params,
     auto s = connection_.send(query.encode(true) + '\n');
     if (!s)
         return onError(s);
+
+    // Start the timeout if this is the first message in the queue:
+    if (pending_.empty())
+        lastProgress_ = std::chrono::steady_clock::now();
 
     // The message has been sent, so save the decoder:
     pending_[id] = Pending{ onError, decoder };
@@ -291,6 +303,7 @@ StratumConnection::handleMessage(const std::string &message)
         ; // TODO: Handle subscription updates
     }
 
+    lastProgress_ = std::chrono::steady_clock::now();
     return Status();
 }
 

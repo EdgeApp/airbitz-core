@@ -100,6 +100,9 @@ private:
     };
     std::map<unsigned, Pending> pending_;
 
+    // Timeout:
+    std::chrono::steady_clock::time_point lastProgress_;
+
     // Server heartbeat:
     std::chrono::steady_clock::time_point lastKeepalive_;
 
