@@ -1821,6 +1821,80 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_SpendSignTx(const char *szUserName,
+                        const char *szWalletUUID,
+                        tABC_SpendTarget *pSpend,
+                        char **pszRawTx,
+                        tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszRawTx);
+
+    {
+        ABC_GET_WALLET();
+
+        auto pInfo = static_cast<SendInfo *>(pSpend->pData);
+        pInfo->metadata.amountSatoshi = pSpend->amount;
+
+        DataChunk rawTx;
+        ABC_CHECK_NEW(spendSignTx(rawTx, *wallet, pInfo));
+        *pszRawTx = stringCopy(base16Encode(rawTx));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_SpendBroadcastTx(const char *szUserName,
+                             const char *szWalletUUID,
+                             tABC_SpendTarget *pSpend,
+                             char *szRawTx,
+                             tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szRawTx);
+
+    {
+        ABC_GET_WALLET();
+
+        auto pInfo = static_cast<SendInfo *>(pSpend->pData);
+        DataChunk rawTx;
+        ABC_CHECK_NEW(base16Decode(rawTx, szRawTx));
+
+        ABC_CHECK_NEW(spendBroadcastTx(*wallet, pInfo, rawTx));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_SpendSaveTx(const char *szUserName,
+                        const char *szWalletUUID,
+                        tABC_SpendTarget *pSpend,
+                        char *szRawTx,
+                        char **pszTxId,
+                        tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szRawTx);
+    ABC_CHECK_NULL(pszTxId);
+
+    {
+        ABC_GET_WALLET();
+
+        auto pInfo = static_cast<SendInfo *>(pSpend->pData);
+        DataChunk rawTx;
+        ABC_CHECK_NEW(base16Decode(rawTx, szRawTx));
+
+        std::string ntxid;
+        ABC_CHECK_NEW(spendSaveTx(*wallet, pInfo, rawTx, ntxid));
+        *pszTxId = stringCopy(ntxid);
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_SpendApprove(const char *szUserName,
                          const char *szWalletUUID,
                          tABC_SpendTarget *pSpend,
@@ -1835,8 +1909,13 @@ tABC_CC ABC_SpendApprove(const char *szUserName,
 
         auto pInfo = static_cast<SendInfo *>(pSpend->pData);
         pInfo->metadata.amountSatoshi = pSpend->amount;
+
+        DataChunk rawTx;
+        ABC_CHECK_NEW(spendSignTx(rawTx, *wallet, pInfo));
+        ABC_CHECK_NEW(spendBroadcastTx(*wallet, pInfo, rawTx));
+
         std::string ntxid;
-        ABC_CHECK_NEW(spendSend(*wallet, pInfo, ntxid));
+        ABC_CHECK_NEW(spendSaveTx(*wallet, pInfo, rawTx, ntxid));
         *pszTxId = stringCopy(ntxid);
     }
 

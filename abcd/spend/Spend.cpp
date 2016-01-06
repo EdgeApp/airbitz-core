@@ -95,7 +95,7 @@ spendCalculateMax(Wallet &self, SendInfo *pInfo, uint64_t &maxSatoshi)
 }
 
 Status
-spendSend(Wallet &self, SendInfo *pInfo, std::string &ntxidOut)
+spendSignTx(DataChunk &result, Wallet &self, SendInfo *pInfo)
 {
     Address changeAddress;
     ABC_CHECK(self.addresses.getNew(changeAddress));
@@ -115,6 +115,12 @@ spendSend(Wallet &self, SendInfo *pInfo, std::string &ntxidOut)
                  std::to_string(pInfo->metadata.amountSatoshi).c_str(),
                  bc::pretty(tx).c_str());
 
+    return Status();
+}
+
+Status
+spendBroadcastTx(Wallet &self, SendInfo *pInfo, DataSlice rawTx)
+{
     // Let the merchant broadcast the transaction:
     if (pInfo->paymentRequest)
     {
@@ -145,6 +151,19 @@ spendSend(Wallet &self, SendInfo *pInfo, std::string &ntxidOut)
 
     // Send to the network:
     ABC_CHECK(broadcastTx(self, rawTx));
+
+    return Status();
+}
+
+Status
+spendSaveTx(Wallet &self, SendInfo *pInfo, DataSlice rawTx,
+            std::string &ntxidOut)
+{
+    bc::transaction_type tx;
+    auto deserial = bc::make_deserializer(rawTx.begin(), rawTx.end());
+    bc::satoshi_load(deserial.iterator(), deserial.end(), tx);
+
+    // Save to the transaction cache:
     if (self.txdb.insert(tx, TxState::unconfirmed))
         watcherSave(self).log(); // Failure is not fatal
 

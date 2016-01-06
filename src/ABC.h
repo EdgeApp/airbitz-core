@@ -1042,7 +1042,35 @@ tABC_CC ABC_SpendGetMax(const char *szUserName,
                         tABC_Error *pError);
 
 /**
- * Sends a payment.
+ * Creates and signs a transaction.
+ */
+tABC_CC ABC_SpendSignTx(const char *szUserName,
+                        const char *szWalletUUID,
+                        tABC_SpendTarget *pSpend,
+                        char **pszRawTx,
+                        tABC_Error *pError);
+
+/**
+ * Broadcasts a transaction to the bitcoin network.
+ */
+tABC_CC ABC_SpendBroadcastTx(const char *szUserName,
+                             const char *szWalletUUID,
+                             tABC_SpendTarget *pSpend,
+                             char *szRawTx,
+                             tABC_Error *pError);
+
+/**
+ * Saves a transaction to the wallet database.
+ */
+tABC_CC ABC_SpendSaveTx(const char *szUserName,
+                        const char *szWalletUUID,
+                        tABC_SpendTarget *pSpend,
+                        char *szRawTx,
+                        char **pszTxId,
+                        tABC_Error *pError);
+
+/**
+ * Signs, broadcasts, and saves a payment.
  * @param szWalletUUID the funds source.
  */
 tABC_CC ABC_SpendApprove(const char *szUserName,
