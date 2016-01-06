@@ -107,8 +107,8 @@ spendSignTx(DataChunk &result, Wallet &self, SendInfo *pInfo)
     // Sign the transaction:
     KeyTable keys = self.addresses.keyTable();
     ABC_CHECK(signTx(tx, self, keys));
-    bc::data_chunk rawTx(satoshi_raw_size(tx));
-    bc::satoshi_save(tx, rawTx.begin());
+    result.resize(satoshi_raw_size(tx));
+    bc::satoshi_save(tx, result.begin());
 
     ABC_DebugLog("Change: %s, Amount: %s, Contents: %s",
                  changeAddress.address.c_str(),
