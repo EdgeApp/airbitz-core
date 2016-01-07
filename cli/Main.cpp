@@ -20,7 +20,6 @@ struct ConfigJson:
     public JsonObject
 {
     ABC_JSON_STRING(apiKey, "apiKey", nullptr)
-    ABC_JSON_STRING(chainKey, "chainKey", nullptr)
     ABC_JSON_STRING(hiddenBitzKey, "hiddenBitzKey", nullptr)
     ABC_JSON_STRING(workingDir, "workingDir", nullptr)
     ABC_JSON_STRING(username, "username", nullptr)
@@ -52,7 +51,6 @@ static Status run(int argc, char *argv[])
     ConfigJson json;
     ABC_CHECK(json.load(configPath()));
     ABC_CHECK(json.apiKeyOk());
-    ABC_CHECK(json.chainKeyOk());
     ABC_CHECK(json.hiddenBitzKeyOk());
 
     // Parse out the command-line options:
@@ -147,7 +145,6 @@ static Status run(int argc, char *argv[])
         ABC_CHECK_OLD(ABC_Initialize(workingDir.c_str(),
                                      CA_CERT,
                                      json.apiKey(),
-                                     json.chainKey(),
                                      json.hiddenBitzKey(),
                                      seed,
                                      sizeof(seed),

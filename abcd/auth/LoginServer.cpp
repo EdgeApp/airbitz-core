@@ -13,7 +13,7 @@
 #include "../crypto/Encoding.hpp"
 #include "../json/JsonObject.hpp"
 #include "../json/JsonArray.hpp"
-#include "../util/Util.hpp"
+#include "../util/Debug.hpp"
 #include <map>
 
 // For debug upload:

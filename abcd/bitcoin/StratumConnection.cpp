@@ -7,6 +7,7 @@
 
 #include "StratumConnection.hpp"
 #include "../crypto/Encoding.hpp"
+#include "../http/Uri.hpp"
 #include "../json/JsonArray.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/Debug.hpp"
@@ -14,7 +15,8 @@
 
 namespace abcd {
 
-constexpr std::chrono::milliseconds keepaliveTime(60000);
+constexpr std::chrono::seconds keepaliveTime(60);
+constexpr std::chrono::seconds timeout(10);
 
 struct RequestJson:
     public JsonObject
@@ -31,101 +33,94 @@ struct ReplyJson:
     ABC_JSON_VALUE(result, "result", JsonPtr);
 };
 
+StratumConnection::~StratumConnection()
+{
+    for (auto &i: pending_)
+        i.second.onError(ABC_ERROR(ABC_CC_Error, "Connection closed"));
+}
+
 void
-StratumConnection::version(
-    bc::client::obelisk_codec::error_handler onError,
-    VersionHandler onReply)
+StratumConnection::version(const StatusCallback &onError,
+                           const VersionHandler &onReply)
 {
     JsonArray params;
     params.append(json_string("2.5.4")); // Our version
     params.append(json_string("0.10")); // Protocol version
 
-    RequestJson query;
-    query.idSet(lastId++);
-    query.methodSet("server.version");
-    query.paramsSet(params);
-    connection_.send(query.encode(true) + '\n');
-
-    // Set up a decoder for the reply:
-    auto decoder = [onError, onReply](ReplyJson message)
+    auto decoder = [onReply](JsonPtr payload) -> Status
     {
-        auto payload = message.result().get();
-        if (!json_is_string(payload))
-        {
-            onError(std::make_error_code(std::errc::bad_message));
-        }
-        else
-        {
-            onReply(json_string_value(payload));
-        }
+        if (!json_is_string(payload.get()))
+            return ABC_ERROR(ABC_CC_JSONError, "Bad reply format");
+
+        onReply(json_string_value(payload.get()));
+        return Status();
     };
-    pending_[query.id()] = Pending{ decoder };
+
+    sendMessage("server.version", params, onError, decoder);
 }
 
 void
 StratumConnection::getTx(
-    bc::client::obelisk_codec::error_handler onError,
-    bc::client::obelisk_codec::fetch_transaction_handler onReply,
+    const bc::client::obelisk_codec::error_handler &onError,
+    const bc::client::obelisk_codec::fetch_transaction_handler &onReply,
     const bc::hash_digest &txid)
 {
     JsonArray params;
     params.append(json_string(bc::encode_hash(txid).c_str()));
 
-    RequestJson query;
-    query.idSet(lastId++);
-    query.methodSet("blockchain.transaction.get");
-    query.paramsSet(params);
-    connection_.send(query.encode(true) + '\n');
-
-    // Set up a decoder for the reply:
-    auto decoder = [onError, onReply](ReplyJson message)
+    auto errorShim = [onError](Status status)
     {
-        auto payload = message.result().get();
-        if (!json_is_string(payload))
-            return onError(std::make_error_code(std::errc::bad_message));
+        onError(std::make_error_code(std::errc::bad_message));
+    };
+
+    auto decoder = [onReply](JsonPtr payload) -> Status
+    {
+        if (!json_is_string(payload.get()))
+            return ABC_ERROR(ABC_CC_JSONError, "Bad reply format");
 
         bc::data_chunk rawTx;
-        if (!base16Decode(rawTx, json_string_value(payload)))
-            return onError(std::make_error_code(std::errc::bad_message));
+        if (!base16Decode(rawTx, json_string_value(payload.get())))
+            return ABC_ERROR(ABC_CC_ParseError, "Bad transaction format");
 
+        // Convert rawTx to bc::transaction_type:
+        bc::transaction_type tx;
         try
         {
-            // Convert rawTx to bc::transaction_type:
             auto deserial = bc::make_deserializer(rawTx.begin(), rawTx.end());
-            bc::transaction_type tx;
             bc::satoshi_load(deserial.iterator(), deserial.end(), tx);
-            onReply(tx);
         }
         catch (bc::end_of_stream)
         {
-            return onError(std::make_error_code(std::errc::bad_message));
+            return ABC_ERROR(ABC_CC_ParseError, "Bad transaction format");
         }
+
+        onReply(tx);
+        return Status();
     };
-    pending_[query.id()] = Pending{ decoder };
+
+    sendMessage("blockchain.transaction.get", params, errorShim, decoder);
 }
 
 void
 StratumConnection::getAddressHistory(
-    bc::client::obelisk_codec::error_handler onError,
-    bc::client::obelisk_codec::fetch_history_handler onReply,
+    const bc::client::obelisk_codec::error_handler &onError,
+    const bc::client::obelisk_codec::fetch_history_handler &onReply,
     const bc::payment_address &address, size_t fromHeight)
 {
     JsonArray params;
     params.append(json_string(address.encoded().c_str()));
 
-    RequestJson query;
-    query.idSet(lastId++);
-    query.methodSet("blockchain.address.get_history");
-    query.paramsSet(params);
-    connection_.send(query.encode(true) + '\n');
-
-    // Set up a decoder for the reply:
-    auto decoder = [onError, onReply](ReplyJson message)
+    auto errorShim = [onError](Status status)
     {
-        JsonArray payload(message.result());
+        onError(std::make_error_code(std::errc::bad_message));
+    };
+
+    auto decoder = [onReply](JsonPtr payload) -> Status
+    {
+        JsonArray arrayJson(payload);
 
         bc::client::history_list history;
-        size_t size = payload.size();
+        size_t size = arrayJson.size();
         history.reserve(size);
         for (size_t i = 0; i < size; i++)
         {
@@ -136,11 +131,11 @@ StratumConnection::getAddressHistory(
                 ABC_JSON_STRING(txid, "tx_hash", nullptr)
                 ABC_JSON_INTEGER(height, "height", 0)
             };
-            HistoryJson json(payload[i]);
+            HistoryJson json(arrayJson[i]);
 
             bc::hash_digest hash;
             if (!json.txidOk() || !bc::decode_hash(hash, json.txid()))
-                return onError(std::make_error_code(std::errc::bad_message));
+                return ABC_ERROR(ABC_CC_Error, "Bad txid");
 
             bc::client::history_row row;
             row.output.hash = hash;
@@ -148,38 +143,81 @@ StratumConnection::getAddressHistory(
             row.spend.hash = bc::null_hash;
             history.push_back(row);
         }
+
         onReply(history);
+        return Status();
     };
-    pending_[query.id()] = Pending{ decoder };
+
+    sendMessage("blockchain.address.get_history", params, errorShim, decoder);
+}
+
+void
+StratumConnection::sendTx(const StatusCallback &onDone, DataSlice tx)
+{
+    JsonArray params;
+    params.append(json_string(base16Encode(tx).c_str()));
+
+    const auto hash = bc::encode_hash(bc::bitcoin_hash(tx));
+    auto decoder = [onDone, hash](JsonPtr payload) -> Status
+    {
+        if (!json_is_string(payload.get()))
+            return ABC_ERROR(ABC_CC_Error, "Bad reply format");
+
+        const auto message = json_string_value(payload.get());
+        if (message != hash)
+            return ABC_ERROR(ABC_CC_Error, message);
+
+        onDone(Status());
+        return Status();
+    };
+
+    sendMessage("blockchain.transaction.broadcast", params, onDone, decoder);
 }
 
 void
 StratumConnection::getHeight(
-    bc::client::obelisk_codec::error_handler onError,
-    HeightHandler onReply)
+    const bc::client::obelisk_codec::error_handler &onError,
+    const HeightHandler &onReply)
 {
-    RequestJson query;
-    query.idSet(lastId++);
-    query.methodSet("blockchain.numblocks.subscribe");
-    connection_.send(query.encode(true) + '\n');
-
-    // Set up a decoder for the reply:
-    auto decoder = [onError, onReply](ReplyJson message)
+    auto errorShim = [onError](Status status)
     {
-        auto payload = message.result().get();
-        if (!json_is_number(payload))
-            onError(std::make_error_code(std::errc::bad_message));
-        else
-            onReply(json_number_value(payload));
+        onError(std::make_error_code(std::errc::bad_message));
     };
-    pending_[query.id()] = Pending{ decoder };
+
+    auto decoder = [onReply](JsonPtr payload) -> Status
+    {
+        if (!json_is_number(payload.get()))
+            return ABC_ERROR(ABC_CC_Error, "Bad reply format");
+
+        onReply(json_number_value(payload.get()));
+        return Status();
+    };
+
+    sendMessage("blockchain.numblocks.subscribe", JsonPtr(),
+                errorShim, decoder);
 }
 
 Status
-StratumConnection::connect(const std::string &hostname, int port)
+StratumConnection::connect(const std::string &rawUri)
 {
-    ABC_CHECK(connection_.connect(hostname, port));
+    Uri uri;
+    if (!uri.decode(rawUri))
+        return ABC_ERROR(ABC_CC_ParseError, "Bad URI - wrong format");
+
+    if (stratumScheme != uri.scheme())
+        return ABC_ERROR(ABC_CC_ParseError, "Bad URI - wrong scheme");
+
+    auto server = uri.authority();
+    auto last = server.find(':');
+    if (std::string::npos == last)
+        return ABC_ERROR(ABC_CC_ParseError, "Bad URI - no port");
+    auto serverName = server.substr(0, last);
+    auto serverPort = server.substr(last + 1, std::string::npos);
+
+    // Connect to the server:
+    ABC_CHECK(connection_.connect(serverName, atoi(serverPort.c_str())));
     lastKeepalive_ = std::chrono::steady_clock::now();
+
     return Status();
 }
 
@@ -206,11 +244,9 @@ StratumConnection::wakeup(SleepTime &sleep)
 
     // We need to wake up every minute:
     auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                       now - lastKeepalive_);
-    if (keepaliveTime < elapsed)
+    if (lastKeepalive_ + keepaliveTime < now)
     {
-        auto onError = [](std::error_code ec) { };
+        auto onError = [](Status status) { };
         auto onReply = [](const std::string &version)
         {
             ABC_DebugLog("Stratum keepalive completed");
@@ -218,11 +254,44 @@ StratumConnection::wakeup(SleepTime &sleep)
         version(onError, onReply);
 
         lastKeepalive_ = now;
-        elapsed = elapsed.zero();
+    }
+    sleep = std::chrono::duration_cast<SleepTime>(
+                lastKeepalive_ + keepaliveTime - now);
+
+    // Check the timeout:
+    if (pending_.size())
+    {
+        if (lastProgress_ + timeout < now)
+            return ABC_ERROR(ABC_CC_ServerError, "Connection timed out");
+        sleep = std::min(sleep, std::chrono::duration_cast<SleepTime>(
+                             lastProgress_ + timeout - now));
     }
 
-    sleep = keepaliveTime - elapsed;
     return Status();
+}
+
+void
+StratumConnection::sendMessage(const std::string &method, JsonPtr params,
+                               const StatusCallback &onError,
+                               const Decoder &decoder)
+{
+    const auto id = lastId++;
+
+    RequestJson query;
+    query.idSet(id);
+    query.methodSet(method);
+    query.paramsSet(params);
+
+    auto s = connection_.send(query.encode(true) + '\n');
+    if (!s)
+        return onError(s);
+
+    // Start the timeout if this is the first message in the queue:
+    if (pending_.empty())
+        lastProgress_ = std::chrono::steady_clock::now();
+
+    // The message has been sent, so save the decoder:
+    pending_[id] = Pending{ onError, decoder };
 }
 
 Status
@@ -235,7 +304,9 @@ StratumConnection::handleMessage(const std::string &message)
         auto i = pending_.find(json.id());
         if (pending_.end() != i)
         {
-            i->second.decoder(json);
+            auto s = i->second.decoder(json.result());
+            if (!s)
+                i->second.onError(s);
             pending_.erase(i);
             return Status();
         }
@@ -249,6 +320,7 @@ StratumConnection::handleMessage(const std::string &message)
         ; // TODO: Handle subscription updates
     }
 
+    lastProgress_ = std::chrono::steady_clock::now();
     return Status();
 }
 

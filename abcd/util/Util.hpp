@@ -90,11 +90,6 @@ structAlloc()
         err->code = set_code; \
     }
 
-#define ABC_CHECK_SYS(test, name) \
-    if (!(test)) { \
-        ABC_RET_ERROR(ABC_CC_SysError, "System function " name " failed."); \
-    } else \
-
 #define ABC_RET_ERROR(err, desc) \
     { \
         if (pError) \
@@ -131,20 +126,6 @@ structAlloc()
             ABC_LOG_ERROR(cc, #err); \
             goto exit; \
         } \
-    }
-
-#define ABC_PRINT_ERR(err) \
-    { \
-        if (err) \
-        { \
-            printf("Desc: %s, Func: %s, File: %s, Line: %d",  \
-                    pError->szDescription, \
-                    pError->szSourceFunc,\
-                    pError->szSourceFile, \
-                    pError->nSourceLine \
-            ); \
-        } \
-        printf("\n"); \
     }
 
 #define ABC_STR_NEW(ptr, count) \

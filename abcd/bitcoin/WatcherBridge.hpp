@@ -43,6 +43,7 @@
 
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
+#include <functional>
 
 namespace libbitcoin {
 struct transaction_type;
@@ -50,6 +51,7 @@ struct transaction_type;
 
 namespace abcd {
 
+typedef std::function<void(Status)> StatusCallback;
 class Wallet;
 
 Status
@@ -92,7 +94,7 @@ tABC_CC ABC_BridgePrioritizeAddress(Wallet &self,
                                     tABC_Error *pError);
 
 Status
-watcherSend(Wallet &self, DataSlice tx);
+watcherSend(Wallet &self, StatusCallback status, DataSlice rawTx);
 
 tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
                                      tABC_TxInfo **aTransactions,

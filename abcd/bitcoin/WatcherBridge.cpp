@@ -224,6 +224,10 @@ tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
 
     watcherInfo->watcher.loop();
 
+    watcherInfo->watcher.set_quiet_callback(nullptr);
+    watcherInfo->watcher.set_height_callback(nullptr);
+    watcherInfo->watcher.set_tx_callback(nullptr);
+
 exit:
     return cc;
 }
@@ -279,12 +283,12 @@ exit:
 }
 
 Status
-watcherSend(Wallet &self, DataSlice tx)
+watcherSend(Wallet &self, StatusCallback status, DataSlice tx)
 {
     Watcher *watcher = nullptr;
     ABC_CHECK(watcherFind(watcher, self));
 
-    watcher->sendTx(tx);
+    watcher->sendTx(status, tx);
 
     return Status();
 }

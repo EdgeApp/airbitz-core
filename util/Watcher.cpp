@@ -5,6 +5,7 @@
 
 #include "ReadLine.hpp"
 #include "../abcd/bitcoin/TxUpdater.hpp"
+#include "../abcd/crypto/Encoding.hpp"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -197,18 +198,14 @@ void Cli::cmd_tx_send(std::stringstream &args)
 {
     std::string arg;
     args >> arg;
-    bc::data_chunk data = bc::decode_hex(arg);
-    bc::transaction_type tx;
-    try
+    abcd::DataChunk tx;
+    abcd::base16Decode(tx, arg);
+
+    auto onDone = [](abcd::Status s)
     {
-        bc::satoshi_load(data.begin(), data.end(), tx);
-    }
-    catch (bc::end_of_stream)
-    {
-        std::cout << "not a valid transaction" << std::endl;
-        return;
-    }
-    updater_.send(tx);
+        std::cout << "broadcast done: " << s << std::endl;
+    };
+    updater_.send(onDone, tx);
 }
 
 void Cli::cmd_watch(std::stringstream &args)

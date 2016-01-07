@@ -60,9 +60,13 @@ TxUpdater::disconnect()
 {
     wantConnection = false;
 
-    for (auto &i: connections_)
-        delete i;
+    const auto temp = connections_;
     connections_.clear();
+
+    // The query_done callback might fire while doing these deletions,
+    // so the connections_ array must already be cleared:
+    for (auto &i: temp)
+        delete i;
 
     ABC_DebugLog("Disconnected from all servers.");
 }
@@ -192,9 +196,10 @@ void TxUpdater::watch(const bc::payment_address &address,
 
 }
 
-void TxUpdater::send(bc::transaction_type tx)
+void
+TxUpdater::send(StatusCallback status, DataSlice tx)
 {
-    send_tx(tx);
+    sendTx(status, tx);
 }
 
 AddressSet TxUpdater::watching()
@@ -349,15 +354,7 @@ TxUpdater::connectTo(long index)
         // Stratum server:
         untriedStratum_.erase(index);
         bconn->type = ConnectionType::stratum;
-
-        // Extract the server name and port:
-        auto last = server.find(":", STRATUM_PREFIX_LENGTH);
-        std::string serverName = server.substr(STRATUM_PREFIX_LENGTH,
-                                               last - STRATUM_PREFIX_LENGTH);
-        std::string serverPort = server.substr(last + 1, std::string::npos);
-        int port = atoi(serverPort.c_str());
-
-        ABC_CHECK(bconn->stratumCodec.connect(serverName, port));
+        ABC_CHECK(bconn->stratumCodec.connect(server));
     }
     else
     {
@@ -675,23 +672,21 @@ void TxUpdater::get_index(bc::hash_digest txid, int server_index)
     }
 }
 
-void TxUpdater::send_tx(const bc::transaction_type &tx)
+void
+TxUpdater::sendTx(StatusCallback status, DataSlice tx)
 {
     for (auto &it: connections_)
     {
-        // TODO: support send_tx for Stratum
+        // Pick one (and only one) stratum server for the broadcast:
         if (ConnectionType::stratum == it->type)
-            continue;
-
-        auto on_error = [](const std::error_code &error) {};
-
-        auto on_done = [this, tx]()
         {
-            db_.unconfirmed(bc::hash_transaction(tx));
-        };
-
-        it->bc_codec.broadcast_transaction(on_error, on_done, tx);
+            it->stratumCodec.sendTx(status, tx);
+            return;
+        }
     }
+
+    // If we get here, there are no stratum connections:
+    status(ABC_ERROR(ABC_CC_Error, "No stratum connections"));
 }
 
 void TxUpdater::query_address(const bc::payment_address &address,

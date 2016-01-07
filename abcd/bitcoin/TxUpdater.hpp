@@ -6,13 +6,16 @@
 #ifndef ABCD_BITCOIN_TX_UPDATER_HPP
 #define ABCD_BITCOIN_TX_UPDATER_HPP
 
+#include "StratumConnection.hpp"
 #include "TxDatabase.hpp"
 #include "../util/Status.hpp"
 #include "../../minilibs/libbitcoin-client/client.hpp"
+#include <functional>
 #include <unordered_map>
-#include "StratumConnection.hpp"
 
 namespace abcd {
+
+typedef std::function<void(Status)> StatusCallback;
 
 /**
  * Interface containing the events the updater can trigger.
@@ -53,7 +56,7 @@ public:
     Status connect();
     void watch(const bc::payment_address &address,
                bc::client::sleep_time poll);
-    void send(bc::transaction_type tx);
+    void send(StatusCallback status, DataSlice tx);
 
     AddressSet watching();
 
@@ -105,7 +108,7 @@ private:
     void get_tx(bc::hash_digest txid, bool want_inputs, int idx);
     void get_tx_mem(bc::hash_digest txid, bool want_inputs, int idx);
     void get_index(bc::hash_digest txid, int idx);
-    void send_tx(const bc::transaction_type &tx);
+    void sendTx(StatusCallback status, DataSlice tx);
     void query_address(const bc::payment_address &address, int server_index);
 
     TxDatabase &db_;
