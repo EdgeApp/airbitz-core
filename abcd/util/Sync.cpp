@@ -9,8 +9,10 @@
 #include "AutoFree.hpp"
 #include "Debug.hpp"
 #include "FileIO.hpp"
+#include "../Context.hpp"
 #include "../General.hpp"
 #include "../../minilibs/git-sync/sync.h"
+#include <assert.h>
 #include <stdlib.h>
 #include <mutex>
 
@@ -156,6 +158,10 @@ syncRepo(const std::string &syncDir, const std::string &syncKey, bool &dirty)
 
     if (need_push)
         ABC_CHECK_GIT(sync_push(repo, url.c_str()));
+
+    // If this fails, the app has been shut down, leaving us for dead.
+    // We will crash anyhow, but this at least makes it official:
+    assert(gContext);
 
     dirty = !!files_changed;
     return Status();
