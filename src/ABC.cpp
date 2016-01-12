@@ -105,27 +105,13 @@ using namespace abcd;
 /** Helper macro for ABC_GetCurrencies. */
 #define CURRENCY_GUI_ROW(code, number, name) {#code, number, name, ""},
 
-/**
- * Initialize the AirBitz Core library.
- *
- * The root directory for all file storage is set in this function.
- *
- * @param szRootDir                     The root directory for all files to be saved
- * @param szCaCertPath                  CA Certificate Path
- * @param szApiKeyHeader                API Key for the AirBitz login servers
- * @param szHiddenBitzKey               Private key for Hiddenbits promotion
- * @param pData                         Pointer to data to be returned back in callback
- * @param pSeedData                     Pointer to data to seed the random number generator
- * @param seedLength                    Length of the seed data
- * @param pError                        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_Initialize(const char                   *szRootDir,
-                       const char                   *szCaCertPath,
-                       const char                   *szApiKeyHeader,
-                       const char                   *szHiddenBitzKey,
-                       const unsigned char          *pSeedData,
-                       unsigned int                 seedLength,
-                       tABC_Error                   *pError)
+tABC_CC ABC_Initialize(const char               *szRootDir,
+                       const char               *szCaCertPath,
+                       const char               *szApiKey,
+                       const char               *szHiddenBitzKey,
+                       const unsigned char      *pSeedData,
+                       unsigned int             seedLength,
+                       tABC_Error               *pError)
 {
     // Cannot use ABC_PROLOG - different initialization semantics
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -134,13 +120,13 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_ASSERT(!gContext, ABC_CC_Reinitialization,
                      "The core library has already been initalized");
     ABC_CHECK_NULL(szRootDir);
-    ABC_CHECK_NULL(szApiKeyHeader);
+    ABC_CHECK_NULL(szApiKey);
     ABC_CHECK_NULL(szHiddenBitzKey);
     ABC_CHECK_NULL(pSeedData);
 
     {
         // Initialize the global context object:
-        gContext.reset(new Context(szRootDir, szCaCertPath, szApiKeyHeader,
+        gContext.reset(new Context(szRootDir, szCaCertPath, szApiKey,
                                    szHiddenBitzKey));
 
         // initialize logging

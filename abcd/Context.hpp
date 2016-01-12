@@ -20,11 +20,11 @@ class Context
 {
 public:
     Context(const std::string &rootDir, const std::string &certPath,
-            const std::string &apiKeyHeader, const std::string &hiddenBitzKey);
+            const std::string &apiKey, const std::string &hiddenBitzKey);
 
     const std::string &rootDir() const { return rootDir_; }
     const std::string &certPath() const { return certPath_; }
-    const std::string &apiKeyHeader() const { return apiKeyHeader_; }
+    const std::string &apiKey() const { return apiKey_; }
     const std::string &hiddenBitzKey() const { return hiddenBitzKey_; }
     std::string accountsDir() const;
     std::string walletsDir() const { return rootDir_ + "Wallets/"; }
@@ -32,7 +32,7 @@ public:
 private:
     const std::string rootDir_;
     const std::string certPath_;
-    const std::string apiKeyHeader_;
+    const std::string apiKey_;
     const std::string hiddenBitzKey_;
 
 public:
