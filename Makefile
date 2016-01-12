@@ -88,6 +88,14 @@ ifneq (, $(shell which astyle))
 	--dry-run | sed -n '/Formatted/s/Formatted/Needs formatting:/p'
 endif
 
+doc: cli/doc/abc-cli.html cli/doc/abc-cli.1
+
+cli/doc/abc-cli.html: cli/doc/abc-cli.pod
+	$(RUN) pod2html --infile=$< --outfile=$@ --noindex
+
+cli/doc/abc-cli.1: cli/doc/abc-cli.pod
+	$(RUN) pod2man $< $@
+
 clean:
 	$(RM) -r $(WORK_DIR) codegen
 
