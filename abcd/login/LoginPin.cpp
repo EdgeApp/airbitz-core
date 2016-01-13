@@ -8,8 +8,8 @@
 #include "LoginPin.hpp"
 #include "Lobby.hpp"
 #include "Login.hpp"
-#include "LoginDir.hpp"
 #include "LoginPackages.hpp"
+#include "../Context.hpp"
 #include "../auth/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
@@ -47,9 +47,11 @@ loginPinExists(bool &result, const std::string &username)
 {
     std::string fixed;
     ABC_CHECK(Lobby::fixUsername(fixed, username));
+    std::string dir;
+    ABC_CHECK(gContext->paths.accountDir(dir, fixed));
 
     PinLocal local;
-    result = !!local.load(loginDirFind(fixed) + PIN_FILENAME);
+    result = !!local.load(dir + PIN_FILENAME);
     return Status();
 }
 

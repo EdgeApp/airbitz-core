@@ -6,8 +6,8 @@
  */
 
 #include "../Command.hpp"
+#include "../../abcd/Context.hpp"
 #include "../../abcd/login/Lobby.hpp"
-#include "../../abcd/login/LoginDir.hpp"
 #include "../../abcd/login/Otp.hpp"
 #include <iostream>
 
@@ -101,7 +101,7 @@ COMMAND(InitLevel::context, OtpResetGet, "otp-reset-get",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     std::list<std::string> result;
-    ABC_CHECK(otpResetGet(result, loginDirList()));
+    ABC_CHECK(otpResetGet(result, gContext->paths.accountList()));
     for (auto &i: result)
         std::cout << i << std::endl;
 

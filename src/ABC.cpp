@@ -52,7 +52,6 @@
 #include "../abcd/login/Bitid.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
-#include "../abcd/login/LoginDir.hpp"
 #include "../abcd/login/LoginPackages.hpp"
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
@@ -249,14 +248,12 @@ tABC_CC ABC_AccountDelete(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
 
     {
-        std::string username;
-        ABC_CHECK_NEW(Lobby::fixUsername(username, szUserName));
+        std::string fixed;
+        ABC_CHECK_NEW(Lobby::fixUsername(fixed, szUserName));
+        std::string dir;
+        ABC_CHECK_NEW(gContext->paths.accountDir(dir, fixed));
 
-        std::string directory;
-        directory = loginDirFind(username);
-        ABC_CHECK_ASSERT(!directory.empty(), ABC_CC_AccountDoesNotExist,
-                         "Account not found on disk");
-        ABC_CHECK_NEW(fileDelete(directory));
+        ABC_CHECK_NEW(fileDelete(dir));
     }
 
 exit:
@@ -457,7 +454,7 @@ tABC_CC ABC_OtpResetGet(char **pszUsernames,
 
     {
         std::list<std::string> result;
-        ABC_CHECK_NEW(otpResetGet(result, loginDirList()));
+        ABC_CHECK_NEW(otpResetGet(result, gContext->paths.accountList()));
 
         std::string out;
         for (auto i: result)
@@ -1121,7 +1118,7 @@ tABC_CC ABC_ListAccounts(char **pszUserNames,
     ABC_CHECK_NULL(pszUserNames);
 
     {
-        auto list = loginDirList();
+        auto list = gContext->paths.accountList();
 
         std::string out;
         for (const auto &username: list)

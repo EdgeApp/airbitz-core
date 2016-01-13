@@ -6,8 +6,8 @@
  */
 
 #include "Lobby.hpp"
-#include "LoginDir.hpp"
 #include "LoginPackages.hpp"
+#include "../Context.hpp"
 #include "../auth/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../util/Debug.hpp"
@@ -44,7 +44,12 @@ Status
 Lobby::dirCreate()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    ABC_CHECK(loginDirCreate(dir_, username_));
+
+    // We don't need to do anything if our directory already exists:
+    if (!dir_.empty())
+        return Status();
+
+    ABC_CHECK(gContext->paths.accountDirNew(dir_, username_));
     ABC_CHECK(otpKeySave());
     return Status();
 }
@@ -119,7 +124,9 @@ Lobby::init(const std::string &username)
 {
     // Set up identity:
     ABC_CHECK(fixUsername(username_, username));
-    dir_ = loginDirFind(username_);
+
+    // Failure is acceptable:
+    gContext->paths.accountDir(dir_, username_);
 
     // Create authId:
     // TODO: Make this lazy!
