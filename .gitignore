@@ -9,3 +9,5 @@
 /codegen
 *.idea*
 *CMakeLists*
+pod2htmd.tmp
+
