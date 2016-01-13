@@ -38,7 +38,7 @@ tABC_CC ABC_LoginPasswordOk(Login &login,
  * Returns true if the logged-in account has a password.
  */
 Status
-passwordExists(bool &result, Login &login);
+passwordExists(bool &result, const Lobby &lobby);
 
 } // namespace abcd
 

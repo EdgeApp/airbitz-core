@@ -212,10 +212,10 @@ exit:
 }
 
 Status
-passwordExists(bool &result, Login &login)
+passwordExists(bool &result, const Lobby &lobby)
 {
     LoginPackage loginPackage;
-    ABC_CHECK(loginPackage.load(login.lobby.loginPackageName()));
+    ABC_CHECK(loginPackage.load(lobby.loginPackageName()));
 
     result = !!loginPackage.passwordBox().get();
     return Status();

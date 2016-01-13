@@ -330,12 +330,16 @@ tABC_CC ABC_PasswordExists(const char *szUserName,
                            tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szUserName);
 
     {
-        ABC_GET_LOGIN();
+        // We avoid the cache, which is super-expensive (scrypt).
+        // We do this so the check can run on non-logged-in accounts:
+        std::shared_ptr<Lobby> lobby;
+        ABC_CHECK_NEW(Lobby::create(lobby, szUserName));
 
         bool out;
-        ABC_CHECK_NEW(passwordExists(out, *login));
+        ABC_CHECK_NEW(passwordExists(out, *lobby));
         *pExists = out;
     }
 
