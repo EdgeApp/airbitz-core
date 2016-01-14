@@ -51,7 +51,7 @@ cacheLoginNew(std::shared_ptr<Login> &result,
  */
 Status
 cacheLoginPassword(std::shared_ptr<Login> &result,
-                   const char *szUserName, const char *szPassword);
+                   const char *szUserName, const std::string &password);
 
 /**
  * Logs the user in with their recovery answers, if necessary.

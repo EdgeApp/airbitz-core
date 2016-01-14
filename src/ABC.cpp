@@ -315,7 +315,7 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
 
     {
         ABC_GET_LOGIN();
-        ABC_CHECK_RET(ABC_LoginPasswordOk(*login, szPassword, pOk, pError));
+        ABC_CHECK_NEW(loginPasswordOk(*pOk, *login, szPassword));
     }
 
 exit:
@@ -339,7 +339,7 @@ tABC_CC ABC_PasswordExists(const char *szUserName,
         ABC_CHECK_NEW(Lobby::create(lobby, szUserName));
 
         bool out;
-        ABC_CHECK_NEW(passwordExists(out, *lobby));
+        ABC_CHECK_NEW(loginPasswordExists(out, *lobby));
         *pExists = out;
     }
 
@@ -1312,7 +1312,7 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
 
     {
         ABC_GET_LOGIN();
-        ABC_CHECK_RET(ABC_LoginPasswordSet(*login, szNewPassword, pError));
+        ABC_CHECK_NEW(loginPasswordSet(*login, szNewPassword));
     }
 
 exit:
@@ -1349,7 +1349,7 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     {
         std::shared_ptr<Login> login;
         ABC_CHECK_NEW(cacheLoginRecovery(login, szUserName, szRecoveryAnswers));
-        ABC_CHECK_RET(ABC_LoginPasswordSet(*login, szNewPassword, pError));
+        ABC_CHECK_NEW(loginPasswordSet(*login, szNewPassword));
     }
 
 exit:
