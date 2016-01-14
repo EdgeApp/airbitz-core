@@ -58,7 +58,7 @@ COMMAND(InitLevel::wallet, CliWalletDecrypt, "wallet-decrypt",
     const auto filename = argv[0];
 
     JsonBox box;
-    ABC_CHECK(box.load(session.wallet->syncDir() + filename));
+    ABC_CHECK(box.load(session.wallet->paths.syncDir() + filename));
 
     DataChunk data;
     ABC_CHECK(box.decrypt(data, session.wallet->dataKey()));
@@ -76,7 +76,7 @@ COMMAND(InitLevel::wallet, CliWalletEncrypt, "wallet-encrypt",
     const auto filename = argv[0];
 
     DataChunk contents;
-    ABC_CHECK(fileLoad(contents, session.wallet->syncDir() + filename));
+    ABC_CHECK(fileLoad(contents, session.wallet->paths.syncDir() + filename));
 
     JsonBox box;
     ABC_CHECK(box.encrypt(contents, session.wallet->dataKey()));

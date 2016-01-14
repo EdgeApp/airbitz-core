@@ -102,7 +102,7 @@ mainBranch(const Wallet &wallet)
 
 AddressDb::AddressDb(Wallet &wallet):
     wallet_(wallet),
-    dir_(wallet.syncDir() + "Addresses/")
+    dir_(wallet.paths.addressesDir())
 {
 }
 

@@ -7,6 +7,7 @@
 
 #include "RootPaths.hpp"
 #include "AccountPaths.hpp"
+#include "WalletPaths.hpp"
 #include "bitcoin/Testnet.hpp"
 #include "json/JsonObject.hpp"
 #include "util/FileIO.hpp"
@@ -138,5 +139,12 @@ RootPaths::accountDirNew(AccountPaths &result, const std::string &username)
     result = account;
     return Status();
 }
+
+WalletPaths
+RootPaths::walletDir(const std::string &id)
+{
+    return WalletPaths(walletsDir() + id + '/');
+}
+
 
 } // namespace abcd

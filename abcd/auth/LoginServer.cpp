@@ -17,10 +17,9 @@
 #include <map>
 
 // For debug upload:
+#include "../WalletPaths.hpp"
 #include "../account/Account.hpp"
-#include "../bitcoin/WatcherBridge.hpp"
 #include "../util/FileIO.hpp"
-#include "../../src/LoginShim.hpp"
 
 namespace abcd {
 
@@ -653,11 +652,9 @@ loginServerUploadLogs(const Account *account)
         auto ids = account->wallets.list();
         for (const auto &id: ids)
         {
-            std::shared_ptr<Wallet> wallet;
-            if (cacheWallet(wallet, nullptr, id.c_str()))
+            DataChunk watchData;
+            if (fileLoad(watchData, WalletPaths(id).watcherPath()))
             {
-                DataChunk watchData;
-                ABC_CHECK(fileLoad(watchData, watcherPath(*wallet)));
                 jsonArray.append(
                     json_string(base64Encode(watchData).c_str()));
             }

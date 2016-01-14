@@ -36,9 +36,6 @@ watcherDeleteCache(Wallet &self);
 Status
 watcherSave(Wallet &self);
 
-std::string
-watcherPath(Wallet &self);
-
 Status
 bridgeSweepKey(Wallet &self, DataSlice key, bool compressed);
 

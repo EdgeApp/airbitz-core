@@ -90,7 +90,7 @@ TxJson::unpack(Tx &result)
 
 TxMetaDb::TxMetaDb(const Wallet &wallet):
     wallet_(wallet),
-    dir_(wallet.syncDir() + "Transactions/")
+    dir_(wallet.paths.txsDir())
 {
 }
 

@@ -87,7 +87,7 @@ watcherFind(Watcher *&result, const Wallet &self)
 Status
 watcherDeleteCache(Wallet &self)
 {
-    ABC_CHECK(fileDelete(watcherPath(self)));
+    ABC_CHECK(fileDelete(self.paths.watcherPath()));
     return Status();
 }
 
@@ -95,15 +95,9 @@ Status
 watcherSave(Wallet &self)
 {
     auto data = self.txdb.serialize();
-    ABC_CHECK(fileSave(data, watcherPath(self)));
+    ABC_CHECK(fileSave(data, self.paths.watcherPath()));
 
     return Status();
-}
-
-std::string
-watcherPath(Wallet &self)
-{
-    return self.dir() + "watcher.ser";
 }
 
 Status

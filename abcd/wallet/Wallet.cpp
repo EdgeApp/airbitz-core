@@ -22,9 +22,6 @@
 
 namespace abcd {
 
-#define WALLET_CURRENCY_FILENAME "Currency.json"
-#define WALLET_NAME_FILENAME "WalletName.json"
-
 struct WalletJson:
     public JsonObject
 {
@@ -60,7 +57,7 @@ Wallet::create(std::shared_ptr<Wallet> &result, Account &account,
 
     // Load the transaction cache (failure is acceptable):
     DataChunk data;
-    if (fileLoad(data, watcherPath(*out)).log())
+    if (fileLoad(data, out->paths.watcherPath()).log())
         out->txdb.load(data).log();
 
     result = std::move(out);
@@ -111,7 +108,7 @@ Wallet::currencySet(int currency)
     currency_ = currency;
     CurrencyJson currencyJson;
     ABC_CHECK(currencyJson.currencySet(currency));
-    ABC_CHECK(currencyJson.save(syncDir() + WALLET_CURRENCY_FILENAME, dataKey()));
+    ABC_CHECK(currencyJson.save(paths.currencyPath(), dataKey()));
 
     return Status();
 }
@@ -124,7 +121,7 @@ Wallet::nameSet(const std::string &name)
     name_ = name;
     NameJson json;
     ABC_CHECK(json.nameSet(name));
-    ABC_CHECK(json.save(syncDir() + WALLET_NAME_FILENAME, dataKey()));
+    ABC_CHECK(json.save(paths.namePath(), dataKey()));
 
     return Status();
 }
@@ -170,7 +167,7 @@ Wallet::balanceDirty()
 Status
 Wallet::sync(bool &dirty)
 {
-    ABC_CHECK(syncRepo(syncDir(), syncKey_, dirty));
+    ABC_CHECK(syncRepo(paths.syncDir(), syncKey_, dirty));
     if (dirty)
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -182,9 +179,9 @@ Wallet::sync(bool &dirty)
 
 Wallet::Wallet(Account &account, const std::string &id):
     account(account),
+    paths(gContext->paths.walletDir(id)),
     parent_(account.shared_from_this()),
     id_(id),
-    dir_(gContext->paths.walletDir(id)),
     balanceDirty_(true),
     addresses(*this),
     txs(*this),
@@ -204,9 +201,8 @@ Wallet::createNew(const std::string &name, int currency)
 
     // Create the sync directory:
     ABC_CHECK(fileEnsureDir(gContext->paths.walletsDir()));
-    ABC_CHECK(fileEnsureDir(dir()));
-    ABC_CHECK(fileEnsureDir(syncDir()));
-    ABC_CHECK(syncMakeRepo(syncDir()));
+    ABC_CHECK(fileEnsureDir(paths.dir()));
+    ABC_CHECK(syncMakeRepo(paths.syncDir()));
 
     // Populate the sync directory:
     ABC_CHECK(currencySet(currency));
@@ -216,7 +212,7 @@ Wallet::createNew(const std::string &name, int currency)
     // Push the wallet to the server:
     bool dirty = false;
     ABC_CHECK(loginServerWalletCreate(account.login, syncKey_));
-    ABC_CHECK(syncRepo(syncDir(), syncKey_, dirty));
+    ABC_CHECK(syncRepo(paths.syncDir(), syncKey_, dirty));
     ABC_CHECK(loginServerWalletActivate(account.login, syncKey_));
 
     // If everything worked, add the wallet to the account:
@@ -251,18 +247,18 @@ Status
 Wallet::loadSync()
 {
     ABC_CHECK(fileEnsureDir(gContext->paths.walletsDir()));
-    ABC_CHECK(fileEnsureDir(dir()));
-    ABC_CHECK(syncEnsureRepo(syncDir(), dir() + "tmp/", syncKey_));
+    ABC_CHECK(fileEnsureDir(paths.dir()));
+    ABC_CHECK(syncEnsureRepo(paths.syncDir(), paths.dir() + "tmp/", syncKey_));
 
     // Load the currency:
     CurrencyJson currencyJson;
-    currencyJson.load(syncDir() + WALLET_CURRENCY_FILENAME, dataKey());
+    currencyJson.load(paths.currencyPath(), dataKey());
     ABC_CHECK(currencyJson.currencyOk());
     currency_ = currencyJson.currency();
 
     // Load the name (failure is acceptable):
     NameJson json;
-    json.load(syncDir() + WALLET_NAME_FILENAME, dataKey());
+    json.load(paths.namePath(), dataKey());
     name_ = json.name();
 
     // Load the databases:
