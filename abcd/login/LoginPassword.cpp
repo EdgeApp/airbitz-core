@@ -9,6 +9,7 @@
 #include "Lobby.hpp"
 #include "Login.hpp"
 #include "LoginPackages.hpp"
+#include "../Context.hpp"
 #include "../auth/LoginServer.hpp"
 #include "../json/JsonBox.hpp"
 
@@ -21,11 +22,14 @@ loginPasswordDisk(std::shared_ptr<Login> &result,
 {
     std::string LP = lobby.username() + password;
 
+    AccountPaths paths;
+    ABC_CHECK(lobby.paths(paths));
+
     // Load the packages:
     CarePackage carePackage;
     LoginPackage loginPackage;
-    ABC_CHECK(carePackage.load(lobby.carePackageName()));
-    ABC_CHECK(loginPackage.load(lobby.loginPackageName()));
+    ABC_CHECK(carePackage.load(paths.carePackagePath()));
+    ABC_CHECK(loginPackage.load(paths.loginPackagePath()));
 
     // Make passwordKey (unlocks dataKey):
     DataChunk passwordKey;
@@ -79,8 +83,8 @@ loginPasswordServer(std::shared_ptr<Login> &result,
                             loginPackage, rootKeyBox, false));
 
     // Set up the on-disk login:
-    ABC_CHECK(carePackage.save(lobby.carePackageName()));
-    ABC_CHECK(loginPackage.save(lobby.loginPackageName()));
+    ABC_CHECK(carePackage.save(out->paths.carePackagePath()));
+    ABC_CHECK(loginPackage.save(out->paths.loginPackagePath()));
 
     result = std::move(out);
     return Status();
@@ -106,8 +110,8 @@ loginPasswordSet(Login &login, const std::string &password)
     // Load the packages:
     CarePackage carePackage;
     LoginPackage loginPackage;
-    ABC_CHECK(carePackage.load(login.lobby.carePackageName()));
-    ABC_CHECK(loginPackage.load(login.lobby.loginPackageName()));
+    ABC_CHECK(carePackage.load(login.paths.carePackagePath()));
+    ABC_CHECK(loginPackage.load(login.paths.loginPackagePath()));
 
     // Load the old keys:
     DataChunk authKey = login.authKey();
@@ -141,8 +145,8 @@ loginPasswordSet(Login &login, const std::string &password)
 
     // Change the on-disk login:
     ABC_CHECK(login.authKeySet(newAuthKey));
-    ABC_CHECK(carePackage.save(login.lobby.carePackageName()));
-    ABC_CHECK(loginPackage.save(login.lobby.loginPackageName()));
+    ABC_CHECK(carePackage.save(login.paths.carePackagePath()));
+    ABC_CHECK(loginPackage.save(login.paths.loginPackagePath()));
 
     return Status();
 }
@@ -155,8 +159,8 @@ loginPasswordOk(bool &result, Login &login, const std::string &password)
     // Load the packages:
     CarePackage carePackage;
     LoginPackage loginPackage;
-    ABC_CHECK(carePackage.load(login.lobby.carePackageName()));
-    ABC_CHECK(loginPackage.load(login.lobby.loginPackageName()));
+    ABC_CHECK(carePackage.load(login.paths.carePackagePath()));
+    ABC_CHECK(loginPackage.load(login.paths.loginPackagePath()));
 
     // Make passwordKey (unlocks dataKey):
     DataChunk passwordKey;
@@ -170,10 +174,15 @@ loginPasswordOk(bool &result, Login &login, const std::string &password)
 }
 
 Status
-loginPasswordExists(bool &result, const Lobby &lobby)
+loginPasswordExists(bool &result, const std::string &username)
 {
+    std::string fixed;
+    ABC_CHECK(Lobby::fixUsername(fixed, username));
+    AccountPaths paths;
+    ABC_CHECK(gContext->paths.accountDir(paths, fixed));
+
     LoginPackage loginPackage;
-    ABC_CHECK(loginPackage.load(lobby.loginPackageName()));
+    ABC_CHECK(loginPackage.load(paths.loginPackagePath()));
 
     result = !!loginPackage.passwordBox().get();
     return Status();

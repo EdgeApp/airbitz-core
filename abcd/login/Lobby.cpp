@@ -21,8 +21,6 @@ struct OtpFile:
     ABC_JSON_STRING(key, "TOTP", "!bad")
 };
 
-const char otpFilename[] = "OtpKey.json";
-
 Status
 Lobby::create(std::shared_ptr<Lobby> &result, const std::string &username)
 {
@@ -33,24 +31,21 @@ Lobby::create(std::shared_ptr<Lobby> &result, const std::string &username)
     return Status();
 }
 
-const std::string &
-Lobby::dir() const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return dir_;
-}
-
 Status
-Lobby::dirCreate()
+Lobby::paths(AccountPaths &result, bool create)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    // We don't need to do anything if our directory already exists:
-    if (!dir_.empty())
-        return Status();
+    if (!paths_.ok())
+    {
+        if (!create)
+            return ABC_ERROR(ABC_CC_FileDoesNotExist, "No account directory");
 
-    ABC_CHECK(gContext->paths.accountDirNew(dir_, username_));
-    ABC_CHECK(otpKeySave());
+        ABC_CHECK(gContext->paths.accountDirNew(paths_, username_));
+        ABC_CHECK(otpKeySave());
+    }
+
+    result = paths_;
     return Status();
 }
 
@@ -70,9 +65,9 @@ Lobby::otpKeyRemove()
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    if (!dir_.empty())
+    if (paths_.ok())
     {
-        ABC_CHECK(fileDelete(dir_ + otpFilename));
+        ABC_CHECK(fileDelete(paths_.otpKeyPath()));
     }
     otpKeyOk_ = false;
     return Status();
@@ -126,17 +121,16 @@ Lobby::init(const std::string &username)
     ABC_CHECK(fixUsername(username_, username));
 
     // Failure is acceptable:
-    gContext->paths.accountDir(dir_, username_);
+    gContext->paths.accountDir(paths_, username_);
 
     // Create authId:
-    // TODO: Make this lazy!
     ABC_CHECK(usernameSnrp().hash(authId_, username_));
     ABC_DebugLog("authId: %s", base64Encode(authId()).c_str());
 
     // Load the OTP key, if possible:
     OtpFile file;
-    otpKeyOk_ = !dir_.empty() &&
-                file.load(dir_ + otpFilename) &&
+    otpKeyOk_ = paths_.ok() &&
+                file.load(paths_.otpKeyPath()) &&
                 otpKey_.decodeBase32(file.key());
 
     return Status();
@@ -145,11 +139,11 @@ Lobby::init(const std::string &username)
 Status
 Lobby::otpKeySave()
 {
-    if (!dir_.empty() && otpKeyOk_)
+    if (paths_.ok() && otpKeyOk_)
     {
         OtpFile file;
         ABC_CHECK(file.keySet(otpKey_.encodeBase32()));
-        ABC_CHECK(file.save(dir_ + otpFilename));
+        ABC_CHECK(file.save(paths_.otpKeyPath()));
     }
     return Status();
 }

@@ -6,6 +6,7 @@
  */
 
 #include "RootPaths.hpp"
+#include "AccountPaths.hpp"
 #include "bitcoin/Testnet.hpp"
 #include "json/JsonObject.hpp"
 #include "util/FileIO.hpp"
@@ -79,7 +80,7 @@ RootPaths::accountList()
 }
 
 Status
-RootPaths::accountDir(std::string &result, const std::string &username)
+RootPaths::accountDir(AccountPaths &result, const std::string &username)
 {
     std::string out;
 
@@ -112,7 +113,7 @@ RootPaths::accountDir(std::string &result, const std::string &username)
 }
 
 Status
-RootPaths::accountDirNew(std::string &result, const std::string &username)
+RootPaths::accountDirNew(AccountPaths &result, const std::string &username)
 {
     std::string accounts = accountsDir();
     std::string account;

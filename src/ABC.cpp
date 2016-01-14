@@ -250,10 +250,10 @@ tABC_CC ABC_AccountDelete(const char *szUserName,
     {
         std::string fixed;
         ABC_CHECK_NEW(Lobby::fixUsername(fixed, szUserName));
-        std::string dir;
-        ABC_CHECK_NEW(gContext->paths.accountDir(dir, fixed));
+        AccountPaths paths;
+        ABC_CHECK_NEW(gContext->paths.accountDir(paths, fixed));
 
-        ABC_CHECK_NEW(fileDelete(dir));
+        ABC_CHECK_NEW(fileDelete(paths.dir()));
     }
 
 exit:
@@ -330,13 +330,8 @@ tABC_CC ABC_PasswordExists(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
 
     {
-        // We avoid the cache, which is super-expensive (scrypt).
-        // We do this so the check can run on non-logged-in accounts:
-        std::shared_ptr<Lobby> lobby;
-        ABC_CHECK_NEW(Lobby::create(lobby, szUserName));
-
         bool out;
-        ABC_CHECK_NEW(loginPasswordExists(out, *lobby));
+        ABC_CHECK_NEW(loginPasswordExists(out, szUserName));
         *pExists = out;
     }
 

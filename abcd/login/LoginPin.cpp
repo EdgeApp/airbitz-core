@@ -21,8 +21,6 @@ namespace abcd {
 
 #define KEY_LENGTH 32
 
-#define PIN_FILENAME                            "PinPackage.json"
-
 /**
  * A round-trippable representation of the PIN-based re-login file.
  */
@@ -47,21 +45,20 @@ loginPinExists(bool &result, const std::string &username)
 {
     std::string fixed;
     ABC_CHECK(Lobby::fixUsername(fixed, username));
-    std::string dir;
-    ABC_CHECK(gContext->paths.accountDir(dir, fixed));
+    AccountPaths paths;
+    ABC_CHECK(gContext->paths.accountDir(paths, fixed));
 
     PinLocal local;
-    result = !!local.load(dir + PIN_FILENAME);
+    result = !!local.load(paths.pinPackagePath());
     return Status();
 }
 
 Status
-loginPinDelete(const Lobby &lobby)
+loginPinDelete(Lobby &lobby)
 {
-    if (!lobby.dir().empty())
-    {
-        ABC_CHECK(fileDelete(lobby.dir() + PIN_FILENAME));
-    }
+    AccountPaths paths;
+    if (lobby.paths(paths))
+        ABC_CHECK(fileDelete(paths.pinPackagePath()));
 
     return Status();
 }
@@ -72,13 +69,16 @@ loginPin(std::shared_ptr<Login> &result,
 {
     std::string LPIN = lobby.username() + pin;
 
+    AccountPaths paths;
+    ABC_CHECK(lobby.paths(paths));
+
     // Load the packages:
     CarePackage carePackage;
     LoginPackage loginPackage;
     PinLocal local;
-    ABC_CHECK(carePackage.load(lobby.carePackageName()));
-    ABC_CHECK(loginPackage.load(lobby.loginPackageName()));
-    ABC_CHECK(local.load(lobby.dir() + PIN_FILENAME));
+    ABC_CHECK(carePackage.load(paths.carePackagePath()));
+    ABC_CHECK(loginPackage.load(paths.loginPackagePath()));
+    ABC_CHECK(local.load(paths.pinPackagePath()));
     DataChunk pinAuthId;
     ABC_CHECK(local.pinAuthIdDecode(pinAuthId));
 
@@ -114,12 +114,12 @@ loginPinSetup(Login &login, const std::string &pin, time_t expires)
 
     // Get login stuff:
     CarePackage carePackage;
-    ABC_CHECK(carePackage.load(login.lobby.carePackageName()));
+    ABC_CHECK(carePackage.load(login.paths.carePackagePath()));
 
     // Set up DID:
     DataChunk pinAuthId;
     PinLocal local;
-    if (!local.load(login.lobby.dir() + PIN_FILENAME) ||
+    if (!local.load(login.paths.pinPackagePath()) ||
             !local.pinAuthIdDecode(pinAuthId))
         ABC_CHECK(randomData(pinAuthId, KEY_LENGTH));
 
@@ -145,7 +145,7 @@ loginPinSetup(Login &login, const std::string &pin, time_t expires)
     ABC_CHECK(local.pinBoxSet(pinBox));
     ABC_CHECK(local.pinAuthIdSet(base64Encode(pinAuthId)));
     ABC_CHECK(local.expiresSet(expires));
-    ABC_CHECK(local.save(login.lobby.dir() + PIN_FILENAME));
+    ABC_CHECK(local.save(login.paths.pinPackagePath()));
 
     return Status();
 }

@@ -45,7 +45,7 @@ loginPasswordOk(bool &result, Login &login, const std::string &password);
  * Returns true if the logged-in account has a password.
  */
 Status
-loginPasswordExists(bool &result, const Lobby &lobby);
+loginPasswordExists(bool &result, const std::string &username);
 
 } // namespace abcd
 

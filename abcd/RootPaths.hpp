@@ -13,6 +13,8 @@
 
 namespace abcd {
 
+class AccountPaths;
+
 /**
  * Knows how to calculate paths at the top-level of the app.
  */
@@ -37,13 +39,13 @@ public:
      * Returns an empty string if the account does not exist on the device.
      */
     Status
-    accountDir(std::string &result, const std::string &username);
+    accountDir(AccountPaths &result, const std::string &username);
 
     /**
      * Creates a fresh directory for a new account.
      */
     Status
-    accountDirNew(std::string &result, const std::string &username);
+    accountDirNew(AccountPaths &result, const std::string &username);
 
     /**
      * Returns the directory name for a particular wallet.

@@ -71,8 +71,8 @@ loginRecovery(std::shared_ptr<Login> &result,
                             loginPackage, rootKeyBox, false));
 
     // Set up the on-disk login:
-    ABC_CHECK(carePackage.save(lobby.carePackageName()));
-    ABC_CHECK(loginPackage.save(lobby.loginPackageName()));
+    ABC_CHECK(carePackage.save(out->paths.carePackagePath()));
+    ABC_CHECK(loginPackage.save(out->paths.loginPackagePath()));
 
     result = std::move(out);
     return Status();
@@ -88,8 +88,8 @@ loginRecoverySet(Login &login,
     // Load the packages:
     CarePackage carePackage;
     LoginPackage loginPackage;
-    ABC_CHECK(carePackage.load(login.lobby.carePackageName()));
-    ABC_CHECK(loginPackage.load(login.lobby.loginPackageName()));
+    ABC_CHECK(carePackage.load(login.paths.carePackagePath()));
+    ABC_CHECK(loginPackage.load(login.paths.loginPackagePath()));
 
     // Load the old keys:
     DataChunk authKey = login.authKey();
@@ -131,8 +131,8 @@ loginRecoverySet(Login &login,
                                         carePackage, loginPackage));
 
     // Change the on-disk login:
-    ABC_CHECK(carePackage.save(login.lobby.carePackageName()));
-    ABC_CHECK(loginPackage.save(login.lobby.loginPackageName()));
+    ABC_CHECK(carePackage.save(login.paths.carePackagePath()));
+    ABC_CHECK(loginPackage.save(login.paths.loginPackagePath()));
 
     return Status();
 }

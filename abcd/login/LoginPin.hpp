@@ -32,7 +32,7 @@ loginPinExists(bool &result, const std::string &username);
  * Deletes the local copy of the PIN-based login data.
  */
 Status
-loginPinDelete(const Lobby &lobby);
+loginPinDelete(Lobby &lobby);
 
 /**
  * Assuming a PIN-based login pagage exits, log the user in.

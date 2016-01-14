@@ -117,9 +117,9 @@ Login::createNew(const char *password)
                                 carePackage, loginPackage, base16Encode(syncKey_)));
 
     // Set up the on-disk login:
-    ABC_CHECK(lobby.dirCreate());
-    ABC_CHECK(carePackage.save(lobby.carePackageName()));
-    ABC_CHECK(loginPackage.save(lobby.loginPackageName()));
+    ABC_CHECK(lobby.paths(paths, true));
+    ABC_CHECK(carePackage.save(paths.carePackagePath()));
+    ABC_CHECK(loginPackage.save(paths.loginPackagePath()));
     ABC_CHECK(rootKeyUpgrade());
 
     // Latch the account:
@@ -135,15 +135,15 @@ Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox,
     ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey_, dataKey_));
     ABC_CHECK(loginPackage.authKeyBox().decrypt(authKey_, dataKey_));
 
-    ABC_CHECK(lobby.dirCreate());
+    ABC_CHECK(lobby.paths(paths, true));
 
     // Look for an existing rootKeyBox:
     if (!rootKeyBox)
     {
-        if (fileExists(lobby.rootKeyPath()))
+        if (fileExists(paths.rootKeyPath()))
         {
             if (diskBased)
-                ABC_CHECK(rootKeyBox.load(lobby.rootKeyPath()));
+                ABC_CHECK(rootKeyBox.load(paths.rootKeyPath()));
             else
                 return ABC_ERROR(ABC_CC_Error,
                                  "The account has a rootKey, but it's not on the server.");
@@ -157,7 +157,7 @@ Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox,
 
             // If the server had one, save it for the future:
             if (rootKeyBox)
-                ABC_CHECK(rootKeyBox.save(lobby.rootKeyPath()));
+                ABC_CHECK(rootKeyBox.save(paths.rootKeyPath()));
         }
         // Otherwise, there just isn't one.
     }
@@ -192,7 +192,7 @@ Login::rootKeyUpgrade()
     // Upgrade the account on the server:
     ABC_CHECK(loginServerAccountUpgrade(*this,
                                         rootKeyBox, mnemonicBox, dataKeyBox));
-    ABC_CHECK(rootKeyBox.save(lobby.rootKeyPath()));
+    ABC_CHECK(rootKeyBox.save(paths.rootKeyPath()));
 
     return Status();
 }
