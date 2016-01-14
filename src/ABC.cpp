@@ -1039,8 +1039,10 @@ tABC_CC ABC_PinLoginExists(const char *szUserName,
                            tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(pbExists);
 
-    ABC_CHECK_RET(ABC_LoginPinExists(szUserName, pbExists, pError));
+    ABC_CHECK_NEW(loginPinExists(*pbExists, szUserName));
 
 exit:
     return cc;
@@ -1056,7 +1058,7 @@ tABC_CC ABC_PinLoginDelete(const char *szUserName,
 
     {
         ABC_GET_LOBBY();
-        ABC_CHECK_RET(ABC_LoginPinDelete(*lobby, pError));
+        ABC_CHECK_NEW(loginPinDelete(*lobby));
     }
 
 exit:
@@ -1101,7 +1103,7 @@ tABC_CC ABC_PinSetup(const char *szUserName,
 
         time_t expires = time(nullptr);
         expires += 60 * settings->minutesAutoLogout;
-        ABC_CHECK_RET(ABC_LoginPinSetup(*login, settings->szPIN, expires, pError));
+        ABC_CHECK_NEW(loginPinSetup(*login, settings->szPIN, expires));
     }
 
 exit:

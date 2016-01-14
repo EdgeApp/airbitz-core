@@ -16,7 +16,6 @@
 #include "../json/JsonBox.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/FileIO.hpp"
-#include "../util/Util.hpp"
 
 namespace abcd {
 
@@ -43,145 +42,110 @@ struct PinLocal:
     }
 };
 
-/**
- * Determines whether or not the given user can log in via PIN on this
- * device.
- */
-tABC_CC ABC_LoginPinExists(const char *szUserName,
-                           bool *pbExists,
-                           tABC_Error *pError)
+Status
+loginPinExists(bool &result, const std::string &username)
 {
-    tABC_CC cc = ABC_CC_Ok;
+    std::string fixed;
+    ABC_CHECK(Lobby::fixUsername(fixed, username));
 
     PinLocal local;
-    std::string fixed;
-
-    ABC_CHECK_NEW(Lobby::fixUsername(fixed, szUserName));
-
-    *pbExists = false;
-    if (local.load(loginDirFind(fixed) + PIN_FILENAME))
-        *pbExists = true;
-
-exit:
-    return cc;
+    result = !!local.load(loginDirFind(fixed) + PIN_FILENAME);
+    return Status();
 }
 
-/**
- * Deletes the local copy of the PIN-based login data.
- */
-tABC_CC ABC_LoginPinDelete(const Lobby &lobby,
-                           tABC_Error *pError)
+Status
+loginPinDelete(const Lobby &lobby)
 {
-    tABC_CC cc = ABC_CC_Ok;
-
     if (!lobby.dir().empty())
     {
-        ABC_CHECK_NEW(fileDelete(lobby.dir() + PIN_FILENAME));
+        ABC_CHECK(fileDelete(lobby.dir() + PIN_FILENAME));
     }
 
-exit:
-    return cc;
+    return Status();
 }
 
-/**
- * Assuming a PIN-based login pagage exits, log the user in.
- */
-tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
-                     Lobby &lobby,
-                     const char *szPin,
-                     tABC_Error *pError)
+Status
+loginPin(std::shared_ptr<Login> &result,
+         Lobby &lobby, const std::string &pin)
 {
-    tABC_CC cc = ABC_CC_Ok;
+    std::string LPIN = lobby.username() + pin;
 
-    std::shared_ptr<Login> out;
+    // Load the packages:
     CarePackage carePackage;
     LoginPackage loginPackage;
     PinLocal local;
-    std::string EPINK;
+    ABC_CHECK(carePackage.load(lobby.carePackageName()));
+    ABC_CHECK(loginPackage.load(lobby.loginPackageName()));
+    ABC_CHECK(local.load(lobby.dir() + PIN_FILENAME));
     DataChunk pinAuthId;
+    ABC_CHECK(local.pinAuthIdDecode(pinAuthId));
+
+    // Get EPINK from the server:
+    std::string EPINK;
     DataChunk pinAuthKey;       // Unlocks the server
+    JsonBox pinKeyBox;          // Holds pinKey
+    ABC_CHECK(usernameSnrp().hash(pinAuthKey, LPIN));
+    ABC_CHECK(loginServerGetPinPackage(pinAuthId, pinAuthKey, EPINK));
+    ABC_CHECK(pinKeyBox.decode(EPINK));
+
+    // Decrypt dataKey:
     DataChunk pinKeyKey;        // Unlocks pinKey
     DataChunk pinKey;           // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
-    JsonBox pinKeyBox;          // Holds pinKey
-    std::string LPIN = lobby.username() + szPin;
-
-    // Load the packages:
-    ABC_CHECK_NEW(carePackage.load(lobby.carePackageName()));
-    ABC_CHECK_NEW(loginPackage.load(lobby.loginPackageName()));
-    ABC_CHECK_NEW(local.load(lobby.dir() + PIN_FILENAME));
-    ABC_CHECK_NEW(local.pinAuthIdDecode(pinAuthId));
-
-    // Get EPINK from the server:
-    ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN));
-    ABC_CHECK_NEW(loginServerGetPinPackage(pinAuthId, pinAuthKey, EPINK));
-    ABC_CHECK_NEW(pinKeyBox.decode(EPINK));
-
-    // Decrypt MK:
-    ABC_CHECK_NEW(carePackage.snrp2().hash(pinKeyKey, LPIN));
-    ABC_CHECK_NEW(pinKeyBox.decrypt(pinKey, pinKeyKey));
-    ABC_CHECK_NEW(local.pinBox().decrypt(dataKey, pinKey));
+    ABC_CHECK(carePackage.snrp2().hash(pinKeyKey, LPIN));
+    ABC_CHECK(pinKeyBox.decrypt(pinKey, pinKeyKey));
+    ABC_CHECK(local.pinBox().decrypt(dataKey, pinKey));
 
     // Create the Login object:
-    ABC_CHECK_NEW(Login::create(out, lobby, dataKey, loginPackage, JsonBox(),
-                                true));
-    result = std::move(out);
+    std::shared_ptr<Login> out;
+    ABC_CHECK(Login::create(out, lobby, dataKey,
+                            loginPackage, JsonBox(), true));
 
-exit:
-    return cc;
+    result = std::move(out);
+    return Status();
 }
 
-/**
- * Sets up a PIN login package, both on-disk and on the server.
- */
-tABC_CC ABC_LoginPinSetup(Login &login,
-                          const char *szPin,
-                          time_t expires,
-                          tABC_Error *pError)
+Status
+loginPinSetup(Login &login, const std::string &pin, time_t expires)
 {
-    tABC_CC cc = ABC_CC_Ok;
-
-    CarePackage carePackage;
-    PinLocal local;
-    DataChunk pinAuthId;
-    DataChunk pinAuthKey;       // Unlocks the server
-    DataChunk pinKeyKey;        // Unlocks pinKey
-    DataChunk pinKey;           // Unlocks dataKey
-    JsonBox pinKeyBox;          // Holds pinKey
-    JsonBox pinBox;             // Holds dataKey
-    std::string LPIN = login.lobby.username() + szPin;
+    std::string LPIN = login.lobby.username() + pin;
 
     // Get login stuff:
-    ABC_CHECK_NEW(carePackage.load(login.lobby.carePackageName()));
+    CarePackage carePackage;
+    ABC_CHECK(carePackage.load(login.lobby.carePackageName()));
 
     // Set up DID:
+    DataChunk pinAuthId;
+    PinLocal local;
     if (!local.load(login.lobby.dir() + PIN_FILENAME) ||
             !local.pinAuthIdDecode(pinAuthId))
-        ABC_CHECK_NEW(randomData(pinAuthId, KEY_LENGTH));
+        ABC_CHECK(randomData(pinAuthId, KEY_LENGTH));
 
     // Put dataKey in a box:
-    ABC_CHECK_NEW(randomData(pinKey, KEY_LENGTH));
-    ABC_CHECK_NEW(pinBox.encrypt(login.dataKey(), pinKey));
+    DataChunk pinKey;           // Unlocks dataKey
+    JsonBox pinBox;             // Holds dataKey
+    ABC_CHECK(randomData(pinKey, KEY_LENGTH));
+    ABC_CHECK(pinBox.encrypt(login.dataKey(), pinKey));
 
     // Put pinKey in a box:
-    ABC_CHECK_NEW(carePackage.snrp2().hash(pinKeyKey, LPIN));
-    ABC_CHECK_NEW(pinKeyBox.encrypt(pinKey, pinKeyKey));
+    DataChunk pinKeyKey;        // Unlocks pinKey
+    JsonBox pinKeyBox;          // Holds pinKey
+    ABC_CHECK(carePackage.snrp2().hash(pinKeyKey, LPIN));
+    ABC_CHECK(pinKeyBox.encrypt(pinKey, pinKeyKey));
 
     // Set up the server:
-    ABC_CHECK_NEW(usernameSnrp().hash(pinAuthKey, LPIN));
-    ABC_CHECK_NEW(loginServerUpdatePinPackage(login,
-                  pinAuthId, pinAuthKey, pinKeyBox.encode(),
-                  expires));
+    DataChunk pinAuthKey;       // Unlocks the server
+    ABC_CHECK(usernameSnrp().hash(pinAuthKey, LPIN));
+    ABC_CHECK(loginServerUpdatePinPackage(login, pinAuthId, pinAuthKey,
+                                          pinKeyBox.encode(), expires));
 
     // Save the local file:
-    ABC_CHECK_NEW(local.pinBoxSet(pinBox));
-    ABC_CHECK_NEW(local.pinAuthIdSet(base64Encode(pinAuthId)));
-    ABC_CHECK_NEW(local.expiresSet(expires));
-    ABC_CHECK_NEW(local.save(login.lobby.dir() + PIN_FILENAME));
+    ABC_CHECK(local.pinBoxSet(pinBox));
+    ABC_CHECK(local.pinAuthIdSet(base64Encode(pinAuthId)));
+    ABC_CHECK(local.expiresSet(expires));
+    ABC_CHECK(local.save(login.lobby.dir() + PIN_FILENAME));
 
-exit:
-
-    return cc;
+    return Status();
 }
 
 } // namespace abcd

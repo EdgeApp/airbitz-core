@@ -134,7 +134,7 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
 
 Status
 cacheLoginPin(std::shared_ptr<Login> &result,
-              const char *szUserName, const char *szPin)
+              const char *szUserName, const std::string pin)
 {
     std::shared_ptr<Lobby> lobby;
     ABC_CHECK(cacheLobby(lobby, szUserName));
@@ -143,7 +143,7 @@ cacheLoginPin(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginPin(gLoginCache, *lobby, szPin, &error));
+        ABC_CHECK(loginPin(gLoginCache, *lobby, pin));
     }
 
     result = gLoginCache;
