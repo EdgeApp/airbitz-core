@@ -291,8 +291,8 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
 
     {
         ABC_GET_LOGIN();
-        ABC_CHECK_RET(ABC_LoginRecoverySet(*login,
-                                           szRecoveryQuestions, szRecoveryAnswers, pError));
+        ABC_CHECK_NEW(loginRecoverySet(*login, szRecoveryQuestions,
+                                       szRecoveryAnswers));
     }
 
 exit:
@@ -1282,7 +1282,10 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
 
     {
         ABC_GET_LOBBY();
-        ABC_CHECK_RET(ABC_LoginGetRQ(*lobby, pszQuestions, pError));
+
+        std::string questions;
+        ABC_CHECK_NEW(loginRecoveryQuestions(questions, *lobby));
+        *pszQuestions = stringCopy(questions);
     }
 
 exit:

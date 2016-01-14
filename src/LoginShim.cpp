@@ -115,7 +115,7 @@ cacheLoginPassword(std::shared_ptr<Login> &result,
 
 Status
 cacheLoginRecovery(std::shared_ptr<Login> &result,
-                   const char *szUserName, const char *szRecoveryAnswers)
+                   const char *szUserName, const std::string &recoveryAnswers)
 {
     std::shared_ptr<Lobby> lobby;
     ABC_CHECK(cacheLobby(lobby, szUserName));
@@ -124,8 +124,7 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK_OLD(ABC_LoginRecovery(gLoginCache, *lobby, szRecoveryAnswers,
-                                        &error));
+        ABC_CHECK(loginRecovery(gLoginCache, *lobby, recoveryAnswers));
     }
 
     result = gLoginCache;
