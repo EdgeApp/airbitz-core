@@ -16,9 +16,6 @@
 
 namespace abcd {
 
-static tABC_CC  ABC_TxBuildFromLabel(Wallet &self, const char **pszLabel,
-                                     tABC_Error *pError);
-
 tABC_CC ABC_TxWatchAddresses(Wallet &self,
                              tABC_Error *pError)
 {
@@ -81,6 +78,7 @@ tABC_CC ABC_TxGenerateRequestQRCode(Wallet &self,
     unsigned char *aData = NULL;
     unsigned int length = 0;
     char *szURI = NULL;
+    AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
 
     // load the request/address
     Address address;
@@ -93,7 +91,11 @@ tABC_CC ABC_TxGenerateRequestQRCode(Wallet &self,
     infoURI.szAddress = address.address.c_str();
 
     // Set the label if there is one
-    ABC_CHECK_RET(ABC_TxBuildFromLabel(self, &(infoURI.szLabel), pError));
+    pSettings.get() = accountSettingsLoad(self.account);
+    if (pSettings->bNameOnPayments && pSettings->szFullName)
+    {
+        infoURI.szLabel = stringCopy(pSettings->szFullName);
+    }
 
     // if there is a note
     if (!address.metadata.notes.empty())
@@ -126,35 +128,6 @@ exit:
     QRcode_free(qr);
     ABC_CLEAR_FREE(aData, length);
 
-    return cc;
-}
-
-/**
- * Create a label based off the user settings
- *
- * @param pszLabel       The label will be returned in this parameter
- * @param pError         A pointer to the location to store the error if there is one
- */
-static
-tABC_CC ABC_TxBuildFromLabel(Wallet &self,
-                             const char **pszLabel, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
-
-    ABC_CHECK_NULL(pszLabel);
-    *pszLabel = NULL;
-
-    ABC_CHECK_RET(ABC_AccountSettingsLoad(self.account, &pSettings.get(), pError));
-
-    if (pSettings->bNameOnPayments && pSettings->szFullName)
-    {
-        *pszLabel = stringCopy(pSettings->szFullName);
-    }
-
-exit:
     return cc;
 }
 

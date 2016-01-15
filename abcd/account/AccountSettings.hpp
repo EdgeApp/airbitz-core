@@ -8,21 +8,30 @@
 #ifndef ABCD_ACCOUNT_ACCOUNT_SETTINGS_HPP
 #define ABCD_ACCOUNT_ACCOUNT_SETTINGS_HPP
 
-#include "../../src/ABC.h"
+#include "../util/Status.hpp"
 
 namespace abcd {
 
 class Account;
 
-tABC_CC ABC_AccountSettingsLoad(const Account &account,
-                                tABC_AccountSettings **ppSettings,
-                                tABC_Error *pError);
+/**
+ * Loads the settings from an account.
+ * Returns default settings if anything goes wrong.
+ */
+tABC_AccountSettings *
+accountSettingsLoad(const Account &account);
 
-tABC_CC ABC_AccountSettingsSave(const Account &account,
-                                tABC_AccountSettings *pSettings,
-                                tABC_Error *pError);
+/**
+ * Saves the settings for an account.
+ */
+Status
+accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings);
 
-void ABC_AccountSettingsFree(tABC_AccountSettings *pSettings);
+/**
+ * Frees the account settings structure, along with its contents.
+ */
+void
+accountSettingsFree(tABC_AccountSettings *pSettings);
 
 } // namespace abcd
 
