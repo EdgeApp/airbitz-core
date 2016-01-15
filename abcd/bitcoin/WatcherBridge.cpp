@@ -61,19 +61,21 @@ struct PendingSweep
 
 struct WatcherInfo
 {
+private:
+    // This needs to come first, since the watcher relies on it's lifetime:
+    std::shared_ptr<Wallet> parent_;
+
+public:
     WatcherInfo(Wallet &wallet):
+        parent_(wallet.shared_from_this()),
         watcher(wallet.txdb),
-        wallet(wallet),
-        parent_(wallet.shared_from_this())
+        wallet(wallet)
     {
     }
 
     Watcher watcher;
-    std::list<PendingSweep> sweeping;
     Wallet &wallet;
-
-private:
-    std::shared_ptr<Wallet> parent_;
+    std::list<PendingSweep> sweeping;
 };
 
 static std::map<std::string, std::unique_ptr<WatcherInfo>> watchers_;
