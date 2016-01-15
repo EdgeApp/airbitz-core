@@ -775,8 +775,8 @@ tABC_CC ABC_GetPIN(const char *szUserName,
     {
         ABC_GET_ACCOUNT();
 
-        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
-        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
 
         *pszPin = nullptr;
         if (settings->szPIN)
@@ -805,18 +805,23 @@ tABC_CC ABC_SetPIN(const char *szUserName,
 {
     ABC_PROLOG();
     ABC_CHECK_NULL(szPin);
-    ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error,
-                     "Pin is too short");
 
     {
         ABC_GET_ACCOUNT();
 
-        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
-        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
+        ABC_CHECK_ASSERT(ABC_MIN_PIN_LENGTH <= strlen(szPin), ABC_CC_Error,
+                         "Pin is too short");
+        char *endstr = nullptr;
+        strtol(szPin, &endstr, 10);
+        ABC_CHECK_ASSERT('\0' == *endstr, ABC_CC_NonNumericPin,
+                         "The pin must be numeric.");
+
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
 
         ABC_FREE_STR(settings->szPIN);
         settings->szPIN = stringCopy(szPin);
-        ABC_CHECK_RET(ABC_AccountSettingsSave(*account, settings, pError));
+        ABC_CHECK_NEW(accountSettingsSave(*account, settings));
     }
 
 exit:
@@ -1090,8 +1095,8 @@ tABC_CC ABC_PinSetup(const char *szUserName,
         ABC_GET_LOGIN();
         ABC_GET_ACCOUNT();
 
-        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
-        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
         ABC_CHECK_NULL(settings->szPIN);
 
         time_t expires = time(nullptr);
@@ -2452,7 +2457,7 @@ tABC_CC ABC_LoadAccountSettings(const char *szUserName,
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, ppSettings, pError));
+        *ppSettings = accountSettingsLoad(*account);
     }
 
 exit:
@@ -2476,7 +2481,7 @@ tABC_CC ABC_UpdateAccountSettings(const char *szUserName,
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_AccountSettingsSave(*account, pSettings, pError));
+        ABC_CHECK_NEW(accountSettingsSave(*account, pSettings));
     }
 
 exit:
@@ -2493,7 +2498,7 @@ void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings)
     // Cannot use ABC_PROLOG - no pError
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    ABC_AccountSettingsFree(pSettings);
+    accountSettingsFree(pSettings);
 }
 
 tABC_CC ABC_DataSyncAccount(const char *szUserName,
@@ -2911,8 +2916,8 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
         currencies.insert(static_cast<Currency>(currencyNum));
 
         // Find the user's exchange-rate preference:
-        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
-        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
         std::string preference = settings->szExchangeRateSource;
 
         // Move the user's preference to the front of the list:
