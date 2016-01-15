@@ -34,8 +34,8 @@ static bool is_valid(const bc::payment_address &address)
 }
 
 Watcher::Watcher(TxDatabase &db):
-    txu_(db, ctx_, *this),
-    socket_(ctx_, ZMQ_PAIR)
+    socket_(ctx_, ZMQ_PAIR),
+    txu_(db, ctx_, *this)
 {
     std::stringstream name;
     name << "inproc://watcher-" << watcher_id++;
