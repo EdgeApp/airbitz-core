@@ -63,8 +63,6 @@ public:
 
 private:
     zmq::context_t ctx_;
-    TxUpdater txu_;
-
     bc::payment_address priority_address_;
 
     // Socket for talking to the thread:
@@ -91,6 +89,9 @@ private:
     virtual void on_add(const bc::transaction_type &tx) override;
     virtual void on_height(size_t height) override;
     virtual void on_quiet() override;
+
+    // This needs to be constructed last, since it uses everything else:
+    TxUpdater txu_;
 };
 
 } // namespace abcd
