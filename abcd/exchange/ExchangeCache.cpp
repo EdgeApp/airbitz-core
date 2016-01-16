@@ -6,6 +6,7 @@
  */
 
 #include "ExchangeCache.hpp"
+#include "../RootPaths.hpp"
 #include "../json/JsonArray.hpp"
 #include "../json/JsonObject.hpp"
 
@@ -28,8 +29,8 @@ struct CacheJsonRow:
     ABC_JSON_INTEGER(timestamp, "timestamp", 0)
 };
 
-ExchangeCache::ExchangeCache(const std::string &dir):
-    path_(dir + "Exchange.json")
+ExchangeCache::ExchangeCache(const std::string &path):
+    path_(path)
 {
     load(); // Nothing bad happens if this fails
 }

@@ -12,7 +12,7 @@
 #ifndef ABCD_LOGIN_LOGIN_RECOVERY_HPP
 #define ABCD_LOGIN_LOGIN_RECOVERY_HPP
 
-#include "../../src/ABC.h"
+#include "../util/Status.hpp"
 #include <memory>
 
 namespace abcd {
@@ -20,19 +20,26 @@ namespace abcd {
 class Login;
 class Lobby;
 
-tABC_CC ABC_LoginGetRQ(Lobby &lobby,
-                       char **pszRecoveryQuestions,
-                       tABC_Error *pError);
+/**
+ * Obtains the recovery questions for a user.
+ */
+Status
+loginRecoveryQuestions(std::string &result, Lobby &lobby);
 
-tABC_CC ABC_LoginRecovery(std::shared_ptr<Login> &result,
-                          Lobby &lobby,
-                          const char *szRecoveryAnswers,
-                          tABC_Error *pError);
+/**
+ * Creates a login object using recovery answers rather than a password.
+ */
+Status
+loginRecovery(std::shared_ptr<Login> &result,
+              Lobby &lobby, const std::string &recoveryAnswers);
 
-tABC_CC ABC_LoginRecoverySet(Login &login,
-                             const char *szRecoveryQuestions,
-                             const char *szRecoveryAnswers,
-                             tABC_Error *pError);
+/**
+ * Changes the recovery questions and answers on an existing login object.
+ */
+Status
+loginRecoverySet(Login &login,
+                 const std::string &recoveryQuestions,
+                 const std::string &recoveryAnswers);
 
 } // namespace abcd
 

@@ -22,7 +22,7 @@ namespace abcd {
 class ExchangeCache
 {
 public:
-    ExchangeCache(const std::string &dir);
+    ExchangeCache(const std::string &path);
 
     /**
      * Updates the exchange rates, trying the sources in the given order.

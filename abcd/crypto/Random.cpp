@@ -29,15 +29,14 @@ randomInitialize(DataSlice seed)
     time_t timeResult;
     clock_t clockVal;
     pid_t pid;
-    std::string rootDir = gContext->rootDir();
-
-    AutoU08Buf NewSeed;
 
     // create our own copy so we can add to it
+    AutoU08Buf NewSeed;
     ABC_BUF_DUP(NewSeed, seed);
 
     // mix in some info on our file system
 #ifndef __ANDROID__
+    std::string rootDir = gContext->paths.rootDir();
     ABC_BUF_APPEND_PTR(NewSeed, rootDir.data(), rootDir.size());
     struct statvfs fiData;
     if ((statvfs(rootDir.c_str(), &fiData)) >= 0 )

@@ -16,7 +16,6 @@
 
 namespace abcd {
 
-#define GENERAL_QUESTIONS_FILENAME              "Questions.json"
 #define GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS   (24 * 60 * 60) // how many seconds old can the info file before it should be updated
 
 #define ABC_SERVER_JSON_CATEGORY_FIELD      "category"
@@ -72,7 +71,7 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::string filename = gContext->rootDir() + GENERAL_QUESTIONS_FILENAME;
+    std::string path = gContext->paths.questionsPath();
     QuestionsFile file;
     json_t *pJSON_Value = NULL;
     time_t lastTime;
@@ -83,17 +82,17 @@ tABC_CC ABC_GeneralGetQuestionChoices(tABC_QuestionChoices
     ABC_CHECK_NULL(ppQuestionChoices);
 
     // Update the file if it is too old or does not exist:
-    if (!fileTime(lastTime, filename) ||
+    if (!fileTime(lastTime, path) ||
             lastTime + GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS < time(nullptr))
     {
         JsonPtr resultsJson;
         ABC_CHECK_NEW(loginServerGetQuestions(resultsJson));
         ABC_CHECK_NEW(file.questionsSet(resultsJson));
-        ABC_CHECK_NEW(file.save(gContext->rootDir() + GENERAL_QUESTIONS_FILENAME));
+        ABC_CHECK_NEW(file.save(path));
     }
 
     // Read in the recovery question choices json object
-    ABC_CHECK_NEW(file.load(filename));
+    ABC_CHECK_NEW(file.load(path));
     pJSON_Value = file.questions().get();
     if (!json_is_array(pJSON_Value))
         ABC_RET_ERROR(ABC_CC_JSONError,

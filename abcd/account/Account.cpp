@@ -35,7 +35,7 @@ Account::sync(bool &dirty)
 Account::Account(Login &login):
     login(login),
     parent_(login.shared_from_this()),
-    dir_(login.lobby.dir() + "sync/"),
+    dir_(login.paths.syncDir()),
     wallets(*this)
 {}
 
@@ -43,7 +43,8 @@ Status
 Account::load()
 {
     // If the sync dir doesn't exist, create it:
-    ABC_CHECK(syncEnsureRepo(dir(), login.lobby.dir() + "tmp/", login.syncKey()));
+    const auto tempPath = login.paths.dir() + "tmp/";
+    ABC_CHECK(syncEnsureRepo(dir(), tempPath, login.syncKey()));
 
     ABC_CHECK(wallets.load());
     return Status();

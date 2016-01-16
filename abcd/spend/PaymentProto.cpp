@@ -135,7 +135,8 @@ PaymentRequest::signatureOk(std::string &result)
 
     AutoFree<SSL_CTX, SSL_CTX_free> sslContext(SSL_CTX_new(SSLv23_client_method()));
     if (!SSL_CTX_load_verify_locations(sslContext.get(),
-                                       gContext->certPath().c_str(), NULL))
+                                       gContext->paths.certPath().c_str(),
+                                       nullptr))
         return ABC_ERROR(ABC_CC_Error, "Unable to load caCerts");
 
     if (!X509_STORE_CTX_init(store_ctx.get(),

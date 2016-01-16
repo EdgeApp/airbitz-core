@@ -8,6 +8,7 @@
 #ifndef ABCD_LOGIN_LOGIN_HPP
 #define ABCD_LOGIN_LOGIN_HPP
 
+#include "../AccountPaths.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 #include <memory>
@@ -27,6 +28,7 @@ class Login:
 {
 public:
     Lobby &lobby;
+    AccountPaths paths;
 
     static Status
     create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
