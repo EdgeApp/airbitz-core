@@ -108,10 +108,10 @@ JsonPtr::clone() const
 }
 
 Status
-JsonPtr::load(const std::string &filename)
+JsonPtr::load(const std::string &path)
 {
     json_error_t error;
-    json_t *root = json_load_file(filename.c_str(), loadFlags, &error);
+    json_t *root = json_load_file(path.c_str(), loadFlags, &error);
     if (!root)
         return ABC_ERROR(ABC_CC_JSONError, error.text);
     reset(root);
@@ -119,10 +119,10 @@ JsonPtr::load(const std::string &filename)
 }
 
 Status
-JsonPtr::load(const std::string &filename, DataSlice dataKey)
+JsonPtr::load(const std::string &path, DataSlice dataKey)
 {
     json_t *root = nullptr;
-    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFileObject(filename.c_str(),
+    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFileObject(path.c_str(),
                   toU08Buf(dataKey), &root, &error));
     reset(root);
     return Status();
@@ -140,20 +140,27 @@ JsonPtr::decode(const std::string &data)
 }
 
 Status
-JsonPtr::save(const std::string &filename) const
+JsonPtr::save(const std::string &path) const
 {
-    ABC_DebugLog("Writing JSON file %s", filename.c_str());
-    if (json_dump_file(root_, filename.c_str(), saveFlags))
-        return ABC_ERROR(ABC_CC_JSONError, "Cannot write JSON file " + filename);
+    ABC_DebugLog("Writing JSON file %s", path.c_str());
+
+    const auto pathTmp = path + ".tmp";
+    if (json_dump_file(root_, pathTmp.c_str(), saveFlags))
+        return ABC_ERROR(ABC_CC_FileWriteError, "Cannot write " + pathTmp);
+
+    if (rename(pathTmp.c_str(), path.c_str()))
+        return ABC_ERROR(ABC_CC_FileWriteError,
+                         "Cannot rename " + pathTmp + " to " + path);
+
     return Status();
 }
 
 Status
-JsonPtr::save(const std::string &filename, DataSlice dataKey) const
+JsonPtr::save(const std::string &path, DataSlice dataKey) const
 {
     ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(root_,
                   toU08Buf(dataKey), ABC_CryptoType_AES256,
-                  filename.c_str(), &error));
+                  path.c_str(), &error));
     return Status();
 }
 
