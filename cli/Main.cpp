@@ -184,7 +184,7 @@ static Status run(int argc, char *argv[])
             std::cout << "No OTP token, resetting account 2-factor auth." << std::endl;
             ABC_CHECK_OLD(ABC_OtpResetSet(session.username.c_str(), &error));
         }
-        ABC_CHECK(cacheLogin(session.login, session.username.c_str()));
+        ABC_CHECK(s);
     }
     if (InitLevel::account <= command->level())
     {
@@ -216,6 +216,6 @@ int main(int argc, char *argv[])
 {
     Status s = run(argc, argv);
     if (!s)
-        std::cerr << s.message() << std::endl;
+        std::cerr << s << std::endl;
     return s ? 0 : 1;
 }
