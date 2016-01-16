@@ -742,6 +742,14 @@ tABC_CC ABC_BitidSign(const char *szUserName,
                       tABC_Error *pError);
 
 /* === Account sync data: === */
+
+/**
+ * Returns true if the sync directory exists for the given username.
+ */
+tABC_CC ABC_AccountSyncExists(const char *szUserName,
+                              bool *pResult,
+                              tABC_Error *pError);
+
 tABC_CC ABC_LoadAccountSettings(const char *szUserName,
                                 const char *szPassword,
                                 tABC_AccountSettings **ppSettings,

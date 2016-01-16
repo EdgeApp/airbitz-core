@@ -2437,6 +2437,26 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_AccountSyncExists(const char *szUserName,
+                              bool *pResult,
+                              tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pResult);
+
+    {
+        std::string fixed;
+        AccountPaths paths;
+
+        *pResult = Lobby::fixUsername(fixed, szUserName) &&
+                   gContext->paths.accountDir(paths, fixed) &&
+                   fileExists(paths.syncDir());
+    }
+
+exit:
+    return cc;
+}
+
 /**
  * Loads the settings for a specific account
  *
