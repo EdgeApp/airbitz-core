@@ -31,6 +31,7 @@
 
 #include "ABC.h"
 #include "LoginShim.hpp"
+#include "Version.h"
 #include "../abcd/Context.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Export.hpp"
@@ -51,7 +52,6 @@
 #include "../abcd/login/Bitid.hpp"
 #include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
-#include "../abcd/login/LoginDir.hpp"
 #include "../abcd/login/LoginPackages.hpp"
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
@@ -104,27 +104,13 @@ using namespace abcd;
 /** Helper macro for ABC_GetCurrencies. */
 #define CURRENCY_GUI_ROW(code, number, name) {#code, number, name, ""},
 
-/**
- * Initialize the AirBitz Core library.
- *
- * The root directory for all file storage is set in this function.
- *
- * @param szRootDir                     The root directory for all files to be saved
- * @param szCaCertPath                  CA Certificate Path
- * @param szApiKeyHeader                API Key for the AirBitz login servers
- * @param szHiddenBitzKey               Private key for Hiddenbits promotion
- * @param pData                         Pointer to data to be returned back in callback
- * @param pSeedData                     Pointer to data to seed the random number generator
- * @param seedLength                    Length of the seed data
- * @param pError                        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_Initialize(const char                   *szRootDir,
-                       const char                   *szCaCertPath,
-                       const char                   *szApiKeyHeader,
-                       const char                   *szHiddenBitzKey,
-                       const unsigned char          *pSeedData,
-                       unsigned int                 seedLength,
-                       tABC_Error                   *pError)
+tABC_CC ABC_Initialize(const char               *szRootDir,
+                       const char               *szCaCertPath,
+                       const char               *szApiKey,
+                       const char               *szHiddenBitzKey,
+                       const unsigned char      *pSeedData,
+                       unsigned int             seedLength,
+                       tABC_Error               *pError)
 {
     // Cannot use ABC_PROLOG - different initialization semantics
     ABC_DebugLog("%s called", __FUNCTION__);
@@ -133,13 +119,13 @@ tABC_CC ABC_Initialize(const char                   *szRootDir,
     ABC_CHECK_ASSERT(!gContext, ABC_CC_Reinitialization,
                      "The core library has already been initalized");
     ABC_CHECK_NULL(szRootDir);
-    ABC_CHECK_NULL(szApiKeyHeader);
+    ABC_CHECK_NULL(szApiKey);
     ABC_CHECK_NULL(szHiddenBitzKey);
     ABC_CHECK_NULL(pSeedData);
 
     {
         // Initialize the global context object:
-        gContext.reset(new Context(szRootDir, szCaCertPath, szApiKeyHeader,
+        gContext.reset(new Context(szRootDir, szCaCertPath, szApiKey,
                                    szHiddenBitzKey));
 
         // initialize logging
@@ -262,14 +248,12 @@ tABC_CC ABC_AccountDelete(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
 
     {
-        std::string username;
-        ABC_CHECK_NEW(Lobby::fixUsername(username, szUserName));
+        std::string fixed;
+        ABC_CHECK_NEW(Lobby::fixUsername(fixed, szUserName));
+        AccountPaths paths;
+        ABC_CHECK_NEW(gContext->paths.accountDir(paths, fixed));
 
-        std::string directory;
-        directory = loginDirFind(username);
-        ABC_CHECK_ASSERT(!directory.empty(), ABC_CC_AccountDoesNotExist,
-                         "Account not found on disk");
-        ABC_CHECK_NEW(fileDelete(directory));
+        ABC_CHECK_NEW(fileDelete(paths.dir()));
     }
 
 exit:
@@ -304,8 +288,8 @@ tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
 
     {
         ABC_GET_LOGIN();
-        ABC_CHECK_RET(ABC_LoginRecoverySet(*login,
-                                           szRecoveryQuestions, szRecoveryAnswers, pError));
+        ABC_CHECK_NEW(loginRecoverySet(*login, szRecoveryQuestions,
+                                       szRecoveryAnswers));
     }
 
 exit:
@@ -328,7 +312,7 @@ tABC_CC ABC_PasswordOk(const char *szUserName,
 
     {
         ABC_GET_LOGIN();
-        ABC_CHECK_RET(ABC_LoginPasswordOk(*login, szPassword, pOk, pError));
+        ABC_CHECK_NEW(loginPasswordOk(*pOk, *login, szPassword));
     }
 
 exit:
@@ -343,12 +327,11 @@ tABC_CC ABC_PasswordExists(const char *szUserName,
                            tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szUserName);
 
     {
-        ABC_GET_LOGIN();
-
         bool out;
-        ABC_CHECK_NEW(passwordExists(out, *login));
+        ABC_CHECK_NEW(loginPasswordExists(out, szUserName));
         *pExists = out;
     }
 
@@ -466,7 +449,7 @@ tABC_CC ABC_OtpResetGet(char **pszUsernames,
 
     {
         std::list<std::string> result;
-        ABC_CHECK_NEW(otpResetGet(result, loginDirList()));
+        ABC_CHECK_NEW(otpResetGet(result, gContext->paths.accountList()));
 
         std::string out;
         for (auto i: result)
@@ -784,8 +767,8 @@ tABC_CC ABC_GetPIN(const char *szUserName,
     {
         ABC_GET_ACCOUNT();
 
-        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
-        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
 
         *pszPin = nullptr;
         if (settings->szPIN)
@@ -814,18 +797,23 @@ tABC_CC ABC_SetPIN(const char *szUserName,
 {
     ABC_PROLOG();
     ABC_CHECK_NULL(szPin);
-    ABC_CHECK_ASSERT(strlen(szPin) >= ABC_MIN_PIN_LENGTH, ABC_CC_Error,
-                     "Pin is too short");
 
     {
         ABC_GET_ACCOUNT();
 
-        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
-        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
+        ABC_CHECK_ASSERT(ABC_MIN_PIN_LENGTH <= strlen(szPin), ABC_CC_Error,
+                         "Pin is too short");
+        char *endstr = nullptr;
+        strtol(szPin, &endstr, 10);
+        ABC_CHECK_ASSERT('\0' == *endstr, ABC_CC_NonNumericPin,
+                         "The pin must be numeric.");
+
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
 
         ABC_FREE_STR(settings->szPIN);
         settings->szPIN = stringCopy(szPin);
-        ABC_CHECK_RET(ABC_AccountSettingsSave(*account, settings, pError));
+        ABC_CHECK_NEW(accountSettingsSave(*account, settings));
     }
 
 exit:
@@ -1043,8 +1031,10 @@ tABC_CC ABC_PinLoginExists(const char *szUserName,
                            tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szUserName);
+    ABC_CHECK_NULL(pbExists);
 
-    ABC_CHECK_RET(ABC_LoginPinExists(szUserName, pbExists, pError));
+    ABC_CHECK_NEW(loginPinExists(*pbExists, szUserName));
 
 exit:
     return cc;
@@ -1060,7 +1050,7 @@ tABC_CC ABC_PinLoginDelete(const char *szUserName,
 
     {
         ABC_GET_LOBBY();
-        ABC_CHECK_RET(ABC_LoginPinDelete(*lobby, pError));
+        ABC_CHECK_NEW(loginPinDelete(*lobby));
     }
 
 exit:
@@ -1099,13 +1089,13 @@ tABC_CC ABC_PinSetup(const char *szUserName,
         ABC_GET_LOGIN();
         ABC_GET_ACCOUNT();
 
-        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
-        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
         ABC_CHECK_NULL(settings->szPIN);
 
         time_t expires = time(nullptr);
         expires += 60 * settings->minutesAutoLogout;
-        ABC_CHECK_RET(ABC_LoginPinSetup(*login, settings->szPIN, expires, pError));
+        ABC_CHECK_NEW(loginPinSetup(*login, settings->szPIN, expires));
     }
 
 exit:
@@ -1123,7 +1113,7 @@ tABC_CC ABC_ListAccounts(char **pszUserNames,
     ABC_CHECK_NULL(pszUserNames);
 
     {
-        auto list = loginDirList();
+        auto list = gContext->paths.accountList();
 
         std::string out;
         for (const auto &username: list)
@@ -1284,7 +1274,10 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
 
     {
         ABC_GET_LOBBY();
-        ABC_CHECK_RET(ABC_LoginGetRQ(*lobby, pszQuestions, pError));
+
+        std::string questions;
+        ABC_CHECK_NEW(loginRecoveryQuestions(questions, *lobby));
+        *pszQuestions = stringCopy(questions);
     }
 
 exit:
@@ -1316,7 +1309,7 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
 
     {
         ABC_GET_LOGIN();
-        ABC_CHECK_RET(ABC_LoginPasswordSet(*login, szNewPassword, pError));
+        ABC_CHECK_NEW(loginPasswordSet(*login, szNewPassword));
     }
 
 exit:
@@ -1353,7 +1346,7 @@ tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
     {
         std::shared_ptr<Login> login;
         ABC_CHECK_NEW(cacheLoginRecovery(login, szUserName, szRecoveryAnswers));
-        ABC_CHECK_RET(ABC_LoginPasswordSet(*login, szNewPassword, pError));
+        ABC_CHECK_NEW(loginPasswordSet(*login, szNewPassword));
     }
 
 exit:
@@ -2444,6 +2437,26 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_AccountSyncExists(const char *szUserName,
+                              bool *pResult,
+                              tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pResult);
+
+    {
+        std::string fixed;
+        AccountPaths paths;
+
+        *pResult = Lobby::fixUsername(fixed, szUserName) &&
+                   gContext->paths.accountDir(paths, fixed) &&
+                   fileExists(paths.syncDir());
+    }
+
+exit:
+    return cc;
+}
+
 /**
  * Loads the settings for a specific account
  *
@@ -2461,7 +2474,7 @@ tABC_CC ABC_LoadAccountSettings(const char *szUserName,
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, ppSettings, pError));
+        *ppSettings = accountSettingsLoad(*account);
     }
 
 exit:
@@ -2485,7 +2498,7 @@ tABC_CC ABC_UpdateAccountSettings(const char *szUserName,
 
     {
         ABC_GET_ACCOUNT();
-        ABC_CHECK_RET(ABC_AccountSettingsSave(*account, pSettings, pError));
+        ABC_CHECK_NEW(accountSettingsSave(*account, pSettings));
     }
 
 exit:
@@ -2502,7 +2515,7 @@ void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings)
     // Cannot use ABC_PROLOG - no pError
     ABC_DebugLog("%s called", __FUNCTION__);
 
-    ABC_AccountSettingsFree(pSettings);
+    accountSettingsFree(pSettings);
 }
 
 tABC_CC ABC_DataSyncAccount(const char *szUserName,
@@ -2920,8 +2933,8 @@ ABC_RequestExchangeRateUpdate(const char *szUserName,
         currencies.insert(static_cast<Currency>(currencyNum));
 
         // Find the user's exchange-rate preference:
-        AutoFree<tABC_AccountSettings, ABC_AccountSettingsFree> settings;
-        ABC_CHECK_RET(ABC_AccountSettingsLoad(*account, &settings.get(), pError));
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
         std::string preference = settings->szExchangeRateSource;
 
         // Move the user's preference to the front of the list:

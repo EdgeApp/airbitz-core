@@ -55,13 +55,13 @@ public:
      * Loads the JSON object from disk.
      */
     Status
-    load(const std::string &filename);
+    load(const std::string &path);
 
     /**
      * Loads the JSON object from disk using encryption.
      */
     Status
-    load(const std::string &filename, DataSlice dataKey);
+    load(const std::string &path, DataSlice dataKey);
 
     /**
      * Loads the JSON object from an in-memory string.
@@ -73,13 +73,13 @@ public:
      * Saves the JSON object to disk.
      */
     Status
-    save(const std::string &filename) const;
+    save(const std::string &path) const;
 
     /**
      * Saves the JSON object to disk using encryption.
      */
     Status
-    save(const std::string &filename, DataSlice dataKey) const;
+    save(const std::string &path, DataSlice dataKey) const;
 
     /**
      * Saves the JSON object to an in-memory string.

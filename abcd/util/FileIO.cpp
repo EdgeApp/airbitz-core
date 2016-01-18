@@ -68,7 +68,8 @@ fileLoad(DataChunk &result, const std::string &path)
 
     FILE *fp = fopen(path.c_str(), "rb");
     if (!fp)
-        return ABC_ERROR(ABC_CC_FileOpenError, "Cannot open for reading: " + path);
+        return ABC_ERROR(ABC_CC_FileOpenError,
+                         "Cannot open " + path + " for reading");
 
     fseek(fp, 0, SEEK_END);
     size_t size = ftell(fp);
@@ -78,7 +79,8 @@ fileLoad(DataChunk &result, const std::string &path)
     if (fread(result.data(), 1, size, fp) != size)
     {
         fclose(fp);
-        return ABC_ERROR(ABC_CC_FileReadError, "Cannot read file: " + path);
+        return ABC_ERROR(ABC_CC_FileReadError,
+                         "Cannot read " + path);
     }
 
     fclose(fp);
@@ -91,17 +93,23 @@ fileSave(DataSlice data, const std::string &path)
     AutoFileLock lock(gFileMutex);
     ABC_DebugLog("Writing file %s", path.c_str());
 
-    FILE *fp = fopen(path.c_str(), "wb");
+    const auto pathTmp = path + ".tmp";
+    FILE *fp = fopen(pathTmp.c_str(), "wb");
     if (!fp)
-        return ABC_ERROR(ABC_CC_FileOpenError, "Cannot open for writing: " + path);
+        return ABC_ERROR(ABC_CC_FileOpenError,
+                         "Cannot open " + pathTmp + " for writing");
 
     if (1 != fwrite(data.data(), data.size(), 1, fp))
     {
         fclose(fp);
-        return ABC_ERROR(ABC_CC_FileReadError, "Cannot write file: " + path);
+        return ABC_ERROR(ABC_CC_FileWriteError, "Cannot write " + pathTmp);
     }
-
     fclose(fp);
+
+    if (rename(pathTmp.c_str(), path.c_str()))
+        return ABC_ERROR(ABC_CC_FileWriteError,
+                         "Cannot rename " + pathTmp + " to " + path);
+
     return Status();
 }
 

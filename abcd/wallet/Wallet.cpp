@@ -185,7 +185,7 @@ Wallet::Wallet(Account &account, const std::string &id):
     account(account),
     parent_(account.shared_from_this()),
     id_(id),
-    dir_(gContext->walletsDir() + id + "/"),
+    dir_(gContext->paths.walletDir(id)),
     balanceDirty_(true),
     addresses(*this),
     txs(*this),
@@ -204,7 +204,7 @@ Wallet::createNew(const std::string &name, int currency)
     syncKey_ = base16Encode(syncKey);
 
     // Create the sync directory:
-    ABC_CHECK(fileEnsureDir(gContext->walletsDir()));
+    ABC_CHECK(fileEnsureDir(gContext->paths.walletsDir()));
     ABC_CHECK(fileEnsureDir(dir()));
     ABC_CHECK(fileEnsureDir(syncDir()));
     ABC_CHECK(syncMakeRepo(syncDir()));
@@ -251,7 +251,7 @@ Wallet::loadKeys()
 Status
 Wallet::loadSync()
 {
-    ABC_CHECK(fileEnsureDir(gContext->walletsDir()));
+    ABC_CHECK(fileEnsureDir(gContext->paths.walletsDir()));
     ABC_CHECK(fileEnsureDir(dir()));
     ABC_CHECK(syncEnsureRepo(syncDir(), dir() + "tmp/", syncKey_));
 

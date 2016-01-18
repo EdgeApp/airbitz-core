@@ -8,6 +8,7 @@
 #ifndef ABCD_LOGIN_LOBBY_HPP
 #define ABCD_LOGIN_LOBBY_HPP
 
+#include "../AccountPaths.hpp"
 #include "../crypto/OtpKey.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
@@ -36,21 +37,11 @@ public:
     username() const { return username_; }
 
     /**
-     * Returns the account's directory name.
-     * The string will be empty if the directory does not exist.
-     */
-    const std::string &
-    dir() const;
-
-    std::string carePackageName() { return dir() + "CarePackage.json"; }
-    std::string loginPackageName() { return dir() + "LoginPackage.json"; }
-    std::string rootKeyPath() { return dir() + "RootKey.json"; }
-
-    /**
-     * Creates a directory for the account if one does not already exist.
+     * Obtains the paths object giving the file locations within the account.
+     * @param create true to create the directory if it does not exist.
      */
     Status
-    dirCreate();
+    paths(AccountPaths &result, bool create=false);
 
     /**
      * Obtains the hashed username used to authenticate with the server,
@@ -87,7 +78,7 @@ public:
 private:
     mutable std::mutex mutex_;
     std::string username_;
-    std::string dir_;
+    AccountPaths paths_;
     DataChunk authId_;
 
     bool otpKeyOk_ = false;

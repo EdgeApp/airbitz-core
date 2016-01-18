@@ -115,3 +115,44 @@ COMMAND(InitLevel::wallet, SpendInternal, "spend-internal",
 
     return Status();
 }
+
+COMMAND(InitLevel::wallet, SpendGetFee, "spend-get-fee",
+        " <address> <amount>")
+{
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto address = argv[0];
+    const auto amount = atol(argv[1]);
+
+    AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
+    ABC_CHECK_OLD(ABC_SpendNewInternal(address, nullptr, nullptr, nullptr, amount,
+                                       &pSpend.get(), &error));
+
+    uint64_t fee;
+    ABC_CHECK_OLD(ABC_SpendGetFee(session.username.c_str(),
+                                  session.uuid.c_str(),
+                                  pSpend, &fee, &error));
+    std::cout << "fee: " << fee << std::endl;
+
+    return Status();
+}
+
+COMMAND(InitLevel::wallet, SpendGetMax, "spend-get-max",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    const auto address = "1111111111111111111114oLvT2";
+    AutoFree<tABC_SpendTarget, ABC_SpendTargetFree> pSpend;
+    ABC_CHECK_OLD(ABC_SpendNewInternal(address, nullptr, nullptr, nullptr, 0,
+                                       &pSpend.get(), &error));
+
+    uint64_t fee;
+    ABC_CHECK_OLD(ABC_SpendGetMax(session.username.c_str(),
+                                  session.uuid.c_str(),
+                                  pSpend, &fee, &error));
+    std::cout << "max: " << fee << std::endl;
+
+    return Status();
+}

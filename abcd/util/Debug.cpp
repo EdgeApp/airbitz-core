@@ -26,27 +26,15 @@ namespace abcd {
 static std::mutex gDebugMutex;
 static FILE *gLogFile = nullptr;
 
-static std::string
-debugLogPath()
-{
-    return gContext->rootDir() + "abc.log";
-}
-
-static std::string
-debugLogOldPath()
-{
-    return gContext->rootDir() + "abc-prev.log";
-}
-
 Status
 debugLogRotate()
 {
     if (gLogFile)
         fclose(gLogFile);
 
-    auto path = debugLogPath();
+    auto path = gContext->paths.logPath();
     if (fileExists(path))
-        rename(path.c_str(), debugLogOldPath().c_str());
+        rename(path.c_str(), gContext->paths.logPrevPath().c_str());
 
     gLogFile = fopen(path.c_str(), "w");
     if (!gLogFile)
@@ -78,10 +66,10 @@ DataChunk
 debugLogLoad()
 {
     DataChunk out1;
-    fileLoad(out1, debugLogOldPath()).log();
+    fileLoad(out1, gContext->paths.logPrevPath()).log();
 
     DataChunk out2;
-    fileLoad(out2, debugLogPath()).log();
+    fileLoad(out2, gContext->paths.logPath()).log();
 
     return buildData({out1, out2});
 }

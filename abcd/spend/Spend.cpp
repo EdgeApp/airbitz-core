@@ -79,10 +79,7 @@ spendCalculateMax(Wallet &self, SendInfo *pInfo, uint64_t &maxSatoshi)
     bc::transaction_type tx;
     tx.version = 1;
     tx.locktime = 0;
-
-    auto oldAmount = pInfo->metadata.amountSatoshi;
     ABC_CHECK(outputsForSendInfo(tx.outputs, pInfo));
-    pInfo->metadata.amountSatoshi = oldAmount;
 
     const auto info = generalAirbitzFeeInfo();
     uint64_t fee, usable;

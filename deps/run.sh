@@ -44,11 +44,7 @@ relative() {
 # Returns the name of a recipe source file.
 # $1 recipe name
 recipe_file() {
-    if [ -d  $base_dir/recipes/$1 ]; then
-        echo $base_dir/recipes/$1/$1
-    else
-        echo $base_dir/recipes/$1
-    fi
+    echo $base_dir/recipes/$1/$1.recipe
 }
 
 # Returns the name of a class source file.
@@ -118,7 +114,7 @@ write_tasks() {
 
     # The write-tasks rule itself:
     echo >>$out "$recipe.write-tasks: $(relative $(task_file $recipe))"
-    echo >>$out "$(relative $(task_file $recipe)): $recipe_files"
+    echo >>$out "$(relative $(task_file $recipe)): $recipe_files run.sh"
     echo >>$out "	@./run.sh $recipe write-tasks" # Caution - literal tab character!
 
     # Redefine the task function to actually write tasks to disk:
@@ -127,14 +123,14 @@ write_tasks() {
         local task=$1
         shift 1
 
-        local dep deps=$(relative $(recipe_file $recipe))
+        local dep deps="\$(wildcard $(relative $recipe_dir)/*)"
         for dep; do
             deps="$deps $(relative $(done_file_dot $dep))"
         done
 
         echo >>$out
         echo >>$out "$recipe.$task: $(relative $(done_file $recipe $task))"
-        echo >>$out "$(relative $(done_file $recipe $task)):$deps"
+        echo >>$out "$(relative $(done_file $recipe $task)): $deps"
         echo >>$out "	@./run.sh $recipe $task" # Caution - literal tab character!
     }
     source $(recipe_file $recipe)
@@ -151,7 +147,7 @@ write_tasks() {
 
 recipe_dir=$(dirname $(recipe_file $recipe))
 log=$work_dir/$task.log
-echo "Running $recipe.$task..."
+echo "Running $recipe.$task"
 
 source $(recipe_file $recipe)
 

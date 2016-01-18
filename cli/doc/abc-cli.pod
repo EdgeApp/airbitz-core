@@ -216,6 +216,18 @@ Transfers Bitcoins from one wallet to another.
 
 Requires a working directory, username, password and wallet.
 
+=item B<spend-get_fee> <wallet-dest> <amount>
+
+Calculates the mining fee for a transaction.
+
+Requires a working directory, username, password and wallet.
+
+=item B<spend-get-max>
+
+Calculates the maximum spendable amount for a wallet.
+
+Requires a working directory, username, password and wallet.
+
 =back
 
 =head2 ADDRESS COMMANDS

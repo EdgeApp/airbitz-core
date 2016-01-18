@@ -166,9 +166,11 @@ HttpRequest::init()
         return ABC_ERROR(ABC_CC_Error, "cURL failed to ignore signals");
     if (curl_easy_setopt(handle_, CURLOPT_CONNECTTIMEOUT, TIMEOUT))
         return ABC_ERROR(ABC_CC_Error, "cURL failed to set timeout");
-    if (!gContext->certPath().empty())
+
+    const auto certPath = gContext->paths.certPath();
+    if (!certPath.empty())
     {
-        if (curl_easy_setopt(handle_, CURLOPT_CAINFO, gContext->certPath().c_str()))
+        if (curl_easy_setopt(handle_, CURLOPT_CAINFO, certPath.c_str()))
             return ABC_ERROR(ABC_CC_Error, "cURL failed to set ca-certificates.crt");
     }
 

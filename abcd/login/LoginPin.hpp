@@ -12,7 +12,7 @@
 #ifndef ABCD_LOGIN_LOGIN_PIN_HPP
 #define ABCD_LOGIN_LOGIN_PIN_HPP
 
-#include "../../src/ABC.h"
+#include "../util/Status.hpp"
 #include <time.h>
 #include <memory>
 
@@ -21,22 +21,31 @@ namespace abcd {
 class Login;
 class Lobby;
 
-tABC_CC ABC_LoginPinExists(const char *szUserName,
-                           bool *pbExists,
-                           tABC_Error *pError);
+/**
+ * Determines whether or not the given user can log in via PIN on this
+ * device.
+ */
+Status
+loginPinExists(bool &result, const std::string &username);
 
-tABC_CC ABC_LoginPinDelete(const Lobby &lobby,
-                           tABC_Error *pError);
+/**
+ * Deletes the local copy of the PIN-based login data.
+ */
+Status
+loginPinDelete(Lobby &lobby);
 
-tABC_CC ABC_LoginPin(std::shared_ptr<Login> &result,
-                     Lobby &lobby,
-                     const char *szPin,
-                     tABC_Error *pError);
+/**
+ * Assuming a PIN-based login pagage exits, log the user in.
+ */
+Status
+loginPin(std::shared_ptr<Login> &result,
+         Lobby &lobby, const std::string &pin);
 
-tABC_CC ABC_LoginPinSetup(Login &login,
-                          const char *szPin,
-                          time_t expires,
-                          tABC_Error *pError);
+/**
+ * Sets up a PIN login package, both on-disk and on the server.
+ */
+Status
+loginPinSetup(Login &login, const std::string &pin, time_t expires);
 
 } // namespace abcd
 

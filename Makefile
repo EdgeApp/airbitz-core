@@ -1,5 +1,19 @@
 # Build settings:
 WORK_DIR ?= build
+INSTALL_PATH ?= /usr/local
+
+# Set latest Git revision as Version
+ifeq (,$(wildcard src/Version.h))
+$(shell cp "src/Version.h.in" "src/Version.h")
+endif
+
+GIT_REV = $(shell git rev-parse --short HEAD)
+SRC_REV = $(shell grep -o "\".*\"" src/Version.h)
+GIT_REV_COMPARE = $(shell [ $(GIT_REV) !=  $(SRC_REV) ] && echo true)
+
+ifeq ($(GIT_REV_COMPARE),true)
+$(shell sed -i '/#define ABC_VERSION ".*"/c\#define ABC_VERSION "$(GIT_REV)"' src/Version.h )
+endif
 
 # Compiler options:
 CFLAGS   += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c99
@@ -75,8 +89,35 @@ ifneq (, $(shell which astyle))
 	--dry-run | sed -n '/Formatted/s/Formatted/Needs formatting:/p'
 endif
 
+doc: cli/doc/abc-cli.html cli/doc/abc-cli.1
+
+cli/doc/abc-cli.html: cli/doc/abc-cli.pod
+	$(RUN) pod2html --infile=$< --outfile=$@ --noindex
+
+cli/doc/abc-cli.1: cli/doc/abc-cli.pod
+	$(RUN) pod2man $< $@
+
 clean:
 	$(RM) -r $(WORK_DIR) codegen
+
+install: $(WORK_DIR)/libabc.a $(WORK_DIR)/abc-cli cli/doc/abc-cli.1
+	install -d $(INSTALL_PATH)/lib
+	install -d $(INSTALL_PATH)/bin
+	install -d $(INSTALL_PATH)/include
+	install -d $(INSTALL_PATH)/share/man/man1
+	install -d $(INSTALL_PATH)/share/bash-completion/completions
+	install $(WORK_DIR)/libabc.a $(INSTALL_PATH)/lib
+	install $(WORK_DIR)/abc-cli $(INSTALL_PATH)/bin
+	install src/ABC.h $(INSTALL_PATH)/include
+	install cli/doc/abc-cli.1 $(INSTALL_PATH)/share/man/man1
+	install cli/abc-cli-bash-completion.sh $(INSTALL_PATH)/share/bash-completion/completions
+
+uninstall:
+	rm -f $(INSTALL_PATH)/lib/libabc.a
+	rm -f $(INSTALL_PATH)/bin/abc-cli
+	rm -f $(INSTALL_PATH)/include/ABC.h
+	rm -f $(INSTALL_PATH)/share/man/man1/abc-cli.1
+	rm -f $(INSTALL_PATH)/share/bash-completion/completions/abc-cli-bash-completion.sh
 
 # Automatic dependency rules:
 $(WORK_DIR)/%.o: %.c | $(generated_headers)

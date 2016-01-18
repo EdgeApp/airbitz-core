@@ -6,30 +6,17 @@
  */
 
 #include "Context.hpp"
-#include "bitcoin/Testnet.hpp"
-#include "util/FileIO.hpp"
 
 namespace abcd {
 
 std::unique_ptr<Context> gContext;
 
 Context::Context(const std::string &rootDir, const std::string &certPath,
-                 const std::string &apiKeyHeader,
-                 const std::string &hiddenBitzKey):
-    rootDir_(fileSlashify(rootDir)),
-    certPath_(certPath),
-    apiKeyHeader_(apiKeyHeader),
+                 const std::string &apiKey, const std::string &hiddenBitzKey):
+    apiKey_(apiKey),
     hiddenBitzKey_(hiddenBitzKey),
-    exchangeCache(rootDir_)
+    paths(rootDir, certPath),
+    exchangeCache(paths.exchangeCachePath())
 {}
-
-std::string
-Context::accountsDir() const
-{
-    if (isTestnet())
-        return rootDir_ + "Accounts-testnet/";
-    else
-        return rootDir_ + "Accounts/";
-}
 
 } // namespace abcd

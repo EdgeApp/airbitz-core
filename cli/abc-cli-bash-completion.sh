@@ -13,18 +13,67 @@ _abc_cli_complete()
     prev_word="${COMP_WORDS[COMP_CWORD-1]}"
 
     # Ask abc-cli to generate a list of types it supports
-    type_list='account-available account-create account-decrypt account-encrypt
-    address-allocate address-calculate address-list address-search bitid-login
-    bitid-sign category-add category-list category-remove change-password
-    change-password-recovery check-password check-recovery-answers data-sync
-    exchange-fetch exchange-update exchange-validate general-update
-    get-question-choices get-questions get-settings list-accounts otp-auth-get
-    otp-auth-remove otp-auth-set otp-key-get otp-key-remove otp-key-set
-    otp-reset-get otp-reset-remove pin-login pin-login-setup plugin-clear
-    plugin-get plugin-remove plugin-set recovery-reminder-set set-nickname
-    sign-in spend-internal spend-transfer spend-uri upload-logs version
-    wallet-archive wallet-create wallet-decrypt wallet-encrypt wallet-info
-    wallet-list wallet-order wallet-seed watcher'
+    type_list='account-available
+    account-create
+    account-decrypt
+    account-encrypt
+    account-list
+    address-allocate
+    address-calculate
+    address-list
+    address-search
+    bitid-login
+    bitid-sign
+    category-add
+    category-list
+    category-remove
+    change-password
+    change-password-recovery
+    check-password
+    check-recovery-answers
+    data-sync
+    exchange-fetch
+    exchange-update
+    exchange-validate
+    general-update
+    get-question-choices
+    get-questions
+    get-settings
+    otp-auth-get
+    otp-auth-remove
+    otp-auth-set
+    otp-key-get
+    otp-key-remove
+    otp-key-set
+    otp-reset-get
+    otp-reset-remove
+    pin-login
+    pin-login-setup
+    plugin-clear
+    plugin-get
+    plugin-remove
+    plugin-set
+    recovery-reminder-set
+    set-nickname
+    sign-in
+    spend-get-fee
+    spend-get-max
+    spend-internal
+    spend-transfer
+    spend-uri
+    stratum-version
+    upload-logs
+    version
+    wallet-archive
+    wallet-create
+    wallet-decrypt
+    wallet-encrypt
+    wallet-info
+    wallet-list
+    wallet-order
+    wallet-remove
+    wallet-seed
+    watcher'
 
     # COMPREPLY is the array of possible completions, generated with
     # the compgen builtin.

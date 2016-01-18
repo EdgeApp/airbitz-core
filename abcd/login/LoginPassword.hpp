@@ -20,25 +20,32 @@ namespace abcd {
 class Login;
 class Lobby;
 
-tABC_CC ABC_LoginPassword(std::shared_ptr<Login> &result,
-                          Lobby &lobby,
-                          const char *szPassword,
-                          tABC_Error *pError);
+/**
+ * Loads an existing login object, either from the server or from disk.
+ */
+Status
+loginPassword(std::shared_ptr<Login> &result,
+              Lobby &lobby,
+              const std::string &password);
 
-tABC_CC ABC_LoginPasswordSet(Login &login,
-                             const char *szPassword,
-                             tABC_Error *pError);
+/**
+ * Changes the password on an existing login object.
+ */
+Status
+loginPasswordSet(Login &login, const std::string &password);
 
-tABC_CC ABC_LoginPasswordOk(Login &login,
-                            const char *szPassword,
-                            bool *pOk,
-                            tABC_Error *pError);
+/**
+ * Validates that the provided password is correct.
+ * This is used in the GUI to guard access to certain actions.
+ */
+Status
+loginPasswordOk(bool &result, Login &login, const std::string &password);
 
 /**
  * Returns true if the logged-in account has a password.
  */
 Status
-passwordExists(bool &result, Login &login);
+loginPasswordExists(bool &result, const std::string &username);
 
 } // namespace abcd
 

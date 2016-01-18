@@ -56,8 +56,6 @@
 #define ABC_DENOMINATION_MBTC 1
 #define ABC_DENOMINATION_UBTC 2
 
-#define ABC_VERSION "1.1.3"
-
 #define ABC_MIN_USERNAME_LENGTH 3
 #define ABC_MIN_PASS_LENGTH 10
 #define ABC_MIN_PIN_LENGTH 4
@@ -484,13 +482,25 @@ typedef void (*tABC_Sweep_Done_Callback)(tABC_CC cc,
         uint64_t amount);
 
 /* === Library lifetime: === */
-tABC_CC ABC_Initialize(const char                   *szRootDir,
-                       const char                    *szCaCertPath,
-                       const char                    *szApiKeyHeader,
-                       const char                    *szHiddenBitzKey,
-                       const unsigned char           *pSeedData,
-                       unsigned int                  seedLength,
-                       tABC_Error                    *pError);
+
+/**
+ * Initialize the AirBitz Core library.
+ * @param szRootDir             The root directory for all files to be saved
+ * @param szCaCertPath          CA Certificate Path
+ * @param szApiKey              API Key for the AirBitz login servers
+ * @param szHiddenBitzKey       Private key for Hiddenbits promotion
+ * @param pData                 Pointer to data to be returned back in callback
+ * @param pSeedData             Pointer to data to seed the random number generator
+ * @param seedLength            Length of the seed data
+ * @param pError                A pointer to the location to store the error if there is one
+ */
+tABC_CC ABC_Initialize(const char               *szRootDir,
+                       const char               *szCaCertPath,
+                       const char               *szApiKey,
+                       const char               *szHiddenBitzKey,
+                       const unsigned char      *pSeedData,
+                       unsigned int             seedLength,
+                       tABC_Error               *pError);
 
 void ABC_Terminate();
 
@@ -732,6 +742,14 @@ tABC_CC ABC_BitidSign(const char *szUserName,
                       tABC_Error *pError);
 
 /* === Account sync data: === */
+
+/**
+ * Returns true if the sync directory exists for the given username.
+ */
+tABC_CC ABC_AccountSyncExists(const char *szUserName,
+                              bool *pResult,
+                              tABC_Error *pError);
+
 tABC_CC ABC_LoadAccountSettings(const char *szUserName,
                                 const char *szPassword,
                                 tABC_AccountSettings **ppSettings,

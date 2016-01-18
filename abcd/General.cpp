@@ -31,7 +31,6 @@ constexpr unsigned fallbackFee = 10000;
                                     "stratum://stratum-az-wjapan.airbitz.co:50001", \
                                     "stratum://stratum-az-neuro.airbitz.co:50001" }
 #define TESTNET_BITCOIN_SERVERS {   "tcp://obelisk-testnet.airbitz.co:9091" }
-#define GENERAL_INFO_FILENAME                   "Servers.json"
 #define GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS   (24 * 60 * 60) // how many seconds old can the info file before it should be updated
 
 struct BitcoinFeeJson:
@@ -71,7 +70,7 @@ generalLoad()
     if (!gContext)
         return GeneralJson();
 
-    const auto path = gContext->rootDir() + GENERAL_INFO_FILENAME;
+    const auto path = gContext->paths.generalPath();
     if (!fileExists(path))
         generalUpdate().log();
 
@@ -83,7 +82,7 @@ generalLoad()
 Status
 generalUpdate()
 {
-    const auto path = gContext->rootDir() + GENERAL_INFO_FILENAME;
+    const auto path = gContext->paths.generalPath();
 
     time_t lastTime;
     if (!fileTime(lastTime, path) ||
