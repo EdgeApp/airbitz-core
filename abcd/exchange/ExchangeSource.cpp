@@ -19,6 +19,24 @@ struct BitstampJson:
     ABC_JSON_STRING(rate, "last", nullptr)
 };
 
+
+struct CryptoCompareJson:
+    public JsonObject
+{
+    ABC_JSON_VALUE(rates, "Data", JsonArray)
+};
+
+struct CryptoCompareJsonRow:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(CryptoCompareJsonRow, JsonObject)
+    ABC_JSON_STRING(code,   "Symbol",  nullptr)
+    ABC_JSON_STRING(rate,   "Price",  nullptr)
+    ABC_JSON_STRING(lastUpdateTs, "LastUpdateTS",nullptr)
+    ABC_JSON_STRING(vol24Hours, "Volume24Hours",nullptr)
+    ABC_JSON_STRING(vol24HoursTo, "Volume24HoursTo",nullptr)
+};
+
 struct BraveNewCoinJson:
     public JsonObject
 {
@@ -36,7 +54,7 @@ struct BraveNewCoinJsonRow:
 
 const ExchangeSources exchangeSources
 {
-    "Bitstamp", "BraveNewCoin", "Coinbase"
+    "CryptoCompare","Bitstamp", "BraveNewCoin", "Coinbase"
 };
 
 static Status
@@ -72,6 +90,43 @@ fetchBitstamp(ExchangeRates &result)
 
     result = std::move(out);
     return Status();
+}
+
+/**
+ * Fetches and decodes exchange rates from the CryptoCompare source.
+ */
+static Status
+fetchCryptoCompare(ExchangeRates &result)
+{
+    HttpReply reply;
+    ABC_CHECK(HttpRequest().get(reply, "https://www.cryptocompare.com/api/data/price?fsym=BTC&tsyms=USD,EUR,GBP,CNY,HKD"));
+    ABC_CHECK(reply.codeOk());
+
+    CryptoCompareJson json;
+    ABC_CHECK(json.decode(reply.body));
+    auto rates = json.rates();
+
+    // Break apart the array:
+    ExchangeRates out;
+    auto size = rates.size();
+    for (size_t i = 0; i < size; ++i)
+    {
+        CryptoCompareJsonRow row(rates[i]);
+        ABC_CHECK(row.codeOk());
+        ABC_CHECK(row.rateOk());
+
+        Currency currency;
+        if (!currencyNumber(currency, row.code()))
+            continue;
+
+        // Capture the value:
+        double rate;
+        ABC_CHECK(doubleDecode(rate, row.rate()));
+        out[currency] = rate;
+    }
+
+   result = std::move(out);
+   return Status();
 }
 
 /**
@@ -175,6 +230,7 @@ fetchCoinbase(ExchangeRates &result)
 Status
 exchangeSourceFetch(ExchangeRates &result, const std::string &source)
 {
+    if (source == "CryptoCompare")  return fetchCryptoCompare(result);
     if (source == "Bitstamp")       return fetchBitstamp(result);
     if (source == "BraveNewCoin")   return fetchBraveNewCoin(result);
     if (source == "Coinbase")       return fetchCoinbase(result);
