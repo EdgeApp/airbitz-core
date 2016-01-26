@@ -1,5 +1,5 @@
 ![AirBitz Core Library](http://airbitz.co/static/img/bitcoin-wallet/section-bitcoin-wallet-platform-bg.jpg)
-# AirBitz Wallet Core
+# Airbitz Wallet Core
 [https://airbitz.co/bitcoin-wallet-api-library/](https://airbitz.co/bitcoin-wallet-api-library/)
 
 This library implements the core Bitcoin functionality for the AirBitz wallet.

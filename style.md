@@ -1,9 +1,9 @@
-# AirBitz C++ Coding Style
+# Airbitz C++ Coding Style
 
-The AirBitz core was originally written in C.
+The Airbitz core was originally written in C.
 Although everything has been converted to C++,
 the source code is still very C-like.
-As AirBitz moves forward with core refactoring,
+As Airbitz moves forward with core refactoring,
 much of this code will need to move off the old C idioms
 and adopt a more C++ way of doing things.
 

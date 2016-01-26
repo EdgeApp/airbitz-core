@@ -1,6 +1,6 @@
 /*
- *  Copyright (c) 2016, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2016, Airbitz, Inc.
+ * All rights reserved.
  *
  * See the LICENSE file for more information.
  */
