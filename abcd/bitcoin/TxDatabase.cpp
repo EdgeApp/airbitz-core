@@ -341,7 +341,7 @@ bc::data_chunk TxDatabase::serialize() const
         serial.set_iterator(satoshi_save(row.second.tx, serial.iterator()));
         serial.write_byte(static_cast<uint8_t>(row.second.state));
         serial.write_8_bytes(height);
-        serial.write_byte(row.second.need_check);
+        serial.write_byte(0); // Was need_check
         serial.write_hash(row.second.txid);
         serial.write_hash(row.second.ntxid);
         serial.write_byte(row.second.bMalleated);
@@ -395,7 +395,7 @@ TxDatabase::load(const bc::data_chunk &data)
             row.timestamp = now;
             if (TxState::unconfirmed == row.state)
                 row.timestamp = row.block_height;
-            row.need_check = serial.read_byte();
+            (void)serial.read_byte(); // Was need_check
 
             row.txid           = serial.read_hash();
             row.ntxid          = serial.read_hash();
@@ -434,8 +434,6 @@ void TxDatabase::dump(std::ostream &out) const
         case TxState::confirmed:
             out << "state: confirmed" << std::endl;
             out << "height: " << row.second.block_height << std::endl;
-            if (row.second.need_check)
-                out << "needs check." << std::endl;
             break;
         }
         for (auto &input: row.second.tx.inputs)
@@ -484,7 +482,7 @@ bool TxDatabase::insert(const bc::transaction_type &tx)
             }
         }
 
-        rows_[txid] = TxRow{tx, txid, ntxid, state, height, time(nullptr), bMalleated, false, false};
+        rows_[txid] = TxRow{tx, txid, ntxid, state, height, time(nullptr), bMalleated, false};
         return true;
     }
 
@@ -504,9 +502,6 @@ void TxDatabase::at_height(size_t height)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     last_height_ = height;
-
-    // Check for blockchain forks:
-    check_fork(height);
 }
 
 void TxDatabase::confirmed(bc::hash_digest txid, long long block_height)
@@ -516,14 +511,6 @@ void TxDatabase::confirmed(bc::hash_digest txid, long long block_height)
     auto it = rows_.find(txid);
     BITCOIN_ASSERT(it != rows_.end());
     auto &row = it->second;
-
-    // If the transaction was already confirmed in another block,
-    // that means the chain has forked:
-    if (row.state == TxState::confirmed && row.block_height != block_height)
-    {
-        //on_fork_();
-        check_fork(row.block_height);
-    }
 
     // Check if there are other malleated transactions.
     // If so, mark them all confirmed
@@ -559,11 +546,8 @@ void TxDatabase::unconfirmed(bc::hash_digest txid)
 
     // If the transaction was already confirmed, and is now unconfirmed,
     // we probably have a block fork:
-//    std::string malTxID1 = bc::encode_hash(bc::hash_transaction(row.tx));
-
     if (row.state == TxState::confirmed)
     {
-
         // Check if there are other malleated transactions.
         // If so, mark them all unconfirmed_malleated
         std::vector<TxRow *> txRows = ntxidLookupAll(it->second.ntxid);
@@ -590,9 +574,6 @@ void TxDatabase::unconfirmed(bc::hash_digest txid)
                 }
             }
         }
-
-        if (TxState::unconfirmed == row.state)
-            check_fork(row.block_height);
     }
 
     row.block_height = height;
@@ -616,36 +597,6 @@ void TxDatabase::foreach_unconfirmed(HashFn &&f)
     for (auto row: rows_)
         if (row.second.state != TxState::confirmed)
             f(row.first);
-}
-
-void TxDatabase::foreach_forked(HashFn &&f)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    for (auto row: rows_)
-        if (row.second.state == TxState::confirmed && row.second.need_check)
-            f(row.first);
-}
-
-/**
- * It is possible that the blockchain has forked. Therefore, mark all
- * transactions just below the given height as needing to be checked.
- */
-void TxDatabase::check_fork(size_t height)
-{
-    // Find the height of next-lower block that has transactions in it:
-    size_t prev_height = 0;
-    for (auto row: rows_)
-        if (row.second.state == TxState::confirmed &&
-                row.second.block_height < height &&
-                prev_height < row.second.block_height)
-            prev_height = row.second.block_height;
-
-    // Mark all transactions at that level as needing checked:
-    for (auto row: rows_)
-        if (row.second.state == TxState::confirmed &&
-                row.second.block_height == prev_height)
-            row.second.need_check = true;
 }
 
 std::vector<TxDatabase::TxRow *>

@@ -182,7 +182,6 @@ TxUpdater::connect()
         // Handle block-fork checks & unconfirmed transactions:
         db_.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1,
                                           ALL_SERVERS));
-        queue_get_indices(ALL_SERVERS);
     }
 
     return Status();
@@ -443,20 +442,6 @@ void TxUpdater::query_done(int idx, Connection &bconn)
         callbacks_.on_quiet();
 }
 
-void TxUpdater::queue_get_indices(int idx)
-{
-    int total_queued_indices = 0;
-    for (auto &it: connections_)
-    {
-        total_queued_indices += it->queued_get_indices_;
-    }
-
-    if (total_queued_indices)
-        return;
-
-    db_.foreach_forked(std::bind(&TxUpdater::get_index, this, _1, idx));
-}
-
 // - server queries --------------------
 
 void TxUpdater::get_height()
@@ -489,7 +474,6 @@ void TxUpdater::get_height()
 
                 // Query all unconfirmed transactions:
                 db_.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1, idx));
-                queue_get_indices(idx);
                 ABC_DebugLevel(2, "get_height server idx=%d height=%d", idx, height);
             }
             bconn.queued_get_height_--;
@@ -654,7 +638,6 @@ void TxUpdater::get_index(bc::hash_digest txid, int server_index)
             db_.unconfirmed(txid);
 
             bconn.queued_get_indices_--;
-            queue_get_indices(idx);
         };
 
         auto on_done = [this, txid, idx, &bconn](size_t block_height, size_t index)
@@ -665,7 +648,6 @@ void TxUpdater::get_index(bc::hash_digest txid, int server_index)
             db_.confirmed(txid, block_height);
 
             bconn.queued_get_indices_--;
-            queue_get_indices(idx);
             ABC_DebugLevel(2,"get_index SUCCESS server idx: %d", idx);
         };
 

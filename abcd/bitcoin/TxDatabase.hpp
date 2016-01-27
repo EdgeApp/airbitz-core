@@ -135,10 +135,6 @@ private:
         bool bMalleated;
         bool bMasterConfirm;
         //bc::hash_digest block_hash; // TODO: Fix obelisk to return this
-
-        // The transaction is certainly in a block, but there is some
-        // question whether or not that block is on the main chain:
-        bool need_check;
     };
 
     /**
@@ -164,10 +160,8 @@ private:
 
     typedef std::function<void (bc::hash_digest txid)> HashFn;
     void foreach_unconfirmed(HashFn &&f);
-    void foreach_forked(HashFn &&f);
 
     // - Internal: ---------------------
-    void check_fork(size_t height);
 
     /**
      * Returns all the rows that match the given ntxid.
