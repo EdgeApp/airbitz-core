@@ -556,6 +556,16 @@ tABC_CC ABC_QrEncode(const char *szText,
                      tABC_Error *pError);
 
 /* === Login lifetime: === */
+
+/**
+ * Transforms a username into the internal format used for hashing.
+ * This collapses spaces, converts things to lowercase,
+ * and checks for invalid characters.
+ */
+tABC_CC ABC_FixUsername(char **pszResult,
+                        const char *szUserName,
+                        tABC_Error *pError);
+
 tABC_CC ABC_SignIn(const char *szUserName,
                    const char *szPassword,
                    tABC_Error *pError);

@@ -143,6 +143,24 @@ void ABC_Log(const char *szMessage)
     ABC_DebugLog("%s", szMessage);
 }
 
+tABC_CC ABC_FixUsername(char **pszResult,
+                        const char *szUserName,
+                        tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszResult);
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        std::string username;
+        ABC_CHECK_NEW(Lobby::fixUsername(username, szUserName));
+        *pszResult = stringCopy(username);
+    }
+
+exit:
+    return cc;
+}
+
 /**
  * Create a new account.
  *
