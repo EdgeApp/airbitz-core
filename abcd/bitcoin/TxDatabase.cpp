@@ -9,6 +9,28 @@
 #include "Utility.hpp"
 #include "WatcherBridge.hpp"
 #include "../util/Debug.hpp"
+#include <unordered_set>
+
+namespace std {
+
+/**
+ * Allows `bc::point_type` to be used with `std::unordered_set`.
+ */
+template<> struct hash<bc::point_type>
+{
+    typedef bc::point_type argument_type;
+    typedef std::size_t result_type;
+
+    result_type
+    operator()(argument_type const &p) const
+    {
+        auto h = libbitcoin::from_little_endian_unsafe<result_type>(
+                     p.hash.begin());
+        return h ^ p.index;
+    }
+};
+
+} // namespace std
 
 namespace abcd {
 
@@ -16,6 +38,90 @@ namespace abcd {
 constexpr uint32_t old_serial_magic = 0x3eab61c3; // From the watcher
 constexpr uint32_t serial_magic = 0xfecdb763;
 constexpr uint8_t serial_tx = 0x42;
+
+typedef std::unordered_set<bc::hash_digest> TxidSet;
+typedef std::unordered_set<bc::point_type> PointSet;
+
+/**
+ * Knows how to check a transaction for double-spends.
+ * This uses a memoized recursive function to do the graph search,
+ * so the more checks this object performs,
+ * the faster those checks can potentially become (for a fixed graph).
+ */
+class TxFilter
+{
+public:
+    TxFilter(const TxDatabase &cache,
+             const PointSet &doubleSpends,
+             const AddressSet &addresses):
+        cache_(cache),
+        doubleSpends_(doubleSpends),
+        addresses_(addresses)
+    {
+    }
+
+    /**
+     * Returns true if a transaction is safe to spend from.
+     * @param filter true to reject unconfirmed non-change transactions.
+     */
+    bool
+    check(bc::hash_digest txid, const TxDatabase::TxRow &row, bool filter)
+    {
+        // If filter is true, we want to eliminate non-change transactions:
+        if (filter && TxState::confirmed != row.state)
+        {
+            // This is a spend if we control all the inputs:
+            for (auto &input: row.tx.inputs)
+            {
+                bc::payment_address address;
+                if (!bc::extract(address, input.script) ||
+                        !addresses_.count(address.encoded()))
+                    return false;
+            }
+        }
+
+        // Now check for double-spends:
+        return isSafe(txid);
+    }
+
+    /**
+     * Recursively checks the transaction graph for double-spends.
+     * @return true if the transaction never sources a double spend.
+     */
+    bool
+    isSafe(bc::hash_digest txid)
+    {
+        // Just use the previous result if we have been here before:
+        auto vi = visited_.find(txid);
+        if (visited_.end() != vi)
+            return vi->second;
+
+        // We have to assume missing transactions are safe:
+        auto i = cache_.rows_.find(txid);
+        if (cache_.rows_.end() == i)
+            return (visited_[txid] = true);
+
+        // Confirmed transactions are also safe:
+        if (TxState::confirmed == i->second.state)
+            return (visited_[txid] = true);
+
+        // Recursively check all the inputs against the double-spend list:
+        for (const auto &input: i->second.tx.inputs)
+        {
+            if (doubleSpends_.count(input.previous_output))
+                return (visited_[txid] = false);
+            if (!isSafe(input.previous_output.hash))
+                return (visited_[txid] = false);
+        }
+        return (visited_[txid] = true);
+    }
+
+private:
+    const TxDatabase &cache_;
+    const PointSet &doubleSpends_;
+    const AddressSet &addresses_;
+    std::unordered_map<bc::hash_digest, bool> visited_;
+};
 
 TxDatabase::~TxDatabase()
 {
@@ -155,85 +261,49 @@ bool TxDatabase::has_history(const bc::payment_address &address) const
     return false;
 }
 
-bc::output_info_list TxDatabase::get_utxos() const
+bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses,
+        bool filter) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    // Allow inserting bc::output_point into std::set:
-    class point_cmp
-    {
-    public:
-        bool operator () (const bc::output_point &a, const bc::output_point &b)
-        {
-            if (a.hash == b.hash)
-                return a.index < b.index;
-            else
-                return a.hash < b.hash;
-        }
-    };
-
-    // Build a list of spent outputs:
-    std::set<bc::output_point, point_cmp> spends;
+    // Build a list of spends:
+    PointSet spends;
+    PointSet doubleSpends;
     for (auto &row: rows_)
+    {
         for (auto &input: row.second.tx.inputs)
-            spends.insert(input.previous_output);
+        {
+            if (!spends.insert(input.previous_output).second)
+                doubleSpends.insert(input.previous_output);
+        }
+    }
+
+    TxFilter checker(*this, doubleSpends, addresses);
 
     // Check each output against the list:
     bc::output_info_list out;
     for (auto &row: rows_)
     {
-        // Exclude unconfirmed malleated transactions from UTXO set.
-        if ((false == row.second.bMalleated) || (TxState::confirmed == row.second.state
-                && row.second.bMasterConfirm))
+        for (uint32_t i = 0; i < row.second.tx.outputs.size(); ++i)
         {
-            for (uint32_t i = 0; i < row.second.tx.outputs.size(); ++i)
+            bc::output_point point = {row.first, i};
+            const auto &output = row.second.tx.outputs[i];
+            bc::payment_address address;
+
+            // The output is interesting if it isn't spent, belongs to us,
+            // and its transaction passes the safety check:
+            if (!spends.count(point) &&
+                    bc::extract(address, output.script) &&
+                    addresses.count(address.encoded()) &&
+                    checker.check(row.first, row.second, filter))
             {
-                auto &output = row.second.tx.outputs[i];
-                bc::output_point point = {row.first, i};
-                if (spends.find(point) == spends.end())
-                {
-                    bc::output_info_type info = {point, output.value};
-                    out.push_back(info);
-                }
+                bc::output_info_type info = {point, output.value};
+                out.push_back(info);
             }
         }
     }
+
     return out;
-}
-
-bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses,
-        bool filter) const
-{
-    auto raw = get_utxos();
-
-    std::lock_guard<std::mutex> lock(mutex_);
-    bc::output_info_list utxos;
-    for (auto &utxo: raw)
-    {
-        auto i = rows_.find(utxo.point.hash);
-        BITCOIN_ASSERT(i != rows_.end());
-        const auto &tx = i->second.tx;
-        auto &output = tx.outputs[utxo.point.index];
-
-        bc::payment_address to_address;
-        if (bc::extract(to_address, output.script))
-            if (addresses.find(to_address.encoded()) != addresses.end())
-                utxos.push_back(utxo);
-    }
-
-    // Filter out unconfirmed ones:
-    if (filter)
-    {
-        bc::output_info_list out;
-        for (auto &utxo: utxos)
-        {
-            if (isSpendable(utxo.point.hash, addresses))
-                out.push_back(utxo);
-        }
-        utxos = std::move(out);
-    }
-
-    return utxos;
 }
 
 bc::data_chunk TxDatabase::serialize() const
@@ -576,28 +646,6 @@ void TxDatabase::check_fork(size_t height)
         if (row.second.state == TxState::confirmed &&
                 row.second.block_height == prev_height)
             row.second.need_check = true;
-}
-
-bool
-TxDatabase::isSpendable(bc::hash_digest txid, const AddressSet &addresses) const
-{
-    auto i = rows_.find(txid);
-    if (i == rows_.end())
-        return false;
-
-    if (TxState::confirmed == i->second.state)
-        return true;
-
-    // This is a spend if we control all the inputs:
-    for (auto &input: i->second.tx.inputs)
-    {
-        bc::payment_address address;
-        if (!bc::extract(address, input.script))
-            return false;
-        if (addresses.find(address.encoded()) == addresses.end())
-            return false;
-    }
-    return true;
 }
 
 std::vector<TxDatabase::TxRow *>

@@ -80,11 +80,6 @@ public:
     bool has_history(const bc::payment_address &address) const;
 
     /**
-     * Get all unspent outputs in the database.
-     */
-    bc::output_info_list get_utxos() const;
-
-    /**
      * Get just the utxos corresponding to a set of addresses.
      * @param filter true to filter out unconfirmed outputs.
      */
@@ -119,8 +114,8 @@ public:
     void clear();
 
 private:
-    // - Updater: ----------------------
     friend class TxUpdater;
+    friend class TxFilter;
 
     /**
      * A single row in the transaction database.
@@ -172,13 +167,6 @@ private:
 
     // - Internal: ---------------------
     void check_fork(size_t height);
-
-    /**
-     * Returns true if the transaction is either confirmed or
-     * is one of our own spends (according to the address list).
-     */
-    bool
-    isSpendable(bc::hash_digest txid, const AddressSet &addresses) const;
 
     /**
      * Returns all the rows that match the given ntxid.
