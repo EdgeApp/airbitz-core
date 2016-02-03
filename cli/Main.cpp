@@ -138,7 +138,8 @@ static Status run(int argc, char *argv[])
             if (json.workingDirOk())
                 workingDir = json.workingDir();
             else
-                return ABC_ERROR(ABC_CC_Error, "No working directory given");
+                return ABC_ERROR(ABC_CC_Error, "No working directory given, " +
+                                 helpString(*command));
         }
 
         unsigned char seed[] = {1, 2, 3};
@@ -157,7 +158,8 @@ static Status run(int argc, char *argv[])
             if (json.usernameOk())
                 session.username = json.username();
             else
-                return ABC_ERROR(ABC_CC_Error, "No username given");
+                return ABC_ERROR(ABC_CC_Error, "No username given, " +
+                                 helpString(*command));
         }
 
         ABC_CHECK(cacheLobby(session.lobby, session.username.c_str()));
@@ -169,7 +171,8 @@ static Status run(int argc, char *argv[])
             if (json.passwordOk())
                 session.password = json.password();
             else
-                return ABC_ERROR(ABC_CC_Error, "No password given");
+                return ABC_ERROR(ABC_CC_Error, "No password given, " +
+                                 helpString(*command));
         }
 
         auto s = cacheLoginPassword(session.login,
@@ -197,7 +200,8 @@ static Status run(int argc, char *argv[])
             if (json.walletOk())
                 session.uuid = json.wallet();
             else
-                return ABC_ERROR(ABC_CC_Error, "No wallet name given");
+                return ABC_ERROR(ABC_CC_Error, "No wallet name given, " +
+                                 helpString(*command));
         }
 
         ABC_CHECK(cacheWallet(session.wallet,
