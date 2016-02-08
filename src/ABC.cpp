@@ -2514,11 +2514,13 @@ void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings)
 
 tABC_CC ABC_DataSyncAccount(const char *szUserName,
                             const char *szPassword,
-                            tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                            void *pData,
+                            bool *pbDirty,
+                            bool *pbPasswordChanged,
                             tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(pbDirty);
+    ABC_CHECK_NULL(pbPasswordChanged);
 
     {
         ABC_GET_ACCOUNT();
@@ -2526,21 +2528,19 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         // Sync the account data:
         bool dirty = false;
         ABC_CHECK_NEW(account->sync(dirty));
-        if (dirty && fAsyncBitCoinEventCallback)
-        {
-            tABC_AsyncBitCoinInfo info;
-            info.eventType = ABC_AsyncEventType_DataSyncUpdate;
-            info.pData = pData;
-            info.szDescription = stringCopy("Account Updated");
-            fAsyncBitCoinEventCallback(&info);
-            ABC_FREE_STR(info.szDescription);
-        }
+        *pbDirty = dirty;
+
+        // Non-critical general information update:
+        generalUpdate().log();
 
         // Has the password changed?
         LoginPackage loginPackage;
         JsonPtr rootKeyBox;
         Status s = loginServerGetLoginPackage(account->login.lobby,
-                                              account->login.authKey(), DataChunk(), loginPackage, rootKeyBox);
+                                              account->login.authKey(),
+                                              DataChunk(),
+                                              loginPackage,
+                                              rootKeyBox);
 
         if (s.value() == ABC_CC_InvalidOTP)
         {
@@ -2548,20 +2548,10 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         }
         else if (s.value() == ABC_CC_BadPassword)
         {
-            if (fAsyncBitCoinEventCallback)
-            {
-                tABC_AsyncBitCoinInfo info;
-                info.eventType = ABC_AsyncEventType_RemotePasswordChange;
-                info.pData = pData;
-                info.szDescription = stringCopy("Password changed");
-                fAsyncBitCoinEventCallback(&info);
-                ABC_FREE_STR(info.szDescription);
-            }
+            *pbPasswordChanged = true;
             goto exit;
         }
-
-        // Non-critical general information update:
-        generalUpdate().log();
+        *pbPasswordChanged = false;
     }
 
 exit:
@@ -2571,27 +2561,18 @@ exit:
 tABC_CC ABC_DataSyncWallet(const char *szUserName,
                            const char *szPassword,
                            const char *szWalletUUID,
-                           tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                           void *pData,
+                           bool *pbDirty,
                            tABC_Error *pError)
 {
     ABC_PROLOG();
-    ABC_CHECK_NULL(fAsyncBitCoinEventCallback);
+    ABC_CHECK_NULL(pbDirty);
 
     {
         ABC_GET_WALLET();
 
         bool dirty = false;
         ABC_CHECK_NEW(wallet->sync(dirty));
-        if (dirty)
-        {
-            tABC_AsyncBitCoinInfo info;
-            info.eventType = ABC_AsyncEventType_DataSyncUpdate;
-            info.pData = pData;
-            info.szDescription = stringCopy("Wallet Updated");
-            fAsyncBitCoinEventCallback(&info);
-            ABC_FREE_STR(info.szDescription);
-        }
+        *pbDirty = dirty;
     }
 
 exit:

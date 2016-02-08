@@ -174,7 +174,7 @@ txReceiveTransaction(Wallet &self,
         {
             tABC_AsyncBitCoinInfo info;
             info.pData = pData;
-            info.eventType = ABC_AsyncEventType_DataSyncUpdate;
+            info.eventType = ABC_AsyncEventType_BalanceUpdate;
             info.szTxID = ntxid.c_str();
             info.szWalletUUID = self.id().c_str();
             info.szDescription = "Updated balance";

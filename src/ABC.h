@@ -191,9 +191,7 @@ typedef enum eABC_AsyncEventType
 {
     ABC_AsyncEventType_IncomingBitCoin,
     ABC_AsyncEventType_BlockHeightChange,
-    ABC_AsyncEventType_DataSyncUpdate,
-    ABC_AsyncEventType_RemotePasswordChange,
-    ABC_AsyncEventType_IncomingSweep
+    ABC_AsyncEventType_BalanceUpdate
 } tABC_AsyncEventType;
 
 /**
@@ -477,8 +475,9 @@ typedef void (*tABC_BitCoin_Event_Callback)(const tABC_AsyncBitCoinInfo *pInfo);
  * if the sweep succeeded.
  * @param amount The number of satoshis swept into the wallet.
  */
-typedef void (*tABC_Sweep_Done_Callback)(tABC_CC cc,
-        const char *szID,
+typedef void (*tABC_Sweep_Done_Callback)(void *pData,
+        tABC_CC cc,
+        const char *szNTXID,
         uint64_t amount);
 
 /* === Library lifetime: === */
@@ -800,8 +799,8 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
 
 tABC_CC ABC_DataSyncAccount(const char *szUserName,
                             const char *szPassword,
-                            tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                            void *pData,
+                            bool *pbDirty,
+                            bool *pbPasswordChanged,
                             tABC_Error *pError);
 
 tABC_CC ABC_UploadLogs(const char *szUserName,
@@ -968,8 +967,7 @@ tABC_CC ABC_CsvExport(const char *szUserName,
 tABC_CC ABC_DataSyncWallet(const char *szUserName,
                            const char *szPassword,
                            const char *szWalletUUID,
-                           tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                           void *pData,
+                           bool *pbDirty,
                            tABC_Error *pError);
 
 /* === Receiving: === */

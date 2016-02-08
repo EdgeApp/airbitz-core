@@ -368,18 +368,7 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
         if (watcherInfo->wallet.txdb.has_history(sweep.address))
         {
             if (sweep.fCallback)
-            {
-                sweep.fCallback(ABC_CC_Ok, NULL, 0);
-            }
-            else if (fAsyncCallback)
-            {
-                tABC_AsyncBitCoinInfo info;
-                info.pData = pData;
-                info.eventType = ABC_AsyncEventType_IncomingSweep;
-                info.sweepSatoshi = 0;
-                info.szTxID = nullptr;
-                fAsyncCallback(&info);
-            }
+                sweep.fCallback(sweep.pData, ABC_CC_Ok, nullptr, 0);
             sweep.done = true;
         }
         return Status();
@@ -428,18 +417,7 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
 
     // Done:
     if (sweep.fCallback)
-    {
-        sweep.fCallback(ABC_CC_Ok, ntxid.c_str(), output.value);
-    }
-    else if (fAsyncCallback)
-    {
-        tABC_AsyncBitCoinInfo info;
-        info.pData = pData;
-        info.eventType = ABC_AsyncEventType_IncomingSweep;
-        info.sweepSatoshi = output.value;
-        info.szTxID = ntxid.c_str();
-        fAsyncCallback(&info);
-    }
+        sweep.fCallback(sweep.pData, ABC_CC_Ok, ntxid.c_str(), output.value);
     sweep.done = true;
 
     return Status();
@@ -456,7 +434,7 @@ bridgeQuietCallback(WatcherInfo *watcherInfo,
         if (!s)
         {
             if (sweep.fCallback)
-                sweep.fCallback(s.value(), NULL, 0);
+                sweep.fCallback(sweep.pData, s.value(), nullptr, 0);
             sweep.done = true;
         }
     }
