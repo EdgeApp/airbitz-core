@@ -75,9 +75,6 @@ tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
                                      unsigned int *pCount,
                                      tABC_Error *pError);
 
-std::string
-ABC_BridgeNonMalleableTxId(libbitcoin::transaction_type tx);
-
 } // namespace abcd
 
 #endif

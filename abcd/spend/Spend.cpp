@@ -14,6 +14,7 @@
 #include "../Tx.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
+#include "../bitcoin/Utility.hpp"
 #include "../util/Debug.hpp"
 #include "../wallet/Details.hpp"
 #include "../wallet/Wallet.hpp"
@@ -174,7 +175,7 @@ spendSaveTx(Wallet &self, SendInfo *pInfo, DataSlice rawTx,
 
     // Update the Airbitz metadata:
     auto txid = bc::encode_hash(bc::hash_transaction(tx));
-    auto ntxid = ABC_BridgeNonMalleableTxId(tx);
+    auto ntxid = bc::encode_hash(makeNtxid(tx));
     std::vector<std::string> addresses;
     for (const auto &output: tx.outputs)
     {

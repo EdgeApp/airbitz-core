@@ -6,6 +6,7 @@
  */
 
 #include "TxDatabase.hpp"
+#include "Utility.hpp"
 #include "WatcherBridge.hpp"
 #include "../util/Debug.hpp"
 
@@ -15,14 +16,6 @@ namespace abcd {
 constexpr uint32_t old_serial_magic = 0x3eab61c3; // From the watcher
 constexpr uint32_t serial_magic = 0xfecdb763;
 constexpr uint8_t serial_tx = 0x42;
-
-static bc::hash_digest
-get_non_malleable_txid(bc::transaction_type tx)
-{
-    for (auto &input: tx.inputs)
-        input.script = bc::script_type();
-    return bc::hash_transaction(tx, bc::sighash::all);
-}
 
 TxDatabase::~TxDatabase()
 {
@@ -395,10 +388,7 @@ bool TxDatabase::insert(const bc::transaction_type &tx)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    //
-    // Yuck. Maybe this func should be in transaction.cpp
-    //
-    bc::hash_digest ntxid = get_non_malleable_txid(tx);
+    auto ntxid = makeNtxid(tx);
 
     // Do not stomp existing tx's:
     auto txid = bc::hash_transaction(tx);
