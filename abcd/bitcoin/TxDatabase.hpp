@@ -162,12 +162,6 @@ private:
     void unconfirmed(bc::hash_digest txid);
 
     /**
-     * Delete a transaction.
-     * This can happen when the network rejects a spend request.
-     */
-    void forget(bc::hash_digest txid);
-
-    /**
      * Call this each time the server reports that it sees a transaction.
      */
     void reset_timestamp(bc::hash_digest txid);

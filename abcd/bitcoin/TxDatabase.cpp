@@ -99,18 +99,6 @@ bc::transaction_type TxDatabase::ntxidLookup(bc::hash_digest ntxid)
     return tx;
 }
 
-const char *stateToString(TxState state)
-{
-    switch (state)
-    {
-    case TxState::unconfirmed:
-        return "unconfirmed";
-    case TxState::confirmed:
-        return "confirmed";
-    }
-
-}
-
 long long TxDatabase::txidHeight(bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -550,13 +538,6 @@ void TxDatabase::unconfirmed(bc::hash_digest txid)
     row.block_height = height;
     row.state = state;
     row.bMalleated = bMalleated;
-}
-
-void TxDatabase::forget(bc::hash_digest txid)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    rows_.erase(txid);
 }
 
 void TxDatabase::reset_timestamp(bc::hash_digest txid)
