@@ -22,6 +22,12 @@ namespace abcd {
 bc::hash_digest
 makeNtxid(bc::transaction_type tx);
 
+/**
+ * Bundles the provided data into a script push operation.
+ */
+bc::operation
+makePushOperation(bc::data_slice data);
+
 } // namespace abcd
 
 #endif

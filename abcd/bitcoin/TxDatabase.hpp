@@ -116,6 +116,7 @@ public:
 private:
     friend class TxUpdater;
     friend class TxFilter;
+    friend class TxDatabaseTest;
 
     /**
      * A single row in the transaction database.
