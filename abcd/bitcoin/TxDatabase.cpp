@@ -169,33 +169,17 @@ bc::transaction_type TxDatabase::ntxidLookup(bc::hash_digest ntxid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    std::vector<TxRow *> txRows = ntxidLookupAll(ntxid);
-
-    bc::transaction_type tx;
-    bool foundTx = false;
-
-    for (auto i = txRows.begin(); i != txRows.end(); ++i)
+    // Try to return the confirmed copy (if any),
+    // otherwise just return any match:
+    bc::transaction_type out;
+    auto rows = ntxidLookupAll(ntxid);
+    for (const auto &row: rows)
     {
-        // Try to return the master confirmed txid if possible
-        // Otherwise return any confirmed txid
-        // Otherwise return any match
-        if (!foundTx)
-        {
-            tx = (*i)->tx;
-            foundTx = true;
-        }
-        else
-        {
-            if (TxState::confirmed == (*i)->state)
-            {
-                tx = (*i)->tx;
-            }
-        }
-
-        if ((*i)->bMasterConfirm)
-            return tx;
+        if (row->state == TxState::confirmed)
+            return row->tx;
+        out = row->tx;
     }
-    return tx;
+    return out;
 }
 
 long long TxDatabase::txidHeight(bc::hash_digest txid) const
@@ -344,9 +328,8 @@ bc::data_chunk TxDatabase::serialize() const
         serial.write_byte(0); // Was need_check
         serial.write_hash(row.second.txid);
         serial.write_hash(row.second.ntxid);
-        serial.write_byte(row.second.bMalleated);
-        serial.write_byte(row.second.bMasterConfirm);
-
+        serial.write_byte(false); // Was bMalleated
+        serial.write_byte(TxState::confirmed == row.second.state); // Was bMasterConfirm
     }
 
     // The copy is not very elegant:
@@ -390,17 +373,37 @@ TxDatabase::load(const bc::data_chunk &data)
             bc::satoshi_load(serial.iterator(), data.end(), row.tx);
             auto step = serial.iterator() + satoshi_raw_size(row.tx);
             serial.set_iterator(step);
-            row.state = static_cast<TxState>(serial.read_byte());
-            row.block_height = serial.read_8_bytes();
-            row.timestamp = now;
-            if (TxState::unconfirmed == row.state)
-                row.timestamp = row.block_height;
-            (void)serial.read_byte(); // Was need_check
 
+            TxState state      = static_cast<TxState>(serial.read_byte());
+            uint64_t height    = serial.read_8_bytes();
+            (void)serial.read_byte(); // Was need_check
             row.txid           = serial.read_hash();
             row.ntxid          = serial.read_hash();
-            row.bMalleated     = serial.read_byte();
-            row.bMasterConfirm = serial.read_byte();
+            auto malleated     = serial.read_byte();
+            auto masterConfirm = serial.read_byte();
+
+            // The height field is the timestamp for unconfirmed txs:
+            if (TxState::unconfirmed == row.state)
+            {
+                row.block_height = 0;
+                row.timestamp = height;
+            }
+            else
+            {
+                row.block_height = height;
+                row.timestamp = now;
+            }
+
+            // Malleated transactions can have inaccurate state:
+            if (malleated && !masterConfirm)
+            {
+                row.state = TxState::unconfirmed;
+                row.block_height = 0;
+            }
+            else
+            {
+                row.state = state;
+            }
 
             rows[hash] = std::move(row);
         }
@@ -456,38 +459,19 @@ bool TxDatabase::insert(const bc::transaction_type &tx)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    auto ntxid = makeNtxid(tx);
-
     // Do not stomp existing tx's:
     auto txid = bc::hash_transaction(tx);
     if (rows_.find(txid) == rows_.end())
     {
-
-        TxState state = TxState::unconfirmed;
-        long long height = 0;
-        bool bMalleated = false;
-
-        // Check if there are other transactions with same txid.
-        // If so, mark all malleated and copy block height and state to
-        // new tx
-        std::vector<TxRow *> txRows = ntxidLookupAll(ntxid);
-
-        for (auto i = txRows.begin(); i != txRows.end(); ++i)
+        rows_[txid] = TxRow
         {
-            if (txid != (*i)->txid)
-            {
-                height = (*i)->block_height;
-                state = (*i)->state;
-                bMalleated = (*i)->bMalleated = true;
-            }
-        }
-
-        rows_[txid] = TxRow{tx, txid, ntxid, state, height, time(nullptr), bMalleated, false};
+            tx, txid, makeNtxid(tx),
+            TxState::unconfirmed, 0, time(nullptr)
+        };
         return true;
     }
 
     return false;
-
 }
 
 void
@@ -512,24 +496,8 @@ void TxDatabase::confirmed(bc::hash_digest txid, long long block_height)
     BITCOIN_ASSERT(it != rows_.end());
     auto &row = it->second;
 
-    // Check if there are other malleated transactions.
-    // If so, mark them all confirmed
-    std::vector<TxRow *> txRows = ntxidLookupAll(it->second.ntxid);
-
     row.state = TxState::confirmed;
     row.block_height = block_height;
-    row.bMasterConfirm = true;
-
-    for (auto i = txRows.begin(); i != txRows.end(); ++i)
-    {
-        if (txid != (*i)->txid)
-        {
-            (*i)->block_height = block_height;
-            (*i)->state = TxState::confirmed;
-            (*i)->bMalleated = true;
-            row.bMalleated = true;
-        }
-    }
 }
 
 void TxDatabase::unconfirmed(bc::hash_digest txid)
@@ -540,45 +508,8 @@ void TxDatabase::unconfirmed(bc::hash_digest txid)
     BITCOIN_ASSERT(it != rows_.end());
     auto &row = it->second;
 
-    long long height = 0;
-    bool bMalleated  = row.bMalleated;
-    TxState state = TxState::unconfirmed;
-
-    // If the transaction was already confirmed, and is now unconfirmed,
-    // we probably have a block fork:
-    if (row.state == TxState::confirmed)
-    {
-        // Check if there are other malleated transactions.
-        // If so, mark them all unconfirmed_malleated
-        std::vector<TxRow *> txRows = ntxidLookupAll(it->second.ntxid);
-
-        for (auto i = txRows.begin(); i != txRows.end(); ++i)
-        {
-            if (txid != (*i)->txid)
-            {
-                if ((*i)->bMasterConfirm)
-                {
-                    height = (*i)->block_height;
-                    state = (*i)->state;
-                }
-                else
-                {
-                    ABC_DebugLevel(1, "Setting tx unconfirmed on malleated ntxid");
-                    ABC_DebugLevel(1, "   ntxid=%s", (bc::encode_hash(it->second.ntxid)).c_str());
-                    ABC_DebugLevel(1, "   txid =%s", (bc::encode_hash(txid)).c_str());
-                    ABC_DebugLevel(1, "   txid =%s", (bc::encode_hash((*i)->txid)).c_str());
-
-                    (*i)->block_height = height = -1;
-                    (*i)->state = TxState::unconfirmed;
-                    (*i)->bMalleated = bMalleated = true;
-                }
-            }
-        }
-    }
-
-    row.block_height = height;
-    row.state = state;
-    row.bMalleated = bMalleated;
+    row.state = TxState::unconfirmed;
+    row.block_height = 0;
 }
 
 void TxDatabase::reset_timestamp(bc::hash_digest txid)

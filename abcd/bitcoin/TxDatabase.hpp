@@ -132,8 +132,6 @@ private:
         TxState state;
         long long block_height;
         time_t timestamp;
-        bool bMalleated;
-        bool bMasterConfirm;
         //bc::hash_digest block_hash; // TODO: Fix obelisk to return this
     };
 
