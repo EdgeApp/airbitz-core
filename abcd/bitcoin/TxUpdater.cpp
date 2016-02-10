@@ -543,7 +543,7 @@ void TxUpdater::get_tx(bc::hash_digest txid, bool want_inputs, int server_index)
         {
             ABC_DebugLevel(2,"get_tx ENTER ON_DONE idx=%d txid=%s", idx, str.c_str());
             BITCOIN_ASSERT(txid == bc::hash_transaction(tx));
-            if (db_.insert(tx, TxState::unconfirmed))
+            if (db_.insert(tx))
                 callbacks_.on_add(tx);
             if (want_inputs)
             {
@@ -602,7 +602,7 @@ void TxUpdater::get_tx_mem(bc::hash_digest txid, bool want_inputs,
             ABC_DebugLevel(2,"get_tx_mem ENTER ON_DONE idx=%d txid=%s FOUND IN MEMPOOL",
                            idx, str.c_str());
             BITCOIN_ASSERT(txid == bc::hash_transaction(tx));
-            if (db_.insert(tx, TxState::unconfirmed))
+            if (db_.insert(tx))
                 callbacks_.on_add(tx);
             if (want_inputs)
             {

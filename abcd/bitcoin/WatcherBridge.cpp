@@ -409,7 +409,7 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     bc::data_chunk raw_tx(satoshi_raw_size(utx.tx));
     bc::satoshi_save(utx.tx, raw_tx.begin());
     ABC_CHECK(broadcastTx(watcherInfo->wallet, raw_tx));
-    if (watcherInfo->wallet.txdb.insert(utx.tx, TxState::unconfirmed))
+    if (watcherInfo->wallet.txdb.insert(utx.tx))
         watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 
     // Save the transaction in the metadatabase:

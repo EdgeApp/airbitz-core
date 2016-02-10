@@ -111,7 +111,7 @@ public:
      * Insert a new transaction into the database.
      * @return true if the callback should be fired.
      */
-    bool insert(const bc::transaction_type &tx, TxState state);
+    bool insert(const bc::transaction_type &tx);
 
     /**
      * Clears the database for debugging purposes.

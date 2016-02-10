@@ -391,7 +391,7 @@ void TxDatabase::dump(std::ostream &out) const
     }
 }
 
-bool TxDatabase::insert(const bc::transaction_type &tx, TxState state)
+bool TxDatabase::insert(const bc::transaction_type &tx)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 

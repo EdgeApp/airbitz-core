@@ -169,7 +169,7 @@ spendSaveTx(Wallet &self, SendInfo *pInfo, DataSlice rawTx,
     bc::satoshi_load(deserial.iterator(), deserial.end(), tx);
 
     // Save to the transaction cache:
-    if (self.txdb.insert(tx, TxState::unconfirmed))
+    if (self.txdb.insert(tx))
         watcherSave(self).log(); // Failure is not fatal
 
     // Update the Airbitz metadata:
