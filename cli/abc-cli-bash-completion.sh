@@ -39,6 +39,7 @@ _abc_cli_complete()
     get-question-choices
     get-questions
     get-settings
+    hiddenbits-generate
     otp-auth-get
     otp-auth-remove
     otp-auth-set

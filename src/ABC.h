@@ -554,6 +554,13 @@ tABC_CC ABC_QrEncode(const char *szText,
                      unsigned int *pWidth,
                      tABC_Error *pError);
 
+/**
+ * Generates a random private key in the hbits format.
+ */
+tABC_CC ABC_CreateHbits(char **pszResult,
+                        char **pszAddress,
+                        tABC_Error *pError);
+
 /* === Login lifetime: === */
 
 /**

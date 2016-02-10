@@ -2431,6 +2431,26 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_CreateHbits(char **pszResult,
+                        char **pszAddress,
+                        tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszResult);
+    ABC_CHECK_NULL(pszAddress);
+
+    {
+        std::string key;
+        std::string address;
+        ABC_CHECK_NEW(hbitsCreate(key, address));
+        *pszResult = stringCopy(key);
+        *pszAddress = stringCopy(address);
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_AccountSyncExists(const char *szUserName,
                               bool *pResult,
                               tABC_Error *pError)
