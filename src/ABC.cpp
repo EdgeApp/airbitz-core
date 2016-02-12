@@ -2159,32 +2159,6 @@ exit:
 }
 
 /**
- * Gets the bit coin public address for a specified request.
- * DEPRECATED, since the address ID *is* the address.
- *
- * @param szUserName        UserName for the account associated with the requests
- * @param szPassword        Password for the account associated with the requests
- * @param szWalletUUID      UUID of the wallet associated with the requests
- * @param szRequestID       ID of request
- * @param pszAddress        Location to store allocated address string (caller must free)
- * @param pError            A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_GetRequestAddress(const char *szUserName,
-                              const char *szPassword,
-                              const char *szWalletUUID,
-                              const char *szRequestID,
-                              char **pszAddress,
-                              tABC_Error *pError)
-{
-    ABC_PROLOG();
-
-    *pszAddress = stringCopy(szRequestID);
-
-exit:
-    return cc;
-}
-
-/**
  * Duplicates transaction details.
  * This can be used when changing the details on a transaction.
  *

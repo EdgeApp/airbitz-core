@@ -1013,13 +1013,6 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
                                   unsigned int *pWidth,
                                   tABC_Error *pError);
 
-tABC_CC ABC_GetRequestAddress(const char *szUserName,
-                              const char *szPassword,
-                              const char *szWalletUUID,
-                              const char *szRequestID,
-                              char **pszAddress,
-                              tABC_Error *pError);
-
 /* === Spending: === */
 
 void ABC_SpendTargetFree(tABC_SpendTarget *pSpend);
