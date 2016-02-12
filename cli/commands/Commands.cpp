@@ -141,42 +141,6 @@ COMMAND(InitLevel::lobby, GetQuestions, "get-questions",
     return Status();
 }
 
-COMMAND(InitLevel::login, GetSettings, "get-settings",
-        "")
-{
-    if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-
-    AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username.c_str(),
-                                          session.password.c_str(),
-                                          &pSettings.get(), &error));
-
-    printf("First name: %s\n",
-           pSettings->szFirstName ? pSettings->szFirstName : "(none)");
-    printf("Last name: %s\n",
-           pSettings->szLastName ? pSettings->szLastName : "(none)");
-    printf("Nickname: %s\n",
-           pSettings->szNickname ? pSettings->szNickname : "(none)");
-    printf("PIN: %s\n", pSettings->szPIN ? pSettings->szPIN : "(none)");
-    printf("List name on payments: %s\n",
-           pSettings->bNameOnPayments ? "yes" : "no");
-    printf("Minutes before auto logout: %d\n", pSettings->minutesAutoLogout);
-    printf("Language: %s\n", pSettings->szLanguage);
-    printf("Currency num: %d\n", pSettings->currencyNum);
-    printf("Advanced features: %s\n", pSettings->bAdvancedFeatures ? "yes" : "no");
-    printf("Denomination satoshi: %ld\n", pSettings->bitcoinDenomination.satoshi);
-    printf("Denomination id: %d\n",
-           pSettings->bitcoinDenomination.denominationType);
-    printf("Daily Spend Enabled: %d\n", pSettings->bDailySpendLimit);
-    printf("Daily Spend Limit: %ld\n", (long) pSettings->dailySpendLimitSatoshis);
-    printf("PIN Spend Enabled: %d\n", pSettings->bSpendRequirePin);
-    printf("PIN Spend Limit: %ld\n", (long) pSettings->spendRequirePinSatoshis);
-    printf("Exchange rate source: %s\n", pSettings->szExchangeRateSource );
-
-    return Status();
-}
-
 COMMAND(InitLevel::lobby, PinLogin, "pin-login",
         " pin>")
 {
@@ -199,7 +163,6 @@ COMMAND(InitLevel::lobby, PinLogin, "pin-login",
     return Status();
 }
 
-
 COMMAND(InitLevel::account, PinLoginSetup, "pin-login-setup",
         "")
 {
@@ -208,47 +171,6 @@ COMMAND(InitLevel::account, PinLoginSetup, "pin-login-setup",
 
     ABC_CHECK_OLD(ABC_PinSetup(session.username.c_str(),
                                session.password.c_str(), &error));
-
-    return Status();
-}
-
-COMMAND(InitLevel::login, RecoveryReminderSet, "recovery-reminder-set",
-        " <n>")
-{
-    if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-    const auto count = atol(argv[0]);
-
-    AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username.c_str(),
-                                          session.password.c_str(),
-                                          &pSettings.get(), &error));
-    printf("Old Reminder Count: %d\n", pSettings->recoveryReminderCount);
-
-    pSettings->recoveryReminderCount = count;
-    ABC_CHECK_OLD(ABC_UpdateAccountSettings(session.username.c_str(),
-                                            session.password.c_str(),
-                                            pSettings, &error));
-
-    return Status();
-}
-
-COMMAND(InitLevel::account, SetNickname, "set-nickname",
-        " <name>")
-{
-    if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-    const auto name = argv[0];
-
-    AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
-    ABC_CHECK_OLD(ABC_LoadAccountSettings(session.username.c_str(),
-                                          session.password.c_str(),
-                                          &pSettings.get(), &error));
-    free(pSettings->szNickname);
-    pSettings->szNickname = stringCopy(name);
-    ABC_CHECK_OLD(ABC_UpdateAccountSettings(session.username.c_str(),
-                                            session.password.c_str(),
-                                            pSettings, &error));
 
     return Status();
 }

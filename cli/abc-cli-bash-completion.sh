@@ -38,7 +38,6 @@ _abc_cli_complete()
     general-update
     get-question-choices
     get-questions
-    get-settings
     hiddenbits-generate
     otp-auth-get
     otp-auth-remove
@@ -54,8 +53,9 @@ _abc_cli_complete()
     plugin-get
     plugin-remove
     plugin-set
-    recovery-reminder-set
-    set-nickname
+    settings-get
+    settings-set-nickname
+    settings-set-recovery-reminder
     sign-in
     spend-get-fee
     spend-get-max
