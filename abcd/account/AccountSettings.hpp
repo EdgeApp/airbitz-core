@@ -13,6 +13,7 @@
 namespace abcd {
 
 class Account;
+class Login;
 
 /**
  * Loads the settings from an account.
@@ -25,13 +26,21 @@ accountSettingsLoad(const Account &account);
  * Saves the settings for an account.
  */
 Status
-accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings);
+accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings,
+                    bool pinChanged=false);
 
 /**
  * Frees the account settings structure, along with its contents.
  */
 void
 accountSettingsFree(tABC_AccountSettings *pSettings);
+
+/**
+ * Updates the local PIN package to match the settings.
+ */
+Status
+accountSettingsPinSync(Login &login, tABC_AccountSettings *settings,
+                       bool pinChanged);
 
 } // namespace abcd
 

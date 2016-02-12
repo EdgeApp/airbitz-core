@@ -591,8 +591,22 @@ tABC_CC ABC_PinLogin(const char *szUserName,
                      const char *szPin,
                      tABC_Error *pError);
 
+/**
+ * Sets up the data for a pin-based login, both on disk and on the server.
+ */
 tABC_CC ABC_PinSetup(const char *szUserName,
                      const char *szPassword,
+                     const char *szPin,
+                     tABC_Error *pError);
+
+/**
+ * Checks a PIN for correctness.
+ * This is used to guard access to certain actions in the GUI.
+ */
+tABC_CC ABC_PinCheck(const char *szUserName,
+                     const char *szPassword,
+                     const char *szPin,
+                     bool *pbResult,
                      tABC_Error *pError);
 
 tABC_CC ABC_ListAccounts(char **pszUserNames,
@@ -762,16 +776,6 @@ tABC_CC ABC_UpdateAccountSettings(const char *szUserName,
                                   tABC_Error *pError);
 
 void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings);
-
-tABC_CC ABC_GetPIN(const char *szUserName,
-                   const char *szPassword,
-                   char **pszPin,
-                   tABC_Error *pError);
-
-tABC_CC ABC_SetPIN(const char *szUserName,
-                   const char *szPassword,
-                   const char *szPin,
-                   tABC_Error *pError);
 
 tABC_CC ABC_GetCategories(const char *szUserName,
                           const char *szPassword,

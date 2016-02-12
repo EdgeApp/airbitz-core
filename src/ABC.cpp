@@ -738,83 +738,6 @@ exit:
 }
 
 /**
- * Get a PIN number (Deprecated!).
- *
- * This function retrieves the PIN for a given account.
- * The string is allocated and must be free'd by the caller.
- * It is deprecated in favor of just reading the PIN out of the account settings.
- *
- * @param szUserName             UserName for the account
- * @param szPassword             Password for the account
- * @param pszPin                 Pointer where to store allocated PIN string.
- *                               This will be set to NULL if there is no PIN.
- * @param pError                 A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_GetPIN(const char *szUserName,
-                   const char *szPassword,
-                   char **pszPin,
-                   tABC_Error *pError)
-{
-    ABC_PROLOG();
-    ABC_CHECK_NULL(pszPin);
-
-    {
-        ABC_GET_ACCOUNT();
-
-        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
-        settings.get() = accountSettingsLoad(*account);
-
-        *pszPin = nullptr;
-        if (settings->szPIN)
-            *pszPin = stringCopy(settings->szPIN);
-    }
-
-exit:
-    return cc;
-}
-
-/**
- * Set PIN number for an account (Deprecated!).
- *
- * This function sets the PIN for a given account.
- * It is deprecated in favor of just setting the PIN in the account settings.
- *
- * @param szUserName            UserName for the account
- * @param szPassword            Password for the account
- * @param szPin                 PIN string
- * @param pError                A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_SetPIN(const char *szUserName,
-                   const char *szPassword,
-                   const char *szPin,
-                   tABC_Error *pError)
-{
-    ABC_PROLOG();
-    ABC_CHECK_NULL(szPin);
-
-    {
-        ABC_GET_ACCOUNT();
-
-        ABC_CHECK_ASSERT(ABC_MIN_PIN_LENGTH <= strlen(szPin), ABC_CC_Error,
-                         "Pin is too short");
-        char *endstr = nullptr;
-        strtol(szPin, &endstr, 10);
-        ABC_CHECK_ASSERT('\0' == *endstr, ABC_CC_NonNumericPin,
-                         "The pin must be numeric.");
-
-        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
-        settings.get() = accountSettingsLoad(*account);
-
-        ABC_FREE_STR(settings->szPIN);
-        settings->szPIN = stringCopy(szPin);
-        ABC_CHECK_NEW(accountSettingsSave(*account, settings));
-    }
-
-exit:
-    return cc;
-}
-
-/**
  * Get the categories for an account.
  *
  * This function gets the categories for an account.
@@ -1070,11 +993,9 @@ exit:
     return cc;
 }
 
-/**
- * Sets up the data for a pin-based login, both on disk and on the server.
- */
 tABC_CC ABC_PinSetup(const char *szUserName,
                      const char *szPassword,
+                     const char *szPin,
                      tABC_Error *pError)
 {
     ABC_PROLOG();
@@ -1083,13 +1004,45 @@ tABC_CC ABC_PinSetup(const char *szUserName,
         ABC_GET_LOGIN();
         ABC_GET_ACCOUNT();
 
+        // Validate the PIN:
+        ABC_CHECK_ASSERT(ABC_MIN_PIN_LENGTH <= strlen(szPin), ABC_CC_Error,
+                         "Pin is too short");
+        char *endstr = nullptr;
+        strtol(szPin, &endstr, 10);
+        ABC_CHECK_ASSERT('\0' == *endstr, ABC_CC_NonNumericPin,
+                         "The pin must be numeric.");
+
+        // Update the settings:
         AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
         settings.get() = accountSettingsLoad(*account);
-        ABC_CHECK_NULL(settings->szPIN);
+        ABC_FREE_STR(settings->szPIN);
+        settings->szPIN = stringCopy(szPin);
+        ABC_CHECK_NEW(accountSettingsSave(*account, settings, true));
+    }
 
-        time_t expires = time(nullptr);
-        expires += settings->secondsAutoLogout;
-        ABC_CHECK_NEW(loginPinSetup(*login, settings->szPIN, expires));
+exit:
+    return cc;
+}
+
+tABC_CC ABC_PinCheck(const char *szUserName,
+                     const char *szPassword,
+                     const char *szPin,
+                     bool *pbResult,
+                     tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szPin);
+    ABC_CHECK_NULL(pbResult);
+
+    {
+        ABC_GET_ACCOUNT();
+
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
+
+        *pbResult = false;
+        if (settings->szPIN && !strcmp(settings->szPIN, szPin))
+            *pbResult = true;
     }
 
 exit:

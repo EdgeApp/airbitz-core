@@ -164,13 +164,15 @@ COMMAND(InitLevel::lobby, PinLogin, "pin-login",
 }
 
 COMMAND(InitLevel::account, PinLoginSetup, "pin-login-setup",
-        "")
+        " <pin>")
 {
-    if (argc != 0)
+    if (1 != argc)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto pin = argv[0];
 
     ABC_CHECK_OLD(ABC_PinSetup(session.username.c_str(),
-                               session.password.c_str(), &error));
+                               session.password.c_str(),
+                               pin, &error));
 
     return Status();
 }

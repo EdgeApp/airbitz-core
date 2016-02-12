@@ -34,7 +34,6 @@ COMMAND(InitLevel::context, AccountCreate, "account-create",
     const auto password = argv[1];
 
     ABC_CHECK_OLD(ABC_CreateAccount(username, password, &error));
-    ABC_CHECK_OLD(ABC_SetPIN(username, password, "1234", &error));
 
     return Status();
 }
