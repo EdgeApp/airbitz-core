@@ -1088,7 +1088,7 @@ tABC_CC ABC_PinSetup(const char *szUserName,
         ABC_CHECK_NULL(settings->szPIN);
 
         time_t expires = time(nullptr);
-        expires += 60 * settings->minutesAutoLogout;
+        expires += settings->secondsAutoLogout;
         ABC_CHECK_NEW(loginPinSetup(*login, settings->szPIN, expires));
     }
 

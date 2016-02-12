@@ -32,6 +32,7 @@ struct SettingsJson:
     ABC_JSON_BOOLEAN(disableFingerprintLogin, "disableFingerprintLogin", false)
     ABC_JSON_INTEGER(pinLoginCount, "pinLoginCount", 0)
     ABC_JSON_INTEGER(minutesAutoLogout, "minutesAutoLogout", 60) // Required
+    ABC_JSON_INTEGER(secondsAutoLogout, "secondsAutoLogout", 60*60)
     ABC_JSON_INTEGER(recoveryReminderCount, "recoveryReminderCount", 0)
 
     // Bitcoin requests:
@@ -105,7 +106,9 @@ accountSettingsLoad(const Account &account)
     out->bDisablePINLogin = json.disablePinLogin();
     out->bDisableFingerprintLogin = json.disableFingerprintLogin();
     out->pinLoginCount = json.pinLoginCount();
-    out->minutesAutoLogout = json.minutesAutoLogout();
+    out->secondsAutoLogout = json.secondsAutoLogoutOk() ?
+                             json.secondsAutoLogout() :
+                             60 * json.minutesAutoLogout();
     out->recoveryReminderCount = json.recoveryReminderCount();
 
     // Bitcoin requests:
@@ -151,7 +154,9 @@ accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings)
     ABC_CHECK(json.disablePinLoginSet(pSettings->bDisablePINLogin));
     ABC_CHECK(json.disableFingerprintLoginSet(pSettings->bDisableFingerprintLogin));
     ABC_CHECK(json.pinLoginCountSet(pSettings->pinLoginCount));
-    ABC_CHECK(json.minutesAutoLogoutSet(pSettings->minutesAutoLogout));
+    auto minutesAutoLogout = (59 + pSettings->secondsAutoLogout) / 60;
+    ABC_CHECK(json.minutesAutoLogoutSet(minutesAutoLogout));
+    ABC_CHECK(json.secondsAutoLogoutSet(pSettings->secondsAutoLogout));
     ABC_CHECK(json.recoveryReminderCountSet(pSettings->recoveryReminderCount));
 
     // Bitcoin requests:

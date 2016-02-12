@@ -425,8 +425,8 @@ typedef struct sABC_AccountSettings
     char                        *szPIN;
     /** should name be listed on payments */
     bool                        bNameOnPayments;
-    /** how many minutes before auto logout */
-    int                         minutesAutoLogout;
+    /** how many seconds before auto logout */
+    int                         secondsAutoLogout;
     /** Number of times we have reminded the user to setup recovery q's */
     int                         recoveryReminderCount;
     /** language (ISO 639-1) */

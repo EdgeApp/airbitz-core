@@ -31,7 +31,7 @@ COMMAND(InitLevel::account, SettingsGet, "settings-get",
     printf("PIN: %s\n", pSettings->szPIN ? pSettings->szPIN : "(none)");
     printf("List name on payments: %s\n",
            pSettings->bNameOnPayments ? "yes" : "no");
-    printf("Minutes before auto logout: %d\n", pSettings->minutesAutoLogout);
+    printf("Seconds before auto logout: %d\n", pSettings->secondsAutoLogout);
     printf("Language: %s\n", pSettings->szLanguage);
     printf("Currency num: %d\n", pSettings->currencyNum);
     printf("Advanced features: %s\n", pSettings->bAdvancedFeatures ? "yes" : "no");
