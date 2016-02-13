@@ -42,7 +42,7 @@ private:
 public:
     WatcherInfo(Wallet &wallet):
         parent_(wallet.shared_from_this()),
-        watcher(wallet.txdb),
+        watcher(wallet.txdb, wallet.addressCache),
         wallet(wallet)
     {
     }
@@ -127,7 +127,7 @@ bridgeSweepKey(Wallet &self, DataSlice key, bool compressed)
     sweep.key = abcd::wif_key{ec_key, compressed};
     sweep.done = false;
     watcherInfo->sweeping.push_back(sweep);
-    watcherInfo->watcher.watch_address(address);
+    self.addressCache.insert(sweep.address);
 
     return Status();
 }
@@ -151,6 +151,13 @@ bridgeWatcherLoop(Wallet &self,
 {
     WatcherInfo *watcherInfo = nullptr;
     ABC_CHECK(watcherFind(watcherInfo, self));
+
+    // Set up the address-changed callback:
+    auto wakeupCallback = [watcherInfo]()
+    {
+        watcherInfo->watcher.sendWakeup();
+    };
+    self.addressCache.wakeupCallbackSet(wakeupCallback);
 
     // Set up new-transaction callback:
     auto txCallback = [watcherInfo, fCallback, pData]
@@ -193,6 +200,7 @@ bridgeWatcherLoop(Wallet &self,
     watcherInfo->watcher.set_quiet_callback(nullptr);
     watcherInfo->watcher.set_height_callback(nullptr);
     watcherInfo->watcher.set_tx_callback(nullptr);
+    self.addressCache.wakeupCallbackSet(nullptr);
 
     return Status();
 }
@@ -204,39 +212,6 @@ bridgeWatcherConnect(Wallet &self)
     ABC_CHECK(watcherFind(watcher, self));
 
     watcher->connect();
-
-    return Status();
-}
-
-Status
-bridgeWatchAddress(const Wallet &self, const std::string &address)
-{
-    ABC_DebugLog("Watching %s for %s", address.c_str(), self.id().c_str());
-
-    bc::payment_address addr;
-    if (!addr.set_encoded(address))
-        return ABC_ERROR(ABC_CC_ParseError, "Invalid address");
-
-    WatcherInfo *watcherInfo = nullptr;
-    ABC_CHECK(watcherFind(watcherInfo, self));
-    watcherInfo->watcher.watch_address(addr);
-
-    return Status();
-}
-
-Status
-bridgePrioritizeAddress(Wallet &self, const char *szAddress)
-{
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
-
-    bc::payment_address addr;
-    if (szAddress)
-    {
-        if (!addr.set_encoded(szAddress))
-            return ABC_ERROR(ABC_CC_ParseError, "Invalid address");
-    }
-    watcher->prioritize_address(addr);
 
     return Status();
 }

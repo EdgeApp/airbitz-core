@@ -6,6 +6,7 @@
  */
 
 #include "TxUpdater.hpp"
+#include "AddressCache.hpp"
 #include "../General.hpp"
 #include "../util/Debug.hpp"
 #include <list>
@@ -25,22 +26,6 @@ namespace abcd {
 
 constexpr unsigned max_queries = 10;
 
-/**
- * An address that needs to be checked.
- * More outdated addresses sort earlier in the list.
- */
-struct ToCheck
-{
-    bc::client::sleep_time oldness;
-    bc::payment_address address;
-
-    bool
-    operator<(const ToCheck &b) const
-    {
-        return oldness > b.oldness;
-    }
-};
-
 using std::placeholders::_1;
 
 TxUpdater::~TxUpdater()
@@ -48,8 +33,10 @@ TxUpdater::~TxUpdater()
     disconnect();
 }
 
-TxUpdater::TxUpdater(TxDatabase &db, void *ctx, TxCallbacks &callbacks):
+TxUpdater::TxUpdater(TxDatabase &db, AddressCache &addressCache, void *ctx,
+                     TxCallbacks &callbacks):
     db_(db),
+    addressCache_(addressCache),
     ctx_(ctx),
     callbacks_(callbacks),
     failed_(false),
@@ -187,28 +174,10 @@ TxUpdater::connect()
     return Status();
 }
 
-void TxUpdater::watch(const bc::payment_address &address,
-                      bc::client::sleep_time poll)
-{
-    ABC_DebugLevel(2,"watch() address=%s",address.encoded().c_str());
-    // Only insert if it isn't already present:
-    rows_[address] = AddressRow{poll, std::chrono::steady_clock::now() - poll};
-    query_address(address, ALL_SERVERS);
-
-}
-
 void
 TxUpdater::send(StatusCallback status, DataSlice tx)
 {
     sendTx(status, tx);
-}
-
-AddressSet TxUpdater::watching()
-{
-    AddressSet out;
-    for (auto &row: rows_)
-        out.insert(row.first.encoded());
-    return out;
 }
 
 bc::client::sleep_time TxUpdater::wakeup()
@@ -228,35 +197,20 @@ bc::client::sleep_time TxUpdater::wakeup()
     }
     next_wakeup = period - elapsed;
 
-    // Build a list of all the addresses that are due for a checkup:
-    std::list<ToCheck> toCheck;
-    for (auto &row: rows_)
+    for (const auto c: connections_)
     {
-        auto poll_time = row.second.poll_time;
-        auto elapsed = std::chrono::duration_cast<bc::client::sleep_time>(
-                           now - row.second.last_check);
-        if (poll_time <= elapsed)
-            toCheck.push_back(ToCheck{elapsed - poll_time, row.first});
-        else
-            next_wakeup = bc::client::min_sleep(next_wakeup, poll_time - elapsed);
-    }
-
-    // Process the most outdated addresses first:
-    toCheck.sort();
-    for (const auto &i: toCheck)
-    {
-        for (const auto c: connections_)
+        while (c->queued_queries_ < max_queries)
         {
-            auto &row = rows_[i.address];
-            if (c->queued_queries_ < max_queries ||
-                    row.poll_time < std::chrono::seconds(6))
-            {
-                ABC_DebugLevel(2,"wakeup() idx=%d Calling query_address %s",
-                               c->server_index,
-                               i.address.encoded().c_str());
-                next_wakeup = bc::client::min_sleep(next_wakeup, row.poll_time);
-                query_address(i.address, c->server_index);
-            }
+            std::string address;
+            next_wakeup = bc::client::min_sleep(next_wakeup,
+                                                addressCache_.nextWakeup(address));
+            if (address.empty())
+                break;
+
+            ABC_DebugLog("Check address %s", address.c_str());
+            addressCache_.checkBegin(address);
+            bc::payment_address a(address);
+            query_address(a, c->server_index);
         }
     }
 
@@ -677,7 +631,6 @@ void TxUpdater::query_address(const bc::payment_address &address,
                               int server_index)
 {
     ABC_DebugLevel(2,"query_address ENTER %s", address.encoded().c_str());
-    rows_[address].last_check = std::chrono::steady_clock::now();
     std::string servers = "";
     std::string maxed_servers = "";
     int total_queries = 0;
@@ -721,6 +674,8 @@ void TxUpdater::query_address(const bc::payment_address &address,
         {
             ABC_DebugLevel(1,"query_address ON_ERROR idx:%d addr:%s failed:%s",
                            idx, address.encoded().c_str(), error.message().c_str());
+
+            addressCache_.checkEnd(address.encoded(), false);
             failed_ = true;
             failed_server_idx_ = idx;
             query_done(idx, bconn);
@@ -732,6 +687,8 @@ void TxUpdater::query_address(const bc::payment_address &address,
             ABC_DebugLevel(2,"TxUpdater::query_address ENTER ON_DONE idx:%d addr:%s", idx,
                            address.encoded().c_str());
             ABC_DebugLevel(2,"   Looping over address transactions... ");
+
+            addressCache_.checkEnd(address.encoded(), true);
             for (auto &row: history)
             {
                 ABC_DebugLevel(2,"   Watching output tx=%s",

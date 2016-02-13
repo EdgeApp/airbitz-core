@@ -100,7 +100,7 @@ mainBranch(const Wallet &wallet)
            generate_private_key(0);
 }
 
-AddressDb::AddressDb(const Wallet &wallet):
+AddressDb::AddressDb(Wallet &wallet):
     wallet_(wallet),
     dir_(wallet.syncDir() + "Addresses/")
 {
@@ -135,6 +135,8 @@ AddressDb::load()
 
                 addresses_[address.address] = address;
                 files_[address.address] = json;
+
+                wallet_.addressCache.insert(address.address);
             }
         }
         closedir(dir);
@@ -271,7 +273,7 @@ AddressDb::stockpile()
                 ABC_CHECK(json.pack(address));
                 ABC_CHECK(json.save(path(address), wallet_.dataKey()));
 
-                bridgeWatchAddress(wallet_, address.address).log();
+                wallet_.addressCache.insert(address.address);
             }
         }
         else if (!index->second)

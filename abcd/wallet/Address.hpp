@@ -15,9 +15,6 @@ namespace abcd {
 struct TxMetadata;
 class Wallet;
 
-tABC_CC ABC_TxWatchAddresses(Wallet &self,
-                             tABC_Error *pError);
-
 tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
                                 const char *szAddress,
                                 bool bRecyclable,

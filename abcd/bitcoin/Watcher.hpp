@@ -24,13 +24,12 @@ class Watcher:
     public TxCallbacks
 {
 public:
-    Watcher(TxDatabase &db);
+    Watcher(TxDatabase &db, AddressCache &addressCache);
 
     // - Updater messages: -------------
+    void sendWakeup();
     void disconnect();
     void connect();
-    void watch_address(const bc::payment_address &address, unsigned poll_ms=10000);
-    void prioritize_address(const bc::payment_address &address);
     void sendTx(StatusCallback status, DataSlice tx);
 
     // - Callbacks: --------------------
@@ -63,18 +62,11 @@ public:
 
 private:
     zmq::context_t ctx_;
-    bc::payment_address priority_address_;
 
     // Socket for talking to the thread:
     std::mutex socket_mutex_;
     std::string socket_name_;
     zmq::socket_t socket_;
-
-    // Methods for sending messages on that socket:
-    void send_disconnect();
-    void send_connect();
-    void send_watch_addr(bc::payment_address address, unsigned poll_ms);
-    void sendSend(StatusCallback status, DataSlice tx);
 
     // The thread uses these callbacks, so put them in a mutex:
     std::mutex cb_mutex_;

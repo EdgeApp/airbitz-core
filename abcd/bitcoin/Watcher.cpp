@@ -14,28 +14,20 @@ namespace abcd {
 using std::placeholders::_1;
 using std::placeholders::_2;
 
-constexpr unsigned default_poll = 20000;
-constexpr unsigned priority_poll = 4000;
-
 static unsigned watcher_id = 0;
 
 enum
 {
     msg_quit,
+    msg_wakeup,
     msg_disconnect,
     msg_connect,
-    msg_watch_addr,
     msg_send
 };
 
-static bool is_valid(const bc::payment_address &address)
-{
-    return address.version() != bc::payment_address::invalid_version;
-}
-
-Watcher::Watcher(TxDatabase &db):
+Watcher::Watcher(TxDatabase &db, AddressCache &addressCache):
     socket_(ctx_, ZMQ_PAIR),
-    txu_(db, ctx_, *this)
+    txu_(db, addressCache, ctx_, *this)
 {
     std::stringstream name;
     name << "inproc://watcher-" << watcher_id++;
@@ -45,47 +37,43 @@ Watcher::Watcher(TxDatabase &db):
     socket_.setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
 }
 
+void
+Watcher::sendWakeup()
+{
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+
+    uint8_t req = msg_wakeup;
+    socket_.send(&req, 1);
+}
+
 void Watcher::disconnect()
 {
-    send_disconnect();
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+
+    uint8_t req = msg_disconnect;
+    socket_.send(&req, 1);
 }
 
 void Watcher::connect()
 {
-    send_connect();
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+
+    uint8_t req = msg_connect;
+    socket_.send(&req, 1);
 }
 
 void
 Watcher::sendTx(StatusCallback status, DataSlice tx)
 {
-    sendSend(status, tx);
-}
+    std::lock_guard<std::mutex> lock(socket_mutex_);
 
-void
-Watcher::watch_address(const bc::payment_address &address, unsigned poll_ms)
-{
-    send_watch_addr(address, poll_ms);
-}
+    auto statusCopy = new StatusCallback(std::move(status));
+    auto statusInt = reinterpret_cast<uintptr_t>(statusCopy);
 
-/**
- * Checks a particular address more frequently.
- * To go back to normal mode, pass an empty address.
- */
-void Watcher::prioritize_address(const bc::payment_address &address)
-{
-    if (is_valid(priority_address_))
-    {
-        send_watch_addr(priority_address_, default_poll);
-        ABC_DebugLog("DISABLE prioritize_address %s",
-                     priority_address_.encoded().c_str());
-    }
-    priority_address_ = address;
-    if (is_valid(priority_address_))
-    {
-        send_watch_addr(priority_address_, priority_poll);
-        ABC_DebugLog("ENABLE prioritize_address %s",
-                     priority_address_.encoded().c_str());
-    }
+    auto data = buildData({bc::to_byte(msg_send),
+                           bc::to_little_endian(statusInt), tx
+                          });
+    socket_.send(data.data(), data.size());
 }
 
 /**
@@ -179,50 +167,6 @@ void Watcher::loop()
     }
 }
 
-void Watcher::send_disconnect()
-{
-    std::lock_guard<std::mutex> lock(socket_mutex_);
-
-    uint8_t req = msg_disconnect;
-    socket_.send(&req, 1);
-}
-
-void Watcher::send_connect()
-{
-    std::lock_guard<std::mutex> lock(socket_mutex_);
-
-    uint8_t req = msg_connect;
-    socket_.send(&req, 1);
-}
-
-void Watcher::send_watch_addr(bc::payment_address address, unsigned poll_ms)
-{
-    std::lock_guard<std::mutex> lock(socket_mutex_);
-
-    std::basic_ostringstream<uint8_t> stream;
-    auto serial = bc::make_serializer(std::ostreambuf_iterator<uint8_t>(stream));
-    serial.write_byte(msg_watch_addr);
-    serial.write_byte(address.version());
-    serial.write_short_hash(address.hash());
-    serial.write_4_bytes(poll_ms);
-    auto str = stream.str();
-    socket_.send(str.data(), str.size());
-}
-
-void
-Watcher::sendSend(StatusCallback status, DataSlice tx)
-{
-    std::lock_guard<std::mutex> lock(socket_mutex_);
-
-    auto statusCopy = new StatusCallback(std::move(status));
-    auto statusInt = reinterpret_cast<uintptr_t>(statusCopy);
-
-    auto data = buildData({bc::to_byte(msg_send),
-                           bc::to_little_endian(statusInt), tx
-                          });
-    socket_.send(data.data(), data.size());
-}
-
 bool Watcher::command(uint8_t *data, size_t size)
 {
     auto serial = bc::make_deserializer(data, data + size);
@@ -232,6 +176,9 @@ bool Watcher::command(uint8_t *data, size_t size)
     case msg_quit:
         return false;
 
+    case msg_wakeup:
+        return true;
+
     case msg_disconnect:
         txu_.disconnect();
         return true;
@@ -239,16 +186,6 @@ bool Watcher::command(uint8_t *data, size_t size)
     case msg_connect:
         txu_.connect().log();
         return true;
-
-    case msg_watch_addr:
-    {
-        auto version = serial.read_byte();
-        auto hash = serial.read_short_hash();
-        bc::payment_address address(version, hash);
-        bc::client::sleep_time poll_time(serial.read_4_bytes());
-        txu_.watch(address, poll_time);
-    }
-    return true;
 
     case msg_send:
     {

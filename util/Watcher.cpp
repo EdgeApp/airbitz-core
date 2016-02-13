@@ -6,6 +6,7 @@
  */
 
 #include "ReadLine.hpp"
+#include "../abcd/bitcoin/AddressCache.hpp"
 #include "../abcd/bitcoin/TxUpdater.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include <fstream>
@@ -53,21 +54,22 @@ private:
     bool read_string(std::stringstream &args, std::string &out,
                      const std::string &error_message);
     bc::hash_digest read_txid(std::stringstream &args);
-    bool read_address(std::stringstream &args, bc::payment_address &out);
 
     // Networking:
     zmq::context_t context_;
     ReadLine terminal_;
 
     // State:
+    abcd::AddressSet addresses_;
     abcd::TxDatabase db_;
+    abcd::AddressCache addressCache_;
     abcd::TxUpdater updater_;
     bool done_;
 };
 
 Cli::Cli():
     terminal_(context_),
-    updater_(db_, context_, *this),
+    updater_(db_, addressCache_, context_, *this),
     done_(false)
 {
 }
@@ -212,23 +214,18 @@ void Cli::cmd_tx_send(std::stringstream &args)
 
 void Cli::cmd_watch(std::stringstream &args)
 {
-    bc::payment_address address;
-    if (!read_address(args, address))
+    std::string address;
+    if (!read_string(args, address, "error: no address given"))
         return;
-    unsigned poll_ms = 10000;
-    args >> poll_ms;
-    if (poll_ms < 500)
-    {
-        std::cout << "warning: poll too short, setting to 500ms" << std::endl;
-        poll_ms = 500;
-    }
-    updater_.watch(address, bc::client::sleep_time(poll_ms));
+
+    addresses_.insert(address);
+    addressCache_.insert(address);
 }
 
 void Cli::cmd_utxos(std::stringstream &args)
 {
     bc::output_info_list utxos;
-    utxos = db_.get_utxos(updater_.watching());
+    utxos = db_.get_utxos(addresses_);
 
     // Display the output:
     size_t total = 0;
@@ -355,23 +352,6 @@ bc::hash_digest Cli::read_txid(std::stringstream &args)
         return bc::null_hash;
     }
     return out;
-}
-
-/**
- * Reads a bitcoin address from the command-line, or prints an error if
- * the address is missing or invalid.
- */
-bool Cli::read_address(std::stringstream &args, bc::payment_address &out)
-{
-    std::string address;
-    if (!read_string(args, address, "error: no address given"))
-        return false;
-    if (!out.set_encoded(address))
-    {
-        std::cout << "error: invalid address " << address << std::endl;
-        return false;
-    }
-    return true;
 }
 
 int main()

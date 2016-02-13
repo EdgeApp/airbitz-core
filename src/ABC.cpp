@@ -2568,28 +2568,20 @@ exit:
 }
 
 /**
- * Watch all the addresses for szWalletUUID
- *
- * @param szUserName   UserName for the account
- * @param szPassword   Password for the account
- * @param szWalletUUID The wallet watcher to use
+ * Deprecated. Does nothing.
  */
 tABC_CC ABC_WatchAddresses(const char *szUserName, const char *szPassword,
                            const char *szWalletUUID, tABC_Error *pError)
 {
     ABC_PROLOG();
 
-    {
-        ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxWatchAddresses(*wallet, pError));
-    }
-
 exit:
     return cc;
 }
 
 /**
- * Watch a single address for a wallet
+ * Watch a single address for a wallet.
+ * Pass a nullptr address to cancel the priority poll.
  *
  * @param szUserName   DEPRECATED. Completely unused.
  * @param szPassword   DEPRECATED. Completely unused.
@@ -2604,7 +2596,11 @@ tABC_CC ABC_PrioritizeAddress(const char *szUserName, const char *szPassword,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_NEW(bridgePrioritizeAddress(*wallet, szAddress));
+
+        std::string address;
+        if (szAddress)
+            address = szAddress;
+        wallet->addressCache.prioritize(address);
     }
 
 exit:

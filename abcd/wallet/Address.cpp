@@ -10,26 +10,10 @@
 #include "Wallet.hpp"
 #include "../account/AccountSettings.hpp"
 #include "../bitcoin/Text.hpp"
-#include "../bitcoin/WatcherBridge.hpp"
 #include "../util/Util.hpp"
 #include <qrencode.h>
 
 namespace abcd {
-
-tABC_CC ABC_TxWatchAddresses(Wallet &self,
-                             tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    auto addresses = self.addresses.list();
-    for (const auto &i: addresses)
-    {
-        ABC_CHECK_NEW(bridgeWatchAddress(self, i));
-    }
-
-exit:
-    return cc;
-}
 
 /**
  * Sets the recycle status on an address as specified

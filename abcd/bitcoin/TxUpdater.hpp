@@ -17,6 +17,7 @@
 
 namespace abcd {
 
+class AddressCache;
 typedef std::function<void(Status)> StatusCallback;
 
 /**
@@ -52,15 +53,12 @@ class TxUpdater:
 {
 public:
     ~TxUpdater();
-    TxUpdater(TxDatabase &db, void *ctx, TxCallbacks &callbacks);
+    TxUpdater(TxDatabase &db, AddressCache &addressCache, void *ctx,
+              TxCallbacks &callbacks);
 
     void disconnect();
     Status connect();
-    void watch(const bc::payment_address &address,
-               bc::client::sleep_time poll);
     void send(StatusCallback status, DataSlice tx);
-
-    AddressSet watching();
 
     // Sleeper interface:
     virtual bc::client::sleep_time wakeup();
@@ -113,15 +111,9 @@ private:
     void query_address(const bc::payment_address &address, int server_index);
 
     TxDatabase &db_;
+    AddressCache &addressCache_;
     void *ctx_;
     TxCallbacks &callbacks_;
-
-    struct AddressRow
-    {
-        libbitcoin::client::sleep_time poll_time;
-        std::chrono::steady_clock::time_point last_check;
-    };
-    std::unordered_map<bc::payment_address, AddressRow> rows_;
 
     bool failed_;
     long failed_server_idx_;

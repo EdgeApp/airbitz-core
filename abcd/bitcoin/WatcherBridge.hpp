@@ -63,12 +63,6 @@ Status
 bridgeWatcherDelete(Wallet &self);
 
 Status
-bridgeWatchAddress(const Wallet &self, const std::string &address);
-
-Status
-bridgePrioritizeAddress(Wallet &self, const char *szAddress);
-
-Status
 watcherSend(Wallet &self, StatusCallback status, DataSlice rawTx);
 
 Status
