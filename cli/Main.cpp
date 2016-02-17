@@ -14,13 +14,15 @@
 
 using namespace abcd;
 
+#define DEFAULT_HIDDENBITZKEY ""
+
 #define CA_CERT "./cli/ca-certificates.crt"
 
 struct ConfigJson:
     public JsonObject
 {
     ABC_JSON_STRING(apiKey, "apiKey", nullptr)
-    ABC_JSON_STRING(hiddenBitzKey, "hiddenBitzKey", nullptr)
+    ABC_JSON_STRING(hiddenBitzKey, "hiddenBitzKey", DEFAULT_HIDDENBITZKEY)
     ABC_JSON_STRING(workingDir, "workingDir", nullptr)
     ABC_JSON_STRING(username, "username", nullptr)
     ABC_JSON_STRING(password, "password", nullptr)
@@ -51,7 +53,6 @@ static Status run(int argc, char *argv[])
     ConfigJson json;
     ABC_CHECK(json.load(configPath()));
     ABC_CHECK(json.apiKeyOk());
-    ABC_CHECK(json.hiddenBitzKeyOk());
 
     // Parse out the command-line options:
     std::string workingDir;
