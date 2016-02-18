@@ -487,7 +487,7 @@ typedef void (*tABC_Sweep_Done_Callback)(void *pData,
  * @param szRootDir             The root directory for all files to be saved
  * @param szCaCertPath          CA Certificate Path
  * @param szApiKey              API Key for the AirBitz login servers
- * @param szHiddenBitzKey       Private key for Hiddenbits promotion
+ * @param szHiddenBitsKey       Private key for Hiddenbits promotion
  * @param pData                 Pointer to data to be returned back in callback
  * @param pSeedData             Pointer to data to seed the random number generator
  * @param seedLength            Length of the seed data
@@ -496,7 +496,7 @@ typedef void (*tABC_Sweep_Done_Callback)(void *pData,
 tABC_CC ABC_Initialize(const char               *szRootDir,
                        const char               *szCaCertPath,
                        const char               *szApiKey,
-                       const char               *szHiddenBitzKey,
+                       const char               *szHiddenBitsKey,
                        const unsigned char      *pSeedData,
                        unsigned int             seedLength,
                        tABC_Error               *pError);

@@ -14,7 +14,7 @@
 
 using namespace abcd;
 
-#define DEFAULT_HIDDENBITZKEY ""
+#define DEFAULT_HIDDENBITSKEY ""
 
 #define CA_CERT "./cli/ca-certificates.crt"
 
@@ -22,7 +22,7 @@ struct ConfigJson:
     public JsonObject
 {
     ABC_JSON_STRING(apiKey, "apiKey", nullptr)
-    ABC_JSON_STRING(hiddenBitzKey, "hiddenBitzKey", DEFAULT_HIDDENBITZKEY)
+    ABC_JSON_STRING(hiddenBitsKey, "hiddenBitsKey", DEFAULT_HIDDENBITSKEY)
     ABC_JSON_STRING(workingDir, "workingDir", nullptr)
     ABC_JSON_STRING(username, "username", nullptr)
     ABC_JSON_STRING(password, "password", nullptr)
@@ -147,7 +147,7 @@ static Status run(int argc, char *argv[])
         ABC_CHECK_OLD(ABC_Initialize(workingDir.c_str(),
                                      CA_CERT,
                                      json.apiKey(),
-                                     json.hiddenBitzKey(),
+                                     json.hiddenBitsKey(),
                                      seed,
                                      sizeof(seed),
                                      &error));

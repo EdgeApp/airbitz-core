@@ -21,14 +21,14 @@ class Context
 {
 public:
     Context(const std::string &rootDir, const std::string &certPath,
-            const std::string &apiKey, const std::string &hiddenBitzKey);
+            const std::string &apiKey, const std::string &hiddenBitsKey);
 
     const std::string &apiKey() const { return apiKey_; }
-    const std::string &hiddenBitzKey() const { return hiddenBitzKey_; }
+    const std::string &hiddenBitsKey() const { return hiddenBitsKey_; }
 
 private:
     const std::string apiKey_;
-    const std::string hiddenBitzKey_;
+    const std::string hiddenBitsKey_;
 
 public:
     RootPaths paths;

@@ -12,9 +12,9 @@ namespace abcd {
 std::unique_ptr<Context> gContext;
 
 Context::Context(const std::string &rootDir, const std::string &certPath,
-                 const std::string &apiKey, const std::string &hiddenBitzKey):
+                 const std::string &apiKey, const std::string &hiddenBitsKey):
     apiKey_(apiKey),
-    hiddenBitzKey_(hiddenBitzKey),
+    hiddenBitsKey_(hiddenBitsKey),
     paths(rootDir, certPath),
     exchangeCache(paths.exchangeCachePath())
 {}

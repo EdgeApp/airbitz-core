@@ -73,7 +73,7 @@ hbitsDecode(bc::ec_secret &result, const std::string &hbits)
     result = bc::sha256_hash(bc::to_data_chunk(trimmed));
 
     // XOR with our magic number:
-    auto mix = bc::decode_hex(gContext->hiddenBitzKey());
+    auto mix = bc::decode_hex(gContext->hiddenBitsKey());
     for (size_t i = 0; i < mix.size() && i < result.size(); ++i)
         result[i] ^= mix[i];
 
