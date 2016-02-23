@@ -584,9 +584,6 @@ tABC_CC ABC_PinLoginExists(const char *szUserName,
                            bool *pbExists,
                            tABC_Error *pError);
 
-tABC_CC ABC_PinLoginDelete(const char *szUserName,
-                           tABC_Error *pError);
-
 tABC_CC ABC_PinLogin(const char *szUserName,
                      const char *szPin,
                      tABC_Error *pError);

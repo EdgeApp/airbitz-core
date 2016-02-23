@@ -958,23 +958,6 @@ exit:
 }
 
 /**
- * Deletes the PIN login package from the disk.
- */
-tABC_CC ABC_PinLoginDelete(const char *szUserName,
-                           tABC_Error *pError)
-{
-    ABC_PROLOG();
-
-    {
-        ABC_GET_LOBBY();
-        ABC_CHECK_NEW(loginPinDelete(*lobby));
-    }
-
-exit:
-    return cc;
-}
-
-/**
  * Performs a PIN-based login for the given user.
  */
 tABC_CC ABC_PinLogin(const char *szUserName,
