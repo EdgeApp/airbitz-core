@@ -191,7 +191,9 @@ typedef enum eABC_AsyncEventType
 {
     ABC_AsyncEventType_IncomingBitCoin,
     ABC_AsyncEventType_BlockHeightChange,
-    ABC_AsyncEventType_BalanceUpdate
+    ABC_AsyncEventType_BalanceUpdate,
+    ABC_AsyncEventType_IncomingSweep,
+    ABC_AsyncEventType_FailedSweep
 } tABC_AsyncEventType;
 
 /**
@@ -203,25 +205,22 @@ typedef enum eABC_AsyncEventType
  */
 typedef struct sABC_AsyncBitCoinInfo
 {
-    /** data pointer given by caller at init */
-    void    *pData;
+    /** Data pointer given by caller. */
+    void *pData;
 
-    /** type of event that occured */
+    /** Type of event that occurred. */
     tABC_AsyncEventType eventType;
 
-    /* Return status of call */
+    /** The success or failure of the event. */
     tABC_Error status;
 
-    /** if the event involved a wallet, this is its ID */
+    /** If the event involved a wallet, this is its ID. */
     const char *szWalletUUID;
 
-    /** if the event involved a transaction, this is its ID */
+    /** If the event involved a transaction, this is its ID. */
     const char *szTxID;
 
-    /** String containing a description of the event */
-    const char *szDescription;
-
-    /** amount swept */
+    /** The amount swept, if this is a sweep. */
     int64_t sweepSatoshi;
 } tABC_AsyncBitCoinInfo;
 
@@ -465,20 +464,6 @@ typedef struct sABC_AccountSettings
  *
  */
 typedef void (*tABC_BitCoin_Event_Callback)(const tABC_AsyncBitCoinInfo *pInfo);
-
-/**
- * Called when the sweep process completes.
- *
- * @param cc Ok if the sweep completed successfully,
- * or some error code if something went wrong.
- * @param szID The transaction id of the incoming funds,
- * if the sweep succeeded.
- * @param amount The number of satoshis swept into the wallet.
- */
-typedef void (*tABC_Sweep_Done_Callback)(void *pData,
-        tABC_CC cc,
-        const char *szNTXID,
-        uint64_t amount);
 
 /* === Library lifetime: === */
 
@@ -1110,8 +1095,6 @@ tABC_CC ABC_SweepKey(const char *szUsername,
                      const char *szWalletUUID,
                      const char *szKey,
                      char **pszAddress,
-                     tABC_Sweep_Done_Callback fCallback,
-                     void *pData,
                      tABC_Error *pError);
 
 /* === Transactions: === */

@@ -1926,8 +1926,6 @@ tABC_CC ABC_SweepKey(const char *szUserName,
                      const char *szWalletUUID,
                      const char *szKey,
                      char **pszAddress,
-                     tABC_Sweep_Done_Callback fCallback,
-                     void *pData,
                      tABC_Error *pError)
 {
     ABC_PROLOG();
@@ -1940,8 +1938,7 @@ tABC_CC ABC_SweepKey(const char *szUserName,
         ABC_CHECK_RET(ABC_BridgeDecodeWIF(szKey, &key, &bCompressed, pszAddress,
                                           pError));
 
-        ABC_CHECK_RET(ABC_BridgeSweepKey(*wallet, key, bCompressed, fCallback, pData,
-                                         pError));
+        ABC_CHECK_RET(ABC_BridgeSweepKey(*wallet, key, bCompressed, pError));
     }
 
 exit:
@@ -2609,6 +2606,7 @@ tABC_CC ABC_WatcherLoop(const char *szWalletUUID,
                         tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(fAsyncBitCoinEventCallback);
 
     {
         ABC_GET_WALLET_N();

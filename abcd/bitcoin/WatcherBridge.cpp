@@ -30,9 +30,6 @@ struct PendingSweep
     std::string address;
     abcd::wif_key key;
     bool done;
-
-    tABC_Sweep_Done_Callback fCallback;
-    void *pData;
 };
 
 struct WatcherInfo
@@ -111,8 +108,6 @@ watcherPath(Wallet &self)
 tABC_CC ABC_BridgeSweepKey(Wallet &self,
                            tABC_U08Buf key,
                            bool compressed,
-                           tABC_Sweep_Done_Callback fCallback,
-                           void *pData,
                            tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -135,8 +130,6 @@ tABC_CC ABC_BridgeSweepKey(Wallet &self,
     sweep.address = address.encoded();
     sweep.key = abcd::wif_key{ec_key, compressed};
     sweep.done = false;
-    sweep.fCallback = fCallback;
-    sweep.pData = pData;
     watcherInfo->sweeping.push_back(sweep);
     watcherInfo->watcher.watch_address(address);
 
@@ -182,14 +175,16 @@ tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
 
     heightCallback = [watcherInfo, fAsyncCallback, pData](const size_t height)
     {
-        if (fAsyncCallback)
-        {
-            tABC_AsyncBitCoinInfo info;
-            info.eventType = ABC_AsyncEventType_BlockHeightChange;
-            info.pData = pData;
-            info.szDescription = "Block height change";
-            fAsyncCallback(&info);
-        }
+        // Update the GUI:
+        tABC_AsyncBitCoinInfo info;
+        info.pData = pData;
+        info.eventType = ABC_AsyncEventType_BlockHeightChange;
+        Status().toError(info.status, ABC_HERE());
+        info.szWalletUUID = watcherInfo->wallet.id().c_str();
+        info.szTxID = nullptr;
+        info.sweepSatoshi = 0;
+        fAsyncCallback(&info);
+
         watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
     };
     watcherInfo->watcher.set_height_callback(heightCallback);
@@ -367,8 +362,15 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
         // Tell the GUI if there were funds in the past:
         if (watcherInfo->wallet.txdb.has_history(sweep.address))
         {
-            if (sweep.fCallback)
-                sweep.fCallback(sweep.pData, ABC_CC_Ok, nullptr, 0);
+            tABC_AsyncBitCoinInfo info;
+            info.pData = pData;
+            info.eventType = ABC_AsyncEventType_IncomingSweep;
+            Status().toError(info.status, ABC_HERE());
+            info.szWalletUUID = watcherInfo->wallet.id().c_str();
+            info.szTxID = nullptr;
+            info.sweepSatoshi = 0;
+            fAsyncCallback(&info);
+
             sweep.done = true;
         }
         return Status();
@@ -416,8 +418,15 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     ABC_CHECK(txSweepSave(watcherInfo->wallet, ntxid, txid, funds));
 
     // Done:
-    if (sweep.fCallback)
-        sweep.fCallback(sweep.pData, ABC_CC_Ok, ntxid.c_str(), output.value);
+    tABC_AsyncBitCoinInfo info;
+    info.pData = pData;
+    info.eventType = ABC_AsyncEventType_IncomingSweep;
+    Status().toError(info.status, ABC_HERE());
+    info.szWalletUUID = watcherInfo->wallet.id().c_str();
+    info.szTxID = ntxid.c_str();
+    info.sweepSatoshi = output.value;
+    fAsyncCallback(&info);
+
     sweep.done = true;
 
     return Status();
@@ -433,8 +442,15 @@ bridgeQuietCallback(WatcherInfo *watcherInfo,
         auto s = bridgeDoSweep(watcherInfo, sweep, fAsyncCallback, pData).log();
         if (!s)
         {
-            if (sweep.fCallback)
-                sweep.fCallback(sweep.pData, s.value(), nullptr, 0);
+            tABC_AsyncBitCoinInfo info;
+            info.pData = pData;
+            info.eventType = ABC_AsyncEventType_IncomingSweep;
+            s.toError(info.status, ABC_HERE());
+            info.szWalletUUID = watcherInfo->wallet.id().c_str();
+            info.szTxID = nullptr;
+            info.sweepSatoshi = 0;
+            fAsyncCallback(&info);
+
             sweep.done = true;
         }
     }

@@ -152,16 +152,15 @@ txReceiveTransaction(Wallet &self,
         // add the transaction to the address
         ABC_CHECK(txSaveNewTx(self, tx, addresses, true));
 
-        if (fAsyncCallback)
-        {
-            tABC_AsyncBitCoinInfo info;
-            info.pData = pData;
-            info.eventType = ABC_AsyncEventType_IncomingBitCoin;
-            info.szTxID = ntxid.c_str();
-            info.szWalletUUID = self.id().c_str();
-            info.szDescription = "Received funds";
-            fAsyncCallback(&info);
-        }
+        // Update the GUI:
+        tABC_AsyncBitCoinInfo info;
+        info.pData = pData;
+        info.eventType = ABC_AsyncEventType_IncomingBitCoin;
+        Status().toError(info.status, ABC_HERE());
+        info.szWalletUUID = self.id().c_str();
+        info.szTxID = ntxid.c_str();
+        info.sweepSatoshi = 0;
+        fAsyncCallback(&info);
     }
     else
     {
@@ -170,16 +169,15 @@ txReceiveTransaction(Wallet &self,
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
         self.balanceDirty();
 
-        if (fAsyncCallback)
-        {
-            tABC_AsyncBitCoinInfo info;
-            info.pData = pData;
-            info.eventType = ABC_AsyncEventType_BalanceUpdate;
-            info.szTxID = ntxid.c_str();
-            info.szWalletUUID = self.id().c_str();
-            info.szDescription = "Updated balance";
-            fAsyncCallback(&info);
-        }
+        // Update the GUI:
+        tABC_AsyncBitCoinInfo info;
+        info.pData = pData;
+        info.eventType = ABC_AsyncEventType_BalanceUpdate;
+        Status().toError(info.status, ABC_HERE());
+        info.szWalletUUID = self.id().c_str();
+        info.szTxID = ntxid.c_str();
+        info.sweepSatoshi = 0;
+        fAsyncCallback(&info);
     }
 
     return Status();
