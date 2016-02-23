@@ -80,11 +80,6 @@ public:
     bool has_history(const bc::payment_address &address) const;
 
     /**
-     * Get all unspent outputs in the database.
-     */
-    bc::output_info_list get_utxos() const;
-
-    /**
      * Get just the utxos corresponding to a set of addresses.
      * @param filter true to filter out unconfirmed outputs.
      */
@@ -111,7 +106,7 @@ public:
      * Insert a new transaction into the database.
      * @return true if the callback should be fired.
      */
-    bool insert(const bc::transaction_type &tx, TxState state);
+    bool insert(const bc::transaction_type &tx);
 
     /**
      * Clears the database for debugging purposes.
@@ -119,8 +114,9 @@ public:
     void clear();
 
 private:
-    // - Updater: ----------------------
     friend class TxUpdater;
+    friend class TxFilter;
+    friend class TxDatabaseTest;
 
     /**
      * A single row in the transaction database.
@@ -136,13 +132,7 @@ private:
         TxState state;
         long long block_height;
         time_t timestamp;
-        bool bMalleated;
-        bool bMasterConfirm;
         //bc::hash_digest block_hash; // TODO: Fix obelisk to return this
-
-        // The transaction is certainly in a block, but there is some
-        // question whether or not that block is on the main chain:
-        bool need_check;
     };
 
     /**
@@ -162,29 +152,14 @@ private:
     void unconfirmed(bc::hash_digest txid);
 
     /**
-     * Delete a transaction.
-     * This can happen when the network rejects a spend request.
-     */
-    void forget(bc::hash_digest txid);
-
-    /**
      * Call this each time the server reports that it sees a transaction.
      */
     void reset_timestamp(bc::hash_digest txid);
 
     typedef std::function<void (bc::hash_digest txid)> HashFn;
     void foreach_unconfirmed(HashFn &&f);
-    void foreach_forked(HashFn &&f);
 
     // - Internal: ---------------------
-    void check_fork(size_t height);
-
-    /**
-     * Returns true if the transaction is either confirmed or
-     * is one of our own spends (according to the address list).
-     */
-    bool
-    isSpendable(bc::hash_digest txid, const AddressSet &addresses) const;
 
     /**
      * Returns all the rows that match the given ntxid.

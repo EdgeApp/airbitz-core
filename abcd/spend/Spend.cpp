@@ -14,6 +14,7 @@
 #include "../Tx.hpp"
 #include "../bitcoin/Watcher.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
+#include "../bitcoin/Utility.hpp"
 #include "../util/Debug.hpp"
 #include "../wallet/Details.hpp"
 #include "../wallet/Wallet.hpp"
@@ -169,12 +170,12 @@ spendSaveTx(Wallet &self, SendInfo *pInfo, DataSlice rawTx,
     bc::satoshi_load(deserial.iterator(), deserial.end(), tx);
 
     // Save to the transaction cache:
-    if (self.txdb.insert(tx, TxState::unconfirmed))
+    if (self.txdb.insert(tx))
         watcherSave(self).log(); // Failure is not fatal
 
     // Update the Airbitz metadata:
     auto txid = bc::encode_hash(bc::hash_transaction(tx));
-    auto ntxid = ABC_BridgeNonMalleableTxId(tx);
+    auto ntxid = bc::encode_hash(makeNtxid(tx));
     std::vector<std::string> addresses;
     for (const auto &output: tx.outputs)
     {

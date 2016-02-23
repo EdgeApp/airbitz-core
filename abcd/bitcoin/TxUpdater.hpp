@@ -103,7 +103,6 @@ private:
     void watch_tx(bc::hash_digest txid, bool want_inputs, int idx, size_t index);
     void get_inputs(const bc::transaction_type &tx, int idx);
     void query_done(int idx, Connection &bconn);
-    void queue_get_indices(int idx);
 
     // Server queries:
     void get_height();

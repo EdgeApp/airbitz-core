@@ -9,6 +9,7 @@
 #include "Outputs.hpp"
 #include "../General.hpp"
 #include "../bitcoin/TxDatabase.hpp"
+#include "../bitcoin/Utility.hpp"
 #include "../wallet/Wallet.hpp"
 #include <unistd.h>
 #include <bitcoin/bitcoin.hpp>
@@ -16,7 +17,6 @@
 namespace abcd {
 
 static std::map<bc::data_chunk, std::string> address_map;
-static bc::operation create_data_operation(bc::data_chunk &data);
 
 Status
 signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
@@ -57,28 +57,12 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
 
         // Create out scriptsig:
         bc::script_type scriptsig;
-        scriptsig.push_operation(create_data_operation(signature));
-        scriptsig.push_operation(create_data_operation(pubkey));
+        scriptsig.push_operation(makePushOperation(signature));
+        scriptsig.push_operation(makePushOperation(pubkey));
         result.inputs[i].script = scriptsig;
     }
 
     return Status();
-}
-
-static bc::operation create_data_operation(bc::data_chunk &data)
-{
-    BITCOIN_ASSERT(data.size() < std::numeric_limits<uint32_t>::max());
-    bc::operation op;
-    op.data = data;
-    if (data.size() <= 75)
-        op.code = bc::opcode::special;
-    else if (data.size() < std::numeric_limits<uint8_t>::max())
-        op.code = bc::opcode::pushdata1;
-    else if (data.size() < std::numeric_limits<uint16_t>::max())
-        op.code = bc::opcode::pushdata2;
-    else if (data.size() < std::numeric_limits<uint32_t>::max())
-        op.code = bc::opcode::pushdata4;
-    return op;
 }
 
 bool gather_challenges(unsigned_transaction &utx, Wallet &wallet)
@@ -144,8 +128,8 @@ bool sign_tx(unsigned_transaction &utx, const key_table &keys)
 
         // Save:
         bc::script_type scriptsig;
-        scriptsig.push_operation(create_data_operation(signature));
-        scriptsig.push_operation(create_data_operation(pubkey));
+        scriptsig.push_operation(makePushOperation(signature));
+        scriptsig.push_operation(makePushOperation(pubkey));
         utx.tx.inputs[i].script = scriptsig;
     }
 

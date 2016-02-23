@@ -8,6 +8,7 @@
 #include "WatcherBridge.hpp"
 #include "TxUpdater.hpp"
 #include "Testnet.hpp"
+#include "Utility.hpp"
 #include "Watcher.hpp"
 #include "../Tx.hpp"
 #include "../spend/Broadcast.hpp"
@@ -409,12 +410,12 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     bc::data_chunk raw_tx(satoshi_raw_size(utx.tx));
     bc::satoshi_save(utx.tx, raw_tx.begin());
     ABC_CHECK(broadcastTx(watcherInfo->wallet, raw_tx));
-    if (watcherInfo->wallet.txdb.insert(utx.tx, TxState::unconfirmed))
+    if (watcherInfo->wallet.txdb.insert(utx.tx))
         watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 
     // Save the transaction in the metadatabase:
     const auto txid = bc::encode_hash(bc::hash_transaction(utx.tx));
-    const auto ntxid = ABC_BridgeNonMalleableTxId(utx.tx);
+    const auto ntxid = bc::encode_hash(makeNtxid(utx.tx));
     ABC_CHECK(txSweepSave(watcherInfo->wallet, ntxid, txid, funds));
 
     // Done:
@@ -487,7 +488,7 @@ bridgeTxCallback(WatcherInfo *watcherInfo,
         addresses.push_back(address.encoded());
     }
 
-    const auto ntxid = ABC_BridgeNonMalleableTxId(tx);
+    const auto ntxid = bc::encode_hash(makeNtxid(tx));
     const auto txid = bc::encode_hash(bc::hash_transaction(tx));
 
     if (relevant)
@@ -503,14 +504,6 @@ bridgeTxCallback(WatcherInfo *watcherInfo,
     watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 
     return Status();
-}
-
-std::string
-ABC_BridgeNonMalleableTxId(bc::transaction_type tx)
-{
-    for (auto &input: tx.inputs)
-        input.script = bc::script_type();
-    return bc::encode_hash(bc::hash_transaction(tx, bc::sighash::all));
 }
 
 } // namespace abcd
