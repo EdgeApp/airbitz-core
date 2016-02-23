@@ -70,6 +70,12 @@ public:
     checkEnd(const std::string &address, bool success);
 
     /**
+     * Sets up callback to notify when every address has been checked.
+     */
+    void
+    doneCallbackSet(const Callback &callback);
+
+    /**
      * Sets up a callback to notify when addresses change.
      */
     void
@@ -88,7 +94,14 @@ private:
     };
     std::map<std::string, AddressRow> rows_;
 
+    Callback doneCallback_;
     Callback wakeupCallback_;
+
+    /**
+     * Returns true if every address has been checked at least once.
+     */
+    bool
+    done();
 };
 
 } // namespace abcd

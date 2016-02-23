@@ -6,6 +6,7 @@
  */
 
 #include "AddressCache.hpp"
+#include <algorithm>
 
 namespace abcd {
 
@@ -23,7 +24,7 @@ AddressCache::insert(const std::string &address)
         {
             periodDefault,
             std::chrono::steady_clock::now() - periodDefault,
-            false
+            false, false
         };
 
         if (wakeupCallback_)
@@ -104,7 +105,29 @@ AddressCache::checkEnd(const std::string &address, bool success)
     auto &row = rows_[address];
     row.checking = false;
     if (success)
+    {
         row.lastCheck = std::chrono::steady_clock::now();
+        row.checkedOnce = true;
+
+        if (doneCallback_ && done())
+        {
+            doneCallback_();
+            doneCallback_ = nullptr;
+        }
+    }
+}
+
+void
+AddressCache::doneCallbackSet(const Callback &callback)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    doneCallback_ = callback;
+    if (doneCallback_ && done())
+    {
+        doneCallback_();
+        doneCallback_ = nullptr;
+    }
 }
 
 void
@@ -112,6 +135,21 @@ AddressCache::wakeupCallbackSet(const Callback &callback)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     wakeupCallback_ = callback;
+}
+
+bool
+AddressCache::done()
+{
+    bool allChecked = true;
+    for (const auto &row: rows_)
+    {
+        if (!row.second.checkedOnce)
+        {
+            allChecked = false;
+            break;
+        }
+    }
+    return allChecked;
 }
 
 } // namespace abcd

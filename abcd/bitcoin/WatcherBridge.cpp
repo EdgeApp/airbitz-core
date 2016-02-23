@@ -159,6 +159,22 @@ bridgeWatcherLoop(Wallet &self,
     };
     self.addressCache.wakeupCallbackSet(wakeupCallback);
 
+    // Set up the address-synced callback:
+    auto doneCallback = [watcherInfo, fCallback, pData]()
+    {
+        ABC_DebugLog("AddressCheckDone callback: wallet %s",
+                     watcherInfo->wallet.id().c_str());
+        tABC_AsyncBitCoinInfo info;
+        info.pData = pData;
+        info.eventType = ABC_AsyncEventType_AddressCheckDone;
+        Status().toError(info.status, ABC_HERE());
+        info.szWalletUUID = watcherInfo->wallet.id().c_str();
+        info.szTxID = nullptr;
+        info.sweepSatoshi = 0;
+        fCallback(&info);
+    };
+    self.addressCache.doneCallbackSet(doneCallback);
+
     // Set up new-transaction callback:
     auto txCallback = [watcherInfo, fCallback, pData]
                       (const libbitcoin::transaction_type &tx)
@@ -201,6 +217,7 @@ bridgeWatcherLoop(Wallet &self,
     watcherInfo->watcher.set_height_callback(nullptr);
     watcherInfo->watcher.set_tx_callback(nullptr);
     self.addressCache.wakeupCallbackSet(nullptr);
+    self.addressCache.doneCallbackSet(nullptr);
 
     return Status();
 }
