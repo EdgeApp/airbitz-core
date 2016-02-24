@@ -39,41 +39,42 @@ watcherSave(Wallet &self);
 std::string
 watcherPath(Wallet &self);
 
-tABC_CC ABC_BridgeSweepKey(Wallet &self,
-                           tABC_U08Buf key,
-                           bool compressed,
-                           tABC_Error *pError);
+Status
+bridgeSweepKey(Wallet &self, DataSlice key, bool compressed);
 
-tABC_CC ABC_BridgeWatcherStart(Wallet &self,
-                               tABC_Error *pError);
+Status
+bridgeWatcherStart(Wallet &self);
 
-tABC_CC ABC_BridgeWatcherLoop(Wallet &self,
-                              tABC_BitCoin_Event_Callback fAsyncCallback,
-                              void *pData,
-                              tABC_Error *pError);
+Status
+bridgeWatcherLoop(Wallet &self,
+                  tABC_BitCoin_Event_Callback fCallback,
+                  void *pData);
 
-tABC_CC ABC_BridgeWatcherConnect(Wallet &self, tABC_Error *pError);
+Status
+bridgeWatcherConnect(Wallet &self);
 
-tABC_CC ABC_BridgeWatcherDisconnect(Wallet &self, tABC_Error *pError);
+Status
+bridgeWatcherDisconnect(Wallet &self);
 
-tABC_CC ABC_BridgeWatcherStop(Wallet &self, tABC_Error *pError);
+Status
+bridgeWatcherStop(Wallet &self);
 
-tABC_CC ABC_BridgeWatcherDelete(Wallet &self, tABC_Error *pError);
+Status
+bridgeWatcherDelete(Wallet &self);
 
 Status
 bridgeWatchAddress(const Wallet &self, const std::string &address);
 
-tABC_CC ABC_BridgePrioritizeAddress(Wallet &self,
-                                    const char *szAddress,
-                                    tABC_Error *pError);
+Status
+bridgePrioritizeAddress(Wallet &self, const char *szAddress);
 
 Status
 watcherSend(Wallet &self, StatusCallback status, DataSlice rawTx);
 
-tABC_CC ABC_BridgeFilterTransactions(Wallet &self,
-                                     tABC_TxInfo **aTransactions,
-                                     unsigned int *pCount,
-                                     tABC_Error *pError);
+Status
+bridgeFilterTransactions(Wallet &self,
+                         tABC_TxInfo **aTransactions,
+                         unsigned int *pCount);
 
 } // namespace abcd
 

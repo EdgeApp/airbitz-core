@@ -147,8 +147,7 @@ Wallet::balance(int64_t &result)
         ABC_CHECK_OLD(ABC_TxGetTransactions(*this,
                                             ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
                                             &aTransactions, &nTxCount, &error));
-        ABC_CHECK_OLD(ABC_BridgeFilterTransactions(*this,
-                      aTransactions, &nTxCount, &error));
+        ABC_CHECK(bridgeFilterTransactions(*this, aTransactions, &nTxCount));
 
         balance_ = 0;
         for (unsigned i = 0; i < nTxCount; ++i)

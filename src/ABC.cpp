@@ -1874,7 +1874,7 @@ tABC_CC ABC_SweepKey(const char *szUserName,
         ABC_CHECK_RET(ABC_BridgeDecodeWIF(szKey, &key, &bCompressed, pszAddress,
                                           pError));
 
-        ABC_CHECK_RET(ABC_BridgeSweepKey(*wallet, key, bCompressed, pError));
+        ABC_CHECK_NEW(bridgeSweepKey(*wallet, key, bCompressed));
     }
 
 exit:
@@ -1935,8 +1935,8 @@ tABC_CC ABC_GetTransactions(const char *szUserName,
         ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxGetTransactions(*wallet, startTime, endTime, paTransactions,
                                             pCount, pError));
-        ABC_CHECK_RET(ABC_BridgeFilterTransactions(*wallet, *paTransactions, pCount,
-                      pError));
+        ABC_CHECK_NEW(bridgeFilterTransactions(*wallet,
+                                               *paTransactions, pCount));
     }
 
 exit:
@@ -2522,7 +2522,7 @@ tABC_CC ABC_WatcherStart(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_BridgeWatcherStart(*wallet, pError));
+        ABC_CHECK_NEW(bridgeWatcherStart(*wallet));
     }
 
 exit:
@@ -2546,8 +2546,8 @@ tABC_CC ABC_WatcherLoop(const char *szWalletUUID,
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeWatcherLoop(*wallet, fAsyncBitCoinEventCallback, pData,
-                                            pError));
+        ABC_CHECK_NEW(bridgeWatcherLoop(*wallet,
+                                        fAsyncBitCoinEventCallback, pData));
     }
 
 exit:
@@ -2560,7 +2560,7 @@ tABC_CC ABC_WatcherConnect(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeWatcherConnect(*wallet, pError));
+        ABC_CHECK_NEW(bridgeWatcherConnect(*wallet));
     }
 
 exit:
@@ -2604,7 +2604,7 @@ tABC_CC ABC_PrioritizeAddress(const char *szUserName, const char *szPassword,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_BridgePrioritizeAddress(*wallet, szAddress, pError));
+        ABC_CHECK_NEW(bridgePrioritizeAddress(*wallet, szAddress));
     }
 
 exit:
@@ -2622,7 +2622,7 @@ tABC_CC ABC_WatcherDisconnect(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeWatcherDisconnect(*wallet, pError));
+        ABC_CHECK_NEW(bridgeWatcherDisconnect(*wallet));
     }
 
 exit:
@@ -2640,7 +2640,7 @@ tABC_CC ABC_WatcherStop(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeWatcherStop(*wallet, pError));
+        ABC_CHECK_NEW(bridgeWatcherStop(*wallet));
     }
 
 exit:
@@ -2659,7 +2659,7 @@ tABC_CC ABC_WatcherDelete(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_RET(ABC_BridgeWatcherDelete(*wallet, pError));
+        ABC_CHECK_NEW(bridgeWatcherDelete(*wallet));
     }
 
 exit:
@@ -2901,8 +2901,8 @@ tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
         ABC_CHECK_RET(ABC_TxGetTransactions(*wallet, startTime, endTime,
                                             &paTransactions, &count, pError));
         ABC_CHECK_ASSERT(0 != count, ABC_CC_NoTransaction, "No transactions to export");
-        ABC_CHECK_RET(ABC_BridgeFilterTransactions(*wallet, paTransactions, &count,
-                      pError));
+        ABC_CHECK_NEW(bridgeFilterTransactions(*wallet,
+                                               paTransactions, &count));
 
         ABC_CHECK_RET(ABC_ExportFormatCsv(paTransactions, count, szCsvData, pError));
     }
