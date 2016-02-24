@@ -164,6 +164,8 @@ bridgeWatcherLoop(Wallet &self,
     auto heightCallback = [watcherInfo, fCallback, pData](const size_t height)
     {
         // Update the GUI:
+        ABC_DebugLog("BlockHeightChange callback: wallet %s",
+                     watcherInfo->wallet.id().c_str());
         tABC_AsyncBitCoinInfo info;
         info.pData = pData;
         info.eventType = ABC_AsyncEventType_BlockHeightChange;
@@ -339,6 +341,8 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
         // Tell the GUI if there were funds in the past:
         if (watcherInfo->wallet.txdb.has_history(sweep.address))
         {
+            ABC_DebugLog("IncomingSweep callback: wallet %s, value: 0",
+                         watcherInfo->wallet.id().c_str());
             tABC_AsyncBitCoinInfo info;
             info.pData = pData;
             info.eventType = ABC_AsyncEventType_IncomingSweep;
@@ -395,6 +399,8 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     ABC_CHECK(txSweepSave(watcherInfo->wallet, ntxid, txid, funds));
 
     // Done:
+    ABC_DebugLog("IncomingSweep callback: wallet %s, ntxid: %s, value: %d",
+                 watcherInfo->wallet.id().c_str(), ntxid.c_str(), output.value);
     tABC_AsyncBitCoinInfo info;
     info.pData = pData;
     info.eventType = ABC_AsyncEventType_IncomingSweep;
@@ -419,6 +425,8 @@ bridgeQuietCallback(WatcherInfo *watcherInfo,
         auto s = bridgeDoSweep(watcherInfo, sweep, fAsyncCallback, pData).log();
         if (!s)
         {
+            ABC_DebugLog("IncomingSweep callback: wallet %s, status: %d",
+                         watcherInfo->wallet.id().c_str(), s.value());
             tABC_AsyncBitCoinInfo info;
             info.pData = pData;
             info.eventType = ABC_AsyncEventType_IncomingSweep;
@@ -469,13 +477,13 @@ bridgeTxCallback(WatcherInfo *watcherInfo,
 
     if (relevant)
     {
-        ABC_DebugLog("New transaction %s", txid.c_str());
         ABC_CHECK(txReceiveTransaction(watcherInfo->wallet,
-                                       ntxid, txid, addresses, fAsyncCallback, pData));
+                                       ntxid, txid, addresses,
+                                       fAsyncCallback, pData));
     }
     else
     {
-        ABC_DebugLog("New (irrelevant) transaction %s", txid.c_str());
+        ABC_DebugLog("New (irrelevant) transaction: txid %s", txid.c_str());
     }
     watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 

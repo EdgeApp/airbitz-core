@@ -153,6 +153,8 @@ txReceiveTransaction(Wallet &self,
         ABC_CHECK(txSaveNewTx(self, tx, addresses, true));
 
         // Update the GUI:
+        ABC_DebugLog("IncomingBitCoin callback: wallet %s, txid: %s, ntxid: %s",
+                     self.id().c_str(), txid.c_str(), ntxid.c_str());
         tABC_AsyncBitCoinInfo info;
         info.pData = pData;
         info.eventType = ABC_AsyncEventType_IncomingBitCoin;
@@ -164,12 +166,12 @@ txReceiveTransaction(Wallet &self,
     }
     else
     {
-        ABC_DebugLog("We already have %s", ntxid.c_str());
-
         // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
         self.balanceDirty();
 
         // Update the GUI:
+        ABC_DebugLog("BalanceUpdate callback: wallet %s, txid: %s, ntxid: %s",
+                     self.id().c_str(), txid.c_str(), ntxid.c_str());
         tABC_AsyncBitCoinInfo info;
         info.pData = pData;
         info.eventType = ABC_AsyncEventType_BalanceUpdate;
