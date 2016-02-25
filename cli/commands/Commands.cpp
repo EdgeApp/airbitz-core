@@ -36,8 +36,10 @@ COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery",
     const auto answers = argv[0];
     const auto newPassword = argv[1];
 
-    ABC_CHECK_OLD(ABC_ChangePasswordWithRecoveryAnswers(session.username.c_str(),
-                  answers, newPassword, &error));
+    ABC_CHECK_OLD(ABC_RecoveryLogin(session.username.c_str(),
+                                    answers, &error));
+    ABC_CHECK_OLD(ABC_ChangePassword(session.username.c_str(), nullptr,
+                                     newPassword, &error));
 
     return Status();
 }

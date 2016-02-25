@@ -618,11 +618,6 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szNewPassword,
                            tABC_Error *pError);
 
-tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
-        const char *szRecoveryAnswers,
-        const char *szNewPassword,
-        tABC_Error *pError);
-
 tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                         const char *szPassword,
                                         const char *szRecoveryQuestions,

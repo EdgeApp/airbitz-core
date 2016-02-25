@@ -1222,43 +1222,6 @@ exit:
 }
 
 /**
- * Change account password using recovery answers.
- *
- * This function kicks off a thread to change the password for an account using the
- * recovery answers as account validation.
- * The callback will be called when it has finished.
- *
- * @param szUserName                UserName for the account
- * @param szRecoveryAnswers         Recovery answers (each answer seperated by a newline)
- * @param szNewPassword             New Password for the account
- * @param fRequestCallback          The function that will be called when the password change has finished.
- * @param pData                     Pointer to data to be returned back in callback
- * @param pError                    A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
-        const char *szRecoveryAnswers,
-        const char *szNewPassword,
-        tABC_Error *pError)
-{
-    ABC_PROLOG();
-    ABC_CHECK_NULL(szRecoveryAnswers);
-    ABC_CHECK_ASSERT(strlen(szRecoveryAnswers) > 0, ABC_CC_Error,
-                     "No recovery answers provided");
-    ABC_CHECK_NULL(szNewPassword);
-    ABC_CHECK_ASSERT(strlen(szNewPassword) > 0, ABC_CC_Error,
-                     "No new password provided");
-
-    {
-        std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLoginRecovery(login, szUserName, szRecoveryAnswers));
-        ABC_CHECK_NEW(loginPasswordSet(*login, szNewPassword));
-    }
-
-exit:
-    return cc;
-}
-
-/**
  * Converts Satoshi to given currency
  *
  * @param satoshi     Amount in Satoshi
