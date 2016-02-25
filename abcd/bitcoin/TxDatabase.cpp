@@ -227,6 +227,51 @@ TxDatabase::ntxidHeight(long long &result, bc::hash_digest ntxid)
     return Status();
 }
 
+Status
+TxDatabase::ntxidAmounts(const std::string &ntxid, const AddressSet &addresses,
+                         int64_t &balance, int64_t &fees)
+{
+    bc::hash_digest hash;
+    if (!bc::decode_hash(hash, ntxid))
+        return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
+    auto tx = ntxidLookup(hash);
+
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    int64_t totalToUs = 0, totalFromUs = 0;
+    int64_t totalIn = 0, totalOut = 0;
+
+    for (const auto &input: tx.inputs)
+    {
+        bc::transaction_output_type output;
+        auto i = rows_.find(input.previous_output.hash);
+        if (rows_.end() != i &&
+                input.previous_output.index < i->second.tx.outputs.size())
+            output = i->second.tx.outputs[input.previous_output.index];
+
+        bc::payment_address address;
+        bc::extract(address, output.script);
+        if (addresses.count(address.encoded()))
+            totalFromUs += output.value;
+
+        totalIn += output.value;
+    }
+
+    for (const auto &output: tx.outputs)
+    {
+        bc::payment_address address;
+        bc::extract(address, output.script);
+        if (addresses.count(address.encoded()))
+            totalToUs += output.value;
+
+        totalOut += output.value;
+    }
+
+    balance = totalToUs - totalFromUs;
+    fees = totalIn - totalOut;
+    return Status();
+}
+
 bool TxDatabase::has_history(const bc::payment_address &address) const
 {
     std::lock_guard<std::mutex> lock(mutex_);

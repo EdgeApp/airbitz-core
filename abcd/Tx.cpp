@@ -22,8 +22,6 @@ namespace abcd {
 
 static Status   txSaveNewTx(Wallet &self, Tx &tx,
                             const std::vector<std::string> &addresses, bool bOutside);
-static Status   txGetAmounts(Wallet &self, const std::string &ntxid,
-                             int64_t *pAmount, int64_t *pFees);
 static Status   txGetOutputs(Wallet &self, const std::string &ntxid,
                              tABC_TxOutput ***paOutputs, unsigned int *pCount);
 static int      ABC_TxInfoPtrCompare (const void *a, const void *b);
@@ -142,9 +140,9 @@ txReceiveTransaction(Wallet &self,
         tx.txid = txid;
         tx.timeCreation = time(nullptr);
         tx.internal = false;
-        ABC_CHECK(txGetAmounts(self, ntxid,
-                               &tx.metadata.amountSatoshi,
-                               &tx.metadata.amountFeesMinersSatoshi));
+        ABC_CHECK(self.txdb.ntxidAmounts(ntxid, self.addresses.list(),
+                                         tx.metadata.amountSatoshi,
+                                         tx.metadata.amountFeesMinersSatoshi));
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
                       tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
                       static_cast<Currency>(self.currency())));
@@ -255,9 +253,9 @@ tABC_CC ABC_TxGetTransaction(Wallet &self,
     pTransaction->szMalleableTxId = stringCopy(tx.txid);
     pTransaction->timeCreation = tx.timeCreation;
     pTransaction->pDetails = tx.metadata.toDetails();
-    ABC_CHECK_NEW(txGetAmounts(self, tx.ntxid,
-                               &(pTransaction->pDetails->amountSatoshi),
-                               &(pTransaction->pDetails->amountFeesMinersSatoshi)));
+    ABC_CHECK_NEW(self.txdb.ntxidAmounts(ntxid, self.addresses.list(),
+                                         pTransaction->pDetails->amountSatoshi,
+                                         pTransaction->pDetails->amountFeesMinersSatoshi));
     ABC_CHECK_NEW(txGetOutputs(self, tx.ntxid,
                                &pTransaction->aOutputs, &pTransaction->countOutputs));
 
@@ -423,52 +421,6 @@ tABC_CC ABC_TxSearchTransactions(Wallet &self,
 exit:
     ABC_FREE(aTransactions);
     return cc;
-}
-
-/**
- * Calculates transaction balances
- */
-static Status
-txGetAmounts(Wallet &self, const std::string &ntxid,
-             int64_t *pAmount, int64_t *pFees)
-{
-    int64_t totalInSatoshi = 0, totalOutSatoshi = 0;
-    int64_t totalMeSatoshi = 0, totalMeInSatoshi = 0;
-
-    bc::hash_digest hash;
-    if (!bc::decode_hash(hash, ntxid))
-        return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
-    auto tx = self.txdb.ntxidLookup(hash);
-
-    for (const auto &i: tx.inputs)
-    {
-        bc::payment_address address;
-        bc::extract(address, i.script);
-
-        auto prev = i.previous_output;
-        auto tx = self.txdb.txidLookup(prev.hash);
-        if (prev.index < tx.outputs.size())
-        {
-            if (self.addresses.has(address.encoded()))
-                totalMeInSatoshi += tx.outputs[prev.index].value;
-            totalInSatoshi += tx.outputs[prev.index].value;
-        }
-    }
-
-    for (const auto &o: tx.outputs)
-    {
-        bc::payment_address address;
-        bc::extract(address, o.script);
-
-        // Do we own this address?
-        if (self.addresses.has(address.encoded()))
-            totalMeSatoshi += o.value;
-        totalOutSatoshi += o.value;
-    }
-
-    *pAmount = totalMeSatoshi - totalMeInSatoshi;
-    *pFees = totalInSatoshi - totalOutSatoshi;
-    return Status();
 }
 
 /**

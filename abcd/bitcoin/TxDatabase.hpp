@@ -75,6 +75,13 @@ public:
     ntxidHeight(long long &result, bc::hash_digest ntxid);
 
     /**
+     * Calculates a transaction's balances.
+     */
+    Status
+    ntxidAmounts(const std::string &ntxid, const AddressSet &addresses,
+                 int64_t &balance, int64_t &fees);
+
+    /**
      * Returns true if this address has received any funds.
      */
     bool has_history(const bc::payment_address &address) const;
