@@ -122,7 +122,7 @@ public:
 
 private:
     friend class TxUpdater;
-    friend class TxFilter;
+    friend class TxGraph;
     friend class TxCacheTest;
 
     /**
@@ -167,6 +167,13 @@ private:
     void foreach_unconfirmed(HashFn &&f);
 
     // - Internal: ---------------------
+
+    /**
+     * Returns true if the transaction has incoming non-change funds.
+     */
+    bool
+    isIncoming(const TxRow &row,
+               const AddressSet &addresses) const;
 
     /**
      * Returns all the rows that match the given ntxid.

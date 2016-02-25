@@ -48,40 +48,28 @@ typedef std::unordered_set<bc::point_type> PointSet;
  * so the more checks this object performs,
  * the faster those checks can potentially become (for a fixed graph).
  */
-class TxFilter
+class TxGraph
 {
 public:
-    TxFilter(const TxCache &cache,
-             const PointSet &doubleSpends,
-             const AddressSet &addresses):
-        cache_(cache),
-        doubleSpends_(doubleSpends),
-        addresses_(addresses)
+    TxGraph(const TxCache &cache):
+        cache_(cache)
     {
+        for (auto &row: cache_.rows_)
+        {
+            for (auto &input: row.second.tx.inputs)
+            {
+                if (!spends_.insert(input.previous_output).second)
+                    doubleSpends_.insert(input.previous_output);
+            }
+        }
     }
 
     /**
-     * Returns true if a transaction is safe to spend from.
-     * @param filter true to reject unconfirmed non-change transactions.
+     * Returns true if the output point has been spent from.
      */
-    bool
-    check(bc::hash_digest txid, const TxCache::TxRow &row, bool filter)
+    bool isSpent(bc::output_point point)
     {
-        // If filter is true, we want to eliminate non-change transactions:
-        if (filter && TxState::confirmed != row.state)
-        {
-            // This is a spend if we control all the inputs:
-            for (auto &input: row.tx.inputs)
-            {
-                bc::payment_address address;
-                if (!bc::extract(address, input.script) ||
-                        !addresses_.count(address.encoded()))
-                    return false;
-            }
-        }
-
-        // Now check for double-spends:
-        return isSafe(txid);
+        return spends_.count(point);
     }
 
     /**
@@ -118,9 +106,10 @@ public:
 
 private:
     const TxCache &cache_;
-    const PointSet &doubleSpends_;
-    const AddressSet &addresses_;
-    std::unordered_map<bc::hash_digest, bool> visited_;
+
+    PointSet spends_;
+    PointSet doubleSpends_;
+    std::unordered_map<bc::hash_digest, unsigned> visited_;
 };
 
 TxCache::~TxCache()
@@ -296,18 +285,7 @@ bc::output_info_list TxCache::get_utxos(const AddressSet &addresses,
     std::lock_guard<std::mutex> lock(mutex_);
 
     // Build a list of spends:
-    PointSet spends;
-    PointSet doubleSpends;
-    for (auto &row: rows_)
-    {
-        for (auto &input: row.second.tx.inputs)
-        {
-            if (!spends.insert(input.previous_output).second)
-                doubleSpends.insert(input.previous_output);
-        }
-    }
-
-    TxFilter checker(*this, doubleSpends, addresses);
+    TxGraph graph(*this);
 
     // Check each output against the list:
     bc::output_info_list out;
@@ -320,11 +298,12 @@ bc::output_info_list TxCache::get_utxos(const AddressSet &addresses,
             bc::payment_address address;
 
             // The output is interesting if it isn't spent, belongs to us,
-            // and its transaction passes the safety check:
-            if (!spends.count(point) &&
+            // and its transaction passes the safety checks:
+            if (!graph.isSpent(point) &&
                     bc::extract(address, output.script) &&
                     addresses.count(address.encoded()) &&
-                    checker.check(row.first, row.second, filter))
+                    graph.isSafe(row.first) &&
+                    !(filter && isIncoming(row.second, addresses)))
             {
                 bc::output_info_type info = {point, output.value};
                 out.push_back(info);
@@ -573,6 +552,21 @@ void TxCache::foreach_unconfirmed(HashFn &&f)
     for (auto row: rows_)
         if (row.second.state != TxState::confirmed)
             f(row.first);
+}
+
+bool
+TxCache::isIncoming(const TxRow &row,
+                    const AddressSet &addresses) const
+{
+    // This is a spend if we control all the inputs:
+    for (auto &input: row.tx.inputs)
+    {
+        bc::payment_address address;
+        if (!bc::extract(address, input.script) ||
+                !addresses.count(address.encoded()))
+            return true;
+    }
+    return false;
 }
 
 std::vector<TxCache::TxRow *>
