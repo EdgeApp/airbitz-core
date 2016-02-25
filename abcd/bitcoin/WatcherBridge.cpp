@@ -258,42 +258,6 @@ bridgeWatcherDelete(Wallet &self)
     return Status();
 }
 
-/**
- * Filters a transaction list, removing any that aren't found in the
- * watcher database.
- * @param aTransactions The array to filter. This will be modified in-place.
- * @param pCount        The array length. This will be updated upon return.
- */
-Status
-bridgeFilterTransactions(Wallet &self,
-                         tABC_TxInfo **aTransactions,
-                         unsigned int *pCount)
-{
-    tABC_TxInfo *const *end = aTransactions + *pCount;
-    tABC_TxInfo *const *si = aTransactions;
-    tABC_TxInfo **di = aTransactions;
-
-    while (si < end)
-    {
-        tABC_TxInfo *pTx = *si++;
-
-        bc::hash_digest ntxid;
-        if (!bc::decode_hash(ntxid, pTx->szID))
-            return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
-        if (self.txdb.ntxidExists(ntxid))
-        {
-            *di++ = pTx;
-        }
-        else
-        {
-            ABC_TxFreeTransaction(pTx);
-        }
-    }
-    *pCount = di - aTransactions;
-
-    return Status();
-}
-
 static Status
 bridgeDoSweep(WatcherInfo *watcherInfo,
               PendingSweep &sweep,

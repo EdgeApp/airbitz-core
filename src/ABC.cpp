@@ -7,11 +7,11 @@
 
 #include "ABC.h"
 #include "LoginShim.hpp"
+#include "TxInfo.hpp"
 #include "Version.h"
 #include "../abcd/Context.hpp"
 #include "../abcd/General.hpp"
 #include "../abcd/Export.hpp"
-#include "../abcd/Tx.hpp"
 #include "../abcd/account/Account.hpp"
 #include "../abcd/account/AccountSettings.hpp"
 #include "../abcd/account/AccountCategories.hpp"
@@ -2010,10 +2010,17 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
                                   tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szID);
+    ABC_CHECK_NULL(pDetails);
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxSetTransactionDetails(*wallet, szID, pDetails, pError));
+
+        Tx tx;
+        ABC_CHECK_NEW(wallet->txs.get(tx, szID));
+        tx.metadata = pDetails;
+        tx.internal = true;
+        ABC_CHECK_NEW(wallet->txs.save(tx));
     }
 
 exit:
@@ -2039,12 +2046,15 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
                                   tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szID);
+    ABC_CHECK_NULL(ppDetails);
 
     {
         ABC_GET_WALLET();
-        TxMetadata metadata;
-        ABC_CHECK_RET(ABC_TxGetTransactionDetails(*wallet, szID, metadata, pError));
-        *ppDetails = metadata.toDetails();
+
+        Tx tx;
+        ABC_CHECK_NEW(wallet->txs.get(tx, szID));
+        *ppDetails = tx.metadata.toDetails();
     }
 
 exit:

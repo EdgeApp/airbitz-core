@@ -63,11 +63,6 @@ bridgeWatcherDelete(Wallet &self);
 Status
 watcherSend(Wallet &self, StatusCallback status, DataSlice rawTx);
 
-Status
-bridgeFilterTransactions(Wallet &self,
-                         tABC_TxInfo **aTransactions,
-                         unsigned int *pCount);
-
 } // namespace abcd
 
 #endif

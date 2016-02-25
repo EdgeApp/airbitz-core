@@ -7,7 +7,6 @@
 
 #include "Wallet.hpp"
 #include "../Context.hpp"
-#include "../Tx.hpp"
 #include "../account/Account.hpp"
 #include "../auth/LoginServer.hpp"
 #include "../bitcoin/TxDatabase.hpp"
@@ -18,6 +17,7 @@
 #include "../login/Login.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Sync.hpp"
+#include "../../src/TxInfo.hpp"
 #include <assert.h>
 
 namespace abcd {
