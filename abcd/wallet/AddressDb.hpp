@@ -81,6 +81,12 @@ public:
     Status
     getNew(Address &result);
 
+    /**
+     * Sets the recycle bit on the address.
+     */
+    Status
+    recycleSet(const std::string &address, bool recycle);
+
 private:
     mutable std::mutex mutex_;
     Wallet &wallet_;

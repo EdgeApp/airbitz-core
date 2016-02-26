@@ -1413,10 +1413,11 @@ tABC_CC ABC_FinalizeReceiveRequest(const char *szUserName,
                                    tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szRequestID);
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxSetAddressRecycle(*wallet, szRequestID, false, pError));
+        ABC_CHECK_NEW(wallet->addresses.recycleSet(szRequestID, false));
     }
 
 exit:
@@ -1439,10 +1440,11 @@ tABC_CC ABC_CancelReceiveRequest(const char *szUserName,
                                  tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szRequestID);
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxSetAddressRecycle(*wallet, szRequestID, true, pError));
+        ABC_CHECK_NEW(wallet->addresses.recycleSet(szRequestID, true));
     }
 
 exit:

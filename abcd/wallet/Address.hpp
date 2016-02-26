@@ -12,13 +12,7 @@
 
 namespace abcd {
 
-struct TxMetadata;
 class Wallet;
-
-tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
-                                const char *szAddress,
-                                bool bRecyclable,
-                                tABC_Error *pError);
 
 tABC_CC ABC_TxGenerateRequestQRCode(Wallet &self,
                                     const char *szRequestID,

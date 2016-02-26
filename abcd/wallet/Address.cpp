@@ -16,31 +16,6 @@
 namespace abcd {
 
 /**
- * Sets the recycle status on an address as specified
- *
- * @param szAddress     ID of the address
- * @param pError        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_TxSetAddressRecycle(Wallet &self,
-                                const char *szAddress,
-                                bool bRecyclable,
-                                tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    Address address;
-    ABC_CHECK_NEW(self.addresses.get(address, szAddress));
-    if (address.recyclable != bRecyclable)
-    {
-        address.recyclable = bRecyclable;
-        ABC_CHECK_NEW(self.addresses.save(address));
-    }
-
-exit:
-    return cc;
-}
-
-/**
  * Generate the QR code for a previously created receive request.
  *
  * @param szRequestID   ID of this request

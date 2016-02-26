@@ -242,6 +242,20 @@ AddressDb::getNew(Address &result)
 }
 
 Status
+AddressDb::recycleSet(const std::string &address, bool recycle)
+{
+    Address a;
+    ABC_CHECK(get(a, address));
+    if (a.recyclable != recycle)
+    {
+        a.recyclable = recycle;
+        ABC_CHECK(save(a));
+    }
+
+    return Status();
+}
+
+Status
 AddressDb::stockpile()
 {
     ABC_CHECK(fileEnsureDir(dir_));
