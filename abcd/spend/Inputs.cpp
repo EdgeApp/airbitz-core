@@ -42,13 +42,9 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
         bc::ec_point pubkey = bc::secret_to_public_key(secret,
                               bc::is_wif_compressed(key->second));
 
-        // Gererate the previous output's signature:
-        // TODO: We already have this; process it and use it
-        bc::script_type sig_script = outputScriptForPubkey(pa.hash());
-
         // Generate the signature for this input:
-        bc::hash_digest sig_hash =
-            bc::script_type::generate_signature_hash(result, i, sig_script, 1);
+        auto sig_hash = bc::script_type::generate_signature_hash(
+                            result, i, script, bc::sighash::all);
         if (sig_hash == bc::null_hash)
             return ABC_ERROR(ABC_CC_Error, "Unable to sign");
         bc::data_chunk signature = bc::sign(secret, sig_hash,
