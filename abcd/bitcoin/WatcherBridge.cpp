@@ -339,26 +339,19 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     tx.version = 1;
     tx.locktime = 0;
 
-    // Set up the inputs:
-    uint64_t funds = 0;
-    for (const auto &utxo: utxos)
-    {
-        funds += utxo.value;
-        bc::transaction_input_type input = { utxo.point, {}, 0xffffffff };
-        tx.inputs.push_back(input);
-    }
-    if (10000 < funds)
-        funds -= 10000; // Ugh, hard-coded mining fee
-    if (outputIsDust(funds))
-        return ABC_ERROR(ABC_CC_InsufficientFunds, "Not enough funds");
-
     // Set up the output:
     Address address;
     watcherInfo->wallet.addresses.getNew(address);
     bc::transaction_output_type output;
-    output.value = funds;
     ABC_CHECK(outputScriptForAddress(output.script, address.address));
     tx.outputs.push_back(output);
+
+    // Set up the inputs:
+    uint64_t fee, funds;
+    ABC_CHECK(inputsPickMaximum(fee, funds, tx, utxos));
+    if (outputIsDust(funds))
+        return ABC_ERROR(ABC_CC_InsufficientFunds, "Not enough funds");
+    tx.outputs[0].value = funds;
 
     // Now sign that:
     KeyTable keys;
