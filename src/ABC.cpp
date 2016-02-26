@@ -1213,8 +1213,13 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
                      "No new password provided");
 
     {
-        ABC_GET_LOGIN();
-        ABC_CHECK_NEW(loginPasswordSet(*login, szNewPassword));
+        ABC_GET_ACCOUNT();
+        ABC_CHECK_NEW(loginPasswordSet(account->login, szNewPassword));
+
+        // Force an update of the PIN, since the SNRP has changed:
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
+        ABC_CHECK_NEW(accountSettingsSave(*account, settings, true));
     }
 
 exit:
