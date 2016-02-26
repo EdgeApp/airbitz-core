@@ -965,7 +965,6 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
 tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
                                  const char *szPassword,
                                  const char *szWalletUUID,
-                                 tABC_TxDetails *pDetails,
                                  char **pszRequestID,
                                  tABC_Error *pError);
 

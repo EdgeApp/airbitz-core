@@ -22,12 +22,10 @@ COMMAND(InitLevel::wallet, CliAddressAllocate, "address-allocate",
 
     for(int i = 0; i < count; ++i)
     {
-        tABC_TxDetails txDetails;
         AutoString requestId;
         ABC_CHECK_OLD(ABC_CreateReceiveRequest(session.username.c_str(),
                                                session.password.c_str(),
                                                session.uuid.c_str(),
-                                               &txDetails,
                                                &requestId.get(),
                                                &error));
         ABC_CHECK_OLD(ABC_FinalizeReceiveRequest(session.username.c_str(),
