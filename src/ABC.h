@@ -575,10 +575,13 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
                                  char **pszQuestions,
                                  tABC_Error *pError);
 
-tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
-                                 const char *szRecoveryAnswers,
-                                 bool *pbValid,
-                                 tABC_Error *pError);
+/**
+ * Logs the user in using their recovery answers.
+ * @param szRecoveryAnswers newline-separated recovery answers.
+ */
+tABC_CC ABC_RecoveryLogin(const char *szUserName,
+                          const char *szRecoveryAnswers,
+                          tABC_Error *pError);
 
 tABC_CC ABC_PinLoginExists(const char *szUserName,
                            bool *pbExists,

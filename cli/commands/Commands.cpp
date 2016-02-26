@@ -72,15 +72,8 @@ COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto answers = argv[0];
 
-    AutoString szQuestions;
-    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(session.username.c_str(),
-                                           &szQuestions.get(), &error));
-    printf("%s\n", szQuestions.get());
-
-    bool bValid = false;
-    ABC_CHECK_OLD(ABC_CheckRecoveryAnswers(session.username.c_str(),
-                                           answers, &bValid, &error));
-    printf("%s\n", bValid ? "Valid!" : "Invalid!");
+    ABC_CHECK_OLD(ABC_RecoveryLogin(session.username.c_str(),
+                                    answers, &error));
 
     return Status();
 }

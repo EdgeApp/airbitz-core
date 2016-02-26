@@ -898,41 +898,16 @@ exit:
     return cc;
 }
 
-/**
- * Checks the validity of the given account answers.
- *
- * This function sets the attributes on a given wallet to those given.
- * The attributes would have already been set when the wallet was created so this would allow them
- * to be changed.
- *
- * @param szUserName            UserName for the account associated with this wallet
- * @param szRecoveryAnswers     Recovery answers - newline seperated
- * @param pbValid               Pointer to boolean into which to store result
- * @param pError                A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
-                                 const char *szRecoveryAnswers,
-                                 bool *pbValid,
-                                 tABC_Error *pError)
+tABC_CC ABC_RecoveryLogin(const char *szUserName,
+                          const char *szRecoveryAnswers,
+                          tABC_Error *pError)
 {
     ABC_PROLOG();
     ABC_CHECK_NULL(szRecoveryAnswers);
 
     {
         std::shared_ptr<Login> login;
-        Status s = cacheLoginRecovery(login, szUserName, szRecoveryAnswers);
-        if (s)
-        {
-            *pbValid = true;
-        }
-        else if (ABC_CC_DecryptFailure == s.value())
-        {
-            *pbValid = false;
-        }
-        else
-        {
-            ABC_CHECK_NEW(s);
-        }
+        ABC_CHECK_NEW(cacheLoginRecovery(login, szUserName, szRecoveryAnswers));
     }
 
 exit:
