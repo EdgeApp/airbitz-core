@@ -1532,19 +1532,19 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
         pSpend->pData = pInfo;
 
         // Parse the URI:
-        AutoFree<tABC_BitcoinURIInfo, ABC_BridgeFreeURIInfo> pUri;
-        ABC_CHECK_RET(ABC_BridgeParseBitcoinURI(szText, &pUri.get(), pError));
-        if (pUri->szRet)
-            pSpend->szRet = stringCopy(pUri->szRet);
-        pInfo->metadata.category = pUri->szCategory ? pUri->szCategory : "";
+        ParsedUri uri;
+        ABC_CHECK_NEW(parseUri(uri, szText));
+        if (!uri.ret.empty())
+            pSpend->szRet = stringCopy(uri.ret);
+        pInfo->metadata.category = uri.category.empty() ? "" : uri.category;
 
         // If this is a payment request, fill those details in:
-        if (pUri->szR)
+        if (!uri.paymentProto.empty())
         {
             // Grab and verify the payment request:
             pInfo->paymentRequest = new PaymentRequest();
             auto *request = pInfo->paymentRequest;
-            ABC_CHECK_NEW(request->fetch(pUri->szR));
+            ABC_CHECK_NEW(request->fetch(uri.paymentProto));
             std::string signer;
             ABC_CHECK_NEW(request->signatureOk(signer));
 
@@ -1557,21 +1557,20 @@ tABC_CC ABC_SpendNewDecode(const char *szText,
             // Fill in the details:
             pInfo->metadata.name = request->merchant(signer);
             pInfo->metadata.notes = request->memo(
-                                        pUri->szMessage ? pUri->szMessage : "");
+                                        uri.message.empty() ? "" : uri.message);
         }
-        else if (pUri->szAddress)
+        else if (!uri.address.empty())
         {
-            pInfo->destAddress = pUri->szAddress;
+            pInfo->destAddress = uri.address;
 
             // Fill in the spend target:
-            pSpend->amount = (ABC_INVALID_AMOUNT != pUri->amountSatoshi) ?
-                             pUri->amountSatoshi : 0;
+            pSpend->amount = uri.amountSatoshi;
             pSpend->amountMutable = true;
-            pSpend->szName = stringCopy(pUri->szAddress);
+            pSpend->szName = stringCopy(uri.address);
 
             // Fill in the details:
-            pInfo->metadata.name = pUri->szLabel ? pUri->szLabel : "";
-            pInfo->metadata.notes = pUri->szMessage ? pUri->szMessage : "";
+            pInfo->metadata.name = uri.label.empty() ? "" : uri.label;
+            pInfo->metadata.notes = uri.message.empty() ? "" : uri.message;
         }
         else
         {
@@ -1831,12 +1830,11 @@ tABC_CC ABC_SweepKey(const char *szUserName,
     {
         ABC_GET_WALLET();
 
-        AutoU08Buf key;
-        bool bCompressed;
-        ABC_CHECK_RET(ABC_BridgeDecodeWIF(szKey, &key, &bCompressed, pszAddress,
-                                          pError));
-
-        ABC_CHECK_NEW(bridgeSweepKey(*wallet, key, bCompressed));
+        ParsedUri uri;
+        ABC_CHECK_NEW(parseUri(uri, szKey));
+        if (uri.wif.empty())
+            ABC_RET_ERROR(ABC_CC_ParseError, "Not a Bitcoin private key");
+        ABC_CHECK_NEW(bridgeSweepKey(*wallet, uri.wif, uri.address));
     }
 
 exit:

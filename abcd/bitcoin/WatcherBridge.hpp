@@ -37,7 +37,8 @@ Status
 watcherSave(Wallet &self);
 
 Status
-bridgeSweepKey(Wallet &self, DataSlice key, bool compressed);
+bridgeSweepKey(Wallet &self, const std::string &wif,
+               const std::string &address);
 
 Status
 bridgeWatcherStart(Wallet &self);

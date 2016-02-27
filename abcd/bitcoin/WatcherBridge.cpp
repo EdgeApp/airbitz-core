@@ -98,24 +98,16 @@ watcherSave(Wallet &self)
 }
 
 Status
-bridgeSweepKey(Wallet &self, DataSlice key, bool compressed)
+bridgeSweepKey(Wallet &self, const std::string &wif,
+               const std::string &address)
 {
     WatcherInfo *watcherInfo = nullptr;
     ABC_CHECK(watcherFind(watcherInfo, self));
 
-    // Decode key and address:
-    bc::ec_secret ec_key;
-    if (ec_key.size() != key.size())
-        return ABC_ERROR(ABC_CC_Error, "Bad key size");
-    std::copy(key.begin(), key.end(), ec_key.data());
-    bc::ec_point ec_addr = bc::secret_to_public_key(ec_key, compressed);
-    bc::payment_address address(pubkeyVersion(),
-                                bc::bitcoin_short_hash(ec_addr));
-
     // Start the sweep:
     PendingSweep sweep;
-    sweep.address = address.encoded();
-    sweep.key = bc::secret_to_wif(ec_key, compressed);
+    sweep.address = address;
+    sweep.key = wif;
     sweep.done = false;
     watcherInfo->sweeping.push_back(sweep);
     self.addressCache.insert(sweep.address);

@@ -12,43 +12,34 @@
 #ifndef ABCD_BITCOIN_TEXT_HPP
 #define ABCD_BITCOIN_TEXT_HPP
 
-#include "../util/Data.hpp"
 #include "../util/Status.hpp"
 
 namespace abcd {
 
 /**
- * AirBitz Bitcoin URI Elements
+ * All the fields that can be found in a URI, bitcoin address, or private key.
  */
-typedef struct sABC_BitcoinURIInfo
+struct ParsedUri
 {
-    /** label for that address (e.g. name of receiver) */
-    const char *szLabel;
-    /** bitcoin address (base58) */
-    const char *szAddress;
-    /** message that shown to the user after scanning the QR code */
-    const char *szMessage;
-    /** amount of bitcoins */
-    int64_t amountSatoshi;
-    /** Bip72 payment request r parameter */
-    const char *szR;
-    /** Airbitz category extension */
-    const char *szCategory;
-    /** Airbitz ret extension for return URI */
-    const char *szRet;
-} tABC_BitcoinURIInfo;
+    // Top-level actions:
+    std::string address;
+    std::string wif;
+    std::string paymentProto;
+    std::string bitidUri;
 
-tABC_CC ABC_BridgeDecodeWIF(const char *szWIF,
-                            tABC_U08Buf *pOut,
-                            bool *pbCompressed,
-                            char **pszAddress,
-                            tABC_Error *pError);
+    // URI parameters:
+    uint64_t amountSatoshi = 0;
+    std::string label;
+    std::string message;
+    std::string category; // Airbitz extension
+    std::string ret; // Airbitz extension
+};
 
-tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
-                                  tABC_BitcoinURIInfo **ppInfo,
-                                  tABC_Error *pError);
-
-void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo);
+/**
+ * Decodes a URI, bitcoin address, or private key.
+ */
+Status
+parseUri(ParsedUri &result, const std::string &text);
 
 /**
  * Generate a random hbits private key.
