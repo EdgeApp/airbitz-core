@@ -50,10 +50,6 @@ tABC_CC ABC_BridgeParseBitcoinURI(std::string uri,
 
 void ABC_BridgeFreeURIInfo(tABC_BitcoinURIInfo *pInfo);
 
-tABC_CC ABC_BridgeEncodeBitcoinURI(char **pszURI,
-                                   tABC_BitcoinURIInfo *pInfo,
-                                   tABC_Error *pError);
-
 /**
  * Generate a random hbits private key.
  */

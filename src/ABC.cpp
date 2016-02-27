@@ -40,7 +40,6 @@
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Sync.hpp"
 #include "../abcd/util/Util.hpp"
-#include "../abcd/wallet/Address.hpp"
 #include "../abcd/wallet/Details.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include <qrencode.h>
@@ -1473,11 +1472,30 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
                                   tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szRequestID);
+    ABC_CHECK_NULL(pszURI);
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGenerateRequestQRCode(*wallet, szRequestID, pszURI, paData,
-                      pWidth, pError));
+
+        Address address;
+        ABC_CHECK_NEW(wallet->addresses.get(address, szRequestID));
+
+        bc::uri_writer writer;
+        writer.write_address(szRequestID);
+        if (address.metadata.amountSatoshi)
+            writer.write_amount(address.metadata.amountSatoshi);
+        if (!address.metadata.notes.empty())
+            writer.write_message(address.metadata.notes);
+
+        AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
+        pSettings.get() = accountSettingsLoad(wallet->account);
+        if (pSettings->bNameOnPayments && pSettings->szFullName)
+            writer.write_label(pSettings->szFullName);
+
+        auto uri = writer.string();
+        *pszURI = stringCopy(uri);
+        ABC_CHECK_RET(ABC_QrEncode(uri.c_str(), paData, pWidth, pError));
     }
 
 exit:
