@@ -2850,6 +2850,35 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_QBOExport(const char *szUserName, /* DEPRECATED */
+                      const char *szPassword, /* DEPRECATED */
+                      const char *szWalletUUID,
+                      int64_t startTime,
+                      int64_t endTime,
+                      char **szQBOData,
+                      tABC_Error *pError)
+{
+    tABC_TxInfo **paTransactions = nullptr;
+    unsigned int count = 0;
+    ABC_PROLOG();
+
+        {
+        ABC_GET_WALLET();
+
+        ABC_CHECK_RET(ABC_TxGetTransactions(*wallet, startTime, endTime,
+                                            &paTransactions, &count, pError));
+        ABC_CHECK_ASSERT(0 != count, ABC_CC_NoTransaction, "No transactions to export");
+        ABC_CHECK_NEW(bridgeFilterTransactions(*wallet,
+                                               paTransactions, &count));
+
+        ABC_CHECK_RET(ABC_ExportFormatQBO(paTransactions, count, szQBOData, pError));
+    }
+
+    exit:
+    ABC_FreeTransactions(paTransactions, count);
+    return cc;
+}
+
 tABC_CC ABC_UploadLogs(const char *szUserName,
                        const char *szPassword,
                        tABC_Error *pError)

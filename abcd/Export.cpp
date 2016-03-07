@@ -15,6 +15,7 @@
 #include <inttypes.h>
 #include <time.h>
 #include <string>
+#include <math.h>
 
 namespace abcd {
 
@@ -334,5 +335,200 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
 exit:
     return cc;
 }
+
+tABC_CC ABC_ExportQBOGenerateHeader(std::string *header, std::string date_today, tABC_Error *pError)
+{
+
+    *header = "OFXHEADER:100\n"
+                     "DATA:OFXSGML\n"
+                     "VERSION:102\n"
+                     "SECURITY:NONE\n"
+                     "ENCODING:USASCII\n"
+                     "CHARSET:1252\n"
+                     "COMPRESSION:NONE\n"
+                     "OLDFILEUID:NONE\n"
+                     "NEWFILEUID:NONE\n\n"
+                     "<OFX>\n"
+                     "<SIGNONMSGSRSV1>\n"
+                     "<SONRS>\n"
+                     "<STATUS>\n"
+                     "<CODE>0\n"
+                     "<SEVERITY>INFO\n"
+                     "</STATUS>\n"
+                     "<DTSERVER>" + date_today + "\n"
+                     "<LANGUAGE>ENG\n"
+                     "<INTU.BID>3000\n"
+                     "</SONRS>\n"
+                     "</SIGNONMSGSRSV1>\n"
+                     "<BANKMSGSRSV1>\n"
+                     "<STMTTRNRS>\n"
+                     "<TRNUID>" + date_today + "\n"
+                     "<STATUS>\n"
+                     "<CODE>0\n"
+                     "<SEVERITY>INFO\n"
+                     "<MESSAGE>OK\n"
+                     "</STATUS>\n"
+                     "<STMTRS>\n"
+                     "<CURDEF>USD\n"
+                     "<BANKACCTFROM>\n"
+                     "<BANKID>999999999\n"
+                     "<ACCTID>999999999999\n"
+                     "<ACCTTYPE>CHECKING\n"
+                     "</BANKACCTFROM>\n\n"
+                     "<BANKTRANLIST>\n"
+                     "<DTSTART>" + date_today + "\n"
+                     "<DTEND>" + date_today + "\n";
+
+
+    tABC_CC cc = ABC_CC_Ok;
+    return cc;
+}
+
+#define MAX_MEMO_SIZE 253
+
+tABC_CC ABC_ExportQBOGenerateRecord(tABC_TxInfo *data, std::string *transactions,
+                                    tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    tABC_TxDetails *pDetails = data->pDetails;
+
+    char   *amountFormatted = NULL;
+    ABC_FormatAmount(pDetails->amountSatoshi,&amountFormatted,
+                     ABC_BITCOIN_DECIMAL_PLACES - (ABC_DENOMINATION_UBTC * 3), true, pError);
+    if (pError->code)
+    {
+        return pError->code;
+    }
+
+    char buff[MAX_DATE_TIME_SIZE];
+    char buffMemo[MAX_MEMO_SIZE];
+    char buffExRate[10];
+    std::string transaction;
+    std::string trtype;
+    std::string date_time;
+    std::string amount = amountFormatted;
+    std::string txid = data->szMalleableTxId;
+    std::string payee = pDetails->szName;
+    std::string trname;
+    std::string memo;
+    std::string exchangeRate;
+
+    // Transaction type
+    if (pDetails->amountSatoshi > 0)
+        trtype = "CREDIT";
+    else
+        trtype = "DEBIT";
+
+    // Transaction date/time
+    time_t t = (time_t) data->timeCreation;
+    struct tm *tmptr = localtime(&t);
+
+    if (!strftime(buff, sizeof buff, "%Y%m%d%H%M.000", tmptr))
+    {
+        cc = ABC_CC_Error;
+        return cc;
+    }
+    date_time = buff;
+
+    // Payee name
+    if (payee.length() > 0)
+        trname = "  <NAME>" + payee + "\n";
+    else
+        trname = "";
+
+    // Transaction amount
+    double fAmount = ((double) pDetails->amountSatoshi) / 100; // Convert to bits
+
+    // Exchange rate
+    double fExchangeRate = pDetails->amountCurrency / fAmount;
+    fExchangeRate = fabs(fExchangeRate);
+    int s = std::snprintf(buffExRate, sizeof(buffExRate),
+                          "%.6f", fExchangeRate);
+    exchangeRate = buffExRate;
+
+    // Memo
+    s = std::snprintf(buffMemo, sizeof(buffMemo),
+                      "// Rate=%s USD=%.2f category=\"%s\" memo=\"%s\"",
+                      exchangeRate.c_str(), fabs(pDetails->amountCurrency), pDetails->szCategory, pDetails->szNotes);
+    memo = buffMemo;
+
+    transaction = "<STMTTRN>\n"
+            "  <TRNTYPE>" + trtype + "\n"
+            "  <DTPOSTED>" + date_time + "\n"
+            "  <TRNAMT>" + amount + "\n"
+            "  <FITID>" + txid + "\n"
+            + trname +
+            "  <MEMO>" + memo + "\n"
+            "  <CURRENCY>" + "\n"
+            "    <CURRATE>" + exchangeRate + "\n"
+            "    <CURSYM>USD" + "\n"
+            "  </CURRENCY>" + "\n"
+            "</STMTTRN>\n";
+
+    ABC_FREE(amountFormatted)
+
+    (*transactions).assign(transaction);
+
+    return cc;
+}
+
+
+tABC_CC ABC_ExportFormatQBO(tABC_TxInfo **pTransactions,
+                            unsigned int iTransactionCount,
+                            char **szQBOData,
+                            tABC_Error *pError)
+{
+    tABC_CC cc = ABC_CC_Ok;
+
+    std::time_t rawtime;
+    std::tm* timeinfo;
+    char buffer [80];
+
+    std::time(&rawtime);
+    timeinfo = std::localtime(&rawtime);
+
+    std::strftime(buffer,80,"%Y%m%d%H%M%S.000",timeinfo);
+
+    std::string date_today = buffer;
+
+    std::string out;
+    {
+        std::string header;
+        ABC_CHECK_RET(ABC_ExportQBOGenerateHeader(&header, date_today, pError));
+        out += header;
+    }
+
+    for (unsigned i=0; i < iTransactionCount; i++)
+    {
+        std::string transactions;
+        ABC_CHECK_RET(ABC_ExportQBOGenerateRecord(pTransactions[i], &transactions,
+                                               pError));
+        out += transactions;
+    }
+
+    // Write footer
+    out += "</BANKTRANLIST>\n"
+                   "<LEDGERBAL>\n"
+                   "<BALAMT>0.00\n"
+                   "<DTASOF>" + date_today + "\n"
+                   "</LEDGERBAL>\n"
+                   "<AVAILBAL>\n"
+                   "<BALAMT>0.00\n"
+                   "<DTASOF>" +  date_today + "\n"
+                   "</AVAILBAL>\n"
+                   "</STMTRS>\n"
+                   "</STMTTRNRS>\n"
+                   "</BANKMSGSRSV1>\n"
+                   "</OFX>\n";
+
+    *szQBOData = (char *) malloc(sizeof(char) * (out.length() + 1));
+    strcpy(*szQBOData, out.c_str());
+
+    exit:
+    return cc;
+}
+
+
 
 } // namespace abcd

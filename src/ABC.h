@@ -955,6 +955,14 @@ tABC_CC ABC_CsvExport(const char *szUserName,
                       char **szCsvData,
                       tABC_Error *pError);
 
+tABC_CC ABC_QBOExport(const char *szUserName,
+                      const char *szPassword,
+                      const char *szUUID,
+                      int64_t startTime,
+                      int64_t endTime,
+                      char **szQBOData,
+                      tABC_Error *pError);
+
 tABC_CC ABC_DataSyncWallet(const char *szUserName,
                            const char *szPassword,
                            const char *szWalletUUID,
