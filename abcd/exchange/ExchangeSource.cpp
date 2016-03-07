@@ -87,7 +87,7 @@ fetchBitstamp(ExchangeRates &result)
 }
 
 /**
- * Fetches exchange rates from the Bitstamp source.
+ * Fetches exchange rates from the Bitfinex source.
  */
 static Status
 fetchBitfinex(ExchangeRates &result)
