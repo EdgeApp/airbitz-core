@@ -19,6 +19,12 @@ struct BitstampJson:
     ABC_JSON_STRING(rate, "last", nullptr)
 };
 
+struct BitfinexJson:
+        public JsonObject
+{
+    ABC_JSON_STRING(rate, "last_price", nullptr)
+};
+
 struct BraveNewCoinJson:
     public JsonObject
 {
@@ -42,7 +48,7 @@ struct CleverCoinJson:
 
 const ExchangeSources exchangeSources
 {
-    "Bitstamp", "BraveNewCoin", "Coinbase", "CleverCoin"
+    "Bitstamp", "Bitfinex", "BraveNewCoin", "Coinbase", "CleverCoin"
 };
 
 static Status
@@ -68,6 +74,29 @@ fetchBitstamp(ExchangeRates &result)
     ABC_CHECK(reply.codeOk());
 
     BitstampJson json;
+    ABC_CHECK(json.decode(reply.body));
+    ABC_CHECK(json.rateOk());
+
+    double rate;
+    ABC_CHECK(doubleDecode(rate, json.rate()));
+    ExchangeRates out;
+    out[Currency::USD] = rate;
+
+    result = std::move(out);
+    return Status();
+}
+
+/**
+ * Fetches exchange rates from the Bitstamp source.
+ */
+static Status
+fetchBitfinex(ExchangeRates &result)
+{
+    HttpReply reply;
+    ABC_CHECK(HttpRequest().get(reply, "https://api.bitfinex.com/v1/pubticker/btcusd"));
+    ABC_CHECK(reply.codeOk());
+
+    BitfinexJson json;
     ABC_CHECK(json.decode(reply.body));
     ABC_CHECK(json.rateOk());
 
@@ -205,6 +234,7 @@ Status
 exchangeSourceFetch(ExchangeRates &result, const std::string &source)
 {
     if (source == "Bitstamp")       return fetchBitstamp(result);
+    if (source == "Bitfinex")       return fetchBitfinex(result);
     if (source == "BraveNewCoin")   return fetchBraveNewCoin(result);
     if (source == "Coinbase")       return fetchCoinbase(result);
     if (source == "CleverCoin")     return fetchCleverCoin(result);
