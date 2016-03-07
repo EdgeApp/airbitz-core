@@ -424,7 +424,7 @@ tABC_CC ABC_ExportQBOGenerateRecord(tABC_TxInfo *data, std::string *transactions
     time_t t = (time_t) data->timeCreation;
     struct tm *tmptr = localtime(&t);
 
-    if (!strftime(buff, sizeof buff, "%Y%m%d%H%M.000", tmptr))
+    if (!strftime(buff, sizeof buff, "%Y%m%d%H%M%S.000", tmptr))
     {
         cc = ABC_CC_Error;
         return cc;
