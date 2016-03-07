@@ -48,7 +48,7 @@ struct CleverCoinJson:
 
 const ExchangeSources exchangeSources
 {
-    "Bitstamp", "Bitfinex", "BraveNewCoin", "Coinbase", "CleverCoin"
+    "Bitstamp", "Bitfinex", "BitcoinAverage", "BraveNewCoin", "Coinbase", "CleverCoin"
 };
 
 static Status
@@ -208,6 +208,57 @@ fetchCoinbase(ExchangeRates &result)
 }
 
 /**
+ * Fetches and decodes exchange rates from the BitcoinAverage source.
+ */
+static Status
+fetchBitcoinAverage(ExchangeRates &result)
+{
+    HttpReply reply;
+    ABC_CHECK(HttpRequest().get(reply, "https://api.bitcoinaverage.com/ticker/global/all"));
+    ABC_CHECK(reply.codeOk());
+
+    JsonObject json;
+    ABC_CHECK(json.decode(reply.body));
+
+    // Check for usable rates:
+    ExchangeRates out;
+    for (void *i = json_object_iter(json.get());
+         i;
+         i = json_object_iter_next(json.get(), i))
+    {
+        const char *key = json_object_iter_key(i);
+
+        std::string code = key;
+
+        Currency currency;
+        for (auto &c: code)
+            c = toupper(c);
+        if (!currencyNumber(currency, code))
+            continue;
+
+        json_t *j, *last;
+
+        j = json_object_iter_value(i);
+        
+        if (!j)
+            return ABC_ERROR(ABC_CC_JSONError, "Bad BitcoinAverage rate string.");
+
+        last = json_object_get(j, "last");
+
+        if (!json_is_real(last))
+            return ABC_ERROR(ABC_CC_JSONError, "Bad BitcoinAverage last string.");
+
+        double rate = json_number_value(last);
+
+        out[currency] = rate;
+    }
+
+    result = std::move(out);
+    return Status();
+}
+
+
+/**
  * Fetches exchange rates from the CleverCoin source.
  */
 static Status
@@ -235,6 +286,7 @@ exchangeSourceFetch(ExchangeRates &result, const std::string &source)
 {
     if (source == "Bitstamp")       return fetchBitstamp(result);
     if (source == "Bitfinex")       return fetchBitfinex(result);
+    if (source == "BitcoinAverage") return fetchBitcoinAverage(result);
     if (source == "BraveNewCoin")   return fetchBraveNewCoin(result);
     if (source == "Coinbase")       return fetchCoinbase(result);
     if (source == "CleverCoin")     return fetchCleverCoin(result);
