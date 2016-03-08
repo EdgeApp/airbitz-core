@@ -16,6 +16,7 @@
 #include <time.h>
 #include <string>
 #include <math.h>
+#include <boost/algorithm/string.hpp>
 
 namespace abcd {
 
@@ -336,6 +337,13 @@ exit:
     return cc;
 }
 
+Status escapeOFXString(std::string &string)
+{
+    boost::replace_all(string, "&", "&amp;");
+    boost::replace_all(string, ">", "&gt;");
+    boost::replace_all(string, "<", "&lt;");
+    return Status();
+}
 static Status
 exportQBOGenerateHeader(std::string &result, std::string date_today)
 {
@@ -402,11 +410,10 @@ exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data)
     std::string transaction;
     std::string trtype;
     std::string date_time;
-    std::string amount = amountFormatted.get();
-    std::string txid = data->szMalleableTxId;
-    std::string payee = pDetails->szName;
+    std::string amount(amountFormatted.get());
+    std::string txid(data->szMalleableTxId);
+    std::string payee(pDetails->szName);
     std::string trname;
-    std::string memo;
     std::string exchangeRate;
 
     // Transaction type
@@ -424,6 +431,7 @@ exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data)
     date_time = buff;
 
     // Payee name
+    escapeOFXString(payee);
     if (payee.length() > 0)
         trname = "  <NAME>" + payee + "\n";
     else
@@ -444,7 +452,8 @@ exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data)
                       "// Rate=%s USD=%.2f category=\"%s\" memo=\"%s\"",
                       exchangeRate.c_str(), fabs(pDetails->amountCurrency), pDetails->szCategory,
                       pDetails->szNotes);
-    memo = buffMemo;
+    std::string memo(buffMemo);
+    escapeOFXString(memo);
 
     transaction = "<STMTTRN>\n"
                   "  <TRNTYPE>" + trtype + "\n"
