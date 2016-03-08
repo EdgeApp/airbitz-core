@@ -1,4 +1,4 @@
-depends="boost curl libsecp256k1 openssl zlib"
+depends="boost libsecp256k1"
 inherit lib
 
 source="https://github.com/libbitcoin/libbitcoin.git#7a1a9d43"
