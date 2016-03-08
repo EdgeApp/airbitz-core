@@ -2882,7 +2882,7 @@ tABC_CC ABC_QBOExport(const char *szUserName, /* DEPRECATED */
     unsigned int count = 0;
     ABC_PROLOG();
 
-        {
+    {
         ABC_GET_WALLET();
 
         ABC_CHECK_RET(ABC_TxGetTransactions(*wallet, startTime, endTime,
@@ -2891,10 +2891,12 @@ tABC_CC ABC_QBOExport(const char *szUserName, /* DEPRECATED */
         ABC_CHECK_NEW(bridgeFilterTransactions(*wallet,
                                                paTransactions, &count));
 
-        ABC_CHECK_RET(ABC_ExportFormatQBO(paTransactions, count, szQBOData, pError));
+        std::string out;
+        ABC_CHECK_NEW(exportFormatQBO(out, paTransactions, count));
+        *szQBOData = stringCopy(out);
     }
 
-    exit:
+exit:
     ABC_FreeTransactions(paTransactions, count);
     return cc;
 }

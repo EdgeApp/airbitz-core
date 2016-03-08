@@ -12,7 +12,7 @@
 #ifndef ABC_Export_h
 #define ABC_Export_h
 
-#include "../src/ABC.h"
+#include "util/Status.hpp"
 
 namespace abcd {
 
@@ -21,10 +21,10 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
                             char **szCsvData,
                             tABC_Error *pError);
 
-tABC_CC ABC_ExportFormatQBO(tABC_TxInfo **pTransactions,
-                            unsigned int iTransactionCount,
-                            char **szQBOData,
-                            tABC_Error *pError);
+Status
+exportFormatQBO(std::string &result, tABC_TxInfo **pTransactions,
+                unsigned int iTransactionCount);
+
 } // namespace abcd
 
 #endif

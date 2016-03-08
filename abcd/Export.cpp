@@ -336,72 +336,65 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_ExportQBOGenerateHeader(std::string *header, std::string date_today,
-                                    tABC_Error *pError)
+static Status
+exportQBOGenerateHeader(std::string &result, std::string date_today)
 {
 
-    *header = "OFXHEADER:100\n"
-              "DATA:OFXSGML\n"
-              "VERSION:102\n"
-              "SECURITY:NONE\n"
-              "ENCODING:USASCII\n"
-              "CHARSET:1252\n"
-              "COMPRESSION:NONE\n"
-              "OLDFILEUID:NONE\n"
-              "NEWFILEUID:NONE\n\n"
-              "<OFX>\n"
-              "<SIGNONMSGSRSV1>\n"
-              "<SONRS>\n"
-              "<STATUS>\n"
-              "<CODE>0\n"
-              "<SEVERITY>INFO\n"
-              "</STATUS>\n"
-              "<DTSERVER>" + date_today + "\n"
-              "<LANGUAGE>ENG\n"
-              "<INTU.BID>3000\n"
-              "</SONRS>\n"
-              "</SIGNONMSGSRSV1>\n"
-              "<BANKMSGSRSV1>\n"
-              "<STMTTRNRS>\n"
-              "<TRNUID>" + date_today + "\n"
-              "<STATUS>\n"
-              "<CODE>0\n"
-              "<SEVERITY>INFO\n"
-              "<MESSAGE>OK\n"
-              "</STATUS>\n"
-              "<STMTRS>\n"
-              "<CURDEF>USD\n"
-              "<BANKACCTFROM>\n"
-              "<BANKID>999999999\n"
-              "<ACCTID>999999999999\n"
-              "<ACCTTYPE>CHECKING\n"
-              "</BANKACCTFROM>\n\n"
-              "<BANKTRANLIST>\n"
-              "<DTSTART>" + date_today + "\n"
-              "<DTEND>" + date_today + "\n";
+    result = "OFXHEADER:100\n"
+             "DATA:OFXSGML\n"
+             "VERSION:102\n"
+             "SECURITY:NONE\n"
+             "ENCODING:USASCII\n"
+             "CHARSET:1252\n"
+             "COMPRESSION:NONE\n"
+             "OLDFILEUID:NONE\n"
+             "NEWFILEUID:NONE\n\n"
+             "<OFX>\n"
+             "<SIGNONMSGSRSV1>\n"
+             "<SONRS>\n"
+             "<STATUS>\n"
+             "<CODE>0\n"
+             "<SEVERITY>INFO\n"
+             "</STATUS>\n"
+             "<DTSERVER>" + date_today + "\n"
+             "<LANGUAGE>ENG\n"
+             "<INTU.BID>3000\n"
+             "</SONRS>\n"
+             "</SIGNONMSGSRSV1>\n"
+             "<BANKMSGSRSV1>\n"
+             "<STMTTRNRS>\n"
+             "<TRNUID>" + date_today + "\n"
+             "<STATUS>\n"
+             "<CODE>0\n"
+             "<SEVERITY>INFO\n"
+             "<MESSAGE>OK\n"
+             "</STATUS>\n"
+             "<STMTRS>\n"
+             "<CURDEF>USD\n"
+             "<BANKACCTFROM>\n"
+             "<BANKID>999999999\n"
+             "<ACCTID>999999999999\n"
+             "<ACCTTYPE>CHECKING\n"
+             "</BANKACCTFROM>\n\n"
+             "<BANKTRANLIST>\n"
+             "<DTSTART>" + date_today + "\n"
+             "<DTEND>" + date_today + "\n";
 
-
-    tABC_CC cc = ABC_CC_Ok;
-    return cc;
+    return Status();
 }
 
 #define MAX_MEMO_SIZE 253
 
-tABC_CC ABC_ExportQBOGenerateRecord(tABC_TxInfo *data,
-                                    std::string *transactions,
-                                    tABC_Error *pError)
+static Status
+exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data)
 {
-    tABC_CC cc = ABC_CC_Ok;
-
     tABC_TxDetails *pDetails = data->pDetails;
 
-    char   *amountFormatted = NULL;
-    ABC_FormatAmount(pDetails->amountSatoshi,&amountFormatted,
-                     ABC_BITCOIN_DECIMAL_PLACES - (ABC_DENOMINATION_UBTC * 3), true, pError);
-    if (pError->code)
-    {
-        return pError->code;
-    }
+    AutoString amountFormatted;
+    ABC_CHECK_OLD(ABC_FormatAmount(pDetails->amountSatoshi,
+                                   &amountFormatted.get(),
+                                   ABC_BITCOIN_DECIMAL_PLACES - (ABC_DENOMINATION_UBTC * 3),
+                                   true, &error));
 
     char buff[MAX_DATE_TIME_SIZE];
     char buffMemo[MAX_MEMO_SIZE];
@@ -409,7 +402,7 @@ tABC_CC ABC_ExportQBOGenerateRecord(tABC_TxInfo *data,
     std::string transaction;
     std::string trtype;
     std::string date_time;
-    std::string amount = amountFormatted;
+    std::string amount = amountFormatted.get();
     std::string txid = data->szMalleableTxId;
     std::string payee = pDetails->szName;
     std::string trname;
@@ -427,10 +420,7 @@ tABC_CC ABC_ExportQBOGenerateRecord(tABC_TxInfo *data,
     struct tm *tmptr = localtime(&t);
 
     if (!strftime(buff, sizeof buff, "%Y%m%d%H%M%S.000", tmptr))
-    {
-        cc = ABC_CC_Error;
-        return cc;
-    }
+        return ABC_ERROR(ABC_CC_Error, "Could not format date");
     date_time = buff;
 
     // Payee name
@@ -469,21 +459,14 @@ tABC_CC ABC_ExportQBOGenerateRecord(tABC_TxInfo *data,
                   "  </CURRENCY>" + "\n"
                   "</STMTTRN>\n";
 
-    ABC_FREE(amountFormatted)
-
-    (*transactions).assign(transaction);
-
-    return cc;
+    result = transaction;
+    return Status();
 }
 
-
-tABC_CC ABC_ExportFormatQBO(tABC_TxInfo **pTransactions,
-                            unsigned int iTransactionCount,
-                            char **szQBOData,
-                            tABC_Error *pError)
+Status
+exportFormatQBO(std::string &result, tABC_TxInfo **pTransactions,
+                unsigned int iTransactionCount)
 {
-    tABC_CC cc = ABC_CC_Ok;
-
     time_t rawtime = time(nullptr);
     tm *timeinfo = localtime(&rawtime);
 
@@ -494,15 +477,14 @@ tABC_CC ABC_ExportFormatQBO(tABC_TxInfo **pTransactions,
     std::string out;
     {
         std::string header;
-        ABC_CHECK_RET(ABC_ExportQBOGenerateHeader(&header, date_today, pError));
+        ABC_CHECK(exportQBOGenerateHeader(header, date_today));
         out += header;
     }
 
     for (unsigned i = 0; i < iTransactionCount; i++)
     {
         std::string transactions;
-        ABC_CHECK_RET(ABC_ExportQBOGenerateRecord(pTransactions[i], &transactions,
-                      pError));
+        ABC_CHECK(exportQBOGenerateRecord(transactions, pTransactions[i]));
         out += transactions;
     }
 
@@ -521,11 +503,8 @@ tABC_CC ABC_ExportFormatQBO(tABC_TxInfo **pTransactions,
            "</BANKMSGSRSV1>\n"
            "</OFX>\n";
 
-    *szQBOData = (char *) malloc(sizeof(char) * (out.length() + 1));
-    strcpy(*szQBOData, out.c_str());
-
-exit:
-    return cc;
+    result = out;
+    return Status();
 }
 
 
