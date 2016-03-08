@@ -20,7 +20,7 @@ struct BitstampJson:
 };
 
 struct BitfinexJson:
-        public JsonObject
+    public JsonObject
 {
     ABC_JSON_STRING(rate, "last_price", nullptr)
 };
@@ -93,7 +93,8 @@ static Status
 fetchBitfinex(ExchangeRates &result)
 {
     HttpReply reply;
-    ABC_CHECK(HttpRequest().get(reply, "https://api.bitfinex.com/v1/pubticker/btcusd"));
+    ABC_CHECK(HttpRequest().get(reply,
+                                "https://api.bitfinex.com/v1/pubticker/btcusd"));
     ABC_CHECK(reply.codeOk());
 
     BitfinexJson json;
@@ -214,7 +215,8 @@ static Status
 fetchBitcoinAverage(ExchangeRates &result)
 {
     HttpReply reply;
-    ABC_CHECK(HttpRequest().get(reply, "https://api.bitcoinaverage.com/ticker/global/all"));
+    ABC_CHECK(HttpRequest().get(reply,
+                                "https://api.bitcoinaverage.com/ticker/global/all"));
     ABC_CHECK(reply.codeOk());
 
     JsonObject json;
@@ -223,8 +225,8 @@ fetchBitcoinAverage(ExchangeRates &result)
     // Check for usable rates:
     ExchangeRates out;
     for (void *i = json_object_iter(json.get());
-         i;
-         i = json_object_iter_next(json.get(), i))
+            i;
+            i = json_object_iter_next(json.get(), i))
     {
         const char *key = json_object_iter_key(i);
 
@@ -239,7 +241,7 @@ fetchBitcoinAverage(ExchangeRates &result)
         json_t *j, *last;
 
         j = json_object_iter_value(i);
-        
+
         if (!j)
             return ABC_ERROR(ABC_CC_JSONError, "Bad BitcoinAverage rate string.");
 
