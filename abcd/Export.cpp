@@ -336,48 +336,49 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_ExportQBOGenerateHeader(std::string *header, std::string date_today, tABC_Error *pError)
+tABC_CC ABC_ExportQBOGenerateHeader(std::string *header, std::string date_today,
+                                    tABC_Error *pError)
 {
 
     *header = "OFXHEADER:100\n"
-                     "DATA:OFXSGML\n"
-                     "VERSION:102\n"
-                     "SECURITY:NONE\n"
-                     "ENCODING:USASCII\n"
-                     "CHARSET:1252\n"
-                     "COMPRESSION:NONE\n"
-                     "OLDFILEUID:NONE\n"
-                     "NEWFILEUID:NONE\n\n"
-                     "<OFX>\n"
-                     "<SIGNONMSGSRSV1>\n"
-                     "<SONRS>\n"
-                     "<STATUS>\n"
-                     "<CODE>0\n"
-                     "<SEVERITY>INFO\n"
-                     "</STATUS>\n"
-                     "<DTSERVER>" + date_today + "\n"
-                     "<LANGUAGE>ENG\n"
-                     "<INTU.BID>3000\n"
-                     "</SONRS>\n"
-                     "</SIGNONMSGSRSV1>\n"
-                     "<BANKMSGSRSV1>\n"
-                     "<STMTTRNRS>\n"
-                     "<TRNUID>" + date_today + "\n"
-                     "<STATUS>\n"
-                     "<CODE>0\n"
-                     "<SEVERITY>INFO\n"
-                     "<MESSAGE>OK\n"
-                     "</STATUS>\n"
-                     "<STMTRS>\n"
-                     "<CURDEF>USD\n"
-                     "<BANKACCTFROM>\n"
-                     "<BANKID>999999999\n"
-                     "<ACCTID>999999999999\n"
-                     "<ACCTTYPE>CHECKING\n"
-                     "</BANKACCTFROM>\n\n"
-                     "<BANKTRANLIST>\n"
-                     "<DTSTART>" + date_today + "\n"
-                     "<DTEND>" + date_today + "\n";
+              "DATA:OFXSGML\n"
+              "VERSION:102\n"
+              "SECURITY:NONE\n"
+              "ENCODING:USASCII\n"
+              "CHARSET:1252\n"
+              "COMPRESSION:NONE\n"
+              "OLDFILEUID:NONE\n"
+              "NEWFILEUID:NONE\n\n"
+              "<OFX>\n"
+              "<SIGNONMSGSRSV1>\n"
+              "<SONRS>\n"
+              "<STATUS>\n"
+              "<CODE>0\n"
+              "<SEVERITY>INFO\n"
+              "</STATUS>\n"
+              "<DTSERVER>" + date_today + "\n"
+              "<LANGUAGE>ENG\n"
+              "<INTU.BID>3000\n"
+              "</SONRS>\n"
+              "</SIGNONMSGSRSV1>\n"
+              "<BANKMSGSRSV1>\n"
+              "<STMTTRNRS>\n"
+              "<TRNUID>" + date_today + "\n"
+              "<STATUS>\n"
+              "<CODE>0\n"
+              "<SEVERITY>INFO\n"
+              "<MESSAGE>OK\n"
+              "</STATUS>\n"
+              "<STMTRS>\n"
+              "<CURDEF>USD\n"
+              "<BANKACCTFROM>\n"
+              "<BANKID>999999999\n"
+              "<ACCTID>999999999999\n"
+              "<ACCTTYPE>CHECKING\n"
+              "</BANKACCTFROM>\n\n"
+              "<BANKTRANLIST>\n"
+              "<DTSTART>" + date_today + "\n"
+              "<DTEND>" + date_today + "\n";
 
 
     tABC_CC cc = ABC_CC_Ok;
@@ -386,7 +387,8 @@ tABC_CC ABC_ExportQBOGenerateHeader(std::string *header, std::string date_today,
 
 #define MAX_MEMO_SIZE 253
 
-tABC_CC ABC_ExportQBOGenerateRecord(tABC_TxInfo *data, std::string *transactions,
+tABC_CC ABC_ExportQBOGenerateRecord(tABC_TxInfo *data,
+                                    std::string *transactions,
                                     tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
@@ -450,21 +452,22 @@ tABC_CC ABC_ExportQBOGenerateRecord(tABC_TxInfo *data, std::string *transactions
     // Memo
     s = std::snprintf(buffMemo, sizeof(buffMemo),
                       "// Rate=%s USD=%.2f category=\"%s\" memo=\"%s\"",
-                      exchangeRate.c_str(), fabs(pDetails->amountCurrency), pDetails->szCategory, pDetails->szNotes);
+                      exchangeRate.c_str(), fabs(pDetails->amountCurrency), pDetails->szCategory,
+                      pDetails->szNotes);
     memo = buffMemo;
 
     transaction = "<STMTTRN>\n"
-            "  <TRNTYPE>" + trtype + "\n"
-            "  <DTPOSTED>" + date_time + "\n"
-            "  <TRNAMT>" + amount + "\n"
-            "  <FITID>" + txid + "\n"
-            + trname +
-            "  <MEMO>" + memo + "\n"
-            "  <CURRENCY>" + "\n"
-            "    <CURRATE>" + exchangeRate + "\n"
-            "    <CURSYM>USD" + "\n"
-            "  </CURRENCY>" + "\n"
-            "</STMTTRN>\n";
+                  "  <TRNTYPE>" + trtype + "\n"
+                  "  <DTPOSTED>" + date_time + "\n"
+                  "  <TRNAMT>" + amount + "\n"
+                  "  <FITID>" + txid + "\n"
+                  + trname +
+                  "  <MEMO>" + memo + "\n"
+                  "  <CURRENCY>" + "\n"
+                  "    <CURRATE>" + exchangeRate + "\n"
+                  "    <CURSYM>USD" + "\n"
+                  "  </CURRENCY>" + "\n"
+                  "</STMTTRN>\n";
 
     ABC_FREE(amountFormatted)
 
@@ -481,15 +484,11 @@ tABC_CC ABC_ExportFormatQBO(tABC_TxInfo **pTransactions,
 {
     tABC_CC cc = ABC_CC_Ok;
 
-    std::time_t rawtime;
-    std::tm* timeinfo;
-    char buffer [80];
+    time_t rawtime = time(nullptr);
+    tm *timeinfo = localtime(&rawtime);
 
-    std::time(&rawtime);
-    timeinfo = std::localtime(&rawtime);
-
-    std::strftime(buffer,80,"%Y%m%d%H%M%S.000",timeinfo);
-
+    char buffer[80];
+    strftime(buffer, 80, "%Y%m%d%H%M%S.000", timeinfo);
     std::string date_today = buffer;
 
     std::string out;
@@ -499,33 +498,33 @@ tABC_CC ABC_ExportFormatQBO(tABC_TxInfo **pTransactions,
         out += header;
     }
 
-    for (unsigned i=0; i < iTransactionCount; i++)
+    for (unsigned i = 0; i < iTransactionCount; i++)
     {
         std::string transactions;
         ABC_CHECK_RET(ABC_ExportQBOGenerateRecord(pTransactions[i], &transactions,
-                                               pError));
+                      pError));
         out += transactions;
     }
 
     // Write footer
     out += "</BANKTRANLIST>\n"
-                   "<LEDGERBAL>\n"
-                   "<BALAMT>0.00\n"
-                   "<DTASOF>" + date_today + "\n"
-                   "</LEDGERBAL>\n"
-                   "<AVAILBAL>\n"
-                   "<BALAMT>0.00\n"
-                   "<DTASOF>" +  date_today + "\n"
-                   "</AVAILBAL>\n"
-                   "</STMTRS>\n"
-                   "</STMTTRNRS>\n"
-                   "</BANKMSGSRSV1>\n"
-                   "</OFX>\n";
+           "<LEDGERBAL>\n"
+           "<BALAMT>0.00\n"
+           "<DTASOF>" + date_today + "\n"
+           "</LEDGERBAL>\n"
+           "<AVAILBAL>\n"
+           "<BALAMT>0.00\n"
+           "<DTASOF>" +  date_today + "\n"
+           "</AVAILBAL>\n"
+           "</STMTRS>\n"
+           "</STMTTRNRS>\n"
+           "</BANKMSGSRSV1>\n"
+           "</OFX>\n";
 
     *szQBOData = (char *) malloc(sizeof(char) * (out.length() + 1));
     strcpy(*szQBOData, out.c_str());
 
-    exit:
+exit:
     return cc;
 }
 
