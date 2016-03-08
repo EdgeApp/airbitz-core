@@ -362,6 +362,25 @@ typedef struct sABC_PasswordRule
 } tABC_PasswordRule;
 
 /**
+ * All the fields that can be found in a URI, bitcoin address, or private key.
+ */
+typedef struct sABC_ParsedUri
+{
+    // Top-level actions:
+    char *szAddress;
+    char *szWif;
+    char *szPaymentProto;
+    char *szBitidUri;
+
+    // URI parameters:
+    uint64_t amountSatoshi;
+    char *szLabel;
+    char *szMessage;
+    char *szCategory; // Airbitz extension
+    char *szRet; // Airbitz extension
+} tABC_ParsedUri;
+
+/**
  * A work-in-progress spend.
  *
  * Somebody, somewhere, wants money.
@@ -545,6 +564,15 @@ tABC_CC ABC_QrEncode(const char *szText,
 tABC_CC ABC_CreateHbits(char **pszResult,
                         char **pszAddress,
                         tABC_Error *pError);
+
+/**
+ * Parses a bitcoin URI, bitid URI, address, or private key.
+ */
+tABC_CC ABC_ParseUri(char *szURI,
+                     tABC_ParsedUri **ppResult,
+                     tABC_Error *pError);
+
+void ABC_FreeParsedUri(tABC_ParsedUri *pUri);
 
 /* === Login lifetime: === */
 

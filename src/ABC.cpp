@@ -2318,6 +2318,59 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_ParseUri(char *szURI,
+                     tABC_ParsedUri **ppResult,
+                     tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szURI);
+    ABC_CHECK_NULL(ppResult);
+
+    {
+        ParsedUri uri;
+        ABC_CHECK_NEW(parseUri(uri, szURI));
+
+        tABC_ParsedUri *pResult = structAlloc<tABC_ParsedUri>();
+        pResult->szAddress = uri.address.empty() ? nullptr :
+                             stringCopy(uri.address);
+        pResult->szWif = uri.wif.empty() ? nullptr : stringCopy(uri.wif);
+        pResult->szPaymentProto = uri.paymentProto.empty() ? nullptr :
+                                  stringCopy(uri.paymentProto);
+        pResult->szBitidUri = uri.bitidUri.empty() ? nullptr :
+                              stringCopy(uri.bitidUri);
+        pResult->amountSatoshi = uri.amountSatoshi;
+        pResult->szLabel = uri.label.empty() ? nullptr : stringCopy(uri.label);
+        pResult->szMessage = uri.message.empty() ? nullptr :
+                             stringCopy(uri.message);
+        pResult->szCategory = uri.category.empty() ? nullptr :
+                              stringCopy(uri.category);
+        pResult->szRet = uri.ret.empty() ? nullptr : stringCopy(uri.ret);
+        *ppResult = pResult;
+    }
+
+exit:
+    return cc;
+}
+
+void ABC_FreeParsedUri(tABC_ParsedUri *pUri)
+{
+    // Cannot use ABC_PROLOG - no pError
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    if (pUri)
+    {
+        stringFree(pUri->szAddress);
+        stringFree(pUri->szWif);
+        stringFree(pUri->szPaymentProto);
+        stringFree(pUri->szBitidUri);
+        stringFree(pUri->szLabel);
+        stringFree(pUri->szMessage);
+        stringFree(pUri->szCategory);
+        stringFree(pUri->szRet);
+        free(pUri);
+    }
+}
+
 tABC_CC ABC_AccountSyncExists(const char *szUserName,
                               bool *pResult,
                               tABC_Error *pError)
