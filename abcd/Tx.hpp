@@ -18,7 +18,6 @@
 
 namespace abcd {
 
-struct SendInfo;
 class Wallet;
 
 /**
@@ -28,14 +27,6 @@ Status
 txSweepSave(Wallet &self,
             const std::string &ntxid, const std::string &txid,
             uint64_t funds);
-
-/**
- * Saves a transaction to the txdb after sending.
- */
-Status
-txSendSave(Wallet &self,
-           const std::string &ntxid, const std::string &txid,
-           SendInfo *pInfo);
 
 /**
  * Handles creating or updating when we receive a transaction.

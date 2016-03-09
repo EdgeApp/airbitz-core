@@ -13,8 +13,6 @@
 
 namespace abcd {
 
-struct SendInfo;
-
 bc::script_type
 outputScriptForPubkey(const bc::short_hash &hash);
 
@@ -23,13 +21,6 @@ outputScriptForPubkey(const bc::short_hash &hash);
  */
 Status
 outputScriptForAddress(bc::script_type &result, const std::string &address);
-
-/**
- * Creates a set of outputs corresponding to a sABC_TxSendInfo structure.
- * Updates the info structure with the Airbitz fees, if any.
- */
-Status
-outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo);
 
 /**
  * Returns true if an amount is small enough to be considered dust.

@@ -1062,55 +1062,66 @@ tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
 
 /* === Spending: === */
 
-void ABC_SpendTargetFree(tABC_SpendTarget *pSpend);
+void ABC_SpendFree(void *pSpend);
 
 /**
- * Creates a spend target from a piece of text.
- * The text could be a URL, a payment address, or other things as well.
+ * Creates a new, blank spend object.
  */
-tABC_CC ABC_SpendNewDecode(const char *szText,
-                           tABC_SpendTarget **ppSpend,
-                           tABC_Error *pError);
+tABC_CC ABC_SpendNew(const char *szUserName,
+                     const char *szWalletUUID,
+                     void **ppResult,
+                     tABC_Error *pError);
 
 /**
- * Creates a spend target for a wallet-to-wallet transfer.
+ * Adds a bitcoin payment address output to a spend.
+ */
+tABC_CC ABC_SpendAddAddress(void *pSpend,
+                            const char *szAddress,
+                            uint64_t amount,
+                            tABC_Error *pError);
+
+/**
+ * Adds a BIP70 payment request output to a spend.
+ */
+tABC_CC ABC_SpendAddPaymentRequest(void *pSpend,
+                                   tABC_PaymentRequest *pRequest,
+                                   tABC_Error *pError);
+
+/**
+ * Adds a wallet-to-wallet transfer output to a spend.
  * @param szWalletUUID the destination wallet.
+ * @param tABC_TxDetails metadata to save in the target wallet.
+ * The fiat amount will be calculated from the amount if it is zero.
+ * Otherwise, the fiat amount will be used as-is.
  */
-tABC_CC ABC_SpendNewTransfer(const char *szUserName,
+tABC_CC ABC_SpendAddTransfer(void *pSpend,
                              const char *szWalletUUID,
                              uint64_t amount,
-                             tABC_SpendTarget **ppSpend,
+                             tABC_TxDetails *pDetails,
                              tABC_Error *pError);
 
 /**
- * Creates a spend target for an internal plugin send request.
+ * Provides metadata to be saved alongside the transaction.
+ * The Airbitz fee will be updated to match whatever was sent,
+ * and the fiat amount will be calculated from the total if it is zero.
+ * Otherwise, the fiat amount will be used as-is.
  */
-tABC_CC ABC_SpendNewInternal(const char *szAddress,
-                             const char *szName,
-                             const char *szCategory,
-                             const char *szNotes,
-                             uint64_t amount,
-                             tABC_SpendTarget **ppSpend,
+tABC_CC ABC_SpendSetMetadata(void *pSpend,
+                             tABC_TxDetails *pDetails,
                              tABC_Error *pError);
 
 /**
  * Calculate the fee needed to perform this spend.
- * @param szWalletUUID the funds source.
  * @return ABC_CC_InsufficientFunds if the source doesn't have enough money.
  */
-tABC_CC ABC_SpendGetFee(const char *szUserName,
-                        const char *szWalletUUID,
-                        tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendGetFee(void *pSpend,
                         uint64_t *pFee,
                         tABC_Error *pError);
 
 /**
- * Finds the maximum amount that could be sent to this target.
- * @param szWalletUUID the funds source.
+ * Finds the maximum amount that could be sent to this collection of outputs.
  */
-tABC_CC ABC_SpendGetMax(const char *szUserName,
-                        const char *szWalletUUID,
-                        tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendGetMax(void *pSpend,
                         uint64_t *pMax,
                         tABC_Error *pError);
 

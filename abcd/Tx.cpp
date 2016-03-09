@@ -8,7 +8,6 @@
 #include "Tx.hpp"
 #include "Context.hpp"
 #include "bitcoin/TxDatabase.hpp"
-#include "spend/Spend.hpp"
 #include "util/Debug.hpp"
 #include "wallet/Wallet.hpp"
 
@@ -33,80 +32,6 @@ txSweepSave(Wallet &self,
     // save the transaction
     ABC_CHECK(self.txs.save(tx));
     self.balanceDirty();
-
-    return Status();
-}
-
-Status
-txSendSave(Wallet &self,
-           const std::string &ntxid, const std::string &txid,
-           SendInfo *pInfo)
-{
-    // set the state
-    Tx tx;
-    tx.ntxid = ntxid;
-    tx.txid = txid;
-    tx.timeCreation = time(nullptr);
-    tx.internal = true;
-    tx.metadata = pInfo->metadata;
-
-    // Add in tx fees to the amount of the tx
-    if (self.addresses.has(pInfo->destAddress))
-    {
-        tx.metadata.amountSatoshi = pInfo->metadata.amountFeesAirbitzSatoshi
-                                    + pInfo->metadata.amountFeesMinersSatoshi;
-    }
-    else
-    {
-        tx.metadata.amountSatoshi = pInfo->metadata.amountSatoshi
-                                    + pInfo->metadata.amountFeesAirbitzSatoshi
-                                    + pInfo->metadata.amountFeesMinersSatoshi;
-    }
-
-    ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                  tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
-                  static_cast<Currency>(self.currency())));
-
-    if (tx.metadata.amountSatoshi > 0)
-        tx.metadata.amountSatoshi *= -1;
-    if (tx.metadata.amountCurrency > 0)
-        tx.metadata.amountCurrency *= -1.0;
-
-    // Save the transaction:
-    ABC_CHECK(self.txs.save(tx));
-    self.balanceDirty();
-
-    if (pInfo->bTransfer)
-    {
-        Tx receiveTx;
-        receiveTx.ntxid = ntxid;
-        receiveTx.txid = txid;
-        receiveTx.timeCreation = time(nullptr);
-        receiveTx.internal = true;
-        receiveTx.metadata = pInfo->metadata;
-
-        // Set the payee name:
-        receiveTx.metadata.name = self.name();
-
-        //
-        // Since this wallet is receiving, it didn't really get charged AB fees
-        // This should really be an assert since no transfers should have AB fees
-        //
-        receiveTx.metadata.amountFeesAirbitzSatoshi = 0;
-
-        ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                      receiveTx.metadata.amountCurrency, receiveTx.metadata.amountSatoshi,
-                      static_cast<Currency>(self.currency())));
-
-        if (receiveTx.metadata.amountSatoshi < 0)
-            receiveTx.metadata.amountSatoshi *= -1;
-        if (receiveTx.metadata.amountCurrency < 0)
-            receiveTx.metadata.amountCurrency *= -1.0;
-
-        // save the transaction
-        ABC_CHECK(pInfo->walletDest->txs.save(tx));
-        pInfo->walletDest->balanceDirty();
-    }
 
     return Status();
 }

@@ -57,9 +57,10 @@ _abc_cli_complete()
     settings-set-nickname
     settings-set-recovery-reminder
     sign-in
+    spend-address
+    spend-bip70
     spend-get-fee
     spend-get-max
-    spend-internal
     spend-transfer
     spend-uri
     stratum-version
