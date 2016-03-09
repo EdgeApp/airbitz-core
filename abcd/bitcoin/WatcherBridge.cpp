@@ -324,6 +324,7 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     // Save the transaction in the metadatabase:
     const auto txid = bc::encode_hash(bc::hash_transaction(tx));
     const auto ntxid = bc::encode_hash(makeNtxid(tx));
+    ABC_CHECK(watcherInfo->wallet.addresses.markOutputs(txid));
     ABC_CHECK(txSweepSave(watcherInfo->wallet, ntxid, txid, funds));
 
     // Done:
@@ -380,6 +381,14 @@ bridgeTxCallback(WatcherInfo *watcherInfo,
                  const libbitcoin::transaction_type &tx,
                  tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
+    const auto ntxid = bc::encode_hash(makeNtxid(tx));
+    const auto txid = bc::encode_hash(bc::hash_transaction(tx));
+
+    // Save the watcher database:
+    ABC_CHECK(watcherInfo->wallet.addresses.markOutputs(txid));
+    watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
+
+    // Update the metadata if the transaction is relevant:
     bool relevant = false;
     for (const auto &i: tx.inputs)
     {
@@ -400,9 +409,6 @@ bridgeTxCallback(WatcherInfo *watcherInfo,
         addresses.push_back(address.encoded());
     }
 
-    const auto ntxid = bc::encode_hash(makeNtxid(tx));
-    const auto txid = bc::encode_hash(bc::hash_transaction(tx));
-
     if (relevant)
     {
         ABC_CHECK(txReceiveTransaction(watcherInfo->wallet,
@@ -413,7 +419,6 @@ bridgeTxCallback(WatcherInfo *watcherInfo,
     {
         ABC_DebugLog("New (irrelevant) transaction: txid %s", txid.c_str());
     }
-    watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 
     return Status();
 }

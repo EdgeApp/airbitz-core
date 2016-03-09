@@ -35,7 +35,7 @@ txSweepSave(Wallet &self,
 Status
 txSendSave(Wallet &self,
            const std::string &ntxid, const std::string &txid,
-           const std::vector<std::string> &addresses, SendInfo *pInfo);
+           SendInfo *pInfo);
 
 /**
  * Handles creating or updating when we receive a transaction.

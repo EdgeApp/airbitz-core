@@ -87,6 +87,12 @@ public:
     Status
     recycleSet(const std::string &address, bool recycle);
 
+    /**
+     * Marks a transaction's output addresses as having received money.
+     */
+    Status
+    markOutputs(const std::string &txid);
+
 private:
     mutable std::mutex mutex_;
     Wallet &wallet_;

@@ -168,22 +168,16 @@ spendSaveTx(Wallet &self, SendInfo *pInfo, DataSlice rawTx,
     bc::transaction_type tx;
     auto deserial = bc::make_deserializer(rawTx.begin(), rawTx.end());
     bc::satoshi_load(deserial.iterator(), deserial.end(), tx);
+    auto txid = bc::encode_hash(bc::hash_transaction(tx));
+    auto ntxid = bc::encode_hash(makeNtxid(tx));
 
     // Save to the transaction cache:
     if (self.txdb.insert(tx))
         watcherSave(self).log(); // Failure is not fatal
+    ABC_CHECK(self.addresses.markOutputs(txid));
 
     // Update the Airbitz metadata:
-    auto txid = bc::encode_hash(bc::hash_transaction(tx));
-    auto ntxid = bc::encode_hash(makeNtxid(tx));
-    std::vector<std::string> addresses;
-    for (const auto &output: tx.outputs)
-    {
-        bc::payment_address addr;
-        bc::extract(addr, output.script);
-        addresses.push_back(addr.encoded());
-    }
-    ABC_CHECK(txSendSave(self, ntxid, txid, addresses, pInfo));
+    ABC_CHECK(txSendSave(self, ntxid, txid, pInfo));
 
     ntxidOut = ntxid;
     return Status();

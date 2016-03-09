@@ -14,9 +14,6 @@
 
 namespace abcd {
 
-static Status   txSaveNewTx(Wallet &self, Tx &tx,
-                            const std::vector<std::string> &addresses, bool bOutside);
-
 Status
 txSweepSave(Wallet &self,
             const std::string &ntxid, const std::string &txid,
@@ -43,7 +40,7 @@ txSweepSave(Wallet &self,
 Status
 txSendSave(Wallet &self,
            const std::string &ntxid, const std::string &txid,
-           const std::vector<std::string> &addresses, SendInfo *pInfo)
+           SendInfo *pInfo)
 {
     // set the state
     Tx tx;
@@ -76,7 +73,8 @@ txSendSave(Wallet &self,
         tx.metadata.amountCurrency *= -1.0;
 
     // Save the transaction:
-    ABC_CHECK(txSaveNewTx(self, tx, addresses, false));
+    ABC_CHECK(self.txs.save(tx));
+    self.balanceDirty();
 
     if (pInfo->bTransfer)
     {
@@ -106,7 +104,8 @@ txSendSave(Wallet &self,
             receiveTx.metadata.amountCurrency *= -1.0;
 
         // save the transaction
-        ABC_CHECK(txSaveNewTx(*pInfo->walletDest, receiveTx, addresses, false));
+        ABC_CHECK(pInfo->walletDest->txs.save(tx));
+        pInfo->walletDest->balanceDirty();
     }
 
     return Status();
@@ -118,9 +117,8 @@ txReceiveTransaction(Wallet &self,
                      const std::vector<std::string> &addresses,
                      tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    Tx temp;
-
     // Does the transaction already exist?
+    Tx temp;
     if (!self.txs.get(temp, ntxid))
     {
         Tx tx;
@@ -135,8 +133,18 @@ txReceiveTransaction(Wallet &self,
                       tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
                       static_cast<Currency>(self.currency())));
 
-        // add the transaction to the address
-        ABC_CHECK(txSaveNewTx(self, tx, addresses, true));
+        // Grab metadata from the address:
+        TxMetadata metadata;
+        for (const auto &i: addresses)
+        {
+            Address address;
+            if (self.addresses.get(address, i))
+                tx.metadata = address.metadata;
+        }
+
+        // Save the metadata:
+        ABC_CHECK(self.txs.save(tx));
+        self.balanceDirty();
 
         // Update the GUI:
         ABC_DebugLog("IncomingBitCoin callback: wallet %s, txid: %s, ntxid: %s",
@@ -167,51 +175,6 @@ txReceiveTransaction(Wallet &self,
         info.sweepSatoshi = 0;
         fAsyncCallback(&info);
     }
-
-    return Status();
-}
-
-/**
- * Saves the a never-before-seen transaction to the sync database,
- * updating the metadata as appropriate.
- *
- * @param bOutside true if this is an outside transaction that needs its
- * details populated from the address database.
- */
-Status
-txSaveNewTx(Wallet &self, Tx &tx,
-            const std::vector<std::string> &addresses, bool bOutside)
-{
-    // Mark addresses as used:
-    TxMetadata metadata;
-    for (const auto &i: addresses)
-    {
-        Address address;
-        if (self.addresses.get(address, i))
-        {
-            // Update the transaction:
-            if (address.recyclable)
-            {
-                address.recyclable = false;
-                ABC_CHECK(self.addresses.save(address));
-            }
-            metadata = address.metadata;
-        }
-    }
-
-    // Copy the metadata (if any):
-    if (bOutside)
-    {
-        if (tx.metadata.name.empty() && !metadata.name.empty())
-            tx.metadata.name = metadata.name;
-        if (tx.metadata.notes.empty() && !metadata.notes.empty())
-            tx.metadata.notes = metadata.notes;
-        if (tx.metadata.category.empty() && !metadata.category.empty())
-            tx.metadata.category = metadata.category;
-        tx.metadata.bizId = metadata.bizId;
-    }
-    ABC_CHECK(self.txs.save(tx));
-    self.balanceDirty();
 
     return Status();
 }

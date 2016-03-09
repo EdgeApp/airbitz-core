@@ -8,7 +8,7 @@
 #include "AddressDb.hpp"
 #include "Details.hpp"
 #include "Wallet.hpp"
-#include "../bitcoin/WatcherBridge.hpp"
+#include "../bitcoin/TxDatabase.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/AutoFree.hpp"
@@ -17,7 +17,6 @@
 #include <bitcoin/bitcoin.hpp>
 #include <dirent.h>
 #include <time.h>
-#include <set>
 
 namespace abcd {
 
@@ -250,6 +249,27 @@ AddressDb::recycleSet(const std::string &address, bool recycle)
     {
         a.recyclable = recycle;
         ABC_CHECK(save(a));
+    }
+
+    return Status();
+}
+
+/**
+ * Marks a transaction's output addresses as having received money.
+ */
+Status
+AddressDb::markOutputs(const std::string &txid)
+{
+    bc::hash_digest hash;
+    if (!bc::decode_hash(hash, txid))
+        return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
+    auto tx = wallet_.txdb.txidLookup(hash);
+
+    for (const auto &o: tx.outputs)
+    {
+        bc::payment_address address;
+        if (bc::extract(address, o.script))
+            recycleSet(address.encoded(), false); /* Failure is ok. */
     }
 
     return Status();
