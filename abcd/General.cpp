@@ -24,7 +24,7 @@
 
 namespace abcd {
 
-constexpr unsigned fallbackFee = 10000;
+constexpr unsigned fallbackFee = 10000; // Satoshi per KB
 
 #define FALLBACK_BITCOIN_SERVERS {  "tcp://obelisk.airbitz.co:9091", \
                                     "stratum://stratum-az-wusa.airbitz.co:50001", \
@@ -110,7 +110,7 @@ generalBitcoinFeeInfo()
     }
 
     if (!out.size())
-        out[0] = fallbackFee;
+        out[1000] = fallbackFee;
     return out;
 }
 
