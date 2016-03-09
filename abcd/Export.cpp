@@ -443,15 +443,15 @@ exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data)
     // Exchange rate
     double fExchangeRate = pDetails->amountCurrency / fAmount;
     fExchangeRate = fabs(fExchangeRate);
-    int s = std::snprintf(buffExRate, sizeof(buffExRate),
-                          "%.6f", fExchangeRate);
+    int s = snprintf(buffExRate, sizeof(buffExRate),
+                     "%.6f", fExchangeRate);
     exchangeRate = buffExRate;
 
     // Memo
-    s = std::snprintf(buffMemo, sizeof(buffMemo),
-                      "// Rate=%s USD=%.2f category=\"%s\" memo=\"%s\"",
-                      exchangeRate.c_str(), fabs(pDetails->amountCurrency), pDetails->szCategory,
-                      pDetails->szNotes);
+    s = snprintf(buffMemo, sizeof(buffMemo),
+                 "// Rate=%s USD=%.2f category=\"%s\" memo=\"%s\"",
+                 exchangeRate.c_str(), fabs(pDetails->amountCurrency), pDetails->szCategory,
+                 pDetails->szNotes);
     std::string memo(buffMemo);
     escapeOFXString(memo);
 
