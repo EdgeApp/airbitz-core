@@ -15,6 +15,11 @@ ifeq ($(GIT_REV_COMPARE),true)
 $(shell sed -i '/#define ABC_VERSION ".*"/c\#define ABC_VERSION "$(GIT_REV)"' src/Version.h )
 endif
 
+# Set DEFAULT_HIDDENBITSKEY in CLI if passed as variable
+ifneq ($(HIDDENBITSKEY),"")
+$(shell sed -i '/#define DEFAULT_HIDDENBITSKEY ".*"/c\#define DEFAULT_HIDDENBITSKEY "$(HIDDENBITSKEY)"' cli/Main.cpp )
+endif
+
 # Compiler options:
 CFLAGS   += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c99
 CXXFLAGS += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c++11
