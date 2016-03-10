@@ -101,6 +101,7 @@ clean:
 	$(RM) -r $(WORK_DIR) codegen
 
 install: $(WORK_DIR)/libabc.a $(WORK_DIR)/abc-cli cli/doc/abc-cli.1
+	make doc
 	install -d $(INSTALL_PATH)/lib
 	install -d $(INSTALL_PATH)/bin
 	install -d $(INSTALL_PATH)/include
@@ -118,6 +119,19 @@ uninstall:
 	rm -f $(INSTALL_PATH)/include/ABC.h
 	rm -f $(INSTALL_PATH)/share/man/man1/abc-cli.1
 	rm -f $(INSTALL_PATH)/share/bash-completion/completions/abc-cli-bash-completion.sh
+
+tar:
+	make
+	make doc
+	mkdir -p abctar abctar/lib abctar/bin abctar/include abctar/share/man/man1 abctar/share/bash-completion/completions
+	cp $(WORK_DIR)/libabc.a abctar/lib
+	cp $(WORK_DIR)/abc-cli abctar/bin
+	cp src/ABC.h abctar/include
+	cp cli/doc/abc-cli.1 abctar/share/man/man1
+	cp cli/abc-cli-bash-completion.sh abctar/share/bash-completion/completions
+	tar -cvf abc.tar abctar
+	gzip -f abc.tar
+	rm -rf abctar
 
 # Automatic dependency rules:
 $(WORK_DIR)/%.o: %.c | $(generated_headers)
