@@ -1725,25 +1725,14 @@ exit:
     return cc;
 }
 
-/**
- * Sweeps a private key into the wallet.
- *
- * @param szUserName        UserName for the account associated with the transactions
- * @param szPassword        Password for the account associated with the transactions
- * @param szWalletUUID      UUID of the wallet associated with the transactions
- * @param szKey             Private key in WIF format
- * @param pszAddress        Resulting bitcoin address out
- * @param fCallback         Called when the sweep is done.
- * @param pData             Closure parameter for the callback.
- */
 tABC_CC ABC_SweepKey(const char *szUserName,
                      const char *szPassword,
                      const char *szWalletUUID,
                      const char *szKey,
-                     char **pszAddress,
                      tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szKey);
 
     {
         ABC_GET_WALLET();

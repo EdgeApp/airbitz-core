@@ -1126,11 +1126,16 @@ tABC_CC ABC_SpendApprove(void *pSpend,
                          char **pszTxId,
                          tABC_Error *pError);
 
+/**
+ * Sweeps a private key into the wallet.
+ * The core will fire a callback when the sweep is done.
+ * @param szKey  Private key in WIF format.
+ * Use `ABC_ParseUri` to convert other formats into WIF.
+ */
 tABC_CC ABC_SweepKey(const char *szUsername,
                      const char *szPassword,
                      const char *szWalletUUID,
                      const char *szKey,
-                     char **pszAddress,
                      tABC_Error *pError);
 
 /* === Transactions: === */
