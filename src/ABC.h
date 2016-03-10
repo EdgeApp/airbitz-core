@@ -398,35 +398,6 @@ typedef struct sABC_PaymentRequest
 } tABC_PaymentRequest;
 
 /**
- * A work-in-progress spend.
- *
- * Somebody, somewhere, wants money.
- * There are many ways they could make this request, such as by URL,
- * address, private key, wallet-wallet transfer, &c..
- * This structure encapsulates such a request,
- * providing the GUI with appropriate meta-data to ask the user's approval.
- */
-typedef struct sABC_SpendTarget
-{
-    /** The amount being requested. */
-    uint64_t amount;
-    /** True if the GUI can change the amount. */
-    bool amountMutable;
-    /** The destination to show to the user. This is often an address,
-     * but also could be something else like a wallet name. */
-    const char *szName;
-    /** True if this is a signed bip70 payment request. */
-    bool bSigned;
-    /** Non-null if the payment request provides a URL
-     * to visit once the payment is done. */
-    const char *szRet;
-    /** The destination wallet if this is a transfer, otherwise NULL */
-    const char *szDestUUID;
-    /** Internal data used by the core. Don't touch. */
-    void *pData;
-} tABC_SpendTarget;
-
-/**
  * AirBitz Bitcoin Denomination
  *
  * This structure contains the method for
@@ -1128,27 +1099,21 @@ tABC_CC ABC_SpendGetMax(void *pSpend,
 /**
  * Creates and signs a transaction.
  */
-tABC_CC ABC_SpendSignTx(const char *szUserName,
-                        const char *szWalletUUID,
-                        tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendSignTx(void *pSpend,
                         char **pszRawTx,
                         tABC_Error *pError);
 
 /**
  * Broadcasts a transaction to the bitcoin network.
  */
-tABC_CC ABC_SpendBroadcastTx(const char *szUserName,
-                             const char *szWalletUUID,
-                             tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendBroadcastTx(void *pSpend,
                              char *szRawTx,
                              tABC_Error *pError);
 
 /**
  * Saves a transaction to the wallet database.
  */
-tABC_CC ABC_SpendSaveTx(const char *szUserName,
-                        const char *szWalletUUID,
-                        tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendSaveTx(void *pSpend,
                         char *szRawTx,
                         char **pszTxId,
                         tABC_Error *pError);
@@ -1157,9 +1122,7 @@ tABC_CC ABC_SpendSaveTx(const char *szUserName,
  * Signs, broadcasts, and saves a payment.
  * @param szWalletUUID the funds source.
  */
-tABC_CC ABC_SpendApprove(const char *szUserName,
-                         const char *szWalletUUID,
-                         tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendApprove(void *pSpend,
                          char **pszTxId,
                          tABC_Error *pError);
 
