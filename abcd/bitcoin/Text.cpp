@@ -81,7 +81,7 @@ parseUri(ParsedUri &result, const std::string &text)
 {
     Uri uri;
 
-    if (uri.decode(text))
+    if (uri.decode(text, false))
     {
         // Turn Airbitz URI's into bitcoin URI's:
         if ("airbitz" == uri.scheme())
@@ -105,9 +105,9 @@ parseUri(ParsedUri &result, const std::string &text)
             auto query = uri.queryDecode();
             bc::decode_base10(result.amountSatoshi, query["amount"], 8);
             result.label = query["label"];
-            result.label = query["message"];
-            result.label = query["category"];
-            result.label = query["ret"];
+            result.message = query["message"];
+            result.category = query["category"];
+            result.ret = query["ret"];
             result.paymentProto = query["r"];
         }
         else if ("hbits" == uri.scheme())

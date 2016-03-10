@@ -195,7 +195,7 @@ TEST_CASE("URI encoding test", "[util][uri]" )
             "test:/some/path/%3F/%23");
 }
 
-TEST_CASE("ParsedUri test", "[bitcoin][uri]" )
+TEST_CASE("ParsedUri test", "[bitcoin][uri]")
 {
     abcd::ParsedUri uri;
 
@@ -212,6 +212,17 @@ TEST_CASE("ParsedUri test", "[bitcoin][uri]" )
         REQUIRE(parseUri(uri, text));
         REQUIRE(uri.address == "113Pfw4sFqN1T5kXUnKbqZHMJHN9oyjtgD");
         REQUIRE(uri.amountSatoshi == 10000000u);
+    }
+    SECTION("payment request URI")
+    {
+        auto text = "bitcoin:?r=https://airbitz.co&label=l&message=m m&category=c&ret=r";
+        REQUIRE(parseUri(uri, text));
+        REQUIRE(uri.address.empty());
+        REQUIRE(uri.paymentProto == "https://airbitz.co");
+        REQUIRE(uri.label == "l");
+        REQUIRE(uri.message == "m m");
+        REQUIRE(uri.category == "c");
+        REQUIRE(uri.ret == "r");
     }
     SECTION("bitid URI")
     {
