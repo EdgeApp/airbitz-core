@@ -19,6 +19,7 @@ build() {
     # Native builds include unit tests and utilities:
     if [ $target = native ]; then
         make all V=1
+        make tar
     fi
 
     # Install:
