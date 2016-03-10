@@ -1450,58 +1450,6 @@ exit:
     return cc;
 }
 
-/**
- * Generate the QR code for a previously created receive request.
- *
- * @param szUserName    UserName for the account associated with this request
- * @param szPassword    Password for the account associated with this request
- * @param szWalletUUID  UUID of the wallet associated with this request
- * @param szRequestID   ID of this request
- * @param pszURI        Pointer to string to store URI -optional
- * @param paData        Pointer to store array of data bytes (0x0 white, 0x1 black)
- * @param pWidth        Pointer to store width of image (image will be square)
- * @param pError        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
-                                  const char *szPassword,
-                                  const char *szWalletUUID,
-                                  const char *szRequestID,
-                                  char **pszURI,
-                                  unsigned char **paData,
-                                  unsigned int *pWidth,
-                                  tABC_Error *pError)
-{
-    ABC_PROLOG();
-    ABC_CHECK_NULL(szRequestID);
-    ABC_CHECK_NULL(pszURI);
-
-    {
-        ABC_GET_WALLET();
-
-        Address address;
-        ABC_CHECK_NEW(wallet->addresses.get(address, szRequestID));
-
-        bc::uri_writer writer;
-        writer.write_address(szRequestID);
-        if (address.metadata.amountSatoshi)
-            writer.write_amount(address.metadata.amountSatoshi);
-        if (!address.metadata.notes.empty())
-            writer.write_message(address.metadata.notes);
-
-        AutoFree<tABC_AccountSettings, ABC_FreeAccountSettings> pSettings;
-        pSettings.get() = accountSettingsLoad(wallet->account);
-        if (pSettings->bNameOnPayments && pSettings->szFullName)
-            writer.write_label(pSettings->szFullName);
-
-        auto uri = writer.string();
-        *pszURI = stringCopy(uri);
-        ABC_CHECK_RET(ABC_QrEncode(uri.c_str(), paData, pWidth, pError));
-    }
-
-exit:
-    return cc;
-}
-
 void ABC_SpendFree(void *pSpend)
 {
     // Cannot use ABC_PROLOG - no pError
@@ -2233,6 +2181,45 @@ tABC_CC ABC_CreateHbits(char **pszResult,
 
 exit:
     return cc;
+}
+
+tABC_CC ABC_AddressUriEncode(const char *szAddress,
+                             uint64_t amountSatoshi,
+                             const char *szLabel,
+                             const char *szMessage,
+                             const char *szCategory,
+                             const char *szRet,
+                             char **pszResult,
+                             tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szAddress);
+    ABC_CHECK_NULL(pszResult);
+
+    {
+        Uri uri;
+        uri.schemeSet("bitcoin");
+        uri.pathSet(szAddress);
+        Uri::QueryMap query;
+        if (amountSatoshi)
+            query["amount"] = bc::encode_base10(amountSatoshi, 8);
+        if (szLabel)
+            query["label"] = szLabel;
+        if (szMessage)
+            query["message"] = szMessage;
+        if (szCategory)
+            query["category"] = szCategory;
+        if (szRet)
+            query["ret"] = szRet;
+        if (query.size())
+            uri.queryEncode(query);
+
+        *pszResult = stringCopy(uri.encode());
+    }
+
+exit:
+    return cc;
+
 }
 
 tABC_CC ABC_ParseUri(char *szURI,

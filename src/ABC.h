@@ -554,6 +554,22 @@ tABC_CC ABC_CreateHbits(char **pszResult,
                         tABC_Error *pError);
 
 /**
+ * Creates a URI for a payment request.
+ * Pass this through `ABC_QrEncode` to get a QR code.
+ * @param amountSatoshi optional amount. Ignored if zero.
+ * @param szLabel optional label. Can be null.
+ * @param szMessage optional message. Can be null.
+ */
+tABC_CC ABC_AddressUriEncode(const char *szAddress,
+                             uint64_t amountSatoshi,
+                             const char *szLabel,
+                             const char *szMessage,
+                             const char *szCategory,
+                             const char *szRet,
+                             char **pszResult,
+                             tABC_Error *pError);
+
+/**
  * Parses a bitcoin URI, bitid URI, address, or private key.
  */
 tABC_CC ABC_ParseUri(char *szURI,
@@ -1021,15 +1037,6 @@ tABC_CC ABC_CancelReceiveRequest(const char *szUserName,
                                  const char *szWalletUUID,
                                  const char *szRequestID,
                                  tABC_Error *pError);
-
-tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
-                                  const char *szPassword,
-                                  const char *szWalletUUID,
-                                  const char *szRequestID,
-                                  char **pszURI,
-                                  unsigned char **paData,
-                                  unsigned int *pWidth,
-                                  tABC_Error *pError);
 
 /* === Spending: === */
 
