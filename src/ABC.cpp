@@ -2371,6 +2371,49 @@ void ABC_FreeParsedUri(tABC_ParsedUri *pUri)
     }
 }
 
+tABC_CC ABC_FetchPaymentRequest(char *szRequestUri,
+                                tABC_PaymentRequest **ppResult,
+                                tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szRequestUri);
+    ABC_CHECK_NULL(ppResult);
+
+    {
+        std::unique_ptr<PaymentRequest> request(new PaymentRequest());
+        ABC_CHECK_NEW(request->fetch(szRequestUri));
+        std::string domain;
+        ABC_CHECK_NEW(request->signatureOk(domain));
+
+        tABC_PaymentRequest *pResult = structAlloc<tABC_PaymentRequest>();
+        pResult->szDomain = stringCopy(domain);
+        pResult->amountSatoshi = request->amount();
+        pResult->szMemo = request->memoOk() ?
+                          stringCopy(request->memo()) : nullptr;
+        pResult->szMerchant = stringCopy(request->merchant());
+        pResult->pInternal = request.release();
+        *ppResult = pResult;
+    }
+
+exit:
+    return cc;
+}
+
+void ABC_FreePaymentRequest(tABC_PaymentRequest *pRequest)
+{
+    // Cannot use ABC_PROLOG - no pError
+    ABC_DebugLog("%s called", __FUNCTION__);
+
+    if (pRequest)
+    {
+        stringFree(pRequest->szDomain);
+        stringFree(pRequest->szMemo);
+        stringFree(pRequest->szMerchant);
+        delete static_cast<PaymentRequest *>(pRequest->pInternal);
+        free(pRequest);
+    }
+}
+
 tABC_CC ABC_AccountSyncExists(const char *szUserName,
                               bool *pResult,
                               tABC_Error *pError)

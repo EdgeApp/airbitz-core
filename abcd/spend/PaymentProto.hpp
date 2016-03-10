@@ -65,6 +65,12 @@ public:
     merchant(const std::string &fallback="") const;
 
     /**
+     * Returns true if the request has a memo field.
+     */
+    bool
+    memoOk() const;
+
+    /**
      * Returns the memo, if any.
      */
     std::string

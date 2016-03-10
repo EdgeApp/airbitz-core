@@ -205,6 +205,12 @@ PaymentRequest::merchant(const std::string &fallback) const
 #endif
 }
 
+bool
+PaymentRequest::memoOk() const
+{
+    return details_.has_memo();
+}
+
 std::string
 PaymentRequest::memo(const std::string &fallback) const
 {

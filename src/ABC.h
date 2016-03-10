@@ -381,6 +381,23 @@ typedef struct sABC_ParsedUri
 } tABC_ParsedUri;
 
 /**
+ * A BIP70 payment request, fetched from the network and verified.
+ */
+typedef struct sABC_PaymentRequest
+{
+    /** The certificate validation domain name. */
+    char *szDomain;
+    /** The total amount being requested. */
+    uint64_t amountSatoshi;
+    /** The payment protocol `memo` field (might be null). */
+    char *szMemo;
+    /** The merchant name, guessed using a regex (might be blank). */
+    char *szMerchant;
+    /** Pointer to core internal data. Do not touch! */
+    void *pInternal;
+} tABC_PaymentRequest;
+
+/**
  * A work-in-progress spend.
  *
  * Somebody, somewhere, wants money.
@@ -573,6 +590,17 @@ tABC_CC ABC_ParseUri(char *szURI,
                      tABC_Error *pError);
 
 void ABC_FreeParsedUri(tABC_ParsedUri *pUri);
+
+/**
+ * Fetches a BIP70 payment request from a server.
+ * @param szRequestUri The request URI,
+ * typically parsed out of the `r` parameter of a larger bitcoin URI.
+ */
+tABC_CC ABC_FetchPaymentRequest(char *szRequestUri,
+                                tABC_PaymentRequest **ppResult,
+                                tABC_Error *pError);
+
+void ABC_FreePaymentRequest(tABC_PaymentRequest *pRequest);
 
 /* === Login lifetime: === */
 
