@@ -30,7 +30,10 @@ Status
 debugLogRotate()
 {
     if (gLogFile)
+    {
         fclose(gLogFile);
+        gLogFile = nullptr;
+    }
 
     auto path = gContext->paths.logPath();
     if (fileExists(path))
@@ -59,7 +62,10 @@ debugTerminate()
 {
     std::lock_guard<std::mutex> lock(gDebugMutex);
     if (gLogFile)
+    {
         fclose(gLogFile);
+        gLogFile = nullptr;
+    }
 }
 
 DataChunk

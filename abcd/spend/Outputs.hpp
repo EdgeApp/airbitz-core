@@ -13,9 +13,6 @@
 
 namespace abcd {
 
-bc::script_type
-outputScriptForPubkey(const bc::short_hash &hash);
-
 /**
  * Creates an output script for sending money to an address.
  */

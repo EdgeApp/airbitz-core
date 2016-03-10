@@ -15,7 +15,7 @@
 
 namespace abcd {
 
-bc::script_type
+static bc::script_type
 outputScriptForPubkey(const bc::short_hash &hash)
 {
     bc::script_type result;

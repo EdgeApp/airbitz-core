@@ -215,7 +215,8 @@ TEST_CASE("ParsedUri test", "[bitcoin][uri]")
     }
     SECTION("payment request URI")
     {
-        auto text = "bitcoin:?r=https://airbitz.co&label=l&message=m m&category=c&ret=r";
+        auto text =
+            "bitcoin:?r=https://airbitz.co&label=l&message=m m&category=c&ret=r";
         REQUIRE(parseUri(uri, text));
         REQUIRE(uri.address.empty());
         REQUIRE(uri.paymentProto == "https://airbitz.co");

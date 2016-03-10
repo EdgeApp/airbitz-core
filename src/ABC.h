@@ -1105,6 +1105,7 @@ tABC_CC ABC_SpendGetMax(void *pSpend,
 
 /**
  * Creates and signs a transaction.
+ * @param pszRawTx the resulting raw transaction, in hex.
  */
 tABC_CC ABC_SpendSignTx(void *pSpend,
                         char **pszRawTx,
