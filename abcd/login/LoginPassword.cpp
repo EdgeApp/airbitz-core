@@ -17,8 +17,7 @@ namespace abcd {
 
 static Status
 loginPasswordDisk(std::shared_ptr<Login> &result,
-                  Lobby &lobby,
-                  const std::string &password)
+                  Lobby &lobby, const std::string &password)
 {
     std::string LP = lobby.username() + password;
 
@@ -50,8 +49,7 @@ loginPasswordDisk(std::shared_ptr<Login> &result,
 
 static Status
 loginPasswordServer(std::shared_ptr<Login> &result,
-                    Lobby &lobby,
-                    const std::string &password)
+                    Lobby &lobby, const std::string &password)
 {
     std::string LP = lobby.username() + password;
 
@@ -92,8 +90,7 @@ loginPasswordServer(std::shared_ptr<Login> &result,
 
 Status
 loginPassword(std::shared_ptr<Login> &result,
-              Lobby &lobby,
-              const std::string &password)
+              Lobby &lobby, const std::string &password)
 {
     // Try the login both ways:
     if (!loginPasswordDisk(result, lobby, password))

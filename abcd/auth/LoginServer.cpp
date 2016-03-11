@@ -86,7 +86,8 @@ static std::string gOtpResetAuth;
 std::string gOtpResetDate;
 
 static tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby, DataSlice LP1,
-                                        const std::string &szWalletAcctKey, const char *szPath, tABC_Error *pError);
+                                        const std::string &szWalletAcctKey,
+                                        const char *szPath, tABC_Error *pError);
 
 Status
 ServerReplyJson::ok()
@@ -215,7 +216,8 @@ loginServerGetQuestions(JsonPtr &result)
 
 Status
 loginServerCreate(const Lobby &lobby, DataSlice LP1,
-                  const CarePackage &carePackage, const LoginPackage &loginPackage,
+                  const CarePackage &carePackage,
+                  const LoginPackage &loginPackage,
                   const std::string &syncKey)
 {
     const auto url = ABC_SERVER_ROOT "/account/create";
@@ -268,8 +270,8 @@ loginServerAvailable(const Lobby &lobby)
 }
 
 Status
-loginServerAccountUpgrade(const Login &login,
-                          JsonPtr rootKeyBox, JsonPtr mnemonicBox, JsonPtr dataKeyBox)
+loginServerAccountUpgrade(const Login &login, JsonPtr rootKeyBox,
+                          JsonPtr mnemonicBox, JsonPtr dataKeyBox)
 {
     const auto url = ABC_SERVER_ROOT "/account/upgrade";
     struct RequestJson:
@@ -296,7 +298,8 @@ loginServerAccountUpgrade(const Login &login,
 Status
 loginServerChangePassword(const Login &login,
                           DataSlice newLP1, DataSlice newLRA1,
-                          const CarePackage &carePackage, const LoginPackage &loginPackage)
+                          const CarePackage &carePackage,
+                          const LoginPackage &loginPackage)
 {
     const auto url = ABC_SERVER_ROOT "/account/password/update";
     JsonPtr json(json_pack("{ss, ss, ss, ss, ss}",
@@ -347,7 +350,8 @@ loginServerGetCarePackage(const Lobby &lobby, CarePackage &result)
 
 Status
 loginServerGetLoginPackage(const Lobby &lobby,
-                           DataSlice LP1, DataSlice LRA1, LoginPackage &result, JsonPtr &rootKeyBox)
+                           DataSlice LP1, DataSlice LRA1,
+                           LoginPackage &result, JsonPtr &rootKeyBox)
 {
     const auto url = ABC_SERVER_ROOT "/account/loginpackage/get";
     ServerRequestJson json;
@@ -406,8 +410,8 @@ loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result)
 
 Status
 loginServerUpdatePinPackage(const Login &login,
-                            DataSlice DID, DataSlice LPIN1, const std::string &pinPackage,
-                            time_t ali)
+                            DataSlice DID, DataSlice LPIN1,
+                            const std::string &pinPackage, time_t ali)
 {
     const auto url = ABC_SERVER_ROOT "/account/pinpackage/update";
 
@@ -450,11 +454,9 @@ loginServerWalletActivate(const Login &login, const std::string &syncKey)
 }
 
 static
-tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby,
-                                 DataSlice LP1,
+tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby, DataSlice LP1,
                                  const std::string &szWalletAcctKey,
-                                 const char *szPath,
-                                 tABC_Error *pError)
+                                 const char *szPath, tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
 

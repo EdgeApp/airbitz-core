@@ -25,8 +25,7 @@ class Lobby;
  */
 Status
 loginPassword(std::shared_ptr<Login> &result,
-              Lobby &lobby,
-              const std::string &password);
+              Lobby &lobby, const std::string &password);
 
 /**
  * Changes the password on an existing login object.
