@@ -8,6 +8,10 @@
 #include "../Command.hpp"
 #include "../Util.hpp"
 #include "../../abcd/General.hpp"
+#include "../../abcd/auth/LoginServer.hpp"
+#include "../../abcd/login/LoginPassword.hpp"
+#include "../../abcd/login/LoginPin.hpp"
+#include "../../abcd/login/LoginRecovery.hpp"
 #include "../../abcd/util/Util.hpp"
 #include "../../abcd/wallet/Wallet.hpp"
 #include <iostream>
@@ -36,10 +40,10 @@ COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery",
     const auto answers = argv[0];
     const auto newPassword = argv[1];
 
-    ABC_CHECK_OLD(ABC_RecoveryLogin(session.username.c_str(),
-                                    answers, &error));
-    ABC_CHECK_OLD(ABC_ChangePassword(session.username.c_str(), nullptr,
-                                     newPassword, &error));
+    AuthError authError;
+    std::shared_ptr<Login> login;
+    ABC_CHECK(loginRecovery(login, *session.lobby, answers, authError));
+    ABC_CHECK(loginPasswordSet(*login, newPassword));
 
     return Status();
 }
@@ -74,8 +78,9 @@ COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto answers = argv[0];
 
-    ABC_CHECK_OLD(ABC_RecoveryLogin(session.username.c_str(),
-                                    answers, &error));
+    AuthError authError;
+    std::shared_ptr<Login> login;
+    ABC_CHECK(loginRecovery(login, *session.lobby, answers, authError));
 
     return Status();
 }
@@ -148,7 +153,13 @@ COMMAND(InitLevel::lobby, PinLogin, "pin-login",
                                      &bExists, &error));
     if (bExists)
     {
-        ABC_CHECK_OLD(ABC_PinLogin(session.username.c_str(), pin, &error));
+        AuthError authError;
+        std::shared_ptr<Login> login;
+        auto s = loginPin(login, *session.lobby, pin, authError);
+        if (authError.pinWait)
+            std::cout << "Please try again in " << authError.pinWait
+                      << " seconds" << std::endl;
+        ABC_CHECK(s);
     }
     else
     {

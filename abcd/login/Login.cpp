@@ -152,8 +152,10 @@ Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox,
         {
             // The server hasn't been asked yet, so do that now:
             LoginPackage unused;
+            AuthError authError;
             ABC_CHECK(loginServerGetLoginPackage(lobby, authKey_, DataChunk(),
-                                                 unused, rootKeyBox));
+                                                 unused, rootKeyBox,
+                                                 authError));
 
             // If the server had one, save it for the future:
             if (rootKeyBox)

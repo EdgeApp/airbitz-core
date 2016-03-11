@@ -75,9 +75,9 @@ otpResetGet(std::list<std::string> &result,
 }
 
 Status
-otpResetSet(Lobby &lobby)
+otpResetSet(Lobby &lobby, const std::string &token)
 {
-    return loginServerOtpReset(lobby);
+    return loginServerOtpReset(lobby, token);
 }
 
 Status

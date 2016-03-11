@@ -79,18 +79,15 @@ struct ServerReplyJson:
      * Checks the server status code for errors.
      */
     Status
-    ok();
+    ok(AuthError *authError=nullptr);
 };
-
-static std::string gOtpResetAuth;
-std::string gOtpResetDate;
 
 static tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby, DataSlice LP1,
                                         const std::string &szWalletAcctKey,
                                         const char *szPath, tABC_Error *pError);
 
 Status
-ServerReplyJson::ok()
+ServerReplyJson::ok(AuthError *authError)
 {
     switch (code())
     {
@@ -113,8 +110,11 @@ ServerReplyJson::ok()
             ABC_JSON_INTEGER(wait, "wait_seconds", 0)
         } resultJson(results());
 
+        if (authError)
+            authError->pinWait = resultJson.wait();
         if (resultJson.waitOk())
-            return ABC_ERROR(ABC_CC_InvalidPinWait, std::to_string(resultJson.wait()));
+            return ABC_ERROR(ABC_CC_InvalidPinWait,
+                             std::to_string(resultJson.wait()));
     }
     return ABC_ERROR(ABC_CC_BadPassword, "Invalid password on server");
 
@@ -123,14 +123,15 @@ ServerReplyJson::ok()
         struct ResultJson: public JsonObject
         {
             ABC_JSON_CONSTRUCTORS(ResultJson, JsonObject)
-            ABC_JSON_STRING(resetAuth, "otp_reset_auth", nullptr)
-            ABC_JSON_STRING(resetDate, "otp_timeout_date", nullptr)
+            ABC_JSON_STRING(resetToken, "otp_reset_auth", "")
+            ABC_JSON_STRING(resetDate, "otp_timeout_date", "")
         } resultJson(results());
 
-        if (resultJson.resetAuthOk())
-            gOtpResetAuth = resultJson.resetAuth();
-        if (resultJson.resetDateOk())
-            gOtpResetDate = resultJson.resetDate();
+        if (authError)
+        {
+            authError->otpToken = resultJson.resetToken();
+            authError->otpDate = resultJson.resetDate();
+        }
     }
     return ABC_ERROR(ABC_CC_InvalidOTP, "Invalid OTP");
 
@@ -351,7 +352,8 @@ loginServerGetCarePackage(const Lobby &lobby, CarePackage &result)
 Status
 loginServerGetLoginPackage(const Lobby &lobby,
                            DataSlice LP1, DataSlice LRA1,
-                           LoginPackage &result, JsonPtr &rootKeyBox)
+                           LoginPackage &result, JsonPtr &rootKeyBox,
+                           AuthError &authError)
 {
     const auto url = ABC_SERVER_ROOT "/account/loginpackage/get";
     ServerRequestJson json;
@@ -365,7 +367,7 @@ loginServerGetLoginPackage(const Lobby &lobby,
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
     ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.ok(&authError));
 
     struct ResultJson:
         public JsonObject
@@ -383,7 +385,8 @@ loginServerGetLoginPackage(const Lobby &lobby,
 }
 
 Status
-loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result)
+loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
+                         AuthError &authError)
 {
     const auto url = ABC_SERVER_ROOT "/account/pinpackage/get";
     JsonPtr json(json_pack("{ss, ss}",
@@ -394,7 +397,7 @@ loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result)
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
     ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.ok(&authError));
 
     struct ResultJson:
         public JsonObject
@@ -551,7 +554,7 @@ loginServerOtpStatus(const Login &login, bool &on, long &timeout)
 }
 
 Status
-loginServerOtpReset(const Lobby &lobby)
+loginServerOtpReset(const Lobby &lobby, const std::string &token)
 {
     const auto url = ABC_SERVER_ROOT "/otp/reset";
     struct ResetJson:
@@ -560,7 +563,7 @@ loginServerOtpReset(const Lobby &lobby)
         ABC_JSON_STRING(otpResetAuth, "otp_reset_auth", nullptr)
     } json;
     ABC_CHECK(json.setup(lobby));
-    ABC_CHECK(json.otpResetAuthSet(gOtpResetAuth));
+    ABC_CHECK(json.otpResetAuthSet(token));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));

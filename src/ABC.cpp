@@ -160,26 +160,27 @@ exit:
     return cc;
 }
 
-/**
- * Create a new account.
- *
- * This function kicks off a thread to signin to an account. The callback will be called when it has finished.
- *
- * @param szUserName                UserName for the account
- * @param szPassword                Password for the account
- * @param pError                    A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_SignIn(const char *szUserName,
-                   const char *szPassword,
-                   tABC_Error *pError)
+tABC_CC ABC_PasswordLogin(const char *szUserName,
+                          const char *szPassword,
+                          char *pszOtpResetToken,
+                          char *pszOtpResetDate,
+                          tABC_Error *pError)
 {
     ABC_PROLOG();
     ABC_CHECK_NULL(szPassword);
-    ABC_CHECK_ASSERT(strlen(szPassword) > 0, ABC_CC_Error, "No password provided");
+    ABC_CHECK_NULL(pszOtpResetToken);
+    ABC_CHECK_NULL(pszOtpResetDate);
 
     {
         std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLoginPassword(login, szUserName, szPassword));
+        AuthError authError;
+        auto s = cacheLoginPassword(login, szUserName, szPassword,
+                                    authError);
+        if (!authError.otpToken.empty())
+            pszOtpResetToken = stringCopy(authError.otpToken);
+        if (!authError.otpDate.empty())
+            pszOtpResetDate = stringCopy(authError.otpDate);
+        ABC_CHECK_NEW(s);
     }
 
 exit:
@@ -454,25 +455,16 @@ exit:
     return cc;
 }
 
-tABC_CC ABC_OtpResetDate(char **pszDate,
-                         tABC_Error *pError)
-{
-    ABC_PROLOG();
-
-    *pszDate = stringCopy(gOtpResetDate);
-
-exit:
-    return cc;
-}
-
 tABC_CC ABC_OtpResetSet(const char *szUserName,
+                        const char *szToken,
                         tABC_Error *pError)
 {
     ABC_PROLOG();
+    ABC_CHECK_NULL(szToken);
 
     {
         ABC_GET_LOBBY();
-        ABC_CHECK_NEW(otpResetSet(*lobby));
+        ABC_CHECK_NEW(otpResetSet(*lobby, szToken));
     }
 
 exit:
@@ -899,14 +891,25 @@ exit:
 
 tABC_CC ABC_RecoveryLogin(const char *szUserName,
                           const char *szRecoveryAnswers,
+                          char *pszOtpResetToken,
+                          char *pszOtpResetDate,
                           tABC_Error *pError)
 {
     ABC_PROLOG();
     ABC_CHECK_NULL(szRecoveryAnswers);
+    ABC_CHECK_NULL(pszOtpResetToken);
+    ABC_CHECK_NULL(pszOtpResetDate);
 
     {
         std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLoginRecovery(login, szUserName, szRecoveryAnswers));
+        AuthError authError;
+        auto s = cacheLoginRecovery(login, szUserName, szRecoveryAnswers,
+                                    authError);
+        if (!authError.otpToken.empty())
+            pszOtpResetToken = stringCopy(authError.otpToken);
+        if (!authError.otpDate.empty())
+            pszOtpResetDate = stringCopy(authError.otpDate);
+        ABC_CHECK_NEW(s);
     }
 
 exit:
@@ -931,19 +934,21 @@ exit:
     return cc;
 }
 
-/**
- * Performs a PIN-based login for the given user.
- */
 tABC_CC ABC_PinLogin(const char *szUserName,
                      const char *szPin,
+                     int *pWaitSeconds,
                      tABC_Error *pError)
 {
     ABC_PROLOG();
     ABC_CHECK_NULL(szPin);
+    ABC_CHECK_NULL(pWaitSeconds);
 
     {
         std::shared_ptr<Login> login;
-        ABC_CHECK_NEW(cacheLoginPin(login, szUserName, szPin));
+        AuthError authError;
+        auto s = cacheLoginPin(login, szUserName, szPin, authError);
+        *pWaitSeconds = authError.pinWait;
+        ABC_CHECK_NEW(s);
     }
 
 exit:
@@ -2423,11 +2428,12 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         // Has the password changed?
         LoginPackage loginPackage;
         JsonPtr rootKeyBox;
-        Status s = loginServerGetLoginPackage(account->login.lobby,
-                                              account->login.authKey(),
-                                              DataChunk(),
-                                              loginPackage,
-                                              rootKeyBox);
+        AuthError authError;
+        auto s = loginServerGetLoginPackage(account->login.lobby,
+                                            account->login.authKey(),
+                                            DataChunk(),
+                                            loginPackage, rootKeyBox,
+                                            authError);
 
         if (s.value() == ABC_CC_InvalidOTP)
         {

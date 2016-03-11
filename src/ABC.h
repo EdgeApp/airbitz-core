@@ -600,9 +600,16 @@ tABC_CC ABC_FixUsername(char **pszResult,
                         const char *szUserName,
                         tABC_Error *pError);
 
-tABC_CC ABC_SignIn(const char *szUserName,
-                   const char *szPassword,
-                   tABC_Error *pError);
+/**
+ * Logs the user in using a password.
+ * @param pszOtpResetToken returned OTP reset token, if any.
+ * @param pszOtpResetDate returned OTP reset date, if any.
+ */
+tABC_CC ABC_PasswordLogin(const char *szUserName,
+                          const char *szPassword,
+                          char *pszOtpResetToken,
+                          char *pszOtpResetDate,
+                          tABC_Error *pError);
 
 tABC_CC ABC_AccountAvailable(const char *szUserName,
                              tABC_Error *pError);
@@ -621,17 +628,26 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
 /**
  * Logs the user in using their recovery answers.
  * @param szRecoveryAnswers newline-separated recovery answers.
+ * @param pszOtpResetToken returned OTP reset token, if any.
+ * @param pszOtpResetDate returned OTP reset date, if any.
  */
 tABC_CC ABC_RecoveryLogin(const char *szUserName,
                           const char *szRecoveryAnswers,
+                          char *pszOtpResetToken,
+                          char *pszOtpResetDate,
                           tABC_Error *pError);
 
 tABC_CC ABC_PinLoginExists(const char *szUserName,
                            bool *pbExists,
                            tABC_Error *pError);
 
+/**
+ * Performs a PIN-based login for the given user.
+ * @param pWaitSeconds seconds before the next retry, if this one failed.
+ */
 tABC_CC ABC_PinLogin(const char *szUserName,
                      const char *szPin,
+                     int *pWaitSeconds,
                      tABC_Error *pError);
 
 /**
@@ -738,13 +754,6 @@ tABC_CC ABC_OtpResetGet(char **szUsernames,
                         tABC_Error *pError);
 
 /**
- * Returns the OTP reset date for the last account that failed to log in,
- * if any. Returns an empty string otherwise.
- */
-tABC_CC ABC_OtpResetDate(char **pszDate,
-                         tABC_Error *pError);
-
-/**
  * Launches an OTP reset timer on the server,
  * which will disable the OTP authentication requirement when it expires.
  *
@@ -753,6 +762,7 @@ tABC_CC ABC_OtpResetDate(char **pszDate,
  * but has failed to fully log in due to a missing OTP key.
  */
 tABC_CC ABC_OtpResetSet(const char *szUserName,
+                        const char *szToken,
                         tABC_Error *pError);
 
 /**

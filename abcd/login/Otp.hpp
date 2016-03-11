@@ -54,7 +54,7 @@ otpResetGet(std::list<std::string> &result,
  * which will disable the OTP authentication requirement when it expires.
  */
 Status
-otpResetSet(Lobby &lobby);
+otpResetSet(Lobby &lobby, const std::string &token);
 
 /**
  * Cancels an OTP reset timer.

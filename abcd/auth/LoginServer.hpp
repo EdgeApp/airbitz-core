@@ -26,8 +26,18 @@ class JsonPtr;
 struct CarePackage;
 struct LoginPackage;
 
-// We need a better way to get this data out than writing to globals:
-extern std::string gOtpResetDate;
+/**
+ * The server returns this along with any OTP error.
+ */
+struct AuthError
+{
+    // ABC_CC_InvalidPinWait:
+    int pinWait = 0; // Seconds
+
+    // ABC_CC_InvalidOTP:
+    std::string otpDate;
+    std::string otpToken;
+};
 
 Status
 loginServerGetGeneral(JsonPtr &result);
@@ -88,10 +98,12 @@ loginServerGetCarePackage(const Lobby &lobby, CarePackage &result);
 Status
 loginServerGetLoginPackage(const Lobby &lobby,
                            DataSlice LP1, DataSlice LRA1,
-                           LoginPackage &result, JsonPtr &rootKeyBox);
+                           LoginPackage &result, JsonPtr &rootKeyBox,
+                           AuthError &authError);
 
 Status
-loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result);
+loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
+                         AuthError &authError);
 
 /**
  * Uploads the pin package.
@@ -139,7 +151,7 @@ loginServerOtpStatus(const Login &login, bool &on, long &timeout);
  * Request a 2-factor authentication reset.
  */
 Status
-loginServerOtpReset(const Lobby &lobby);
+loginServerOtpReset(const Lobby &lobby, const std::string &token);
 
 /**
  * Determine which accounts have pending 2-factor authentication resets.

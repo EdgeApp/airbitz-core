@@ -6,7 +6,9 @@
  */
 
 #include "Command.hpp"
+#include "../abcd/auth/LoginServer.hpp"
 #include "../abcd/json/JsonObject.hpp"
+#include "../abcd/login/Otp.hpp"
 #include "../abcd/util/Util.hpp"
 #include "../src/LoginShim.hpp"
 #include <iostream>
@@ -176,17 +178,19 @@ static Status run(int argc, char *argv[])
                                  helpString(*command));
         }
 
+        AuthError authError;
         auto s = cacheLoginPassword(session.login,
                                     session.username.c_str(),
-                                    session.password.c_str());
+                                    session.password.c_str(),
+                                    authError);
         if (ABC_CC_InvalidOTP == s.value())
         {
-            AutoString date;
-            ABC_CHECK_OLD(ABC_OtpResetDate(&date.get(), &error));
-            if (strlen(date))
-                std::cout << "Pending OTP reset ends at " << date.get() << std::endl;
-            std::cout << "No OTP token, resetting account 2-factor auth." << std::endl;
-            ABC_CHECK_OLD(ABC_OtpResetSet(session.username.c_str(), &error));
+            if (!authError.otpDate.empty())
+                std::cout << "Pending OTP reset ends at " << authError.otpDate
+                          << std::endl;
+            std::cout << "No OTP token, resetting account 2-factor auth."
+                      << std::endl;
+            ABC_CHECK(otpResetSet(*session.lobby, authError.otpToken));
         }
         ABC_CHECK(s);
     }
