@@ -13,6 +13,8 @@
 
 namespace abcd {
 
+#undef BSD
+
 /**
  * The complete currency list, in a format the preprocessor can understand.
  * The `_` parameter is a macro that specifies
