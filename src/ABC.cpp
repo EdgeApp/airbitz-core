@@ -162,8 +162,8 @@ exit:
 
 tABC_CC ABC_PasswordLogin(const char *szUserName,
                           const char *szPassword,
-                          char *pszOtpResetToken,
-                          char *pszOtpResetDate,
+                          char **pszOtpResetToken,
+                          char **pszOtpResetDate,
                           tABC_Error *pError)
 {
     ABC_PROLOG();
@@ -177,9 +177,9 @@ tABC_CC ABC_PasswordLogin(const char *szUserName,
         auto s = cacheLoginPassword(login, szUserName, szPassword,
                                     authError);
         if (!authError.otpToken.empty())
-            pszOtpResetToken = stringCopy(authError.otpToken);
+            *pszOtpResetToken = stringCopy(authError.otpToken);
         if (!authError.otpDate.empty())
-            pszOtpResetDate = stringCopy(authError.otpDate);
+            *pszOtpResetDate = stringCopy(authError.otpDate);
         ABC_CHECK_NEW(s);
     }
 
@@ -891,8 +891,8 @@ exit:
 
 tABC_CC ABC_RecoveryLogin(const char *szUserName,
                           const char *szRecoveryAnswers,
-                          char *pszOtpResetToken,
-                          char *pszOtpResetDate,
+                          char **pszOtpResetToken,
+                          char **pszOtpResetDate,
                           tABC_Error *pError)
 {
     ABC_PROLOG();
@@ -906,9 +906,9 @@ tABC_CC ABC_RecoveryLogin(const char *szUserName,
         auto s = cacheLoginRecovery(login, szUserName, szRecoveryAnswers,
                                     authError);
         if (!authError.otpToken.empty())
-            pszOtpResetToken = stringCopy(authError.otpToken);
+            *pszOtpResetToken = stringCopy(authError.otpToken);
         if (!authError.otpDate.empty())
-            pszOtpResetDate = stringCopy(authError.otpDate);
+            *pszOtpResetDate = stringCopy(authError.otpDate);
         ABC_CHECK_NEW(s);
     }
 

@@ -607,8 +607,8 @@ tABC_CC ABC_FixUsername(char **pszResult,
  */
 tABC_CC ABC_PasswordLogin(const char *szUserName,
                           const char *szPassword,
-                          char *pszOtpResetToken,
-                          char *pszOtpResetDate,
+                          char **pszOtpResetToken,
+                          char **pszOtpResetDate,
                           tABC_Error *pError);
 
 tABC_CC ABC_AccountAvailable(const char *szUserName,
@@ -633,8 +633,8 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
  */
 tABC_CC ABC_RecoveryLogin(const char *szUserName,
                           const char *szRecoveryAnswers,
-                          char *pszOtpResetToken,
-                          char *pszOtpResetDate,
+                          char **pszOtpResetToken,
+                          char **pszOtpResetDate,
                           tABC_Error *pError);
 
 tABC_CC ABC_PinLoginExists(const char *szUserName,
