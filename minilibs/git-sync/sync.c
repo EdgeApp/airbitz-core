@@ -255,6 +255,25 @@ static int sync_merge_trees(git_oid *out,
                 &new_tree,
                 git_tree_entry_filemode(e1)));
         }
+        else if (state == BOTH && base_entry)
+        {
+            if (git_oid_cmp(git_tree_entry_id(base_entry), git_tree_entry_id(e1)))
+            {
+                // Entry `e1` has changes, so use that:
+                git_check(git_treebuilder_insert(NULL, tb,
+                    git_tree_entry_name(e1),
+                    git_tree_entry_id(e1),
+                    git_tree_entry_filemode(e1)));
+            }
+            else
+            {
+                // Entry `e1` has no changes, so use `e2`:
+                git_check(git_treebuilder_insert(NULL, tb,
+                    git_tree_entry_name(e2),
+                    git_tree_entry_id(e2),
+                    git_tree_entry_filemode(e2)));
+            }
+        }
         else if (state == BOTH || !base_entry)
         {
             // Entry was added, or already present:
@@ -263,6 +282,7 @@ static int sync_merge_trees(git_oid *out,
                 git_tree_entry_id(entry),
                 git_tree_entry_filemode(entry)));
         }
+        // Otherwise, the entry was deleted.
     }
 
     // Write tree:
