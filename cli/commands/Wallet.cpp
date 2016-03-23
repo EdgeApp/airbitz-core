@@ -116,16 +116,23 @@ COMMAND(InitLevel::account, CliWalletList, "wallet-list",
     if (argc != 0)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
-    // Iterate over wallets:
+    // Load wallets:
     auto ids = session.account->wallets.list();
+    std::list<std::shared_ptr<Wallet>> wallets;
     for (const auto &id: ids)
     {
         std::shared_ptr<Wallet> wallet;
         ABC_CHECK(cacheWallet(wallet, nullptr, id.c_str()));
+        wallets.push_back(wallet);
+    }
+
+    // Display wallets:
+    for (const auto &wallet: wallets)
+    {
         std::cout << wallet->id() << ": " << wallet->name();
 
         bool archived;
-        ABC_CHECK(session.account->wallets.archived(archived, id));
+        ABC_CHECK(session.account->wallets.archived(archived, wallet->id()));
         if (archived)
             std::cout << " (archived)" << std::endl;
         else
