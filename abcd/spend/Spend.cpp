@@ -49,6 +49,8 @@ Spend::addTransfer(Wallet &target, uint64_t amount, TxMetadata metadata)
 
     // Adjust and save the metadata:
     metadata.amountSatoshi = amount;
+    metadata.amountFeesMinersSatoshi = 0;
+    metadata.amountFeesAirbitzSatoshi = 0;
     if (!metadata.amountCurrency)
     {
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
