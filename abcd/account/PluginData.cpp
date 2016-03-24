@@ -15,6 +15,14 @@
 
 namespace abcd {
 
+struct PluginNameJson:
+    public JsonObject
+{
+    ABC_JSON_STRING(name, "name", nullptr)
+};
+
+constexpr auto nameFilename = "Name.json";
+
 struct PluginDataFile:
     public JsonObject
 {
@@ -43,6 +51,31 @@ keyFilename(const Account &account, const std::string &plugin,
 {
     return pluginDirectory(account, plugin) +
            cryptoFilename(account.login.dataKey(), key) + ".json";
+}
+
+std::list<std::string>
+pluginDataList(const Account &account)
+{
+    std::list<std::string> out;
+
+    std::string outer = pluginsDirectory(account);
+    DIR *dir = opendir(outer.c_str());
+    if (!dir)
+        return out;
+
+    struct dirent *de;
+    while (nullptr != (de = readdir(dir)))
+    {
+        auto path = outer + de->d_name + '/' + nameFilename;
+        PluginNameJson json;
+        if (de->d_name[0] != '.'
+                && json.load(path, account.login.dataKey())
+                && json.nameOk())
+            out.push_back(json.name());
+    }
+
+    closedir(dir);
+    return out;
 }
 
 std::list<std::string>
@@ -92,6 +125,14 @@ pluginDataSet(const Account &account, const std::string &plugin,
 {
     ABC_CHECK(fileEnsureDir(pluginsDirectory(account)));
     ABC_CHECK(fileEnsureDir(pluginDirectory(account, plugin)));
+
+    const auto namePath = pluginDirectory(account, plugin) + "Name.json";
+    if (!fileExists(namePath))
+    {
+        PluginNameJson json;
+        ABC_CHECK(json.nameSet(plugin));
+        json.save(namePath, account.login.dataKey());
+    }
 
     PluginDataFile json;
     json.keySet(key);

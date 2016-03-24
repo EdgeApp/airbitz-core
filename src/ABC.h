@@ -854,6 +854,21 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
 /** === Plugin data: === */
 
 /**
+ * Lists the plugin key/value stores in an account.
+ *
+ * Anybody who uses this is probably doing something wrong.
+ * This mainly exists for diagnostics,
+ * since the idea is that all plugins are sandboxed by their plugin id.
+ * There shouldn't be any code that needs to list the plugin id's,
+ * since the list should be static and know ahead of time.
+ */
+tABC_CC ABC_PluginDataList(const char *szUserName,
+                           const char *szPassword,
+                           char ***paszPlugins,
+                           unsigned int *pCount,
+                           tABC_Error *pError);
+
+/**
  * Lists the keys in a plugin key/value store.
  * @param szPlugin The plugin's unique ID.
  */

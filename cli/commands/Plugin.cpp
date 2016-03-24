@@ -11,6 +11,26 @@
 
 using namespace abcd;
 
+COMMAND(InitLevel::account, PluginList, "plugin-list",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    const auto plugins = pluginDataList(*session.account);
+    if (plugins.empty())
+    {
+        std::cout << "No plugins" << std::endl;
+    }
+    else
+    {
+        for (const auto &plugin: plugins)
+            std::cout << '"' << plugin << '"' << std::endl;
+    }
+
+    return Status();
+}
+
 COMMAND(InitLevel::account, PluginKeys, "plugin-keys",
         " <plugin>")
 {

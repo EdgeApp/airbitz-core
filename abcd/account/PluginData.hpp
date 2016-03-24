@@ -16,6 +16,16 @@ namespace abcd {
 class Account;
 
 /**
+ * Lists the plugin key/value stores in the account.
+ * This mainly exists for diagnostics,
+ * since the idea is that all plugins are sandboxed by their plugin id.
+ * There shouldn't be any code that needs to list the plugin id's,
+ * since the list should be static and know ahead of time.
+ */
+std::list<std::string>
+pluginDataList(const Account &account);
+
+/**
  * Lists the keys in a plugin key/value store.
  */
 std::list<std::string>

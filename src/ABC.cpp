@@ -2708,6 +2708,31 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_PluginDataList(const char *szUserName,
+                           const char *szPassword,
+                           char ***paszPlugins,
+                           unsigned int *pCount,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(paszPlugins);
+    ABC_CHECK_NULL(pCount);
+
+    {
+        ABC_GET_ACCOUNT();
+
+        auto plugins = pluginDataList(*account);
+        ABC_ARRAY_NEW(*paszPlugins, plugins.size(), char *);
+        unsigned int i = 0;
+        for (const auto &plugin: plugins)
+            (*paszPlugins)[i++] = stringCopy(plugin);
+        *pCount = plugins.size();
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_PluginDataKeys(const char *szUserName,
                            const char *szPassword,
                            const char *szPlugin,
