@@ -9,10 +9,17 @@
 #define ABCD_ACCOUNT_PLUGIN_DATA_HPP
 
 #include "../util/Status.hpp"
+#include <list>
 
 namespace abcd {
 
 class Account;
+
+/**
+ * Lists the keys in a plugin key/value store.
+ */
+std::list<std::string>
+pluginDataKeys(const Account &account, const std::string &plugin);
 
 /**
  * Retreives an item from the plugin key/value store.

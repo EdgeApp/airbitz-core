@@ -11,7 +11,7 @@
 #include "../json/JsonObject.hpp"
 #include "../login/Login.hpp"
 #include "../util/FileIO.hpp"
-#include <sstream>
+#include <dirent.h>
 
 namespace abcd {
 
@@ -43,6 +43,30 @@ keyFilename(const Account &account, const std::string &plugin,
 {
     return pluginDirectory(account, plugin) +
            cryptoFilename(account.login.dataKey(), key) + ".json";
+}
+
+std::list<std::string>
+pluginDataKeys(const Account &account, const std::string &plugin)
+{
+    std::list<std::string> out;
+
+    std::string outer = pluginDirectory(account, plugin);
+    DIR *dir = opendir(outer.c_str());
+    if (!dir)
+        return out;
+
+    struct dirent *de;
+    while (nullptr != (de = readdir(dir)))
+    {
+        PluginDataFile json;
+        if (fileIsJson(de->d_name)
+                && json.load(outer + de->d_name, account.login.dataKey())
+                && json.keyOk())
+            out.push_back(json.key());
+    }
+
+    closedir(dir);
+    return out;
 }
 
 Status

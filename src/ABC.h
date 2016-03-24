@@ -854,6 +854,17 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
 /** === Plugin data: === */
 
 /**
+ * Lists the keys in a plugin key/value store.
+ * @param szPlugin The plugin's unique ID.
+ */
+tABC_CC ABC_PluginDataKeys(const char *szUserName,
+                           const char *szPassword,
+                           const char *szPlugin,
+                           char ***paszKeys,
+                           unsigned int *pCount,
+                           tABC_Error *pError);
+
+/**
  * Retreives an item from the plugin key/value store.
  * @param szPlugin The plugin's unique ID.
  * @param szKey The data location. Merges happen at the key level,

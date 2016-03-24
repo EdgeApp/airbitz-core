@@ -2708,6 +2708,33 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_PluginDataKeys(const char *szUserName,
+                           const char *szPassword,
+                           const char *szPlugin,
+                           char ***paszKeys,
+                           unsigned int *pCount,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szPlugin);
+    ABC_CHECK_NULL(paszKeys);
+    ABC_CHECK_NULL(pCount);
+
+    {
+        ABC_GET_ACCOUNT();
+
+        auto keys = pluginDataKeys(*account, szPlugin);
+        ABC_ARRAY_NEW(*paszKeys, keys.size(), char *);
+        unsigned int i = 0;
+        for (const auto &key: keys)
+            (*paszKeys)[i++] = stringCopy(key);
+        *pCount = keys.size();
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_PluginDataGet(const char *szUserName,
                           const char *szPassword,
                           const char *szPlugin,
