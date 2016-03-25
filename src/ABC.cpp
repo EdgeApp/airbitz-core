@@ -1795,36 +1795,6 @@ exit:
 }
 
 /**
- * Obtains a raw Bitcoin transaction in hex form.
- */
-tABC_CC ABC_GetRawTransaction(const char *szUserName,
-                              const char *szPassword,
-                              const char *szWalletUUID,
-                              const char *szNtxid,
-                              char **pszHex,
-                              tABC_Error *pError)
-{
-    ABC_PROLOG();
-
-    {
-        ABC_GET_WALLET();
-
-        bc::hash_digest hash;
-        if (!bc::decode_hash(hash, szNtxid))
-            ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
-
-        auto tx = wallet->txdb.ntxidLookup(hash);
-        DataChunk out;
-        out.resize(satoshi_raw_size(tx));
-        bc::satoshi_save(tx, out.begin());
-        *pszHex = stringCopy(base16Encode(out));
-    }
-
-exit:
-    return cc;
-}
-
-/**
  * Frees the given transactions
  *
  * @param pTransaction Pointer to transaction
