@@ -17,7 +17,6 @@
 #include "../login/Login.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Sync.hpp"
-#include "../../src/TxInfo.hpp"
 #include <assert.h>
 
 namespace abcd {
@@ -138,20 +137,11 @@ Wallet::balance(int64_t &result)
     std::lock_guard<std::mutex> lock(mutex_);
     if (dirty)
     {
-        tABC_TxInfo **aTransactions = nullptr;
-        unsigned int nTxCount = 0;
-
-        ABC_CHECK_OLD(ABC_TxGetTransactions(*this,
-                                            ABC_GET_TX_ALL_TIMES, ABC_GET_TX_ALL_TIMES,
-                                            &aTransactions, &nTxCount, &error));
-        ABC_CHECK(bridgeFilterTransactions(*this, aTransactions, &nTxCount));
+        const auto utxos = txdb.get_utxos(addresses.list(), false);
 
         balance_ = 0;
-        for (unsigned i = 0; i < nTxCount; ++i)
-            balance_ += aTransactions[i]->pDetails->amountSatoshi;
-
-        // TODO: Leaks if ABC_BridgeFilterTransactions fails.
-        ABC_TxFreeTransactions(aTransactions, nTxCount);
+        for (const auto &utxo: utxos)
+            balance_ += utxo.value;
     }
 
     result = balance_;
