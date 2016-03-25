@@ -143,14 +143,6 @@ bool TxCache::txidExists(bc::hash_digest txid) const
     return rows_.find(txid) != rows_.end();
 }
 
-bool TxCache::ntxidExists(bc::hash_digest ntxid)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    auto txRows = ntxidLookupAll(ntxid);
-    return !txRows.empty();
-}
-
 bc::transaction_type TxCache::txidLookup(bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -159,23 +151,6 @@ bc::transaction_type TxCache::txidLookup(bc::hash_digest txid) const
     if (i == rows_.end())
         return bc::transaction_type();
     return i->second.tx;
-}
-
-bc::transaction_type TxCache::ntxidLookup(bc::hash_digest ntxid)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    // Try to return the confirmed copy (if any),
-    // otherwise just return any match:
-    bc::transaction_type out;
-    auto rows = ntxidLookupAll(ntxid);
-    for (const auto &row: rows)
-    {
-        if (row->state == TxState::confirmed)
-            return row->tx;
-        out = row->tx;
-    }
-    return out;
 }
 
 long long TxCache::txidHeight(bc::hash_digest txid) const
@@ -193,79 +168,132 @@ long long TxCache::txidHeight(bc::hash_digest txid) const
     return i->second.block_height;
 }
 
-Status
-TxCache::ntxidHeight(long long &result, bc::hash_digest ntxid)
+bool
+TxCache::isRelevant(const bc::transaction_type &tx,
+                    const AddressSet &addresses) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
-
-    std::vector<TxRow *> txRows = ntxidLookupAll(ntxid);
-    if (txRows.empty())
-        return ABC_ERROR(ABC_CC_Synchronizing, "tx isn't in the database");
-
-    long long height = 0;
-    for (auto row: txRows)
-    {
-        if (TxState::confirmed == row->state)
-        {
-            if (height < row->block_height)
-                height = row->block_height;
-        }
-    }
-
-    // Special signal to the GUI that the transaction is both
-    // malleated and unconfirmed:
-    if (1 < txRows.size() && !height)
-    {
-        height = -1;
-    }
-
-    result = height;
-    return Status();
+    return isRelevantInternal(tx, addresses);
 }
 
-Status
-TxCache::ntxidAmounts(const std::string &ntxid, const AddressSet &addresses,
-                      int64_t &balance, int64_t &fees)
+bool
+TxCache::isRelevantInternal(const bc::transaction_type &tx,
+                            const AddressSet &addresses) const
 {
-    bc::hash_digest hash;
-    if (!bc::decode_hash(hash, ntxid))
-        return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
-    auto tx = ntxidLookup(hash);
-
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    int64_t totalToUs = 0, totalFromUs = 0;
-    int64_t totalIn = 0, totalOut = 0;
-
+    // Scan inputs:
     for (const auto &input: tx.inputs)
     {
         bc::transaction_output_type output;
         auto i = rows_.find(input.previous_output.hash);
-        if (rows_.end() != i &&
-                input.previous_output.index < i->second.tx.outputs.size())
+        if (rows_.end() != i
+                && input.previous_output.index < i->second.tx.outputs.size())
             output = i->second.tx.outputs[input.previous_output.index];
 
         bc::payment_address address;
-        bc::extract(address, output.script);
-        if (addresses.count(address.encoded()))
-            totalFromUs += output.value;
-
-        totalIn += output.value;
+        if (bc::extract(address, output.script)
+                && addresses.count(address.encoded()))
+            return true;
     }
 
+    // Scan outputs:
     for (const auto &output: tx.outputs)
     {
         bc::payment_address address;
-        bc::extract(address, output.script);
-        if (addresses.count(address.encoded()))
+        if (bc::extract(address, output.script)
+                && addresses.count(address.encoded()))
+            return true;
+    }
+
+    return false;
+}
+
+TxInfo
+TxCache::txInfo(const bc::transaction_type &tx,
+                const AddressSet &addresses) const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return txInfoInternal(tx, addresses);
+}
+
+TxInfo
+TxCache::txInfoInternal(const bc::transaction_type &tx,
+                        const AddressSet &addresses) const
+{
+    TxInfo out;
+    int64_t totalToUs = 0, totalFromUs = 0;
+    int64_t totalIn = 0, totalOut = 0;
+
+    // Basic info:
+    const auto txid = bc::hash_transaction(tx);
+    out.txid = bc::encode_hash(txid);
+    out.ntxid = bc::encode_hash(makeNtxid(tx));
+
+    // Scan inputs:
+    for (const auto &input: tx.inputs)
+    {
+        bc::transaction_output_type output;
+        auto i = rows_.find(input.previous_output.hash);
+        if (rows_.end() != i
+                && input.previous_output.index < i->second.tx.outputs.size())
+            output = i->second.tx.outputs[input.previous_output.index];
+
+        bc::payment_address address;
+        if (bc::extract(address, output.script)
+                && addresses.count(address.encoded()))
+            totalFromUs += output.value;
+
+        totalIn += output.value;
+        out.ios.push_back(TxInOut{true, output.value, address.encoded()});
+    }
+
+    // Scan outputs:
+    for (const auto &output: tx.outputs)
+    {
+        bc::payment_address address;
+        if (bc::extract(address, output.script)
+                && addresses.count(address.encoded()))
             totalToUs += output.value;
 
         totalOut += output.value;
+        out.ios.push_back(TxInOut{false, output.value, address.encoded()});
     }
 
-    balance = totalToUs - totalFromUs;
-    fees = totalIn - totalOut;
+    out.balance = totalToUs - totalFromUs;
+    out.fee = totalIn - totalOut;
+
+    return out;
+}
+
+Status
+TxCache::txidInfo(TxInfo &result, const std::string &txid,
+                  const AddressSet &addresses) const
+{
+    bc::hash_digest hash;
+    if (!bc::decode_hash(hash, txid))
+        return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
+    const auto tx = txidLookup(hash);
+
+    result = txInfo(tx, addresses);
     return Status();
+}
+
+std::list<TxInfo>
+TxCache::list(const AddressSet &addresses) const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::list<TxInfo> out;
+
+    for (const auto &row: rows_)
+    {
+        if (isRelevantInternal(row.second.tx, addresses))
+        {
+            auto info = txInfoInternal(row.second.tx, addresses);
+            out.push_back(info);
+        }
+        // TODO: Merge by ntxid
+    }
+
+    return out;
 }
 
 bool TxCache::has_history(const bc::payment_address &address) const
@@ -574,18 +602,6 @@ TxCache::isIncoming(const TxRow &row,
             return true;
     }
     return false;
-}
-
-std::vector<TxCache::TxRow *>
-TxCache::ntxidLookupAll(bc::hash_digest ntxid)
-{
-    std::vector<TxRow *> out;
-    for (auto &row: rows_)
-    {
-        if (row.second.ntxid == ntxid)
-            out.push_back(&row.second);
-    }
-    return out;
 }
 
 } // namespace abcd

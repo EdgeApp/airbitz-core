@@ -82,7 +82,7 @@ public:
      * Saves a transaction to the wallet.
      */
     Status
-    saveTx(DataSlice rawTx, std::string &ntxidOut);
+    saveTx(DataSlice rawTx, std::string &txidOut);
 
 private:
     Wallet &wallet_;

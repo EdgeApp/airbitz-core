@@ -255,18 +255,12 @@ AddressDb::recycleSet(const std::string &address, bool recycle)
  * Marks a transaction's output addresses as having received money.
  */
 Status
-AddressDb::markOutputs(const std::string &txid)
+AddressDb::markOutputs(const std::list<TxInOut> &ios)
 {
-    bc::hash_digest hash;
-    if (!bc::decode_hash(hash, txid))
-        return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
-    auto tx = wallet_.txCache.txidLookup(hash);
-
-    for (const auto &o: tx.outputs)
+    for (const auto &io: ios)
     {
-        bc::payment_address address;
-        if (bc::extract(address, o.script))
-            recycleSet(address.encoded(), false); /* Failure is ok. */
+        if (!io.input)
+            recycleSet(io.address, false); /* Failure is ok. */
     }
 
     return Status();

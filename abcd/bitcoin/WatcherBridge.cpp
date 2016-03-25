@@ -315,37 +315,38 @@ bridgeDoSweep(Wallet &wallet, PendingSweep &sweep,
     bc::data_chunk raw_tx(satoshi_raw_size(tx));
     bc::satoshi_save(tx, raw_tx.begin());
     ABC_CHECK(broadcastTx(wallet, raw_tx));
-    if (wallet.txCache.insert(tx))
-        watcherSave(wallet).log(); // Failure is not fatal
 
-    // Save the transaction in the metadatabase:
-    const auto txid = bc::encode_hash(bc::hash_transaction(tx));
-    const auto ntxid = bc::encode_hash(makeNtxid(tx));
-    ABC_CHECK(wallet.addresses.markOutputs(txid));
+    // Calculate transaction information:
+    const auto info = wallet.txCache.txInfo(tx, wallet.addresses.list());
 
     // Save the transaction metadata:
     Tx meta;
-    meta.ntxid = ntxid;
-    meta.txid = txid;
+    meta.ntxid = info.ntxid;
+    meta.txid = info.txid;
     meta.timeCreation = time(nullptr);
     meta.internal = true;
     meta.metadata.amountSatoshi = funds;
     meta.metadata.amountFeesAirbitzSatoshi = 0;
     ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                  meta.metadata.amountCurrency, meta.metadata.amountSatoshi,
+                  meta.metadata.amountCurrency, info.balance,
                   static_cast<Currency>(wallet.currency())));
     ABC_CHECK(wallet.txs.save(meta));
+
+    // Update the transaction cache:
+    if (wallet.txCache.insert(tx))
+        watcherSave(wallet).log(); // Failure is not fatal
     wallet.balanceDirty();
+    ABC_CHECK(wallet.addresses.markOutputs(info.ios));
 
     // Done:
-    ABC_DebugLog("IncomingSweep callback: wallet %s, ntxid: %s, value: %d",
-                 wallet.id().c_str(), ntxid.c_str(), output.value);
+    ABC_DebugLog("IncomingSweep callback: wallet %s, txid: %s, value: %d",
+                 wallet.id().c_str(), info.txid.c_str(), output.value);
     tABC_AsyncBitCoinInfo async;
     async.pData = pData;
     async.eventType = ABC_AsyncEventType_IncomingSweep;
     Status().toError(async.status, ABC_HERE());
     async.szWalletUUID = wallet.id().c_str();
-    async.szTxID = ntxid.c_str();
+    async.szTxID = info.txid.c_str();
     async.sweepSatoshi = output.value;
     fAsyncCallback(&async);
 
@@ -391,91 +392,71 @@ bridgeTxCallback(Wallet &wallet,
                  const libbitcoin::transaction_type &tx,
                  tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    const auto ntxid = bc::encode_hash(makeNtxid(tx));
-    const auto txid = bc::encode_hash(bc::hash_transaction(tx));
+    const auto addresses = wallet.addresses.list();
+    const auto info = wallet.txCache.txInfo(tx, addresses);
 
-    // Save the watcher database:
-    ABC_CHECK(wallet.addresses.markOutputs(txid));
-    watcherSave(wallet).log(); // Failure is not fatal
-
-    // Update the metadata if the transaction is relevant:
-    bool relevant = false;
-    for (const auto &i: tx.inputs)
-    {
-        bc::payment_address address;
-        bc::extract(address, i.script);
-        if (wallet.addresses.has(address.encoded()))
-            relevant = true;
-    }
-
-    std::vector<std::string> addresses;
-    for (const auto &o: tx.outputs)
-    {
-        bc::payment_address address;
-        bc::extract(address, o.script);
-        if (wallet.addresses.has(address.encoded()))
-            relevant = true;
-
-        addresses.push_back(address.encoded());
-    }
-
-    if (relevant)
+    // Does this transaction concern us?
+    if (wallet.txCache.isRelevant(tx, addresses))
     {
         // Does the transaction already exist?
         Tx meta;
-        if (!wallet.txs.get(meta, ntxid))
+        if (!wallet.txs.get(meta, info.ntxid))
         {
-            meta.ntxid = ntxid;
-            meta.txid = txid;
+            meta.ntxid = info.ntxid;
+            meta.txid = info.txid;
             meta.timeCreation = time(nullptr);
             meta.internal = false;
-            ABC_CHECK(wallet.txCache.ntxidAmounts(ntxid, wallet.addresses.list(),
-                                                  meta.metadata.amountSatoshi,
-                                                  meta.metadata.amountFeesMinersSatoshi));
-            ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                          meta.metadata.amountCurrency,
-                          meta.metadata.amountSatoshi,
-                          static_cast<Currency>(wallet.currency())));
 
             // Grab metadata from the address:
             TxMetadata metadata;
-            for (const auto &i: addresses)
+            for (const auto &io: info.ios)
             {
                 Address address;
-                if (wallet.addresses.get(address, i))
+                if (wallet.addresses.get(address, io.address))
                     meta.metadata = address.metadata;
             }
+            meta.metadata.amountSatoshi = info.balance;
+            meta.metadata.amountFeesMinersSatoshi = info.fee;
+            ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
+                          meta.metadata.amountCurrency, info.balance,
+                          static_cast<Currency>(wallet.currency())));
 
             // Save the metadata:
             ABC_CHECK(wallet.txs.save(meta));
+
+            // Update the transaction cache:
+            watcherSave(wallet).log(); // Failure is not fatal
             wallet.balanceDirty();
+            ABC_CHECK(wallet.addresses.markOutputs(info.ios));
 
             // Update the GUI:
-            ABC_DebugLog("IncomingBitCoin callback: wallet %s, txid: %s, ntxid: %s",
-                         wallet.id().c_str(), txid.c_str(), ntxid.c_str());
+            ABC_DebugLog("IncomingBitCoin callback: wallet %s, txid: %s",
+                         wallet.id().c_str(), info.txid.c_str());
             tABC_AsyncBitCoinInfo async;
             async.pData = pData;
             async.eventType = ABC_AsyncEventType_IncomingBitCoin;
             Status().toError(async.status, ABC_HERE());
             async.szWalletUUID = wallet.id().c_str();
-            async.szTxID = ntxid.c_str();
+            async.szTxID = info.txid.c_str();
             async.sweepSatoshi = 0;
             fAsyncCallback(&async);
         }
         else
         {
-            // Mark the wallet cache as dirty in case the Tx wasn't included in the current balance
+            // Update the transaction cache:
+            watcherSave(wallet).log(); // Failure is not fatal
             wallet.balanceDirty();
+            ABC_CHECK(wallet.addresses.markOutputs(info.ios));
 
             // Update the GUI:
-            ABC_DebugLog("BalanceUpdate callback: wallet %s, txid: %s, ntxid: %s",
-                         wallet.id().c_str(), txid.c_str(), ntxid.c_str());
+            ABC_DebugLog("BalanceUpdate callback: wallet %s, txid: %s",
+                         wallet.id().c_str(), info.txid.c_str());
             tABC_AsyncBitCoinInfo async;
             async.pData = pData;
             async.eventType = ABC_AsyncEventType_BalanceUpdate;
             Status().toError(async.status, ABC_HERE());
             async.szWalletUUID = wallet.id().c_str();
-            async.szTxID = ntxid.c_str();
+            async.szTxID = info.txid.c_str();
             async.sweepSatoshi = 0;
             fAsyncCallback(&async);
         }
@@ -483,7 +464,7 @@ bridgeTxCallback(Wallet &wallet,
     else
     {
         ABC_DebugLog("New (irrelevant) transaction:  wallet %s, txid: %s",
-                     wallet.id().c_str(), txid.c_str());
+                     wallet.id().c_str(), info.txid.c_str());
     }
 
     return Status();

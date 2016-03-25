@@ -168,55 +168,51 @@ Spend::broadcastTx(DataSlice rawTx)
 }
 
 Status
-Spend::saveTx(DataSlice rawTx, std::string &ntxidOut)
+Spend::saveTx(DataSlice rawTx, std::string &txidOut)
 {
     bc::transaction_type tx;
     auto deserial = bc::make_deserializer(rawTx.begin(), rawTx.end());
     bc::satoshi_load(deserial.iterator(), deserial.end(), tx);
-    auto txid = bc::encode_hash(bc::hash_transaction(tx));
-    auto ntxid = bc::encode_hash(makeNtxid(tx));
 
-    // Save to the transaction cache:
-    if (wallet_.txCache.insert(tx))
-        watcherSave(wallet_).log(); // Failure is not fatal
-    ABC_CHECK(wallet_.addresses.markOutputs(txid));
-
-    // Calculate the amounts:
-    int64_t amount, fee;
-    ABC_CHECK(wallet_.txCache.ntxidAmounts(ntxid, wallet_.addresses.list(),
-                                           amount, fee));
+    // Calculate transaction amounts:
+    const auto info = wallet_.txCache.txInfo(tx, wallet_.addresses.list());
 
     // Create Airbitz metadata:
     Tx txInfo;
-    txInfo.ntxid = ntxid;
-    txInfo.txid = txid;
+    txInfo.ntxid = info.ntxid;
+    txInfo.txid = info.txid;
     txInfo.timeCreation = time(nullptr);
     txInfo.internal = true;
     txInfo.metadata = metadata_;
-    txInfo.metadata.amountSatoshi = amount;
-    txInfo.metadata.amountFeesMinersSatoshi = fee;
+    txInfo.metadata.amountSatoshi = info.balance;
+    txInfo.metadata.amountFeesMinersSatoshi = info.fee;
 
     // Calculate amountCurrency if necessary:
     if (!txInfo.metadata.amountCurrency)
     {
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                      txInfo.metadata.amountCurrency, amount,
+                      txInfo.metadata.amountCurrency, info.balance,
                       static_cast<Currency>(wallet_.currency())));
     }
 
     // Save the transaction:
     ABC_CHECK(wallet_.txs.save(txInfo));
-    wallet_.balanceDirty();
 
     // Update any transfers:
     for (auto transfer: transfers_)
     {
         txInfo.metadata = transfer.second;
-        txInfo.metadata.amountFeesMinersSatoshi = fee;
+        txInfo.metadata.amountFeesMinersSatoshi = info.fee;
         transfer.first->txs.save(txInfo);
     }
 
-    ntxidOut = ntxid;
+    // Update the transaction cache:
+    if (wallet_.txCache.insert(tx))
+        watcherSave(wallet_).log(); // Failure is not fatal
+    wallet_.balanceDirty();
+    ABC_CHECK(wallet_.addresses.markOutputs(info.ios));
+
+    txidOut = info.txid;
     return Status();
 }
 

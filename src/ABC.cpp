@@ -1645,9 +1645,9 @@ tABC_CC ABC_SpendSaveTx(void *pSpend,
 
         DataChunk rawTx;
         ABC_CHECK_NEW(base16Decode(rawTx, szRawTx));
-        std::string ntxid;
-        ABC_CHECK_NEW(spend->saveTx(rawTx, ntxid));
-        *pszTxId = stringCopy(ntxid);
+        std::string txid;
+        ABC_CHECK_NEW(spend->saveTx(rawTx, txid));
+        *pszTxId = stringCopy(txid);
     }
 
 exit:
@@ -1669,9 +1669,9 @@ tABC_CC ABC_SpendApprove(void *pSpend,
         ABC_CHECK_NEW(spend->signTx(rawTx));
         ABC_CHECK_NEW(spend->broadcastTx(rawTx));
 
-        std::string ntxid;
-        ABC_CHECK_NEW(spend->saveTx(rawTx, ntxid));
-        *pszTxId = stringCopy(ntxid);
+        std::string txid;
+        ABC_CHECK_NEW(spend->saveTx(rawTx, txid));
+        *pszTxId = stringCopy(txid);
     }
 
 exit:
@@ -1723,7 +1723,11 @@ tABC_CC ABC_GetTransaction(const char *szUserName,
 
     {
         ABC_GET_WALLET();
-        ABC_CHECK_RET(ABC_TxGetTransaction(*wallet, szID, ppTransaction, pError));
+
+        TxInfo info;
+        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
+                                               wallet->addresses.list()));
+        *ppTransaction = makeTxInfo(*wallet, info);
     }
 
 exit:
@@ -1755,8 +1759,6 @@ tABC_CC ABC_GetTransactions(const char *szUserName,
         ABC_GET_WALLET();
         ABC_CHECK_RET(ABC_TxGetTransactions(*wallet, startTime, endTime, paTransactions,
                                             pCount, pError));
-        ABC_CHECK_NEW(bridgeFilterTransactions(*wallet,
-                                               *paTransactions, pCount));
     }
 
 exit:
@@ -1846,11 +1848,15 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
     {
         ABC_GET_WALLET();
 
-        Tx tx;
-        ABC_CHECK_NEW(wallet->txs.get(tx, szID));
-        tx.metadata = pDetails;
-        tx.internal = true;
-        ABC_CHECK_NEW(wallet->txs.save(tx));
+        TxInfo info;
+        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
+                                               wallet->addresses.list()));
+
+        Tx meta;
+        ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));
+        meta.metadata = pDetails;
+        meta.internal = true;
+        ABC_CHECK_NEW(wallet->txs.save(meta));
     }
 
 exit:
@@ -1882,9 +1888,13 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
     {
         ABC_GET_WALLET();
 
-        Tx tx;
-        ABC_CHECK_NEW(wallet->txs.get(tx, szID));
-        *ppDetails = tx.metadata.toDetails();
+        TxInfo info;
+        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
+                                               wallet->addresses.list()));
+
+        Tx meta;
+        ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));
+        *ppDetails = meta.metadata.toDetails();
     }
 
 exit:
@@ -2590,7 +2600,7 @@ exit:
  * @param szTxId The "non-malleable" transaction id
  * @param height Pointer to integer to store the results
  */
-tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szNtxid,
+tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxid,
                      int *height, tABC_Error *pError)
 {
     // Cannot use ABC_PROLOG - too much debug spew
@@ -2599,18 +2609,16 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szNtxid,
     ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized,
                      "The core library has not been initalized");
 
-    ABC_CHECK_NULL(szNtxid);
+    ABC_CHECK_NULL(szTxid);
 
     {
         ABC_GET_WALLET_N();
 
         bc::hash_digest hash;
-        if (!bc::decode_hash(hash, szNtxid))
-            ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
+        if (!bc::decode_hash(hash, szTxid))
+            ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
 
-        long long out;
-        ABC_CHECK_NEW(wallet->txCache.ntxidHeight(out, hash));
-        *height = out;
+        *height = wallet->txCache.txidHeight(hash);
     }
 
 exit:
@@ -2853,8 +2861,6 @@ tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
         ABC_CHECK_RET(ABC_TxGetTransactions(*wallet, startTime, endTime,
                                             &paTransactions, &count, pError));
         ABC_CHECK_ASSERT(0 != count, ABC_CC_NoTransaction, "No transactions to export");
-        ABC_CHECK_NEW(bridgeFilterTransactions(*wallet,
-                                               paTransactions, &count));
 
         ABC_CHECK_RET(ABC_ExportFormatCsv(paTransactions, count, szCsvData, pError));
     }
@@ -2882,8 +2888,6 @@ tABC_CC ABC_QBOExport(const char *szUserName, /* DEPRECATED */
         ABC_CHECK_RET(ABC_TxGetTransactions(*wallet, startTime, endTime,
                                             &paTransactions, &count, pError));
         ABC_CHECK_ASSERT(0 != count, ABC_CC_NoTransaction, "No transactions to export");
-        ABC_CHECK_NEW(bridgeFilterTransactions(*wallet,
-                                               paTransactions, &count));
 
         std::string out;
         ABC_CHECK_NEW(exportFormatQBO(out, paTransactions, count));

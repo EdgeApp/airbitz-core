@@ -83,7 +83,6 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
     const char *szInputAddresses = "IN_ADDRESSES";
     const char *szOutputAddresses = "OUT_ADDRESSES";
     const char *szCsvTxid = "TXID";
-    const char *szCsvNtxid = "NTXID";
 
     ABC_CHECK_NULL(szCsvRec);
 
@@ -92,7 +91,7 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
 
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
-             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
              szDateCreation,
              szTimeCreation,
              szName,
@@ -105,7 +104,6 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
              szInputAddresses,
              szOutputAddresses,
              szCsvTxid,
-             szCsvNtxid,
              ABC_CSV_REC_TERM_NAME);
 exit:
     return cc;
@@ -201,7 +199,6 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec,
     char *szInputAddresses;
     char *szOutputAddresses;
     char *szCsvTxid;
-    char *szCsvNtxid;
 
     char buff[MAX_DATE_TIME_SIZE];
     char *pFormatted = NULL;
@@ -264,18 +261,15 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec,
     ABC_CSV_INIT(tmpCsvVar, pFormatted);
     ABC_CSV_FMT(tmpCsvVar, szOutputAddresses);
 
-    ABC_CSV_INIT(tmpCsvVar, data->szMalleableTxId);
-    ABC_CSV_FMT(tmpCsvVar, szCsvTxid);
-
     ABC_CSV_INIT(tmpCsvVar, data->szID);
-    ABC_CSV_FMT(tmpCsvVar, szCsvNtxid);
+    ABC_CSV_FMT(tmpCsvVar, szCsvTxid);
 
     /* Allocated enough space for one CSV REC - Determined by adding all field when quoted */
     ABC_STR_NEW(*szCsvRec, ABC_CSV_MAX_REC_SZ+1);
 
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
-             "%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+             "%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
              szDateCreation,
              szTimeCreation,
              szName,
@@ -288,7 +282,6 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec,
              szInputAddresses,
              szOutputAddresses,
              szCsvTxid,
-             szCsvNtxid,
              ABC_CSV_REC_TERM_VALUE);
 
     ABC_FREE(szTimeCreation);
@@ -301,7 +294,6 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec,
     ABC_FREE(szAmtAirbitzBTC);
     ABC_FREE(szAmtFeesMinersBTC);
     ABC_FREE(szCsvTxid);
-    ABC_FREE(szCsvNtxid);
     ABC_FREE(pFormatted);
 
 
@@ -411,7 +403,7 @@ exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data)
     std::string trtype;
     std::string date_time;
     std::string amount(amountFormatted.get());
-    std::string txid(data->szMalleableTxId);
+    std::string txid(data->szID);
     std::string payee(pDetails->szName);
     std::string trname;
     std::string exchangeRate;

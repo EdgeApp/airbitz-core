@@ -12,13 +12,15 @@
 
 namespace abcd {
 
-struct TxMetadata;
+struct TxInfo;
 class Wallet;
 
-tABC_CC ABC_TxGetTransaction(Wallet &self,
-                             const std::string &ntxid,
-                             tABC_TxInfo **ppTransaction,
-                             tABC_Error *pError);
+/**
+ * Converts the modern `TxInfo` structure to the API's `tABC_TxInfo` structure,
+ * using information from the wallet's metadatabase.
+ */
+tABC_TxInfo *
+makeTxInfo(Wallet &self, const TxInfo &info);
 
 tABC_CC ABC_TxGetTransactions(Wallet &self,
                               int64_t startTime,
@@ -37,11 +39,6 @@ void ABC_TxFreeTransaction(tABC_TxInfo *pTransactions);
 
 void ABC_TxFreeTransactions(tABC_TxInfo **aTransactions,
                             unsigned int count);
-
-Status
-bridgeFilterTransactions(Wallet &self,
-                         tABC_TxInfo **aTransactions,
-                         unsigned int *pCount);
 
 } // namespace abcd
 

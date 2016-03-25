@@ -52,6 +52,18 @@ structAlloc()
     return out;
 }
 
+/**
+ * Allocates a C-style array.
+ */
+template<typename T> T *
+arrayAlloc(size_t count)
+{
+    auto out = static_cast<T *>(calloc(count, sizeof(T)));
+    if (!out)
+        throw std::bad_alloc();
+    return out;
+}
+
 #ifdef DEBUG
 #define ABC_LOG_ERROR(code, err_string) \
     { \
