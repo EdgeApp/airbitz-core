@@ -6,7 +6,6 @@
  */
 
 #include "../Command.hpp"
-#include "../Util.hpp"
 #include "../../abcd/account/Account.hpp"
 #include "../../abcd/crypto/Encoding.hpp"
 #include "../../abcd/exchange/Currency.hpp"
@@ -93,8 +92,6 @@ COMMAND(InitLevel::wallet, CliWalletInfo, "wallet-info",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     // Obtain the balance:
-    WatcherThread thread;
-    ABC_CHECK(thread.init(session));
     int64_t balance;
     ABC_CHECK(session.wallet->balance(balance));
 
