@@ -12,7 +12,7 @@
 #include "PaymentProto.hpp"
 #include "../Context.hpp"
 #include "../General.hpp"
-#include "../bitcoin/TxDatabase.hpp"
+#include "../bitcoin/TxCache.hpp"
 #include "../bitcoin/Utility.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../util/Debug.hpp"
@@ -90,7 +90,7 @@ Spend::calculateFees(uint64_t &totalFees)
 Status
 Spend::calculateMax(uint64_t &maxSatoshi)
 {
-    auto utxos = wallet_.txdb.get_utxos(wallet_.addresses.list(), true);
+    auto utxos = wallet_.txCache.get_utxos(wallet_.addresses.list(), true);
 
     bc::transaction_type tx;
     tx.version = 1;
@@ -119,7 +119,7 @@ Spend::signTx(DataChunk &result)
 
     // Sign the transaction:
     KeyTable keys = wallet_.addresses.keyTable();
-    ABC_CHECK(abcd::signTx(tx, wallet_.txdb, keys));
+    ABC_CHECK(abcd::signTx(tx, wallet_.txCache, keys));
     result.resize(satoshi_raw_size(tx));
     bc::satoshi_save(tx, result.begin());
 
@@ -177,14 +177,14 @@ Spend::saveTx(DataSlice rawTx, std::string &ntxidOut)
     auto ntxid = bc::encode_hash(makeNtxid(tx));
 
     // Save to the transaction cache:
-    if (wallet_.txdb.insert(tx))
+    if (wallet_.txCache.insert(tx))
         watcherSave(wallet_).log(); // Failure is not fatal
     ABC_CHECK(wallet_.addresses.markOutputs(txid));
 
     // Calculate the amounts:
     int64_t amount, fee;
-    ABC_CHECK(wallet_.txdb.ntxidAmounts(ntxid, wallet_.addresses.list(),
-                                        amount, fee));
+    ABC_CHECK(wallet_.txCache.ntxidAmounts(ntxid, wallet_.addresses.list(),
+                                           amount, fee));
 
     // Create Airbitz metadata:
     Tx txInfo;
@@ -278,10 +278,10 @@ Spend::makeTx(libbitcoin::transaction_type &result,
     // Check if enough confirmed inputs are available,
     // otherwise use unconfirmed inputs too:
     uint64_t fee, change;
-    auto utxos = wallet_.txdb.get_utxos(wallet_.addresses.list(), true);
+    auto utxos = wallet_.txCache.get_utxos(wallet_.addresses.list(), true);
     if (!inputsPickOptimal(fee, change, tx, utxos))
     {
-        auto utxos = wallet_.txdb.get_utxos(wallet_.addresses.list(), false);
+        auto utxos = wallet_.txCache.get_utxos(wallet_.addresses.list(), false);
         ABC_CHECK(inputsPickOptimal(fee, change, tx, utxos));
     }
 

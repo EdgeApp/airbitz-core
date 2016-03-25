@@ -20,7 +20,7 @@ namespace abcd {
 class Wallet;
 
 /**
- * Saves a transaction to the txdb after sweeping.
+ * Saves a transaction to the metadatabase after sweeping.
  */
 Status
 txSweepSave(Wallet &self,

@@ -7,7 +7,7 @@
 
 #include "TxInfo.hpp"
 #include "TxDetails.hpp"
-#include "../abcd/bitcoin/TxDatabase.hpp"
+#include "../abcd/bitcoin/TxCache.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include "../abcd/util/Util.hpp"
 
@@ -47,9 +47,9 @@ tABC_CC ABC_TxGetTransaction(Wallet &self,
     pTransaction->szMalleableTxId = stringCopy(tx.txid);
     pTransaction->timeCreation = tx.timeCreation;
     pTransaction->pDetails = tx.metadata.toDetails();
-    ABC_CHECK_NEW(self.txdb.ntxidAmounts(ntxid, self.addresses.list(),
-                                         pTransaction->pDetails->amountSatoshi,
-                                         pTransaction->pDetails->amountFeesMinersSatoshi));
+    ABC_CHECK_NEW(self.txCache.ntxidAmounts(ntxid, self.addresses.list(),
+                                            pTransaction->pDetails->amountSatoshi,
+                                            pTransaction->pDetails->amountFeesMinersSatoshi));
     ABC_CHECK_NEW(txGetOutputs(self, tx.ntxid,
                                &pTransaction->aOutputs, &pTransaction->countOutputs));
 
@@ -227,7 +227,7 @@ txGetOutputs(Wallet &self, const std::string &ntxid,
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, ntxid))
         return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
-    auto tx = self.txdb.ntxidLookup(hash);
+    auto tx = self.txCache.ntxidLookup(hash);
     auto txid = bc::encode_hash(bc::hash_transaction(tx));
 
     // Create the array:
@@ -249,7 +249,7 @@ txGetOutputs(Wallet &self, const std::string &ntxid,
         out->input = true;
         out->szAddress = stringCopy(addr.encoded());
 
-        auto tx = self.txdb.txidLookup(prev.hash);
+        auto tx = self.txCache.txidLookup(prev.hash);
         if (prev.index < tx.outputs.size())
         {
             out->value = tx.outputs[prev.index].value;
@@ -484,7 +484,7 @@ bridgeFilterTransactions(Wallet &self,
         bc::hash_digest ntxid;
         if (!bc::decode_hash(ntxid, pTx->szID))
             return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
-        if (self.txdb.ntxidExists(ntxid))
+        if (self.txCache.ntxidExists(ntxid))
         {
             *di++ = pTx;
         }

@@ -21,7 +21,7 @@
 namespace abcd {
 
 class Account;
-class TxDatabase;
+class TxCache;
 
 /**
  * Manages the information stored in the top-level wallet sync directory.
@@ -100,7 +100,7 @@ public:
     AddressCache addressCache;
     AddressDb addresses;
     TxMetaDb txs;
-    TxDatabase &txdb;
+    TxCache &txCache;
 };
 
 } // namespace abcd

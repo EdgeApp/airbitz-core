@@ -33,7 +33,7 @@ TxUpdater::~TxUpdater()
     disconnect();
 }
 
-TxUpdater::TxUpdater(TxDatabase &db, AddressCache &addressCache, void *ctx,
+TxUpdater::TxUpdater(TxCache &db, AddressCache &addressCache, void *ctx,
                      TxCallbacks &callbacks):
     db_(db),
     addressCache_(addressCache),

@@ -39,11 +39,11 @@ typedef std::set<std::string> AddressSet;
  * The fork-detection algorithm isn't perfect yet, since obelisk doesn't
  * provide the necessary information.
  */
-class TxDatabase
+class TxCache
 {
 public:
-    ~TxDatabase();
-    TxDatabase(unsigned unconfirmed_timeout=60*60);
+    ~TxCache();
+    TxCache(unsigned unconfirmed_timeout=60*60);
 
     /**
      * Returns the highest block that this database has seen.
@@ -123,7 +123,7 @@ public:
 private:
     friend class TxUpdater;
     friend class TxFilter;
-    friend class TxDatabaseTest;
+    friend class TxCacheTest;
 
     /**
      * A single row in the transaction database.

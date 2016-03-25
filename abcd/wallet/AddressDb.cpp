@@ -7,7 +7,7 @@
 
 #include "AddressDb.hpp"
 #include "Wallet.hpp"
-#include "../bitcoin/TxDatabase.hpp"
+#include "../bitcoin/TxCache.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/Debug.hpp"
@@ -260,7 +260,7 @@ AddressDb::markOutputs(const std::string &txid)
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, txid))
         return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
-    auto tx = wallet_.txdb.txidLookup(hash);
+    auto tx = wallet_.txCache.txidLookup(hash);
 
     for (const auto &o: tx.outputs)
     {

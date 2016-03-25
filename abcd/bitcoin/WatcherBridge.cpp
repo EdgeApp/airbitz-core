@@ -39,7 +39,7 @@ private:
 public:
     WatcherInfo(Wallet &wallet):
         parent_(wallet.shared_from_this()),
-        watcher(wallet.txdb, wallet.addressCache),
+        watcher(wallet.txCache, wallet.addressCache),
         wallet(wallet)
     {
     }
@@ -91,7 +91,7 @@ watcherDeleteCache(Wallet &self)
 Status
 watcherSave(Wallet &self)
 {
-    auto data = self.txdb.serialize();
+    auto data = self.txCache.serialize();
     ABC_CHECK(fileSave(data, self.paths.watcherPath()));
 
     return Status();
@@ -266,13 +266,13 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     // Find utxos for this address:
     AddressSet addresses;
     addresses.insert(sweep.address);
-    auto utxos = watcherInfo->wallet.txdb.get_utxos(addresses);
+    auto utxos = watcherInfo->wallet.txCache.get_utxos(addresses);
 
     // Bail out if there are no funds to sweep:
     if (!utxos.size())
     {
         // Tell the GUI if there were funds in the past:
-        if (watcherInfo->wallet.txdb.has_history(sweep.address))
+        if (watcherInfo->wallet.txCache.has_history(sweep.address))
         {
             ABC_DebugLog("IncomingSweep callback: wallet %s, value: 0",
                          watcherInfo->wallet.id().c_str());
@@ -312,13 +312,13 @@ bridgeDoSweep(WatcherInfo *watcherInfo,
     // Now sign that:
     KeyTable keys;
     keys[sweep.address] = sweep.key;
-    ABC_CHECK(signTx(tx, watcherInfo->wallet.txdb, keys));
+    ABC_CHECK(signTx(tx, watcherInfo->wallet.txCache, keys));
 
     // Send:
     bc::data_chunk raw_tx(satoshi_raw_size(tx));
     bc::satoshi_save(tx, raw_tx.begin());
     ABC_CHECK(broadcastTx(watcherInfo->wallet, raw_tx));
-    if (watcherInfo->wallet.txdb.insert(tx))
+    if (watcherInfo->wallet.txCache.insert(tx))
         watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
 
     // Save the transaction in the metadatabase:

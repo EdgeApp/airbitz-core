@@ -15,7 +15,7 @@
 
 namespace abcd {
 
-class TxDatabase;
+class TxCache;
 
 /**
  * Maps from Bitcoin addresses to WIF-encoded private keys.
@@ -26,7 +26,7 @@ typedef std::map<const std::string, std::string> KeyTable;
  * Fills the transaction's inputs with signatures.
  */
 Status
-signTx(bc::transaction_type &result, const TxDatabase &txdb,
+signTx(bc::transaction_type &result, const TxCache &txCache,
        const KeyTable &keys);
 
 /**

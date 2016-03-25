@@ -61,7 +61,7 @@ private:
 
     // State:
     abcd::AddressSet addresses_;
-    abcd::TxDatabase db_;
+    abcd::TxCache db_;
     abcd::AddressCache addressCache_;
     abcd::TxUpdater updater_;
     bool done_;

@@ -25,7 +25,7 @@ enum
     msg_send
 };
 
-Watcher::Watcher(TxDatabase &db, AddressCache &addressCache):
+Watcher::Watcher(TxCache &db, AddressCache &addressCache):
     socket_(ctx_, ZMQ_PAIR),
     txu_(db, addressCache, ctx_, *this)
 {

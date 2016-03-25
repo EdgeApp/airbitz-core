@@ -7,7 +7,7 @@
 
 #include "Tx.hpp"
 #include "Context.hpp"
-#include "bitcoin/TxDatabase.hpp"
+#include "bitcoin/TxCache.hpp"
 #include "util/Debug.hpp"
 #include "wallet/Wallet.hpp"
 
@@ -51,9 +51,9 @@ txReceiveTransaction(Wallet &self,
         tx.txid = txid;
         tx.timeCreation = time(nullptr);
         tx.internal = false;
-        ABC_CHECK(self.txdb.ntxidAmounts(ntxid, self.addresses.list(),
-                                         tx.metadata.amountSatoshi,
-                                         tx.metadata.amountFeesMinersSatoshi));
+        ABC_CHECK(self.txCache.ntxidAmounts(ntxid, self.addresses.list(),
+                                            tx.metadata.amountSatoshi,
+                                            tx.metadata.amountFeesMinersSatoshi));
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
                       tx.metadata.amountCurrency, tx.metadata.amountSatoshi,
                       static_cast<Currency>(self.currency())));

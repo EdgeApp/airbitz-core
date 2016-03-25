@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "../abcd/bitcoin/TxDatabase.hpp"
+#include "../abcd/bitcoin/TxCache.hpp"
 #include "../abcd/bitcoin/Utility.hpp"
 #include "../abcd/spend/Outputs.hpp"
 #include "../minilibs/catch/catch.hpp"
@@ -15,7 +15,7 @@ namespace abcd {
 /**
  * Fills a transaction database with carefully-crafted test data.
  */
-class TxDatabaseTest
+class TxCacheTest
 {
 public:
     abcd::AddressSet ourAddresses;
@@ -28,7 +28,7 @@ public:
     bc::hash_digest doubleSpendId;
     bc::hash_digest badSpendId;
 
-    TxDatabaseTest(abcd::TxDatabase &txdb)
+    TxCacheTest(abcd::TxCache &txCache)
     {
         // Create an address for ourselves:
         bc::ec_secret ourSecret{{0xff}};
@@ -53,7 +53,7 @@ public:
 
         bc::hash_digest fakeTxid{};
 
-        txdb.at_height(100);
+        txCache.at_height(100);
 
         // One output, not connected to anything:
         bc::transaction_type irrelevant
@@ -67,7 +67,7 @@ public:
             }
         };
         irrelevantId = bc::hash_transaction(irrelevant);
-        txdb.insert(irrelevant);
+        txCache.insert(irrelevant);
 
         // One output to an address we control:
         bc::transaction_type incoming
@@ -81,7 +81,7 @@ public:
             }
         };
         incomingId = bc::hash_transaction(incoming);
-        txdb.insert(incoming);
+        txCache.insert(incoming);
 
         // Two spent outputs to addresses we control (confirmed):
         bc::transaction_type buried
@@ -96,8 +96,8 @@ public:
             }
         };
         buriedId = bc::hash_transaction(buried);
-        txdb.insert(buried);
-        txdb.confirmed(buriedId, 100);
+        txCache.insert(buried);
+        txCache.confirmed(buriedId, 100);
 
         // Spend from buried[0], one output (confirmed):
         bc::transaction_type confirmed
@@ -111,8 +111,8 @@ public:
             }
         };
         confirmedId = bc::hash_transaction(confirmed);
-        txdb.insert(confirmed);
-        txdb.confirmed(confirmedId, 100);
+        txCache.insert(confirmed);
+        txCache.confirmed(confirmedId, 100);
 
         // Double-spend from buried[0]:
         bc::transaction_type doubleSpend
@@ -126,7 +126,7 @@ public:
             }
         };
         doubleSpendId = bc::hash_transaction(doubleSpend);
-        txdb.insert(doubleSpend);
+        txCache.insert(doubleSpend);
 
         // Spend from buried[1], two outputs:
         bc::transaction_type change
@@ -141,7 +141,7 @@ public:
             }
         };
         changeId = bc::hash_transaction(change);
-        txdb.insert(change);
+        txCache.insert(change);
 
         // Spend from doubleSpend[0] and change[0]:
         bc::transaction_type badSpend
@@ -156,7 +156,7 @@ public:
             }
         };
         badSpendId = bc::hash_transaction(badSpend);
-        txdb.insert(badSpend);
+        txCache.insert(badSpend);
     }
 };
 
@@ -184,17 +184,17 @@ hasTxid(const bc::output_info_list &utxos, bc::hash_digest txid, uint32_t index)
 
 TEST_CASE("Transaction database", "[bitcoin][database]")
 {
-    abcd::TxDatabase txdb;
-    abcd::TxDatabaseTest test(txdb);
+    abcd::TxCache txCache;
+    abcd::TxCacheTest test(txCache);
 
     SECTION("height")
     {
-        REQUIRE(txdb.last_height() == 100);
+        REQUIRE(txCache.last_height() == 100);
     }
 
     SECTION("filtered utxos")
     {
-        auto utxos = txdb.get_utxos(test.ourAddresses, true);
+        auto utxos = txCache.get_utxos(test.ourAddresses, true);
         if (false)
             dumpUtxos(utxos);
         REQUIRE(2 == utxos.size());
@@ -205,7 +205,7 @@ TEST_CASE("Transaction database", "[bitcoin][database]")
 
     SECTION("all utxos")
     {
-        auto utxos = txdb.get_utxos(test.ourAddresses, false);
+        auto utxos = txCache.get_utxos(test.ourAddresses, false);
         REQUIRE(3 == utxos.size());
         REQUIRE(hasTxid(utxos, test.incomingId, 0));
         REQUIRE(hasTxid(utxos, test.confirmedId, 0));

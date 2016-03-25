@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "TxDatabase.hpp"
+#include "TxCache.hpp"
 #include "Utility.hpp"
 #include "WatcherBridge.hpp"
 #include "../util/Debug.hpp"
@@ -51,7 +51,7 @@ typedef std::unordered_set<bc::point_type> PointSet;
 class TxFilter
 {
 public:
-    TxFilter(const TxDatabase &cache,
+    TxFilter(const TxCache &cache,
              const PointSet &doubleSpends,
              const AddressSet &addresses):
         cache_(cache),
@@ -65,7 +65,7 @@ public:
      * @param filter true to reject unconfirmed non-change transactions.
      */
     bool
-    check(bc::hash_digest txid, const TxDatabase::TxRow &row, bool filter)
+    check(bc::hash_digest txid, const TxCache::TxRow &row, bool filter)
     {
         // If filter is true, we want to eliminate non-change transactions:
         if (filter && TxState::confirmed != row.state)
@@ -117,37 +117,37 @@ public:
     }
 
 private:
-    const TxDatabase &cache_;
+    const TxCache &cache_;
     const PointSet &doubleSpends_;
     const AddressSet &addresses_;
     std::unordered_map<bc::hash_digest, bool> visited_;
 };
 
-TxDatabase::~TxDatabase()
+TxCache::~TxCache()
 {
 }
 
-TxDatabase::TxDatabase(unsigned unconfirmed_timeout):
+TxCache::TxCache(unsigned unconfirmed_timeout):
     last_height_(0),
     unconfirmed_timeout_(unconfirmed_timeout)
 {
 }
 
-long long TxDatabase::last_height() const
+long long TxCache::last_height() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
     return last_height_;
 }
 
-bool TxDatabase::txidExists(bc::hash_digest txid) const
+bool TxCache::txidExists(bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
     return rows_.find(txid) != rows_.end();
 }
 
-bool TxDatabase::ntxidExists(bc::hash_digest ntxid)
+bool TxCache::ntxidExists(bc::hash_digest ntxid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -155,7 +155,7 @@ bool TxDatabase::ntxidExists(bc::hash_digest ntxid)
     return !txRows.empty();
 }
 
-bc::transaction_type TxDatabase::txidLookup(bc::hash_digest txid) const
+bc::transaction_type TxCache::txidLookup(bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -165,7 +165,7 @@ bc::transaction_type TxDatabase::txidLookup(bc::hash_digest txid) const
     return i->second.tx;
 }
 
-bc::transaction_type TxDatabase::ntxidLookup(bc::hash_digest ntxid)
+bc::transaction_type TxCache::ntxidLookup(bc::hash_digest ntxid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -182,7 +182,7 @@ bc::transaction_type TxDatabase::ntxidLookup(bc::hash_digest ntxid)
     return out;
 }
 
-long long TxDatabase::txidHeight(bc::hash_digest txid) const
+long long TxCache::txidHeight(bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -198,7 +198,7 @@ long long TxDatabase::txidHeight(bc::hash_digest txid) const
 }
 
 Status
-TxDatabase::ntxidHeight(long long &result, bc::hash_digest ntxid)
+TxCache::ntxidHeight(long long &result, bc::hash_digest ntxid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -228,8 +228,8 @@ TxDatabase::ntxidHeight(long long &result, bc::hash_digest ntxid)
 }
 
 Status
-TxDatabase::ntxidAmounts(const std::string &ntxid, const AddressSet &addresses,
-                         int64_t &balance, int64_t &fees)
+TxCache::ntxidAmounts(const std::string &ntxid, const AddressSet &addresses,
+                      int64_t &balance, int64_t &fees)
 {
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, ntxid))
@@ -272,7 +272,7 @@ TxDatabase::ntxidAmounts(const std::string &ntxid, const AddressSet &addresses,
     return Status();
 }
 
-bool TxDatabase::has_history(const bc::payment_address &address) const
+bool TxCache::has_history(const bc::payment_address &address) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -290,8 +290,8 @@ bool TxDatabase::has_history(const bc::payment_address &address) const
     return false;
 }
 
-bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses,
-        bool filter) const
+bc::output_info_list TxCache::get_utxos(const AddressSet &addresses,
+                                        bool filter) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -335,9 +335,9 @@ bc::output_info_list TxDatabase::get_utxos(const AddressSet &addresses,
     return out;
 }
 
-bc::data_chunk TxDatabase::serialize() const
+bc::data_chunk TxCache::serialize() const
 {
-    ABC_DebugLog("ENTER TxDatabase::serialize");
+    ABC_DebugLog("ENTER TxCache::serialize");
     std::lock_guard<std::mutex> lock(mutex_);
 
     std::basic_ostringstream<uint8_t> stream;
@@ -357,7 +357,7 @@ bc::data_chunk TxDatabase::serialize() const
         if (row.second.timestamp + unconfirmed_timeout_ < now &&
                 TxState::unconfirmed == row.second.state)
         {
-            ABC_DebugLog("TxDatabase::serialize Purging unconfirmed tx");
+            ABC_DebugLog("TxCache::serialize Purging unconfirmed tx");
             continue;
         }
 
@@ -383,7 +383,7 @@ bc::data_chunk TxDatabase::serialize() const
 }
 
 Status
-TxDatabase::load(const bc::data_chunk &data)
+TxCache::load(const bc::data_chunk &data)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -463,7 +463,7 @@ TxDatabase::load(const bc::data_chunk &data)
     return Status();
 }
 
-void TxDatabase::dump(std::ostream &out) const
+void TxCache::dump(std::ostream &out) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -500,7 +500,7 @@ void TxDatabase::dump(std::ostream &out) const
     }
 }
 
-bool TxDatabase::insert(const bc::transaction_type &tx)
+bool TxCache::insert(const bc::transaction_type &tx)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -520,20 +520,20 @@ bool TxDatabase::insert(const bc::transaction_type &tx)
 }
 
 void
-TxDatabase::clear()
+TxCache::clear()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     last_height_ = 0;
     rows_.clear();
 }
 
-void TxDatabase::at_height(size_t height)
+void TxCache::at_height(size_t height)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     last_height_ = height;
 }
 
-void TxDatabase::confirmed(bc::hash_digest txid, long long block_height)
+void TxCache::confirmed(bc::hash_digest txid, long long block_height)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -545,7 +545,7 @@ void TxDatabase::confirmed(bc::hash_digest txid, long long block_height)
     row.block_height = block_height;
 }
 
-void TxDatabase::unconfirmed(bc::hash_digest txid)
+void TxCache::unconfirmed(bc::hash_digest txid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -557,7 +557,7 @@ void TxDatabase::unconfirmed(bc::hash_digest txid)
     row.block_height = 0;
 }
 
-void TxDatabase::reset_timestamp(bc::hash_digest txid)
+void TxCache::reset_timestamp(bc::hash_digest txid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -566,7 +566,7 @@ void TxDatabase::reset_timestamp(bc::hash_digest txid)
         i->second.timestamp = time(nullptr);
 }
 
-void TxDatabase::foreach_unconfirmed(HashFn &&f)
+void TxCache::foreach_unconfirmed(HashFn &&f)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -575,8 +575,8 @@ void TxDatabase::foreach_unconfirmed(HashFn &&f)
             f(row.first);
 }
 
-std::vector<TxDatabase::TxRow *>
-TxDatabase::ntxidLookupAll(bc::hash_digest ntxid)
+std::vector<TxCache::TxRow *>
+TxCache::ntxidLookupAll(bc::hash_digest ntxid)
 {
     std::vector<TxRow *> out;
     for (auto &row: rows_)

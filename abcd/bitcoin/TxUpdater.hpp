@@ -9,7 +9,7 @@
 #define ABCD_BITCOIN_TX_UPDATER_HPP
 
 #include "StratumConnection.hpp"
-#include "TxDatabase.hpp"
+#include "TxCache.hpp"
 #include "../util/Status.hpp"
 #include "../../minilibs/libbitcoin-client/client.hpp"
 #include <functional>
@@ -53,7 +53,7 @@ class TxUpdater:
 {
 public:
     ~TxUpdater();
-    TxUpdater(TxDatabase &db, AddressCache &addressCache, void *ctx,
+    TxUpdater(TxCache &db, AddressCache &addressCache, void *ctx,
               TxCallbacks &callbacks);
 
     void disconnect();
@@ -110,7 +110,7 @@ private:
     void sendTx(StatusCallback status, DataSlice tx);
     void query_address(const bc::payment_address &address, int server_index);
 
-    TxDatabase &db_;
+    TxCache &db_;
     AddressCache &addressCache_;
     void *ctx_;
     TxCallbacks &callbacks_;

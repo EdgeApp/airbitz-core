@@ -20,7 +20,7 @@
 #include "../abcd/auth/LoginServer.hpp"
 #include "../abcd/bitcoin/Testnet.hpp"
 #include "../abcd/bitcoin/Text.hpp"
-#include "../abcd/bitcoin/TxDatabase.hpp"
+#include "../abcd/bitcoin/TxCache.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
@@ -2576,7 +2576,7 @@ tABC_CC ABC_WatcherDeleteCache(const char *szWalletUUID, tABC_Error *pError)
     {
         ABC_GET_WALLET_N();
         ABC_CHECK_NEW(watcherDeleteCache(*wallet));
-        wallet->txdb.clear();
+        wallet->txCache.clear();
     }
 
 exit:
@@ -2609,7 +2609,7 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szNtxid,
             ABC_RET_ERROR(ABC_CC_ParseError, "Bad ntxid");
 
         long long out;
-        ABC_CHECK_NEW(wallet->txdb.ntxidHeight(out, hash));
+        ABC_CHECK_NEW(wallet->txCache.ntxidHeight(out, hash));
         *height = out;
     }
 
@@ -2635,7 +2635,7 @@ tABC_CC ABC_BlockHeight(const char *szWalletUUID, int *height,
     {
         ABC_GET_WALLET_N();
 
-        *height = wallet->txdb.last_height();
+        *height = wallet->txCache.last_height();
         if (*height == 0)
         {
             cc = ABC_CC_Synchronizing;

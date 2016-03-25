@@ -9,7 +9,7 @@
 #include "../Context.hpp"
 #include "../account/Account.hpp"
 #include "../auth/LoginServer.hpp"
-#include "../bitcoin/TxDatabase.hpp"
+#include "../bitcoin/TxCache.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
@@ -43,7 +43,7 @@ struct NameJson:
 
 Wallet::~Wallet()
 {
-    delete &txdb;
+    delete &txCache;
 }
 
 Status
@@ -57,7 +57,7 @@ Wallet::create(std::shared_ptr<Wallet> &result, Account &account,
     // Load the transaction cache (failure is acceptable):
     DataChunk data;
     if (fileLoad(data, out->paths.watcherPath()).log())
-        out->txdb.load(data).log();
+        out->txCache.load(data).log();
 
     result = std::move(out);
     return Status();
@@ -137,7 +137,7 @@ Wallet::balance(int64_t &result)
     std::lock_guard<std::mutex> lock(mutex_);
     if (dirty)
     {
-        const auto utxos = txdb.get_utxos(addresses.list(), false);
+        const auto utxos = txCache.get_utxos(addresses.list(), false);
 
         balance_ = 0;
         for (const auto &utxo: utxos)
@@ -175,7 +175,7 @@ Wallet::Wallet(Account &account, const std::string &id):
     balanceDirty_(true),
     addresses(*this),
     txs(*this),
-    txdb(*new TxDatabase())
+    txCache(*new TxCache())
 {}
 
 Status

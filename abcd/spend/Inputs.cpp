@@ -8,7 +8,7 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "../General.hpp"
-#include "../bitcoin/TxDatabase.hpp"
+#include "../bitcoin/TxCache.hpp"
 #include "../bitcoin/Utility.hpp"
 #include "../wallet/Wallet.hpp"
 #include <unistd.h>
@@ -19,14 +19,14 @@ namespace abcd {
 static std::map<bc::data_chunk, std::string> address_map;
 
 Status
-signTx(bc::transaction_type &result, const TxDatabase &txdb,
+signTx(bc::transaction_type &result, const TxCache &txCache,
        const KeyTable &keys)
 {
     for (size_t i = 0; i < result.inputs.size(); ++i)
     {
         // Find the utxo this input refers to:
         bc::input_point &point = result.inputs[i].previous_output;
-        bc::transaction_type tx = txdb.txidLookup(point.hash);
+        bc::transaction_type tx = txCache.txidLookup(point.hash);
 
         // Find the address for that utxo:
         bc::payment_address pa;
