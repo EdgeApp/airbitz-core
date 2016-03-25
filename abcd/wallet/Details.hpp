@@ -24,13 +24,6 @@ void
 ABC_TxDetailsFree(tABC_TxDetails *pDetails);
 
 /**
- * Duplicate a TX details struct
- */
-tABC_CC
-ABC_TxDetailsCopy(tABC_TxDetails **ppNewDetails,
-                  const tABC_TxDetails *pOldDetails, tABC_Error *pError);
-
-/**
  * Decodes the transaction details data from a json transaction or address object
  *
  * @param ppInfo Pointer to store allocated meta info

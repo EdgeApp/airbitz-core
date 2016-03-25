@@ -1233,10 +1233,6 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
                                   tABC_TxDetails **ppDetails,
                                   tABC_Error *pError);
 
-tABC_CC ABC_DuplicateTxDetails(tABC_TxDetails **ppNewDetails,
-                               const tABC_TxDetails *pOldDetails,
-                               tABC_Error *pError);
-
 void ABC_FreeTxDetails(tABC_TxDetails *pDetails);
 
 /* === Wallet watcher: === */

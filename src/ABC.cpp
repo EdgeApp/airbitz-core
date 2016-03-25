@@ -1922,26 +1922,6 @@ exit:
 }
 
 /**
- * Duplicates transaction details.
- * This can be used when changing the details on a transaction.
- *
- * @param ppNewDetails  Address to store pointer to copy of details
- * @param pOldDetails   Ptr to details to copy
- * @param pError        A pointer to the location to store the error if there is one
- */
-tABC_CC ABC_DuplicateTxDetails(tABC_TxDetails **ppNewDetails,
-                               const tABC_TxDetails *pOldDetails,
-                               tABC_Error *pError)
-{
-    ABC_PROLOG();
-
-    ABC_CHECK_RET(ABC_TxDetailsCopy(ppNewDetails, pOldDetails, pError));
-
-exit:
-    return cc;
-}
-
-/**
  * Frees the given transaction details
  *
  * @param pDetails Ptr to details to free

@@ -35,38 +35,6 @@ ABC_TxDetailsFree(tABC_TxDetails *pDetails)
 }
 
 tABC_CC
-ABC_TxDetailsCopy(tABC_TxDetails **ppNewDetails,
-                  const tABC_TxDetails *pOldDetails, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    AutoFree<tABC_TxDetails, ABC_TxDetailsFree>
-    pNewDetails(structAlloc<tABC_TxDetails>());
-
-    ABC_CHECK_NULL(ppNewDetails);
-    ABC_CHECK_NULL(pOldDetails);
-
-    pNewDetails->amountSatoshi  = pOldDetails->amountSatoshi;
-    pNewDetails->amountFeesAirbitzSatoshi = pOldDetails->amountFeesAirbitzSatoshi;
-    pNewDetails->amountFeesMinersSatoshi = pOldDetails->amountFeesMinersSatoshi;
-    pNewDetails->amountCurrency  = pOldDetails->amountCurrency;
-    pNewDetails->bizId = pOldDetails->bizId;
-    pNewDetails->attributes = pOldDetails->attributes;
-    if (pOldDetails->szName)
-        pNewDetails->szName = stringCopy(pOldDetails->szName);
-    if (pOldDetails->szCategory)
-        pNewDetails->szCategory = stringCopy(pOldDetails->szCategory);
-    if (pOldDetails->szNotes)
-        pNewDetails->szNotes = stringCopy(pOldDetails->szNotes);
-
-    // set the pointer for the caller
-    *ppNewDetails = pNewDetails.release();
-
-exit:
-    return cc;
-}
-
-tABC_CC
 ABC_TxDetailsDecode(json_t *pJSON_Obj, tABC_TxDetails **ppDetails,
                     tABC_Error *pError)
 {
