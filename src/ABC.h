@@ -316,10 +316,6 @@ typedef struct sABC_TxOutput
     int64_t  value;
     /** The coin address **/
     const char *szAddress;
-    /** The tx address **/
-    const char *szTxId;
-    /** The tx index **/
-    int64_t  index;
 } tABC_TxOutput;
 
 /**

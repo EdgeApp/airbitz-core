@@ -247,7 +247,6 @@ txGetOutputs(Wallet &self, const std::string &ntxid,
 
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = true;
-        out->szTxId = stringCopy(bc::encode_hash(prev.hash));
         out->szAddress = stringCopy(addr.encoded());
 
         auto tx = self.txdb.txidLookup(prev.hash);
@@ -266,7 +265,6 @@ txGetOutputs(Wallet &self, const std::string &ntxid,
         tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
         out->input = false;
         out->value = output.value;
-        out->szTxId = stringCopy(txid);
         out->szAddress = stringCopy(addr.encoded());
 
         aOutputs[i] = out;
@@ -355,7 +353,6 @@ void ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count)
             if (pOutput)
             {
                 ABC_FREE_STR(pOutput->szAddress);
-                ABC_FREE_STR(pOutput->szTxId);
                 ABC_CLEAR_FREE(pOutput, sizeof(tABC_TxOutput));
             }
         }
