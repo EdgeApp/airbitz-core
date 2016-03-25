@@ -60,7 +60,7 @@ public:
         {
             0, 0,
             {
-                {{fakeTxid, 0}, {}, 0}
+                {{fakeTxid, 0}, {}, 0xfffffffc} // replace-by-fee
             },
             {
                 {1, otherReceive}
@@ -74,7 +74,7 @@ public:
         {
             0, 0,
             {
-                {{fakeTxid, 1}, {}, 0}
+                {{fakeTxid, 1}, {}, 0xffffffff}
             },
             {
                 {2, ourReceive}
@@ -88,7 +88,7 @@ public:
         {
             0, 0,
             {
-                {{fakeTxid, 2}, {}, 0}
+                {{fakeTxid, 2}, {}, 0xffffffff}
             },
             {
                 {3, ourReceive},
@@ -104,7 +104,7 @@ public:
         {
             0, 0,
             {
-                {{buriedId, 0}, ourSpend, 0}
+                {{buriedId, 0}, ourSpend, 0xffffffff}
             },
             {
                 {5, ourReceive}
@@ -119,7 +119,7 @@ public:
         {
             0, 0,
             {
-                {{buriedId, 0}, ourSpend, 0}
+                {{buriedId, 0}, ourSpend, 0xffffffff}
             },
             {
                 {6, ourReceive}
@@ -133,7 +133,7 @@ public:
         {
             0, 0,
             {
-                {{buriedId, 1}, ourSpend, 0}
+                {{buriedId, 1}, ourSpend, 0xffffffff}
             },
             {
                 {7, ourReceive},
@@ -148,8 +148,8 @@ public:
         {
             0, 0,
             {
-                {{doubleSpendId, 0}, ourSpend, 0},
-                {{changeId, 0}, ourSpend, 0}
+                {{doubleSpendId, 0}, ourSpend, 0xffffffff},
+                {{changeId, 0}, ourSpend, 0xffffffff}
             },
             {
                 {9, ourReceive}

@@ -23,6 +23,12 @@ bc::hash_digest
 makeNtxid(bc::transaction_type tx);
 
 /**
+ * Returns true if a transaction opts in to RBF semantics.
+ */
+bool
+isReplaceByFee(const bc::transaction_type &tx);
+
+/**
  * Bundles the provided data into a script push operation.
  */
 bc::operation

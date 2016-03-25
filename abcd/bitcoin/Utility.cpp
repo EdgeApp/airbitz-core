@@ -17,6 +17,15 @@ makeNtxid(bc::transaction_type tx)
     return bc::hash_transaction(tx, bc::sighash::all);
 }
 
+bool
+isReplaceByFee(const bc::transaction_type &tx)
+{
+    for (const auto input: tx.inputs)
+        if (input.sequence < 0xffffffff - 1)
+            return true;
+    return false;
+}
+
 bc::operation
 makePushOperation(bc::data_slice data)
 {

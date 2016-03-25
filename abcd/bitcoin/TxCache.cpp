@@ -43,7 +43,7 @@ typedef std::unordered_set<bc::hash_digest> TxidSet;
 typedef std::unordered_set<bc::point_type> PointSet;
 
 /**
- * Knows how to check a transaction for double-spends.
+ * Knows how to check a transaction for double-spends and other problems.
  * This uses a memoized recursive function to do the graph search,
  * so the more checks this object performs,
  * the faster those checks can potentially become (for a fixed graph).
@@ -51,6 +51,9 @@ typedef std::unordered_set<bc::point_type> PointSet;
 class TxGraph
 {
 public:
+    static constexpr unsigned doubleSpent = 1 << 0;
+    static constexpr unsigned replaceByFee = 1 << 1;
+
     TxGraph(const TxCache &cache):
         cache_(cache)
     {
@@ -73,11 +76,11 @@ public:
     }
 
     /**
-     * Recursively checks the transaction graph for double-spends.
-     * @return true if the transaction never sources a double spend.
+     * Recursively checks the transaction graph for problems.
+     * @return A bitfield containing problem flags.
      */
-    bool
-    isSafe(bc::hash_digest txid)
+    unsigned
+    problems(bc::hash_digest txid)
     {
         // Just use the previous result if we have been here before:
         auto vi = visited_.find(txid);
@@ -87,21 +90,25 @@ public:
         // We have to assume missing transactions are safe:
         auto i = cache_.rows_.find(txid);
         if (cache_.rows_.end() == i)
-            return (visited_[txid] = true);
+            return (visited_[txid] = 0);
 
         // Confirmed transactions are also safe:
         if (TxState::confirmed == i->second.state)
-            return (visited_[txid] = true);
+            return (visited_[txid] = 0);
 
-        // Recursively check all the inputs against the double-spend list:
+        // Check for the opt-in replace-by-fee flag:
+        unsigned out = 0;
+        if (isReplaceByFee(i->second.tx))
+            out |= replaceByFee;
+
+        // Recursively check all the inputs:
         for (const auto &input: i->second.tx.inputs)
         {
+            out |= problems(input.previous_output.hash);
             if (doubleSpends_.count(input.previous_output))
-                return (visited_[txid] = false);
-            if (!isSafe(input.previous_output.hash))
-                return (visited_[txid] = false);
+                out |= doubleSpent;
         }
-        return (visited_[txid] = true);
+        return (visited_[txid] = out);
     }
 
 private:
@@ -302,7 +309,7 @@ bc::output_info_list TxCache::get_utxos(const AddressSet &addresses,
             if (!graph.isSpent(point) &&
                     bc::extract(address, output.script) &&
                     addresses.count(address.encoded()) &&
-                    graph.isSafe(row.first) &&
+                    !graph.problems(row.first) &&
                     !(filter && isIncoming(row.second, addresses)))
             {
                 bc::output_info_type info = {point, output.value};
