@@ -2484,18 +2484,6 @@ exit:
 }
 
 /**
- * Deprecated. Does nothing.
- */
-tABC_CC ABC_WatchAddresses(const char *szUserName, const char *szPassword,
-                           const char *szWalletUUID, tABC_Error *pError)
-{
-    ABC_PROLOG();
-
-exit:
-    return cc;
-}
-
-/**
  * Watch a single address for a wallet.
  * Pass a nullptr address to cancel the priority poll.
  *
