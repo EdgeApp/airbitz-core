@@ -199,13 +199,18 @@ bc::client::sleep_time TxUpdater::wakeup()
 
     for (const auto c: connections_)
     {
+        // If anything goes wrong, we will keep hitting the same address.
+        // This will break us out of the loop when that happens:
+        std::string last_address;
+
         while (c->queued_queries_ < max_queries)
         {
             std::string address;
             next_wakeup = bc::client::min_sleep(next_wakeup,
                                                 addressCache_.nextWakeup(address));
-            if (address.empty())
+            if (address.empty() || last_address == address)
                 break;
+            last_address = address;
 
             ABC_DebugLog("Check address %s", address.c_str());
             addressCache_.checkBegin(address);
