@@ -13,6 +13,7 @@
 namespace abcd {
 
 struct TxInfo;
+struct TxStatus;
 class Wallet;
 
 /**
@@ -20,7 +21,7 @@ class Wallet;
  * using information from the wallet's metadatabase.
  */
 tABC_TxInfo *
-makeTxInfo(Wallet &self, const TxInfo &info);
+makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status);
 
 tABC_CC ABC_TxGetTransactions(Wallet &self,
                               int64_t startTime,

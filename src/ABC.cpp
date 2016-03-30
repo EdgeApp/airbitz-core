@@ -1725,9 +1725,11 @@ tABC_CC ABC_GetTransaction(const char *szUserName,
         ABC_GET_WALLET();
 
         TxInfo info;
+        TxStatus status;
         ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
                                                wallet->addresses.list()));
-        *ppTransaction = makeTxInfo(*wallet, info);
+        ABC_CHECK_NEW(wallet->txCache.txidStatus(status, szID));
+        *ppTransaction = makeTxInfo(*wallet, info, status);
     }
 
 exit:

@@ -274,18 +274,43 @@ TxCache::txidInfo(TxInfo &result, const std::string &txid,
     return Status();
 }
 
-std::list<TxInfo>
+Status
+TxCache::txidStatus(TxStatus &result, const std::string &txid) const
+{
+    bc::hash_digest hash;
+    if (!bc::decode_hash(hash, txid))
+        return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
+
+    TxStatus out;
+    out.height = txidHeight(hash);
+
+    TxGraph graph(*this);
+    const auto problems = graph.problems(hash);
+    out.isDoubleSpent = problems & TxGraph::doubleSpent;
+    out.isReplaceByFee = problems & TxGraph::replaceByFee;
+
+    result = out;
+    return Status();
+}
+
+std::list<std::pair<TxInfo, TxStatus> >
 TxCache::list(const AddressSet &addresses) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::list<TxInfo> out;
+    std::list<std::pair<TxInfo, TxStatus>> out;
 
+    TxGraph graph(*this);
     for (const auto &row: rows_)
     {
         if (isRelevantInternal(row.second.tx, addresses))
         {
-            auto info = txInfoInternal(row.second.tx, addresses);
-            out.push_back(info);
+            std::pair<TxInfo, TxStatus> pair;
+            pair.first = txInfoInternal(row.second.tx, addresses);
+            pair.second.height = row.second.block_height;
+            const auto problems = graph.problems(row.second.txid);
+            pair.second.isDoubleSpent = problems & TxGraph::doubleSpent;
+            pair.second.isReplaceByFee = problems & TxGraph::replaceByFee;
+            out.push_back(pair);
         }
         // TODO: Merge by ntxid
     }

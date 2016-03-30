@@ -338,6 +338,12 @@ typedef struct sABC_TxInfo
     tABC_TxOutput **aOutputs;
     /** transaction details */
     tABC_TxDetails *pDetails;
+    /** The confirmation height of the transaction, or 0 for unconfirmed. */
+    unsigned long height;
+    /** True if the transaction is a double-spend. */
+    bool bDoubleSpent;
+    /** True if the transaction is eligible for replacement-by-fee. */
+    bool bReplaceByFee;
 } tABC_TxInfo;
 
 /**

@@ -20,7 +20,7 @@ static int      ABC_TxStrStr(const char *haystack, const char *needle,
                              tABC_Error *pError);
 
 tABC_TxInfo *
-makeTxInfo(Wallet &self, const TxInfo &info)
+makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
 {
     auto out = structAlloc<tABC_TxInfo>();
 
@@ -55,6 +55,11 @@ makeTxInfo(Wallet &self, const TxInfo &info)
     out->pDetails->amountSatoshi = info.balance;
     out->pDetails->amountFeesMinersSatoshi = info.fee;
 
+    // Status:
+    out->height = status.height;
+    out->bDoubleSpent = status.isDoubleSpent;
+    out->bReplaceByFee = status.isReplaceByFee;
+
     return out;
 }
 
@@ -83,7 +88,7 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
     const auto infos = self.txCache.list(self.addresses.list());
     for (const auto &info: infos)
     {
-        pTransaction = makeTxInfo(self, info);
+        pTransaction = makeTxInfo(self, info.first, info.second);
 
         if ((endTime == ABC_GET_TX_ALL_TIMES) ||
                 (pTransaction->timeCreation >= startTime &&

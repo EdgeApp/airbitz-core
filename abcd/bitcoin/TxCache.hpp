@@ -52,6 +52,17 @@ struct TxInfo
 };
 
 /**
+ * Transaction confirmation & safety status.
+ */
+struct TxStatus
+{
+    TxInfo info;
+    size_t height;
+    bool isDoubleSpent;
+    bool isReplaceByFee;
+};
+
+/**
  * A list of transactions.
  *
  * This will eventually become a full database with queires mirroring what
@@ -105,10 +116,16 @@ public:
              const AddressSet &addresses) const;
 
     /**
+     * Looks up a transaction and returns its confirmation & safety state.
+     */
+    Status
+    txidStatus(TxStatus &result, const std::string &txid) const;
+
+    /**
      * Lists all the transactions relevant to these addresses,
      * along with their information.
      */
-    std::list<TxInfo>
+    std::list<std::pair<TxInfo, TxStatus> >
     list(const AddressSet &addresses) const;
 
     /**
