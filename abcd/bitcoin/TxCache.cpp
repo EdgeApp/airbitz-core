@@ -136,21 +136,17 @@ long long TxCache::last_height() const
     return last_height_;
 }
 
-bool TxCache::txidExists(bc::hash_digest txid) const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    return rows_.find(txid) != rows_.end();
-}
-
-bc::transaction_type TxCache::txidLookup(bc::hash_digest txid) const
+Status
+TxCache::txidLookup(bc::transaction_type &result, bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
     auto i = rows_.find(txid);
-    if (i == rows_.end())
-        return bc::transaction_type();
-    return i->second.tx;
+    if (rows_.end() == i)
+        return ABC_ERROR(ABC_CC_Synchronizing, "Cannot find transaction");
+
+    result = i->second.tx;
+    return Status();
 }
 
 long long TxCache::txidHeight(bc::hash_digest txid) const
@@ -271,7 +267,8 @@ TxCache::txidInfo(TxInfo &result, const std::string &txid,
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, txid))
         return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
-    const auto tx = txidLookup(hash);
+    bc::transaction_type tx;
+    ABC_CHECK(txidLookup(tx, hash));
 
     result = txInfo(tx, addresses);
     return Status();

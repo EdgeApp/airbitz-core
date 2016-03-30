@@ -189,7 +189,8 @@ void Cli::cmd_tx_dump(std::stringstream &args)
     bc::hash_digest txid = read_txid(args);
     if (txid == bc::null_hash)
         return;
-    bc::transaction_type tx = db_.txidLookup(txid);
+    bc::transaction_type tx;
+    db_.txidLookup(tx, txid);
 
     std::basic_ostringstream<uint8_t> stream;
     auto serial = bc::make_serializer(std::ostreambuf_iterator<uint8_t>(stream));
@@ -233,7 +234,8 @@ void Cli::cmd_utxos(std::stringstream &args)
     {
         std::cout << bc::encode_hash(utxo.point.hash) << ":" <<
                   utxo.point.index << std::endl;
-        auto tx = db_.txidLookup(utxo.point.hash);
+        bc::transaction_type tx;
+        db_.txidLookup(tx, utxo.point.hash);
         auto &output = tx.outputs[utxo.point.index];
         bc::payment_address to_address;
         if (bc::extract(to_address, output.script))

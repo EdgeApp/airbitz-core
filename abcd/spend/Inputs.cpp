@@ -26,7 +26,8 @@ signTx(bc::transaction_type &result, const TxCache &txCache,
     {
         // Find the utxo this input refers to:
         bc::input_point &point = result.inputs[i].previous_output;
-        bc::transaction_type tx = txCache.txidLookup(point.hash);
+        bc::transaction_type tx;
+        ABC_CHECK(txCache.txidLookup(tx, point.hash));
 
         // Find the address for that utxo:
         bc::payment_address pa;

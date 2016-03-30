@@ -73,14 +73,10 @@ public:
     long long last_height() const;
 
     /**
-     * Returns true if the database contains the transaction.
-     */
-    bool txidExists(bc::hash_digest txid) const;
-
-    /**
      * Obtains a transaction from the database.
      */
-    bc::transaction_type txidLookup(bc::hash_digest txid) const;
+    Status
+    txidLookup(bc::transaction_type &result, bc::hash_digest txid) const;
 
     /**
      * Finds a transaction's height, or 0 if it is unconfirmed.
