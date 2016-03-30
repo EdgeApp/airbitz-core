@@ -90,7 +90,7 @@ Spend::calculateFees(uint64_t &totalFees)
 Status
 Spend::calculateMax(uint64_t &maxSatoshi)
 {
-    auto utxos = wallet_.txCache.get_utxos(wallet_.addresses.list(), true);
+    auto utxos = wallet_.txCache.get_utxos(wallet_.addresses.list(), false);
 
     bc::transaction_type tx;
     tx.version = 1;
