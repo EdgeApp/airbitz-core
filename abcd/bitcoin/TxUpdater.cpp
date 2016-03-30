@@ -332,7 +332,8 @@ void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx,
 {
     db_.reset_timestamp(txid);
     std::string str = bc::encode_hash(txid);
-    if (!db_.txidExists(txid))
+    bc::transaction_type tx;
+    if (!db_.txidLookup(tx, txid))
     {
 
         ABC_DebugLevel(1,
@@ -359,7 +360,7 @@ void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx,
         {
             ABC_DebugLevel(2,"*** watch_tx idx=%d getting inputs for tx=%s ****", idx,
                            str.c_str());
-            get_inputs(db_.txidLookup(txid), idx);
+            get_inputs(tx, idx);
         }
     }
 }

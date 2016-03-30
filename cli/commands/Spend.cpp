@@ -33,11 +33,11 @@ COMMAND(InitLevel::wallet, SpendAddress, "spend-address",
               << std::endl;
 
     DataChunk rawTx;
-    std::string ntxid;
+    std::string txid;
     ABC_CHECK(spend.signTx(rawTx));
     ABC_CHECK(spend.broadcastTx(rawTx));
-    ABC_CHECK(spend.saveTx(rawTx, ntxid));
-    std::cout << "Transaction id: " << ntxid << std::endl;
+    ABC_CHECK(spend.saveTx(rawTx, txid));
+    std::cout << "Transaction id: " << txid << std::endl;
 
     bool dirty;
     ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
@@ -69,11 +69,11 @@ COMMAND(InitLevel::wallet, SpendBip70, "spend-bip70",
               << metadata.name << std::endl;
 
     DataChunk rawTx;
-    std::string ntxid;
+    std::string txid;
     ABC_CHECK(spend.signTx(rawTx));
     ABC_CHECK(spend.broadcastTx(rawTx));
-    ABC_CHECK(spend.saveTx(rawTx, ntxid));
-    std::cout << "Transaction id: " << ntxid << std::endl;
+    ABC_CHECK(spend.saveTx(rawTx, txid));
+    std::cout << "Transaction id: " << txid << std::endl;
 
     bool dirty;
     ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
@@ -113,11 +113,11 @@ COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer",
     ABC_CHECK(spend.metadataSet(metadata));
 
     DataChunk rawTx;
-    std::string ntxid;
+    std::string txid;
     ABC_CHECK(spend.signTx(rawTx));
     ABC_CHECK(spend.broadcastTx(rawTx));
-    ABC_CHECK(spend.saveTx(rawTx, ntxid));
-    std::cout << "Transaction id: " << ntxid << std::endl;
+    ABC_CHECK(spend.saveTx(rawTx, txid));
+    std::cout << "Transaction id: " << txid << std::endl;
 
     bool dirty;
     ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),

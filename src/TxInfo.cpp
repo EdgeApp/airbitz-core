@@ -13,54 +13,54 @@
 
 namespace abcd {
 
-static Status   txGetOutputs(Wallet &self, const std::string &ntxid,
-                             tABC_TxOutput ***paOutputs, unsigned int *pCount);
 static void     ABC_TxFreeOutputs(tABC_TxOutput **aOutputs, unsigned int count);
 static int      ABC_TxInfoPtrCompare (const void *a, const void *b);
 static void     ABC_TxStrTable(const char *needle, int *table);
 static int      ABC_TxStrStr(const char *haystack, const char *needle,
                              tABC_Error *pError);
 
-
-/**
- * Get the specified transactions.
- * @param ppTransaction     Location to store allocated transaction
- *                          (caller must free)
- */
-tABC_CC ABC_TxGetTransaction(Wallet &self,
-                             const std::string &ntxid,
-                             tABC_TxInfo **ppTransaction,
-                             tABC_Error *pError)
+tABC_TxInfo *
+makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
 {
-    tABC_CC cc = ABC_CC_Ok;
+    auto out = structAlloc<tABC_TxInfo>();
 
-    Tx tx;
-    tABC_TxInfo *pTransaction = structAlloc<tABC_TxInfo>();
+    // Basic information:
+    out->szID = stringCopy(info.txid);
+    out->szMalleableTxId = stringCopy(info.txid);
 
-    *ppTransaction = NULL;
+    // Outputs array:
+    out->countOutputs = info.ios.size();
+    out->aOutputs = arrayAlloc<tABC_TxOutput *>(info.ios.size());
+    int i = 0;
+    for (const auto &io: info.ios)
+    {
+        tABC_TxOutput *txo = structAlloc<tABC_TxOutput>();
+        txo->input = io.input;
+        txo->value = io.value;
+        txo->szAddress = stringCopy(io.address);
+        out->aOutputs[i++] = txo;
+    }
 
-    // load the transaction
-    ABC_CHECK_NEW(self.txs.get(tx, ntxid));
+    // Details:
+    Tx meta;
+    if (self.txs.get(meta, info.ntxid))
+    {
+        out->pDetails = meta.metadata.toDetails();
+        out->timeCreation = meta.timeCreation;
+    }
+    else
+    {
+        out->timeCreation = time(nullptr);
+    }
+    out->pDetails->amountSatoshi = info.balance;
+    out->pDetails->amountFeesMinersSatoshi = info.fee;
 
-    // steal the data and assign it to our new struct
-    pTransaction->szID = stringCopy(tx.ntxid);
-    pTransaction->szMalleableTxId = stringCopy(tx.txid);
-    pTransaction->timeCreation = tx.timeCreation;
-    pTransaction->pDetails = tx.metadata.toDetails();
-    ABC_CHECK_NEW(self.txCache.ntxidAmounts(ntxid, self.addresses.list(),
-                                            pTransaction->pDetails->amountSatoshi,
-                                            pTransaction->pDetails->amountFeesMinersSatoshi));
-    ABC_CHECK_NEW(txGetOutputs(self, tx.ntxid,
-                               &pTransaction->aOutputs, &pTransaction->countOutputs));
+    // Status:
+    out->height = status.height;
+    out->bDoubleSpent = status.isDoubleSpent;
+    out->bReplaceByFee = status.isReplaceByFee;
 
-    // assign final result
-    *ppTransaction = pTransaction;
-    pTransaction = NULL;
-
-exit:
-    ABC_TxFreeTransaction(pTransaction);
-
-    return cc;
+    return out;
 }
 
 /**
@@ -85,11 +85,10 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
 
-    NtxidList ntxids = self.txs.list();
-    for (const auto &ntxid: ntxids)
+    const auto infos = self.txCache.list(self.addresses.list());
+    for (const auto &info: infos)
     {
-        // load it into the info transaction structure
-        ABC_CHECK_RET(ABC_TxGetTransaction(self, ntxid, &pTransaction, pError));
+        pTransaction = makeTxInfo(self, info.first, info.second);
 
         if ((endTime == ABC_GET_TX_ALL_TIMES) ||
                 (pTransaction->timeCreation >= startTime &&
@@ -215,65 +214,6 @@ tABC_CC ABC_TxSearchTransactions(Wallet &self,
 exit:
     ABC_FREE(aTransactions);
     return cc;
-}
-
-/**
- * Prepares transaction outputs for the advanced details screen.
- */
-static Status
-txGetOutputs(Wallet &self, const std::string &ntxid,
-             tABC_TxOutput ***paOutputs, unsigned int *pCount)
-{
-    bc::hash_digest hash;
-    if (!bc::decode_hash(hash, ntxid))
-        return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
-    auto tx = self.txCache.ntxidLookup(hash);
-    auto txid = bc::encode_hash(bc::hash_transaction(tx));
-
-    // Create the array:
-    size_t count = tx.inputs.size() + tx.outputs.size();
-    tABC_TxOutput **aOutputs = (tABC_TxOutput **)calloc(count,
-                               sizeof(tABC_TxOutput *));
-    if (!aOutputs)
-        return ABC_ERROR(ABC_CC_NULLPtr, "out of memory");
-
-    // Build output entries:
-    int i = 0;
-    for (const auto &input: tx.inputs)
-    {
-        auto prev = input.previous_output;
-        bc::payment_address addr;
-        bc::extract(addr, input.script);
-
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = true;
-        out->szAddress = stringCopy(addr.encoded());
-
-        auto tx = self.txCache.txidLookup(prev.hash);
-        if (prev.index < tx.outputs.size())
-        {
-            out->value = tx.outputs[prev.index].value;
-        }
-        aOutputs[i] = out;
-        i++;
-    }
-    for (const auto &output: tx.outputs)
-    {
-        bc::payment_address addr;
-        bc::extract(addr, output.script);
-
-        tABC_TxOutput *out = (tABC_TxOutput *) malloc(sizeof(tABC_TxOutput));
-        out->input = false;
-        out->value = output.value;
-        out->szAddress = stringCopy(addr.encoded());
-
-        aOutputs[i] = out;
-        i++;
-    }
-
-    *paOutputs = aOutputs;
-    *pCount = count;
-    return Status();
 }
 
 /**
@@ -460,42 +400,6 @@ int ABC_TxStrStr(const char *haystack, const char *needle,
 exit:
     ABC_FREE(table);
     return result > -1 ? 1 : 0;
-}
-
-/**
- * Filters a transaction list, removing any that aren't found in the
- * watcher database.
- * @param aTransactions The array to filter. This will be modified in-place.
- * @param pCount        The array length. This will be updated upon return.
- */
-Status
-bridgeFilterTransactions(Wallet &self,
-                         tABC_TxInfo **aTransactions,
-                         unsigned int *pCount)
-{
-    tABC_TxInfo *const *end = aTransactions + *pCount;
-    tABC_TxInfo *const *si = aTransactions;
-    tABC_TxInfo **di = aTransactions;
-
-    while (si < end)
-    {
-        tABC_TxInfo *pTx = *si++;
-
-        bc::hash_digest ntxid;
-        if (!bc::decode_hash(ntxid, pTx->szID))
-            return ABC_ERROR(ABC_CC_ParseError, "Bad ntxid");
-        if (self.txCache.ntxidExists(ntxid))
-        {
-            *di++ = pTx;
-        }
-        else
-        {
-            ABC_TxFreeTransaction(pTx);
-        }
-    }
-    *pCount = di - aTransactions;
-
-    return Status();
 }
 
 } // namespace abcd

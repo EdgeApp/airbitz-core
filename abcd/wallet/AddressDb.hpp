@@ -11,6 +11,7 @@
 #include "../json/JsonPtr.hpp"
 #include "../util/Status.hpp"
 #include "TxMetadata.hpp"
+#include <list>
 #include <map>
 #include <mutex>
 #include <set>
@@ -19,6 +20,7 @@ namespace abcd {
 
 class Wallet;
 
+struct TxInOut;
 typedef std::set<std::string> AddressSet;
 typedef std::map<const std::string, std::string> KeyTable;
 
@@ -91,7 +93,7 @@ public:
      * Marks a transaction's output addresses as having received money.
      */
     Status
-    markOutputs(const std::string &txid);
+    markOutputs(const std::list<TxInOut> &ios);
 
 private:
     mutable std::mutex mutex_;

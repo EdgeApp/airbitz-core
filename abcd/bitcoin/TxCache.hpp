@@ -10,12 +10,12 @@
 
 #include "../util/Status.hpp"
 #include <bitcoin/bitcoin.hpp>
+#include <time.h>
+#include <list>
 #include <mutex>
 #include <ostream>
 #include <set>
 #include <unordered_map>
-#include <vector>
-#include <time.h>
 
 namespace abcd {
 
@@ -28,6 +28,39 @@ enum class TxState
 };
 
 typedef std::set<std::string> AddressSet;
+
+/**
+ * An input or an output of a transaction.
+ */
+struct TxInOut
+{
+    bool input;
+    uint64_t value;
+    std::string address;
+};
+
+/**
+ * Transaction input & output information.
+ */
+struct TxInfo
+{
+    std::string txid;
+    std::string ntxid;
+    int64_t balance;
+    int64_t fee;
+    std::list<TxInOut> ios;
+};
+
+/**
+ * Transaction confirmation & safety status.
+ */
+struct TxStatus
+{
+    TxInfo info;
+    size_t height;
+    bool isDoubleSpent;
+    bool isReplaceByFee;
+};
 
 /**
  * A list of transactions.
@@ -51,16 +84,10 @@ public:
     long long last_height() const;
 
     /**
-     * Returns true if the database contains the transaction.
-     */
-    bool txidExists(bc::hash_digest txid) const;
-    bool ntxidExists(bc::hash_digest ntxid);
-
-    /**
      * Obtains a transaction from the database.
      */
-    bc::transaction_type txidLookup(bc::hash_digest txid) const;
-    bc::transaction_type ntxidLookup(bc::hash_digest ntxid);
+    Status
+    txidLookup(bc::transaction_type &result, bc::hash_digest txid) const;
 
     /**
      * Finds a transaction's height, or 0 if it is unconfirmed.
@@ -68,18 +95,38 @@ public:
     long long txidHeight(bc::hash_digest txid) const;
 
     /**
-     * Finds a transaction's height, or 0 if it is unconfirmed.
-     * Returns -1 if it is malleated and unconfirmed.
+     * Returns true if the transaction touches one of the addresses.
      */
-    Status
-    ntxidHeight(long long &result, bc::hash_digest ntxid);
+    bool
+    isRelevant(const bc::transaction_type &tx,
+               const AddressSet &addresses) const;
 
     /**
-     * Calculates a transaction's balances.
+     * Returns the input & output information for a loose transaction.
+     */
+    TxInfo
+    txInfo(const bc::transaction_type &tx,
+           const AddressSet &addresses) const;
+
+    /**
+     * Looks up a transaction and returns its input & output information.
      */
     Status
-    ntxidAmounts(const std::string &ntxid, const AddressSet &addresses,
-                 int64_t &balance, int64_t &fees);
+    txidInfo(TxInfo &result, const std::string &txid,
+             const AddressSet &addresses) const;
+
+    /**
+     * Looks up a transaction and returns its confirmation & safety state.
+     */
+    Status
+    txidStatus(TxStatus &result, const std::string &txid) const;
+
+    /**
+     * Lists all the transactions relevant to these addresses,
+     * along with their information.
+     */
+    std::list<std::pair<TxInfo, TxStatus> >
+    list(const AddressSet &addresses) const;
 
     /**
      * Returns true if this address has received any funds.
@@ -169,16 +216,25 @@ private:
     // - Internal: ---------------------
 
     /**
+     * Returns true if the transaction touches one of the addresses.
+     */
+    bool
+    isRelevantInternal(const bc::transaction_type &tx,
+                       const AddressSet &addresses) const;
+
+    /**
+     * Same as `txInfo`, but should be called with the mutex held.
+     */
+    TxInfo
+    txInfoInternal(const bc::transaction_type &tx,
+                   const AddressSet &addresses) const;
+
+    /**
      * Returns true if the transaction has incoming non-change funds.
      */
     bool
     isIncoming(const TxRow &row,
                const AddressSet &addresses) const;
-
-    /**
-     * Returns all the rows that match the given ntxid.
-     */
-    std::vector<TxRow *> ntxidLookupAll(bc::hash_digest ntxid);
 
     // Guards access to object state:
     mutable std::mutex mutex_;
