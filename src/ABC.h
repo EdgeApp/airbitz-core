@@ -328,8 +328,6 @@ typedef struct sABC_TxInfo
 {
     /** transaction identifier */
     const char *szID;
-    /** malleable transaction identifier */
-    const char *szMalleableTxId;
     /** time of creation */
     int64_t timeCreation;
     /** count of bitcoin addresses associated with this transaciton */
