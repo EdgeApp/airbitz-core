@@ -615,6 +615,10 @@ bool
 TxCache::isIncoming(const TxRow &row,
                     const AddressSet &addresses) const
 {
+    // Confirmed transactions are no longer incoming:
+    if (TxState::confirmed == row.state)
+        return false;
+
     // This is a spend if we control all the inputs:
     for (auto &input: row.tx.inputs)
     {
