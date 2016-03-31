@@ -96,7 +96,6 @@ TxMetadata::toDetails() const
     out->amountSatoshi = amountSatoshi;
     out->amountFeesAirbitzSatoshi = amountFeesAirbitzSatoshi;
     out->amountFeesMinersSatoshi = amountFeesMinersSatoshi;
-    out->attributes = 0;
     return out;
 }
 

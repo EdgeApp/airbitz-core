@@ -298,8 +298,6 @@ typedef struct sABC_TxDetails
     char *szCategory;
     /** notes for the transaction */
     char *szNotes;
-    /** attributes for the transaction */
-    unsigned int attributes;
 } tABC_TxDetails;
 
 /**
