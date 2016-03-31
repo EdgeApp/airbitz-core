@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -9,7 +9,9 @@
 #include "Account.hpp"
 #include "../exchange/ExchangeSource.hpp"
 #include "../json/JsonObject.hpp"
+#include "../login/Lobby.hpp"
 #include "../login/Login.hpp"
+#include "../login/LoginPin.hpp"
 #include "../util/Util.hpp"
 
 namespace abcd {
@@ -32,6 +34,7 @@ struct SettingsJson:
     ABC_JSON_BOOLEAN(disableFingerprintLogin, "disableFingerprintLogin", false)
     ABC_JSON_INTEGER(pinLoginCount, "pinLoginCount", 0)
     ABC_JSON_INTEGER(minutesAutoLogout, "minutesAutoLogout", 60) // Required
+    ABC_JSON_INTEGER(secondsAutoLogout, "secondsAutoLogout", 60*60)
     ABC_JSON_INTEGER(recoveryReminderCount, "recoveryReminderCount", 0)
 
     // Bitcoin requests:
@@ -105,7 +108,9 @@ accountSettingsLoad(const Account &account)
     out->bDisablePINLogin = json.disablePinLogin();
     out->bDisableFingerprintLogin = json.disableFingerprintLogin();
     out->pinLoginCount = json.pinLoginCount();
-    out->minutesAutoLogout = json.minutesAutoLogout();
+    out->secondsAutoLogout = json.secondsAutoLogoutOk() ?
+                             json.secondsAutoLogout() :
+                             60 * json.minutesAutoLogout();
     out->recoveryReminderCount = json.recoveryReminderCount();
 
     // Bitcoin requests:
@@ -135,7 +140,8 @@ accountSettingsLoad(const Account &account)
 }
 
 Status
-accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings)
+accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings,
+                    bool pinChanged)
 {
     SettingsJson json;
 
@@ -151,7 +157,9 @@ accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings)
     ABC_CHECK(json.disablePinLoginSet(pSettings->bDisablePINLogin));
     ABC_CHECK(json.disableFingerprintLoginSet(pSettings->bDisableFingerprintLogin));
     ABC_CHECK(json.pinLoginCountSet(pSettings->pinLoginCount));
-    ABC_CHECK(json.minutesAutoLogoutSet(pSettings->minutesAutoLogout));
+    auto minutesAutoLogout = (59 + pSettings->secondsAutoLogout) / 60;
+    ABC_CHECK(json.minutesAutoLogoutSet(minutesAutoLogout));
+    ABC_CHECK(json.secondsAutoLogoutSet(pSettings->secondsAutoLogout));
     ABC_CHECK(json.recoveryReminderCountSet(pSettings->recoveryReminderCount));
 
     // Bitcoin requests:
@@ -178,6 +186,9 @@ accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings)
 
     ABC_CHECK(json.save(settingsPath(account), account.login.dataKey()));
 
+    // Update the PIN package to match:
+    ABC_CHECK(accountSettingsPinSync(account.login, pSettings, pinChanged));
+
     return Status();
 }
 
@@ -196,6 +207,28 @@ accountSettingsFree(tABC_AccountSettings *pSettings)
 
         ABC_CLEAR_FREE(pSettings, sizeof(tABC_AccountSettings));
     }
+}
+
+Status
+accountSettingsPinSync(Login &login, tABC_AccountSettings *settings,
+                       bool pinChanged)
+{
+    if (!settings->bDisablePINLogin && settings->szPIN)
+    {
+        bool exists;
+        ABC_CHECK(loginPinExists(exists, login.lobby.username()));
+        if (pinChanged || !exists)
+        {
+            time_t expires = time(nullptr);
+            expires += settings->secondsAutoLogout;
+            ABC_CHECK(loginPinSetup(login, settings->szPIN, expires));
+        }
+    }
+    else
+    {
+        loginPinDelete(login.lobby).log();
+    }
+    return Status();
 }
 
 } // namespace abcd

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -26,8 +26,18 @@ class JsonPtr;
 struct CarePackage;
 struct LoginPackage;
 
-// We need a better way to get this data out than writing to globals:
-extern std::string gOtpResetDate;
+/**
+ * The server returns this along with any OTP error.
+ */
+struct AuthError
+{
+    // ABC_CC_InvalidPinWait:
+    int pinWait = 0; // Seconds
+
+    // ABC_CC_InvalidOTP:
+    std::string otpDate;
+    std::string otpToken;
+};
 
 Status
 loginServerGetGeneral(JsonPtr &result);
@@ -40,7 +50,8 @@ loginServerGetQuestions(JsonPtr &result);
  */
 Status
 loginServerCreate(const Lobby &lobby, DataSlice LP1,
-                  const CarePackage &carePackage, const LoginPackage &loginPackage,
+                  const CarePackage &carePackage,
+                  const LoginPackage &loginPackage,
                   const std::string &syncKey);
 
 /**
@@ -63,8 +74,8 @@ loginServerAvailable(const Lobby &lobby);
  * @param dataKeyBox The old dataKey, encrypted with infoKey
  */
 Status
-loginServerAccountUpgrade(const Login &login,
-                          JsonPtr rootKeyBox, JsonPtr mnemonicBox, JsonPtr dataKeyBox);
+loginServerAccountUpgrade(const Login &login, JsonPtr rootKeyBox,
+                          JsonPtr mnemonicBox, JsonPtr dataKeyBox);
 
 /**
  * Changes the password for an account on the server.
@@ -72,7 +83,8 @@ loginServerAccountUpgrade(const Login &login,
 Status
 loginServerChangePassword(const Login &login,
                           DataSlice newLP1, DataSlice newLRA1,
-                          const CarePackage &carePackage, const LoginPackage &loginPackage);
+                          const CarePackage &carePackage,
+                          const LoginPackage &loginPackage);
 
 Status
 loginServerGetCarePackage(const Lobby &lobby, CarePackage &result);
@@ -85,10 +97,13 @@ loginServerGetCarePackage(const Lobby &lobby, CarePackage &result);
  */
 Status
 loginServerGetLoginPackage(const Lobby &lobby,
-                           DataSlice LP1, DataSlice LRA1, LoginPackage &result, JsonPtr &rootKeyBox);
+                           DataSlice LP1, DataSlice LRA1,
+                           LoginPackage &result, JsonPtr &rootKeyBox,
+                           AuthError &authError);
 
 Status
-loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result);
+loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
+                         AuthError &authError);
 
 /**
  * Uploads the pin package.
@@ -98,8 +113,8 @@ loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result);
  */
 Status
 loginServerUpdatePinPackage(const Login &login,
-                            DataSlice DID, DataSlice LPIN1, const std::string &pinPackage,
-                            time_t ali);
+                            DataSlice DID, DataSlice LPIN1,
+                            const std::string &pinPackage, time_t ali);
 
 /**
  * Create a git repository on the server, suitable for holding a wallet.
@@ -136,7 +151,7 @@ loginServerOtpStatus(const Login &login, bool &on, long &timeout);
  * Request a 2-factor authentication reset.
  */
 Status
-loginServerOtpReset(const Lobby &lobby);
+loginServerOtpReset(const Lobby &lobby, const std::string &token);
 
 /**
  * Determine which accounts have pending 2-factor authentication resets.

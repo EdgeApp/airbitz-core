@@ -1,6 +1,8 @@
 /*
- *  Copyright (c) 2015, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2015, Airbitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
  */
 
 #ifndef ABCD_SPEND_SPEND_HPP
@@ -9,6 +11,9 @@
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
 #include "../wallet/TxMetadata.hpp"
+#include <bitcoin/bitcoin.hpp>
+#include <map>
+#include <set>
 
 namespace abcd {
 
@@ -18,51 +23,81 @@ class Wallet;
 /**
  * Options for sending money.
  */
-struct SendInfo
+class Spend
 {
-    ~SendInfo();
-    SendInfo();
+public:
+    Spend(Wallet &wallet);
 
-    std::string             destAddress;
-    PaymentRequest          *paymentRequest;
-    TxMetadata              metadata;
+    /**
+     * Send money to this address.
+     */
+    Status
+    addAddress(const std::string &address, uint64_t amount);
 
-    // Transfer from one wallet to another:
-    bool                    bTransfer;
-    Wallet                  *walletDest;
+    /**
+     * Send money to this BIP70 payment request.
+     */
+    Status
+    addPaymentRequest(PaymentRequest *request);
+
+    /**
+     * Transfer money to this other Airbitz wallet.
+     * @param metadata Information to be saved in the target wallet.
+     */
+    Status
+    addTransfer(Wallet &target, uint64_t amount, TxMetadata metadata);
+
+    /**
+     * Provides metadata to be saved alongside the transaction.
+     */
+    Status
+    metadataSet(const TxMetadata &metadata);
+
+    /**
+     * Calculate the fees that will be required to perform this send.
+     */
+    Status
+    calculateFees(uint64_t &totalFees);
+
+    /**
+     * Calculate the total amount that could be sent to these outputs.
+     */
+    Status
+    calculateMax(uint64_t &maxSatoshi);
+
+    /**
+     * Builds a signed transaction.
+     */
+    Status
+    signTx(DataChunk &result);
+
+    /**
+     * Broadcasts a transaction to the bitcoin network,
+     * optionally passing through the payment protocol server first.
+     */
+    Status
+    broadcastTx(DataSlice rawTx);
+
+    /**
+     * Saves a transaction to the wallet.
+     */
+    Status
+    saveTx(DataSlice rawTx, std::string &txidOut);
+
+private:
+    Wallet &wallet_;
+    std::map<std::string, uint64_t> addresses_;
+    std::set<PaymentRequest *> paymentRequests_;
+    std::map<Wallet *, TxMetadata> transfers_;
+    TxMetadata metadata_;
+
+    Status
+    makeOutputs(bc::transaction_output_list &result);
+
+    Status
+    makeTx(libbitcoin::transaction_type &result,
+           const std::string &changeAddress);
 };
-
-/**
- * Calculate the fees that will be required to perform this send.
- */
-Status
-spendCalculateFees(Wallet &self, SendInfo *pInfo, uint64_t &totalFees);
-
-/**
- * Calculate the maximum amount that can be sent.
- */
-Status
-spendCalculateMax(Wallet &self, SendInfo *pInfo, uint64_t &maxSatoshi);
-
-/**
- * Builds a signed transaction and stores it in the SendInfo structure.
- */
-Status
-spendSignTx(DataChunk &result, Wallet &self, SendInfo *pInfo);
-
-/**
- * Broadcasts a transaction to the bitcoin network,
- * optionally passing through the payment protocol server first.
- */
-Status
-spendBroadcastTx(Wallet &self, SendInfo *pInfo, DataSlice rawTx);
-
-/**
- * Saves a transaction to the wallet.
- */
-Status
-spendSaveTx(Wallet &self, SendInfo *pInfo, DataSlice rawTx,
-            std::string &ntxidOut);
 
 } // namespace abcd
 

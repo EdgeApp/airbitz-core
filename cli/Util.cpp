@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, AirBitz, Inc.
+ * Copyright (c) 2015, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -79,10 +79,6 @@ WatcherThread::init(const Session &session)
                                    session.uuid.c_str(),
                                    &error));
     thread_ = new std::thread(watcherThread, session.uuid.c_str());
-    ABC_CHECK_OLD(ABC_WatchAddresses(session.username.c_str(),
-                                     session.password.c_str(),
-                                     session.uuid.c_str(),
-                                     &error));
     ABC_CHECK_OLD(ABC_WatcherConnect(session.uuid.c_str(), &error));
     return Status();
 }

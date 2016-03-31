@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2015, AirBitz, Inc.
+ * Copyright (c) 2015, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
  */
 
 #include "../abcd/http/Uri.hpp"
+#include "../abcd/bitcoin/Text.hpp"
 #include "../minilibs/catch/catch.hpp"
 
 TEST_CASE("Basic URI handling", "[util][uri]" )
@@ -192,4 +193,56 @@ TEST_CASE("URI encoding test", "[util][uri]" )
 
     REQUIRE(uri.encode() ==
             "test:/some/path/%3F/%23");
+}
+
+TEST_CASE("ParsedUri test", "[bitcoin][uri]")
+{
+    abcd::ParsedUri uri;
+
+    SECTION("airbitz URI")
+    {
+        auto text = "airbitz://bitcoin/113Pfw4sFqN1T5kXUnKbqZHMJHN9oyjtgD?amount=0.1";
+        REQUIRE(parseUri(uri, text));
+        REQUIRE(uri.address == "113Pfw4sFqN1T5kXUnKbqZHMJHN9oyjtgD");
+        REQUIRE(uri.amountSatoshi == 10000000u);
+    }
+    SECTION("bitcoin URI")
+    {
+        auto text = "bitcoin:113Pfw4sFqN1T5kXUnKbqZHMJHN9oyjtgD?amount=0.1";
+        REQUIRE(parseUri(uri, text));
+        REQUIRE(uri.address == "113Pfw4sFqN1T5kXUnKbqZHMJHN9oyjtgD");
+        REQUIRE(uri.amountSatoshi == 10000000u);
+    }
+    SECTION("payment request URI")
+    {
+        auto text =
+            "bitcoin:?r=https://airbitz.co&label=l&message=m m&category=c&ret=r";
+        REQUIRE(parseUri(uri, text));
+        REQUIRE(uri.address.empty());
+        REQUIRE(uri.paymentProto == "https://airbitz.co");
+        REQUIRE(uri.label == "l");
+        REQUIRE(uri.message == "m m");
+        REQUIRE(uri.category == "c");
+        REQUIRE(uri.ret == "r");
+    }
+    SECTION("bitid URI")
+    {
+        auto text = "bitid://bitid.bitcoin.blue/callback?x=fbc3ac5e2615dece&u=1";
+        REQUIRE(parseUri(uri, text));
+        REQUIRE(uri.bitidUri == text);
+    }
+    SECTION("wif")
+    {
+        auto text = "KzuvBLcUQsfKcjHRhoe7D8UfzjLRsjB14AppLwSsb8uTdKHH45vM";
+        REQUIRE(parseUri(uri, text));
+        REQUIRE(uri.wif == text);
+        REQUIRE(uri.address == "18LVsfoGUPWvK7b8L3WdgmDt4katk8nWf6");
+    }
+    SECTION("minikey")
+    {
+        auto text = "S4b3N3oGqDqR5jNuxEvDwf";
+        REQUIRE(parseUri(uri, text));
+        REQUIRE(uri.wif == "5HueCGU8rMjxEXxiPuD5BDku4MkFqeZyd4dZ1jvhTVqvbTLvyTJ");
+        REQUIRE(uri.address == "1GAehh7TsJAHuUAeKZcXf5CnwuGuGgyX2S");
+    }
 }

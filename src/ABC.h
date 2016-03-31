@@ -191,8 +191,8 @@ typedef enum eABC_AsyncEventType
 {
     ABC_AsyncEventType_IncomingBitCoin,
     ABC_AsyncEventType_BlockHeightChange,
-    ABC_AsyncEventType_DataSyncUpdate,
-    ABC_AsyncEventType_RemotePasswordChange,
+    ABC_AsyncEventType_BalanceUpdate,
+    ABC_AsyncEventType_AddressCheckDone,
     ABC_AsyncEventType_IncomingSweep
 } tABC_AsyncEventType;
 
@@ -205,25 +205,22 @@ typedef enum eABC_AsyncEventType
  */
 typedef struct sABC_AsyncBitCoinInfo
 {
-    /** data pointer given by caller at init */
-    void    *pData;
+    /** Data pointer given by caller. */
+    void *pData;
 
-    /** type of event that occured */
+    /** Type of event that occurred. */
     tABC_AsyncEventType eventType;
 
-    /* Return status of call */
+    /** The success or failure of the event. */
     tABC_Error status;
 
-    /** if the event involved a wallet, this is its ID */
+    /** If the event involved a wallet, this is its ID. */
     const char *szWalletUUID;
 
-    /** if the event involved a transaction, this is its ID */
+    /** If the event involved a transaction, this is its ID. */
     const char *szTxID;
 
-    /** String containing a description of the event */
-    const char *szDescription;
-
-    /** amount swept */
+    /** The amount swept, if this is a sweep. */
     int64_t sweepSatoshi;
 } tABC_AsyncBitCoinInfo;
 
@@ -319,10 +316,6 @@ typedef struct sABC_TxOutput
     int64_t  value;
     /** The coin address **/
     const char *szAddress;
-    /** The tx address **/
-    const char *szTxId;
-    /** The tx index **/
-    int64_t  index;
 } tABC_TxOutput;
 
 /**
@@ -345,6 +338,12 @@ typedef struct sABC_TxInfo
     tABC_TxOutput **aOutputs;
     /** transaction details */
     tABC_TxDetails *pDetails;
+    /** The confirmation height of the transaction, or 0 for unconfirmed. */
+    unsigned long height;
+    /** True if the transaction is a double-spend. */
+    bool bDoubleSpent;
+    /** True if the transaction is eligible for replacement-by-fee. */
+    bool bReplaceByFee;
 } tABC_TxInfo;
 
 /**
@@ -365,33 +364,40 @@ typedef struct sABC_PasswordRule
 } tABC_PasswordRule;
 
 /**
- * A work-in-progress spend.
- *
- * Somebody, somewhere, wants money.
- * There are many ways they could make this request, such as by URL,
- * address, private key, wallet-wallet transfer, &c..
- * This structure encapsulates such a request,
- * providing the GUI with appropriate meta-data to ask the user's approval.
+ * All the fields that can be found in a URI, bitcoin address, or private key.
  */
-typedef struct sABC_SpendTarget
+typedef struct sABC_ParsedUri
 {
-    /** The amount being requested. */
-    uint64_t amount;
-    /** True if the GUI can change the amount. */
-    bool amountMutable;
-    /** The destination to show to the user. This is often an address,
-     * but also could be something else like a wallet name. */
-    const char *szName;
-    /** True if this is a signed bip70 payment request. */
-    bool bSigned;
-    /** Non-null if the payment request provides a URL
-     * to visit once the payment is done. */
-    const char *szRet;
-    /** The destination wallet if this is a transfer, otherwise NULL */
-    const char *szDestUUID;
-    /** Internal data used by the core. Don't touch. */
-    void *pData;
-} tABC_SpendTarget;
+    // Top-level actions:
+    char *szAddress;
+    char *szWif;
+    char *szPaymentProto;
+    char *szBitidUri;
+
+    // URI parameters:
+    uint64_t amountSatoshi;
+    char *szLabel;
+    char *szMessage;
+    char *szCategory; // Airbitz extension
+    char *szRet; // Airbitz extension
+} tABC_ParsedUri;
+
+/**
+ * A BIP70 payment request, fetched from the network and verified.
+ */
+typedef struct sABC_PaymentRequest
+{
+    /** The certificate validation domain name. */
+    char *szDomain;
+    /** The total amount being requested. */
+    uint64_t amountSatoshi;
+    /** The payment protocol `memo` field (might be null). */
+    char *szMemo;
+    /** The merchant name, guessed using a regex (might be blank). */
+    char *szMerchant;
+    /** Pointer to core internal data. Do not touch! */
+    void *pInternal;
+} tABC_PaymentRequest;
 
 /**
  * AirBitz Bitcoin Denomination
@@ -427,8 +433,8 @@ typedef struct sABC_AccountSettings
     char                        *szPIN;
     /** should name be listed on payments */
     bool                        bNameOnPayments;
-    /** how many minutes before auto logout */
-    int                         minutesAutoLogout;
+    /** how many seconds before auto logout */
+    int                         secondsAutoLogout;
     /** Number of times we have reminded the user to setup recovery q's */
     int                         recoveryReminderCount;
     /** language (ISO 639-1) */
@@ -468,19 +474,6 @@ typedef struct sABC_AccountSettings
  */
 typedef void (*tABC_BitCoin_Event_Callback)(const tABC_AsyncBitCoinInfo *pInfo);
 
-/**
- * Called when the sweep process completes.
- *
- * @param cc Ok if the sweep completed successfully,
- * or some error code if something went wrong.
- * @param szID The transaction id of the incoming funds,
- * if the sweep succeeded.
- * @param amount The number of satoshis swept into the wallet.
- */
-typedef void (*tABC_Sweep_Done_Callback)(tABC_CC cc,
-        const char *szID,
-        uint64_t amount);
-
 /* === Library lifetime: === */
 
 /**
@@ -488,7 +481,7 @@ typedef void (*tABC_Sweep_Done_Callback)(tABC_CC cc,
  * @param szRootDir             The root directory for all files to be saved
  * @param szCaCertPath          CA Certificate Path
  * @param szApiKey              API Key for the AirBitz login servers
- * @param szHiddenBitzKey       Private key for Hiddenbits promotion
+ * @param szHiddenBitsKey       Private key for Hiddenbits promotion
  * @param pData                 Pointer to data to be returned back in callback
  * @param pSeedData             Pointer to data to seed the random number generator
  * @param seedLength            Length of the seed data
@@ -497,7 +490,7 @@ typedef void (*tABC_Sweep_Done_Callback)(tABC_CC cc,
 tABC_CC ABC_Initialize(const char               *szRootDir,
                        const char               *szCaCertPath,
                        const char               *szApiKey,
-                       const char               *szHiddenBitzKey,
+                       const char               *szHiddenBitsKey,
                        const unsigned char      *pSeedData,
                        unsigned int             seedLength,
                        tABC_Error               *pError);
@@ -555,10 +548,70 @@ tABC_CC ABC_QrEncode(const char *szText,
                      unsigned int *pWidth,
                      tABC_Error *pError);
 
+/**
+ * Generates a random private key in the hbits format.
+ */
+tABC_CC ABC_CreateHbits(char **pszResult,
+                        char **pszAddress,
+                        tABC_Error *pError);
+
+/**
+ * Creates a URI for a payment request.
+ * Pass this through `ABC_QrEncode` to get a QR code.
+ * @param amountSatoshi optional amount. Ignored if zero.
+ * @param szLabel optional label. Can be null.
+ * @param szMessage optional message. Can be null.
+ */
+tABC_CC ABC_AddressUriEncode(const char *szAddress,
+                             uint64_t amountSatoshi,
+                             const char *szLabel,
+                             const char *szMessage,
+                             const char *szCategory,
+                             const char *szRet,
+                             char **pszResult,
+                             tABC_Error *pError);
+
+/**
+ * Parses a bitcoin URI, bitid URI, address, or private key.
+ */
+tABC_CC ABC_ParseUri(char *szURI,
+                     tABC_ParsedUri **ppResult,
+                     tABC_Error *pError);
+
+void ABC_FreeParsedUri(tABC_ParsedUri *pUri);
+
+/**
+ * Fetches a BIP70 payment request from a server.
+ * @param szRequestUri The request URI,
+ * typically parsed out of the `r` parameter of a larger bitcoin URI.
+ */
+tABC_CC ABC_FetchPaymentRequest(char *szRequestUri,
+                                tABC_PaymentRequest **ppResult,
+                                tABC_Error *pError);
+
+void ABC_FreePaymentRequest(tABC_PaymentRequest *pRequest);
+
 /* === Login lifetime: === */
-tABC_CC ABC_SignIn(const char *szUserName,
-                   const char *szPassword,
-                   tABC_Error *pError);
+
+/**
+ * Transforms a username into the internal format used for hashing.
+ * This collapses spaces, converts things to lowercase,
+ * and checks for invalid characters.
+ */
+tABC_CC ABC_FixUsername(char **pszResult,
+                        const char *szUserName,
+                        tABC_Error *pError);
+
+/**
+ * Logs the user in using a password.
+ * @param pszOtpResetToken returned OTP reset token, if any.
+ * @param pszOtpResetDate returned OTP reset date, if any.
+ */
+tABC_CC ABC_PasswordLogin(const char *szUserName,
+                          const char *szPassword,
+                          char **pszOtpResetToken,
+                          char **pszOtpResetDate,
+                          tABC_Error *pError);
 
 tABC_CC ABC_AccountAvailable(const char *szUserName,
                              tABC_Error *pError);
@@ -574,24 +627,47 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
                                  char **pszQuestions,
                                  tABC_Error *pError);
 
-tABC_CC ABC_CheckRecoveryAnswers(const char *szUserName,
-                                 const char *szRecoveryAnswers,
-                                 bool *pbValid,
-                                 tABC_Error *pError);
+/**
+ * Logs the user in using their recovery answers.
+ * @param szRecoveryAnswers newline-separated recovery answers.
+ * @param pszOtpResetToken returned OTP reset token, if any.
+ * @param pszOtpResetDate returned OTP reset date, if any.
+ */
+tABC_CC ABC_RecoveryLogin(const char *szUserName,
+                          const char *szRecoveryAnswers,
+                          char **pszOtpResetToken,
+                          char **pszOtpResetDate,
+                          tABC_Error *pError);
 
 tABC_CC ABC_PinLoginExists(const char *szUserName,
                            bool *pbExists,
                            tABC_Error *pError);
 
-tABC_CC ABC_PinLoginDelete(const char *szUserName,
-                           tABC_Error *pError);
-
+/**
+ * Performs a PIN-based login for the given user.
+ * @param pWaitSeconds seconds before the next retry, if this one failed.
+ */
 tABC_CC ABC_PinLogin(const char *szUserName,
+                     const char *szPin,
+                     int *pWaitSeconds,
+                     tABC_Error *pError);
+
+/**
+ * Sets up the data for a pin-based login, both on disk and on the server.
+ */
+tABC_CC ABC_PinSetup(const char *szUserName,
+                     const char *szPassword,
                      const char *szPin,
                      tABC_Error *pError);
 
-tABC_CC ABC_PinSetup(const char *szUserName,
+/**
+ * Checks a PIN for correctness.
+ * This is used to guard access to certain actions in the GUI.
+ */
+tABC_CC ABC_PinCheck(const char *szUserName,
                      const char *szPassword,
+                     const char *szPin,
+                     bool *pbResult,
                      tABC_Error *pError);
 
 tABC_CC ABC_ListAccounts(char **pszUserNames,
@@ -602,11 +678,6 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,
                            const char *szNewPassword,
                            tABC_Error *pError);
-
-tABC_CC ABC_ChangePasswordWithRecoveryAnswers(const char *szUserName,
-        const char *szRecoveryAnswers,
-        const char *szNewPassword,
-        tABC_Error *pError);
 
 tABC_CC ABC_SetAccountRecoveryQuestions(const char *szUserName,
                                         const char *szPassword,
@@ -685,13 +756,6 @@ tABC_CC ABC_OtpResetGet(char **szUsernames,
                         tABC_Error *pError);
 
 /**
- * Returns the OTP reset date for the last account that failed to log in,
- * if any. Returns an empty string otherwise.
- */
-tABC_CC ABC_OtpResetDate(char **pszDate,
-                         tABC_Error *pError);
-
-/**
  * Launches an OTP reset timer on the server,
  * which will disable the OTP authentication requirement when it expires.
  *
@@ -700,6 +764,7 @@ tABC_CC ABC_OtpResetDate(char **pszDate,
  * but has failed to fully log in due to a missing OTP key.
  */
 tABC_CC ABC_OtpResetSet(const char *szUserName,
+                        const char *szToken,
                         tABC_Error *pError);
 
 /**
@@ -762,16 +827,6 @@ tABC_CC ABC_UpdateAccountSettings(const char *szUserName,
 
 void ABC_FreeAccountSettings(tABC_AccountSettings *pSettings);
 
-tABC_CC ABC_GetPIN(const char *szUserName,
-                   const char *szPassword,
-                   char **pszPin,
-                   tABC_Error *pError);
-
-tABC_CC ABC_SetPIN(const char *szUserName,
-                   const char *szPassword,
-                   const char *szPin,
-                   tABC_Error *pError);
-
 tABC_CC ABC_GetCategories(const char *szUserName,
                           const char *szPassword,
                           char ***paszCategories,
@@ -790,8 +845,8 @@ tABC_CC ABC_RemoveCategory(const char *szUserName,
 
 tABC_CC ABC_DataSyncAccount(const char *szUserName,
                             const char *szPassword,
-                            tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                            void *pData,
+                            bool *pbDirty,
+                            bool *pbPasswordChanged,
                             tABC_Error *pError);
 
 tABC_CC ABC_UploadLogs(const char *szUserName,
@@ -799,6 +854,32 @@ tABC_CC ABC_UploadLogs(const char *szUserName,
                        tABC_Error *pError);
 
 /** === Plugin data: === */
+
+/**
+ * Lists the plugin key/value stores in an account.
+ *
+ * Anybody who uses this is probably doing something wrong.
+ * This mainly exists for diagnostics,
+ * since the idea is that all plugins are sandboxed by their plugin id.
+ * There shouldn't be any code that needs to list the plugin id's,
+ * since the list should be static and know ahead of time.
+ */
+tABC_CC ABC_PluginDataList(const char *szUserName,
+                           const char *szPassword,
+                           char ***paszPlugins,
+                           unsigned int *pCount,
+                           tABC_Error *pError);
+
+/**
+ * Lists the keys in a plugin key/value store.
+ * @param szPlugin The plugin's unique ID.
+ */
+tABC_CC ABC_PluginDataKeys(const char *szUserName,
+                           const char *szPassword,
+                           const char *szPlugin,
+                           char ***paszKeys,
+                           unsigned int *pCount,
+                           tABC_Error *pError);
 
 /**
  * Retreives an item from the plugin key/value store.
@@ -955,18 +1036,24 @@ tABC_CC ABC_CsvExport(const char *szUserName,
                       char **szCsvData,
                       tABC_Error *pError);
 
+tABC_CC ABC_QBOExport(const char *szUserName,
+                      const char *szPassword,
+                      const char *szUUID,
+                      int64_t startTime,
+                      int64_t endTime,
+                      char **szQBOData,
+                      tABC_Error *pError);
+
 tABC_CC ABC_DataSyncWallet(const char *szUserName,
                            const char *szPassword,
                            const char *szWalletUUID,
-                           tABC_BitCoin_Event_Callback fAsyncBitCoinEventCallback,
-                           void *pData,
+                           bool *pbDirty,
                            tABC_Error *pError);
 
 /* === Receiving: === */
 tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
                                  const char *szPassword,
                                  const char *szWalletUUID,
-                                 tABC_TxDetails *pDetails,
                                  char **pszRequestID,
                                  tABC_Error *pError);
 
@@ -989,100 +1076,90 @@ tABC_CC ABC_CancelReceiveRequest(const char *szUserName,
                                  const char *szRequestID,
                                  tABC_Error *pError);
 
-tABC_CC ABC_GenerateRequestQRCode(const char *szUserName,
-                                  const char *szPassword,
-                                  const char *szWalletUUID,
-                                  const char *szRequestID,
-                                  char **pszURI,
-                                  unsigned char **paData,
-                                  unsigned int *pWidth,
-                                  tABC_Error *pError);
-
-tABC_CC ABC_GetRequestAddress(const char *szUserName,
-                              const char *szPassword,
-                              const char *szWalletUUID,
-                              const char *szRequestID,
-                              char **pszAddress,
-                              tABC_Error *pError);
-
 /* === Spending: === */
 
-void ABC_SpendTargetFree(tABC_SpendTarget *pSpend);
+void ABC_SpendFree(void *pSpend);
 
 /**
- * Creates a spend target from a piece of text.
- * The text could be a URL, a payment address, or other things as well.
+ * Creates a new, blank spend object.
  */
-tABC_CC ABC_SpendNewDecode(const char *szText,
-                           tABC_SpendTarget **ppSpend,
-                           tABC_Error *pError);
+tABC_CC ABC_SpendNew(const char *szUserName,
+                     const char *szWalletUUID,
+                     void **ppResult,
+                     tABC_Error *pError);
 
 /**
- * Creates a spend target for a wallet-to-wallet transfer.
+ * Adds a bitcoin payment address output to a spend.
+ */
+tABC_CC ABC_SpendAddAddress(void *pSpend,
+                            const char *szAddress,
+                            uint64_t amount,
+                            tABC_Error *pError);
+
+/**
+ * Adds a BIP70 payment request output to a spend.
+ */
+tABC_CC ABC_SpendAddPaymentRequest(void *pSpend,
+                                   tABC_PaymentRequest *pRequest,
+                                   tABC_Error *pError);
+
+/**
+ * Adds a wallet-to-wallet transfer output to a spend.
  * @param szWalletUUID the destination wallet.
+ * @param tABC_TxDetails metadata to save in the target wallet.
+ * The fiat amount will be calculated from the amount if it is zero.
+ * Otherwise, the fiat amount will be used as-is.
  */
-tABC_CC ABC_SpendNewTransfer(const char *szUserName,
+tABC_CC ABC_SpendAddTransfer(void *pSpend,
                              const char *szWalletUUID,
                              uint64_t amount,
-                             tABC_SpendTarget **ppSpend,
+                             tABC_TxDetails *pDetails,
                              tABC_Error *pError);
 
 /**
- * Creates a spend target for an internal plugin send request.
+ * Provides metadata to be saved alongside the transaction.
+ * The Airbitz fee will be updated to match whatever was sent,
+ * and the fiat amount will be calculated from the total if it is zero.
+ * Otherwise, the fiat amount will be used as-is.
  */
-tABC_CC ABC_SpendNewInternal(const char *szAddress,
-                             const char *szName,
-                             const char *szCategory,
-                             const char *szNotes,
-                             uint64_t amount,
-                             tABC_SpendTarget **ppSpend,
+tABC_CC ABC_SpendSetMetadata(void *pSpend,
+                             tABC_TxDetails *pDetails,
                              tABC_Error *pError);
 
 /**
  * Calculate the fee needed to perform this spend.
- * @param szWalletUUID the funds source.
  * @return ABC_CC_InsufficientFunds if the source doesn't have enough money.
  */
-tABC_CC ABC_SpendGetFee(const char *szUserName,
-                        const char *szWalletUUID,
-                        tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendGetFee(void *pSpend,
                         uint64_t *pFee,
                         tABC_Error *pError);
 
 /**
- * Finds the maximum amount that could be sent to this target.
- * @param szWalletUUID the funds source.
+ * Finds the maximum amount that could be sent to this collection of outputs.
  */
-tABC_CC ABC_SpendGetMax(const char *szUserName,
-                        const char *szWalletUUID,
-                        tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendGetMax(void *pSpend,
                         uint64_t *pMax,
                         tABC_Error *pError);
 
 /**
  * Creates and signs a transaction.
+ * @param pszRawTx the resulting raw transaction, in hex.
  */
-tABC_CC ABC_SpendSignTx(const char *szUserName,
-                        const char *szWalletUUID,
-                        tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendSignTx(void *pSpend,
                         char **pszRawTx,
                         tABC_Error *pError);
 
 /**
  * Broadcasts a transaction to the bitcoin network.
  */
-tABC_CC ABC_SpendBroadcastTx(const char *szUserName,
-                             const char *szWalletUUID,
-                             tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendBroadcastTx(void *pSpend,
                              char *szRawTx,
                              tABC_Error *pError);
 
 /**
  * Saves a transaction to the wallet database.
  */
-tABC_CC ABC_SpendSaveTx(const char *szUserName,
-                        const char *szWalletUUID,
-                        tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendSaveTx(void *pSpend,
                         char *szRawTx,
                         char **pszTxId,
                         tABC_Error *pError);
@@ -1091,19 +1168,20 @@ tABC_CC ABC_SpendSaveTx(const char *szUserName,
  * Signs, broadcasts, and saves a payment.
  * @param szWalletUUID the funds source.
  */
-tABC_CC ABC_SpendApprove(const char *szUserName,
-                         const char *szWalletUUID,
-                         tABC_SpendTarget *pSpend,
+tABC_CC ABC_SpendApprove(void *pSpend,
                          char **pszTxId,
                          tABC_Error *pError);
 
+/**
+ * Sweeps a private key into the wallet.
+ * The core will fire a callback when the sweep is done.
+ * @param szKey  Private key in WIF format.
+ * Use `ABC_ParseUri` to convert other formats into WIF.
+ */
 tABC_CC ABC_SweepKey(const char *szUsername,
                      const char *szPassword,
                      const char *szWalletUUID,
                      const char *szKey,
-                     char **pszAddress,
-                     tABC_Sweep_Done_Callback fCallback,
-                     void *pData,
                      tABC_Error *pError);
 
 /* === Transactions: === */
@@ -1131,13 +1209,6 @@ tABC_CC ABC_SearchTransactions(const char *szUserName,
                                unsigned int *pCount,
                                tABC_Error *pError);
 
-tABC_CC ABC_GetRawTransaction(const char *szUserName,
-                              const char *szPassword,
-                              const char *szWalletUUID,
-                              const char *szID,
-                              char **pszHex,
-                              tABC_Error *pError);
-
 void ABC_FreeTransaction(tABC_TxInfo *pTransaction);
 
 void ABC_FreeTransactions(tABC_TxInfo **aTransactions,
@@ -1157,10 +1228,6 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
                                   tABC_TxDetails **ppDetails,
                                   tABC_Error *pError);
 
-tABC_CC ABC_DuplicateTxDetails(tABC_TxDetails **ppNewDetails,
-                               const tABC_TxDetails *pOldDetails,
-                               tABC_Error *pError);
-
 void ABC_FreeTxDetails(tABC_TxDetails *pDetails);
 
 /* === Wallet watcher: === */
@@ -1175,9 +1242,6 @@ tABC_CC ABC_WatcherLoop(const char *szWalletUUID,
                         tABC_Error *pError);
 
 tABC_CC ABC_WatcherConnect(const char *szWalletUUID, tABC_Error *pError);
-
-tABC_CC ABC_WatchAddresses(const char *szUsername, const char *szPassword,
-                           const char *szWalletUUID, tABC_Error *pError);
 
 tABC_CC ABC_PrioritizeAddress(const char *szUserName, const char *szPassword,
                               const char *szWalletUUID, const char *szAddress,

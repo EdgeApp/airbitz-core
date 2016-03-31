@@ -1,11 +1,12 @@
 /*
- *  Copyright (c) 2015, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2015, Airbitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
  */
 
 #include "Outputs.hpp"
 #include "PaymentProto.hpp"
-#include "Spend.hpp"
 #include "../General.hpp"
 #include "../bitcoin/Testnet.hpp"
 #include <iterator>
@@ -14,7 +15,7 @@
 
 namespace abcd {
 
-bc::script_type
+static bc::script_type
 outputScriptForPubkey(const bc::short_hash &hash)
 {
     bc::script_type result;
@@ -50,51 +51,6 @@ outputScriptForAddress(bc::script_type &result, const std::string &address)
     else
         return ABC_ERROR(ABC_CC_ParseError, "Non-Bitcoin address " + address);
 
-    return Status();
-}
-
-Status
-outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo)
-{
-    bc::transaction_output_list out;
-
-    if (pInfo->paymentRequest)
-    {
-        // Gather the outputs from the payment request, if any:
-        for (auto &a: pInfo->paymentRequest->outputs())
-        {
-            bc::transaction_output_type output;
-            output.value = a.amount;
-            output.script = bc::parse_script(bc::to_data_chunk(a.script));
-            out.push_back(output);
-        }
-    }
-    else
-    {
-        // Otherwise, make an output for the ordinary address:
-        bc::transaction_output_type output;
-        output.value = pInfo->metadata.amountSatoshi;
-        ABC_CHECK(outputScriptForAddress(output.script, pInfo->destAddress));
-        out.push_back(output);
-    }
-
-    // Handle the Airbitz fees:
-    const auto info = generalAirbitzFeeInfo();
-    auto airbitzFee = generalAirbitzFee(info, outputsTotal(out),
-                                        pInfo->bTransfer);
-    pInfo->metadata.amountFeesAirbitzSatoshi = airbitzFee;
-    if (airbitzFee)
-    {
-        auto i = info.addresses.begin();
-        std::advance(i, time(nullptr) % info.addresses.size());
-
-        bc::transaction_output_type output;
-        output.value = airbitzFee;
-        ABC_CHECK(outputScriptForAddress(output.script, *i));
-        out.push_back(output);
-    }
-
-    result = std::move(out);
     return Status();
 }
 

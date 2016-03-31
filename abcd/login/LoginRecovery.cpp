@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -39,7 +39,8 @@ loginRecoveryQuestions(std::string &result, Lobby &lobby)
 
 Status
 loginRecovery(std::shared_ptr<Login> &result,
-              Lobby &lobby, const std::string &recoveryAnswers)
+              Lobby &lobby, const std::string &recoveryAnswers,
+              AuthError &authError)
 {
     std::string LRA = lobby.username() + recoveryAnswers;
 
@@ -55,7 +56,8 @@ loginRecovery(std::shared_ptr<Login> &result,
     LoginPackage loginPackage;
     JsonPtr rootKeyBox;
     ABC_CHECK(loginServerGetLoginPackage(lobby, U08Buf(), recoveryAuthKey,
-                                         loginPackage, rootKeyBox));
+                                         loginPackage, rootKeyBox,
+                                         authError));
 
     // Make recoveryKey (unlocks dataKey):
     DataChunk recoveryKey;

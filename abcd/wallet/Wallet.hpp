@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, AirBitz, Inc.
+ * Copyright (c) 2015, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -8,8 +8,10 @@
 #ifndef ABCD_WALLET_WALLET_HPP
 #define ABCD_WALLET_WALLET_HPP
 
+#include "../WalletPaths.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
+#include "../bitcoin/AddressCache.hpp"
 #include "AddressDb.hpp"
 #include "TxMetaDb.hpp"
 #include <atomic>
@@ -19,7 +21,7 @@
 namespace abcd {
 
 class Account;
-class TxDatabase;
+class TxCache;
 
 /**
  * Manages the information stored in the top-level wallet sync directory.
@@ -31,6 +33,7 @@ public:
     ~Wallet();
 
     Account &account;
+    WalletPaths paths;
 
     static Status
     create(std::shared_ptr<Wallet> &result, Account &account,
@@ -41,10 +44,6 @@ public:
               const std::string &name, int currency);
 
     const std::string &id() const { return id_; }
-    const std::string &dir() const { return dir_; }
-    std::string syncDir() const     { return dir() + "sync/"; }
-    std::string txDir() const       { return syncDir() + "Transactions/"; }
-
     const DataChunk &bitcoinKey() const;
     const DataChunk &dataKey() const { return dataKey_; }
 
@@ -67,7 +66,6 @@ private:
     mutable std::mutex mutex_;
     const std::shared_ptr<Account> parent_;
     const std::string id_;
-    const std::string dir_;
 
     // Account data:
     DataChunk bitcoinKey_;
@@ -99,9 +97,10 @@ private:
     loadSync();
 
 public:
+    AddressCache addressCache;
     AddressDb addresses;
     TxMetaDb txs;
-    TxDatabase &txdb;
+    TxCache &txCache;
 };
 
 } // namespace abcd

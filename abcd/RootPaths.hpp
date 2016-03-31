@@ -1,6 +1,6 @@
 /*
- *  Copyright (c) 2016, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2016, Airbitz, Inc.
+ * All rights reserved.
  *
  * See the LICENSE file for more information.
  */
@@ -14,6 +14,7 @@
 namespace abcd {
 
 class AccountPaths;
+class WalletPaths;
 
 /**
  * Knows how to calculate paths at the top-level of the app.
@@ -50,8 +51,8 @@ public:
     /**
      * Returns the directory name for a particular wallet.
      */
-    std::string
-    walletDir(const std::string &id) { return walletsDir() + id + '/'; }
+    WalletPaths
+    walletDir(const std::string &id);
 
     // Individual files:
     const std::string &certPath() const { return certPath_; }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -65,7 +65,8 @@ loginPinDelete(Lobby &lobby)
 
 Status
 loginPin(std::shared_ptr<Login> &result,
-         Lobby &lobby, const std::string &pin)
+         Lobby &lobby, const std::string &pin,
+         AuthError &authError)
 {
     std::string LPIN = lobby.username() + pin;
 
@@ -87,7 +88,8 @@ loginPin(std::shared_ptr<Login> &result,
     DataChunk pinAuthKey;       // Unlocks the server
     JsonBox pinKeyBox;          // Holds pinKey
     ABC_CHECK(usernameSnrp().hash(pinAuthKey, LPIN));
-    ABC_CHECK(loginServerGetPinPackage(pinAuthId, pinAuthKey, EPINK));
+    ABC_CHECK(loginServerGetPinPackage(pinAuthId, pinAuthKey, EPINK,
+                                       authError));
     ABC_CHECK(pinKeyBox.decode(EPINK));
 
     // Decrypt dataKey:

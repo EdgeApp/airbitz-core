@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, AirBitz, Inc.
+ * Copyright (c) 2015, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -75,9 +75,9 @@ otpResetGet(std::list<std::string> &result,
 }
 
 Status
-otpResetSet(Lobby &lobby)
+otpResetSet(Lobby &lobby, const std::string &token)
 {
-    return loginServerOtpReset(lobby);
+    return loginServerOtpReset(lobby, token);
 }
 
 Status

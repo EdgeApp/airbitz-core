@@ -1,6 +1,6 @@
 /*
- *  Copyright (c) 2015, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2015, Airbitz, Inc.
+ * All rights reserved.
  *
  * See the LICENSE file for more information.
  */
@@ -30,7 +30,10 @@ Status
 debugLogRotate()
 {
     if (gLogFile)
+    {
         fclose(gLogFile);
+        gLogFile = nullptr;
+    }
 
     auto path = gContext->paths.logPath();
     if (fileExists(path))
@@ -59,7 +62,10 @@ debugTerminate()
 {
     std::lock_guard<std::mutex> lock(gDebugMutex);
     if (gLogFile)
+    {
         fclose(gLogFile);
+        gLogFile = nullptr;
+    }
 }
 
 DataChunk

@@ -1,6 +1,8 @@
 /*
- *  Copyright (c) 2015, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2015, Airbitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
  */
 
 #ifndef ABCD_SPEND_OUTPUTS_HPP
@@ -11,23 +13,11 @@
 
 namespace abcd {
 
-struct SendInfo;
-
-bc::script_type
-outputScriptForPubkey(const bc::short_hash &hash);
-
 /**
  * Creates an output script for sending money to an address.
  */
 Status
 outputScriptForAddress(bc::script_type &result, const std::string &address);
-
-/**
- * Creates a set of outputs corresponding to a sABC_TxSendInfo structure.
- * Updates the info structure with the Airbitz fees, if any.
- */
-Status
-outputsForSendInfo(bc::transaction_output_list &result, SendInfo *pInfo);
 
 /**
  * Returns true if an amount is small enough to be considered dust.

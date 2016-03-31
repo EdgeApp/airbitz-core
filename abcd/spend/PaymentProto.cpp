@@ -1,6 +1,8 @@
 /*
- *  Copyright (c) 2015, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2015, Airbitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
  */
 
 #include "PaymentProto.hpp"
@@ -201,6 +203,12 @@ PaymentRequest::merchant(const std::string &fallback) const
 
     return match[1];
 #endif
+}
+
+bool
+PaymentRequest::memoOk() const
+{
+    return details_.has_memo();
 }
 
 std::string

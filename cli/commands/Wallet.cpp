@@ -1,12 +1,11 @@
 /*
- * Copyright (c) 2015, AirBitz, Inc.
+ * Copyright (c) 2015, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
  */
 
 #include "../Command.hpp"
-#include "../Util.hpp"
 #include "../../abcd/account/Account.hpp"
 #include "../../abcd/crypto/Encoding.hpp"
 #include "../../abcd/exchange/Currency.hpp"
@@ -58,7 +57,7 @@ COMMAND(InitLevel::wallet, CliWalletDecrypt, "wallet-decrypt",
     const auto filename = argv[0];
 
     JsonBox box;
-    ABC_CHECK(box.load(session.wallet->syncDir() + filename));
+    ABC_CHECK(box.load(session.wallet->paths.syncDir() + filename));
 
     DataChunk data;
     ABC_CHECK(box.decrypt(data, session.wallet->dataKey()));
@@ -76,7 +75,7 @@ COMMAND(InitLevel::wallet, CliWalletEncrypt, "wallet-encrypt",
     const auto filename = argv[0];
 
     DataChunk contents;
-    ABC_CHECK(fileLoad(contents, session.wallet->syncDir() + filename));
+    ABC_CHECK(fileLoad(contents, session.wallet->paths.syncDir() + filename));
 
     JsonBox box;
     ABC_CHECK(box.encrypt(contents, session.wallet->dataKey()));
@@ -93,8 +92,6 @@ COMMAND(InitLevel::wallet, CliWalletInfo, "wallet-info",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     // Obtain the balance:
-    WatcherThread thread;
-    ABC_CHECK(thread.init(session));
     int64_t balance;
     ABC_CHECK(session.wallet->balance(balance));
 
@@ -116,16 +113,23 @@ COMMAND(InitLevel::account, CliWalletList, "wallet-list",
     if (argc != 0)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
-    // Iterate over wallets:
+    // Load wallets:
     auto ids = session.account->wallets.list();
+    std::list<std::shared_ptr<Wallet>> wallets;
     for (const auto &id: ids)
     {
         std::shared_ptr<Wallet> wallet;
         ABC_CHECK(cacheWallet(wallet, nullptr, id.c_str()));
+        wallets.push_back(wallet);
+    }
+
+    // Display wallets:
+    for (const auto &wallet: wallets)
+    {
         std::cout << wallet->id() << ": " << wallet->name();
 
         bool archived;
-        ABC_CHECK(session.account->wallets.archived(archived, id));
+        ABC_CHECK(session.account->wallets.archived(archived, wallet->id()));
         if (archived)
             std::cout << " (archived)" << std::endl;
         else

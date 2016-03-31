@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -19,14 +19,15 @@ namespace abcd {
 
 class Login;
 class Lobby;
+struct AuthError;
 
 /**
  * Loads an existing login object, either from the server or from disk.
  */
 Status
 loginPassword(std::shared_ptr<Login> &result,
-              Lobby &lobby,
-              const std::string &password);
+              Lobby &lobby, const std::string &password,
+              AuthError &authError);
 
 /**
  * Changes the password on an existing login object.

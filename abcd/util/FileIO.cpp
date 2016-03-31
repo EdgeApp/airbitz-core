@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, AirBitz, Inc.
+ * Copyright (c) 2015, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -14,10 +14,6 @@
 #include <mutex>
 
 namespace abcd {
-
-typedef std::lock_guard<std::recursive_mutex> AutoFileLock;
-
-std::recursive_mutex gFileMutex;
 
 std::string
 fileSlashify(const std::string &path)
@@ -38,8 +34,6 @@ fileIsJson(const std::string &name)
 Status
 fileEnsureDir(const std::string &dir)
 {
-    AutoFileLock lock(gFileMutex);
-
     if (!fileExists(dir))
     {
         mode_t process_mask = umask(0);
@@ -56,16 +50,12 @@ fileEnsureDir(const std::string &dir)
 bool
 fileExists(const std::string &path)
 {
-    AutoFileLock lock(gFileMutex);
-
     return 0 == access(path.c_str(), F_OK);
 }
 
 Status
 fileLoad(DataChunk &result, const std::string &path)
 {
-    AutoFileLock lock(gFileMutex);
-
     FILE *fp = fopen(path.c_str(), "rb");
     if (!fp)
         return ABC_ERROR(ABC_CC_FileOpenError,
@@ -90,7 +80,6 @@ fileLoad(DataChunk &result, const std::string &path)
 Status
 fileSave(DataSlice data, const std::string &path)
 {
-    AutoFileLock lock(gFileMutex);
     ABC_DebugLog("Writing file %s", path.c_str());
 
     const auto pathTmp = path + ".tmp";

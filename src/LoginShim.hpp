@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -25,6 +25,7 @@ class Lobby;
 class Login;
 class Account;
 class Wallet;
+struct AuthError;
 
 /**
  * Clears all cached login objects.
@@ -51,21 +52,24 @@ cacheLoginNew(std::shared_ptr<Login> &result,
  */
 Status
 cacheLoginPassword(std::shared_ptr<Login> &result,
-                   const char *szUserName, const std::string &password);
+                   const char *szUserName, const std::string &password,
+                   AuthError &authError);
 
 /**
  * Logs the user in with their recovery answers, if necessary.
  */
 Status
 cacheLoginRecovery(std::shared_ptr<Login> &result,
-                   const char *szUserName, const std::string &recoveryAnswers);
+                   const char *szUserName, const std::string &recoveryAnswers,
+                   AuthError &authError);
 
 /**
  * Logs the user in with their PIN, if necessary.
  */
 Status
 cacheLoginPin(std::shared_ptr<Login> &result,
-              const char *szUserName, const std::string pin);
+              const char *szUserName, const std::string pin,
+              AuthError &authError);
 
 /**
  * Retrieves the cached login, assuming the username still matches.

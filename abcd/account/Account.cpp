@@ -1,14 +1,16 @@
 /*
- * Copyright (c) 2015, AirBitz, Inc.
+ * Copyright (c) 2015, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
  */
 
 #include "Account.hpp"
+#include "AccountSettings.hpp"
 #include "../login/Lobby.hpp"
 #include "../login/Login.hpp"
 #include "../util/Sync.hpp"
+#include "../util/AutoFree.hpp"
 
 namespace abcd {
 
@@ -45,6 +47,11 @@ Account::load()
     // If the sync dir doesn't exist, create it:
     const auto tempPath = login.paths.dir() + "tmp/";
     ABC_CHECK(syncEnsureRepo(dir(), tempPath, login.syncKey()));
+
+    AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+    settings.get() = accountSettingsLoad(*this);
+    bool pinChanged = false; // TODO: settings->szPIN != last-login-pin?
+    ABC_CHECK(accountSettingsPinSync(login, settings, pinChanged));
 
     ABC_CHECK(wallets.load());
     return Status();

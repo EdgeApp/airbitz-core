@@ -1,6 +1,6 @@
 /*
- *  Copyright (c) 2015, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2015, Airbitz, Inc.
+ * All rights reserved.
  *
  * See the LICENSE file for more information.
  */
@@ -11,6 +11,7 @@
 #include "../json/JsonPtr.hpp"
 #include "../util/Status.hpp"
 #include "TxMetadata.hpp"
+#include <list>
 #include <map>
 #include <mutex>
 #include <set>
@@ -19,6 +20,7 @@ namespace abcd {
 
 class Wallet;
 
+struct TxInOut;
 typedef std::set<std::string> AddressSet;
 typedef std::map<const std::string, std::string> KeyTable;
 
@@ -37,7 +39,7 @@ struct Address
 class AddressDb
 {
 public:
-    AddressDb(const Wallet &wallet);
+    AddressDb(Wallet &wallet);
 
     /**
      * Loads the addresses off disk.
@@ -81,9 +83,21 @@ public:
     Status
     getNew(Address &result);
 
+    /**
+     * Sets the recycle bit on the address.
+     */
+    Status
+    recycleSet(const std::string &address, bool recycle);
+
+    /**
+     * Marks a transaction's output addresses as having received money.
+     */
+    Status
+    markOutputs(const std::list<TxInOut> &ios);
+
 private:
     mutable std::mutex mutex_;
-    const Wallet &wallet_;
+    Wallet &wallet_;
     const std::string dir_;
 
     std::map<std::string, Address> addresses_;

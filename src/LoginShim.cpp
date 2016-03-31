@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -96,7 +96,8 @@ cacheLoginNew(std::shared_ptr<Login> &result,
 
 Status
 cacheLoginPassword(std::shared_ptr<Login> &result,
-                   const char *szUserName, const std::string &password)
+                   const char *szUserName, const std::string &password,
+                   AuthError &authError)
 {
     std::shared_ptr<Lobby> lobby;
     ABC_CHECK(cacheLobby(lobby, szUserName));
@@ -105,7 +106,7 @@ cacheLoginPassword(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK(loginPassword(gLoginCache, *lobby, password));
+        ABC_CHECK(loginPassword(gLoginCache, *lobby, password, authError));
     }
 
     result = gLoginCache;
@@ -114,7 +115,8 @@ cacheLoginPassword(std::shared_ptr<Login> &result,
 
 Status
 cacheLoginRecovery(std::shared_ptr<Login> &result,
-                   const char *szUserName, const std::string &recoveryAnswers)
+                   const char *szUserName, const std::string &recoveryAnswers,
+                   AuthError &authError)
 {
     std::shared_ptr<Lobby> lobby;
     ABC_CHECK(cacheLobby(lobby, szUserName));
@@ -123,7 +125,8 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK(loginRecovery(gLoginCache, *lobby, recoveryAnswers));
+        ABC_CHECK(loginRecovery(gLoginCache, *lobby, recoveryAnswers,
+                                authError));
     }
 
     result = gLoginCache;
@@ -132,7 +135,8 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
 
 Status
 cacheLoginPin(std::shared_ptr<Login> &result,
-              const char *szUserName, const std::string pin)
+              const char *szUserName, const std::string pin,
+              AuthError &authError)
 {
     std::shared_ptr<Lobby> lobby;
     ABC_CHECK(cacheLobby(lobby, szUserName));
@@ -141,7 +145,7 @@ cacheLoginPin(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK(loginPin(gLoginCache, *lobby, pin));
+        ABC_CHECK(loginPin(gLoginCache, *lobby, pin, authError));
     }
 
     result = gLoginCache;

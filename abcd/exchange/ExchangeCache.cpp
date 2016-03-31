@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -54,6 +54,7 @@ ExchangeCache::update(Currencies currencies, const ExchangeSources &sources)
 
         // Grab the rates from the server:
         ExchangeRates rates;
+        ExchangeRates ratesWanted;
         if (!exchangeSourceFetch(rates, source))
             continue; // Just skip the failed ones
 
@@ -62,12 +63,15 @@ ExchangeCache::update(Currencies currencies, const ExchangeSources &sources)
         {
             auto i = currencies.find(rate.first);
             if (currencies.end() != i)
+            {
                 currencies.erase(i);
+                ratesWanted.insert(rate);
+            }
         }
 
         // Add any new rates to the allRates list:
-        rates.insert(allRates.begin(), allRates.end());
-        allRates = std::move(rates);
+        ratesWanted.insert(allRates.begin(), allRates.end());
+        allRates = std::move(ratesWanted);
     }
 
     // Add the rates to the cache:

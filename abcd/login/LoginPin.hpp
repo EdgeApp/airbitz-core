@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -20,6 +20,7 @@ namespace abcd {
 
 class Login;
 class Lobby;
+struct AuthError;
 
 /**
  * Determines whether or not the given user can log in via PIN on this
@@ -39,7 +40,8 @@ loginPinDelete(Lobby &lobby);
  */
 Status
 loginPin(std::shared_ptr<Login> &result,
-         Lobby &lobby, const std::string &pin);
+         Lobby &lobby, const std::string &pin,
+         AuthError &authError);
 
 /**
  * Sets up a PIN login package, both on-disk and on the server.

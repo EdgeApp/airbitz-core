@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -15,6 +15,8 @@
 #include <inttypes.h>
 #include <time.h>
 #include <string>
+#include <math.h>
+#include <boost/algorithm/string.hpp>
 
 namespace abcd {
 
@@ -81,7 +83,6 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
     const char *szInputAddresses = "IN_ADDRESSES";
     const char *szOutputAddresses = "OUT_ADDRESSES";
     const char *szCsvTxid = "TXID";
-    const char *szCsvNtxid = "NTXID";
 
     ABC_CHECK_NULL(szCsvRec);
 
@@ -90,7 +91,7 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
 
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
-             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+             "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
              szDateCreation,
              szTimeCreation,
              szName,
@@ -103,7 +104,6 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
              szInputAddresses,
              szOutputAddresses,
              szCsvTxid,
-             szCsvNtxid,
              ABC_CSV_REC_TERM_NAME);
 exit:
     return cc;
@@ -199,7 +199,6 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec,
     char *szInputAddresses;
     char *szOutputAddresses;
     char *szCsvTxid;
-    char *szCsvNtxid;
 
     char buff[MAX_DATE_TIME_SIZE];
     char *pFormatted = NULL;
@@ -262,18 +261,15 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec,
     ABC_CSV_INIT(tmpCsvVar, pFormatted);
     ABC_CSV_FMT(tmpCsvVar, szOutputAddresses);
 
-    ABC_CSV_INIT(tmpCsvVar, data->szMalleableTxId);
-    ABC_CSV_FMT(tmpCsvVar, szCsvTxid);
-
     ABC_CSV_INIT(tmpCsvVar, data->szID);
-    ABC_CSV_FMT(tmpCsvVar, szCsvNtxid);
+    ABC_CSV_FMT(tmpCsvVar, szCsvTxid);
 
     /* Allocated enough space for one CSV REC - Determined by adding all field when quoted */
     ABC_STR_NEW(*szCsvRec, ABC_CSV_MAX_REC_SZ+1);
 
     /* build the entire record */
     snprintf(*out, ABC_CSV_MAX_FLD_SZ,
-             "%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+             "%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
              szDateCreation,
              szTimeCreation,
              szName,
@@ -286,7 +282,6 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec,
              szInputAddresses,
              szOutputAddresses,
              szCsvTxid,
-             szCsvNtxid,
              ABC_CSV_REC_TERM_VALUE);
 
     ABC_FREE(szTimeCreation);
@@ -299,7 +294,6 @@ tABC_CC ABC_ExportGenerateRecord(tABC_TxInfo *data, char **szCsvRec,
     ABC_FREE(szAmtAirbitzBTC);
     ABC_FREE(szAmtFeesMinersBTC);
     ABC_FREE(szCsvTxid);
-    ABC_FREE(szCsvNtxid);
     ABC_FREE(pFormatted);
 
 
@@ -334,5 +328,186 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
 exit:
     return cc;
 }
+
+Status escapeOFXString(std::string &string)
+{
+    boost::replace_all(string, "&", "&amp;");
+    boost::replace_all(string, ">", "&gt;");
+    boost::replace_all(string, "<", "&lt;");
+    return Status();
+}
+static Status
+exportQBOGenerateHeader(std::string &result, std::string date_today)
+{
+
+    result = "OFXHEADER:100\n"
+             "DATA:OFXSGML\n"
+             "VERSION:102\n"
+             "SECURITY:NONE\n"
+             "ENCODING:USASCII\n"
+             "CHARSET:1252\n"
+             "COMPRESSION:NONE\n"
+             "OLDFILEUID:NONE\n"
+             "NEWFILEUID:NONE\n\n"
+             "<OFX>\n"
+             "<SIGNONMSGSRSV1>\n"
+             "<SONRS>\n"
+             "<STATUS>\n"
+             "<CODE>0\n"
+             "<SEVERITY>INFO\n"
+             "</STATUS>\n"
+             "<DTSERVER>" + date_today + "\n"
+             "<LANGUAGE>ENG\n"
+             "<INTU.BID>3000\n"
+             "</SONRS>\n"
+             "</SIGNONMSGSRSV1>\n"
+             "<BANKMSGSRSV1>\n"
+             "<STMTTRNRS>\n"
+             "<TRNUID>" + date_today + "\n"
+             "<STATUS>\n"
+             "<CODE>0\n"
+             "<SEVERITY>INFO\n"
+             "<MESSAGE>OK\n"
+             "</STATUS>\n"
+             "<STMTRS>\n"
+             "<CURDEF>USD\n"
+             "<BANKACCTFROM>\n"
+             "<BANKID>999999999\n"
+             "<ACCTID>999999999999\n"
+             "<ACCTTYPE>CHECKING\n"
+             "</BANKACCTFROM>\n\n"
+             "<BANKTRANLIST>\n"
+             "<DTSTART>" + date_today + "\n"
+             "<DTEND>" + date_today + "\n";
+
+    return Status();
+}
+
+#define MAX_MEMO_SIZE 253
+
+static Status
+exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data)
+{
+    tABC_TxDetails *pDetails = data->pDetails;
+
+    AutoString amountFormatted;
+    ABC_CHECK_OLD(ABC_FormatAmount(pDetails->amountSatoshi,
+                                   &amountFormatted.get(),
+                                   ABC_BITCOIN_DECIMAL_PLACES - (ABC_DENOMINATION_UBTC * 3),
+                                   true, &error));
+
+    char buff[MAX_DATE_TIME_SIZE];
+    char buffMemo[MAX_MEMO_SIZE];
+    char buffExRate[10];
+    std::string transaction;
+    std::string trtype;
+    std::string date_time;
+    std::string amount(amountFormatted.get());
+    std::string txid(data->szID);
+    std::string payee(pDetails->szName);
+    std::string trname;
+    std::string exchangeRate;
+
+    // Transaction type
+    if (pDetails->amountSatoshi > 0)
+        trtype = "CREDIT";
+    else
+        trtype = "DEBIT";
+
+    // Transaction date/time
+    time_t t = (time_t) data->timeCreation;
+    struct tm *tmptr = localtime(&t);
+
+    if (!strftime(buff, sizeof buff, "%Y%m%d%H%M%S.000", tmptr))
+        return ABC_ERROR(ABC_CC_Error, "Could not format date");
+    date_time = buff;
+
+    // Payee name
+    escapeOFXString(payee);
+    if (payee.length() > 0)
+        trname = "  <NAME>" + payee + "\n";
+    else
+        trname = "";
+
+    // Transaction amount
+    double fAmount = ((double) pDetails->amountSatoshi) / 100; // Convert to bits
+
+    // Exchange rate
+    double fExchangeRate = pDetails->amountCurrency / fAmount;
+    fExchangeRate = fabs(fExchangeRate);
+    int s = snprintf(buffExRate, sizeof(buffExRate),
+                     "%.6f", fExchangeRate);
+    exchangeRate = buffExRate;
+
+    // Memo
+    s = snprintf(buffMemo, sizeof(buffMemo),
+                 "// Rate=%s USD=%.2f category=\"%s\" memo=\"%s\"",
+                 exchangeRate.c_str(), fabs(pDetails->amountCurrency), pDetails->szCategory,
+                 pDetails->szNotes);
+    std::string memo(buffMemo);
+    escapeOFXString(memo);
+
+    transaction = "<STMTTRN>\n"
+                  "  <TRNTYPE>" + trtype + "\n"
+                  "  <DTPOSTED>" + date_time + "\n"
+                  "  <TRNAMT>" + amount + "\n"
+                  "  <FITID>" + txid + "\n"
+                  + trname +
+                  "  <MEMO>" + memo + "\n"
+                  "  <CURRENCY>" + "\n"
+                  "    <CURRATE>" + exchangeRate + "\n"
+                  "    <CURSYM>USD" + "\n"
+                  "  </CURRENCY>" + "\n"
+                  "</STMTTRN>\n";
+
+    result = transaction;
+    return Status();
+}
+
+Status
+exportFormatQBO(std::string &result, tABC_TxInfo **pTransactions,
+                unsigned int iTransactionCount)
+{
+    time_t rawtime = time(nullptr);
+    tm *timeinfo = localtime(&rawtime);
+
+    char buffer[80];
+    strftime(buffer, 80, "%Y%m%d%H%M%S.000", timeinfo);
+    std::string date_today = buffer;
+
+    std::string out;
+    {
+        std::string header;
+        ABC_CHECK(exportQBOGenerateHeader(header, date_today));
+        out += header;
+    }
+
+    for (unsigned i = 0; i < iTransactionCount; i++)
+    {
+        std::string transactions;
+        ABC_CHECK(exportQBOGenerateRecord(transactions, pTransactions[i]));
+        out += transactions;
+    }
+
+    // Write footer
+    out += "</BANKTRANLIST>\n"
+           "<LEDGERBAL>\n"
+           "<BALAMT>0.00\n"
+           "<DTASOF>" + date_today + "\n"
+           "</LEDGERBAL>\n"
+           "<AVAILBAL>\n"
+           "<BALAMT>0.00\n"
+           "<DTASOF>" +  date_today + "\n"
+           "</AVAILBAL>\n"
+           "</STMTRS>\n"
+           "</STMTTRNRS>\n"
+           "</BANKMSGSRSV1>\n"
+           "</OFX>\n";
+
+    result = out;
+    return Status();
+}
+
+
 
 } // namespace abcd

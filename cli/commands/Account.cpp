@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, AirBitz, Inc.
+ * Copyright (c) 2015, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -34,7 +34,6 @@ COMMAND(InitLevel::context, AccountCreate, "account-create",
     const auto password = argv[1];
 
     ABC_CHECK_OLD(ABC_CreateAccount(username, password, &error));
-    ABC_CHECK_OLD(ABC_SetPIN(username, password, "1234", &error));
 
     return Status();
 }

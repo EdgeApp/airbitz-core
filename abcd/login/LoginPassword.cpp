@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -17,8 +17,7 @@ namespace abcd {
 
 static Status
 loginPasswordDisk(std::shared_ptr<Login> &result,
-                  Lobby &lobby,
-                  const std::string &password)
+                  Lobby &lobby, const std::string &password)
 {
     std::string LP = lobby.username() + password;
 
@@ -50,8 +49,8 @@ loginPasswordDisk(std::shared_ptr<Login> &result,
 
 static Status
 loginPasswordServer(std::shared_ptr<Login> &result,
-                    Lobby &lobby,
-                    const std::string &password)
+                    Lobby &lobby, const std::string &password,
+                    AuthError &authError)
 {
     std::string LP = lobby.username() + password;
 
@@ -67,7 +66,8 @@ loginPasswordServer(std::shared_ptr<Login> &result,
     LoginPackage loginPackage;
     JsonPtr rootKeyBox;
     ABC_CHECK(loginServerGetLoginPackage(lobby, authKey, U08Buf(),
-                                         loginPackage, rootKeyBox));
+                                         loginPackage, rootKeyBox,
+                                         authError));
 
     // Make passwordKey (unlocks dataKey):
     DataChunk passwordKey;
@@ -92,12 +92,12 @@ loginPasswordServer(std::shared_ptr<Login> &result,
 
 Status
 loginPassword(std::shared_ptr<Login> &result,
-              Lobby &lobby,
-              const std::string &password)
+              Lobby &lobby, const std::string &password,
+              AuthError &authError)
 {
     // Try the login both ways:
     if (!loginPasswordDisk(result, lobby, password))
-        ABC_CHECK(loginPasswordServer(result, lobby, password));
+        ABC_CHECK(loginPasswordServer(result, lobby, password, authError));
 
     return Status();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, AirBitz, Inc.
+ * Copyright (c) 2015, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -22,12 +22,10 @@ COMMAND(InitLevel::wallet, CliAddressAllocate, "address-allocate",
 
     for(int i = 0; i < count; ++i)
     {
-        tABC_TxDetails txDetails;
         AutoString requestId;
         ABC_CHECK_OLD(ABC_CreateReceiveRequest(session.username.c_str(),
                                                session.password.c_str(),
                                                session.uuid.c_str(),
-                                               &txDetails,
                                                &requestId.get(),
                                                &error));
         ABC_CHECK_OLD(ABC_FinalizeReceiveRequest(session.username.c_str(),

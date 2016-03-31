@@ -15,6 +15,11 @@ ifeq ($(GIT_REV_COMPARE),true)
 $(shell sed -i '/#define ABC_VERSION ".*"/c\#define ABC_VERSION "$(GIT_REV)"' src/Version.h )
 endif
 
+# Set DEFAULT_HIDDENBITSKEY in CLI if passed as variable
+ifneq ($(HIDDENBITSKEY),"")
+$(shell sed -i '/#define DEFAULT_HIDDENBITSKEY ".*"/c\#define DEFAULT_HIDDENBITSKEY "$(HIDDENBITSKEY)"' cli/Main.cpp )
+endif
+
 # Compiler options:
 CFLAGS   += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c99
 CXXFLAGS += -D_GNU_SOURCE -DDEBUG -g -Wall -fPIC -std=c++11
@@ -101,6 +106,7 @@ clean:
 	$(RM) -r $(WORK_DIR) codegen
 
 install: $(WORK_DIR)/libabc.a $(WORK_DIR)/abc-cli cli/doc/abc-cli.1
+	make doc
 	install -d $(INSTALL_PATH)/lib
 	install -d $(INSTALL_PATH)/bin
 	install -d $(INSTALL_PATH)/include
@@ -118,6 +124,19 @@ uninstall:
 	rm -f $(INSTALL_PATH)/include/ABC.h
 	rm -f $(INSTALL_PATH)/share/man/man1/abc-cli.1
 	rm -f $(INSTALL_PATH)/share/bash-completion/completions/abc-cli-bash-completion.sh
+
+tar:
+	make
+	make doc
+	mkdir -p abctar abctar/lib abctar/bin abctar/include abctar/share/man/man1 abctar/share/bash-completion/completions
+	cp $(WORK_DIR)/libabc.a abctar/lib
+	cp $(WORK_DIR)/abc-cli abctar/bin
+	cp src/ABC.h abctar/include
+	cp cli/doc/abc-cli.1 abctar/share/man/man1
+	cp cli/abc-cli-bash-completion.sh abctar/share/bash-completion/completions
+	tar -cvf abc.tar abctar
+	gzip -f abc.tar
+	rm -rf abctar
 
 # Automatic dependency rules:
 $(WORK_DIR)/%.o: %.c | $(generated_headers)

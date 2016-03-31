@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, AirBitz, Inc.
+ * Copyright (c) 2015, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -54,7 +54,7 @@ otpResetGet(std::list<std::string> &result,
  * which will disable the OTP authentication requirement when it expires.
  */
 Status
-otpResetSet(Lobby &lobby);
+otpResetSet(Lobby &lobby, const std::string &token);
 
 /**
  * Cancels an OTP reset timer.

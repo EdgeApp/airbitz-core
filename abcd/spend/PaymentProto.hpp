@@ -1,6 +1,8 @@
 /*
- *  Copyright (c) 2015, AirBitz, Inc.
- *  All rights reserved.
+ * Copyright (c) 2015, Airbitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
  */
 
 #ifndef ABCD_SPEND_PAYMENT_PROTO_HPP
@@ -61,6 +63,12 @@ public:
      */
     std::string
     merchant(const std::string &fallback="") const;
+
+    /**
+     * Returns true if the request has a memo field.
+     */
+    bool
+    memoOk() const;
 
     /**
      * Returns the memo, if any.

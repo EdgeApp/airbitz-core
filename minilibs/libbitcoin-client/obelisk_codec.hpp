@@ -50,6 +50,8 @@ public:
     // Loose message handlers:
     typedef std::function<void (const std::string& command)> unknown_handler;
 
+    BC_API ~obelisk_codec();
+
     /**
      * Constructor.
      * @param out a stream to receive outgoing messages created by the codec.

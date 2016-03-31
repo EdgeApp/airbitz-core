@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -8,7 +8,8 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "../General.hpp"
-#include "../bitcoin/TxDatabase.hpp"
+#include "../bitcoin/TxCache.hpp"
+#include "../bitcoin/Utility.hpp"
 #include "../wallet/Wallet.hpp"
 #include <unistd.h>
 #include <bitcoin/bitcoin.hpp>
@@ -16,16 +17,17 @@
 namespace abcd {
 
 static std::map<bc::data_chunk, std::string> address_map;
-static bc::operation create_data_operation(bc::data_chunk &data);
 
 Status
-signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
+signTx(bc::transaction_type &result, const TxCache &txCache,
+       const KeyTable &keys)
 {
     for (size_t i = 0; i < result.inputs.size(); ++i)
     {
         // Find the utxo this input refers to:
         bc::input_point &point = result.inputs[i].previous_output;
-        bc::transaction_type tx = wallet.txdb.txidLookup(point.hash);
+        bc::transaction_type tx;
+        ABC_CHECK(txCache.txidLookup(tx, point.hash));
 
         // Find the address for that utxo:
         bc::payment_address pa;
@@ -42,13 +44,9 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
         bc::ec_point pubkey = bc::secret_to_public_key(secret,
                               bc::is_wif_compressed(key->second));
 
-        // Gererate the previous output's signature:
-        // TODO: We already have this; process it and use it
-        bc::script_type sig_script = outputScriptForPubkey(pa.hash());
-
         // Generate the signature for this input:
-        bc::hash_digest sig_hash =
-            bc::script_type::generate_signature_hash(result, i, sig_script, 1);
+        auto sig_hash = bc::script_type::generate_signature_hash(
+                            result, i, script, bc::sighash::all);
         if (sig_hash == bc::null_hash)
             return ABC_ERROR(ABC_CC_Error, "Unable to sign");
         bc::data_chunk signature = bc::sign(secret, sig_hash,
@@ -57,99 +55,12 @@ signTx(bc::transaction_type &result, const Wallet &wallet, const KeyTable &keys)
 
         // Create out scriptsig:
         bc::script_type scriptsig;
-        scriptsig.push_operation(create_data_operation(signature));
-        scriptsig.push_operation(create_data_operation(pubkey));
+        scriptsig.push_operation(makePushOperation(signature));
+        scriptsig.push_operation(makePushOperation(pubkey));
         result.inputs[i].script = scriptsig;
     }
 
     return Status();
-}
-
-static bc::operation create_data_operation(bc::data_chunk &data)
-{
-    BITCOIN_ASSERT(data.size() < std::numeric_limits<uint32_t>::max());
-    bc::operation op;
-    op.data = data;
-    if (data.size() <= 75)
-        op.code = bc::opcode::special;
-    else if (data.size() < std::numeric_limits<uint8_t>::max())
-        op.code = bc::opcode::pushdata1;
-    else if (data.size() < std::numeric_limits<uint16_t>::max())
-        op.code = bc::opcode::pushdata2;
-    else if (data.size() < std::numeric_limits<uint32_t>::max())
-        op.code = bc::opcode::pushdata4;
-    return op;
-}
-
-bool gather_challenges(unsigned_transaction &utx, Wallet &wallet)
-{
-    utx.challenges.resize(utx.tx.inputs.size());
-
-    for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
-    {
-        bc::input_point &point = utx.tx.inputs[i].previous_output;
-        if (!wallet.txdb.txidExists(point.hash))
-            return false;
-        bc::transaction_type tx = wallet.txdb.txidLookup(point.hash);
-        utx.challenges[i] = tx.outputs[point.index].script;
-    }
-
-    return true;
-}
-
-bool sign_tx(unsigned_transaction &utx, const key_table &keys)
-{
-    bool all_done = true;
-
-    for (size_t i = 0; i < utx.tx.inputs.size(); ++i)
-    {
-        auto &input = utx.tx.inputs[i];
-        auto &challenge = utx.challenges[i];
-
-        // Already signed?
-        if (input.script.operations().size())
-            continue;
-
-        // Extract the address:
-        bc::payment_address from_address;
-        if (!bc::extract(from_address, challenge))
-        {
-            all_done = false;
-            continue;
-        }
-
-        // Find a matching key:
-        auto key = keys.find(from_address);
-        if (key == keys.end())
-        {
-            all_done = false;
-            continue;
-        }
-        auto &secret = key->second.secret;
-        auto pubkey = bc::secret_to_public_key(secret, key->second.compressed);
-
-        // Create the sighash for this input:
-        bc::hash_digest sighash =
-            bc::script_type::generate_signature_hash(utx.tx, i, challenge, 1);
-        if (sighash == bc::null_hash)
-        {
-            all_done = false;
-            continue;
-        }
-
-        // Sign:
-        bc::data_chunk signature = bc::sign(secret, sighash,
-                                            bc::create_nonce(secret, sighash));
-        signature.push_back(0x01);
-
-        // Save:
-        bc::script_type scriptsig;
-        scriptsig.push_operation(create_data_operation(signature));
-        scriptsig.push_operation(create_data_operation(pubkey));
-        utx.tx.inputs[i].script = scriptsig;
-    }
-
-    return all_done;
 }
 
 static uint64_t
@@ -220,7 +131,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
         for (auto &point: chosen.points)
         {
             bc::transaction_input_type input;
-            input.sequence = 4294967295;
+            input.sequence = 0xffffffff;
             input.previous_output = point;
             tx.inputs.push_back(input);
         }
@@ -246,7 +157,7 @@ inputsPickMaximum(uint64_t &resultFee, uint64_t &resultUsable,
     for (auto &utxo: utxos)
     {
         bc::transaction_input_type input;
-        input.sequence = 4294967295;
+        input.sequence = 0xffffffff;
         input.previous_output = utxo.point;
         tx.inputs.push_back(input);
         sourced += utxo.value;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, AirBitz, Inc.
+ * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
  *
  * See the LICENSE file for more information.
@@ -19,6 +19,7 @@ namespace abcd {
 
 class Login;
 class Lobby;
+struct AuthError;
 
 /**
  * Obtains the recovery questions for a user.
@@ -31,7 +32,8 @@ loginRecoveryQuestions(std::string &result, Lobby &lobby);
  */
 Status
 loginRecovery(std::shared_ptr<Login> &result,
-              Lobby &lobby, const std::string &recoveryAnswers);
+              Lobby &lobby, const std::string &recoveryAnswers,
+              AuthError &authError);
 
 /**
  * Changes the recovery questions and answers on an existing login object.
