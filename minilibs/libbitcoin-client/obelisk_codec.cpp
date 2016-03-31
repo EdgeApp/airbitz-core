@@ -37,6 +37,15 @@ T reverse(const T& in)
     return out;
 }
 
+BC_API obelisk_codec::~obelisk_codec()
+{
+    for (const auto &request: pending_requests_)
+    {
+        const auto ec = std::make_error_code(std::errc::operation_canceled);
+        request.second.on_error(ec);
+    }
+}
+
 BC_API obelisk_codec::obelisk_codec(message_stream& out,
     unknown_handler&& on_unknown,
     sleep_time timeout, unsigned retries)
