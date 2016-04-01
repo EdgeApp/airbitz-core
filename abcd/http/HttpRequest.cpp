@@ -13,6 +13,19 @@ namespace abcd {
 
 #define TIMEOUT 10
 
+static Status curlOk(CURLcode code)
+{
+    if (code)
+    {
+        const auto message = std::string("cURL error: ") +
+                             curl_easy_strerror(code);
+        return ABC_ERROR(ABC_CC_SysError, message);
+    }
+    return Status();
+}
+
+#define ABC_CHECK_CURL(code) ABC_CHECK(curlOk(code))
+
 static int
 curlDebugCallback(CURL *handle, curl_infotype type, char *data, size_t size,
                   void *userp)
@@ -74,13 +87,11 @@ HttpRequest::HttpRequest():
 HttpRequest &
 HttpRequest::debug()
 {
-    if (!status_)
-        return *this;
-
-    if (curl_easy_setopt(handle_, CURLOPT_DEBUGFUNCTION, curlDebugCallback) ||
-            curl_easy_setopt(handle_, CURLOPT_VERBOSE, 1L))
-        status_ = ABC_ERROR(ABC_CC_Error, "cURL failed to enable debug output");
-
+    if (status_)
+        status_ = curlOk(curl_easy_setopt(handle_, CURLOPT_DEBUGFUNCTION,
+                                          curlDebugCallback));
+    if (status_)
+        status_ = curlOk(curl_easy_setopt(handle_, CURLOPT_VERBOSE, 1L));
     return *this;
 }
 
@@ -107,23 +118,17 @@ HttpRequest::get(HttpReply &result, const std::string &url)
         return status_;
 
     // Final options:
-    if (curl_easy_setopt(handle_, CURLOPT_WRITEDATA, &result.body))
-        return ABC_ERROR(ABC_CC_Error, "cURL failed to set callback data");
-    if (curl_easy_setopt(handle_, CURLOPT_WRITEFUNCTION, curlDataCallback))
-        return ABC_ERROR(ABC_CC_Error, "cURL failed to set callback");
-    if (curl_easy_setopt(handle_, CURLOPT_URL, url.c_str()))
-        return ABC_ERROR(ABC_CC_Error, "cURL failed to set URL");
+    ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_WRITEDATA, &result.body));
+    ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_WRITEFUNCTION,
+                                    curlDataCallback));
+    ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_URL, url.c_str()));
     if (headers_)
-    {
-        if (curl_easy_setopt(handle_, CURLOPT_HTTPHEADER, headers_))
-            return ABC_ERROR(ABC_CC_Error, "cURL failed to set headers");
-    }
+        ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_HTTPHEADER, headers_));
 
     // Make the request:
-    if (curl_easy_perform(handle_))
-        return ABC_ERROR(ABC_CC_Error, "cURL failed to make HTTP request");
-    if (curl_easy_getinfo(handle_, CURLINFO_RESPONSE_CODE, &result.code))
-        return ABC_ERROR(ABC_CC_Error, "cURL failed to get response code");
+    ABC_CHECK_CURL(curl_easy_perform(handle_));
+    ABC_CHECK_CURL(curl_easy_getinfo(handle_, CURLINFO_RESPONSE_CODE,
+                                     &result.code));
     if (result.codeOk())
         ABC_DebugLog("%s (%d)", url.c_str(), result.code);
     else
@@ -139,9 +144,9 @@ HttpRequest::post(HttpReply &result, const std::string &url,
 {
     if (!status_)
         return status_;
-    if (curl_easy_setopt(handle_, CURLOPT_POSTFIELDSIZE, body.size()) ||
-            curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, body.c_str()))
-        return ABC_ERROR(ABC_CC_Error, "cURL failed to set POST body");
+
+    ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_POSTFIELDSIZE, body.size()));
+    ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, body.c_str()));
     return get(result, url);
 }
 
@@ -151,8 +156,8 @@ HttpRequest::put(HttpReply &result, const std::string &url,
 {
     if (!status_)
         return status_;
-    if (curl_easy_setopt(handle_, CURLOPT_CUSTOMREQUEST, "PUT"))
-        return ABC_ERROR(ABC_CC_Error, "cURL failed to set PUT mode");
+
+    ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_CUSTOMREQUEST, "PUT"));
     return post(result, url);
 }
 
@@ -164,17 +169,13 @@ HttpRequest::init()
         return ABC_ERROR(ABC_CC_Error, "cURL failed create handle");
 
     // Basic options:
-    if (curl_easy_setopt(handle_, CURLOPT_NOSIGNAL, 1))
-        return ABC_ERROR(ABC_CC_Error, "cURL failed to ignore signals");
-    if (curl_easy_setopt(handle_, CURLOPT_CONNECTTIMEOUT, TIMEOUT))
-        return ABC_ERROR(ABC_CC_Error, "cURL failed to set timeout");
+    ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_NOSIGNAL, 1));
+    ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_CONNECTTIMEOUT, TIMEOUT));
 
     const auto certPath = gContext->paths.certPath();
     if (!certPath.empty())
-    {
-        if (curl_easy_setopt(handle_, CURLOPT_CAINFO, certPath.c_str()))
-            return ABC_ERROR(ABC_CC_Error, "cURL failed to set ca-certificates.crt");
-    }
+        ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_CAINFO,
+                                        certPath.c_str()));
 
     return Status();
 }
