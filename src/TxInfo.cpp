@@ -51,6 +51,7 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
     else
     {
         out->timeCreation = time(nullptr);
+        out->pDetails = TxMetadata().toDetails();
     }
     out->pDetails->amountSatoshi = info.balance;
     out->pDetails->amountFeesMinersSatoshi = info.fee;
