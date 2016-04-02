@@ -19,7 +19,7 @@ struct MetadataJson:
     ABC_JSON_STRING(category,           "category", "");
     ABC_JSON_STRING(notes,              "notes", "");
     ABC_JSON_INTEGER(bizId,             "bizId", 0);
-    ABC_JSON_INTEGER(amountCurrency,    "amountCurrency", 0);
+    ABC_JSON_NUMBER(amountCurrency,     "amountCurrency", 0);
     ABC_JSON_INTEGER(amount,            "amountSatoshi", 0);
     ABC_JSON_INTEGER(airbitzFee,        "amountFeeAirBitzSatoshi", 0);
     ABC_JSON_INTEGER(minerFee,          "amountFeeMinersSatoshi", 0);
