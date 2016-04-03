@@ -231,6 +231,14 @@ TEST_CASE("ParsedUri test", "[bitcoin][uri]")
         REQUIRE(parseUri(uri, text));
         REQUIRE(uri.bitidUri == text);
     }
+    SECTION("OTP URI")
+    {
+        auto text =
+            "otpauth://totp/Example:alice@google.com?secret=JBSWY3DPEHPK3PXP&issuer=Example";
+        REQUIRE(parseUri(uri, text));
+        REQUIRE(uri.otpKey == "JBSWY3DPEHPK3PXP");
+        REQUIRE(uri.label == "Example:alice@google.com");
+    }
     SECTION("wif")
     {
         auto text = "KzuvBLcUQsfKcjHRhoe7D8UfzjLRsjB14AppLwSsb8uTdKHH45vM";

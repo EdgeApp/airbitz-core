@@ -373,6 +373,7 @@ typedef struct sABC_ParsedUri
     char *szWif;
     char *szPaymentProto;
     char *szBitidUri;
+    char *szOtpKey;
 
     // URI parameters:
     uint64_t amountSatoshi;

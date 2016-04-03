@@ -121,6 +121,20 @@ parseUri(ParsedUri &result, const std::string &text)
         {
             result.bitidUri = text;
         }
+        else if ("otpauth" == uri.scheme())
+        {
+            DataChunk secret;
+            auto query = uri.queryDecode();
+            if (!uri.authorityOk() || "totp" != uri.authority()
+                    || query.end() == query.find("secret"))
+                return ABC_ERROR(ABC_CC_ParseError, "Invalid otpauth URI");
+
+            result.otpKey = query["secret"];
+            result.label = uri.path();
+            if ('/' == result.label[0])
+                result.label.erase(0, 1);
+            //ABC_CHECK(base32Decode(secret, result.otpKey));
+        }
         else
         {
             return ABC_ERROR(ABC_CC_ParseError, "Unknown URI scheme");

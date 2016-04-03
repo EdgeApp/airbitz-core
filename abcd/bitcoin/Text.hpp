@@ -26,6 +26,7 @@ struct ParsedUri
     std::string wif;
     std::string paymentProto;
     std::string bitidUri;
+    std::string otpKey;
 
     // URI parameters:
     uint64_t amountSatoshi = 0;

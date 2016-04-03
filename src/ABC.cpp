@@ -2209,6 +2209,8 @@ tABC_CC ABC_ParseUri(char *szURI,
                                   stringCopy(uri.paymentProto);
         pResult->szBitidUri = uri.bitidUri.empty() ? nullptr :
                               stringCopy(uri.bitidUri);
+        pResult->szOtpKey = uri.otpKey.empty() ? nullptr :
+                            stringCopy(uri.otpKey);
         pResult->amountSatoshi = uri.amountSatoshi;
         pResult->szLabel = uri.label.empty() ? nullptr : stringCopy(uri.label);
         pResult->szMessage = uri.message.empty() ? nullptr :
