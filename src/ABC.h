@@ -782,6 +782,14 @@ tABC_CC ABC_OtpGenerate(char **pszCode,
                         const char *szKey,
                         tABC_Error *pError);
 
+/**
+ * Generates a URI for sharing an OTP token.
+ */
+tABC_CC ABC_OtpEncode(char **pszUri,
+                      const char *szKey,
+                      const char *szLabel,
+                      tABC_Error *pError);
+
 /** === BitID: === */
 
 /**

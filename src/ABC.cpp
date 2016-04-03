@@ -504,6 +504,31 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_OtpEncode(char **pszUri,
+                      const char *szKey,
+                      const char *szLabel,
+                      tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszUri);
+    ABC_CHECK_NULL(szKey);
+    ABC_CHECK_NULL(szLabel);
+
+    {
+        Uri uri;
+        uri.schemeSet("otpauth");
+        uri.authoritySet("totp");
+        uri.pathSet("/" + std::string(szLabel));
+        std::map<std::string, std::string> query;
+        query["secret"] = szKey;
+        uri.queryEncode(query);
+        *pszUri = stringCopy(uri.encode());
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_BitidParseUri(const char *szUserName,
                           const char *szPassword,
                           const char *szBitidURI,
