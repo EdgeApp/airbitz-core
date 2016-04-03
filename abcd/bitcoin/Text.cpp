@@ -11,6 +11,7 @@
 #include "../crypto/Random.hpp"
 #include "../http/Uri.hpp"
 #include <bitcoin/bitcoin.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace abcd {
 
@@ -190,6 +191,14 @@ hbitsCreate(std::string &result, std::string &addressOut)
             return Status();
         }
     }
+}
+
+std::string
+trimSpace(std::string text)
+{
+    std::string out = text;
+    boost::algorithm::trim(out);
+    return out;
 }
 
 } // namespace abcd

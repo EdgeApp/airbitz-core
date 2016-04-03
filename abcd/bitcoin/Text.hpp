@@ -47,6 +47,12 @@ parseUri(ParsedUri &result, const std::string &text);
 Status
 hbitsCreate(std::string &result, std::string &addressOut);
 
+/**
+ * Trims the spaces off the ends of a string.
+ */
+std::string
+trimSpace(std::string text);
+
 } // namespace abcd
 
 #endif

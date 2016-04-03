@@ -498,7 +498,7 @@ tABC_CC ABC_BitidParseUri(const char *szUserName,
 
     {
         Uri callback;
-        ABC_CHECK_NEW(bitidCallback(callback, szBitidURI));
+        ABC_CHECK_NEW(bitidCallback(callback, trimSpace(szBitidURI)));
         callback.pathSet("");
         *pszDomain = stringCopy(callback.encode());
     }
@@ -517,7 +517,7 @@ tABC_CC ABC_BitidLogin(const char *szUserName,
 
     {
         ABC_GET_LOGIN();
-        ABC_CHECK_NEW(bitidLogin(login->rootKey(), szBitidURI));
+        ABC_CHECK_NEW(bitidLogin(login->rootKey(), trimSpace(szBitidURI)));
     }
 
 exit:
@@ -542,7 +542,7 @@ tABC_CC ABC_BitidSign(const char *szUserName,
         ABC_GET_LOGIN();
 
         Uri callback;
-        ABC_CHECK_NEW(bitidCallback(callback, szBitidURI, false));
+        ABC_CHECK_NEW(bitidCallback(callback, trimSpace(szBitidURI), false));
         const auto signature = bitidSign(login->rootKey(),
                                          szMessage, callback.encode(), 0);
 
@@ -2199,7 +2199,7 @@ tABC_CC ABC_ParseUri(char *szURI,
 
     {
         ParsedUri uri;
-        ABC_CHECK_NEW(parseUri(uri, szURI));
+        ABC_CHECK_NEW(parseUri(uri, trimSpace(szURI)));
 
         tABC_ParsedUri *pResult = structAlloc<tABC_ParsedUri>();
         pResult->szAddress = uri.address.empty() ? nullptr :
