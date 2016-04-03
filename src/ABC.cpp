@@ -486,6 +486,24 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_OtpGenerate(char **pszCode,
+                        const char *szKey,
+                        tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szKey);
+    ABC_CHECK_NULL(pszCode);
+
+    {
+        OtpKey key;
+        ABC_CHECK_NEW(key.decodeBase32(szKey));
+        *pszCode = stringCopy(key.totp());
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_BitidParseUri(const char *szUserName,
                           const char *szPassword,
                           const char *szBitidURI,

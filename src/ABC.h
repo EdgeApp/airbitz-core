@@ -775,6 +775,13 @@ tABC_CC ABC_OtpResetRemove(const char *szUserName,
                            const char *szPassword,
                            tABC_Error *pError);
 
+/**
+ * Generates a code from an arbitrary OTP token.
+ */
+tABC_CC ABC_OtpGenerate(char **pszCode,
+                        const char *szKey,
+                        tABC_Error *pError);
+
 /** === BitID: === */
 
 /**
