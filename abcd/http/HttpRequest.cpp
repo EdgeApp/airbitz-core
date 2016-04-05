@@ -17,8 +17,11 @@ static Status curlOk(CURLcode code)
 {
     if (code)
     {
-        const auto message = std::string("cURL error: ") +
-                             curl_easy_strerror(code);
+        std::string message("cURL error: ");
+        if (curl_easy_strerror(code))
+            message += curl_easy_strerror(code);
+        else
+            message += std::to_string(code);
         return ABC_ERROR(ABC_CC_SysError, message);
     }
     return Status();
