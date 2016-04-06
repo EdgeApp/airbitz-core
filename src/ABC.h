@@ -387,6 +387,8 @@ typedef struct sABC_ParsedUri
  */
 typedef struct sABC_PaymentRequest
 {
+    /** True if the request is digitally signed (not all are). */
+    bool bSigned;
     /** The certificate validation domain name. */
     char *szDomain;
     /** The total amount being requested. */

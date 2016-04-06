@@ -40,11 +40,18 @@ public:
     fetch(const std::string &url);
 
     /**
+     * Returns true if the payment request is signed.
+     */
+    bool
+    signatureExists();
+
+    /**
      * Returns true if the certificate chain checks out.
-     * Sets the result to the certificate domain name.
+     * Sets the result to the certificate domain name,
+     * or URI authority if there is no certificate chain.
      */
     Status
-    signatureOk(std::string &result);
+    signatureOk(std::string &result, const std::string &uri);
 
     /**
      * Obtains the payment scripts and amounts being requested.
