@@ -9,6 +9,7 @@
 #include "../Context.hpp"
 #include "../bitcoin/Testnet.hpp"
 #include "../http/HttpRequest.hpp"
+#include "../http/Uri.hpp"
 #include "../util/AutoFree.hpp"
 #include <regex>
 
@@ -100,16 +101,32 @@ PaymentRequest::fetch(const std::string &url)
     return Status();
 }
 
-Status
-PaymentRequest::signatureOk(std::string &result)
+bool
+PaymentRequest::signatureExists()
 {
+    return (request_.pki_type() == "x509+sha256")
+           || (request_.pki_type() == "x509+sha1");
+}
+
+Status
+PaymentRequest::signatureOk(std::string &result, const std::string &uri)
+{
+    // If there is no signature, we don't need to do anything:
+    if (request_.pki_type() == "none")
+    {
+        Uri parsed;
+        if (!parsed.decode(uri) || !parsed.authorityOk())
+            return ABC_ERROR(ABC_CC_ParseError, "Invalid payment URI");
+
+        result = parsed.authority();
+        return Status(); // Leave result unchanged
+    }
+
     const EVP_MD *alg = NULL;
     if (request_.pki_type() == "x509+sha256")
         alg = EVP_sha256();
     else if (request_.pki_type() == "x509+sha1")
         alg = EVP_sha1();
-    else if (request_.pki_type() == "none")
-        return ABC_ERROR(ABC_CC_Error, "Pki_type == none");
     else
         return ABC_ERROR(ABC_CC_Error, "Unknown pki_type");
 
@@ -233,7 +250,7 @@ PaymentRequest::pay(PaymentReceipt &result, DataSlice tx, DataSlice refund)
 
     // Check request expiration
     time_t now = time(NULL);
-    if (details_.has_expires() && (int64_t) details_.expires() < now)
+    if (details_.has_expires() && (time_t)details_.expires() < now)
         return ABC_ERROR(ABC_CC_Error, "Payment request has expired");
 
     HttpReply reply;
