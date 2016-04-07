@@ -19,8 +19,6 @@ namespace abcd {
 
 class Wallet;
 
-typedef std::vector<std::string> NtxidList;
-
 struct Tx
 {
     std::string ntxid;
@@ -50,12 +48,6 @@ public:
      */
     Status
     save(const Tx &tx);
-
-    /**
-     * Lists all the transactions in the database.
-     */
-    NtxidList
-    list();
 
     /**
      * Looks up a particular transaction in the database.

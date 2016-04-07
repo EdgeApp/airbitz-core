@@ -157,19 +157,6 @@ TxMetaDb::save(const Tx &tx)
     return Status();
 }
 
-NtxidList
-TxMetaDb::list()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    NtxidList out;
-    out.reserve(txs_.size());
-    for (const auto &i: txs_)
-        out.push_back(i.first);
-
-    return out;
-}
-
 Status
 TxMetaDb::get(Tx &result, const std::string &ntxid)
 {
