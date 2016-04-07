@@ -9,6 +9,7 @@
 #define ABCD_BITCOIN_CACHE_CACHE_HPP
 
 #include "AddressCache.hpp"
+#include "BlockCache.hpp"
 #include "TxCache.hpp"
 
 namespace abcd {
@@ -17,9 +18,10 @@ class Cache
 {
 public:
     TxCache txs;
+    BlockCache &blocks;
     AddressCache addresses;
 
-    Cache(const std::string &path);
+    Cache(const std::string &path, BlockCache &blockCache);
 
     /**
      * Clears the cache in case something goes wrong.

@@ -2646,9 +2646,7 @@ tABC_CC ABC_BlockHeight(const char *szWalletUUID, int *height,
                      "The core library has not been initalized");
 
     {
-        ABC_GET_WALLET_N();
-
-        *height = wallet->cache.txs.last_height();
+        *height = gContext->blockCache.height();
         if (*height == 0)
         {
             cc = ABC_CC_Synchronizing;

@@ -74,11 +74,6 @@ public:
     TxCache(unsigned unconfirmed_timeout=60*60);
 
     /**
-     * Returns the highest block that this database has seen.
-     */
-    long long last_height() const;
-
-    /**
      * Obtains a transaction from the database.
      */
     Status
@@ -183,11 +178,6 @@ private:
     };
 
     /**
-     * Updates the block height.
-     */
-    void at_height(size_t height);
-
-    /**
      * Mark a transaction as confirmed.
      * TODO: Require the block hash as well, once obelisk provides this.
      */
@@ -230,9 +220,6 @@ private:
 
     // Guards access to object state:
     mutable std::mutex mutex_;
-
-    // The last block seen on the network:
-    size_t last_height_;
 
     std::unordered_map<bc::hash_digest, TxRow> rows_;
 

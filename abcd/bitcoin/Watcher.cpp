@@ -87,15 +87,6 @@ void Watcher::set_tx_callback(tx_callback cb)
 }
 
 /**
- * Sets up the change in block heightcallback.
- */
-void Watcher::set_height_callback(block_height_callback cb)
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    height_cb_ = std::move(cb);
-}
-
-/**
  * Sets up the server failure callback
  */
 void Watcher::set_quiet_callback(quiet_callback cb)
@@ -203,13 +194,6 @@ void Watcher::on_add(const bc::transaction_type &tx)
     std::lock_guard<std::mutex> lock(cb_mutex_);
     if (cb_)
         cb_(tx);
-}
-
-void Watcher::on_height(size_t height)
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    if (height_cb_)
-        height_cb_(height);
 }
 
 void Watcher::on_quiet()

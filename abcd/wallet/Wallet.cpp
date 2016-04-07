@@ -172,7 +172,7 @@ Wallet::Wallet(Account &account, const std::string &id):
     balanceDirty_(true),
     addresses(*this),
     txs(*this),
-    cache(*new Cache(paths.watcherPath()))
+    cache(*new Cache(paths.watcherPath(), gContext->blockCache))
 {}
 
 Status

@@ -424,10 +424,9 @@ void TxUpdater::get_height()
 
         auto on_done = [this, idx, &bconn](size_t height)
         {
-            if (cache_.txs.last_height() < height)
+            if (cache_.blocks.height() < height)
             {
-                cache_.txs.at_height(height);
-                callbacks_.on_height(height);
+                cache_.blocks.heightSet(height);
 
                 // Query all unconfirmed transactions:
                 cache_.txs.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1, idx));

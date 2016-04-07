@@ -29,11 +29,6 @@ public:
     virtual void on_add(const bc::transaction_type &tx) = 0;
 
     /**
-     * Called when the updater detects a new block.
-     */
-    virtual void on_height(size_t height) = 0;
-
-    /**
      * Called when the updater has finished all its address queries,
      * and balances should now be up-to-date.
      */

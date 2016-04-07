@@ -8,6 +8,7 @@
 #include "WatcherBridge.hpp"
 #include "Watcher.hpp"
 #include "cache/Cache.hpp"
+#include "../Context.hpp"
 #include "../spend/Sweep.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
@@ -42,6 +43,9 @@ public:
     Watcher watcher;
     Wallet &wallet;
     std::list<PendingSweep> sweeping;
+
+    tABC_BitCoin_Event_Callback fCallback;
+    void *pData;
 };
 
 static std::map<std::string, std::unique_ptr<WatcherInfo>> watchers_;
@@ -51,6 +55,31 @@ static void     bridgeQuietCallback(WatcherInfo *watcherInfo,
 static Status   bridgeTxCallback(Wallet &wallet,
                                  const libbitcoin::transaction_type &tx,
                                  tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
+
+/**
+ * Tells all running watchers that height has changed.
+ * This is a temporary hack until we gain support for app-wide callbacks.
+ */
+static void
+onHeight(size_t height)
+{
+    for (auto &watcher: watchers_)
+    {
+        if (watcher.second->fCallback)
+        {
+            ABC_DebugLog("BlockHeightChange callback: wallet %s",
+                         watcher.second->wallet.id().c_str());
+            tABC_AsyncBitCoinInfo info;
+            info.pData = watcher.second->pData;
+            info.eventType = ABC_AsyncEventType_BlockHeightChange;
+            Status().toError(info.status, ABC_HERE());
+            info.szWalletUUID = watcher.second->wallet.id().c_str();
+            info.szTxID = nullptr;
+            info.sweepSatoshi = 0;
+            watcher.second->fCallback(&info);
+        }
+    }
+}
 
 static Status
 watcherFind(WatcherInfo *&result, const Wallet &self)
@@ -111,6 +140,11 @@ bridgeWatcherLoop(Wallet &self,
     WatcherInfo *watcherInfo = nullptr;
     ABC_CHECK(watcherFind(watcherInfo, self));
 
+    // Set up new-block callback:
+    watcherInfo->fCallback = fCallback;
+    watcherInfo->pData = pData;
+    gContext->blockCache.onHeightSet(onHeight);
+
     // Set up the address-changed callback:
     auto wakeupCallback = [watcherInfo]()
     {
@@ -142,25 +176,6 @@ bridgeWatcherLoop(Wallet &self,
     };
     watcherInfo->watcher.set_tx_callback(txCallback);
 
-    // Set up new-block callback:
-    auto heightCallback = [watcherInfo, fCallback, pData](const size_t height)
-    {
-        // Update the GUI:
-        ABC_DebugLog("BlockHeightChange callback: wallet %s",
-                     watcherInfo->wallet.id().c_str());
-        tABC_AsyncBitCoinInfo info;
-        info.pData = pData;
-        info.eventType = ABC_AsyncEventType_BlockHeightChange;
-        Status().toError(info.status, ABC_HERE());
-        info.szWalletUUID = watcherInfo->wallet.id().c_str();
-        info.szTxID = nullptr;
-        info.sweepSatoshi = 0;
-        fCallback(&info);
-
-        watcherInfo->wallet.cache.save().log(); // Failure is fine
-    };
-    watcherInfo->watcher.set_height_callback(heightCallback);
-
     // Set up sweep-trigger callback:
     auto onQuiet = [watcherInfo, fCallback, pData]()
     {
@@ -173,10 +188,11 @@ bridgeWatcherLoop(Wallet &self,
 
     // Cancel all callbacks:
     watcherInfo->watcher.set_quiet_callback(nullptr);
-    watcherInfo->watcher.set_height_callback(nullptr);
     watcherInfo->watcher.set_tx_callback(nullptr);
     self.cache.addresses.wakeupCallbackSet(nullptr);
     self.cache.addresses.doneCallbackSet(nullptr);
+    watcherInfo->fCallback = nullptr;
+    watcherInfo->pData = nullptr;
 
     return Status();
 }

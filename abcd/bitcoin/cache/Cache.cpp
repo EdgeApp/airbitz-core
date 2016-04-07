@@ -11,7 +11,8 @@
 
 namespace abcd {
 
-Cache::Cache(const std::string &path):
+Cache::Cache(const std::string &path, BlockCache &blockCache):
+    blocks(blockCache),
     path_(path)
 {
 }
@@ -19,6 +20,7 @@ Cache::Cache(const std::string &path):
 void
 Cache::clear()
 {
+    blocks.clear();
     txs.clear();
     save();
 }

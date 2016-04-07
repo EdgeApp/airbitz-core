@@ -53,8 +53,6 @@ public:
 
         bc::hash_digest fakeTxid{};
 
-        txCache.at_height(100);
-
         // One output, not connected to anything:
         bc::transaction_type irrelevant
         {
@@ -186,11 +184,6 @@ TEST_CASE("Transaction database", "[bitcoin][database]")
 {
     abcd::TxCache txCache;
     abcd::TxCacheTest test(txCache);
-
-    SECTION("height")
-    {
-        REQUIRE(txCache.last_height() == 100);
-    }
 
     SECTION("filtered utxos")
     {

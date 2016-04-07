@@ -122,16 +122,8 @@ TxCache::~TxCache()
 }
 
 TxCache::TxCache(unsigned unconfirmed_timeout):
-    last_height_(0),
     unconfirmed_timeout_(unconfirmed_timeout)
 {
-}
-
-long long TxCache::last_height() const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    return last_height_;
 }
 
 Status
@@ -369,7 +361,7 @@ bc::data_chunk TxCache::serialize() const
     serial.write_4_bytes(serial_magic);
 
     // Last block height:
-    serial.write_8_bytes(last_height_);
+    serial.write_8_bytes(0);
 
     // Tx table:
     time_t now = time(nullptr);
@@ -410,7 +402,6 @@ TxCache::load(const bc::data_chunk &data)
     std::lock_guard<std::mutex> lock(mutex_);
 
     auto serial = bc::make_deserializer(data.begin(), data.end());
-    size_t last_height;
     std::unordered_map<bc::hash_digest, TxRow> rows;
 
     try
@@ -425,7 +416,7 @@ TxCache::load(const bc::data_chunk &data)
         }
 
         // Last block height:
-        last_height = serial.read_8_bytes();
+        (void)serial.read_8_bytes();
 
         time_t now = time(nullptr);
         while (serial.iterator() != data.end())
@@ -479,9 +470,8 @@ TxCache::load(const bc::data_chunk &data)
     {
         return ABC_ERROR(ABC_CC_ParseError, "Truncated transaction database");
     }
-    last_height_ = last_height;
+
     rows_ = rows;
-    ABC_DebugLog("Loaded transaction database at height %d", last_height);
     return Status();
 }
 
@@ -489,7 +479,6 @@ void TxCache::dump(std::ostream &out) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    out << "height: " << last_height_ << std::endl;
     for (const auto &row: rows_)
     {
         out << "================" << std::endl;
@@ -545,14 +534,7 @@ void
 TxCache::clear()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    last_height_ = 0;
     rows_.clear();
-}
-
-void TxCache::at_height(size_t height)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    last_height_ = height;
 }
 
 void TxCache::confirmed(bc::hash_digest txid, long long block_height)
