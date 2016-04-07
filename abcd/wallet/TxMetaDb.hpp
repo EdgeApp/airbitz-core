@@ -19,7 +19,7 @@ namespace abcd {
 
 class Wallet;
 
-struct Tx
+struct TxMeta
 {
     std::string ntxid;
     std::string txid;
@@ -47,24 +47,24 @@ public:
      * Can also be used to insert new transactions into the database.
      */
     Status
-    save(const Tx &tx);
+    save(const TxMeta &tx);
 
     /**
      * Looks up a particular transaction in the database.
      */
     Status
-    get(Tx &result, const std::string &ntxid);
+    get(TxMeta &result, const std::string &ntxid);
 
 private:
     mutable std::mutex mutex_;
     const Wallet &wallet_;
     const std::string dir_;
 
-    std::map<std::string, Tx> txs_;
+    std::map<std::string, TxMeta> txs_;
     std::map<std::string, JsonPtr> files_;
 
     std::string
-    path(const Tx &tx);
+    path(const TxMeta &tx);
 };
 
 } // namespace abcd

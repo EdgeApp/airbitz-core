@@ -178,32 +178,32 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     const auto info = wallet_.txCache.txInfo(tx, wallet_.addresses.list());
 
     // Create Airbitz metadata:
-    Tx txInfo;
-    txInfo.ntxid = info.ntxid;
-    txInfo.txid = info.txid;
-    txInfo.timeCreation = time(nullptr);
-    txInfo.internal = true;
-    txInfo.metadata = metadata_;
-    txInfo.metadata.amountSatoshi = info.balance;
-    txInfo.metadata.amountFeesMinersSatoshi = info.fee;
+    TxMeta meta;
+    meta.ntxid = info.ntxid;
+    meta.txid = info.txid;
+    meta.timeCreation = time(nullptr);
+    meta.internal = true;
+    meta.metadata = metadata_;
+    meta.metadata.amountSatoshi = info.balance;
+    meta.metadata.amountFeesMinersSatoshi = info.fee;
 
     // Calculate amountCurrency if necessary:
-    if (!txInfo.metadata.amountCurrency)
+    if (!meta.metadata.amountCurrency)
     {
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                      txInfo.metadata.amountCurrency, info.balance,
+                      meta.metadata.amountCurrency, info.balance,
                       static_cast<Currency>(wallet_.currency())));
     }
 
     // Save the transaction:
-    ABC_CHECK(wallet_.txs.save(txInfo));
+    ABC_CHECK(wallet_.txs.save(meta));
 
     // Update any transfers:
     for (auto transfer: transfers_)
     {
-        txInfo.metadata = transfer.second;
-        txInfo.metadata.amountFeesMinersSatoshi = info.fee;
-        transfer.first->txs.save(txInfo);
+        meta.metadata = transfer.second;
+        meta.metadata.amountFeesMinersSatoshi = info.fee;
+        transfer.first->txs.save(meta);
     }
 
     // Update the transaction cache:

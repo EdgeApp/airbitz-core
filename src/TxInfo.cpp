@@ -41,7 +41,7 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
     }
 
     // Details:
-    Tx meta;
+    TxMeta meta;
     if (self.txs.get(meta, info.ntxid))
     {
         out->pDetails = meta.metadata.toDetails();

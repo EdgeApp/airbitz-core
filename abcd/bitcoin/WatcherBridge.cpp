@@ -320,7 +320,7 @@ bridgeDoSweep(Wallet &wallet, PendingSweep &sweep,
     const auto info = wallet.txCache.txInfo(tx, wallet.addresses.list());
 
     // Save the transaction metadata:
-    Tx meta;
+    TxMeta meta;
     meta.ntxid = info.ntxid;
     meta.txid = info.txid;
     meta.timeCreation = time(nullptr);
@@ -399,7 +399,7 @@ bridgeTxCallback(Wallet &wallet,
     if (wallet.txCache.isRelevant(tx, addresses))
     {
         // Does the transaction already exist?
-        Tx meta;
+        TxMeta meta;
         if (!wallet.txs.get(meta, info.ntxid))
         {
             meta.ntxid = info.ntxid;

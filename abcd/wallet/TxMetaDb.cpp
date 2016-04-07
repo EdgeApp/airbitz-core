@@ -35,14 +35,14 @@ struct TxJson:
     ABC_JSON_VALUE(metadata, "meta", JsonPtr)
 
     Status
-    pack(const Tx &in);
+    pack(const TxMeta &in);
 
     Status
-    unpack(Tx &result);
+    unpack(TxMeta &result);
 };
 
 Status
-TxJson::pack(const Tx &in)
+TxJson::pack(const TxMeta &in)
 {
     // Main json:
     ABC_CHECK(ntxidSet(in.ntxid));
@@ -63,9 +63,9 @@ TxJson::pack(const Tx &in)
 }
 
 Status
-TxJson::unpack(Tx &result)
+TxJson::unpack(TxMeta &result)
 {
-    Tx out;
+    TxMeta out;
 
     // Main json:
     ABC_CHECK(ntxidOk());
@@ -109,7 +109,7 @@ TxMetaDb::load()
                 continue;
 
             // Try to load the address:
-            Tx tx;
+            TxMeta tx;
             TxJson json;
             if (json.load(dir_ + de->d_name, wallet_.dataKey()).log() &&
                     json.unpack(tx).log())
@@ -142,7 +142,7 @@ TxMetaDb::load()
 }
 
 Status
-TxMetaDb::save(const Tx &tx)
+TxMetaDb::save(const TxMeta &tx)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -158,7 +158,7 @@ TxMetaDb::save(const Tx &tx)
 }
 
 Status
-TxMetaDb::get(Tx &result, const std::string &ntxid)
+TxMetaDb::get(TxMeta &result, const std::string &ntxid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -171,7 +171,7 @@ TxMetaDb::get(Tx &result, const std::string &ntxid)
 }
 
 std::string
-TxMetaDb::path(const Tx &tx)
+TxMetaDb::path(const TxMeta &tx)
 {
     return dir_ + cryptoFilename(wallet_.dataKey(), tx.ntxid) +
            (tx.internal ? "-int.json" : "-ext.json");

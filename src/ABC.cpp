@@ -1854,7 +1854,7 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
         ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
                                                wallet->addresses.list()));
 
-        Tx meta;
+        TxMeta meta;
         ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));
         meta.metadata = pDetails;
         meta.internal = true;
@@ -1894,7 +1894,7 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
         ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
                                                wallet->addresses.list()));
 
-        Tx meta;
+        TxMeta meta;
         ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));
         *ppDetails = meta.metadata.toDetails();
     }
