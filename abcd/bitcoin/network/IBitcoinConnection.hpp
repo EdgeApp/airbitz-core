@@ -22,6 +22,8 @@ typedef std::map<std::string, size_t> AddressHistory;
 typedef std::function<void (unsigned height)> HeightCallback;
 typedef std::function<void (const AddressHistory &history)> AddressCallback;
 typedef std::function<void (const libbitcoin::transaction_type &tx)> TxCallback;
+typedef std::function<void (const libbitcoin::block_header_type &header)>
+HeaderCallback;
 
 /**
  * A connection to the Bitcoin network.
@@ -66,6 +68,14 @@ public:
     txDataFetch(const StatusCallback &onError,
                 const TxCallback &onReply,
                 const std::string &txid) = 0;
+
+    /**
+     * Fetches the header for a block at a particular height.
+     */
+    virtual void
+    blockHeaderFetch(const StatusCallback &onError,
+                     const HeaderCallback &onReply,
+                     size_t height) = 0;
 };
 
 } // namespace abcd

@@ -50,6 +50,11 @@ public:
                 const TxCallback &onReply,
                 const std::string &txid) override;
 
+    void
+    blockHeaderFetch(const StatusCallback &onError,
+                     const HeaderCallback &onReply,
+                     size_t height) override;
+
 private:
     // Connection:
     std::string uri_;
