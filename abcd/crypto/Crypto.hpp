@@ -44,32 +44,10 @@ tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
                                     json_t            **ppJSON_Enc,
                                     tABC_Error        *pError);
 
-tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
-                                  const tABC_U08Buf Key,
-                                  tABC_CryptoType   cryptoType,
-                                  const char *szFilename,
-                                  tABC_Error        *pError);
-
-tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
-                                        const tABC_U08Buf Key,
-                                        tABC_CryptoType cryptoType,
-                                        const char *szFilename,
-                                        tABC_Error  *pError);
-
 tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
                                     const tABC_U08Buf Key,
                                     tABC_U08Buf       *pData,
                                     tABC_Error        *pError);
-
-tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
-                                  const tABC_U08Buf Key,
-                                  tABC_U08Buf       *pData,
-                                  tABC_Error        *pError);
-
-tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
-                                        const tABC_U08Buf Key,
-                                        json_t **ppJSON_Data,
-                                        tABC_Error  *pError);
 
 } // namespace abcd
 

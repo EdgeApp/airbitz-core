@@ -119,63 +119,6 @@ exit:
 }
 
 /**
- * Encrypted the given data and write the json to a file
- */
-tABC_CC ABC_CryptoEncryptJSONFile(const tABC_U08Buf Data,
-                                  const tABC_U08Buf Key,
-                                  tABC_CryptoType   cryptoType,
-                                  const char *szFilename,
-                                  tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    json_t *root = nullptr;
-
-    ABC_CHECK_NULL_BUF(Data);
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL(szFilename);
-
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONObject(Data, Key, cryptoType, &root,
-                  pError));
-    ABC_CHECK_NEW(JsonPtr(root).save(szFilename));
-
-exit:
-    return cc;
-}
-
-/**
- * Encrypted the given json and write the encrypted json to a file
- */
-tABC_CC ABC_CryptoEncryptJSONFileObject(json_t *pJSON_Data,
-                                        const tABC_U08Buf Key,
-                                        tABC_CryptoType  cryptoType,
-                                        const char *szFilename,
-                                        tABC_Error  *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    std::string data;
-
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL(szFilename);
-    ABC_CHECK_NULL(pJSON_Data);
-
-    // Downstream decoders often forget to null-terminate their input.
-    // This is a bug, but we can save the app from crashing by
-    // including a null byte in the encrypted data.
-    data = JsonPtr(json_incref(pJSON_Data)).encode();
-    data.push_back(0);
-
-    ABC_CHECK_RET(ABC_CryptoEncryptJSONFile(toU08Buf(data), Key, cryptoType,
-                                            szFilename, pError));
-
-exit:
-    return cc;
-}
-
-/**
  * Given a JSON object holding encrypted data, this function decrypts it
  */
 tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
@@ -220,60 +163,6 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     // decrypted the data
     ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(toU08Buf(data), Key, toU08Buf(iv),
                   pData, pError));
-
-exit:
-    return cc;
-}
-
-/**
- * Given a file holding encrypted data, this function decrypts it
- */
-tABC_CC ABC_CryptoDecryptJSONFile(const char *szFilename,
-                                  const tABC_U08Buf Key,
-                                  tABC_U08Buf       *pData,
-                                  tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    JsonPtr json;
-
-    ABC_CHECK_NULL(szFilename);
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL(pData);
-
-    ABC_CHECK_NEW(json.load(szFilename));
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONObject(json.get(), Key, pData, pError));
-
-exit:
-    return cc;
-}
-
-/**
- * Loads the given file, decrypts it and creates the json object from it
- *
- * @param ppJSON_Data pointer to store allocated json object
- *                   (the user is responsible for json_decref'ing)
- */
-tABC_CC ABC_CryptoDecryptJSONFileObject(const char *szFilename,
-                                        const tABC_U08Buf Key,
-                                        json_t **ppJSON_Data,
-                                        tABC_Error  *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    AutoU08Buf Data;
-    JsonPtr file;
-
-    ABC_CHECK_NULL(szFilename);
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL(ppJSON_Data);
-    *ppJSON_Data = NULL;
-
-    ABC_CHECK_RET(ABC_CryptoDecryptJSONFile(szFilename, Key, &Data, pError));
-    ABC_CHECK_NEW(file.decode(toString(Data)));
-    *ppJSON_Data = json_incref(file.get());
 
 exit:
     return cc;
