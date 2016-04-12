@@ -56,7 +56,6 @@ struct TxInfo
  */
 struct TxStatus
 {
-    TxInfo info;
     size_t height;
     bool isDoubleSpent;
     bool isReplaceByFee;
