@@ -30,7 +30,7 @@ TEST_CASE("RFC 4226 test vectors", "[crypto][otp]" )
     int i = 0;
     for (auto test: cases)
     {
-        REQUIRE(key.hotp(i) == cases[i]);
+        REQUIRE(key.hotp(i) == test);
         ++i;
     }
 }

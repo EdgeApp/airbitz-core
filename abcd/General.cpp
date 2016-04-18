@@ -184,7 +184,7 @@ generalBitcoinServers()
         std::string serverlist[] = TESTNET_BITCOIN_SERVERS;
 
         size_t size = sizeof(serverlist) / sizeof(*serverlist);
-        for (int i = 0; i < size; i++)
+        for (size_t i = 0; i < size; i++)
             out.push_back(serverlist[i]);
 
         return out;
@@ -209,7 +209,7 @@ generalBitcoinServers()
         std::string serverlist[] = FALLBACK_BITCOIN_SERVERS;
 
         size_t size = sizeof(serverlist) / sizeof(*serverlist);
-        for (int i = 0; i < size; i++)
+        for (size_t i = 0; i < size; i++)
             out.push_back(serverlist[i]);
     }
     return out;
