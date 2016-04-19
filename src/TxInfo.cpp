@@ -26,7 +26,6 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
 
     // Basic information:
     out->szID = stringCopy(info.txid);
-    out->szMalleableTxId = stringCopy(info.txid);
 
     // Outputs array:
     out->countOutputs = info.ios.size();
