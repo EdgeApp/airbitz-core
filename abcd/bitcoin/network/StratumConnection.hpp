@@ -10,8 +10,8 @@
 
 #include "IBitcoinConnection.hpp"
 #include "TcpConnection.hpp"
-#include "../../../minilibs/libbitcoin-client/client.hpp"
 #include <chrono>
+#include <map>
 
 namespace abcd {
 
@@ -26,7 +26,6 @@ class StratumConnection:
 {
 public:
     typedef std::function<void (const std::string &version)> VersionHandler;
-    typedef std::function<void (const size_t &height)> HeightHandler;
 
     ~StratumConnection();
 
@@ -37,35 +36,12 @@ public:
     version(const StatusCallback &onError, const VersionHandler &onReply);
 
     /**
-     * Requests a transaction from the server.
-     */
-    void
-    getTx(
-        const bc::client::obelisk_codec::error_handler &onError,
-        const bc::client::obelisk_codec::fetch_transaction_handler &onReply,
-        const bc::hash_digest &txid);
-
-    void
-    getAddressHistory(
-        const bc::client::obelisk_codec::error_handler &onError,
-        const bc::client::obelisk_codec::fetch_history_handler &onReply,
-        const bc::payment_address &address, size_t fromHeight=0);
-
-    /**
      * Broadcasts a transaction over the Bitcoin network.
      * @param onDone called when the broadcast is done,
      * either successful or failed.
      */
     void
     sendTx(const StatusCallback &onDone, DataSlice tx);
-
-    /**
-     * Requests current blockchain height from the server.
-     */
-    void
-    getHeight(
-        const bc::client::obelisk_codec::error_handler &onError,
-        const HeightHandler &onReply);
 
     /**
      * Connects to the specified stratum server.

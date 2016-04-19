@@ -65,90 +65,6 @@ StratumConnection::version(const StatusCallback &onError,
 }
 
 void
-StratumConnection::getTx(
-    const bc::client::obelisk_codec::error_handler &onError,
-    const bc::client::obelisk_codec::fetch_transaction_handler &onReply,
-    const bc::hash_digest &txid)
-{
-    JsonArray params;
-    params.append(json_string(bc::encode_hash(txid).c_str()));
-
-    auto errorShim = [onError](Status status)
-    {
-        onError(std::make_error_code(std::errc::bad_message));
-    };
-
-    auto decoder = [onReply](JsonPtr payload) -> Status
-    {
-        if (!json_is_string(payload.get()))
-            return ABC_ERROR(ABC_CC_JSONError, "Bad reply format");
-
-        bc::data_chunk rawTx;
-        if (!base16Decode(rawTx, json_string_value(payload.get())))
-            return ABC_ERROR(ABC_CC_ParseError, "Bad transaction format");
-
-        // Convert rawTx to bc::transaction_type:
-        bc::transaction_type tx;
-        ABC_CHECK(decodeTx(tx, rawTx));
-
-        onReply(tx);
-        return Status();
-    };
-
-    sendMessage("blockchain.transaction.get", params, errorShim, decoder);
-}
-
-void
-StratumConnection::getAddressHistory(
-    const bc::client::obelisk_codec::error_handler &onError,
-    const bc::client::obelisk_codec::fetch_history_handler &onReply,
-    const bc::payment_address &address, size_t fromHeight)
-{
-    JsonArray params;
-    params.append(json_string(address.encoded().c_str()));
-
-    auto errorShim = [onError](Status status)
-    {
-        onError(std::make_error_code(std::errc::bad_message));
-    };
-
-    auto decoder = [onReply](JsonPtr payload) -> Status
-    {
-        JsonArray arrayJson(payload);
-
-        bc::client::history_list history;
-        size_t size = arrayJson.size();
-        history.reserve(size);
-        for (size_t i = 0; i < size; i++)
-        {
-            struct HistoryJson:
-                public JsonObject
-            {
-                ABC_JSON_CONSTRUCTORS(HistoryJson, JsonObject)
-                ABC_JSON_STRING(txid, "tx_hash", nullptr)
-                ABC_JSON_INTEGER(height, "height", 0)
-            };
-            HistoryJson json(arrayJson[i]);
-
-            bc::hash_digest hash;
-            if (!json.txidOk() || !bc::decode_hash(hash, json.txid()))
-                return ABC_ERROR(ABC_CC_Error, "Bad txid");
-
-            bc::client::history_row row;
-            row.output.hash = hash;
-            row.output_height = json.height();
-            row.spend.hash = bc::null_hash;
-            history.push_back(row);
-        }
-
-        onReply(history);
-        return Status();
-    };
-
-    sendMessage("blockchain.address.get_history", params, errorShim, decoder);
-}
-
-void
 StratumConnection::sendTx(const StatusCallback &onDone, DataSlice tx)
 {
     JsonArray params;
@@ -169,29 +85,6 @@ StratumConnection::sendTx(const StatusCallback &onDone, DataSlice tx)
     };
 
     sendMessage("blockchain.transaction.broadcast", params, onDone, decoder);
-}
-
-void
-StratumConnection::getHeight(
-    const bc::client::obelisk_codec::error_handler &onError,
-    const HeightHandler &onReply)
-{
-    auto errorShim = [onError](Status status)
-    {
-        onError(std::make_error_code(std::errc::bad_message));
-    };
-
-    auto decoder = [onReply](JsonPtr payload) -> Status
-    {
-        if (!json_is_number(payload.get()))
-            return ABC_ERROR(ABC_CC_Error, "Bad reply format");
-
-        onReply(json_number_value(payload.get()));
-        return Status();
-    };
-
-    sendMessage("blockchain.numblocks.subscribe", JsonPtr(),
-                errorShim, decoder);
 }
 
 Status
