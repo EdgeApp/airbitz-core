@@ -8,13 +8,12 @@
 #ifndef ABCD_BITCOIN_TX_DATABASE_HPP
 #define ABCD_BITCOIN_TX_DATABASE_HPP
 
-#include "../util/Status.hpp"
+#include "Typedefs.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <time.h>
 #include <list>
 #include <mutex>
 #include <ostream>
-#include <set>
 #include <unordered_map>
 
 namespace abcd {
@@ -26,8 +25,6 @@ enum class TxState
     /// The transaction is in a block.
     confirmed
 };
-
-typedef std::set<std::string> AddressSet;
 
 /**
  * An input or an output of a transaction.

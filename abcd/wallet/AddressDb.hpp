@@ -8,20 +8,18 @@
 #ifndef ABCD_WALLET_ADDRESS_DB_HPP
 #define ABCD_WALLET_ADDRESS_DB_HPP
 
-#include "../json/JsonPtr.hpp"
-#include "../util/Status.hpp"
 #include "Metadata.hpp"
+#include "../bitcoin/Typedefs.hpp"
+#include "../json/JsonPtr.hpp"
 #include <list>
 #include <map>
 #include <mutex>
-#include <set>
 
 namespace abcd {
 
 class Wallet;
 
 struct TxInOut;
-typedef std::set<std::string> AddressSet;
 typedef std::map<const std::string, std::string> KeyTable;
 
 struct AddressMeta

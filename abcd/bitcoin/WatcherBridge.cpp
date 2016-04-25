@@ -7,6 +7,7 @@
 
 #include "WatcherBridge.hpp"
 #include "Testnet.hpp"
+#include "TxCache.hpp"
 #include "Watcher.hpp"
 #include "../Context.hpp"
 #include "../exchange/ExchangeCache.hpp"

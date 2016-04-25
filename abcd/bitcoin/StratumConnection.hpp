@@ -9,10 +9,9 @@
 #define ABCD_BITCOIN_STRATUM_CODEC_HPP
 
 #include "TcpConnection.hpp"
+#include "Typedefs.hpp"
 #include "../../minilibs/libbitcoin-client/client.hpp"
 #include <chrono>
-#include <functional>
-#include <string>
 
 namespace abcd {
 
@@ -25,7 +24,6 @@ constexpr auto stratumScheme = "stratum";
 class StratumConnection
 {
 public:
-    typedef std::function<void (Status)> StatusCallback;
     typedef std::function<void (const std::string &version)> VersionHandler;
     typedef std::function<void (const size_t &height)> HeightHandler;
 

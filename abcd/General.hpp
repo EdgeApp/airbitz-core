@@ -16,14 +16,11 @@
 #ifndef ABCD_GENERAL_HPP
 #define ABCD_GENERAL_HPP
 
-#include "util/Status.hpp"
+#include "bitcoin/Typedefs.hpp"
 #include <map>
-#include <set>
 #include <vector>
 
 namespace abcd {
-
-typedef std::set<std::string> AddressSet;
 
 /**
  * Maps from transaction sizes to corresponding fees.

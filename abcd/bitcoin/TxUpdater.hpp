@@ -9,16 +9,12 @@
 #define ABCD_BITCOIN_TX_UPDATER_HPP
 
 #include "StratumConnection.hpp"
-#include "TxCache.hpp"
-#include "../util/Status.hpp"
 #include "../../minilibs/libbitcoin-client/client.hpp"
-#include <functional>
-#include <unordered_map>
 
 namespace abcd {
 
 class AddressCache;
-typedef std::function<void(Status)> StatusCallback;
+class TxCache;
 
 /**
  * Interface containing the events the updater can trigger.

@@ -39,7 +39,6 @@ constexpr uint32_t old_serial_magic = 0x3eab61c3; // From the watcher
 constexpr uint32_t serial_magic = 0xfecdb763;
 constexpr uint8_t serial_tx = 0x42;
 
-typedef std::unordered_set<bc::hash_digest> TxidSet;
 typedef std::unordered_set<bc::point_type> PointSet;
 
 /**
