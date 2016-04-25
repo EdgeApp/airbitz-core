@@ -12,7 +12,7 @@
 #ifndef ABCD_CRYPTO_CRYPTO_HPP
 #define ABCD_CRYPTO_CRYPTO_HPP
 
-#include "../util/Data.hpp"
+#include "../util/U08Buf.hpp"
 #include "../../src/ABC.h"
 #include <jansson.h>
 

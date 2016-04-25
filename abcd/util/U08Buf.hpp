@@ -11,6 +11,7 @@
 #ifndef ABCD_UTIL_U08BUF_H
 #define ABCD_UTIL_U08BUF_H
 
+#include "Data.hpp"
 #include <string.h>
 
 namespace abcd {
@@ -25,6 +26,14 @@ struct U08Buf
     {}
     U08Buf(unsigned char *data, size_t size):
         p_(data), end_(data + size)
+    {}
+
+    /**
+     * Casts new-style data to an old-style U08Buf type.
+     * DANGER! THIS IS NOT CONST-CORRECT!
+     */
+    U08Buf(DataSlice slice):
+        p_(const_cast<uint8_t *>(slice.data())), end_(p_+ slice.size())
     {}
 
     size_t size() const { return end_ - p_; }

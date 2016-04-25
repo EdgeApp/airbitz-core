@@ -14,8 +14,8 @@ Status
 JsonBox::encrypt(DataSlice data, DataSlice key)
 {
     json_t *root;
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(toU08Buf(data),
-                  toU08Buf(key), ABC_CryptoType_AES256,
+    ABC_CHECK_OLD(ABC_CryptoEncryptJSONObject(data,
+                  key, ABC_CryptoType_AES256,
                   &root, &error));
     reset(root);
     return Status();
@@ -28,7 +28,7 @@ JsonBox::decrypt(DataChunk &result, DataSlice key)
     if (!root_)
         return ABC_ERROR(ABC_CC_DecryptError, "No encrypted data");
     ABC_CHECK_OLD(ABC_CryptoDecryptJSONObject(root_,
-                  toU08Buf(key), &data, &error));
+                  key, &data, &error));
     result = DataChunk(data.begin(), data.end());
     return Status();
 }

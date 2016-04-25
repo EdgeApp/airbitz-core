@@ -12,7 +12,6 @@
 #ifndef ABCD_UTIL_DATA_HPP
 #define ABCD_UTIL_DATA_HPP
 
-#include "U08Buf.hpp"
 #include <stdint.h>
 #include <array>
 #include <string>
@@ -26,6 +25,10 @@ namespace abcd {
 class DataSlice
 {
 public:
+    DataSlice():
+        begin_(nullptr), end_(nullptr)
+    {}
+
     DataSlice(const uint8_t *begin, const uint8_t *end):
         begin_(begin), end_(end)
     {}
@@ -51,16 +54,6 @@ private:
     const uint8_t *begin_;
     const uint8_t *end_;
 };
-
-/**
- * Casts new-style data to an old-style U08Buf type.
- * DANGER! THIS IS NOT CONST-CORRECT!
- */
-inline U08Buf
-toU08Buf(DataSlice slice)
-{
-    return U08Buf(const_cast<uint8_t *>(slice.data()), slice.size());
-}
 
 /**
  * Casts a data slice to a string.

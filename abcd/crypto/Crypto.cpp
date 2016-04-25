@@ -161,7 +161,7 @@ tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
     ABC_CHECK_NEW(base64Decode(data, json_string_value(jsonVal)));
 
     // decrypted the data
-    ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(toU08Buf(data), Key, toU08Buf(iv),
+    ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(U08Buf(data), Key, U08Buf(iv),
                   pData, pError));
 
 exit:
@@ -275,7 +275,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     pCurUnencryptedData += SHA256_DIGEST_LENGTH;
 
     // encrypted our new unencrypted package
-    ABC_CHECK_RET(ABC_CryptoEncryptAES256(UnencryptedData, Key, toU08Buf(IV),
+    ABC_CHECK_RET(ABC_CryptoEncryptAES256(UnencryptedData, Key, U08Buf(IV),
                                           pEncData, pError));
 
 exit:

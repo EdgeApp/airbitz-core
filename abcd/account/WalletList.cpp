@@ -11,6 +11,7 @@
 #include "../login/Login.hpp"
 #include "../util/FileIO.hpp"
 #include <dirent.h>
+#include <string.h>
 
 namespace abcd {
 

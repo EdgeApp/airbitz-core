@@ -55,7 +55,7 @@ loginRecovery(std::shared_ptr<Login> &result,
     // Get the LoginPackage:
     LoginPackage loginPackage;
     JsonPtr rootKeyBox;
-    ABC_CHECK(loginServerGetLoginPackage(lobby, U08Buf(), recoveryAuthKey,
+    ABC_CHECK(loginServerGetLoginPackage(lobby, DataSlice(), recoveryAuthKey,
                                          loginPackage, rootKeyBox,
                                          authError));
 

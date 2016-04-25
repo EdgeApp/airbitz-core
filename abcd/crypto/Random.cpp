@@ -7,6 +7,7 @@
 
 #include "Random.hpp"
 #include "../Context.hpp"
+#include "../util/U08Buf.hpp"
 #include <openssl/rand.h>
 #ifndef __ANDROID__
 #include <sys/statvfs.h>
