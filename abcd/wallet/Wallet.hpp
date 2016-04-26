@@ -11,7 +11,7 @@
 #include "../WalletPaths.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
-#include "../bitcoin/AddressCache.hpp"
+#include "../bitcoin/cache/AddressCache.hpp"
 #include "AddressDb.hpp"
 #include "TxDb.hpp"
 #include <atomic>

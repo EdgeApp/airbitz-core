@@ -8,7 +8,7 @@
 #ifndef ABCD_BITCOIN_WATCHER_HPP
 #define ABCD_BITCOIN_WATCHER_HPP
 
-#include "TxUpdater.hpp"
+#include "network/TxUpdater.hpp"
 #include "../util/Status.hpp"
 #include "../../minilibs/libbitcoin-client/client.hpp"
 #include <zmq.hpp>

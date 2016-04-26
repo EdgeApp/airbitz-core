@@ -5,10 +5,10 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_BITCOIN_ADDRESS_CACHE_HPP
-#define ABCD_BITCOIN_ADDRESS_CACHE_HPP
+#ifndef ABCD_BITCOIN_CACHE_ADDRESS_CACHE_HPP
+#define ABCD_BITCOIN_CACHE_ADDRESS_CACHE_HPP
 
-#include "../util/Status.hpp"
+#include "../../util/Status.hpp"
 #include <chrono>
 #include <map>
 #include <mutex>

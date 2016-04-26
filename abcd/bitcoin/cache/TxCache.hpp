@@ -5,10 +5,10 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_BITCOIN_TX_DATABASE_HPP
-#define ABCD_BITCOIN_TX_DATABASE_HPP
+#ifndef ABCD_BITCOIN_CACHE_TX_CACHE_HPP
+#define ABCD_BITCOIN_CACHE_TX_CACHE_HPP
 
-#include "Typedefs.hpp"
+#include "../Typedefs.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <time.h>
 #include <list>

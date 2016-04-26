@@ -8,7 +8,7 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "../General.hpp"
-#include "../bitcoin/TxCache.hpp"
+#include "../bitcoin/cache/TxCache.hpp"
 #include "../bitcoin/Utility.hpp"
 #include "../wallet/Wallet.hpp"
 #include <unistd.h>

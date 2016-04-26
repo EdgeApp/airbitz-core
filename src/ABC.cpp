@@ -20,7 +20,7 @@
 #include "../abcd/auth/LoginServer.hpp"
 #include "../abcd/bitcoin/Testnet.hpp"
 #include "../abcd/bitcoin/Text.hpp"
-#include "../abcd/bitcoin/TxCache.hpp"
+#include "../abcd/bitcoin/cache/TxCache.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"

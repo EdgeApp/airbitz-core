@@ -6,8 +6,8 @@
  */
 
 #include "WatcherBridge.hpp"
-#include "TxCache.hpp"
 #include "Watcher.hpp"
+#include "cache/TxCache.hpp"
 #include "../spend/Sweep.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"

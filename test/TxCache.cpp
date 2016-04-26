@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "../abcd/bitcoin/TxCache.hpp"
+#include "../abcd/bitcoin/cache/TxCache.hpp"
 #include "../abcd/bitcoin/Utility.hpp"
 #include "../abcd/spend/Outputs.hpp"
 #include "../minilibs/catch/catch.hpp"

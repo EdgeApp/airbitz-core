@@ -6,12 +6,12 @@
  */
 
 #include "StratumConnection.hpp"
-#include "Utility.hpp"
-#include "../crypto/Encoding.hpp"
-#include "../http/Uri.hpp"
-#include "../json/JsonArray.hpp"
-#include "../json/JsonObject.hpp"
-#include "../util/Debug.hpp"
+#include "../Utility.hpp"
+#include "../../crypto/Encoding.hpp"
+#include "../../http/Uri.hpp"
+#include "../../json/JsonArray.hpp"
+#include "../../json/JsonObject.hpp"
+#include "../../util/Debug.hpp"
 #include <algorithm>
 
 namespace abcd {

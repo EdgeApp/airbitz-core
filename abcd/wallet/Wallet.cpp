@@ -9,7 +9,7 @@
 #include "../Context.hpp"
 #include "../account/Account.hpp"
 #include "../auth/LoginServer.hpp"
-#include "../bitcoin/TxCache.hpp"
+#include "../bitcoin/cache/TxCache.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"

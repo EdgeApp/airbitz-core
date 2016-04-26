@@ -5,12 +5,12 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_BITCOIN_STRATUM_CODEC_HPP
-#define ABCD_BITCOIN_STRATUM_CODEC_HPP
+#ifndef ABCD_BITCOIN_NETWORK_STRATUM_CODEC_HPP
+#define ABCD_BITCOIN_NETWORK_STRATUM_CODEC_HPP
 
 #include "TcpConnection.hpp"
-#include "Typedefs.hpp"
-#include "../../minilibs/libbitcoin-client/client.hpp"
+#include "../Typedefs.hpp"
+#include "../../../minilibs/libbitcoin-client/client.hpp"
 #include <chrono>
 
 namespace abcd {

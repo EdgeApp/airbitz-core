@@ -37,7 +37,7 @@ endif
 
 # Source files:
 abc_sources = \
-	$(wildcard abcd/*.cpp abcd/*/*.cpp src/*.cpp) \
+	$(wildcard abcd/*.cpp abcd/*/*.cpp abcd/*/*/*.cpp src/*.cpp) \
 	$(wildcard minilibs/libbitcoin-client/*.cpp) \
 	minilibs/git-sync/sync.c \
 	minilibs/scrypt/crypto_scrypt.c \
@@ -142,7 +142,7 @@ $(WORK_DIR)/%.o: %.cpp | $(generated_headers)
 	@mkdir -p $(dir $@)
 	$(RUN) $(CXX) -c -MD $(CXXFLAGS) -o $@ $<
 
-include $(wildcard $(WORK_DIR)/*/*.d $(WORK_DIR)/*/*/*.d)
+include $(wildcard $(WORK_DIR)/*/*.d $(WORK_DIR)/*/*/*.d $(WORK_DIR)/*/*/*/*.d)
 %.h: ;
 %.hpp: ;
 

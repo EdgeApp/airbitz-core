@@ -10,7 +10,7 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "../Context.hpp"
-#include "../bitcoin/TxCache.hpp"
+#include "../bitcoin/cache/TxCache.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../exchange/ExchangeCache.hpp"
 #include "../util/Debug.hpp"

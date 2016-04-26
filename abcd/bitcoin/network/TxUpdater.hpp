@@ -5,11 +5,11 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_BITCOIN_TX_UPDATER_HPP
-#define ABCD_BITCOIN_TX_UPDATER_HPP
+#ifndef ABCD_BITCOIN_NETWORK_TX_UPDATER_HPP
+#define ABCD_BITCOIN_NETWORK_TX_UPDATER_HPP
 
 #include "StratumConnection.hpp"
-#include "../../minilibs/libbitcoin-client/client.hpp"
+#include "../../../minilibs/libbitcoin-client/client.hpp"
 
 namespace abcd {
 

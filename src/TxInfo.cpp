@@ -7,7 +7,7 @@
 
 #include "TxInfo.hpp"
 #include "TxDetails.hpp"
-#include "../abcd/bitcoin/TxCache.hpp"
+#include "../abcd/bitcoin/cache/TxCache.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include "../abcd/util/Util.hpp"
 

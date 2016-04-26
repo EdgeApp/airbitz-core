@@ -7,7 +7,7 @@
 
 #include "AddressDb.hpp"
 #include "Wallet.hpp"
-#include "../bitcoin/TxCache.hpp"
+#include "../bitcoin/cache/TxCache.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/Debug.hpp"

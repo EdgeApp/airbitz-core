@@ -13,7 +13,7 @@
 #include "PaymentProto.hpp"
 #include "../Context.hpp"
 #include "../General.hpp"
-#include "../bitcoin/TxCache.hpp"
+#include "../bitcoin/cache/TxCache.hpp"
 #include "../bitcoin/Utility.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../exchange/ExchangeCache.hpp"
