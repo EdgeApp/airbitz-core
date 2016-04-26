@@ -36,6 +36,12 @@ public:
     load();
 
     /**
+     * Loads the cache from the legacy format.
+     */
+    Status
+    loadLegacy(const std::string &path);
+
+    /**
      * Saves the cache to disk.
      */
     Status

@@ -77,7 +77,8 @@ sweepSend(Wallet &wallet,
     ABC_CHECK(broadcastTx(wallet, raw_tx));
 
     // Calculate transaction information:
-    const auto info = wallet.cache.txs.txInfo(tx);
+    TxInfo info;
+    ABC_CHECK(wallet.cache.txs.info(info, tx));
     const auto balance = wallet.addresses.balance(info);
 
     // Save the transaction metadata:
@@ -94,10 +95,9 @@ sweepSend(Wallet &wallet,
     ABC_CHECK(wallet.txs.save(meta, balance, info.fee));
 
     // Update the transaction cache:
-    if (wallet.cache.txs.insert(tx))
-        wallet.cache.save().log(); // Failure is fine
-    wallet.balanceDirty();
-    ABC_CHECK(wallet.addresses.markOutputs(info));
+    wallet.cache.txs.insert(tx);
+    wallet.cache.addresses.updateSpend(info);
+    wallet.cache.save().log(); // Failure is fine
 
     // Done:
     ABC_DebugLog("IncomingSweep callback: wallet %s, txid: %s, value: %d",

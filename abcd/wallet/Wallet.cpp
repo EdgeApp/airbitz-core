@@ -53,8 +53,9 @@ Wallet::create(std::shared_ptr<Wallet> &result, Account &account,
     ABC_CHECK(out->loadKeys());
     ABC_CHECK(out->loadSync());
 
-    // Load the transaction cache (failure is acceptable):
-    out->cache.load().log();
+    // Load the transaction cache (failure is fine):
+    if (!out->cache.load().log())
+        out->cache.loadLegacy(out->paths.cachePathOld());
 
     result = std::move(out);
     return Status();
@@ -172,7 +173,7 @@ Wallet::Wallet(Account &account, const std::string &id):
     balanceDirty_(true),
     addresses(*this),
     txs(*this),
-    cache(*new Cache(paths.watcherPath(), gContext->blockCache))
+    cache(*new Cache(paths.cachePath(), gContext->blockCache))
 {}
 
 Status

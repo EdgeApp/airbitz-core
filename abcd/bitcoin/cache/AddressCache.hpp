@@ -8,12 +8,41 @@
 #ifndef ABCD_BITCOIN_CACHE_ADDRESS_CACHE_HPP
 #define ABCD_BITCOIN_CACHE_ADDRESS_CACHE_HPP
 
+#include "../Typedefs.hpp"
 #include "../../util/Status.hpp"
-#include <chrono>
+#include <time.h>
 #include <map>
 #include <mutex>
 
 namespace abcd {
+
+class JsonObject;
+class TxCache;
+struct TxInfo;
+
+/**
+ * Status of an address that needs work.
+ */
+struct AddressStatus
+{
+    /** The address in question. */
+    std::string address;
+
+    /** True if this address needs to be checked. */
+    bool needsCheck;
+
+    /** The time of the next check. Used for sorting. */
+    time_t nextCheck;
+
+    /** A list of transactions that are missing from the cache. */
+    TxidSet missingTxids;
+};
+
+/**
+ * Sorts statuses by order of urgency.
+ */
+bool
+operator <(const AddressStatus &a, const AddressStatus &b);
 
 /**
  * Tracks address query freshness.
@@ -30,13 +59,61 @@ namespace abcd {
 class AddressCache
 {
 public:
-    typedef std::function<void()> Callback;
+    typedef std::function<void ()> Callback;
+    typedef std::function<void (const std::string &txid)> TxidCallback;
+    typedef std::function<void (const std::string &address)> CompleteCallback;
+
+    // Lifetime ------------------------------------------------------------
+
+    AddressCache(TxCache &txCache);
+
+    /**
+     * Clears the cache for debugging purposes.
+     */
+    void
+    clear();
+
+    /**
+     * Reads the database contents from the provided cache JSON object.
+     */
+    Status
+    load(JsonObject &json);
+
+    /**
+     * Saves the database contents to the provided cache JSON object.
+     */
+    Status
+    save(JsonObject &json);
+
+    // Queries -------------------------------------------------------------
+
+    /**
+     * Returns the number of completed addresses & total addresses.
+     */
+    std::pair<size_t, size_t>
+    progress() const;
+
+    /**
+     * Returns the status of all unsynced addresses.
+     * @param sleep If there is no work to be performed,
+     * the number of seconds until the next time work will be available.
+     */
+    std::list<AddressStatus>
+    statuses(time_t &sleep) const;
+
+    /**
+     * Builds a list of transactions that are relevant to these addresses.
+     */
+    TxidSet
+    txids() const;
+
+    // Updates -------------------------------------------------------------
 
     /**
      * Begins watching an address.
      */
     void
-    insert(const std::string &address);
+    insert(const std::string &address, bool sweep=false);
 
     /**
      * Begins checking the provided address at high speed.
@@ -46,62 +123,88 @@ public:
     prioritize(const std::string &address);
 
     /**
-     * Returns the amount of time until the next wakeup needs to happen.
-     * If there are stale addresses, the wakeup would be in the past.
-     * In that case, this function returns 0 and sets `nextAddress`
-     * to the most out-of-date address.
-     * Also returns 0 if there are no active addresses at all.
-     */
-    std::chrono::milliseconds
-    nextWakeup(std::string &nextAddress);
-
-    /**
-     * Indicates that a watcher is currently checking this address.
+     * Fires callbacks in response to adding new transactions to the cache.
      */
     void
-    checkBegin(const std::string &address);
+    update();
 
     /**
-     * Indicates that a watcher has finished checking this address.
-     * @param success true to indicate that the address is now up to date,
-     * or false to indicate that the check failed.
+     * Updates an address with a new list of relevant transactions.
      */
     void
-    checkEnd(const std::string &address, bool success);
+    update(const std::string &address, const TxidSet &txids);
 
     /**
-     * Sets up callback to notify when every address has been checked.
+     * Updates all addresses touched by a spend.
      */
     void
-    doneCallbackSet(const Callback &callback);
+    updateSpend(TxInfo &info);
 
     /**
      * Sets up a callback to notify when addresses change.
+     * This wakes up the updater to check for new work.
      */
     void
     wakeupCallbackSet(const Callback &callback);
 
+    /**
+     * Provides a callback to be notified when new transactions are complete.
+     */
+    void
+    onTxSet(const TxidCallback &onTx);
+
+    /**
+     * Provides a callback to be notified when an address is complete.
+     */
+    void
+    onCompleteSet(const CompleteCallback &onComplete);
+
 private:
-    mutable std::mutex mutex_;
+    mutable std::recursive_mutex mutex_; // The callbacks force this on us
+    TxCache &txCache_;
     std::string priorityAddress_;
 
     struct AddressRow
     {
-        std::chrono::milliseconds period;
-        std::chrono::steady_clock::time_point lastCheck;
-        bool checking;
-        bool checkedOnce;
+        // Persistent state:
+        TxidSet txids;
+        time_t lastCheck = 0;
+
+        // Dynamic state:
+        bool checkedOnce = false;
+        bool complete = false; // True if all txids are known to the GUI.
+        bool knownComplete = false; // True if `onComplete` has been called.
+        bool sweep = false;
+
+        void
+        insertTxid(const std::string &txid)
+        {
+            txids.insert(txid);
+            complete = false;
+            knownComplete = false;
+        }
     };
     std::map<std::string, AddressRow> rows_;
 
-    Callback doneCallback_;
-    Callback wakeupCallback_;
-
     /**
-     * Returns true if every address has been checked at least once.
+     * Transactions that are relevant, in the cache,
+     * and that the GUI knows about.
      */
-    bool
-    done();
+    TxidSet knownTxids_;
+
+    Callback wakeupCallback_;
+    TxidCallback onTx_;
+    CompleteCallback onComplete_;
+
+    time_t
+    nextCheck(const std::string &address, const AddressRow &row) const;
+
+    AddressStatus
+    status(const std::string &address, const AddressRow &row,
+           time_t now) const;
+
+    void
+    updateInternal();
 };
 
 } // namespace abcd

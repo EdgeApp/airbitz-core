@@ -8,110 +8,98 @@
 #ifndef ABCD_BITCOIN_NETWORK_TX_UPDATER_HPP
 #define ABCD_BITCOIN_NETWORK_TX_UPDATER_HPP
 
-#include "StratumConnection.hpp"
-#include "../../../minilibs/libbitcoin-client/client.hpp"
+#include "../Typedefs.hpp"
+#include "../../util/Data.hpp"
+#include <zmq.h>
+#include <chrono>
+#include <map>
 
 namespace abcd {
 
 class Cache;
-
-/**
- * Interface containing the events the updater can trigger.
- */
-class TxCallbacks
-{
-public:
-    virtual ~TxCallbacks() {};
-
-    /**
-     * Called when the updater inserts a transaction into the database.
-     */
-    virtual void on_add(const bc::transaction_type &tx) = 0;
-
-    /**
-     * Called when the updater has finished all its address queries,
-     * and balances should now be up-to-date.
-     */
-    virtual void on_quiet() {}
-};
+class IBitcoinConnection;
 
 /**
  * Syncs a set of transactions with the bitcoin server.
  */
-class TxUpdater:
-    public bc::client::sleeper
+class TxUpdater
 {
 public:
     ~TxUpdater();
-    TxUpdater(Cache &cache, void *ctx, TxCallbacks &callbacks);
+    TxUpdater(Cache &cache, void *ctx);
 
     void disconnect();
     Status connect();
-    void send(StatusCallback status, DataSlice tx);
 
-    // Sleeper interface:
-    virtual bc::client::sleep_time wakeup();
+    /**
+     * Performs any pending work.
+     * Returns the number of milliseconds until the next work will be ready.
+     */
+    std::chrono::milliseconds
+    wakeup();
 
     /**
      * Obtains a list of sockets that the main loop should sleep on.
      */
-    std::vector<zmq_pollitem_t>
+    std::list<zmq_pollitem_t>
     pollitems();
 
+    /**
+     * Broadcasts a transaction.
+     * All errors go to the `status` callback.
+     */
+    void
+    sendTx(StatusCallback status, DataSlice tx);
+
 private:
-    enum class ConnectionType
-    {
-        libbitcoin,
-        stratum
-    };
-
-    struct Connection
-    {
-        Connection(void *ctx, long server_index);
-
-        bool operator==(const Connection &l)
-        {
-            return server_index == l.server_index;
-        };
-
-        ConnectionType type;
-        StratumConnection stratumCodec;
-        bc::client::zeromq_socket bc_socket;
-        bc::client::obelisk_codec bc_codec;
-        int queued_queries_;
-        int queued_get_indices_;
-        int queued_get_height_;
-
-        long server_index;
-    };
-
     Status connectTo(long index);
-
-    void watch_tx(bc::hash_digest txid, bool want_inputs, int idx, size_t index);
-    void get_inputs(const bc::transaction_type &tx, int idx);
-    void query_done(int idx, Connection &bconn);
-
-    // Server queries:
-    void get_height();
-    void get_tx(bc::hash_digest txid, bool want_inputs, int idx);
-    void get_tx_mem(bc::hash_digest txid, bool want_inputs, int idx);
-    void get_index(bc::hash_digest txid, int idx);
-    void sendTx(StatusCallback status, DataSlice tx);
-    void query_address(const bc::payment_address &address, int server_index);
 
     Cache &cache_;
     void *ctx_;
-    TxCallbacks &callbacks_;
-
-    bool failed_;
-    long failed_server_idx_;
-    std::chrono::steady_clock::time_point last_wakeup_;
 
     bool wantConnection = false;
-    std::vector<Connection *> connections_;
+    std::vector<IBitcoinConnection *> connections_;
     std::vector<std::string> serverList_;
     std::set<int> untriedLibbitcoin_;
     std::set<int> untriedStratum_;
+
+    // Fetches currently in progress:
+    AddressSet wipAddresses_;
+    TxidSet wipTxids_;
+
+    /**
+     * The last server used to query the address.
+     * Used to avoid reusing the same server over and over,
+     * and to fetch transactions from the same server that reported them.
+     */
+    std::map<std::string, std::string> addressServers_;
+
+    /**
+     * A list of servers that have failed.
+     */
+    std::set<std::string> failedServers_;
+
+    /**
+     * Finds the requested server, assuming it is even connected and ready.
+     * @return The best available server,
+     * or a null pointer if the server is busy.
+     */
+    IBitcoinConnection *
+    pickServer(const std::string &name);
+
+    /**
+     * Tries to pick a different server than the one provided.
+     * @return The best available server,
+     * or a null pointer if there are no free servers.
+     */
+    IBitcoinConnection *
+    pickOtherServer(const std::string &name="");
+
+    void
+    fetchAddress(const std::string &address, IBitcoinConnection *bc);
+
+    void
+    fetchTx(const std::string &txid, IBitcoinConnection *bc);
 };
 
 } // namespace abcd

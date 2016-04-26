@@ -78,7 +78,8 @@ Spend::calculateFees(uint64_t &totalFees)
     ABC_CHECK(makeTx(tx, changeAddress.address));
 
     // Calculate the miner fee:
-    const auto info = wallet_.cache.txs.txInfo(tx);
+    TxInfo info;
+    ABC_CHECK(wallet_.cache.txs.info(info, tx));
 
     totalFees = airbitzFeeSent_ + info.fee;
     return Status();
@@ -201,7 +202,8 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     ABC_CHECK(decodeTx(tx, rawTx));
 
     // Calculate transaction amounts:
-    const auto info = wallet_.cache.txs.txInfo(tx);
+    TxInfo info;
+    ABC_CHECK(wallet_.cache.txs.info(info, tx));
     auto balance = wallet_.addresses.balance(info);
 
     // Create Airbitz metadata:
@@ -239,10 +241,9 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     }
 
     // Update the transaction cache:
-    if (wallet_.cache.txs.insert(tx))
-        wallet_.cache.save().log(); // Failure is fine
-    wallet_.balanceDirty();
-    ABC_CHECK(wallet_.addresses.markOutputs(info));
+    wallet_.cache.txs.insert(tx);
+    wallet_.cache.addresses.updateSpend(info);
+    wallet_.cache.save().log(); // Failure is fine
 
     txidOut = info.txid;
     return Status();

@@ -95,7 +95,7 @@ public:
         };
         buriedId = bc::hash_transaction(buried);
         txCache.insert(buried);
-        txCache.confirmed(buriedId, 100);
+        txCache.confirmed(bc::encode_hash(buriedId), 100);
 
         // Spend from buried[0], one output (confirmed):
         bc::transaction_type confirmed
@@ -110,7 +110,7 @@ public:
         };
         confirmedId = bc::hash_transaction(confirmed);
         txCache.insert(confirmed);
-        txCache.confirmed(confirmedId, 100);
+        txCache.confirmed(bc::encode_hash(confirmedId), 100);
 
         // Double-spend from buried[0]:
         bc::transaction_type doubleSpend

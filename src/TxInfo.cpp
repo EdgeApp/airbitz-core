@@ -92,7 +92,7 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
 
-    const auto infos = self.cache.txs.statuses(self.addresses.list());
+    const auto infos = self.cache.txs.statuses(self.cache.addresses.txids());
     for (const auto &info: infos)
     {
         pTransaction = makeTxInfo(self, info.first, info.second);

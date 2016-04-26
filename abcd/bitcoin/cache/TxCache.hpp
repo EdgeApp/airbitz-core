@@ -10,21 +10,12 @@
 
 #include "../Typedefs.hpp"
 #include <bitcoin/bitcoin.hpp>
-#include <time.h>
 #include <list>
 #include <mutex>
-#include <ostream>
-#include <unordered_map>
 
 namespace abcd {
 
-enum class TxState
-{
-    /// The network has seen this transaction, but not in a block.
-    unconfirmed,
-    /// The transaction is in a block.
-    confirmed
-};
+class JsonObject;
 
 /**
  * An input or an output of a transaction.
@@ -70,38 +61,60 @@ struct TxStatus
 class TxCache
 {
 public:
-    ~TxCache();
-    TxCache(unsigned unconfirmed_timeout=60*60);
+    // Lifetime -----------------------------------------------------------
+
+    /**
+     * Clears the database for debugging purposes.
+     */
+    void
+    clear();
+
+    /**
+     * Reads the database contents from the provided cache JSON object.
+     */
+    Status
+    load(JsonObject &json);
+
+    /**
+     * Saves the database contents to the provided cache JSON object.
+     */
+    Status
+    save(JsonObject &json);
+
+    // Queries ------------------------------------------------------------
 
     /**
      * Obtains a transaction from the database.
      */
     Status
-    get(bc::transaction_type &result, bc::hash_digest txid) const;
-
-    /**
-     * Finds a transaction's height, or 0 if it is unconfirmed.
-     */
-    long long txidHeight(bc::hash_digest txid) const;
-
-    /**
-     * Returns true if the transaction touches one of the addresses.
-     */
-    bool
-    isRelevant(const bc::transaction_type &tx,
-               const AddressSet &addresses) const;
+    get(bc::transaction_type &result, const std::string &txid) const;
 
     /**
      * Returns the input & output information for a loose transaction.
      */
-    TxInfo
-    txInfo(const bc::transaction_type &tx) const;
+    Status
+    info(TxInfo &result, const bc::transaction_type &tx) const;
 
     /**
      * Looks up a transaction and returns its input & output information.
      */
     Status
     info(TxInfo &result, const std::string &txid) const;
+
+    /**
+     * Returns true if the transaction is present in the cache
+     * along with its inputs.
+     */
+    bool
+    missing(const std::string &txid) const;
+
+    /**
+     * Verifies that the given transactions are present in the cache
+     * along with their inputs.
+     * @return A list of needed txids.
+     */
+    TxidSet
+    missingTxids(const TxidSet &txids) const;
 
     /**
      * Looks up a transaction and returns its confirmation & safety state.
@@ -111,15 +124,10 @@ public:
 
     /**
      * Lists all the transactions relevant to these addresses,
-     * along with their information.
+     * along with their information. Skips missing txids.
      */
     std::list<std::pair<TxInfo, TxStatus> >
-    statuses(const AddressSet &addresses) const;
-
-    /**
-     * Returns true if this address has received any funds.
-     */
-    bool has_history(const bc::payment_address &address) const;
+    statuses(const TxidSet &txids) const;
 
     /**
      * Get just the utxos corresponding to a set of addresses.
@@ -128,104 +136,60 @@ public:
     bc::output_info_list
     utxos(const AddressSet &addresses, bool filter=false) const;
 
-    /**
-     * Write the database to an in-memory blob.
-     */
-    bc::data_chunk serialize() const;
+    // Updates ------------------------------------------------------------
 
     /**
-     * Reconstitute the database from an in-memory blob.
+     * Removes a transaction from the cache if it is old and unconfirmed.
+     * @return true if the transaction was removed.
      */
-    Status
-    load(const bc::data_chunk &data);
-
-    /**
-     * Debug dump to show db contents.
-     */
-    void dump(std::ostream &out) const;
+    bool
+    drop(const std::string &txid, time_t now=time(nullptr));
 
     /**
      * Insert a new transaction into the database.
      * @return true if the callback should be fired.
      */
-    bool insert(const bc::transaction_type &tx);
-
-    /**
-     * Clears the database for debugging purposes.
-     */
-    void clear();
-
-private:
-    friend class TxUpdater;
-    friend class TxGraph;
-    friend class TxCacheTest;
-
-    /**
-     * A single row in the transaction database.
-     */
-    struct TxRow
-    {
-        // The transaction itself:
-        bc::transaction_type tx;
-        bc::hash_digest txid;
-        bc::hash_digest ntxid;
-
-        // State machine:
-        TxState state;
-        long long block_height;
-        time_t timestamp;
-        //bc::hash_digest block_hash; // TODO: Fix obelisk to return this
-    };
+    bool
+    insert(const bc::transaction_type &tx);
 
     /**
      * Mark a transaction as confirmed.
      * TODO: Require the block hash as well, once obelisk provides this.
      */
-    void confirmed(bc::hash_digest txid, long long block_height);
+    void
+    confirmed(const std::string &txid, size_t height, time_t now=time(nullptr));
 
-    /**
-     * Mark a transaction as unconfirmed.
-     */
-    void unconfirmed(bc::hash_digest txid);
+private:
+    friend class TxGraph;
 
-    /**
-     * Call this each time the server reports that it sees a transaction.
-     */
-    void reset_timestamp(bc::hash_digest txid);
+    struct HeightInfo
+    {
+        size_t height = 0;
+        time_t firstSeen = 0;
+    };
 
-    typedef std::function<void (bc::hash_digest txid)> HashFn;
-    void foreach_unconfirmed(HashFn &&f);
-
-    // - Internal: ---------------------
-
-    /**
-     * Returns true if the transaction touches one of the addresses.
-     */
-    bool
-    isRelevantInternal(const bc::transaction_type &tx,
-                       const AddressSet &addresses) const;
+    mutable std::mutex mutex_;
+    std::map<std::string, bc::transaction_type> txs_;
+    std::map<std::string, HeightInfo> heights_;
 
     /**
      * Same as `txInfo`, but should be called with the mutex held.
      */
-    TxInfo
-    txInfoInternal(const bc::transaction_type &tx) const;
+    Status
+    infoInternal(TxInfo &result, const bc::transaction_type &tx) const;
 
     /**
      * Returns true if the transaction has incoming non-change funds.
      */
     bool
-    isIncoming(const TxRow &row,
+    isIncoming(const bc::transaction_type &tx, const std::string &txid,
                const AddressSet &addresses) const;
 
-    // Guards access to object state:
-    mutable std::mutex mutex_;
-
-    std::unordered_map<bc::hash_digest, TxRow> rows_;
-
-    // Number of seconds an unconfirmed transaction must remain unseen
-    // before we stop saving it:
-    const unsigned unconfirmed_timeout_;
+    /**
+     * Returns a transaction's height, or zero if it is unconfirmed.
+     */
+    size_t
+    txidHeight(const std::string &txid) const;
 };
 
 } // namespace abcd

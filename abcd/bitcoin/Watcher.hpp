@@ -10,14 +10,14 @@
 
 #include "network/TxUpdater.hpp"
 #include <zmq.hpp>
+#include <mutex>
 
 namespace abcd {
 
 /**
  * Provides threading support for the TxUpdater object.
  */
-class Watcher:
-    public TxCallbacks
+class Watcher
 {
 public:
     Watcher(Cache &cache);
@@ -27,13 +27,6 @@ public:
     void disconnect();
     void connect();
     void sendTx(StatusCallback status, DataSlice tx);
-
-    // - Callbacks: --------------------
-    typedef std::function<void (const bc::transaction_type &)> tx_callback;
-    void set_tx_callback(tx_callback cb);
-
-    typedef std::function<void ()> quiet_callback;
-    void set_quiet_callback(quiet_callback cb);
 
     // - Thread implementation: --------
 
@@ -61,17 +54,8 @@ private:
     std::string socket_name_;
     zmq::socket_t socket_;
 
-    // The thread uses these callbacks, so put them in a mutex:
-    std::mutex cb_mutex_;
-    tx_callback cb_;
-    quiet_callback quiet_cb_;
-
     // Everything below this point is only touched by the thread:
     bool command(uint8_t *data, size_t size);
-
-    // TxCallbacks interface:
-    virtual void on_add(const bc::transaction_type &tx) override;
-    virtual void on_quiet() override;
 
     // This needs to be constructed last, since it uses everything else:
     TxUpdater txu_;

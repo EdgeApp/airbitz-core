@@ -7,6 +7,9 @@
 
 #include "TxCache.hpp"
 #include "../Utility.hpp"
+#include "../../crypto/Encoding.hpp"
+#include "../../json/JsonArray.hpp"
+#include "../../json/JsonObject.hpp"
 #include "../../util/Debug.hpp"
 #include <unordered_set>
 
@@ -33,11 +36,6 @@ template<> struct hash<bc::point_type>
 
 namespace abcd {
 
-// Serialization stuff:
-constexpr uint32_t old_serial_magic = 0x3eab61c3; // From the watcher
-constexpr uint32_t serial_magic = 0xfecdb763;
-constexpr uint8_t serial_tx = 0x42;
-
 typedef std::unordered_set<bc::point_type> PointSet;
 
 /**
@@ -55,9 +53,9 @@ public:
     TxGraph(const TxCache &cache):
         cache_(cache)
     {
-        for (auto &row: cache_.rows_)
+        for (auto &row: cache_.txs_)
         {
-            for (auto &input: row.second.tx.inputs)
+            for (auto &input: row.second.inputs)
             {
                 if (!spends_.insert(input.previous_output).second)
                     doubleSpends_.insert(input.previous_output);
@@ -78,7 +76,7 @@ public:
      * @return A bitfield containing problem flags.
      */
     unsigned
-    problems(bc::hash_digest txid)
+    problems(const std::string &txid)
     {
         // Just use the previous result if we have been here before:
         auto vi = visited_.find(txid);
@@ -86,23 +84,23 @@ public:
             return vi->second;
 
         // We have to assume missing transactions are safe:
-        auto i = cache_.rows_.find(txid);
-        if (cache_.rows_.end() == i)
+        auto i = cache_.txs_.find(txid);
+        if (cache_.txs_.end() == i)
             return (visited_[txid] = 0);
 
         // Confirmed transactions are also safe:
-        if (TxState::confirmed == i->second.state)
+        if (cache_.txidHeight(txid))
             return (visited_[txid] = 0);
 
         // Check for the opt-in replace-by-fee flag:
         unsigned out = 0;
-        if (isReplaceByFee(i->second.tx))
+        if (isReplaceByFee(i->second))
             out |= replaceByFee;
 
         // Recursively check all the inputs:
-        for (const auto &input: i->second.tx.inputs)
+        for (const auto &input: i->second.inputs)
         {
-            out |= problems(input.previous_output.hash);
+            out |= problems(bc::encode_hash(input.previous_output.hash));
             if (doubleSpends_.count(input.previous_output))
                 out |= doubleSpent;
         }
@@ -114,94 +112,155 @@ private:
 
     PointSet spends_;
     PointSet doubleSpends_;
-    std::unordered_map<bc::hash_digest, unsigned> visited_;
+    std::map<std::string, unsigned> visited_;
 };
 
-TxCache::~TxCache()
+struct CacheJson:
+    public JsonObject
 {
-}
+    ABC_JSON_CONSTRUCTORS(CacheJson, JsonObject)
 
-TxCache::TxCache(unsigned unconfirmed_timeout):
-    unconfirmed_timeout_(unconfirmed_timeout)
+    ABC_JSON_VALUE(txs, "txs", JsonArray)
+    ABC_JSON_VALUE(heights, "heights", JsonArray)
+};
+
+
+struct TxJson:
+    public JsonObject
 {
+    ABC_JSON_CONSTRUCTORS(TxJson, JsonObject)
+
+    ABC_JSON_STRING(txid, "txid", 0)
+    ABC_JSON_STRING(data, "data", 0)
+};
+
+struct HeightJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(HeightJson, JsonObject)
+
+    ABC_JSON_STRING(txid, "txid", 0)
+    ABC_JSON_INTEGER(height, "height", 0)
+    ABC_JSON_INTEGER(firstSeen, "firstSeen", 0)
+};
+
+void
+TxCache::clear()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    txs_.clear();
+    heights_.clear();
 }
 
 Status
-TxCache::get(bc::transaction_type &result, bc::hash_digest txid) const
+TxCache::load(JsonObject &json)
 {
     std::lock_guard<std::mutex> lock(mutex_);
+    CacheJson cacheJson(json);
 
-    auto i = rows_.find(txid);
-    if (rows_.end() == i)
-        return ABC_ERROR(ABC_CC_Synchronizing, "Cannot find transaction");
+    // Tx data:
+    auto txsJson = cacheJson.txs();
+    size_t txsSize = txsJson.size();
+    for (size_t i = 0; i < txsSize; i++)
+    {
+        TxJson txJson(txsJson[i]);
+        if (txJson.txidOk() && txJson.dataOk())
+        {
+            DataChunk rawTx;
+            ABC_CHECK(base64Decode(rawTx, txJson.data()));
+            bc::transaction_type tx;
+            ABC_CHECK(decodeTx(tx, rawTx));
 
-    result = i->second.tx;
+            txs_[txJson.txid()] = std::move(tx);
+        }
+    }
+
+    // Heights:
+    auto heightsJson = cacheJson.heights();
+    size_t heightsSize = heightsJson.size();
+    for (size_t i = 0; i < heightsSize; i++)
+    {
+        HeightJson heightJson(heightsJson[i]);
+        if (heightJson.txidOk())
+        {
+            HeightInfo info;
+            info.height = heightJson.height();
+            info.firstSeen = heightJson.firstSeen();
+            heights_[heightJson.txid()] = info;
+        }
+    }
+
     return Status();
 }
 
-long long TxCache::txidHeight(bc::hash_digest txid) const
+Status
+TxCache::save(JsonObject &json)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    CacheJson cacheJson(json);
+
+    // Tx data:
+    JsonArray txsJson;
+    for (const auto &tx: txs_)
+    {
+        bc::data_chunk rawTx(satoshi_raw_size(tx.second));
+        bc::satoshi_save(tx.second, rawTx.begin());
+
+        TxJson txJson;
+        ABC_CHECK(txJson.txidSet(tx.first));
+        ABC_CHECK(txJson.dataSet(base64Encode(rawTx)));
+        ABC_CHECK(txsJson.append(txJson));
+    }
+    cacheJson.txsSet(txsJson);
+
+    // Heights:
+    JsonArray heightsJson;
+    for (const auto &height: heights_)
+    {
+        HeightJson heightJson;
+        ABC_CHECK(heightJson.txidSet(height.first));
+        if (height.second.height)
+            ABC_CHECK(heightJson.heightSet(height.second.height));
+        ABC_CHECK(heightJson.firstSeenSet(height.second.firstSeen));
+        ABC_CHECK(heightsJson.append(heightJson));
+    }
+    cacheJson.heightsSet(heightsJson);
+
+    return Status();
+}
+
+Status
+TxCache::get(bc::transaction_type &result, const std::string &txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    auto i = rows_.find(txid);
-    if (i == rows_.end())
-        return 0;
+    auto i = txs_.find(txid);
+    if (txs_.end() == i)
+        return ABC_ERROR(ABC_CC_Synchronizing, "Cannot find transaction");
 
-    if (i->second.state != TxState::confirmed)
-    {
-        return 0;
-    }
-    return i->second.block_height;
+    result = i->second;
+    return Status();
 }
 
-bool
-TxCache::isRelevant(const bc::transaction_type &tx,
-                    const AddressSet &addresses) const
+Status
+TxCache::info(TxInfo &result, const bc::transaction_type &tx) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    return isRelevantInternal(tx, addresses);
+    ABC_CHECK(infoInternal(result, tx));
+    return Status();
 }
 
-bool
-TxCache::isRelevantInternal(const bc::transaction_type &tx,
-                            const AddressSet &addresses) const
+Status
+TxCache::info(TxInfo &result, const std::string &txid) const
 {
-    // Scan inputs:
-    for (const auto &input: tx.inputs)
-    {
-        bc::transaction_output_type output;
-        auto i = rows_.find(input.previous_output.hash);
-        if (rows_.end() != i
-                && input.previous_output.index < i->second.tx.outputs.size())
-            output = i->second.tx.outputs[input.previous_output.index];
-
-        bc::payment_address address;
-        if (bc::extract(address, output.script)
-                && addresses.count(address.encoded()))
-            return true;
-    }
-
-    // Scan outputs:
-    for (const auto &output: tx.outputs)
-    {
-        bc::payment_address address;
-        if (bc::extract(address, output.script)
-                && addresses.count(address.encoded()))
-            return true;
-    }
-
-    return false;
+    bc::transaction_type tx;
+    ABC_CHECK(get(tx, txid));
+    ABC_CHECK(info(result, tx));
+    return Status();
 }
 
-TxInfo
-TxCache::txInfo(const bc::transaction_type &tx) const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return txInfoInternal(tx);
-}
-
-TxInfo
-TxCache::txInfoInternal(const bc::transaction_type &tx) const
+Status
+TxCache::infoInternal(TxInfo &result, const bc::transaction_type &tx) const
 {
     TxInfo out;
     int64_t totalIn = 0, totalOut = 0;
@@ -213,11 +272,13 @@ TxCache::txInfoInternal(const bc::transaction_type &tx) const
     // Scan inputs:
     for (const auto &input: tx.inputs)
     {
-        bc::transaction_output_type output;
-        auto i = rows_.find(input.previous_output.hash);
-        if (rows_.end() != i
-                && input.previous_output.index < i->second.tx.outputs.size())
-            output = i->second.tx.outputs[input.previous_output.index];
+        const auto txid = bc::encode_hash(input.previous_output.hash);
+        auto i = txs_.find(txid);
+        if (txs_.end() == i)
+            return ABC_ERROR(ABC_CC_Synchronizing, "Missing input " + txid);
+        if (i->second.outputs.size() <= input.previous_output.index)
+            return ABC_ERROR(ABC_CC_Error, "Impossible input on " + txid);
+        auto &output = i->second.outputs[input.previous_output.index];
 
         totalIn += output.value;
         bc::payment_address address;
@@ -236,34 +297,66 @@ TxCache::txInfoInternal(const bc::transaction_type &tx) const
 
     out.fee = totalIn - totalOut;
 
-    return out;
+    result = out;
+    return Status();
 }
 
-Status
-TxCache::info(TxInfo &result, const std::string &txid) const
+bool
+TxCache::missing(const std::string &txid) const
 {
-    bc::hash_digest hash;
-    if (!bc::decode_hash(hash, txid))
-        return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
-    bc::transaction_type tx;
-    ABC_CHECK(get(tx, hash));
+    std::lock_guard<std::mutex> lock(mutex_);
 
-    result = txInfo(tx);
-    return Status();
+    // Check the transaction:
+    auto i = txs_.find(txid);
+    if (txs_.end() == i)
+        return true;
+
+    // Check the inputs:
+    for (const auto &input: i->second.inputs)
+    {
+        const auto txid = bc::encode_hash(input.previous_output.hash);
+        if (!txs_.count(txid))
+            return true;
+    }
+
+    return false;
+}
+
+TxidSet
+TxCache::missingTxids(const TxidSet &txids) const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    TxidSet out;
+
+    for (const auto &txid: txids)
+    {
+        // Check the transaction:
+        auto i = txs_.find(txid);
+        if (txs_.end() == i)
+        {
+            out.insert(txid);
+            continue;
+        }
+
+        // Check the inputs:
+        for (const auto &input: i->second.inputs)
+        {
+            const auto txid = bc::encode_hash(input.previous_output.hash);
+            if (!txs_.count(txid))
+                out.insert(txid);
+        }
+    }
+
+    return out;
 }
 
 Status
 TxCache::status(TxStatus &result, const std::string &txid) const
 {
-    bc::hash_digest hash;
-    if (!bc::decode_hash(hash, txid))
-        return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
-
-    TxStatus out;
-    out.height = txidHeight(hash);
-
     TxGraph graph(*this);
-    const auto problems = graph.problems(hash);
+    TxStatus out;
+    out.height = txidHeight(txid);
+    const auto problems = graph.problems(txid);
     out.isDoubleSpent = problems & TxGraph::doubleSpent;
     out.isReplaceByFee = problems & TxGraph::replaceByFee;
 
@@ -272,46 +365,29 @@ TxCache::status(TxStatus &result, const std::string &txid) const
 }
 
 std::list<std::pair<TxInfo, TxStatus> >
-TxCache::statuses(const AddressSet &addresses) const
+TxCache::statuses(const TxidSet &txids) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
     std::list<std::pair<TxInfo, TxStatus>> out;
 
     TxGraph graph(*this);
-    for (const auto &row: rows_)
+    for (const auto &txid: txids)
     {
-        if (isRelevantInternal(row.second.tx, addresses))
+        auto i = txs_.find(txid);
+        std::pair<TxInfo, TxStatus> pair;
+        if (txs_.end() != i && infoInternal(pair.first, i->second))
         {
-            std::pair<TxInfo, TxStatus> pair;
-            pair.first = txInfoInternal(row.second.tx);
-            pair.second.height = row.second.block_height;
-            const auto problems = graph.problems(row.second.txid);
+            pair.second.height = txidHeight(i->first);
+            const auto problems = graph.problems(i->first);
             pair.second.isDoubleSpent = problems & TxGraph::doubleSpent;
             pair.second.isReplaceByFee = problems & TxGraph::replaceByFee;
             out.push_back(pair);
         }
-        // TODO: Merge by ntxid
     }
+
+    // TODO: Merge by ntxid
 
     return out;
-}
-
-bool TxCache::has_history(const bc::payment_address &address) const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    for (auto &row: rows_)
-    {
-        for (auto &output: row.second.tx.outputs)
-        {
-            bc::payment_address to_address;
-            if (bc::extract(to_address, output.script))
-                if (address == to_address)
-                    return true;
-        }
-    }
-
-    return false;
 }
 
 bc::output_info_list
@@ -324,13 +400,17 @@ TxCache::utxos(const AddressSet &addresses, bool filter) const
 
     // Check each output against the list:
     bc::output_info_list out;
-    for (auto &row: rows_)
+    for (auto &row: txs_)
     {
-        for (uint32_t i = 0; i < row.second.tx.outputs.size(); ++i)
+        for (uint32_t i = 0; i < row.second.outputs.size(); ++i)
         {
-            bc::output_point point = {row.first, i};
-            const auto &output = row.second.tx.outputs[i];
+            bc::hash_digest hash;
+            bc::decode_hash(hash, row.first);
+
+            bc::output_point point = {hash, i};
+            const auto &output = row.second.outputs[i];
             bc::payment_address address;
+            const auto txid = row.first;
 
             // The output is interesting if it isn't spent, belongs to us,
             // and its transaction passes the safety checks:
@@ -338,7 +418,7 @@ TxCache::utxos(const AddressSet &addresses, bool filter) const
                     bc::extract(address, output.script) &&
                     addresses.count(address.encoded()) &&
                     !graph.problems(row.first) &&
-                    !(filter && isIncoming(row.second, addresses)))
+                    !(filter && isIncoming(row.second, txid, addresses)))
             {
                 bc::output_info_type info = {point, output.value};
                 out.push_back(info);
@@ -349,181 +429,31 @@ TxCache::utxos(const AddressSet &addresses, bool filter) const
     return out;
 }
 
-bc::data_chunk TxCache::serialize() const
+bool
+TxCache::drop(const std::string &txid, time_t now)
 {
-    ABC_DebugLog("ENTER TxCache::serialize");
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
 
-    std::basic_ostringstream<uint8_t> stream;
-    auto serial = bc::make_serializer(std::ostreambuf_iterator<uint8_t>(stream));
+    // Do not drop if it is confirmed or less than an hour old:
+    const auto &info = heights_[txid];
+    if (info.height || now < info.firstSeen + 60*60)
+        return false;
 
-    // Magic version bytes:
-    serial.write_4_bytes(serial_magic);
-
-    // Last block height:
-    serial.write_8_bytes(0);
-
-    // Tx table:
-    time_t now = time(nullptr);
-    for (const auto &row: rows_)
-    {
-        // Don't save old unconfirmed transactions:
-        if (row.second.timestamp + unconfirmed_timeout_ < now &&
-                TxState::unconfirmed == row.second.state)
-        {
-            ABC_DebugLog("TxCache::serialize Purging unconfirmed tx");
-            continue;
-        }
-
-        auto height = row.second.block_height;
-        if (TxState::unconfirmed == row.second.state)
-            height = row.second.timestamp;
-
-        serial.write_byte(serial_tx);
-        serial.write_hash(row.first);
-        serial.set_iterator(satoshi_save(row.second.tx, serial.iterator()));
-        serial.write_byte(static_cast<uint8_t>(row.second.state));
-        serial.write_8_bytes(height);
-        serial.write_byte(0); // Was need_check
-        serial.write_hash(row.second.txid);
-        serial.write_hash(row.second.ntxid);
-        serial.write_byte(false); // Was bMalleated
-        serial.write_byte(TxState::confirmed == row.second.state); // Was bMasterConfirm
-    }
-
-    // The copy is not very elegant:
-    auto str = stream.str();
-    return bc::data_chunk(str.begin(), str.end());
+    heights_.erase(txid);
+    txs_.erase(txid);
+    return true;
 }
 
-Status
-TxCache::load(const bc::data_chunk &data)
+bool
+TxCache::insert(const bc::transaction_type &tx)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    auto serial = bc::make_deserializer(data.begin(), data.end());
-    std::unordered_map<bc::hash_digest, TxRow> rows;
-
-    try
-    {
-        // Header bytes:
-        auto magic = serial.read_4_bytes();
-        if (serial_magic != magic)
-        {
-            return old_serial_magic == magic ?
-                   ABC_ERROR(ABC_CC_ParseError, "Outdated transaction database format") :
-                   ABC_ERROR(ABC_CC_ParseError, "Unknown transaction database header");
-        }
-
-        // Last block height:
-        (void)serial.read_8_bytes();
-
-        time_t now = time(nullptr);
-        while (serial.iterator() != data.end())
-        {
-            if (serial.read_byte() != serial_tx)
-            {
-                return ABC_ERROR(ABC_CC_ParseError, "Unknown entry in transaction database");
-            }
-
-            bc::hash_digest hash = serial.read_hash();
-            TxRow row;
-            bc::satoshi_load(serial.iterator(), data.end(), row.tx);
-            auto step = serial.iterator() + satoshi_raw_size(row.tx);
-            serial.set_iterator(step);
-
-            TxState state      = static_cast<TxState>(serial.read_byte());
-            uint64_t height    = serial.read_8_bytes();
-            (void)serial.read_byte(); // Was need_check
-            row.txid           = serial.read_hash();
-            row.ntxid          = serial.read_hash();
-            auto malleated     = serial.read_byte();
-            auto masterConfirm = serial.read_byte();
-
-            // The height field is the timestamp for unconfirmed txs:
-            if (TxState::unconfirmed == row.state)
-            {
-                row.block_height = 0;
-                row.timestamp = height;
-            }
-            else
-            {
-                row.block_height = height;
-                row.timestamp = now;
-            }
-
-            // Malleated transactions can have inaccurate state:
-            if (malleated && !masterConfirm)
-            {
-                row.state = TxState::unconfirmed;
-                row.block_height = 0;
-            }
-            else
-            {
-                row.state = state;
-            }
-
-            rows[hash] = std::move(row);
-        }
-    }
-    catch (bc::end_of_stream)
-    {
-        return ABC_ERROR(ABC_CC_ParseError, "Truncated transaction database");
-    }
-
-    rows_ = rows;
-    return Status();
-}
-
-void TxCache::dump(std::ostream &out) const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    for (const auto &row: rows_)
-    {
-        out << "================" << std::endl;
-        out << "hash: " << bc::encode_hash(row.first) << std::endl;
-        std::string state;
-        switch (row.second.state)
-        {
-        case TxState::unconfirmed:
-            out << "state: unconfirmed" << std::endl;
-            out << "timestamp: " << row.second.timestamp << std::endl;
-            break;
-        case TxState::confirmed:
-            out << "state: confirmed" << std::endl;
-            out << "height: " << row.second.block_height << std::endl;
-            break;
-        }
-        for (auto &input: row.second.tx.inputs)
-        {
-            bc::payment_address address;
-            if (bc::extract(address, input.script))
-                out << "input: " << address.encoded() << std::endl;
-        }
-        for (auto &output: row.second.tx.outputs)
-        {
-            bc::payment_address address;
-            if (bc::extract(address, output.script))
-                out << "output: " << address.encoded() << " " <<
-                    output.value << std::endl;
-        }
-    }
-}
-
-bool TxCache::insert(const bc::transaction_type &tx)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
 
     // Do not stomp existing tx's:
-    auto txid = bc::hash_transaction(tx);
-    if (rows_.find(txid) == rows_.end())
+    auto txid = bc::encode_hash(bc::hash_transaction(tx));
+    if (txs_.find(txid) == txs_.end())
     {
-        rows_[txid] = TxRow
-        {
-            tx, txid, makeNtxid(tx),
-            TxState::unconfirmed, 0, time(nullptr)
-        };
+        txs_[txid] = tx;
         return true;
     }
 
@@ -531,64 +461,26 @@ bool TxCache::insert(const bc::transaction_type &tx)
 }
 
 void
-TxCache::clear()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    rows_.clear();
-}
-
-void TxCache::confirmed(bc::hash_digest txid, long long block_height)
+TxCache::confirmed(const std::string &txid, size_t height, time_t now)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    auto it = rows_.find(txid);
-    BITCOIN_ASSERT(it != rows_.end());
-    auto &row = it->second;
-
-    row.state = TxState::confirmed;
-    row.block_height = block_height;
-}
-
-void TxCache::unconfirmed(bc::hash_digest txid)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    auto it = rows_.find(txid);
-    BITCOIN_ASSERT(it != rows_.end());
-    auto &row = it->second;
-
-    row.state = TxState::unconfirmed;
-    row.block_height = 0;
-}
-
-void TxCache::reset_timestamp(bc::hash_digest txid)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    auto i = rows_.find(txid);
-    if (i != rows_.end())
-        i->second.timestamp = time(nullptr);
-}
-
-void TxCache::foreach_unconfirmed(HashFn &&f)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    for (auto row: rows_)
-        if (row.second.state != TxState::confirmed)
-            f(row.first);
+    auto &info = heights_[txid];
+    info.height = height;
+    if (0 == info.firstSeen)
+        info.firstSeen = now;
 }
 
 bool
-TxCache::isIncoming(const TxRow &row,
+TxCache::isIncoming(const bc::transaction_type &tx, const std::string &txid,
                     const AddressSet &addresses) const
 {
     // Confirmed transactions are no longer incoming:
-    if (TxState::confirmed == row.state)
+    if (txidHeight(txid))
         return false;
 
     // This is a spend if we control all the inputs:
-    for (auto &input: row.tx.inputs)
+    for (auto &input: tx.inputs)
     {
         bc::payment_address address;
         if (!bc::extract(address, input.script) ||
@@ -596,6 +488,15 @@ TxCache::isIncoming(const TxRow &row,
             return true;
     }
     return false;
+}
+
+size_t
+TxCache::txidHeight(const std::string &txid) const
+{
+    const auto i = heights_.find(txid);
+    if (heights_.end() == i)
+        return 0;
+    return i->second.height;
 }
 
 } // namespace abcd
