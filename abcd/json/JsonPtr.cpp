@@ -15,7 +15,7 @@
 namespace abcd {
 
 constexpr size_t loadFlags = 0;
-constexpr size_t saveFlags = JSON_INDENT(4) | JSON_SORT_KEYS;
+constexpr size_t saveFlags = JSON_INDENT(1) | JSON_SORT_KEYS;
 constexpr size_t saveFlagsCompact = JSON_COMPACT | JSON_SORT_KEYS;
 
 /**
