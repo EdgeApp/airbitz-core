@@ -77,7 +77,7 @@ public:
      * Obtains a transaction from the database.
      */
     Status
-    txidLookup(bc::transaction_type &result, bc::hash_digest txid) const;
+    get(bc::transaction_type &result, bc::hash_digest txid) const;
 
     /**
      * Finds a transaction's height, or 0 if it is unconfirmed.
@@ -101,20 +101,20 @@ public:
      * Looks up a transaction and returns its input & output information.
      */
     Status
-    txidInfo(TxInfo &result, const std::string &txid) const;
+    info(TxInfo &result, const std::string &txid) const;
 
     /**
      * Looks up a transaction and returns its confirmation & safety state.
      */
     Status
-    txidStatus(TxStatus &result, const std::string &txid) const;
+    status(TxStatus &result, const std::string &txid) const;
 
     /**
      * Lists all the transactions relevant to these addresses,
      * along with their information.
      */
     std::list<std::pair<TxInfo, TxStatus> >
-    list(const AddressSet &addresses) const;
+    statuses(const AddressSet &addresses) const;
 
     /**
      * Returns true if this address has received any funds.
@@ -125,8 +125,8 @@ public:
      * Get just the utxos corresponding to a set of addresses.
      * @param filter true to filter out unconfirmed outputs.
      */
-    bc::output_info_list get_utxos(const AddressSet &addresses,
-                                   bool filter=false) const;
+    bc::output_info_list
+    utxos(const AddressSet &addresses, bool filter=false) const;
 
     /**
      * Write the database to an in-memory blob.

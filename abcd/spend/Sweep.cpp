@@ -28,7 +28,7 @@ sweepSend(Wallet &wallet,
     // Find utxos for this address:
     AddressSet addresses;
     addresses.insert(address);
-    auto utxos = wallet.cache.txs.get_utxos(addresses);
+    auto utxos = wallet.cache.txs.utxos(addresses);
 
     // Bail out if there are no funds to sweep:
     if (!utxos.size())

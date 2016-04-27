@@ -330,7 +330,7 @@ void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx,
     cache_.txs.reset_timestamp(txid);
     std::string str = bc::encode_hash(txid);
     bc::transaction_type tx;
-    if (!cache_.txs.txidLookup(tx, txid))
+    if (!cache_.txs.get(tx, txid))
     {
 
         ABC_DebugLevel(1,

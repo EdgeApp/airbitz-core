@@ -187,7 +187,7 @@ TEST_CASE("Transaction database", "[bitcoin][database]")
 
     SECTION("filtered utxos")
     {
-        auto utxos = txCache.get_utxos(test.ourAddresses, true);
+        auto utxos = txCache.utxos(test.ourAddresses, true);
         if (false)
             dumpUtxos(utxos);
         REQUIRE(2 == utxos.size());
@@ -198,7 +198,7 @@ TEST_CASE("Transaction database", "[bitcoin][database]")
 
     SECTION("all utxos")
     {
-        auto utxos = txCache.get_utxos(test.ourAddresses, false);
+        auto utxos = txCache.utxos(test.ourAddresses, false);
         REQUIRE(3 == utxos.size());
         REQUIRE(hasTxid(utxos, test.incomingId, 0));
         REQUIRE(hasTxid(utxos, test.confirmedId, 0));

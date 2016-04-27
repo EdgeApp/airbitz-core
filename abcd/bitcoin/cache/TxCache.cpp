@@ -127,7 +127,7 @@ TxCache::TxCache(unsigned unconfirmed_timeout):
 }
 
 Status
-TxCache::txidLookup(bc::transaction_type &result, bc::hash_digest txid) const
+TxCache::get(bc::transaction_type &result, bc::hash_digest txid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -240,20 +240,20 @@ TxCache::txInfoInternal(const bc::transaction_type &tx) const
 }
 
 Status
-TxCache::txidInfo(TxInfo &result, const std::string &txid) const
+TxCache::info(TxInfo &result, const std::string &txid) const
 {
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, txid))
         return ABC_ERROR(ABC_CC_ParseError, "Bad txid");
     bc::transaction_type tx;
-    ABC_CHECK(txidLookup(tx, hash));
+    ABC_CHECK(get(tx, hash));
 
     result = txInfo(tx);
     return Status();
 }
 
 Status
-TxCache::txidStatus(TxStatus &result, const std::string &txid) const
+TxCache::status(TxStatus &result, const std::string &txid) const
 {
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, txid))
@@ -272,7 +272,7 @@ TxCache::txidStatus(TxStatus &result, const std::string &txid) const
 }
 
 std::list<std::pair<TxInfo, TxStatus> >
-TxCache::list(const AddressSet &addresses) const
+TxCache::statuses(const AddressSet &addresses) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
     std::list<std::pair<TxInfo, TxStatus>> out;
@@ -314,8 +314,8 @@ bool TxCache::has_history(const bc::payment_address &address) const
     return false;
 }
 
-bc::output_info_list TxCache::get_utxos(const AddressSet &addresses,
-                                        bool filter) const
+bc::output_info_list
+TxCache::utxos(const AddressSet &addresses, bool filter) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 

@@ -134,7 +134,7 @@ Wallet::balance(int64_t &result)
     std::lock_guard<std::mutex> lock(mutex_);
     if (dirty)
     {
-        const auto utxos = cache.txs.get_utxos(addresses.list(), false);
+        const auto utxos = cache.txs.utxos(addresses.list(), false);
 
         balance_ = 0;
         for (const auto &utxo: utxos)

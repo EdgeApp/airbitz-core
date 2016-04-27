@@ -1729,8 +1729,8 @@ tABC_CC ABC_GetTransaction(const char *szUserName,
 
         TxInfo info;
         TxStatus status;
-        ABC_CHECK_NEW(wallet->cache.txs.txidInfo(info, szID));
-        ABC_CHECK_NEW(wallet->cache.txs.txidStatus(status, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.info(info, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.status(status, szID));
         *ppTransaction = makeTxInfo(*wallet, info, status);
     }
 
@@ -1853,7 +1853,7 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
         ABC_GET_WALLET();
 
         TxInfo info;
-        ABC_CHECK_NEW(wallet->cache.txs.txidInfo(info, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.info(info, szID));
         auto balance = wallet->addresses.balance(info);
 
         TxMeta meta;
@@ -1893,7 +1893,7 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
         ABC_GET_WALLET();
 
         TxInfo info;
-        ABC_CHECK_NEW(wallet->cache.txs.txidInfo(info, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.info(info, szID));
 
         TxMeta meta;
         ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));
@@ -2619,11 +2619,9 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxid,
     {
         ABC_GET_WALLET_N();
 
-        bc::hash_digest hash;
-        if (!bc::decode_hash(hash, szTxid))
-            ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
-
-        *height = wallet->cache.txs.txidHeight(hash);
+        TxStatus status;
+        ABC_CHECK_NEW(wallet->cache.txs.status(status, szTxid));
+        *height = status.height;
     }
 
 exit:
