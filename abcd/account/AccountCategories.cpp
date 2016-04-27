@@ -30,6 +30,7 @@ accountCategoriesSave(const Account &account,
                       const AccountCategories &categories)
 {
     JsonArray arrayJson;
+    ABC_CHECK(arrayJson.create());
     for (auto &i: categories)
     {
         ABC_CHECK(arrayJson.append(json_string(i.c_str())));

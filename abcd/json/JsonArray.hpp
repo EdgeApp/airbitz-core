@@ -22,6 +22,12 @@ public:
     ABC_JSON_CONSTRUCTORS(JsonArray, JsonPtr)
 
     /**
+     * Creates an empty array object, if there isn't one already.
+     */
+    Status
+    create();
+
+    /**
      * Returns the number of values in the array.
      */
     size_t size() { return json_array_size(root_); }

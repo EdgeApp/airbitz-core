@@ -9,6 +9,16 @@
 
 namespace abcd {
 
+Status
+JsonArray::create()
+{
+    if (!json_is_array(root_))
+        reset(json_array());
+    if (!root_)
+        return ABC_ERROR(ABC_CC_JSONError, "Cannot create array");
+    return Status();
+}
+
 JsonPtr
 JsonArray::operator[](size_t i)
 {
@@ -18,12 +28,9 @@ JsonArray::operator[](size_t i)
 Status
 JsonArray::append(JsonPtr value)
 {
-    if (!json_is_array(root_))
-        reset(json_array());
-
+    ABC_CHECK(create());
     if (json_array_append(root_, value.get()) < 0)
         return ABC_ERROR(ABC_CC_JSONError, "Cannot append to array");
-
     return Status();
 }
 

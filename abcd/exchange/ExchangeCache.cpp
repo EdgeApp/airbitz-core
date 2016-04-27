@@ -138,6 +138,7 @@ ExchangeCache::save()
     std::lock_guard<std::mutex> lock(mutex_);
 
     JsonArray rates;
+    ABC_CHECK(rates.create());
     for (const auto &i: cache_)
     {
         std::string code;
