@@ -7,7 +7,7 @@
 
 #include "WatcherBridge.hpp"
 #include "Watcher.hpp"
-#include "cache/TxCache.hpp"
+#include "cache/Cache.hpp"
 #include "../spend/Sweep.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
@@ -34,7 +34,7 @@ private:
 public:
     WatcherInfo(Wallet &wallet):
         parent_(wallet.shared_from_this()),
-        watcher(wallet.txCache, wallet.addressCache),
+        watcher(wallet.cache),
         wallet(wallet)
     {
     }
@@ -75,22 +75,6 @@ watcherFind(Watcher *&result, const Wallet &self)
 }
 
 Status
-watcherDeleteCache(Wallet &self)
-{
-    ABC_CHECK(fileDelete(self.paths.watcherPath()));
-    return Status();
-}
-
-Status
-watcherSave(Wallet &self)
-{
-    auto data = self.txCache.serialize();
-    ABC_CHECK(fileSave(data, self.paths.watcherPath()));
-
-    return Status();
-}
-
-Status
 bridgeSweepKey(Wallet &self, const std::string &wif,
                const std::string &address)
 {
@@ -102,7 +86,7 @@ bridgeSweepKey(Wallet &self, const std::string &wif,
     sweep.address = address;
     sweep.key = wif;
     watcherInfo->sweeping.push_back(sweep);
-    self.addressCache.insert(sweep.address);
+    self.cache.addresses.insert(sweep.address);
 
     return Status();
 }
@@ -132,7 +116,7 @@ bridgeWatcherLoop(Wallet &self,
     {
         watcherInfo->watcher.sendWakeup();
     };
-    self.addressCache.wakeupCallbackSet(wakeupCallback);
+    self.cache.addresses.wakeupCallbackSet(wakeupCallback);
 
     // Set up the address-synced callback:
     auto doneCallback = [watcherInfo, fCallback, pData]()
@@ -148,7 +132,7 @@ bridgeWatcherLoop(Wallet &self,
         info.sweepSatoshi = 0;
         fCallback(&info);
     };
-    self.addressCache.doneCallbackSet(doneCallback);
+    self.cache.addresses.doneCallbackSet(doneCallback);
 
     // Set up new-transaction callback:
     auto txCallback = [watcherInfo, fCallback, pData]
@@ -173,7 +157,7 @@ bridgeWatcherLoop(Wallet &self,
         info.sweepSatoshi = 0;
         fCallback(&info);
 
-        watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
+        watcherInfo->wallet.cache.save().log(); // Failure is fine
     };
     watcherInfo->watcher.set_height_callback(heightCallback);
 
@@ -191,8 +175,8 @@ bridgeWatcherLoop(Wallet &self,
     watcherInfo->watcher.set_quiet_callback(nullptr);
     watcherInfo->watcher.set_height_callback(nullptr);
     watcherInfo->watcher.set_tx_callback(nullptr);
-    self.addressCache.wakeupCallbackSet(nullptr);
-    self.addressCache.doneCallbackSet(nullptr);
+    self.cache.addresses.wakeupCallbackSet(nullptr);
+    self.cache.addresses.doneCallbackSet(nullptr);
 
     return Status();
 }
@@ -244,7 +228,7 @@ bridgeWatcherStop(Wallet &self)
 Status
 bridgeWatcherDelete(Wallet &self)
 {
-    watcherSave(self).log(); // Failure is not fatal
+    self.cache.save().log(); // Failure is fine
     watchers_.erase(self.id());
 
     return Status();
@@ -260,7 +244,7 @@ bridgeQuietCallback(WatcherInfo *watcherInfo,
     auto i = watcherInfo->sweeping.begin();
     while (watcherInfo->sweeping.end() != i)
     {
-        if (wallet.txCache.has_history(i->address))
+        if (wallet.cache.txs.has_history(i->address))
         {
             // Remove the sweep from the list:
             auto sweep = *i;
@@ -281,10 +265,10 @@ bridgeTxCallback(Wallet &wallet,
                  const libbitcoin::transaction_type &tx,
                  tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    const auto info = wallet.txCache.txInfo(tx);
+    const auto info = wallet.cache.txs.txInfo(tx);
 
     // Does this transaction concern us?
-    if (wallet.txCache.isRelevant(tx, wallet.addresses.list()))
+    if (wallet.cache.txs.isRelevant(tx, wallet.addresses.list()))
     {
         ABC_CHECK(onReceive(wallet, info, fAsyncCallback, pData));
     }

@@ -20,7 +20,7 @@
 #include "../abcd/auth/LoginServer.hpp"
 #include "../abcd/bitcoin/Testnet.hpp"
 #include "../abcd/bitcoin/Text.hpp"
-#include "../abcd/bitcoin/cache/TxCache.hpp"
+#include "../abcd/bitcoin/cache/Cache.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
@@ -1729,8 +1729,8 @@ tABC_CC ABC_GetTransaction(const char *szUserName,
 
         TxInfo info;
         TxStatus status;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
-        ABC_CHECK_NEW(wallet->txCache.txidStatus(status, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.txidInfo(info, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.txidStatus(status, szID));
         *ppTransaction = makeTxInfo(*wallet, info, status);
     }
 
@@ -1853,7 +1853,7 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
         ABC_GET_WALLET();
 
         TxInfo info;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.txidInfo(info, szID));
         auto balance = wallet->addresses.balance(info);
 
         TxMeta meta;
@@ -1893,7 +1893,7 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
         ABC_GET_WALLET();
 
         TxInfo info;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.txidInfo(info, szID));
 
         TxMeta meta;
         ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));
@@ -2520,7 +2520,7 @@ tABC_CC ABC_PrioritizeAddress(const char *szUserName, const char *szPassword,
         std::string address;
         if (szAddress)
             address = szAddress;
-        wallet->addressCache.prioritize(address);
+        wallet->cache.addresses.prioritize(address);
     }
 
 exit:
@@ -2591,8 +2591,7 @@ tABC_CC ABC_WatcherDeleteCache(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_NEW(watcherDeleteCache(*wallet));
-        wallet->txCache.clear();
+        wallet->cache.clear();
     }
 
 exit:
@@ -2624,7 +2623,7 @@ tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxid,
         if (!bc::decode_hash(hash, szTxid))
             ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
 
-        *height = wallet->txCache.txidHeight(hash);
+        *height = wallet->cache.txs.txidHeight(hash);
     }
 
 exit:
@@ -2649,7 +2648,7 @@ tABC_CC ABC_BlockHeight(const char *szWalletUUID, int *height,
     {
         ABC_GET_WALLET_N();
 
-        *height = wallet->txCache.last_height();
+        *height = wallet->cache.txs.last_height();
         if (*height == 0)
         {
             cc = ABC_CC_Synchronizing;

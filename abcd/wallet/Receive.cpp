@@ -9,8 +9,7 @@
 #include "Wallet.hpp"
 #include "../Context.hpp"
 #include "../General.hpp"
-#include "../bitcoin/WatcherBridge.hpp"
-#include "../bitcoin/cache/TxCache.hpp"
+#include "../bitcoin/cache/Cache.hpp"
 #include "../exchange/ExchangeCache.hpp"
 #include "../spend/AirbitzFee.hpp"
 #include "../util/Debug.hpp"
@@ -56,7 +55,7 @@ onReceive(Wallet &wallet, const TxInfo &info,
         ABC_CHECK(wallet.txs.save(meta, balance, info.fee));
 
         // Update the transaction cache:
-        watcherSave(wallet).log(); // Failure is not fatal
+        wallet.cache.save().log(); // Failure is fine
         wallet.balanceDirty();
         ABC_CHECK(wallet.addresses.markOutputs(info));
 
@@ -75,7 +74,7 @@ onReceive(Wallet &wallet, const TxInfo &info,
     else
     {
         // Update the transaction cache:
-        watcherSave(wallet).log(); // Failure is not fatal
+        wallet.cache.save().log(); // Failure is fine
         wallet.balanceDirty();
         ABC_CHECK(wallet.addresses.markOutputs(info));
 

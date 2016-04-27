@@ -6,8 +6,7 @@
  */
 
 #include "TxUpdater.hpp"
-#include "../cache/AddressCache.hpp"
-#include "../cache/TxCache.hpp"
+#include "../cache/Cache.hpp"
 #include "../../General.hpp"
 #include "../../util/Debug.hpp"
 
@@ -33,10 +32,8 @@ TxUpdater::~TxUpdater()
     disconnect();
 }
 
-TxUpdater::TxUpdater(TxCache &db, AddressCache &addressCache, void *ctx,
-                     TxCallbacks &callbacks):
-    db_(db),
-    addressCache_(addressCache),
+TxUpdater::TxUpdater(Cache &cache, void *ctx, TxCallbacks &callbacks):
+    cache_(cache),
     ctx_(ctx),
     callbacks_(callbacks),
     failed_(false),
@@ -167,8 +164,8 @@ TxUpdater::connect()
         get_height();
 
         // Handle block-fork checks & unconfirmed transactions:
-        db_.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1,
-                                          ALL_SERVERS));
+        cache_.txs.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1,
+                                       ALL_SERVERS));
     }
 
     return Status();
@@ -207,13 +204,13 @@ bc::client::sleep_time TxUpdater::wakeup()
         {
             std::string address;
             next_wakeup = bc::client::min_sleep(next_wakeup,
-                                                addressCache_.nextWakeup(address));
+                                                cache_.addresses.nextWakeup(address));
             if (address.empty() || last_address == address)
                 break;
             last_address = address;
 
             ABC_DebugLog("Check address %s", address.c_str());
-            addressCache_.checkBegin(address);
+            cache_.addresses.checkBegin(address);
             bc::payment_address a(address);
             query_address(a, c->server_index);
         }
@@ -330,10 +327,10 @@ TxUpdater::connectTo(long index)
 void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx,
                          size_t index)
 {
-    db_.reset_timestamp(txid);
+    cache_.txs.reset_timestamp(txid);
     std::string str = bc::encode_hash(txid);
     bc::transaction_type tx;
-    if (!db_.txidLookup(tx, txid))
+    if (!cache_.txs.txidLookup(tx, txid))
     {
 
         ABC_DebugLevel(1,
@@ -351,7 +348,7 @@ void TxUpdater::watch_tx(bc::hash_digest txid, bool want_inputs, int idx,
         // tx database
         if (index)
         {
-            db_.confirmed(txid, index);
+            cache_.txs.confirmed(txid, index);
         }
 
         ABC_DebugLevel(2,"*** watch_tx idx=%d TRANSACTION %s already in DB ****", idx,
@@ -427,13 +424,13 @@ void TxUpdater::get_height()
 
         auto on_done = [this, idx, &bconn](size_t height)
         {
-            if (db_.last_height() < height)
+            if (cache_.txs.last_height() < height)
             {
-                db_.at_height(height);
+                cache_.txs.at_height(height);
                 callbacks_.on_height(height);
 
                 // Query all unconfirmed transactions:
-                db_.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1, idx));
+                cache_.txs.foreach_unconfirmed(std::bind(&TxUpdater::get_index, this, _1, idx));
                 ABC_DebugLevel(2, "get_height server idx=%d height=%d", idx, height);
             }
             bconn.queued_get_height_--;
@@ -487,7 +484,7 @@ void TxUpdater::get_tx(bc::hash_digest txid, bool want_inputs, int server_index)
         {
             ABC_DebugLevel(2,"get_tx ENTER ON_DONE idx=%d txid=%s", idx, str.c_str());
             BITCOIN_ASSERT(txid == bc::hash_transaction(tx));
-            if (db_.insert(tx))
+            if (cache_.txs.insert(tx))
                 callbacks_.on_add(tx);
             if (want_inputs)
             {
@@ -546,7 +543,7 @@ void TxUpdater::get_tx_mem(bc::hash_digest txid, bool want_inputs,
             ABC_DebugLevel(2,"get_tx_mem ENTER ON_DONE idx=%d txid=%s FOUND IN MEMPOOL",
                            idx, str.c_str());
             BITCOIN_ASSERT(txid == bc::hash_transaction(tx));
-            if (db_.insert(tx))
+            if (cache_.txs.insert(tx))
                 callbacks_.on_add(tx);
             if (want_inputs)
             {
@@ -595,7 +592,7 @@ void TxUpdater::get_index(bc::hash_digest txid, int server_index)
         {
             // A failure means that the transaction is unconfirmed:
             (void)error;
-            db_.unconfirmed(txid);
+            cache_.txs.unconfirmed(txid);
 
             bconn.queued_get_indices_--;
         };
@@ -605,7 +602,7 @@ void TxUpdater::get_index(bc::hash_digest txid, int server_index)
             // The transaction is confirmed:
             (void)index;
 
-            db_.confirmed(txid, block_height);
+            cache_.txs.confirmed(txid, block_height);
 
             bconn.queued_get_indices_--;
             ABC_DebugLevel(2,"get_index SUCCESS server idx: %d", idx);
@@ -681,7 +678,7 @@ void TxUpdater::query_address(const bc::payment_address &address,
             ABC_DebugLevel(1,"query_address ON_ERROR idx:%d addr:%s failed:%s",
                            idx, address.encoded().c_str(), error.message().c_str());
 
-            addressCache_.checkEnd(address.encoded(), false);
+            cache_.addresses.checkEnd(address.encoded(), false);
             failed_ = true;
             failed_server_idx_ = idx;
             query_done(idx, bconn);
@@ -694,7 +691,7 @@ void TxUpdater::query_address(const bc::payment_address &address,
                            address.encoded().c_str());
             ABC_DebugLevel(2,"   Looping over address transactions... ");
 
-            addressCache_.checkEnd(address.encoded(), true);
+            cache_.addresses.checkEnd(address.encoded(), true);
             for (auto &row: history)
             {
                 ABC_DebugLevel(2,"   Watching output tx=%s",

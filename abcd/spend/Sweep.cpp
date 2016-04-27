@@ -10,8 +10,7 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "../Context.hpp"
-#include "../bitcoin/cache/TxCache.hpp"
-#include "../bitcoin/WatcherBridge.hpp"
+#include "../bitcoin/cache/Cache.hpp"
 #include "../exchange/ExchangeCache.hpp"
 #include "../util/Debug.hpp"
 #include "../wallet/Wallet.hpp"
@@ -29,7 +28,7 @@ sweepSend(Wallet &wallet,
     // Find utxos for this address:
     AddressSet addresses;
     addresses.insert(address);
-    auto utxos = wallet.txCache.get_utxos(addresses);
+    auto utxos = wallet.cache.txs.get_utxos(addresses);
 
     // Bail out if there are no funds to sweep:
     if (!utxos.size())
@@ -70,7 +69,7 @@ sweepSend(Wallet &wallet,
     // Now sign that:
     KeyTable keys;
     keys[address] = wif;
-    ABC_CHECK(signTx(tx, wallet.txCache, keys));
+    ABC_CHECK(signTx(tx, wallet.cache.txs, keys));
 
     // Send:
     bc::data_chunk raw_tx(satoshi_raw_size(tx));
@@ -78,7 +77,7 @@ sweepSend(Wallet &wallet,
     ABC_CHECK(broadcastTx(wallet, raw_tx));
 
     // Calculate transaction information:
-    const auto info = wallet.txCache.txInfo(tx);
+    const auto info = wallet.cache.txs.txInfo(tx);
     const auto balance = wallet.addresses.balance(info);
 
     // Save the transaction metadata:
@@ -95,8 +94,8 @@ sweepSend(Wallet &wallet,
     ABC_CHECK(wallet.txs.save(meta, balance, info.fee));
 
     // Update the transaction cache:
-    if (wallet.txCache.insert(tx))
-        watcherSave(wallet).log(); // Failure is not fatal
+    if (wallet.cache.txs.insert(tx))
+        wallet.cache.save().log(); // Failure is fine
     wallet.balanceDirty();
     ABC_CHECK(wallet.addresses.markOutputs(info));
 

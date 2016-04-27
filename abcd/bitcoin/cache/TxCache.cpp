@@ -7,7 +7,6 @@
 
 #include "TxCache.hpp"
 #include "../Utility.hpp"
-#include "../WatcherBridge.hpp"
 #include "../../util/Debug.hpp"
 #include <unordered_set>
 

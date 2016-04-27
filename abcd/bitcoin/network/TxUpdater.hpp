@@ -13,8 +13,7 @@
 
 namespace abcd {
 
-class AddressCache;
-class TxCache;
+class Cache;
 
 /**
  * Interface containing the events the updater can trigger.
@@ -49,8 +48,7 @@ class TxUpdater:
 {
 public:
     ~TxUpdater();
-    TxUpdater(TxCache &db, AddressCache &addressCache, void *ctx,
-              TxCallbacks &callbacks);
+    TxUpdater(Cache &cache, void *ctx, TxCallbacks &callbacks);
 
     void disconnect();
     Status connect();
@@ -106,8 +104,7 @@ private:
     void sendTx(StatusCallback status, DataSlice tx);
     void query_address(const bc::payment_address &address, int server_index);
 
-    TxCache &db_;
-    AddressCache &addressCache_;
+    Cache &cache_;
     void *ctx_;
     TxCallbacks &callbacks_;
 

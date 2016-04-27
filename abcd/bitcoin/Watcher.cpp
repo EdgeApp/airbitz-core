@@ -25,9 +25,9 @@ enum
     msg_send
 };
 
-Watcher::Watcher(TxCache &db, AddressCache &addressCache):
+Watcher::Watcher(Cache &cache):
     socket_(ctx_, ZMQ_PAIR),
-    txu_(db, addressCache, ctx_, *this)
+    txu_(cache, ctx_, *this)
 {
     std::stringstream name;
     name << "inproc://watcher-" << watcher_id++;

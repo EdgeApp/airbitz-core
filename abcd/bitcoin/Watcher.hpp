@@ -24,7 +24,7 @@ class Watcher:
     public TxCallbacks
 {
 public:
-    Watcher(TxCache &db, AddressCache &addressCache);
+    Watcher(Cache &cache);
 
     // - Updater messages: -------------
     void sendWakeup();
