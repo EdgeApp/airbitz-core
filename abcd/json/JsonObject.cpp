@@ -25,6 +25,14 @@ JsonObject::JsonObject(const JsonPtr &copy):
 }
 
 Status
+JsonObject::ok()
+{
+    if (!json_is_object(root_))
+        return ABC_ERROR(ABC_CC_JSONError, "Not a JSON object.");
+    return Status();
+}
+
+Status
 JsonObject::setValue(const char *key, json_t *value)
 {
     if (json_object_set_new(root_, key, value) < 0)

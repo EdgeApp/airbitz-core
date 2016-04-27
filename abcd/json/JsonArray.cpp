@@ -24,6 +24,14 @@ JsonArray::JsonArray(const JsonPtr &copy):
 {
 }
 
+Status
+JsonArray::ok()
+{
+    if (!json_is_array(root_))
+        return ABC_ERROR(ABC_CC_JSONError, "Not a JSON array.");
+    return Status();
+}
+
 JsonPtr
 JsonArray::operator[](size_t i)
 {
