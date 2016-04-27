@@ -24,6 +24,7 @@
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
+#include "../abcd/exchange/ExchangeCache.hpp"
 #include "../abcd/http/Http.hpp"
 #include "../abcd/http/Uri.hpp"
 #include "../abcd/login/Bitid.hpp"

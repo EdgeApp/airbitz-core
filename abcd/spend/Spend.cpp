@@ -15,6 +15,7 @@
 #include "../bitcoin/TxCache.hpp"
 #include "../bitcoin/Utility.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
+#include "../exchange/ExchangeCache.hpp"
 #include "../util/Debug.hpp"
 #include "../wallet/Wallet.hpp"
 

@@ -7,6 +7,7 @@
 
 #include "../Command.hpp"
 #include "../../abcd/Context.hpp"
+#include "../../abcd/exchange/ExchangeCache.hpp"
 #include <iostream>
 
 using namespace abcd;

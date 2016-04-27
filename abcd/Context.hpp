@@ -9,10 +9,11 @@
 #define ABCD_CONTEXT_H
 
 #include "RootPaths.hpp"
-#include "exchange/ExchangeCache.hpp"
 #include <memory>
 
 namespace abcd {
+
+class ExchangeCache;
 
 /**
  * An object holding app-wide information, such as paths.
@@ -20,6 +21,7 @@ namespace abcd {
 class Context
 {
 public:
+    ~Context();
     Context(const std::string &rootDir, const std::string &certPath,
             const std::string &apiKey, const std::string &hiddenBitsKey);
 
@@ -32,7 +34,7 @@ private:
 
 public:
     RootPaths paths;
-    ExchangeCache exchangeCache;
+    ExchangeCache &exchangeCache;
 };
 
 /**

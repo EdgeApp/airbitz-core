@@ -10,6 +10,7 @@
 #include "Utility.hpp"
 #include "Watcher.hpp"
 #include "../Context.hpp"
+#include "../exchange/ExchangeCache.hpp"
 #include "../spend/Broadcast.hpp"
 #include "../spend/Inputs.hpp"
 #include "../spend/Outputs.hpp"
