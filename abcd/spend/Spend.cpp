@@ -172,8 +172,7 @@ Status
 Spend::saveTx(DataSlice rawTx, std::string &txidOut)
 {
     bc::transaction_type tx;
-    auto deserial = bc::make_deserializer(rawTx.begin(), rawTx.end());
-    bc::satoshi_load(deserial.iterator(), deserial.end(), tx);
+    ABC_CHECK(decodeTx(tx, rawTx));
 
     // Calculate transaction amounts:
     const auto info = wallet_.txCache.txInfo(tx, wallet_.addresses.list());

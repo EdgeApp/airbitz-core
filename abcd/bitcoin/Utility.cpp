@@ -45,4 +45,22 @@ makePushOperation(bc::data_slice data)
     return op;
 }
 
+Status
+decodeTx(bc::transaction_type &result, bc::data_slice rawTx)
+{
+    bc::transaction_type out;
+    try
+    {
+        auto deserial = bc::make_deserializer(rawTx.begin(), rawTx.end());
+        bc::satoshi_load(deserial.iterator(), deserial.end(), out);
+    }
+    catch (bc::end_of_stream)
+    {
+        return ABC_ERROR(ABC_CC_ParseError, "Bad transaction format");
+    }
+
+    result = std::move(out);
+    return Status();
+}
+
 } // namespace abcd
