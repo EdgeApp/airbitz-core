@@ -398,6 +398,11 @@ typedef struct sABC_ParsedUri
     char *szMessage;
     char *szCategory; // Airbitz extension
     char *szRet; // Airbitz extension
+
+    // BitID metadata requests:
+    bool bitidPaymentAddress;
+    bool bitidKYCProvider;
+    bool bitidKYCRequest;
 } tABC_ParsedUri;
 
 /**

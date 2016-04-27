@@ -2259,6 +2259,10 @@ tABC_CC ABC_ParseUri(char *szURI,
                              stringCopy(uri.message);
         pResult->szCategory = uri.category.empty() ? nullptr :
                               stringCopy(uri.category);
+        pResult->bitidPaymentAddress = uri.bitidPaymentAddress;
+        pResult->bitidKYCProvider = uri.bitidKycProvider;
+        pResult->bitidKYCRequest = uri.bitidKycRequest;
+
         pResult->szRet = uri.ret.empty() ? nullptr : stringCopy(uri.ret);
         *ppResult = pResult;
     }
