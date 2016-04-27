@@ -283,11 +283,10 @@ bridgeTxCallback(Wallet &wallet,
                  const libbitcoin::transaction_type &tx,
                  tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    const auto addresses = wallet.addresses.list();
-    const auto info = wallet.txCache.txInfo(tx, addresses);
+    const auto info = wallet.txCache.txInfo(tx);
 
     // Does this transaction concern us?
-    if (wallet.txCache.isRelevant(tx, addresses))
+    if (wallet.txCache.isRelevant(tx, wallet.addresses.list()))
     {
         // Does the transaction already exist?
         TxMeta meta;
@@ -306,17 +305,18 @@ bridgeTxCallback(Wallet &wallet,
                 if (wallet.addresses.get(address, io.address))
                     meta.metadata = address.metadata;
             }
+            const auto balance = wallet.addresses.balance(info);
             ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                          meta.metadata.amountCurrency, info.balance,
+                          meta.metadata.amountCurrency, balance,
                           static_cast<Currency>(wallet.currency())));
 
             // Save the metadata:
-            ABC_CHECK(wallet.txs.save(meta, info.balance, info.fee));
+            ABC_CHECK(wallet.txs.save(meta, balance, info.fee));
 
             // Update the transaction cache:
             watcherSave(wallet).log(); // Failure is not fatal
             wallet.balanceDirty();
-            ABC_CHECK(wallet.addresses.markOutputs(info.ios));
+            ABC_CHECK(wallet.addresses.markOutputs(info));
 
             // Update the GUI:
             ABC_DebugLog("IncomingBitCoin callback: wallet %s, txid: %s",
@@ -335,7 +335,7 @@ bridgeTxCallback(Wallet &wallet,
             // Update the transaction cache:
             watcherSave(wallet).log(); // Failure is not fatal
             wallet.balanceDirty();
-            ABC_CHECK(wallet.addresses.markOutputs(info.ios));
+            ABC_CHECK(wallet.addresses.markOutputs(info));
 
             // Update the GUI:
             ABC_DebugLog("BalanceUpdate callback: wallet %s, txid: %s",

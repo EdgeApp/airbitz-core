@@ -78,7 +78,8 @@ sweepSend(Wallet &wallet,
     ABC_CHECK(broadcastTx(wallet, raw_tx));
 
     // Calculate transaction information:
-    const auto info = wallet.txCache.txInfo(tx, wallet.addresses.list());
+    const auto info = wallet.txCache.txInfo(tx);
+    const auto balance = wallet.addresses.balance(info);
 
     // Save the transaction metadata:
     TxMeta meta;
@@ -88,26 +89,26 @@ sweepSend(Wallet &wallet,
     meta.internal = true;
     meta.airbitzFeeSent = 0;
     ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                  meta.metadata.amountCurrency, info.balance,
+                  meta.metadata.amountCurrency, balance,
                   static_cast<Currency>(wallet.currency())));
-    ABC_CHECK(wallet.txs.save(meta, info.balance, info.fee));
+    ABC_CHECK(wallet.txs.save(meta, balance, info.fee));
 
     // Update the transaction cache:
     if (wallet.txCache.insert(tx))
         watcherSave(wallet).log(); // Failure is not fatal
     wallet.balanceDirty();
-    ABC_CHECK(wallet.addresses.markOutputs(info.ios));
+    ABC_CHECK(wallet.addresses.markOutputs(info));
 
     // Done:
     ABC_DebugLog("IncomingSweep callback: wallet %s, txid: %s, value: %d",
-                 wallet.id().c_str(), info.txid.c_str(), info.balance);
+                 wallet.id().c_str(), info.txid.c_str(), balance);
     tABC_AsyncBitCoinInfo async;
     async.pData = pData;
     async.eventType = ABC_AsyncEventType_IncomingSweep;
     Status().toError(async.status, ABC_HERE());
     async.szWalletUUID = wallet.id().c_str();
     async.szTxID = info.txid.c_str();
-    async.sweepSatoshi = info.balance;
+    async.sweepSatoshi = balance;
     fCallback(&async);
 
     return Status();

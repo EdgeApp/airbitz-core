@@ -43,7 +43,6 @@ struct TxInfo
 {
     std::string txid;
     std::string ntxid;
-    int64_t balance;
     int64_t fee;
     std::list<TxInOut> ios;
 };
@@ -101,15 +100,13 @@ public:
      * Returns the input & output information for a loose transaction.
      */
     TxInfo
-    txInfo(const bc::transaction_type &tx,
-           const AddressSet &addresses) const;
+    txInfo(const bc::transaction_type &tx) const;
 
     /**
      * Looks up a transaction and returns its input & output information.
      */
     Status
-    txidInfo(TxInfo &result, const std::string &txid,
-             const AddressSet &addresses) const;
+    txidInfo(TxInfo &result, const std::string &txid) const;
 
     /**
      * Looks up a transaction and returns its confirmation & safety state.
@@ -222,8 +219,7 @@ private:
      * Same as `txInfo`, but should be called with the mutex held.
      */
     TxInfo
-    txInfoInternal(const bc::transaction_type &tx,
-                   const AddressSet &addresses) const;
+    txInfoInternal(const bc::transaction_type &tx) const;
 
     /**
      * Returns true if the transaction has incoming non-change funds.

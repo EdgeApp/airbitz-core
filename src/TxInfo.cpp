@@ -54,7 +54,7 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
         out->pDetails = Metadata().toDetails();
         out->pDetails->amountFeesAirbitzSatoshi = 0;
     }
-    out->pDetails->amountSatoshi = info.balance;
+    out->pDetails->amountSatoshi = self.addresses.balance(info);
     out->pDetails->amountFeesMinersSatoshi = info.fee;
 
     // Status:

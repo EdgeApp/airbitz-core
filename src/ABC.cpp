@@ -1728,8 +1728,7 @@ tABC_CC ABC_GetTransaction(const char *szUserName,
 
         TxInfo info;
         TxStatus status;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
-                                               wallet->addresses.list()));
+        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
         ABC_CHECK_NEW(wallet->txCache.txidStatus(status, szID));
         *ppTransaction = makeTxInfo(*wallet, info, status);
     }
@@ -1853,14 +1852,14 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
         ABC_GET_WALLET();
 
         TxInfo info;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
-                                               wallet->addresses.list()));
+        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
+        auto balance = wallet->addresses.balance(info);
 
         TxMeta meta;
         ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));
         meta.metadata = pDetails;
         meta.internal = true;
-        ABC_CHECK_NEW(wallet->txs.save(meta, info.balance, info.fee));
+        ABC_CHECK_NEW(wallet->txs.save(meta, balance, info.fee));
     }
 
 exit:
@@ -1893,8 +1892,7 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
         ABC_GET_WALLET();
 
         TxInfo info;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
-                                               wallet->addresses.list()));
+        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
 
         TxMeta meta;
         ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));

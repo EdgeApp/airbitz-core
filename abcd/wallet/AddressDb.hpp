@@ -18,8 +18,7 @@
 namespace abcd {
 
 class Wallet;
-
-struct TxInOut;
+struct TxInfo;
 typedef std::map<const std::string, std::string> KeyTable;
 
 struct AddressMeta
@@ -51,6 +50,12 @@ public:
      */
     Status
     save(const AddressMeta &address);
+
+    /**
+     * Calculates the transaction's impact on the wallet balance.
+     */
+    int64_t
+    balance(const TxInfo &info) const;
 
     /**
      * Lists all the addresses in the wallet.
@@ -92,7 +97,7 @@ public:
      * Marks a transaction's output addresses as having received money.
      */
     Status
-    markOutputs(const std::list<TxInOut> &ios);
+    markOutputs(const TxInfo &info);
 
 private:
     mutable std::mutex mutex_;

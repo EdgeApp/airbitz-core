@@ -77,7 +77,7 @@ Spend::calculateFees(uint64_t &totalFees)
     ABC_CHECK(makeTx(tx, changeAddress.address));
 
     // Calculate the miner fee:
-    const auto info = wallet_.txCache.txInfo(tx, wallet_.addresses.list());
+    const auto info = wallet_.txCache.txInfo(tx);
 
     totalFees = airbitzFeeSent_ + info.fee;
     return Status();
@@ -197,7 +197,8 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     ABC_CHECK(decodeTx(tx, rawTx));
 
     // Calculate transaction amounts:
-    const auto info = wallet_.txCache.txInfo(tx, wallet_.addresses.list());
+    const auto info = wallet_.txCache.txInfo(tx);
+    auto balance = wallet_.addresses.balance(info);
 
     // Create Airbitz metadata:
     TxMeta meta;
@@ -212,26 +213,26 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     if (!meta.metadata.amountCurrency)
     {
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                      meta.metadata.amountCurrency, info.balance,
+                      meta.metadata.amountCurrency, balance,
                       static_cast<Currency>(wallet_.currency())));
     }
 
     // Save the transaction:
-    ABC_CHECK(wallet_.txs.save(meta, info.balance, info.fee));
+    ABC_CHECK(wallet_.txs.save(meta, balance, info.fee));
 
     // Update any transfers:
     for (auto transfer: transfers_)
     {
         meta.airbitzFeeSent = 0;
         meta.metadata = transfer.second;
-        transfer.first->txs.save(meta, -info.balance, info.fee);
+        transfer.first->txs.save(meta, -balance, info.fee);
     }
 
     // Update the transaction cache:
     if (wallet_.txCache.insert(tx))
         watcherSave(wallet_).log(); // Failure is not fatal
     wallet_.balanceDirty();
-    ABC_CHECK(wallet_.addresses.markOutputs(info.ios));
+    ABC_CHECK(wallet_.addresses.markOutputs(info));
 
     txidOut = info.txid;
     return Status();

@@ -174,6 +174,19 @@ AddressDb::save(const AddressMeta &address)
     return Status();
 }
 
+int64_t
+AddressDb::balance(const TxInfo &info) const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    int64_t out = 0;
+    for (const auto &io: info.ios)
+        if (addresses_.count(io.address))
+            out += io.input ? -io.value : io.value;
+
+    return out;
+}
+
 AddressSet
 AddressDb::list() const
 {
@@ -268,12 +281,12 @@ AddressDb::recycleSet(const std::string &address, bool recycle)
  * Marks a transaction's output addresses as having received money.
  */
 Status
-AddressDb::markOutputs(const std::list<TxInOut> &ios)
+AddressDb::markOutputs(const TxInfo &info)
 {
-    for (const auto &io: ios)
+    for (const auto &io: info.ios)
     {
         if (!io.input)
-            recycleSet(io.address, false); /* Failure is ok. */
+            recycleSet(io.address, false); // Failure is fine
     }
 
     return Status();
