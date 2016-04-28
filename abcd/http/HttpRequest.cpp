@@ -66,7 +66,7 @@ curlDataCallback(void *data, size_t memberSize, size_t numMembers,
 }
 
 Status
-HttpReply::codeOk()
+HttpReply::codeOk() const
 {
     if (code < 200 || 300 <= code)
         return ABC_ERROR(ABC_CC_Error, "Bad HTTP status code " +

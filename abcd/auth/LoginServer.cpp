@@ -79,7 +79,7 @@ struct ServerReplyJson:
      * Checks the server status code for errors.
      */
     Status
-    ok(AuthError *authError=nullptr);
+    decode(const HttpReply &reply, AuthError *authError=nullptr);
 };
 
 static tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby, DataSlice LP1,
@@ -87,8 +87,11 @@ static tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby, DataSlice LP1,
                                         const char *szPath, tABC_Error *pError);
 
 Status
-ServerReplyJson::ok(AuthError *authError)
+ServerReplyJson::decode(const HttpReply &reply, AuthError *authError)
 {
+    ABC_CHECK(JsonObject::decode(reply.body));
+
+    // First check the body for a descriptive error code:
     switch (code())
     {
     case ABC_Server_Code_Success:
@@ -144,6 +147,9 @@ ServerReplyJson::ok(AuthError *authError)
         return ABC_ERROR(ABC_CC_ServerError, message());
     }
 
+    // Also check the HTTP status code:
+    ABC_CHECK(reply.codeOk());
+
     return Status();
 }
 
@@ -193,8 +199,7 @@ loginServerGetGeneral(JsonPtr &result)
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     result = replyJson.results();
     return Status();
@@ -208,8 +213,7 @@ loginServerGetQuestions(JsonPtr &result)
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     result = replyJson.results();
     return Status();
@@ -232,8 +236,7 @@ loginServerCreate(const Lobby &lobby, DataSlice LP1,
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     return Status();
 }
@@ -248,8 +251,7 @@ loginServerActivate(const Login &login)
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     return Status();
 }
@@ -264,8 +266,7 @@ loginServerAvailable(const Lobby &lobby)
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     return Status();
 }
@@ -290,8 +291,7 @@ loginServerAccountUpgrade(const Login &login, JsonPtr rootKeyBox,
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     return Status();
 }
@@ -318,8 +318,7 @@ loginServerChangePassword(const Login &login,
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     return Status();
 }
@@ -334,8 +333,7 @@ loginServerGetCarePackage(const Lobby &lobby, CarePackage &result)
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     struct ResultJson:
         public JsonObject
@@ -366,8 +364,7 @@ loginServerGetLoginPackage(const Lobby &lobby,
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok(&authError));
+    ABC_CHECK(replyJson.decode(reply, &authError));
 
     struct ResultJson:
         public JsonObject
@@ -396,8 +393,7 @@ loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok(&authError));
+    ABC_CHECK(replyJson.decode(reply, &authError));
 
     struct ResultJson:
         public JsonObject
@@ -434,8 +430,7 @@ loginServerUpdatePinPackage(const Login &login,
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     return Status();
 }
@@ -475,8 +470,7 @@ tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby, DataSlice LP1,
     // send the command
     ABC_CHECK_NEW(AirbitzRequest().post(reply, url, json.encode()));
 
-    ABC_CHECK_NEW(replyJson.decode(reply.body));
-    ABC_CHECK_NEW(replyJson.ok());
+    ABC_CHECK_NEW(replyJson.decode(reply));
 
 exit:
     return cc;
@@ -501,8 +495,7 @@ loginServerOtpEnable(const Login &login, const std::string &otpToken,
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     return Status();
 }
@@ -517,8 +510,7 @@ loginServerOtpDisable(const Login &login)
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     return Status();
 }
@@ -533,8 +525,7 @@ loginServerOtpStatus(const Login &login, bool &on, long &timeout)
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     struct ResultJson:
         public JsonObject
@@ -568,8 +559,7 @@ loginServerOtpReset(const Lobby &lobby, const std::string &token)
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     return Status();
 }
@@ -594,8 +584,7 @@ loginServerOtpPending(std::list<DataChunk> users, std::list<bool> &isPending)
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     JsonArray arrayJson = replyJson.results();
     size_t size = arrayJson.size();
@@ -637,8 +626,7 @@ loginServerOtpResetCancelPending(const Login &login)
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply.body));
-    ABC_CHECK(replyJson.ok());
+    ABC_CHECK(replyJson.decode(reply));
 
     return Status();
 }
