@@ -7,20 +7,16 @@
 
 #include "WatcherBridge.hpp"
 #include "Testnet.hpp"
-#include "Utility.hpp"
 #include "Watcher.hpp"
 #include "../Context.hpp"
 #include "../exchange/ExchangeCache.hpp"
-#include "../spend/Broadcast.hpp"
-#include "../spend/Inputs.hpp"
-#include "../spend/Outputs.hpp"
+#include "../spend/Sweep.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
 #include "../wallet/Wallet.hpp"
 #include <algorithm>
 #include <list>
 #include <memory>
-#include <unordered_map>
 
 namespace abcd {
 
@@ -28,7 +24,6 @@ struct PendingSweep
 {
     std::string address;
     std::string key;
-    bool done;
 };
 
 struct WatcherInfo
@@ -107,7 +102,6 @@ bridgeSweepKey(Wallet &self, const std::string &wif,
     PendingSweep sweep;
     sweep.address = address;
     sweep.key = wif;
-    sweep.done = false;
     watcherInfo->sweeping.push_back(sweep);
     self.addressCache.insert(sweep.address);
 
@@ -257,135 +251,30 @@ bridgeWatcherDelete(Wallet &self)
     return Status();
 }
 
-static Status
-bridgeDoSweep(Wallet &wallet, PendingSweep &sweep,
-              tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
-{
-    // Find utxos for this address:
-    AddressSet addresses;
-    addresses.insert(sweep.address);
-    auto utxos = wallet.txCache.get_utxos(addresses);
-
-    // Bail out if there are no funds to sweep:
-    if (!utxos.size())
-    {
-        // Tell the GUI if there were funds in the past:
-        if (wallet.txCache.has_history(sweep.address))
-        {
-            ABC_DebugLog("IncomingSweep callback: wallet %s, value: 0",
-                         wallet.id().c_str());
-            tABC_AsyncBitCoinInfo info;
-            info.pData = pData;
-            info.eventType = ABC_AsyncEventType_IncomingSweep;
-            Status().toError(info.status, ABC_HERE());
-            info.szWalletUUID = wallet.id().c_str();
-            info.szTxID = nullptr;
-            info.sweepSatoshi = 0;
-            fAsyncCallback(&info);
-
-            sweep.done = true;
-        }
-        return Status();
-    }
-
-    // Build a transaction:
-    bc::transaction_type tx;
-    tx.version = 1;
-    tx.locktime = 0;
-
-    // Set up the output:
-    Address address;
-    wallet.addresses.getNew(address);
-    bc::transaction_output_type output;
-    ABC_CHECK(outputScriptForAddress(output.script, address.address));
-    tx.outputs.push_back(output);
-
-    // Set up the inputs:
-    uint64_t fee, funds;
-    ABC_CHECK(inputsPickMaximum(fee, funds, tx, utxos));
-    if (outputIsDust(funds))
-        return ABC_ERROR(ABC_CC_InsufficientFunds, "Not enough funds");
-    tx.outputs[0].value = funds;
-
-    // Now sign that:
-    KeyTable keys;
-    keys[sweep.address] = sweep.key;
-    ABC_CHECK(signTx(tx, wallet.txCache, keys));
-
-    // Send:
-    bc::data_chunk raw_tx(satoshi_raw_size(tx));
-    bc::satoshi_save(tx, raw_tx.begin());
-    ABC_CHECK(broadcastTx(wallet, raw_tx));
-
-    // Calculate transaction information:
-    const auto info = wallet.txCache.txInfo(tx, wallet.addresses.list());
-
-    // Save the transaction metadata:
-    TxMeta meta;
-    meta.ntxid = info.ntxid;
-    meta.txid = info.txid;
-    meta.timeCreation = time(nullptr);
-    meta.internal = true;
-    meta.metadata.amountSatoshi = funds;
-    meta.metadata.amountFeesAirbitzSatoshi = 0;
-    ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                  meta.metadata.amountCurrency, info.balance,
-                  static_cast<Currency>(wallet.currency())));
-    ABC_CHECK(wallet.txs.save(meta));
-
-    // Update the transaction cache:
-    if (wallet.txCache.insert(tx))
-        watcherSave(wallet).log(); // Failure is not fatal
-    wallet.balanceDirty();
-    ABC_CHECK(wallet.addresses.markOutputs(info.ios));
-
-    // Done:
-    ABC_DebugLog("IncomingSweep callback: wallet %s, txid: %s, value: %d",
-                 wallet.id().c_str(), info.txid.c_str(), output.value);
-    tABC_AsyncBitCoinInfo async;
-    async.pData = pData;
-    async.eventType = ABC_AsyncEventType_IncomingSweep;
-    Status().toError(async.status, ABC_HERE());
-    async.szWalletUUID = wallet.id().c_str();
-    async.szTxID = info.txid.c_str();
-    async.sweepSatoshi = output.value;
-    fAsyncCallback(&async);
-
-    sweep.done = true;
-
-    return Status();
-}
-
 static void
 bridgeQuietCallback(WatcherInfo *watcherInfo,
                     tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
 {
-    // If we are sweeping any keys, do that now:
-    for (auto &sweep: watcherInfo->sweeping)
-    {
-        auto s = bridgeDoSweep(watcherInfo->wallet, sweep, fAsyncCallback, pData).log();
-        if (!s)
-        {
-            ABC_DebugLog("IncomingSweep callback: wallet %s, status: %d",
-                         watcherInfo->wallet.id().c_str(), s.value());
-            tABC_AsyncBitCoinInfo info;
-            info.pData = pData;
-            info.eventType = ABC_AsyncEventType_IncomingSweep;
-            s.toError(info.status, ABC_HERE());
-            info.szWalletUUID = watcherInfo->wallet.id().c_str();
-            info.szTxID = nullptr;
-            info.sweepSatoshi = 0;
-            fAsyncCallback(&info);
+    auto &wallet = watcherInfo->wallet;
 
-            sweep.done = true;
+    // If we are sweeping any keys, do that now:
+    auto i = watcherInfo->sweeping.begin();
+    while (watcherInfo->sweeping.end() != i)
+    {
+        if (wallet.txCache.has_history(i->address))
+        {
+            // Remove the sweep from the list:
+            auto sweep = *i;
+            i = watcherInfo->sweeping.erase(i);
+
+            sweepOnComplete(wallet, sweep.address, sweep.key,
+                            fAsyncCallback, pData);
+        }
+        else
+        {
+            ++i;
         }
     }
-
-    // Remove completed ones:
-    watcherInfo->sweeping.remove_if([](const PendingSweep& sweep)
-    {
-        return sweep.done;
-    });
 }
 
 static Status
