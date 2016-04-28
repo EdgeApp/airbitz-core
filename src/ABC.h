@@ -809,12 +809,20 @@ tABC_CC ABC_BitidParseUri(const char *szUserName,
                           const char *szPassword,
                           const char *szBitidURI,
                           char **pszDomain,
+                          char **pszBitidCallbackURI,
                           tABC_Error *pError);
 
 tABC_CC ABC_BitidLogin(const char *szUserName,
                        const char *szPassword,
                        const char *szBitidURI,
                        tABC_Error *pError);
+
+tABC_CC ABC_BitidLoginMeta(const char *szUserName,
+                           const char *szPassword,
+                           const char *szBitidURI,
+                           const char *szWalletUUID,
+                           const char *szBitIDKYCURI,
+                           tABC_Error *pError);
 
 /**
  * Signs a message using a BitID key.
