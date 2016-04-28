@@ -8,8 +8,8 @@
 #ifndef ABCD_BITCOIN_NETWORK_STRATUM_CODEC_HPP
 #define ABCD_BITCOIN_NETWORK_STRATUM_CODEC_HPP
 
+#include "IBitcoinConnection.hpp"
 #include "TcpConnection.hpp"
-#include "../Typedefs.hpp"
 #include "../../../minilibs/libbitcoin-client/client.hpp"
 #include <chrono>
 
@@ -21,7 +21,8 @@ typedef std::chrono::milliseconds SleepTime;
 // Scheme used for stratum URI's:
 constexpr auto stratumScheme = "stratum";
 
-class StratumConnection
+class StratumConnection:
+    public IBitcoinConnection
 {
 public:
     typedef std::function<void (const std::string &version)> VersionHandler;
@@ -84,10 +85,32 @@ public:
      */
     int pollfd() const { return connection_.pollfd(); }
 
+    // IBitcoinConnection interface:
+    std::string
+    uri() override;
+
+    bool
+    queueFull() override;
+
+    void
+    heightSubscribe(const StatusCallback &onError,
+                    const HeightCallback &onReply) override;
+
+    void
+    addressHistoryFetch(const StatusCallback &onError,
+                        const AddressCallback &onReply,
+                        const std::string &address) override;
+
+    void
+    txDataFetch(const StatusCallback &onError,
+                const TxCallback &onReply,
+                const std::string &txid) override;
+
 private:
     typedef std::function<Status (JsonPtr payload)> Decoder;
 
     // Socket:
+    std::string uri_;
     TcpConnection connection_;
     std::string incoming_;
 
@@ -106,6 +129,9 @@ private:
 
     // Server heartbeat:
     std::chrono::steady_clock::time_point lastKeepalive_;
+
+    // Subscriptions:
+    HeightCallback heightCallback_;
 
     /**
      * Sends a message and sets up the reply decoder.
