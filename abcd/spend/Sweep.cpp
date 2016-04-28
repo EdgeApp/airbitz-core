@@ -86,7 +86,7 @@ sweepSend(Wallet &wallet,
     meta.txid = info.txid;
     meta.timeCreation = time(nullptr);
     meta.internal = true;
-    meta.metadata.amountSatoshi = funds;
+    meta.metadata.amountSatoshi = info.balance;
     meta.metadata.amountFeesAirbitzSatoshi = 0;
     ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
                   meta.metadata.amountCurrency, info.balance,
@@ -101,14 +101,14 @@ sweepSend(Wallet &wallet,
 
     // Done:
     ABC_DebugLog("IncomingSweep callback: wallet %s, txid: %s, value: %d",
-                 wallet.id().c_str(), info.txid.c_str(), output.value);
+                 wallet.id().c_str(), info.txid.c_str(), info.balance);
     tABC_AsyncBitCoinInfo async;
     async.pData = pData;
     async.eventType = ABC_AsyncEventType_IncomingSweep;
     Status().toError(async.status, ABC_HERE());
     async.szWalletUUID = wallet.id().c_str();
     async.szTxID = info.txid.c_str();
-    async.sweepSatoshi = output.value;
+    async.sweepSatoshi = info.balance;
     fCallback(&async);
 
     return Status();
