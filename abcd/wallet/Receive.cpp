@@ -8,9 +8,11 @@
 #include "Receive.hpp"
 #include "Wallet.hpp"
 #include "../Context.hpp"
+#include "../General.hpp"
 #include "../bitcoin/TxCache.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
 #include "../exchange/ExchangeCache.hpp"
+#include "../spend/AirbitzFee.hpp"
 #include "../util/Debug.hpp"
 
 namespace abcd {
@@ -23,11 +25,18 @@ onReceive(Wallet &wallet, const TxInfo &info,
     TxMeta meta;
     if (!wallet.txs.get(meta, info.ntxid))
     {
+        const auto balance = wallet.addresses.balance(info);
+
         meta.ntxid = info.ntxid;
         meta.txid = info.txid;
         meta.timeCreation = time(nullptr);
         meta.internal = false;
+        meta.airbitzFeeWanted = 0;
         meta.airbitzFeeSent = 0;
+
+        // Receives can accumulate Airbitz fees:
+        const auto airbitzFeeInfo = generalAirbitzFeeInfo();
+        meta.airbitzFeeWanted = airbitzFeeIncoming(airbitzFeeInfo, balance);
 
         // Grab metadata from the address:
         for (const auto &io: info.ios)
@@ -36,7 +45,6 @@ onReceive(Wallet &wallet, const TxInfo &info,
             if (wallet.addresses.get(address, io.address))
                 meta.metadata = address.metadata;
         }
-        const auto balance = wallet.addresses.balance(info);
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
                       meta.metadata.amountCurrency, balance,
                       static_cast<Currency>(wallet.currency())));

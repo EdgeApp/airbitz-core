@@ -87,6 +87,7 @@ sweepSend(Wallet &wallet,
     meta.txid = info.txid;
     meta.timeCreation = time(nullptr);
     meta.internal = true;
+    meta.airbitzFeeWanted = 0;
     meta.airbitzFeeSent = 0;
     ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
                   meta.metadata.amountCurrency, balance,

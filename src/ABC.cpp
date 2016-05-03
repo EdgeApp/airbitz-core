@@ -36,6 +36,7 @@
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/Otp.hpp"
 #include "../abcd/login/RecoveryQuestions.hpp"
+#include "../abcd/spend/AirbitzFee.hpp"
 #include "../abcd/spend/PaymentProto.hpp"
 #include "../abcd/spend/Spend.hpp"
 #include "../abcd/util/Debug.hpp"
@@ -2425,6 +2426,8 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
 
     {
         ABC_GET_WALLET();
+
+        airbitzFeeAutoSend(*wallet).log();
 
         bool dirty = false;
         ABC_CHECK_NEW(wallet->sync(dirty));
