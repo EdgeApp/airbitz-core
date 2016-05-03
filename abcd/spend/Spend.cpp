@@ -44,7 +44,7 @@ Status
 Spend::addTransfer(Wallet &target, uint64_t amount, TxMetadata metadata)
 {
     // Create a new address to spend to:
-    Address address;
+    AddressMeta address;
     ABC_CHECK(target.addresses.getNew(address));
     addresses_[address.address] += amount;
 
@@ -77,7 +77,7 @@ Spend::calculateFees(uint64_t &totalFees)
     metadata_.amountFeesMinersSatoshi = 0;
 
     // Make an unsigned transaction:
-    Address changeAddress;
+    AddressMeta changeAddress;
     ABC_CHECK(wallet_.addresses.getNew(changeAddress));
     bc::transaction_type tx;
     ABC_CHECK(makeTx(tx, changeAddress.address));
@@ -113,7 +113,7 @@ Status
 Spend::signTx(DataChunk &result)
 {
     // Make an unsigned transaction:
-    Address changeAddress;
+    AddressMeta changeAddress;
     ABC_CHECK(wallet_.addresses.getNew(changeAddress));
     bc::transaction_type tx;
     ABC_CHECK(makeTx(tx, changeAddress.address));
@@ -136,7 +136,7 @@ Spend::broadcastTx(DataSlice rawTx)
     for (auto request: paymentRequests_)
     {
         // TODO: Update the metadata with something about a refund
-        Address refundAddress;
+        AddressMeta refundAddress;
         ABC_CHECK(wallet_.addresses.getNew(refundAddress));
         refundAddress.time = time(nullptr);
         refundAddress.metadata = metadata_;

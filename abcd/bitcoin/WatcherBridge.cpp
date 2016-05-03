@@ -301,7 +301,7 @@ bridgeTxCallback(Wallet &wallet,
             TxMetadata metadata;
             for (const auto &io: info.ios)
             {
-                Address address;
+                AddressMeta address;
                 if (wallet.addresses.get(address, io.address))
                     meta.metadata = address.metadata;
             }

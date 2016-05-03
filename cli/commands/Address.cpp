@@ -47,7 +47,7 @@ COMMAND(InitLevel::wallet, CliAddressList, "address-list",
     auto list = session.wallet->addresses.list();
     for (const auto &i: list)
     {
-        abcd::Address address;
+        abcd::AddressMeta address;
         ABC_CHECK(session.wallet->addresses.get(address, i));
         std::cout << address.address << " #" <<
                   address.index << ", " <<

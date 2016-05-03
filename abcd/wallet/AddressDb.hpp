@@ -24,7 +24,7 @@ struct TxInOut;
 typedef std::set<std::string> AddressSet;
 typedef std::map<const std::string, std::string> KeyTable;
 
-struct Address
+struct AddressMeta
 {
     size_t index;
     std::string address;
@@ -51,7 +51,7 @@ public:
      * Updates a particular address in the database.
      */
     Status
-    save(const Address &address);
+    save(const AddressMeta &address);
 
     /**
      * Lists all the addresses in the wallet.
@@ -75,13 +75,13 @@ public:
      * Looks up a particular address in the wallet.
      */
     Status
-    get(Address &result, const std::string &address);
+    get(AddressMeta &result, const std::string &address);
 
     /**
      * Returns a fresh address.
      */
     Status
-    getNew(Address &result);
+    getNew(AddressMeta &result);
 
     /**
      * Sets the recycle bit on the address.
@@ -100,7 +100,7 @@ private:
     Wallet &wallet_;
     const std::string dir_;
 
-    std::map<std::string, Address> addresses_;
+    std::map<std::string, AddressMeta> addresses_;
     std::map<std::string, JsonPtr> files_;
 
     /**
@@ -111,7 +111,7 @@ private:
     stockpile();
 
     std::string
-    path(const Address &address);
+    path(const AddressMeta &address);
 };
 
 } // namespace abcd

@@ -1358,7 +1358,7 @@ tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
     {
         ABC_GET_WALLET();
 
-        Address address;
+        AddressMeta address;
         ABC_CHECK_NEW(wallet->addresses.getNew(address));
         *pszRequestID = stringCopy(address.address);
     }
@@ -1391,7 +1391,7 @@ tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
     {
         ABC_GET_WALLET();
 
-        Address address;
+        AddressMeta address;
         ABC_CHECK_NEW(wallet->addresses.get(address, szRequestID));
         address.metadata = pDetails;
         address.time = time(nullptr);

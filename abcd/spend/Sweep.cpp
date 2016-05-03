@@ -54,7 +54,7 @@ sweepSend(Wallet &wallet,
     tx.locktime = 0;
 
     // Set up the output:
-    Address addressMeta;
+    AddressMeta addressMeta;
     wallet.addresses.getNew(addressMeta);
     bc::transaction_output_type output;
     ABC_CHECK(outputScriptForAddress(output.script, addressMeta.address));
