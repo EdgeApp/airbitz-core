@@ -153,6 +153,8 @@ AddressDb::save(const Address &address)
     addresses_[address.address] = address;
 
     AddressJson json(files_[address.address]);
+    if (!json)
+        json = JsonObject();
     ABC_CHECK(json.pack(address));
     ABC_CHECK(json.save(path(address), wallet_.dataKey()));
     files_[address.address] = json;
@@ -297,6 +299,7 @@ AddressDb::stockpile()
                 AddressJson json;
                 ABC_CHECK(json.pack(address));
                 ABC_CHECK(json.save(path(address), wallet_.dataKey()));
+                files_[address.address] = json;
 
                 wallet_.addressCache.insert(address.address);
             }

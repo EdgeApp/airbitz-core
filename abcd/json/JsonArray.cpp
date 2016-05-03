@@ -9,14 +9,19 @@
 
 namespace abcd {
 
-Status
-JsonArray::create()
+JsonArray::JsonArray():
+    JsonPtr(json_array())
 {
-    if (!json_is_array(root_))
-        reset(json_array());
-    if (!root_)
-        return ABC_ERROR(ABC_CC_JSONError, "Cannot create array");
-    return Status();
+}
+
+JsonArray::JsonArray(JsonPtr &&move):
+    JsonPtr(std::move(move))
+{
+}
+
+JsonArray::JsonArray(const JsonPtr &copy):
+    JsonPtr(copy)
+{
 }
 
 JsonPtr
@@ -28,7 +33,6 @@ JsonArray::operator[](size_t i)
 Status
 JsonArray::append(JsonPtr value)
 {
-    ABC_CHECK(create());
     if (json_array_append(root_, value.get()) < 0)
         return ABC_ERROR(ABC_CC_JSONError, "Cannot append to array");
     return Status();

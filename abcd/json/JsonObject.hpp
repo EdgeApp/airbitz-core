@@ -20,7 +20,9 @@ class JsonObject:
     public JsonPtr
 {
 public:
-    ABC_JSON_CONSTRUCTORS(JsonObject, JsonPtr)
+    JsonObject();
+    JsonObject(JsonPtr &&move);
+    JsonObject(const JsonPtr &copy);
 
 protected:
     /**

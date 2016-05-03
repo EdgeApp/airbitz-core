@@ -19,13 +19,9 @@ class JsonArray:
     public JsonPtr
 {
 public:
-    ABC_JSON_CONSTRUCTORS(JsonArray, JsonPtr)
-
-    /**
-     * Creates an empty array object, if there isn't one already.
-     */
-    Status
-    create();
+    JsonArray();
+    JsonArray(JsonPtr &&move);
+    JsonArray(const JsonPtr &copy);
 
     /**
      * Returns the number of values in the array.

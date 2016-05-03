@@ -150,6 +150,8 @@ TxMetaDb::save(const TxMeta &tx)
 
     ABC_CHECK(fileEnsureDir(dir_));
     TxJson json(files_[tx.ntxid]);
+    if (!json)
+        json = JsonObject();
     ABC_CHECK(json.pack(tx));
     ABC_CHECK(json.save(path(tx), wallet_.dataKey()));
     files_[tx.ntxid] = json;

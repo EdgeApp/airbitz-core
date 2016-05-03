@@ -657,8 +657,7 @@ loginServerUploadLogs(const Account *account)
                              ABC_SERVER_JSON_L1_FIELD, base64Encode(account->login.lobby.authId()).c_str(),
                              ABC_SERVER_JSON_LP1_FIELD, base64Encode(account->login.authKey()).c_str(),
                              "log", base64Encode(logData).c_str()));
-        if (jsonArray)
-            json_object_set(json.get(), "watchers", jsonArray.get());
+        json_object_set(json.get(), "watchers", jsonArray.get());
     }
     else
     {
