@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "TxMetaDb.hpp"
+#include "TxDb.hpp"
 #include "Wallet.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
@@ -84,14 +84,14 @@ TxJson::unpack(TxMeta &result)
     return Status();
 }
 
-TxMetaDb::TxMetaDb(const Wallet &wallet):
+TxDb::TxDb(const Wallet &wallet):
     wallet_(wallet),
     dir_(wallet.paths.txsDir())
 {
 }
 
 Status
-TxMetaDb::load()
+TxDb::load()
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -142,7 +142,7 @@ TxMetaDb::load()
 }
 
 Status
-TxMetaDb::save(const TxMeta &tx)
+TxDb::save(const TxMeta &tx)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -160,7 +160,7 @@ TxMetaDb::save(const TxMeta &tx)
 }
 
 Status
-TxMetaDb::get(TxMeta &result, const std::string &ntxid)
+TxDb::get(TxMeta &result, const std::string &ntxid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -173,7 +173,7 @@ TxMetaDb::get(TxMeta &result, const std::string &ntxid)
 }
 
 std::string
-TxMetaDb::path(const TxMeta &tx)
+TxDb::path(const TxMeta &tx)
 {
     return dir_ + cryptoFilename(wallet_.dataKey(), tx.ntxid) +
            (tx.internal ? "-int.json" : "-ext.json");

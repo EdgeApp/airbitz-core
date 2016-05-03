@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_WALLET_TX_META_DB_HPP
-#define ABCD_WALLET_TX_META_DB_HPP
+#ifndef ABCD_WALLET_TX_DB_HPP
+#define ABCD_WALLET_TX_DB_HPP
 
 #include "../json/JsonPtr.hpp"
 #include "../util/Status.hpp"
@@ -31,10 +31,10 @@ struct TxMeta
 /**
  * Manages the transaction metadata stored in the wallet sync directory.
  */
-class TxMetaDb
+class TxDb
 {
 public:
-    TxMetaDb(const Wallet &wallet);
+    TxDb(const Wallet &wallet);
 
     /**
      * Loads the transactions off disk.
