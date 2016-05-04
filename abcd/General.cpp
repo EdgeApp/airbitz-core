@@ -155,25 +155,6 @@ generalAirbitzFee(const AirbitzFeeInfo &info, uint64_t spend, bool transfer)
     return fee;
 }
 
-uint64_t
-generalAirbitzFeeSpendable(const AirbitzFeeInfo &info,
-                           uint64_t usable, bool transfer)
-{
-    uint64_t max = usable + 1; // Must always be more than we can spend
-    uint64_t min = 0;
-    while (min + 1 < max)
-    {
-        uint64_t guess = (min + max) / 2;
-
-        if (usable < guess + generalAirbitzFee(info, guess, transfer))
-            max = guess;
-        else
-            min = guess;
-    }
-
-    return min;
-}
-
 std::vector<std::string>
 generalBitcoinServers()
 {

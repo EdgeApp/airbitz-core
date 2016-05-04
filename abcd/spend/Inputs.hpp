@@ -35,7 +35,7 @@ signTx(bc::transaction_type &result, const TxCache &txCache,
  */
 Status
 inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
-                  bc::transaction_type &tx, bc::output_info_list &utxos);
+                  bc::transaction_type &tx, const bc::output_info_list &utxos);
 
 /**
  * Populate the transaction's input list with all the utxo's in the wallet,
@@ -43,7 +43,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
  */
 Status
 inputsPickMaximum(uint64_t &resultFee, uint64_t &resultUsable,
-                  bc::transaction_type &tx, bc::output_info_list &utxos);
+                  bc::transaction_type &tx, const bc::output_info_list &utxos);
 
 } // namespace abcd
 

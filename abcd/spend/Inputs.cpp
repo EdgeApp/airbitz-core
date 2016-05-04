@@ -111,7 +111,7 @@ minerFee(const bc::transaction_type &tx, uint64_t sourced,
 
 Status
 inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
-                  bc::transaction_type &tx, bc::output_info_list &utxos)
+                  bc::transaction_type &tx, const bc::output_info_list &utxos)
 {
     auto totalOut = outputsTotal(tx.outputs);
 
@@ -149,7 +149,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
 
 Status
 inputsPickMaximum(uint64_t &resultFee, uint64_t &resultUsable,
-                  bc::transaction_type &tx, bc::output_info_list &utxos)
+                  bc::transaction_type &tx, const bc::output_info_list &utxos)
 {
     // Calculate the fees for this input combination:
     tx.inputs.clear();

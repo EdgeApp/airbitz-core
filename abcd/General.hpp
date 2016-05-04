@@ -69,14 +69,6 @@ uint64_t
 generalAirbitzFee(const AirbitzFeeInfo &info, uint64_t spend, bool transfer);
 
 /**
- * Calculates the maximum amount spendable,
- * factoring in the need for an Airbitz fee.
- */
-uint64_t
-generalAirbitzFeeSpendable(const AirbitzFeeInfo &info,
-                           uint64_t usable, bool transfer);
-
-/**
  * Obtains a list of libbitcoin servers for the current network
  * (either testnet or mainnet).
  * Returns a fallback server if something goes wrong.

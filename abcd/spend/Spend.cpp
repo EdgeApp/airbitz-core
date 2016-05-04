@@ -91,21 +91,48 @@ Spend::calculateFees(uint64_t &totalFees)
 Status
 Spend::calculateMax(uint64_t &maxSatoshi)
 {
-    auto utxos = wallet_.txCache.get_utxos(wallet_.addresses.list(), false);
+    const auto addresses = wallet_.addresses.list();
+    const auto utxos = wallet_.txCache.get_utxos(addresses, false);
+    const auto info = generalAirbitzFeeInfo();
 
+    // Set up a fake transaction:
     bc::transaction_type tx;
     tx.version = 1;
     tx.locktime = 0;
     ABC_CHECK(makeOutputs(tx.outputs));
+    for (auto &output: tx.outputs)
+        output.value = 0;
 
-    const auto info = generalAirbitzFeeInfo();
-    uint64_t fee, usable;
-    if (inputsPickMaximum(fee, usable, tx, utxos))
-        maxSatoshi = generalAirbitzFeeSpendable(info, usable,
-                                                !transfers_.empty());
-    else
+    // We can't send anything to an empty list:
+    if (tx.outputs.empty())
+    {
         maxSatoshi = 0;
+        return Status();
+    }
 
+    // The range for our binary search (min <= result < max)
+    int64_t min = 0;
+    int64_t max = 0;
+    for (const auto utxo: utxos)
+        max += utxo.value;
+    max += 1; // Make this a non-inclusive maximum
+
+    // Do the binary search:
+    while (min + 1 < max)
+    {
+        int64_t guess = (min + max) / 2;
+        tx.outputs[0].value = guess;
+        tx.outputs[0].value += generalAirbitzFee(info, guess,
+                               !transfers_.empty());
+
+        uint64_t fee, change;
+        if (inputsPickOptimal(fee, change, tx, utxos))
+            min = guess;
+        else
+            max = guess;
+    }
+
+    maxSatoshi = min;
     return Status();
 }
 
