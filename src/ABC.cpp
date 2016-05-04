@@ -1393,8 +1393,9 @@ tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
 
         AddressMeta address;
         ABC_CHECK_NEW(wallet->addresses.get(address, szRequestID));
-        address.metadata = pDetails;
         address.time = time(nullptr);
+        address.requestAmount = pDetails->amountSatoshi;
+        address.metadata = pDetails;
         ABC_CHECK_NEW(wallet->addresses.save(address));
     }
 
@@ -1859,7 +1860,7 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
         ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));
         meta.metadata = pDetails;
         meta.internal = true;
-        ABC_CHECK_NEW(wallet->txs.save(meta));
+        ABC_CHECK_NEW(wallet->txs.save(meta, info.balance, info.fee));
     }
 
 exit:

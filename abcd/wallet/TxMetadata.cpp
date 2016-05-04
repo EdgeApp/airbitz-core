@@ -20,20 +20,17 @@ struct MetadataJson:
     ABC_JSON_STRING(notes,              "notes", "");
     ABC_JSON_INTEGER(bizId,             "bizId", 0);
     ABC_JSON_NUMBER(amountCurrency,     "amountCurrency", 0);
-    ABC_JSON_INTEGER(amount,            "amountSatoshi", 0);
-    ABC_JSON_INTEGER(airbitzFee,        "amountFeeAirBitzSatoshi", 0);
-    ABC_JSON_INTEGER(minerFee,          "amountFeeMinersSatoshi", 0);
 
-    // Obsolete fields:
+    // Obsolete/moved fields:
     ABC_JSON_INTEGER(attributes,        "attributes", 0);
+    ABC_JSON_INTEGER(amount,            "amountSatoshi", 0);
+    ABC_JSON_INTEGER(minerFee,          "amountFeeMinersSatoshi", 0);
+    ABC_JSON_INTEGER(airbitzFee,        "amountFeeAirBitzSatoshi", 0);
 };
 
 TxMetadata::TxMetadata():
     bizId(0),
-    amountCurrency(0),
-    amountSatoshi(0),
-    amountFeesAirbitzSatoshi(0),
-    amountFeesMinersSatoshi(0)
+    amountCurrency(0)
 {
 }
 
@@ -42,15 +39,12 @@ TxMetadata::TxMetadata(const tABC_TxDetails *pDetails):
     category(pDetails->szCategory ? pDetails->szCategory : ""),
     notes(pDetails->szNotes ? pDetails->szNotes : ""),
     bizId(pDetails->bizId),
-    amountCurrency (pDetails->amountCurrency),
-    amountSatoshi(pDetails->amountSatoshi),
-    amountFeesAirbitzSatoshi(pDetails->amountFeesAirbitzSatoshi),
-    amountFeesMinersSatoshi(pDetails->amountFeesMinersSatoshi)
+    amountCurrency (pDetails->amountCurrency)
 {
 }
 
 Status
-TxMetadata::load(JsonPtr json)
+TxMetadata::load(const JsonObject &json)
 {
     MetadataJson metaJson(json);
     name           = metaJson.name();
@@ -58,29 +52,24 @@ TxMetadata::load(JsonPtr json)
     notes          = metaJson.notes();
     bizId          = metaJson.bizId();
     amountCurrency = metaJson.amountCurrency();
-    amountSatoshi  = metaJson.amount();
-    amountFeesAirbitzSatoshi = metaJson.airbitzFee();
-    amountFeesMinersSatoshi  = metaJson.minerFee();
     return Status();
 }
 
 Status
-TxMetadata::save(JsonPtr &result) const
+TxMetadata::save(JsonObject &json) const
 {
-    MetadataJson out;
-    ABC_CHECK(out.nameSet(name));
-    ABC_CHECK(out.categorySet(category));
-    ABC_CHECK(out.notesSet(notes));
-    ABC_CHECK(out.bizIdSet(bizId));
-    ABC_CHECK(out.amountCurrencySet(amountCurrency));
-    ABC_CHECK(out.amountSet(amountSatoshi));
-    ABC_CHECK(out.airbitzFeeSet(amountFeesAirbitzSatoshi));
-    ABC_CHECK(out.minerFeeSet(amountFeesMinersSatoshi));
+    MetadataJson metaJson(json);
+    ABC_CHECK(metaJson.nameSet(name));
+    ABC_CHECK(metaJson.categorySet(category));
+    ABC_CHECK(metaJson.notesSet(notes));
+    ABC_CHECK(metaJson.bizIdSet(bizId));
+    ABC_CHECK(metaJson.amountCurrencySet(amountCurrency));
 
-    // Obsolete fields:
-    ABC_CHECK(out.attributesSet(0));
-
-    result = out;
+    // Obsolete/moved fields:
+    ABC_CHECK(metaJson.attributesSet(0));
+    ABC_CHECK(metaJson.amountSet(0));
+    ABC_CHECK(metaJson.minerFeeSet(0));
+    ABC_CHECK(metaJson.airbitzFeeSet(0));
     return Status();
 }
 
@@ -93,9 +82,9 @@ TxMetadata::toDetails() const
     out->szNotes = stringCopy(notes);
     out->bizId = bizId;
     out->amountCurrency  = amountCurrency;
-    out->amountSatoshi = amountSatoshi;
-    out->amountFeesAirbitzSatoshi = amountFeesAirbitzSatoshi;
-    out->amountFeesMinersSatoshi = amountFeesMinersSatoshi;
+    out->amountSatoshi = 0;
+    out->amountFeesAirbitzSatoshi = 0;
+    out->amountFeesMinersSatoshi = 0;
     return out;
 }
 

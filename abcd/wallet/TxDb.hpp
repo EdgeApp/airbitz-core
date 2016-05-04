@@ -25,6 +25,7 @@ struct TxMeta
     std::string txid;
     int64_t timeCreation;
     bool internal;
+    int64_t airbitzFeeSent = 0;
     TxMetadata metadata;
 };
 
@@ -47,7 +48,7 @@ public:
      * Can also be used to insert new transactions into the database.
      */
     Status
-    save(const TxMeta &tx);
+    save(const TxMeta &tx, int64_t balance, int64_t fee);
 
     /**
      * Looks up a particular transaction in the database.

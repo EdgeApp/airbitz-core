@@ -18,6 +18,14 @@
 
 namespace abcd {
 
+struct AddressMetaJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(AddressMetaJson, JsonObject)
+
+    ABC_JSON_INTEGER(requestAmount, "amountSatoshi", 0);
+};
+
 struct AddressStateJson:
     public JsonObject
 {
@@ -35,7 +43,7 @@ struct AddressJson:
     ABC_JSON_INTEGER(index, "seq", 0)
     ABC_JSON_STRING(address, "address", nullptr)
     ABC_JSON_VALUE(state, "state", AddressStateJson)
-    ABC_JSON_VALUE(metadata, "meta", JsonPtr)
+    ABC_JSON_VALUE(metadata, "meta", AddressMetaJson)
 
     Status
     pack(const AddressMeta &in);
@@ -58,8 +66,9 @@ AddressJson::pack(const AddressMeta &in)
     ABC_CHECK(stateSet(stateJson));
 
     // Details json:
-    JsonPtr metaJson;
+    AddressMetaJson metaJson;
     ABC_CHECK(in.metadata.save(metaJson));
+    ABC_CHECK(metaJson.requestAmountSet(in.requestAmount));
     ABC_CHECK(metadataSet(metaJson));
 
     return Status();
@@ -82,7 +91,9 @@ AddressJson::unpack(AddressMeta &result)
     out.time = stateJson.time();
 
     // Details json:
-    ABC_CHECK(out.metadata.load(metadata()));
+    auto metaJson = metadata();
+    ABC_CHECK(out.metadata.load(metaJson));
+    out.requestAmount = metaJson.requestAmount();
 
     result = std::move(out);
     return Status();

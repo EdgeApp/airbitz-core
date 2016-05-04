@@ -296,23 +296,21 @@ bridgeTxCallback(Wallet &wallet,
             meta.txid = info.txid;
             meta.timeCreation = time(nullptr);
             meta.internal = false;
+            meta.airbitzFeeSent = 0;
 
             // Grab metadata from the address:
-            TxMetadata metadata;
             for (const auto &io: info.ios)
             {
                 AddressMeta address;
                 if (wallet.addresses.get(address, io.address))
                     meta.metadata = address.metadata;
             }
-            meta.metadata.amountSatoshi = info.balance;
-            meta.metadata.amountFeesMinersSatoshi = info.fee;
             ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
                           meta.metadata.amountCurrency, info.balance,
                           static_cast<Currency>(wallet.currency())));
 
             // Save the metadata:
-            ABC_CHECK(wallet.txs.save(meta));
+            ABC_CHECK(wallet.txs.save(meta, info.balance, info.fee));
 
             // Update the transaction cache:
             watcherSave(wallet).log(); // Failure is not fatal

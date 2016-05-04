@@ -15,6 +15,16 @@
 
 namespace abcd {
 
+struct TxMetaJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(TxMetaJson, JsonObject)
+
+    ABC_JSON_INTEGER(airbitzFeeSent, "amountFeeAirBitzSatoshi", 0);
+    ABC_JSON_INTEGER(balance, "amountSatoshi", 0);
+    ABC_JSON_INTEGER(fee, "amountFeeMinersSatoshi", 0);
+};
+
 struct TxStateJson:
     public JsonObject
 {
@@ -32,17 +42,17 @@ struct TxJson:
 
     ABC_JSON_STRING(ntxid, "ntxid", nullptr)
     ABC_JSON_VALUE(state, "state", TxStateJson)
-    ABC_JSON_VALUE(metadata, "meta", JsonPtr)
+    ABC_JSON_VALUE(metadata, "meta", TxMetaJson)
 
     Status
-    pack(const TxMeta &in);
+    pack(const TxMeta &in, int64_t balance, int64_t fee);
 
     Status
     unpack(TxMeta &result);
 };
 
 Status
-TxJson::pack(const TxMeta &in)
+TxJson::pack(const TxMeta &in, int64_t balance, int64_t fee)
 {
     // Main json:
     ABC_CHECK(ntxidSet(in.ntxid));
@@ -55,8 +65,11 @@ TxJson::pack(const TxMeta &in)
     ABC_CHECK(stateSet(stateJson));
 
     // Details json:
-    JsonPtr metaJson;
+    TxMetaJson metaJson;
     ABC_CHECK(in.metadata.save(metaJson));
+    ABC_CHECK(metaJson.airbitzFeeSentSet(in.airbitzFeeSent));
+    ABC_CHECK(metaJson.balanceSet(balance));
+    ABC_CHECK(metaJson.feeSet(fee));
     ABC_CHECK(metadataSet(metaJson));
 
     return Status();
@@ -78,7 +91,9 @@ TxJson::unpack(TxMeta &result)
     out.internal = stateJson.internal();
 
     // Details json:
-    ABC_CHECK(out.metadata.load(metadata()));
+    auto metaJson = metadata();
+    ABC_CHECK(out.metadata.load(metaJson));
+    out.airbitzFeeSent = metaJson.airbitzFeeSent();
 
     result = std::move(out);
     return Status();
@@ -142,7 +157,7 @@ TxDb::load()
 }
 
 Status
-TxDb::save(const TxMeta &tx)
+TxDb::save(const TxMeta &tx, int64_t balance, int64_t fee)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -152,7 +167,7 @@ TxDb::save(const TxMeta &tx)
     TxJson json(files_[tx.ntxid]);
     if (!json)
         json = JsonObject();
-    ABC_CHECK(json.pack(tx));
+    ABC_CHECK(json.pack(tx, balance, fee));
     ABC_CHECK(json.save(path(tx), wallet_.dataKey()));
     files_[tx.ntxid] = json;
 

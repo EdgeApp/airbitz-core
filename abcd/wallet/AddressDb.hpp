@@ -30,6 +30,7 @@ struct AddressMeta
     std::string address;
     bool recyclable;
     time_t time;
+    int64_t requestAmount = 0;
     TxMetadata metadata;
 };
 

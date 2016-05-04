@@ -8,10 +8,11 @@
 #ifndef ABCD_WALLET_TX_METADATA_HPP
 #define ABCD_WALLET_TX_METADATA_HPP
 
-#include "../json/JsonPtr.hpp"
 #include "../util/Status.hpp"
 
 namespace abcd {
+
+class JsonObject;
 
 /**
  * Common user-editable metadata for transactions and addresses.
@@ -28,22 +29,17 @@ struct TxMetadata
     unsigned bizId;
     double amountCurrency;
 
-    // Transaction properties:
-    int64_t amountSatoshi;
-    int64_t amountFeesAirbitzSatoshi;
-    int64_t amountFeesMinersSatoshi;
-
     /**
      * Loads the structure from a JSON object.
      */
     Status
-    load(JsonPtr json);
+    load(const JsonObject &json);
 
     /**
-     * Encodes the structure into a JSON object.
+     * Writes the structure fields into the provided JSON object.
      */
     Status
-    save(JsonPtr &result) const;
+    save(JsonObject &json) const;
 
     /**
      * Converts this structure to the legacy format.

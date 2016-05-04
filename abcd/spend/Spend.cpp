@@ -49,9 +49,6 @@ Spend::addTransfer(Wallet &target, uint64_t amount, TxMetadata metadata)
     addresses_[address.address] += amount;
 
     // Adjust and save the metadata:
-    metadata.amountSatoshi = amount;
-    metadata.amountFeesMinersSatoshi = 0;
-    metadata.amountFeesAirbitzSatoshi = 0;
     if (!metadata.amountCurrency)
     {
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
@@ -73,18 +70,16 @@ Spend::metadataSet(const TxMetadata &metadata)
 Status
 Spend::calculateFees(uint64_t &totalFees)
 {
-    metadata_.amountFeesAirbitzSatoshi = 0;
-    metadata_.amountFeesMinersSatoshi = 0;
-
     // Make an unsigned transaction:
     AddressMeta changeAddress;
     ABC_CHECK(wallet_.addresses.getNew(changeAddress));
     bc::transaction_type tx;
     ABC_CHECK(makeTx(tx, changeAddress.address));
 
-    totalFees = metadata_.amountFeesAirbitzSatoshi +
-                metadata_.amountFeesMinersSatoshi;
+    // Calculate the miner fee:
+    const auto info = wallet_.txCache.txInfo(tx, wallet_.addresses.list());
 
+    totalFees = airbitzFeeSent_ + info.fee;
     return Status();
 }
 
@@ -210,9 +205,8 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     meta.txid = info.txid;
     meta.timeCreation = time(nullptr);
     meta.internal = true;
+    meta.airbitzFeeSent = airbitzFeeSent_;
     meta.metadata = metadata_;
-    meta.metadata.amountSatoshi = info.balance;
-    meta.metadata.amountFeesMinersSatoshi = info.fee;
 
     // Calculate amountCurrency if necessary:
     if (!meta.metadata.amountCurrency)
@@ -223,14 +217,14 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     }
 
     // Save the transaction:
-    ABC_CHECK(wallet_.txs.save(meta));
+    ABC_CHECK(wallet_.txs.save(meta, info.balance, info.fee));
 
     // Update any transfers:
     for (auto transfer: transfers_)
     {
+        meta.airbitzFeeSent = 0;
         meta.metadata = transfer.second;
-        meta.metadata.amountFeesMinersSatoshi = info.fee;
-        transfer.first->txs.save(meta);
+        transfer.first->txs.save(meta, -info.balance, info.fee);
     }
 
     // Update the transaction cache:
@@ -271,20 +265,19 @@ Spend::makeOutputs(bc::transaction_output_list &result)
 
     // Create an Airbitz fee output:
     const auto info = generalAirbitzFeeInfo();
-    auto airbitzFee = generalAirbitzFee(info, outputsTotal(out),
+    airbitzFeeSent_ = generalAirbitzFee(info, outputsTotal(out),
                                         !transfers_.empty());
-    if (airbitzFee)
+    if (airbitzFeeSent_)
     {
         auto i = info.addresses.begin();
         std::advance(i, time(nullptr) % info.addresses.size());
 
         bc::transaction_output_type output;
-        output.value = airbitzFee;
+        output.value = airbitzFeeSent_;
         ABC_CHECK(outputScriptForAddress(output.script, *i));
         out.push_back(output);
     }
 
-    metadata_.amountFeesAirbitzSatoshi = airbitzFee;
     result = std::move(out);
     return Status();
 }
@@ -310,7 +303,6 @@ Spend::makeTx(libbitcoin::transaction_type &result,
 
     ABC_CHECK(outputsFinalize(tx.outputs, change, changeAddress));
 
-    metadata_.amountFeesMinersSatoshi = fee;
     result = std::move(tx);
     return Status();
 }

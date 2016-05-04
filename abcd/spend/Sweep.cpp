@@ -86,12 +86,11 @@ sweepSend(Wallet &wallet,
     meta.txid = info.txid;
     meta.timeCreation = time(nullptr);
     meta.internal = true;
-    meta.metadata.amountSatoshi = info.balance;
-    meta.metadata.amountFeesAirbitzSatoshi = 0;
+    meta.airbitzFeeSent = 0;
     ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
                   meta.metadata.amountCurrency, info.balance,
                   static_cast<Currency>(wallet.currency())));
-    ABC_CHECK(wallet.txs.save(meta));
+    ABC_CHECK(wallet.txs.save(meta, info.balance, info.fee));
 
     // Update the transaction cache:
     if (wallet.txCache.insert(tx))

@@ -46,11 +46,13 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
     {
         out->pDetails = meta.metadata.toDetails();
         out->timeCreation = meta.timeCreation;
+        out->pDetails->amountFeesAirbitzSatoshi = meta.airbitzFeeSent;
     }
     else
     {
         out->timeCreation = time(nullptr);
         out->pDetails = TxMetadata().toDetails();
+        out->pDetails->amountFeesAirbitzSatoshi = 0;
     }
     out->pDetails->amountSatoshi = info.balance;
     out->pDetails->amountFeesMinersSatoshi = info.fee;

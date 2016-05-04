@@ -89,6 +89,8 @@ private:
     std::map<std::string, uint64_t> addresses_;
     std::set<PaymentRequest *> paymentRequests_;
     std::map<Wallet *, TxMetadata> transfers_;
+
+    uint64_t airbitzFeeSent_;
     TxMetadata metadata_;
 
     Status
