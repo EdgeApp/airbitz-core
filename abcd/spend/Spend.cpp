@@ -41,7 +41,7 @@ Spend::addPaymentRequest(PaymentRequest *request)
 }
 
 Status
-Spend::addTransfer(Wallet &target, uint64_t amount, TxMetadata metadata)
+Spend::addTransfer(Wallet &target, uint64_t amount, Metadata metadata)
 {
     // Create a new address to spend to:
     AddressMeta address;
@@ -61,7 +61,7 @@ Spend::addTransfer(Wallet &target, uint64_t amount, TxMetadata metadata)
 }
 
 Status
-Spend::metadataSet(const TxMetadata &metadata)
+Spend::metadataSet(const Metadata &metadata)
 {
     metadata_ = metadata;
     return Status();

@@ -1533,7 +1533,7 @@ tABC_CC ABC_SpendAddTransfer(void *pSpend,
 
         std::shared_ptr<Wallet> target;
         ABC_CHECK_NEW(cacheWallet(target, nullptr, szWalletUUID));
-        TxMetadata metadata(pDetails);
+        Metadata metadata(pDetails);
         ABC_CHECK_NEW(spend->addTransfer(*target, amount, metadata));
     }
 

@@ -60,7 +60,7 @@ COMMAND(InitLevel::wallet, SpendBip70, "spend-bip70",
 
     PaymentRequest request;
     ABC_CHECK(request.fetch(uri));
-    TxMetadata metadata;
+    Metadata metadata;
     ABC_CHECK(request.signatureOk(metadata.name, uri));
     if (!request.signatureExists())
         std::cout << "warning: Unsigned request" << std::endl;
@@ -104,7 +104,7 @@ COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer",
 
     std::shared_ptr<Wallet> target;
     ABC_CHECK(Wallet::create(target, *session.account, dest));
-    TxMetadata metadata;
+    Metadata metadata;
     metadata.name = session.wallet->name();
 
     Spend spend(*session.wallet);

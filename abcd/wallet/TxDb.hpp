@@ -10,7 +10,7 @@
 
 #include "../json/JsonPtr.hpp"
 #include "../util/Status.hpp"
-#include "TxMetadata.hpp"
+#include "Metadata.hpp"
 #include <map>
 #include <mutex>
 #include <vector>
@@ -26,7 +26,7 @@ struct TxMeta
     int64_t timeCreation;
     bool internal;
     int64_t airbitzFeeSent = 0;
-    TxMetadata metadata;
+    Metadata metadata;
 };
 
 /**

@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_WALLET_TX_METADATA_HPP
-#define ABCD_WALLET_TX_METADATA_HPP
+#ifndef ABCD_WALLET_METADATA_HPP
+#define ABCD_WALLET_METADATA_HPP
 
 #include "../util/Status.hpp"
 
@@ -17,10 +17,10 @@ class JsonObject;
 /**
  * Common user-editable metadata for transactions and addresses.
  */
-struct TxMetadata
+struct Metadata
 {
-    TxMetadata();
-    TxMetadata(const tABC_TxDetails *pDetails);
+    Metadata();
+    Metadata(const tABC_TxDetails *pDetails);
 
     // User-editable metadata:
     std::string name;

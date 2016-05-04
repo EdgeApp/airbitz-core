@@ -10,7 +10,7 @@
 
 #include "../json/JsonPtr.hpp"
 #include "../util/Status.hpp"
-#include "TxMetadata.hpp"
+#include "Metadata.hpp"
 #include <list>
 #include <map>
 #include <mutex>
@@ -31,7 +31,7 @@ struct AddressMeta
     bool recyclable;
     time_t time;
     int64_t requestAmount = 0;
-    TxMetadata metadata;
+    Metadata metadata;
 };
 
 /**

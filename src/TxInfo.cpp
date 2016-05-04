@@ -51,7 +51,7 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
     else
     {
         out->timeCreation = time(nullptr);
-        out->pDetails = TxMetadata().toDetails();
+        out->pDetails = Metadata().toDetails();
         out->pDetails->amountFeesAirbitzSatoshi = 0;
     }
     out->pDetails->amountSatoshi = info.balance;

@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "TxMetadata.hpp"
+#include "Metadata.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/Util.hpp"
 
@@ -28,13 +28,13 @@ struct MetadataJson:
     ABC_JSON_INTEGER(airbitzFee,        "amountFeeAirBitzSatoshi", 0);
 };
 
-TxMetadata::TxMetadata():
+Metadata::Metadata():
     bizId(0),
     amountCurrency(0)
 {
 }
 
-TxMetadata::TxMetadata(const tABC_TxDetails *pDetails):
+Metadata::Metadata(const tABC_TxDetails *pDetails):
     name(pDetails->szName ? pDetails->szName : ""),
     category(pDetails->szCategory ? pDetails->szCategory : ""),
     notes(pDetails->szNotes ? pDetails->szNotes : ""),
@@ -44,7 +44,7 @@ TxMetadata::TxMetadata(const tABC_TxDetails *pDetails):
 }
 
 Status
-TxMetadata::load(const JsonObject &json)
+Metadata::load(const JsonObject &json)
 {
     MetadataJson metaJson(json);
     name           = metaJson.name();
@@ -56,7 +56,7 @@ TxMetadata::load(const JsonObject &json)
 }
 
 Status
-TxMetadata::save(JsonObject &json) const
+Metadata::save(JsonObject &json) const
 {
     MetadataJson metaJson(json);
     ABC_CHECK(metaJson.nameSet(name));
@@ -74,7 +74,7 @@ TxMetadata::save(JsonObject &json) const
 }
 
 tABC_TxDetails *
-TxMetadata::toDetails() const
+Metadata::toDetails() const
 {
     tABC_TxDetails *out = structAlloc<tABC_TxDetails>();
     out->szName = stringCopy(name);
