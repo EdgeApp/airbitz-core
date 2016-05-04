@@ -1,0 +1,87 @@
+/*
+ * Copyright (c) 2015, Airbitz, Inc.
+ * All rights reserved.
+ *
+ * See the LICENSE file for more information.
+ */
+
+#include "Receive.hpp"
+#include "Wallet.hpp"
+#include "../Context.hpp"
+#include "../bitcoin/TxCache.hpp"
+#include "../bitcoin/WatcherBridge.hpp"
+#include "../exchange/ExchangeCache.hpp"
+#include "../util/Debug.hpp"
+
+namespace abcd {
+
+Status
+onReceive(Wallet &wallet, const TxInfo &info,
+          tABC_BitCoin_Event_Callback fCallback, void *pData)
+{
+    // Does the transaction already exist?
+    TxMeta meta;
+    if (!wallet.txs.get(meta, info.ntxid))
+    {
+        meta.ntxid = info.ntxid;
+        meta.txid = info.txid;
+        meta.timeCreation = time(nullptr);
+        meta.internal = false;
+        meta.airbitzFeeSent = 0;
+
+        // Grab metadata from the address:
+        for (const auto &io: info.ios)
+        {
+            AddressMeta address;
+            if (wallet.addresses.get(address, io.address))
+                meta.metadata = address.metadata;
+        }
+        const auto balance = wallet.addresses.balance(info);
+        ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
+                      meta.metadata.amountCurrency, balance,
+                      static_cast<Currency>(wallet.currency())));
+
+        // Save the metadata:
+        ABC_CHECK(wallet.txs.save(meta, balance, info.fee));
+
+        // Update the transaction cache:
+        watcherSave(wallet).log(); // Failure is not fatal
+        wallet.balanceDirty();
+        ABC_CHECK(wallet.addresses.markOutputs(info));
+
+        // Update the GUI:
+        ABC_DebugLog("IncomingBitCoin callback: wallet %s, txid: %s",
+                     wallet.id().c_str(), info.txid.c_str());
+        tABC_AsyncBitCoinInfo async;
+        async.pData = pData;
+        async.eventType = ABC_AsyncEventType_IncomingBitCoin;
+        Status().toError(async.status, ABC_HERE());
+        async.szWalletUUID = wallet.id().c_str();
+        async.szTxID = info.txid.c_str();
+        async.sweepSatoshi = 0;
+        fCallback(&async);
+    }
+    else
+    {
+        // Update the transaction cache:
+        watcherSave(wallet).log(); // Failure is not fatal
+        wallet.balanceDirty();
+        ABC_CHECK(wallet.addresses.markOutputs(info));
+
+        // Update the GUI:
+        ABC_DebugLog("BalanceUpdate callback: wallet %s, txid: %s",
+                     wallet.id().c_str(), info.txid.c_str());
+        tABC_AsyncBitCoinInfo async;
+        async.pData = pData;
+        async.eventType = ABC_AsyncEventType_BalanceUpdate;
+        Status().toError(async.status, ABC_HERE());
+        async.szWalletUUID = wallet.id().c_str();
+        async.szTxID = info.txid.c_str();
+        async.sweepSatoshi = 0;
+        fCallback(&async);
+    }
+
+    return Status();
+}
+
+} // namespace abcd
