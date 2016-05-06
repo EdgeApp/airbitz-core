@@ -6,6 +6,7 @@
  */
 
 #include "Spend.hpp"
+#include "AirbitzFee.hpp"
 #include "Broadcast.hpp"
 #include "Inputs.hpp"
 #include "Outputs.hpp"
@@ -21,8 +22,9 @@
 
 namespace abcd {
 
-Spend::Spend(Wallet &wallet_):
-    wallet_(wallet_)
+Spend::Spend(Wallet &wallet):
+    wallet_(wallet),
+    airbitzFeePending_(wallet_.txs.airbitzFeePending())
 {
 }
 
@@ -94,12 +96,15 @@ Spend::calculateMax(uint64_t &maxSatoshi)
     bc::transaction_type tx;
     tx.version = 1;
     tx.locktime = 0;
-    ABC_CHECK(makeOutputs(tx.outputs));
-    for (auto &output: tx.outputs)
+
+    // Set up our basic output list:
+    bc::transaction_output_list outputs;
+    ABC_CHECK(makeOutputs(outputs));
+    for (auto &output: outputs)
         output.value = 0;
 
     // We can't send anything to an empty list:
-    if (tx.outputs.empty())
+    if (outputs.empty())
     {
         maxSatoshi = 0;
         return Status();
@@ -116,9 +121,9 @@ Spend::calculateMax(uint64_t &maxSatoshi)
     while (min + 1 < max)
     {
         int64_t guess = (min + max) / 2;
+        tx.outputs = outputs;
         tx.outputs[0].value = guess;
-        tx.outputs[0].value += generalAirbitzFee(info, guess,
-                               !transfers_.empty());
+        ABC_CHECK(addAirbitzFeeOutput(tx.outputs, info));
 
         uint64_t fee, change;
         if (inputsPickOptimal(fee, change, tx, utxos))
@@ -206,6 +211,7 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     meta.txid = info.txid;
     meta.timeCreation = time(nullptr);
     meta.internal = true;
+    meta.airbitzFeeWanted = airbitzFeeWanted_;
     meta.airbitzFeeSent = airbitzFeeSent_;
     meta.metadata = metadata_;
 
@@ -264,10 +270,25 @@ Spend::makeOutputs(bc::transaction_output_list &result)
         }
     }
 
-    // Create an Airbitz fee output:
-    const auto info = generalAirbitzFeeInfo();
-    airbitzFeeSent_ = generalAirbitzFee(info, outputsTotal(out),
-                                        !transfers_.empty());
+    result = std::move(out);
+    return Status();
+}
+
+Status
+Spend::addAirbitzFeeOutput(bc::transaction_output_list &outputs,
+                           const AirbitzFeeInfo &info)
+{
+    // Calculate the Airbitz fee we owe:
+    if (transfers_.empty())
+        airbitzFeeWanted_ = airbitzFeeOutgoing(info, outputsTotal(outputs));
+    else
+        airbitzFeeWanted_ = 0;
+
+    airbitzFeeSent_ = airbitzFeePending_ + airbitzFeeWanted_;
+    if (airbitzFeeSent_ < info.sendMin || info.addresses.empty())
+        airbitzFeeSent_ = 0;
+
+    // Add a fee output if it makes sense:
     if (airbitzFeeSent_)
     {
         auto i = info.addresses.begin();
@@ -276,10 +297,9 @@ Spend::makeOutputs(bc::transaction_output_list &result)
         bc::transaction_output_type output;
         output.value = airbitzFeeSent_;
         ABC_CHECK(outputScriptForAddress(output.script, *i));
-        out.push_back(output);
+        outputs.push_back(output);
     }
 
-    result = std::move(out);
     return Status();
 }
 
@@ -291,6 +311,8 @@ Spend::makeTx(libbitcoin::transaction_type &result,
     tx.version = 1;
     tx.locktime = 0;
     ABC_CHECK(makeOutputs(tx.outputs));
+    const auto info = generalAirbitzFeeInfo();
+    ABC_CHECK(addAirbitzFeeOutput(tx.outputs, info));
 
     // Check if enough confirmed inputs are available,
     // otherwise use unconfirmed inputs too:

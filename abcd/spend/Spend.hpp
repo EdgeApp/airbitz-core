@@ -17,6 +17,7 @@
 
 namespace abcd {
 
+struct AirbitzFeeInfo;
 class PaymentRequest;
 class Wallet;
 
@@ -90,11 +91,17 @@ private:
     std::set<PaymentRequest *> paymentRequests_;
     std::map<Wallet *, Metadata> transfers_;
 
+    uint64_t airbitzFeePending_;
+    uint64_t airbitzFeeWanted_;
     uint64_t airbitzFeeSent_;
     Metadata metadata_;
 
     Status
     makeOutputs(bc::transaction_output_list &result);
+
+    Status
+    addAirbitzFeeOutput(bc::transaction_output_list &outputs,
+                        const AirbitzFeeInfo &info);
 
     Status
     makeTx(libbitcoin::transaction_type &result,

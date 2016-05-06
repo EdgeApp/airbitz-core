@@ -25,7 +25,8 @@ struct TxMeta
     std::string txid;
     int64_t timeCreation;
     bool internal;
-    int64_t airbitzFeeSent = 0;
+    uint64_t airbitzFeeWanted = 0; // The fee owed for this transaction
+    int64_t airbitzFeeSent = 0; // The fee actually sent
     Metadata metadata;
 };
 
@@ -55,6 +56,18 @@ public:
      */
     Status
     get(TxMeta &result, const std::string &ntxid);
+
+    /**
+     * Determine how many satoshis of unpaid Airbitz fees are in the wallet.
+     */
+    int64_t
+    airbitzFeePending();
+
+    /**
+     * Determine the last time the wallet sent out Airbitz fees.
+     */
+    time_t
+    airbitzFeeLastSent();
 
 private:
     mutable std::mutex mutex_;

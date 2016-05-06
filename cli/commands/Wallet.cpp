@@ -99,10 +99,15 @@ COMMAND(InitLevel::wallet, CliWalletInfo, "wallet-info",
     ABC_CHECK(currencyCode(currency,
                            static_cast<Currency>(session.wallet->currency())));
 
-    std::cout << "name:     " << session.wallet->name() << std::endl;
-    std::cout << "currency: " << currency << std::endl;
-    std::cout << "balance:  " << balance / 100000000.0 <<
-              " (" << balance << " satoshis)" << std::endl;
+    const auto pending = session.wallet->txs.airbitzFeePending();
+    const auto lastSent = session.wallet->txs.airbitzFeeLastSent();
+
+    std::cout << "name:    \t" << session.wallet->name() << std::endl;
+    std::cout << "currency:\t" << currency << std::endl;
+    std::cout << "balance: \t" << balance / 100000000.0 <<
+              " BTC (" << balance << " satoshis)" << std::endl;
+    std::cout << "fees owed:\t" << pending << std::endl;
+    std::cout << "fees sent:\t" << ctime(&lastSent) << std::endl;
 
     return Status();
 }

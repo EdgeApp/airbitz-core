@@ -43,6 +43,7 @@ struct TxJson:
     ABC_JSON_STRING(ntxid, "ntxid", nullptr)
     ABC_JSON_VALUE(state, "state", TxStateJson)
     ABC_JSON_VALUE(metadata, "meta", TxMetaJson)
+    ABC_JSON_INTEGER(airbitzFeeWanted, "airbitzFeeWanted", 0);
 
     Status
     pack(const TxMeta &in, int64_t balance, int64_t fee);
@@ -56,6 +57,7 @@ TxJson::pack(const TxMeta &in, int64_t balance, int64_t fee)
 {
     // Main json:
     ABC_CHECK(ntxidSet(in.ntxid));
+    ABC_CHECK(airbitzFeeWantedSet(in.airbitzFeeWanted));
 
     // State json:
     TxStateJson stateJson;
@@ -94,6 +96,11 @@ TxJson::unpack(TxMeta &result)
     auto metaJson = metadata();
     ABC_CHECK(out.metadata.load(metaJson));
     out.airbitzFeeSent = metaJson.airbitzFeeSent();
+
+    if (airbitzFeeWantedOk())
+        out.airbitzFeeWanted = airbitzFeeWanted();
+    else
+        out.airbitzFeeWanted = out.airbitzFeeSent;
 
     result = std::move(out);
     return Status();
@@ -185,6 +192,35 @@ TxDb::get(TxMeta &result, const std::string &ntxid)
 
     result = i->second;
     return Status();
+}
+
+int64_t
+TxDb::airbitzFeePending()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    int64_t totalWanted = 0;
+    int64_t totalSent = 0;
+    for (const auto &i: txs_)
+    {
+        totalWanted += i.second.airbitzFeeWanted;
+        totalSent += i.second.airbitzFeeSent;
+    }
+
+    return totalWanted - totalSent;
+}
+
+time_t
+TxDb::airbitzFeeLastSent()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    time_t out = 0;
+
+    for (const auto &i: txs_)
+        if (i.second.airbitzFeeSent && out < i.second.timeCreation)
+            out = i.second.timeCreation;
+
+    return out;
 }
 
 std::string

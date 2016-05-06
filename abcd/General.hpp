@@ -33,10 +33,23 @@ typedef std::map<size_t, uint64_t> BitcoinFeeInfo;
 struct AirbitzFeeInfo
 {
     AddressSet addresses;
-    int64_t minSatoshi;
-    int64_t maxSatoshi;
+
+    // Fee amounts for incoming funds:
+    double incomingRate;
+    int64_t incomingMax;
+    int64_t incomingMin;
+
+    // Fee amounts for outgoing funds:
+    double outgoingRate;
+    int64_t outgoingMax;
+    int64_t outgoingMin;
     int64_t noFeeMinSatoshi;
-    double rate;
+
+    // When to actually send fees:
+    int64_t sendMin;
+    time_t sendPeriod;
+    std::string sendCategory;
+    std::string sendPayee;
 };
 
 /**
@@ -58,12 +71,6 @@ generalBitcoinFeeInfo();
  */
 AirbitzFeeInfo
 generalAirbitzFeeInfo();
-
-/**
- * Calculates the Airbitz fee for a particular transaction amount.
- */
-uint64_t
-generalAirbitzFee(const AirbitzFeeInfo &info, uint64_t spend, bool transfer);
 
 /**
  * Obtains a list of libbitcoin servers for the current network
