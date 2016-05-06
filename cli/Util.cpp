@@ -7,33 +7,9 @@
 
 #include "Util.hpp"
 #include "Command.hpp"
-#include "../abcd/account/Account.hpp"
-#include "../abcd/login/Lobby.hpp"
-#include "../abcd/login/Login.hpp"
-#include "../abcd/wallet/Wallet.hpp"
-#include "../src/LoginShim.hpp"
 #include <iostream>
 
 using namespace abcd;
-
-Status syncAll(Account &account)
-{
-    // Sync the account:
-    bool dirty = false;
-    ABC_CHECK(account.sync(dirty));
-
-    // Sync the wallets:
-    auto ids = account.wallets.list();
-    for (const auto &id: ids)
-    {
-        std::shared_ptr<Wallet> wallet;
-        ABC_CHECK(cacheWallet(wallet, nullptr, id.c_str()));
-
-        ABC_CHECK(wallet->sync(dirty));
-    }
-
-    return Status();
-}
 
 static void
 eventCallback(const tABC_AsyncBitCoinInfo *pInfo)

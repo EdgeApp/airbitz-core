@@ -171,6 +171,23 @@ COMMAND(InitLevel::wallet, CliWalletSeed, "wallet-seed",
     return Status();
 }
 
+COMMAND(InitLevel::wallet, CliWalletSync, "wallet-sync",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    bool dirty;
+    ABC_CHECK(session.wallet->sync(dirty));
+
+    if (dirty)
+        std::cout << "Contents changed" << std::endl;
+    else
+        std::cout << "No changes" << std::endl;
+
+    return Status();
+}
+
 COMMAND(InitLevel::wallet, CliWalletRemove, "wallet-remove",
         "")
 {

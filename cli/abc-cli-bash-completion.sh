@@ -18,6 +18,7 @@ _abc_cli_complete()
     account-decrypt
     account-encrypt
     account-list
+    account-sync
     address-allocate
     address-calculate
     address-list
@@ -31,7 +32,6 @@ _abc_cli_complete()
     change-password-recovery
     check-password
     check-recovery-answers
-    data-sync
     exchange-fetch
     exchange-update
     exchange-validate
@@ -51,8 +51,12 @@ _abc_cli_complete()
     pin-login-setup
     plugin-clear
     plugin-get
+    plugin-keys
+    plugin-list
     plugin-remove
     plugin-set
+    repo-clone
+    repo-sync
     settings-get
     settings-set-nickname
     settings-set-recovery-reminder
@@ -62,7 +66,6 @@ _abc_cli_complete()
     spend-get-fee
     spend-get-max
     spend-transfer
-    spend-uri
     stratum-version
     upload-logs
     version
@@ -75,12 +78,13 @@ _abc_cli_complete()
     wallet-order
     wallet-remove
     wallet-seed
+    wallet-sync
     watcher'
 
     # COMPREPLY is the array of possible completions, generated with
     # the compgen builtin.
     if [[ ${prev_word} == 'abc-cli' ]] ; then
-    	COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
+        COMPREPLY=( $(compgen -W "${type_list}" -- ${cur_word}) )
     else
         COMPREPLY=()
     fi

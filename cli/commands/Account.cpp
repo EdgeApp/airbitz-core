@@ -87,3 +87,20 @@ COMMAND(InitLevel::context, AccountList, "account-list",
 
     return Status();
 }
+
+COMMAND(InitLevel::wallet, CliAccountSync, "account-sync",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    bool dirty;
+    ABC_CHECK(session.account->sync(dirty));
+
+    if (dirty)
+        std::cout << "Contents changed" << std::endl;
+    else
+        std::cout << "No changes" << std::endl;
+
+    return Status();
+}

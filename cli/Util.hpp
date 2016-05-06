@@ -16,15 +16,6 @@
 #include <thread>
 
 struct Session;
-namespace abcd {
-class Account;
-}
-
-/**
- * Syncs the account and all its wallets.
- */
-abcd::Status
-syncAll(abcd::Account &account);
 
 /**
  * Launches and runs a watcher thread.
