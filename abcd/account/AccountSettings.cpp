@@ -213,8 +213,14 @@ Status
 accountSettingsPinSync(Login &login, tABC_AccountSettings *settings,
                        bool pinChanged)
 {
-    if (!settings->bDisablePINLogin && settings->szPIN)
+    if (settings->bDisablePINLogin)
     {
+        // Only delete the PIN if the user *explicitly* asks for that:
+        loginPinDelete(login.lobby).log();
+    }
+    else if (settings->szPIN)
+    {
+        // Set up a new PIN if things have changed:
         bool exists;
         ABC_CHECK(loginPinExists(exists, login.lobby.username()));
         if (pinChanged || !exists)
@@ -224,10 +230,7 @@ accountSettingsPinSync(Login &login, tABC_AccountSettings *settings,
             ABC_CHECK(loginPinSetup(login, settings->szPIN, expires));
         }
     }
-    else
-    {
-        loginPinDelete(login.lobby).log();
-    }
+
     return Status();
 }
 
