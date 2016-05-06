@@ -62,6 +62,7 @@ _abc_cli_complete()
     settings-set-recovery-reminder
     sign-in
     spend-address
+    spend-airbitz-fee
     spend-bip70
     spend-get-fee
     spend-get-max

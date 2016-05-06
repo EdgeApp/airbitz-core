@@ -7,6 +7,7 @@
 
 #include "../Command.hpp"
 #include "../../abcd/bitcoin/Text.hpp"
+#include "../../abcd/spend/AirbitzFee.hpp"
 #include "../../abcd/spend/PaymentProto.hpp"
 #include "../../abcd/spend/Spend.hpp"
 #include "../../abcd/util/Util.hpp"
@@ -96,6 +97,16 @@ COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer",
 
     return Status();
 }
+
+COMMAND(InitLevel::wallet, SpendAirbitzFee, "spend-airbitz-fee",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    ABC_CHECK(airbitzFeeAutoSend(*session.wallet));
+    return Status();
+};
 
 COMMAND(InitLevel::wallet, SpendGetFee, "spend-get-fee",
         " <address> <amount>")
