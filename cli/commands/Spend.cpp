@@ -6,7 +6,6 @@
  */
 
 #include "../Command.hpp"
-#include "../Util.hpp"
 #include "../../abcd/bitcoin/Text.hpp"
 #include "../../abcd/spend/PaymentProto.hpp"
 #include "../../abcd/spend/Spend.hpp"
@@ -24,9 +23,6 @@ COMMAND(InitLevel::wallet, SpendAddress, "spend-address",
     const auto address = argv[0];
     const auto amount = atol(argv[1]);
 
-    WatcherThread thread;
-    ABC_CHECK(thread.init(session));
-
     Spend spend(*session.wallet);
     ABC_CHECK(spend.addAddress(address, amount));
     std::cout << "Sending " << amount << " satoshis to " << address
@@ -39,12 +35,6 @@ COMMAND(InitLevel::wallet, SpendAddress, "spend-address",
     ABC_CHECK(spend.saveTx(rawTx, txid));
     std::cout << "Transaction id: " << txid << std::endl;
 
-    bool dirty;
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
-                                     session.password.c_str(),
-                                     session.uuid.c_str(),
-                                     &dirty, &error));
-
     return Status();
 }
 
@@ -54,9 +44,6 @@ COMMAND(InitLevel::wallet, SpendBip70, "spend-bip70",
     if (argc != 1)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto uri = argv[0];
-
-    WatcherThread thread;
-    ABC_CHECK(thread.init(session));
 
     PaymentRequest request;
     ABC_CHECK(request.fetch(uri));
@@ -77,12 +64,6 @@ COMMAND(InitLevel::wallet, SpendBip70, "spend-bip70",
     ABC_CHECK(spend.saveTx(rawTx, txid));
     std::cout << "Transaction id: " << txid << std::endl;
 
-    bool dirty;
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
-                                     session.password.c_str(),
-                                     session.uuid.c_str(),
-                                     &dirty, &error));
-
     return Status();
 }
 
@@ -93,14 +74,6 @@ COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto dest = argv[0];
     const auto amount = atol(argv[1]);
-
-    WatcherThread thread;
-    ABC_CHECK(thread.init(session));
-
-    Session sessionDest = session;
-    sessionDest.uuid = dest;
-    WatcherThread threadDest;
-    ABC_CHECK(threadDest.init(sessionDest));
 
     std::shared_ptr<Wallet> target;
     ABC_CHECK(Wallet::create(target, *session.account, dest));
@@ -120,15 +93,6 @@ COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer",
     ABC_CHECK(spend.broadcastTx(rawTx));
     ABC_CHECK(spend.saveTx(rawTx, txid));
     std::cout << "Transaction id: " << txid << std::endl;
-
-    bool dirty;
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
-                                     session.password.c_str(),
-                                     session.uuid.c_str(),
-                                     &dirty, &error));
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
-                                     session.password.c_str(),
-                                     dest, &dirty, &error));
 
     return Status();
 }
