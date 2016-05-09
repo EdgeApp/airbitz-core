@@ -37,6 +37,9 @@ onReceive(Wallet &wallet, const TxInfo &info,
         // Receives can accumulate Airbitz fees:
         const auto airbitzFeeInfo = generalAirbitzFeeInfo();
         meta.airbitzFeeWanted = airbitzFeeIncoming(airbitzFeeInfo, balance);
+        logInfo("Airbitz fee: " +
+                std::to_string(meta.airbitzFeeWanted) + " wanted, " +
+                std::to_string(wallet.txs.airbitzFeePending()) + " pending");
 
         // Grab metadata from the address:
         for (const auto &io: info.ios)

@@ -215,6 +215,11 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     meta.airbitzFeeSent = airbitzFeeSent_;
     meta.metadata = metadata_;
 
+    logInfo("Airbitz fee: " +
+            std::to_string(airbitzFeeWanted_) + " wanted, " +
+            std::to_string(wallet_.txs.airbitzFeePending()) + " pending, " +
+            std::to_string(airbitzFeeSent_) + " sent");
+
     // Calculate amountCurrency if necessary:
     if (!meta.metadata.amountCurrency)
     {

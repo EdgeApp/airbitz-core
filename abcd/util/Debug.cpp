@@ -134,4 +134,10 @@ void ABC_DebugLog(const char *format, ...)
 #endif
 }
 
+void
+logInfo(const std::string &message)
+{
+    ABC_DebugLog("%s", message.c_str());
+}
+
 } // namespace abcd
