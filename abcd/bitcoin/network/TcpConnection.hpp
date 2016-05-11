@@ -5,11 +5,11 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_BITCOIN_TCP_CONNECTION_HPP
-#define ABCD_BITCOIN_TCP_CONNECTION_HPP
+#ifndef ABCD_BITCOIN_NETWORK_TCP_CONNECTION_HPP
+#define ABCD_BITCOIN_NETWORK_TCP_CONNECTION_HPP
 
-#include "../util/Status.hpp"
-#include "../util/Data.hpp"
+#include "../../util/Status.hpp"
+#include "../../util/Data.hpp"
 
 namespace abcd {
 

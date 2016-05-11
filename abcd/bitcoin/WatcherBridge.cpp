@@ -6,8 +6,9 @@
  */
 
 #include "WatcherBridge.hpp"
-#include "TxCache.hpp"
 #include "Watcher.hpp"
+#include "cache/Cache.hpp"
+#include "../Context.hpp"
 #include "../spend/Sweep.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
@@ -15,15 +16,10 @@
 #include "../wallet/Wallet.hpp"
 #include <algorithm>
 #include <list>
+#include <map>
 #include <memory>
 
 namespace abcd {
-
-struct PendingSweep
-{
-    std::string address;
-    std::string key;
-};
 
 struct WatcherInfo
 {
@@ -34,23 +30,82 @@ private:
 public:
     WatcherInfo(Wallet &wallet):
         parent_(wallet.shared_from_this()),
-        watcher(wallet.txCache, wallet.addressCache),
+        watcher(wallet.cache),
         wallet(wallet)
     {
     }
 
     Watcher watcher;
     Wallet &wallet;
-    std::list<PendingSweep> sweeping;
-};
+    std::map<std::string, std::string> sweeping; // address to key
 
+    tABC_BitCoin_Event_Callback fCallback;
+    void *pData;
+};
 static std::map<std::string, std::unique_ptr<WatcherInfo>> watchers_;
 
-static void     bridgeQuietCallback(WatcherInfo *watcherInfo,
-                                    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
-static Status   bridgeTxCallback(Wallet &wallet,
-                                 const libbitcoin::transaction_type &tx,
-                                 tABC_BitCoin_Event_Callback fAsyncCallback, void *pData);
+/**
+ * Tells all running watchers that height has changed.
+ * This is a temporary hack until we gain support for app-wide callbacks.
+ */
+static void
+onHeight(size_t height)
+{
+    for (auto &watcher: watchers_)
+    {
+        if (watcher.second->fCallback)
+        {
+            ABC_DebugLog("BlockHeightChange callback: wallet %s",
+                         watcher.second->wallet.id().c_str());
+            tABC_AsyncBitCoinInfo info;
+            info.pData = watcher.second->pData;
+            info.eventType = ABC_AsyncEventType_BlockHeightChange;
+            Status().toError(info.status, ABC_HERE());
+            info.szWalletUUID = watcher.second->wallet.id().c_str();
+            info.szTxID = nullptr;
+            info.sweepSatoshi = 0;
+            watcher.second->fCallback(&info);
+        }
+    }
+}
+
+/**
+ * Called when an address is completely loaded into the cache.
+ */
+static void
+bridgeOnComplete(WatcherInfo *watcherInfo, const std::string &address,
+                 tABC_BitCoin_Event_Callback fCallback, void *pData)
+{
+    auto &wallet = watcherInfo->wallet;
+
+    // If we are sweeping this address, do that now:
+    auto i = watcherInfo->sweeping.find(address);
+    if (watcherInfo->sweeping.end() != i)
+    {
+        // We need to do this first, since the actual send
+        // triggers another `onComplete` callback for the sweep address:
+        auto sweep = *i;
+        watcherInfo->sweeping.erase(i);
+
+        sweepOnComplete(wallet, sweep.first, sweep.second, fCallback, pData);
+    }
+
+    // Send the AddressCheckDone callback if its time:
+    const auto p = wallet.cache.addresses.progress();
+    if (p.first == p.second)
+    {
+        ABC_DebugLog("AddressCheckDone callback: wallet %s",
+                     wallet.id().c_str());
+        tABC_AsyncBitCoinInfo info;
+        info.pData = pData;
+        info.eventType = ABC_AsyncEventType_AddressCheckDone;
+        Status().toError(info.status, ABC_HERE());
+        info.szWalletUUID = wallet.id().c_str();
+        info.szTxID = nullptr;
+        info.sweepSatoshi = 0;
+        fCallback(&info);
+    }
+}
 
 static Status
 watcherFind(WatcherInfo *&result, const Wallet &self)
@@ -75,22 +130,6 @@ watcherFind(Watcher *&result, const Wallet &self)
 }
 
 Status
-watcherDeleteCache(Wallet &self)
-{
-    ABC_CHECK(fileDelete(self.paths.watcherPath()));
-    return Status();
-}
-
-Status
-watcherSave(Wallet &self)
-{
-    auto data = self.txCache.serialize();
-    ABC_CHECK(fileSave(data, self.paths.watcherPath()));
-
-    return Status();
-}
-
-Status
 bridgeSweepKey(Wallet &self, const std::string &wif,
                const std::string &address)
 {
@@ -98,11 +137,8 @@ bridgeSweepKey(Wallet &self, const std::string &wif,
     ABC_CHECK(watcherFind(watcherInfo, self));
 
     // Start the sweep:
-    PendingSweep sweep;
-    sweep.address = address;
-    sweep.key = wif;
-    watcherInfo->sweeping.push_back(sweep);
-    self.addressCache.insert(sweep.address);
+    watcherInfo->sweeping[address] = wif;
+    self.cache.addresses.insert(address, true);
 
     return Status();
 }
@@ -127,72 +163,45 @@ bridgeWatcherLoop(Wallet &self,
     WatcherInfo *watcherInfo = nullptr;
     ABC_CHECK(watcherFind(watcherInfo, self));
 
+    // Set up new-block callback:
+    watcherInfo->fCallback = fCallback;
+    watcherInfo->pData = pData;
+    gContext->blockCache.onHeightSet(onHeight);
+
     // Set up the address-changed callback:
     auto wakeupCallback = [watcherInfo]()
     {
         watcherInfo->watcher.sendWakeup();
     };
-    self.addressCache.wakeupCallbackSet(wakeupCallback);
+    self.cache.addresses.wakeupCallbackSet(wakeupCallback);
 
-    // Set up the address-synced callback:
-    auto doneCallback = [watcherInfo, fCallback, pData]()
+    // Set up the new-transaction callback:
+    auto onTx = [watcherInfo, fCallback, pData]
+                (const std::string &txid)
     {
-        ABC_DebugLog("AddressCheckDone callback: wallet %s",
-                     watcherInfo->wallet.id().c_str());
-        tABC_AsyncBitCoinInfo info;
-        info.pData = pData;
-        info.eventType = ABC_AsyncEventType_AddressCheckDone;
-        Status().toError(info.status, ABC_HERE());
-        info.szWalletUUID = watcherInfo->wallet.id().c_str();
-        info.szTxID = nullptr;
-        info.sweepSatoshi = 0;
-        fCallback(&info);
+        TxInfo info;
+        if (watcherInfo->wallet.cache.txs.info(info, txid).log())
+            onReceive(watcherInfo->wallet, info, fCallback, pData).log();
     };
-    self.addressCache.doneCallbackSet(doneCallback);
+    self.cache.addresses.onTxSet(onTx);
 
-    // Set up new-transaction callback:
-    auto txCallback = [watcherInfo, fCallback, pData]
-                      (const libbitcoin::transaction_type &tx)
+    // Set up the address-completed callback:
+    auto onComplete = [watcherInfo, fCallback, pData]
+                      (const std::string &address)
     {
-        bridgeTxCallback(watcherInfo->wallet, tx, fCallback, pData).log();
+        bridgeOnComplete(watcherInfo, address, fCallback, pData);
     };
-    watcherInfo->watcher.set_tx_callback(txCallback);
-
-    // Set up new-block callback:
-    auto heightCallback = [watcherInfo, fCallback, pData](const size_t height)
-    {
-        // Update the GUI:
-        ABC_DebugLog("BlockHeightChange callback: wallet %s",
-                     watcherInfo->wallet.id().c_str());
-        tABC_AsyncBitCoinInfo info;
-        info.pData = pData;
-        info.eventType = ABC_AsyncEventType_BlockHeightChange;
-        Status().toError(info.status, ABC_HERE());
-        info.szWalletUUID = watcherInfo->wallet.id().c_str();
-        info.szTxID = nullptr;
-        info.sweepSatoshi = 0;
-        fCallback(&info);
-
-        watcherSave(watcherInfo->wallet).log(); // Failure is not fatal
-    };
-    watcherInfo->watcher.set_height_callback(heightCallback);
-
-    // Set up sweep-trigger callback:
-    auto onQuiet = [watcherInfo, fCallback, pData]()
-    {
-        bridgeQuietCallback(watcherInfo, fCallback, pData);
-    };
-    watcherInfo->watcher.set_quiet_callback(onQuiet);
+    self.cache.addresses.onCompleteSet(onComplete);
 
     // Do the loop:
     watcherInfo->watcher.loop();
 
     // Cancel all callbacks:
-    watcherInfo->watcher.set_quiet_callback(nullptr);
-    watcherInfo->watcher.set_height_callback(nullptr);
-    watcherInfo->watcher.set_tx_callback(nullptr);
-    self.addressCache.wakeupCallbackSet(nullptr);
-    self.addressCache.doneCallbackSet(nullptr);
+    self.cache.addresses.wakeupCallbackSet(nullptr);
+    self.cache.addresses.onTxSet(nullptr);
+    self.cache.addresses.onCompleteSet(nullptr);
+    watcherInfo->fCallback = nullptr;
+    watcherInfo->pData = nullptr;
 
     return Status();
 }
@@ -244,55 +253,8 @@ bridgeWatcherStop(Wallet &self)
 Status
 bridgeWatcherDelete(Wallet &self)
 {
-    watcherSave(self).log(); // Failure is not fatal
+    self.cache.save().log(); // Failure is fine
     watchers_.erase(self.id());
-
-    return Status();
-}
-
-static void
-bridgeQuietCallback(WatcherInfo *watcherInfo,
-                    tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
-{
-    auto &wallet = watcherInfo->wallet;
-
-    // If we are sweeping any keys, do that now:
-    auto i = watcherInfo->sweeping.begin();
-    while (watcherInfo->sweeping.end() != i)
-    {
-        if (wallet.txCache.has_history(i->address))
-        {
-            // Remove the sweep from the list:
-            auto sweep = *i;
-            i = watcherInfo->sweeping.erase(i);
-
-            sweepOnComplete(wallet, sweep.address, sweep.key,
-                            fAsyncCallback, pData);
-        }
-        else
-        {
-            ++i;
-        }
-    }
-}
-
-static Status
-bridgeTxCallback(Wallet &wallet,
-                 const libbitcoin::transaction_type &tx,
-                 tABC_BitCoin_Event_Callback fAsyncCallback, void *pData)
-{
-    const auto info = wallet.txCache.txInfo(tx);
-
-    // Does this transaction concern us?
-    if (wallet.txCache.isRelevant(tx, wallet.addresses.list()))
-    {
-        ABC_CHECK(onReceive(wallet, info, fAsyncCallback, pData));
-    }
-    else
-    {
-        ABC_DebugLog("New (irrelevant) transaction: wallet %s, txid: %s",
-                     wallet.id().c_str(), info.txid.c_str());
-    }
 
     return Status();
 }

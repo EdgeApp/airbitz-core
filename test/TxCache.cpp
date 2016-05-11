@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "../abcd/bitcoin/TxCache.hpp"
+#include "../abcd/bitcoin/cache/TxCache.hpp"
 #include "../abcd/bitcoin/Utility.hpp"
 #include "../abcd/spend/Outputs.hpp"
 #include "../minilibs/catch/catch.hpp"
@@ -53,8 +53,6 @@ public:
 
         bc::hash_digest fakeTxid{};
 
-        txCache.at_height(100);
-
         // One output, not connected to anything:
         bc::transaction_type irrelevant
         {
@@ -97,7 +95,7 @@ public:
         };
         buriedId = bc::hash_transaction(buried);
         txCache.insert(buried);
-        txCache.confirmed(buriedId, 100);
+        txCache.confirmed(bc::encode_hash(buriedId), 100);
 
         // Spend from buried[0], one output (confirmed):
         bc::transaction_type confirmed
@@ -112,7 +110,7 @@ public:
         };
         confirmedId = bc::hash_transaction(confirmed);
         txCache.insert(confirmed);
-        txCache.confirmed(confirmedId, 100);
+        txCache.confirmed(bc::encode_hash(confirmedId), 100);
 
         // Double-spend from buried[0]:
         bc::transaction_type doubleSpend
@@ -187,14 +185,9 @@ TEST_CASE("Transaction database", "[bitcoin][database]")
     abcd::TxCache txCache;
     abcd::TxCacheTest test(txCache);
 
-    SECTION("height")
-    {
-        REQUIRE(txCache.last_height() == 100);
-    }
-
     SECTION("filtered utxos")
     {
-        auto utxos = txCache.get_utxos(test.ourAddresses, true);
+        auto utxos = txCache.utxos(test.ourAddresses, true);
         if (false)
             dumpUtxos(utxos);
         REQUIRE(2 == utxos.size());
@@ -205,7 +198,7 @@ TEST_CASE("Transaction database", "[bitcoin][database]")
 
     SECTION("all utxos")
     {
-        auto utxos = txCache.get_utxos(test.ourAddresses, false);
+        auto utxos = txCache.utxos(test.ourAddresses, false);
         REQUIRE(3 == utxos.size());
         REQUIRE(hasTxid(utxos, test.incomingId, 0));
         REQUIRE(hasTxid(utxos, test.confirmedId, 0));

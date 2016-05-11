@@ -30,7 +30,8 @@ public:
     // Files:
     std::string currencyPath() const { return dir_ + "sync/Currency.json"; }
     std::string namePath() const { return dir_ + "sync/WalletName.json"; }
-    std::string watcherPath() const { return dir_ + "watcher.ser"; }
+    std::string cachePath() const { return dir_ + "Cache.json"; }
+    std::string cachePathOld() const { return dir_ + "watcher.ser"; }
 
 private:
     std::string dir_;

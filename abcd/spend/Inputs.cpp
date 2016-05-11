@@ -8,7 +8,7 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "../General.hpp"
-#include "../bitcoin/TxCache.hpp"
+#include "../bitcoin/cache/TxCache.hpp"
 #include "../bitcoin/Utility.hpp"
 #include "../wallet/Wallet.hpp"
 #include <unistd.h>
@@ -27,7 +27,7 @@ signTx(bc::transaction_type &result, const TxCache &txCache,
         // Find the utxo this input refers to:
         bc::input_point &point = result.inputs[i].previous_output;
         bc::transaction_type tx;
-        ABC_CHECK(txCache.txidLookup(tx, point.hash));
+        ABC_CHECK(txCache.get(tx, bc::encode_hash(point.hash)));
 
         // Find the address for that utxo:
         bc::payment_address pa;

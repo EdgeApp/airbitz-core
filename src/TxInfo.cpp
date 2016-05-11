@@ -7,7 +7,7 @@
 
 #include "TxInfo.hpp"
 #include "TxDetails.hpp"
-#include "../abcd/bitcoin/TxCache.hpp"
+#include "../abcd/bitcoin/cache/Cache.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include "../abcd/util/Util.hpp"
 
@@ -92,7 +92,7 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
 
-    const auto infos = self.txCache.list(self.addresses.list());
+    const auto infos = self.cache.txs.statuses(self.cache.addresses.txids());
     for (const auto &info: infos)
     {
         pTransaction = makeTxInfo(self, info.first, info.second);

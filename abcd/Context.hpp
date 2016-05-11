@@ -13,6 +13,7 @@
 
 namespace abcd {
 
+class BlockCache;
 class ExchangeCache;
 
 /**
@@ -34,6 +35,7 @@ private:
 
 public:
     RootPaths paths;
+    BlockCache &blockCache;
     ExchangeCache &exchangeCache;
 };
 

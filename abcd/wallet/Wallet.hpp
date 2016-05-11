@@ -11,7 +11,6 @@
 #include "../WalletPaths.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
-#include "../bitcoin/AddressCache.hpp"
 #include "AddressDb.hpp"
 #include "TxDb.hpp"
 #include <atomic>
@@ -21,7 +20,7 @@
 namespace abcd {
 
 class Account;
-class TxCache;
+class Cache;
 
 /**
  * Manages the information stored in the top-level wallet sync directory.
@@ -97,10 +96,10 @@ private:
     loadSync();
 
 public:
-    AddressCache addressCache;
     AddressDb addresses;
     TxDb txs;
-    TxCache &txCache;
+
+    Cache &cache;
 };
 
 } // namespace abcd

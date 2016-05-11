@@ -9,8 +9,7 @@
 #include "../Context.hpp"
 #include "../account/Account.hpp"
 #include "../auth/LoginServer.hpp"
-#include "../bitcoin/TxCache.hpp"
-#include "../bitcoin/WatcherBridge.hpp"
+#include "../bitcoin/cache/Cache.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
 #include "../json/JsonObject.hpp"
@@ -43,7 +42,7 @@ struct NameJson:
 
 Wallet::~Wallet()
 {
-    delete &txCache;
+    delete &cache;
 }
 
 Status
@@ -54,10 +53,9 @@ Wallet::create(std::shared_ptr<Wallet> &result, Account &account,
     ABC_CHECK(out->loadKeys());
     ABC_CHECK(out->loadSync());
 
-    // Load the transaction cache (failure is acceptable):
-    DataChunk data;
-    if (fileLoad(data, out->paths.watcherPath()).log())
-        out->txCache.load(data).log();
+    // Load the transaction cache (failure is fine):
+    if (!out->cache.load().log())
+        out->cache.loadLegacy(out->paths.cachePathOld());
 
     result = std::move(out);
     return Status();
@@ -137,7 +135,7 @@ Wallet::balance(int64_t &result)
     std::lock_guard<std::mutex> lock(mutex_);
     if (dirty)
     {
-        const auto utxos = txCache.get_utxos(addresses.list(), false);
+        const auto utxos = cache.txs.utxos(addresses.list(), false);
 
         balance_ = 0;
         for (const auto &utxo: utxos)
@@ -175,7 +173,7 @@ Wallet::Wallet(Account &account, const std::string &id):
     balanceDirty_(true),
     addresses(*this),
     txs(*this),
-    txCache(*new TxCache())
+    cache(*new Cache(paths.cachePath(), gContext->blockCache))
 {}
 
 Status

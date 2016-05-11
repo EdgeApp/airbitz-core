@@ -6,6 +6,7 @@
  */
 
 #include "Context.hpp"
+#include "bitcoin/cache/BlockCache.hpp"
 #include "exchange/ExchangeCache.hpp"
 
 namespace abcd {
@@ -14,6 +15,7 @@ std::unique_ptr<Context> gContext;
 
 Context::~Context()
 {
+    delete &blockCache;
     delete &exchangeCache;
 }
 
@@ -22,6 +24,7 @@ Context::Context(const std::string &rootDir, const std::string &certPath,
     apiKey_(apiKey),
     hiddenBitsKey_(hiddenBitsKey),
     paths(rootDir, certPath),
+    blockCache(*new BlockCache(paths.blockCachePath())),
     exchangeCache(*new ExchangeCache(paths.exchangeCachePath()))
 {
 }

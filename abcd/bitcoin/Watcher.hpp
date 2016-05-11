@@ -8,39 +8,25 @@
 #ifndef ABCD_BITCOIN_WATCHER_HPP
 #define ABCD_BITCOIN_WATCHER_HPP
 
-#include "TxUpdater.hpp"
-#include "../util/Status.hpp"
-#include "../../minilibs/libbitcoin-client/client.hpp"
+#include "network/TxUpdater.hpp"
 #include <zmq.hpp>
-#include <iostream>
-#include <unordered_map>
+#include <mutex>
 
 namespace abcd {
 
 /**
  * Provides threading support for the TxUpdater object.
  */
-class Watcher:
-    public TxCallbacks
+class Watcher
 {
 public:
-    Watcher(TxCache &db, AddressCache &addressCache);
+    Watcher(Cache &cache);
 
     // - Updater messages: -------------
     void sendWakeup();
     void disconnect();
     void connect();
     void sendTx(StatusCallback status, DataSlice tx);
-
-    // - Callbacks: --------------------
-    typedef std::function<void (const bc::transaction_type &)> tx_callback;
-    void set_tx_callback(tx_callback cb);
-
-    typedef std::function<void (const size_t)> block_height_callback;
-    void set_height_callback(block_height_callback cb);
-
-    typedef std::function<void ()> quiet_callback;
-    void set_quiet_callback(quiet_callback cb);
 
     // - Thread implementation: --------
 
@@ -68,19 +54,8 @@ private:
     std::string socket_name_;
     zmq::socket_t socket_;
 
-    // The thread uses these callbacks, so put them in a mutex:
-    std::mutex cb_mutex_;
-    tx_callback cb_;
-    block_height_callback height_cb_;
-    quiet_callback quiet_cb_;
-
     // Everything below this point is only touched by the thread:
     bool command(uint8_t *data, size_t size);
-
-    // TxCallbacks interface:
-    virtual void on_add(const bc::transaction_type &tx) override;
-    virtual void on_height(size_t height) override;
-    virtual void on_quiet() override;
 
     // This needs to be constructed last, since it uses everything else:
     TxUpdater txu_;
