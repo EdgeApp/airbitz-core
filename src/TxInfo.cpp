@@ -26,6 +26,8 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
 
     // Basic information:
     out->szID = stringCopy(info.txid);
+    out->balance = self.addresses.balance(info);
+    out->minerFee = info.fee;
 
     // Outputs array:
     out->countOutputs = info.ios.size();
@@ -44,18 +46,21 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
     TxMeta meta;
     if (self.txs.get(meta, info.ntxid))
     {
-        out->pDetails = meta.metadata.toDetails();
         out->timeCreation = meta.timeCreation;
-        out->pDetails->amountFeesAirbitzSatoshi = meta.airbitzFeeSent;
+        out->airbitzFeeWanted = meta.airbitzFeeWanted;
+        out->airbitzFeeSent = meta.airbitzFeeSent;
+        out->pDetails = meta.metadata.toDetails();
     }
     else
     {
         out->timeCreation = time(nullptr);
+        out->airbitzFeeWanted = 0;
+        out->airbitzFeeSent = 0;
         out->pDetails = Metadata().toDetails();
-        out->pDetails->amountFeesAirbitzSatoshi = 0;
     }
-    out->pDetails->amountSatoshi = self.addresses.balance(info);
-    out->pDetails->amountFeesMinersSatoshi = info.fee;
+    out->pDetails->amountSatoshi = out->balance;
+    out->pDetails->amountFeesMinersSatoshi = out->minerFee;
+    out->pDetails->amountFeesAirbitzSatoshi = out->airbitzFeeSent;
 
     // Status:
     out->height = status.height;

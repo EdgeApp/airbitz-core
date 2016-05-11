@@ -284,9 +284,9 @@ typedef struct sABC_TxDetails
 {
     /** amount of bitcoins in satoshi (including fees if any) */
     int64_t amountSatoshi;
-    /** airbitz fees in satoshi */
+    /** airbitz fees in satoshi (DEPRECATED, moved to tABC_TxInfo) */
     int64_t amountFeesAirbitzSatoshi;
-    /** miners fees in satoshi */
+    /** miners fees in satoshi (DEPRECATED, moved to tABC_TxInfo) */
     int64_t amountFeesMinersSatoshi;
     /** amount in currency */
     double amountCurrency;
@@ -328,12 +328,22 @@ typedef struct sABC_TxInfo
     const char *szID;
     /** time of creation */
     int64_t timeCreation;
+    /** The net impact on the wallet balance. */
+    int64_t balance;
+    /** The mining fees paid. */
+    int64_t minerFee;
     /** count of bitcoin addresses associated with this transaciton */
     unsigned int countOutputs;
     /** bitcoin addresses associated with this transaction */
     tABC_TxOutput **aOutputs;
     /** transaction details */
     tABC_TxDetails *pDetails;
+
+    /** The Airbitz fee owed for this transaction. */
+    int64_t airbitzFeeWanted;
+    /** The Airbitz fee actually sent with this transaction. */
+    int64_t airbitzFeeSent;
+
     /** The confirmation height of the transaction, or 0 for unconfirmed. */
     unsigned long height;
     /** True if the transaction is a double-spend. */
