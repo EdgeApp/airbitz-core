@@ -46,7 +46,7 @@ TEST_CASE("JsonPtr lifetime", "[util][json]")
 TEST_CASE("JsonArray manipulation", "[util][json]")
 {
     abcd::JsonArray a;
-    REQUIRE_FALSE(a.get());
+    REQUIRE(json_is_array(a.get()));
 
     abcd::JsonPtr temp(json_integer(42));
     REQUIRE(a.append(temp));
@@ -59,7 +59,7 @@ TEST_CASE("JsonArray manipulation", "[util][json]")
 
 TEST_CASE("JsonObject manipulation", "[util][json]")
 {
-    struct TestFile:
+    struct TestJson:
         public abcd::JsonObject
     {
         ABC_JSON_VALUE  (value,   "value",   JsonPtr)
@@ -68,10 +68,11 @@ TEST_CASE("JsonObject manipulation", "[util][json]")
         ABC_JSON_BOOLEAN(boolean, "boolean", true)
         ABC_JSON_INTEGER(integer, "integer", 42)
     };
-    TestFile test;
+    TestJson test;
 
     SECTION("empty")
     {
+        REQUIRE(json_is_object(test.get()));
         REQUIRE_FALSE(test.stringOk());
         REQUIRE_FALSE(test.numberOk());
         REQUIRE_FALSE(test.booleanOk());

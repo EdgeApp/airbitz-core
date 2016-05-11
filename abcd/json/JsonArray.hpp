@@ -19,7 +19,9 @@ class JsonArray:
     public JsonPtr
 {
 public:
-    ABC_JSON_CONSTRUCTORS(JsonArray, JsonPtr)
+    JsonArray();
+    JsonArray(JsonPtr &&move);
+    JsonArray(const JsonPtr &copy);
 
     /**
      * Returns the number of values in the array.

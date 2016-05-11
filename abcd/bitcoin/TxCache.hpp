@@ -8,13 +8,12 @@
 #ifndef ABCD_BITCOIN_TX_DATABASE_HPP
 #define ABCD_BITCOIN_TX_DATABASE_HPP
 
-#include "../util/Status.hpp"
+#include "Typedefs.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <time.h>
 #include <list>
 #include <mutex>
 #include <ostream>
-#include <set>
 #include <unordered_map>
 
 namespace abcd {
@@ -26,8 +25,6 @@ enum class TxState
     /// The transaction is in a block.
     confirmed
 };
-
-typedef std::set<std::string> AddressSet;
 
 /**
  * An input or an output of a transaction.
@@ -46,7 +43,6 @@ struct TxInfo
 {
     std::string txid;
     std::string ntxid;
-    int64_t balance;
     int64_t fee;
     std::list<TxInOut> ios;
 };
@@ -56,7 +52,6 @@ struct TxInfo
  */
 struct TxStatus
 {
-    TxInfo info;
     size_t height;
     bool isDoubleSpent;
     bool isReplaceByFee;
@@ -105,15 +100,13 @@ public:
      * Returns the input & output information for a loose transaction.
      */
     TxInfo
-    txInfo(const bc::transaction_type &tx,
-           const AddressSet &addresses) const;
+    txInfo(const bc::transaction_type &tx) const;
 
     /**
      * Looks up a transaction and returns its input & output information.
      */
     Status
-    txidInfo(TxInfo &result, const std::string &txid,
-             const AddressSet &addresses) const;
+    txidInfo(TxInfo &result, const std::string &txid) const;
 
     /**
      * Looks up a transaction and returns its confirmation & safety state.
@@ -226,8 +219,7 @@ private:
      * Same as `txInfo`, but should be called with the mutex held.
      */
     TxInfo
-    txInfoInternal(const bc::transaction_type &tx,
-                   const AddressSet &addresses) const;
+    txInfoInternal(const bc::transaction_type &tx) const;
 
     /**
      * Returns true if the transaction has incoming non-change funds.

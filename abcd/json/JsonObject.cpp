@@ -9,13 +9,24 @@
 
 namespace abcd {
 
+JsonObject::JsonObject():
+    JsonPtr(json_object())
+{
+}
+
+JsonObject::JsonObject(JsonPtr &&move):
+    JsonPtr(std::move(move))
+{
+}
+
+JsonObject::JsonObject(const JsonPtr &copy):
+    JsonPtr(copy)
+{
+}
+
 Status
 JsonObject::setValue(const char *key, json_t *value)
 {
-    if (!json_is_object(root_))
-        reset(json_object());
-    if (!root_)
-        return ABC_ERROR(ABC_CC_JSONError, "Cannot create root object.");
     if (json_object_set_new(root_, key, value) < 0)
         return ABC_ERROR(ABC_CC_JSONError, "Cannot set " + std::string(key));
     return Status();

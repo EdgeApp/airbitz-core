@@ -18,6 +18,14 @@
 
 namespace abcd {
 
+struct AddressMetaJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(AddressMetaJson, JsonObject)
+
+    ABC_JSON_INTEGER(requestAmount, "amountSatoshi", 0);
+};
+
 struct AddressStateJson:
     public JsonObject
 {
@@ -35,17 +43,17 @@ struct AddressJson:
     ABC_JSON_INTEGER(index, "seq", 0)
     ABC_JSON_STRING(address, "address", nullptr)
     ABC_JSON_VALUE(state, "state", AddressStateJson)
-    ABC_JSON_VALUE(metadata, "meta", JsonPtr)
+    ABC_JSON_VALUE(metadata, "meta", AddressMetaJson)
 
     Status
-    pack(const Address &in);
+    pack(const AddressMeta &in);
 
     Status
-    unpack(Address &result);
+    unpack(AddressMeta &result);
 };
 
 Status
-AddressJson::pack(const Address &in)
+AddressJson::pack(const AddressMeta &in)
 {
     // Main json:
     ABC_CHECK(indexSet(in.index));
@@ -58,17 +66,18 @@ AddressJson::pack(const Address &in)
     ABC_CHECK(stateSet(stateJson));
 
     // Details json:
-    JsonPtr metaJson;
+    AddressMetaJson metaJson;
     ABC_CHECK(in.metadata.save(metaJson));
+    ABC_CHECK(metaJson.requestAmountSet(in.requestAmount));
     ABC_CHECK(metadataSet(metaJson));
 
     return Status();
 }
 
 Status
-AddressJson::unpack(Address &result)
+AddressJson::unpack(AddressMeta &result)
 {
-    Address out;
+    AddressMeta out;
 
     // Main json:
     ABC_CHECK(indexOk());
@@ -82,7 +91,9 @@ AddressJson::unpack(Address &result)
     out.time = stateJson.time();
 
     // Details json:
-    ABC_CHECK(out.metadata.load(metadata()));
+    auto metaJson = metadata();
+    ABC_CHECK(out.metadata.load(metaJson));
+    out.requestAmount = metaJson.requestAmount();
 
     result = std::move(out);
     return Status();
@@ -121,7 +132,7 @@ AddressDb::load()
                 continue;
 
             // Try to load the address:
-            Address address;
+            AddressMeta address;
             AddressJson json;
             if (json.load(dir_ + de->d_name, wallet_.dataKey()).log() &&
                     json.unpack(address).log())
@@ -143,7 +154,7 @@ AddressDb::load()
 }
 
 Status
-AddressDb::save(const Address &address)
+AddressDb::save(const AddressMeta &address)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -153,12 +164,27 @@ AddressDb::save(const Address &address)
     addresses_[address.address] = address;
 
     AddressJson json(files_[address.address]);
+    if (!json)
+        json = JsonObject();
     ABC_CHECK(json.pack(address));
     ABC_CHECK(json.save(path(address), wallet_.dataKey()));
     files_[address.address] = json;
 
     ABC_CHECK(stockpile());
     return Status();
+}
+
+int64_t
+AddressDb::balance(const TxInfo &info) const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    int64_t out = 0;
+    for (const auto &io: info.ios)
+        if (addresses_.count(io.address))
+            out += io.input ? -io.value : io.value;
+
+    return out;
 }
 
 AddressSet
@@ -198,7 +224,7 @@ AddressDb::has(const std::string &address)
 }
 
 Status
-AddressDb::get(Address &result, const std::string &address)
+AddressDb::get(AddressMeta &result, const std::string &address)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -211,7 +237,7 @@ AddressDb::get(Address &result, const std::string &address)
 }
 
 Status
-AddressDb::getNew(Address &result)
+AddressDb::getNew(AddressMeta &result)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -240,7 +266,7 @@ AddressDb::getNew(Address &result)
 Status
 AddressDb::recycleSet(const std::string &address, bool recycle)
 {
-    Address a;
+    AddressMeta a;
     ABC_CHECK(get(a, address));
     if (a.recyclable != recycle)
     {
@@ -255,12 +281,12 @@ AddressDb::recycleSet(const std::string &address, bool recycle)
  * Marks a transaction's output addresses as having received money.
  */
 Status
-AddressDb::markOutputs(const std::list<TxInOut> &ios)
+AddressDb::markOutputs(const TxInfo &info)
 {
-    for (const auto &io: ios)
+    for (const auto &io: info.ios)
     {
         if (!io.input)
-            recycleSet(io.address, false); /* Failure is ok. */
+            recycleSet(io.address, false); // Failure is fine
     }
 
     return Status();
@@ -287,7 +313,7 @@ AddressDb::stockpile()
             auto m00n = mainBranch(wallet_).generate_private_key(i);
             if (m00n.valid())
             {
-                Address address;
+                AddressMeta address;
                 address.index = i;
                 address.address = m00n.address().encoded();
                 address.recyclable = true;
@@ -297,6 +323,7 @@ AddressDb::stockpile()
                 AddressJson json;
                 ABC_CHECK(json.pack(address));
                 ABC_CHECK(json.save(path(address), wallet_.dataKey()));
+                files_[address.address] = json;
 
                 wallet_.addressCache.insert(address.address);
             }
@@ -311,7 +338,7 @@ AddressDb::stockpile()
 }
 
 std::string
-AddressDb::path(const Address &address)
+AddressDb::path(const AddressMeta &address)
 {
     return dir_ + std::to_string(address.index) + "-" +
            cryptoFilename(wallet_.dataKey(), address.address) + ".json";

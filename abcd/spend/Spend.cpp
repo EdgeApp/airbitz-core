@@ -6,6 +6,7 @@
  */
 
 #include "Spend.hpp"
+#include "AirbitzFee.hpp"
 #include "Broadcast.hpp"
 #include "Inputs.hpp"
 #include "Outputs.hpp"
@@ -15,13 +16,15 @@
 #include "../bitcoin/TxCache.hpp"
 #include "../bitcoin/Utility.hpp"
 #include "../bitcoin/WatcherBridge.hpp"
+#include "../exchange/ExchangeCache.hpp"
 #include "../util/Debug.hpp"
 #include "../wallet/Wallet.hpp"
 
 namespace abcd {
 
-Spend::Spend(Wallet &wallet_):
-    wallet_(wallet_)
+Spend::Spend(Wallet &wallet):
+    wallet_(wallet),
+    airbitzFeePending_(wallet_.txs.airbitzFeePending())
 {
 }
 
@@ -40,17 +43,14 @@ Spend::addPaymentRequest(PaymentRequest *request)
 }
 
 Status
-Spend::addTransfer(Wallet &target, uint64_t amount, TxMetadata metadata)
+Spend::addTransfer(Wallet &target, uint64_t amount, Metadata metadata)
 {
     // Create a new address to spend to:
-    Address address;
+    AddressMeta address;
     ABC_CHECK(target.addresses.getNew(address));
     addresses_[address.address] += amount;
 
     // Adjust and save the metadata:
-    metadata.amountSatoshi = amount;
-    metadata.amountFeesMinersSatoshi = 0;
-    metadata.amountFeesAirbitzSatoshi = 0;
     if (!metadata.amountCurrency)
     {
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
@@ -63,7 +63,7 @@ Spend::addTransfer(Wallet &target, uint64_t amount, TxMetadata metadata)
 }
 
 Status
-Spend::metadataSet(const TxMetadata &metadata)
+Spend::metadataSet(const Metadata &metadata)
 {
     metadata_ = metadata;
     return Status();
@@ -72,39 +72,67 @@ Spend::metadataSet(const TxMetadata &metadata)
 Status
 Spend::calculateFees(uint64_t &totalFees)
 {
-    metadata_.amountFeesAirbitzSatoshi = 0;
-    metadata_.amountFeesMinersSatoshi = 0;
-
     // Make an unsigned transaction:
-    Address changeAddress;
+    AddressMeta changeAddress;
     ABC_CHECK(wallet_.addresses.getNew(changeAddress));
     bc::transaction_type tx;
     ABC_CHECK(makeTx(tx, changeAddress.address));
 
-    totalFees = metadata_.amountFeesAirbitzSatoshi +
-                metadata_.amountFeesMinersSatoshi;
+    // Calculate the miner fee:
+    const auto info = wallet_.txCache.txInfo(tx);
 
+    totalFees = airbitzFeeSent_ + info.fee;
     return Status();
 }
 
 Status
 Spend::calculateMax(uint64_t &maxSatoshi)
 {
-    auto utxos = wallet_.txCache.get_utxos(wallet_.addresses.list(), false);
+    const auto addresses = wallet_.addresses.list();
+    const auto utxos = wallet_.txCache.get_utxos(addresses, false);
+    const auto info = generalAirbitzFeeInfo();
 
+    // Set up a fake transaction:
     bc::transaction_type tx;
     tx.version = 1;
     tx.locktime = 0;
-    ABC_CHECK(makeOutputs(tx.outputs));
 
-    const auto info = generalAirbitzFeeInfo();
-    uint64_t fee, usable;
-    if (inputsPickMaximum(fee, usable, tx, utxos))
-        maxSatoshi = generalAirbitzFeeSpendable(info, usable,
-                                                !transfers_.empty());
-    else
+    // Set up our basic output list:
+    bc::transaction_output_list outputs;
+    ABC_CHECK(makeOutputs(outputs));
+    for (auto &output: outputs)
+        output.value = 0;
+
+    // We can't send anything to an empty list:
+    if (outputs.empty())
+    {
         maxSatoshi = 0;
+        return Status();
+    }
 
+    // The range for our binary search (min <= result < max)
+    int64_t min = 0;
+    int64_t max = 0;
+    for (const auto utxo: utxos)
+        max += utxo.value;
+    max += 1; // Make this a non-inclusive maximum
+
+    // Do the binary search:
+    while (min + 1 < max)
+    {
+        int64_t guess = (min + max) / 2;
+        tx.outputs = outputs;
+        tx.outputs[0].value = guess;
+        ABC_CHECK(addAirbitzFeeOutput(tx.outputs, info));
+
+        uint64_t fee, change;
+        if (inputsPickOptimal(fee, change, tx, utxos))
+            min = guess;
+        else
+            max = guess;
+    }
+
+    maxSatoshi = min;
     return Status();
 }
 
@@ -112,7 +140,7 @@ Status
 Spend::signTx(DataChunk &result)
 {
     // Make an unsigned transaction:
-    Address changeAddress;
+    AddressMeta changeAddress;
     ABC_CHECK(wallet_.addresses.getNew(changeAddress));
     bc::transaction_type tx;
     ABC_CHECK(makeTx(tx, changeAddress.address));
@@ -135,7 +163,7 @@ Spend::broadcastTx(DataSlice rawTx)
     for (auto request: paymentRequests_)
     {
         // TODO: Update the metadata with something about a refund
-        Address refundAddress;
+        AddressMeta refundAddress;
         ABC_CHECK(wallet_.addresses.getNew(refundAddress));
         refundAddress.time = time(nullptr);
         refundAddress.metadata = metadata_;
@@ -171,46 +199,51 @@ Status
 Spend::saveTx(DataSlice rawTx, std::string &txidOut)
 {
     bc::transaction_type tx;
-    auto deserial = bc::make_deserializer(rawTx.begin(), rawTx.end());
-    bc::satoshi_load(deserial.iterator(), deserial.end(), tx);
+    ABC_CHECK(decodeTx(tx, rawTx));
 
     // Calculate transaction amounts:
-    const auto info = wallet_.txCache.txInfo(tx, wallet_.addresses.list());
+    const auto info = wallet_.txCache.txInfo(tx);
+    auto balance = wallet_.addresses.balance(info);
 
     // Create Airbitz metadata:
-    Tx txInfo;
-    txInfo.ntxid = info.ntxid;
-    txInfo.txid = info.txid;
-    txInfo.timeCreation = time(nullptr);
-    txInfo.internal = true;
-    txInfo.metadata = metadata_;
-    txInfo.metadata.amountSatoshi = info.balance;
-    txInfo.metadata.amountFeesMinersSatoshi = info.fee;
+    TxMeta meta;
+    meta.ntxid = info.ntxid;
+    meta.txid = info.txid;
+    meta.timeCreation = time(nullptr);
+    meta.internal = true;
+    meta.airbitzFeeWanted = airbitzFeeWanted_;
+    meta.airbitzFeeSent = airbitzFeeSent_;
+    meta.metadata = metadata_;
+
+    logInfo("Airbitz fee: " +
+            std::to_string(airbitzFeeWanted_) + " wanted, " +
+            std::to_string(wallet_.txs.airbitzFeePending()) + " pending, " +
+            std::to_string(airbitzFeeSent_) + " sent");
 
     // Calculate amountCurrency if necessary:
-    if (!txInfo.metadata.amountCurrency)
+    if (!meta.metadata.amountCurrency)
     {
         ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                      txInfo.metadata.amountCurrency, info.balance,
+                      meta.metadata.amountCurrency, balance,
                       static_cast<Currency>(wallet_.currency())));
     }
 
     // Save the transaction:
-    ABC_CHECK(wallet_.txs.save(txInfo));
+    ABC_CHECK(wallet_.txs.save(meta, balance, info.fee));
 
     // Update any transfers:
     for (auto transfer: transfers_)
     {
-        txInfo.metadata = transfer.second;
-        txInfo.metadata.amountFeesMinersSatoshi = info.fee;
-        transfer.first->txs.save(txInfo);
+        meta.airbitzFeeSent = 0;
+        meta.metadata = transfer.second;
+        transfer.first->txs.save(meta, -balance, info.fee);
     }
 
     // Update the transaction cache:
     if (wallet_.txCache.insert(tx))
         watcherSave(wallet_).log(); // Failure is not fatal
     wallet_.balanceDirty();
-    ABC_CHECK(wallet_.addresses.markOutputs(info.ios));
+    ABC_CHECK(wallet_.addresses.markOutputs(info));
 
     txidOut = info.txid;
     return Status();
@@ -242,23 +275,36 @@ Spend::makeOutputs(bc::transaction_output_list &result)
         }
     }
 
-    // Create an Airbitz fee output:
-    const auto info = generalAirbitzFeeInfo();
-    auto airbitzFee = generalAirbitzFee(info, outputsTotal(out),
-                                        !transfers_.empty());
-    if (airbitzFee)
+    result = std::move(out);
+    return Status();
+}
+
+Status
+Spend::addAirbitzFeeOutput(bc::transaction_output_list &outputs,
+                           const AirbitzFeeInfo &info)
+{
+    // Calculate the Airbitz fee we owe:
+    if (transfers_.empty())
+        airbitzFeeWanted_ = airbitzFeeOutgoing(info, outputsTotal(outputs));
+    else
+        airbitzFeeWanted_ = 0;
+
+    airbitzFeeSent_ = airbitzFeePending_ + airbitzFeeWanted_;
+    if (airbitzFeeSent_ < info.sendMin || info.addresses.empty())
+        airbitzFeeSent_ = 0;
+
+    // Add a fee output if it makes sense:
+    if (airbitzFeeSent_)
     {
         auto i = info.addresses.begin();
         std::advance(i, time(nullptr) % info.addresses.size());
 
         bc::transaction_output_type output;
-        output.value = airbitzFee;
+        output.value = airbitzFeeSent_;
         ABC_CHECK(outputScriptForAddress(output.script, *i));
-        out.push_back(output);
+        outputs.push_back(output);
     }
 
-    metadata_.amountFeesAirbitzSatoshi = airbitzFee;
-    result = std::move(out);
     return Status();
 }
 
@@ -270,6 +316,8 @@ Spend::makeTx(libbitcoin::transaction_type &result,
     tx.version = 1;
     tx.locktime = 0;
     ABC_CHECK(makeOutputs(tx.outputs));
+    const auto info = generalAirbitzFeeInfo();
+    ABC_CHECK(addAirbitzFeeOutput(tx.outputs, info));
 
     // Check if enough confirmed inputs are available,
     // otherwise use unconfirmed inputs too:
@@ -283,7 +331,6 @@ Spend::makeTx(libbitcoin::transaction_type &result,
 
     ABC_CHECK(outputsFinalize(tx.outputs, change, changeAddress));
 
-    metadata_.amountFeesMinersSatoshi = fee;
     result = std::move(tx);
     return Status();
 }

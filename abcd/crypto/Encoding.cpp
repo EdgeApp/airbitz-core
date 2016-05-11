@@ -24,12 +24,12 @@ chunkEncode(DataSlice data, const char *alphabet)
 
     constexpr unsigned shift = 8 * Bytes / Chars; // Bits per character
     uint16_t buffer = 0; // Bits waiting to be written out, MSB first
-    int bits = 0; // Number of bits currently in the buffer
+    signed bits = 0; // Number of bits currently in the buffer
     auto i = data.begin();
     while (i != data.end() || 0 < bits)
     {
         // Reload the buffer if we need more bits:
-        if (i != data.end() && bits < shift)
+        if (i != data.end() && static_cast<unsigned>(bits) < shift)
         {
             buffer |= *i++ << (8 - bits);
             bits += 8;
@@ -66,12 +66,12 @@ chunkDecode(DataChunk &result, const std::string &in)
 
     constexpr unsigned shift = 8 * Bytes / Chars; // Bits per character
     uint16_t buffer = 0; // Bits waiting to be written out, MSB first
-    int bits = 0; // Number of bits currently in the buffer
+    unsigned bits = 0; // Number of bits currently in the buffer
     auto i = in.begin();
     while (i != in.end())
     {
         // Read one character from the string:
-        int value = Decode(*i);
+        const auto value = Decode(*i);
         if (value < 0)
             break;
         ++i;
@@ -90,8 +90,9 @@ chunkDecode(DataChunk &result, const std::string &in)
     }
 
     // Any extra characters must be '=':
-    if (!std::all_of(i, in.end(), [](char c) { return '=' == c; }))
-    return ABC_ERROR(ABC_CC_ParseError, "Bad encoding");
+    const auto isPadding = [](char c) { return '=' == c; };
+    if (!std::all_of(i, in.end(), isPadding))
+        return ABC_ERROR(ABC_CC_ParseError, "Bad encoding");
 
     // There cannot be extra padding:
     if (Chars <= in.end() - i || shift <= bits)

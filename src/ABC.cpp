@@ -24,6 +24,7 @@
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
+#include "../abcd/exchange/ExchangeCache.hpp"
 #include "../abcd/http/Http.hpp"
 #include "../abcd/http/Uri.hpp"
 #include "../abcd/login/Bitid.hpp"
@@ -35,6 +36,7 @@
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/Otp.hpp"
 #include "../abcd/login/RecoveryQuestions.hpp"
+#include "../abcd/spend/AirbitzFee.hpp"
 #include "../abcd/spend/PaymentProto.hpp"
 #include "../abcd/spend/Spend.hpp"
 #include "../abcd/util/Debug.hpp"
@@ -1357,7 +1359,7 @@ tABC_CC ABC_CreateReceiveRequest(const char *szUserName,
     {
         ABC_GET_WALLET();
 
-        Address address;
+        AddressMeta address;
         ABC_CHECK_NEW(wallet->addresses.getNew(address));
         *pszRequestID = stringCopy(address.address);
     }
@@ -1390,10 +1392,11 @@ tABC_CC ABC_ModifyReceiveRequest(const char *szUserName,
     {
         ABC_GET_WALLET();
 
-        Address address;
+        AddressMeta address;
         ABC_CHECK_NEW(wallet->addresses.get(address, szRequestID));
-        address.metadata = pDetails;
         address.time = time(nullptr);
+        address.requestAmount = pDetails->amountSatoshi;
+        address.metadata = pDetails;
         ABC_CHECK_NEW(wallet->addresses.save(address));
     }
 
@@ -1531,7 +1534,7 @@ tABC_CC ABC_SpendAddTransfer(void *pSpend,
 
         std::shared_ptr<Wallet> target;
         ABC_CHECK_NEW(cacheWallet(target, nullptr, szWalletUUID));
-        TxMetadata metadata(pDetails);
+        Metadata metadata(pDetails);
         ABC_CHECK_NEW(spend->addTransfer(*target, amount, metadata));
     }
 
@@ -1726,8 +1729,7 @@ tABC_CC ABC_GetTransaction(const char *szUserName,
 
         TxInfo info;
         TxStatus status;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
-                                               wallet->addresses.list()));
+        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
         ABC_CHECK_NEW(wallet->txCache.txidStatus(status, szID));
         *ppTransaction = makeTxInfo(*wallet, info, status);
     }
@@ -1851,14 +1853,14 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
         ABC_GET_WALLET();
 
         TxInfo info;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
-                                               wallet->addresses.list()));
+        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
+        auto balance = wallet->addresses.balance(info);
 
-        Tx meta;
+        TxMeta meta;
         ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));
         meta.metadata = pDetails;
         meta.internal = true;
-        ABC_CHECK_NEW(wallet->txs.save(meta));
+        ABC_CHECK_NEW(wallet->txs.save(meta, balance, info.fee));
     }
 
 exit:
@@ -1891,10 +1893,9 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
         ABC_GET_WALLET();
 
         TxInfo info;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID,
-                                               wallet->addresses.list()));
+        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
 
-        Tx meta;
+        TxMeta meta;
         ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));
         *ppDetails = meta.metadata.toDetails();
     }
@@ -2425,6 +2426,8 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
 
     {
         ABC_GET_WALLET();
+
+        airbitzFeeAutoSend(*wallet).log();
 
         bool dirty = false;
         ABC_CHECK_NEW(wallet->sync(dirty));

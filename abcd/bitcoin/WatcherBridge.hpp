@@ -17,17 +17,11 @@
 #ifndef ABC_Bridge_h
 #define ABC_Bridge_h
 
+#include "Typedefs.hpp"
 #include "../util/Data.hpp"
-#include "../util/Status.hpp"
-#include <functional>
-
-namespace libbitcoin {
-struct transaction_type;
-}
 
 namespace abcd {
 
-typedef std::function<void(Status)> StatusCallback;
 class Wallet;
 
 Status

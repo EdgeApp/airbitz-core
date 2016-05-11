@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "TxMetaDb.hpp"
+#include "TxDb.hpp"
 #include "Wallet.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
@@ -14,6 +14,16 @@
 #include <dirent.h>
 
 namespace abcd {
+
+struct TxMetaJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(TxMetaJson, JsonObject)
+
+    ABC_JSON_INTEGER(airbitzFeeSent, "amountFeeAirBitzSatoshi", 0);
+    ABC_JSON_INTEGER(balance, "amountSatoshi", 0);
+    ABC_JSON_INTEGER(fee, "amountFeeMinersSatoshi", 0);
+};
 
 struct TxStateJson:
     public JsonObject
@@ -32,20 +42,22 @@ struct TxJson:
 
     ABC_JSON_STRING(ntxid, "ntxid", nullptr)
     ABC_JSON_VALUE(state, "state", TxStateJson)
-    ABC_JSON_VALUE(metadata, "meta", JsonPtr)
+    ABC_JSON_VALUE(metadata, "meta", TxMetaJson)
+    ABC_JSON_INTEGER(airbitzFeeWanted, "airbitzFeeWanted", 0);
 
     Status
-    pack(const Tx &in);
+    pack(const TxMeta &in, int64_t balance, int64_t fee);
 
     Status
-    unpack(Tx &result);
+    unpack(TxMeta &result);
 };
 
 Status
-TxJson::pack(const Tx &in)
+TxJson::pack(const TxMeta &in, int64_t balance, int64_t fee)
 {
     // Main json:
     ABC_CHECK(ntxidSet(in.ntxid));
+    ABC_CHECK(airbitzFeeWantedSet(in.airbitzFeeWanted));
 
     // State json:
     TxStateJson stateJson;
@@ -55,17 +67,20 @@ TxJson::pack(const Tx &in)
     ABC_CHECK(stateSet(stateJson));
 
     // Details json:
-    JsonPtr metaJson;
+    TxMetaJson metaJson;
     ABC_CHECK(in.metadata.save(metaJson));
+    ABC_CHECK(metaJson.airbitzFeeSentSet(in.airbitzFeeSent));
+    ABC_CHECK(metaJson.balanceSet(balance));
+    ABC_CHECK(metaJson.feeSet(fee));
     ABC_CHECK(metadataSet(metaJson));
 
     return Status();
 }
 
 Status
-TxJson::unpack(Tx &result)
+TxJson::unpack(TxMeta &result)
 {
-    Tx out;
+    TxMeta out;
 
     // Main json:
     ABC_CHECK(ntxidOk());
@@ -78,20 +93,27 @@ TxJson::unpack(Tx &result)
     out.internal = stateJson.internal();
 
     // Details json:
-    ABC_CHECK(out.metadata.load(metadata()));
+    auto metaJson = metadata();
+    ABC_CHECK(out.metadata.load(metaJson));
+    out.airbitzFeeSent = metaJson.airbitzFeeSent();
+
+    if (airbitzFeeWantedOk())
+        out.airbitzFeeWanted = airbitzFeeWanted();
+    else
+        out.airbitzFeeWanted = out.airbitzFeeSent;
 
     result = std::move(out);
     return Status();
 }
 
-TxMetaDb::TxMetaDb(const Wallet &wallet):
+TxDb::TxDb(const Wallet &wallet):
     wallet_(wallet),
     dir_(wallet.paths.txsDir())
 {
 }
 
 Status
-TxMetaDb::load()
+TxDb::load()
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -109,7 +131,7 @@ TxMetaDb::load()
                 continue;
 
             // Try to load the address:
-            Tx tx;
+            TxMeta tx;
             TxJson json;
             if (json.load(dir_ + de->d_name, wallet_.dataKey()).log() &&
                     json.unpack(tx).log())
@@ -142,7 +164,7 @@ TxMetaDb::load()
 }
 
 Status
-TxMetaDb::save(const Tx &tx)
+TxDb::save(const TxMeta &tx, int64_t balance, int64_t fee)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -150,28 +172,17 @@ TxMetaDb::save(const Tx &tx)
 
     ABC_CHECK(fileEnsureDir(dir_));
     TxJson json(files_[tx.ntxid]);
-    ABC_CHECK(json.pack(tx));
+    if (!json)
+        json = JsonObject();
+    ABC_CHECK(json.pack(tx, balance, fee));
     ABC_CHECK(json.save(path(tx), wallet_.dataKey()));
     files_[tx.ntxid] = json;
 
     return Status();
 }
 
-NtxidList
-TxMetaDb::list()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    NtxidList out;
-    out.reserve(txs_.size());
-    for (const auto &i: txs_)
-        out.push_back(i.first);
-
-    return out;
-}
-
 Status
-TxMetaDb::get(Tx &result, const std::string &ntxid)
+TxDb::get(TxMeta &result, const std::string &ntxid)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -183,8 +194,37 @@ TxMetaDb::get(Tx &result, const std::string &ntxid)
     return Status();
 }
 
+int64_t
+TxDb::airbitzFeePending()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    int64_t totalWanted = 0;
+    int64_t totalSent = 0;
+    for (const auto &i: txs_)
+    {
+        totalWanted += i.second.airbitzFeeWanted;
+        totalSent += i.second.airbitzFeeSent;
+    }
+
+    return totalWanted - totalSent;
+}
+
+time_t
+TxDb::airbitzFeeLastSent()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    time_t out = 0;
+
+    for (const auto &i: txs_)
+        if (i.second.airbitzFeeSent && out < i.second.timeCreation)
+            out = i.second.timeCreation;
+
+    return out;
+}
+
 std::string
-TxMetaDb::path(const Tx &tx)
+TxDb::path(const TxMeta &tx)
 {
     return dir_ + cryptoFilename(wallet_.dataKey(), tx.ntxid) +
            (tx.internal ? "-int.json" : "-ext.json");

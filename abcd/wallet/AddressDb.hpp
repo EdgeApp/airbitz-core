@@ -8,29 +8,27 @@
 #ifndef ABCD_WALLET_ADDRESS_DB_HPP
 #define ABCD_WALLET_ADDRESS_DB_HPP
 
+#include "Metadata.hpp"
+#include "../bitcoin/Typedefs.hpp"
 #include "../json/JsonPtr.hpp"
-#include "../util/Status.hpp"
-#include "TxMetadata.hpp"
 #include <list>
 #include <map>
 #include <mutex>
-#include <set>
 
 namespace abcd {
 
 class Wallet;
-
-struct TxInOut;
-typedef std::set<std::string> AddressSet;
+struct TxInfo;
 typedef std::map<const std::string, std::string> KeyTable;
 
-struct Address
+struct AddressMeta
 {
     size_t index;
     std::string address;
     bool recyclable;
     time_t time;
-    TxMetadata metadata;
+    int64_t requestAmount = 0;
+    Metadata metadata;
 };
 
 /**
@@ -51,7 +49,13 @@ public:
      * Updates a particular address in the database.
      */
     Status
-    save(const Address &address);
+    save(const AddressMeta &address);
+
+    /**
+     * Calculates the transaction's impact on the wallet balance.
+     */
+    int64_t
+    balance(const TxInfo &info) const;
 
     /**
      * Lists all the addresses in the wallet.
@@ -75,13 +79,13 @@ public:
      * Looks up a particular address in the wallet.
      */
     Status
-    get(Address &result, const std::string &address);
+    get(AddressMeta &result, const std::string &address);
 
     /**
      * Returns a fresh address.
      */
     Status
-    getNew(Address &result);
+    getNew(AddressMeta &result);
 
     /**
      * Sets the recycle bit on the address.
@@ -93,14 +97,14 @@ public:
      * Marks a transaction's output addresses as having received money.
      */
     Status
-    markOutputs(const std::list<TxInOut> &ios);
+    markOutputs(const TxInfo &info);
 
 private:
     mutable std::mutex mutex_;
     Wallet &wallet_;
     const std::string dir_;
 
-    std::map<std::string, Address> addresses_;
+    std::map<std::string, AddressMeta> addresses_;
     std::map<std::string, JsonPtr> files_;
 
     /**
@@ -111,7 +115,7 @@ private:
     stockpile();
 
     std::string
-    path(const Address &address);
+    path(const AddressMeta &address);
 };
 
 } // namespace abcd

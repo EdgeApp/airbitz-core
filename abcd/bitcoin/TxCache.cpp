@@ -39,7 +39,6 @@ constexpr uint32_t old_serial_magic = 0x3eab61c3; // From the watcher
 constexpr uint32_t serial_magic = 0xfecdb763;
 constexpr uint8_t serial_tx = 0x42;
 
-typedef std::unordered_set<bc::hash_digest> TxidSet;
 typedef std::unordered_set<bc::point_type> PointSet;
 
 /**
@@ -204,24 +203,20 @@ TxCache::isRelevantInternal(const bc::transaction_type &tx,
 }
 
 TxInfo
-TxCache::txInfo(const bc::transaction_type &tx,
-                const AddressSet &addresses) const
+TxCache::txInfo(const bc::transaction_type &tx) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    return txInfoInternal(tx, addresses);
+    return txInfoInternal(tx);
 }
 
 TxInfo
-TxCache::txInfoInternal(const bc::transaction_type &tx,
-                        const AddressSet &addresses) const
+TxCache::txInfoInternal(const bc::transaction_type &tx) const
 {
     TxInfo out;
-    int64_t totalToUs = 0, totalFromUs = 0;
     int64_t totalIn = 0, totalOut = 0;
 
     // Basic info:
-    const auto txid = bc::hash_transaction(tx);
-    out.txid = bc::encode_hash(txid);
+    out.txid = bc::encode_hash(bc::hash_transaction(tx));
     out.ntxid = bc::encode_hash(makeNtxid(tx));
 
     // Scan inputs:
@@ -233,36 +228,28 @@ TxCache::txInfoInternal(const bc::transaction_type &tx,
                 && input.previous_output.index < i->second.tx.outputs.size())
             output = i->second.tx.outputs[input.previous_output.index];
 
-        bc::payment_address address;
-        if (bc::extract(address, output.script)
-                && addresses.count(address.encoded()))
-            totalFromUs += output.value;
-
         totalIn += output.value;
+        bc::payment_address address;
+        bc::extract(address, output.script);
         out.ios.push_back(TxInOut{true, output.value, address.encoded()});
     }
 
     // Scan outputs:
     for (const auto &output: tx.outputs)
     {
-        bc::payment_address address;
-        if (bc::extract(address, output.script)
-                && addresses.count(address.encoded()))
-            totalToUs += output.value;
-
         totalOut += output.value;
+        bc::payment_address address;
+        bc::extract(address, output.script);
         out.ios.push_back(TxInOut{false, output.value, address.encoded()});
     }
 
-    out.balance = totalToUs - totalFromUs;
     out.fee = totalIn - totalOut;
 
     return out;
 }
 
 Status
-TxCache::txidInfo(TxInfo &result, const std::string &txid,
-                  const AddressSet &addresses) const
+TxCache::txidInfo(TxInfo &result, const std::string &txid) const
 {
     bc::hash_digest hash;
     if (!bc::decode_hash(hash, txid))
@@ -270,7 +257,7 @@ TxCache::txidInfo(TxInfo &result, const std::string &txid,
     bc::transaction_type tx;
     ABC_CHECK(txidLookup(tx, hash));
 
-    result = txInfo(tx, addresses);
+    result = txInfo(tx);
     return Status();
 }
 
@@ -305,7 +292,7 @@ TxCache::list(const AddressSet &addresses) const
         if (isRelevantInternal(row.second.tx, addresses))
         {
             std::pair<TxInfo, TxStatus> pair;
-            pair.first = txInfoInternal(row.second.tx, addresses);
+            pair.first = txInfoInternal(row.second.tx);
             pair.second.height = row.second.block_height;
             const auto problems = graph.problems(row.second.txid);
             pair.second.isDoubleSpent = problems & TxGraph::doubleSpent;

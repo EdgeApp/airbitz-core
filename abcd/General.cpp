@@ -46,10 +46,17 @@ struct AirbitzFeesJson:
 {
     ABC_JSON_CONSTRUCTORS(AirbitzFeesJson, JsonObject)
     ABC_JSON_VALUE(addresses, "addresses", JsonArray)
-    ABC_JSON_INTEGER(maxSatoshi, "maxSatoshi", 0)
-    ABC_JSON_INTEGER(minSatoshi, "minSatoshi", 0)
+    ABC_JSON_NUMBER(incomingRate, "incomingRate", 0)
+    ABC_JSON_INTEGER(incomingMax, "incomingMax", 0)
+    ABC_JSON_INTEGER(incomingMin, "incomingMin", 0)
+    ABC_JSON_NUMBER(outgoingPercentage, "percentage", 0)
+    ABC_JSON_INTEGER(outgoingMax, "maxSatoshi", 0)
+    ABC_JSON_INTEGER(outgoingMin, "minSatoshi", 0)
     ABC_JSON_INTEGER(noFeeMinSatoshi, "noFeeMinSatoshi", 0)
-    ABC_JSON_NUMBER(percentage, "percentage", 0)
+    ABC_JSON_INTEGER(sendMin, "sendMin", 4000) // No dust allowed
+    ABC_JSON_INTEGER(sendPeriod, "sendPeriod", 7*24*60*60) // One week
+    ABC_JSON_STRING(sendPayee, "sendPayee", "Airbitz")
+    ABC_JSON_STRING(sendCategory, "sendCategory", "Expense:Fees")
 };
 
 struct GeneralJson:
@@ -117,13 +124,8 @@ generalBitcoinFeeInfo()
 AirbitzFeeInfo
 generalAirbitzFeeInfo()
 {
-    auto feeJson = generalLoad().airbitzFees();
-
     AirbitzFeeInfo out;
-    out.minSatoshi = feeJson.minSatoshi();
-    out.maxSatoshi = feeJson.maxSatoshi();
-    out.noFeeMinSatoshi = feeJson.noFeeMinSatoshi();
-    out.rate = feeJson.percentage() / 100.0;
+    auto feeJson = generalLoad().airbitzFees();
 
     auto arrayJson = feeJson.addresses();
     size_t size = arrayJson.size();
@@ -134,44 +136,21 @@ generalAirbitzFeeInfo()
             out.addresses.insert(json_string_value(stringJson.get()));
     }
 
-    if (!out.addresses.size())
-        return AirbitzFeeInfo{{}, 0, 0, 0};
+    out.incomingRate = feeJson.incomingRate();
+    out.incomingMin  = feeJson.incomingMin();
+    out.incomingMax  = feeJson.incomingMax();
+
+    out.outgoingRate = feeJson.outgoingPercentage() / 100.0;
+    out.outgoingMin  = feeJson.outgoingMin();
+    out.outgoingMax  = feeJson.outgoingMax();
+    out.noFeeMinSatoshi = feeJson.noFeeMinSatoshi();
+
+    out.sendMin = feeJson.sendMin();
+    out.sendPeriod = feeJson.sendPeriod();
+    out.sendPayee = feeJson.sendPayee();
+    out.sendCategory = feeJson.sendCategory();
+
     return out;
-}
-
-uint64_t
-generalAirbitzFee(const AirbitzFeeInfo &info, uint64_t spend, bool transfer)
-{
-    int64_t fee = info.rate * spend;
-
-    if (transfer)
-        return 0;
-    if (fee < info.noFeeMinSatoshi)
-        return 0;
-    if (fee < info.minSatoshi)
-        return info.minSatoshi;
-    if (info.maxSatoshi < fee)
-        return info.maxSatoshi;
-    return fee;
-}
-
-uint64_t
-generalAirbitzFeeSpendable(const AirbitzFeeInfo &info,
-                           uint64_t usable, bool transfer)
-{
-    uint64_t max = usable + 1; // Must always be more than we can spend
-    uint64_t min = 0;
-    while (min + 1 < max)
-    {
-        uint64_t guess = (min + max) / 2;
-
-        if (usable < guess + generalAirbitzFee(info, guess, transfer))
-            max = guess;
-        else
-            min = guess;
-    }
-
-    return min;
 }
 
 std::vector<std::string>
@@ -184,7 +163,7 @@ generalBitcoinServers()
         std::string serverlist[] = TESTNET_BITCOIN_SERVERS;
 
         size_t size = sizeof(serverlist) / sizeof(*serverlist);
-        for (int i = 0; i < size; i++)
+        for (size_t i = 0; i < size; i++)
             out.push_back(serverlist[i]);
 
         return out;
@@ -209,7 +188,7 @@ generalBitcoinServers()
         std::string serverlist[] = FALLBACK_BITCOIN_SERVERS;
 
         size_t size = sizeof(serverlist) / sizeof(*serverlist);
-        for (int i = 0; i < size; i++)
+        for (size_t i = 0; i < size; i++)
             out.push_back(serverlist[i]);
     }
     return out;

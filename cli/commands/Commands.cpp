@@ -6,7 +6,6 @@
  */
 
 #include "../Command.hpp"
-#include "../Util.hpp"
 #include "../../abcd/General.hpp"
 #include "../../abcd/auth/LoginServer.hpp"
 #include "../../abcd/login/LoginPassword.hpp"
@@ -81,17 +80,6 @@ COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers",
     AuthError authError;
     std::shared_ptr<Login> login;
     ABC_CHECK(loginRecovery(login, *session.lobby, answers, authError));
-
-    return Status();
-}
-
-COMMAND(InitLevel::account, DataSync, "data-sync",
-        "")
-{
-    if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-
-    ABC_CHECK(syncAll(*session.account));
 
     return Status();
 }

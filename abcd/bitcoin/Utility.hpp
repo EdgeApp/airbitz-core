@@ -12,6 +12,7 @@
 #ifndef ABCD_BITCOIN_UTILITY_HPP
 #define ABCD_BITCOIN_UTILITY_HPP
 
+#include "../util/Status.hpp"
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
@@ -33,6 +34,12 @@ isReplaceByFee(const bc::transaction_type &tx);
  */
 bc::operation
 makePushOperation(bc::data_slice data);
+
+/**
+ * Decodes a blob of raw data into a transaction.
+ */
+Status
+decodeTx(bc::transaction_type &result, bc::data_slice rawTx);
 
 } // namespace abcd
 

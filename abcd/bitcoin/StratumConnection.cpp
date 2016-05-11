@@ -6,6 +6,7 @@
  */
 
 #include "StratumConnection.hpp"
+#include "Utility.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../http/Uri.hpp"
 #include "../json/JsonArray.hpp"
@@ -84,15 +85,7 @@ StratumConnection::getTx(
 
         // Convert rawTx to bc::transaction_type:
         bc::transaction_type tx;
-        try
-        {
-            auto deserial = bc::make_deserializer(rawTx.begin(), rawTx.end());
-            bc::satoshi_load(deserial.iterator(), deserial.end(), tx);
-        }
-        catch (bc::end_of_stream)
-        {
-            return ABC_ERROR(ABC_CC_ParseError, "Bad transaction format");
-        }
+        ABC_CHECK(decodeTx(tx, rawTx));
 
         onReply(tx);
         return Status();

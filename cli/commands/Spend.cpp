@@ -6,8 +6,8 @@
  */
 
 #include "../Command.hpp"
-#include "../Util.hpp"
 #include "../../abcd/bitcoin/Text.hpp"
+#include "../../abcd/spend/AirbitzFee.hpp"
 #include "../../abcd/spend/PaymentProto.hpp"
 #include "../../abcd/spend/Spend.hpp"
 #include "../../abcd/util/Util.hpp"
@@ -24,9 +24,6 @@ COMMAND(InitLevel::wallet, SpendAddress, "spend-address",
     const auto address = argv[0];
     const auto amount = atol(argv[1]);
 
-    WatcherThread thread;
-    ABC_CHECK(thread.init(session));
-
     Spend spend(*session.wallet);
     ABC_CHECK(spend.addAddress(address, amount));
     std::cout << "Sending " << amount << " satoshis to " << address
@@ -39,12 +36,6 @@ COMMAND(InitLevel::wallet, SpendAddress, "spend-address",
     ABC_CHECK(spend.saveTx(rawTx, txid));
     std::cout << "Transaction id: " << txid << std::endl;
 
-    bool dirty;
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
-                                     session.password.c_str(),
-                                     session.uuid.c_str(),
-                                     &dirty, &error));
-
     return Status();
 }
 
@@ -55,12 +46,9 @@ COMMAND(InitLevel::wallet, SpendBip70, "spend-bip70",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto uri = argv[0];
 
-    WatcherThread thread;
-    ABC_CHECK(thread.init(session));
-
     PaymentRequest request;
     ABC_CHECK(request.fetch(uri));
-    TxMetadata metadata;
+    Metadata metadata;
     ABC_CHECK(request.signatureOk(metadata.name, uri));
     if (!request.signatureExists())
         std::cout << "warning: Unsigned request" << std::endl;
@@ -77,12 +65,6 @@ COMMAND(InitLevel::wallet, SpendBip70, "spend-bip70",
     ABC_CHECK(spend.saveTx(rawTx, txid));
     std::cout << "Transaction id: " << txid << std::endl;
 
-    bool dirty;
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
-                                     session.password.c_str(),
-                                     session.uuid.c_str(),
-                                     &dirty, &error));
-
     return Status();
 }
 
@@ -94,17 +76,9 @@ COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer",
     const auto dest = argv[0];
     const auto amount = atol(argv[1]);
 
-    WatcherThread thread;
-    ABC_CHECK(thread.init(session));
-
-    Session sessionDest = session;
-    sessionDest.uuid = dest;
-    WatcherThread threadDest;
-    ABC_CHECK(threadDest.init(sessionDest));
-
     std::shared_ptr<Wallet> target;
     ABC_CHECK(Wallet::create(target, *session.account, dest));
-    TxMetadata metadata;
+    Metadata metadata;
     metadata.name = session.wallet->name();
 
     Spend spend(*session.wallet);
@@ -121,17 +95,18 @@ COMMAND(InitLevel::wallet, SpendTransfer, "spend-transfer",
     ABC_CHECK(spend.saveTx(rawTx, txid));
     std::cout << "Transaction id: " << txid << std::endl;
 
-    bool dirty;
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
-                                     session.password.c_str(),
-                                     session.uuid.c_str(),
-                                     &dirty, &error));
-    ABC_CHECK_OLD(ABC_DataSyncWallet(session.username.c_str(),
-                                     session.password.c_str(),
-                                     dest, &dirty, &error));
-
     return Status();
 }
+
+COMMAND(InitLevel::wallet, SpendAirbitzFee, "spend-airbitz-fee",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    ABC_CHECK(airbitzFeeAutoSend(*session.wallet));
+    return Status();
+};
 
 COMMAND(InitLevel::wallet, SpendGetFee, "spend-get-fee",
         " <address> <amount>")

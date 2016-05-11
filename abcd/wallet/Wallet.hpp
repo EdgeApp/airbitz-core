@@ -13,7 +13,7 @@
 #include "../util/Status.hpp"
 #include "../bitcoin/AddressCache.hpp"
 #include "AddressDb.hpp"
-#include "TxMetaDb.hpp"
+#include "TxDb.hpp"
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -99,7 +99,7 @@ private:
 public:
     AddressCache addressCache;
     AddressDb addresses;
-    TxMetaDb txs;
+    TxDb txs;
     TxCache &txCache;
 };
 

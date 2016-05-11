@@ -24,7 +24,7 @@ struct HttpReply
      * Verifies that the response code is in the 200 range.
      */
     Status
-    codeOk();
+    codeOk() const;
 };
 
 /**

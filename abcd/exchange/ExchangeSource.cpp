@@ -9,6 +9,7 @@
 #include "../http/HttpRequest.hpp"
 #include "../json/JsonArray.hpp"
 #include "../json/JsonObject.hpp"
+#include <string.h>
 #include <stdlib.h>
 
 namespace abcd {

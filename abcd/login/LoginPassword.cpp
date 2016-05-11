@@ -65,7 +65,7 @@ loginPasswordServer(std::shared_ptr<Login> &result,
     // Get the LoginPackage:
     LoginPackage loginPackage;
     JsonPtr rootKeyBox;
-    ABC_CHECK(loginServerGetLoginPackage(lobby, authKey, U08Buf(),
+    ABC_CHECK(loginServerGetLoginPackage(lobby, authKey, DataSlice(),
                                          loginPackage, rootKeyBox,
                                          authError));
 

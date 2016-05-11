@@ -122,7 +122,7 @@ broadcastTx(Wallet &self, DataSlice rawTx)
         }
         syncer->cv.notify_all();
     };
-    ABC_CHECK(watcherSend(self, updaterDone, rawTx));
+    watcherSend(self, updaterDone, rawTx).log();
 
     // Loop as long as any thread is still running:
     while (true)

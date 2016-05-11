@@ -7,6 +7,7 @@
 
 #include "ReadLine.hpp"
 #include "../abcd/bitcoin/AddressCache.hpp"
+#include "../abcd/bitcoin/TxCache.hpp"
 #include "../abcd/bitcoin/TxUpdater.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include <fstream>

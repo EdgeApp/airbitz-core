@@ -8,6 +8,7 @@
 #include "FileIO.hpp"
 #include "Debug.hpp"
 #include <dirent.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>

@@ -10,13 +10,14 @@
 
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
-#include "../wallet/TxMetadata.hpp"
+#include "../wallet/Metadata.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <map>
 #include <set>
 
 namespace abcd {
 
+struct AirbitzFeeInfo;
 class PaymentRequest;
 class Wallet;
 
@@ -45,13 +46,13 @@ public:
      * @param metadata Information to be saved in the target wallet.
      */
     Status
-    addTransfer(Wallet &target, uint64_t amount, TxMetadata metadata);
+    addTransfer(Wallet &target, uint64_t amount, Metadata metadata);
 
     /**
      * Provides metadata to be saved alongside the transaction.
      */
     Status
-    metadataSet(const TxMetadata &metadata);
+    metadataSet(const Metadata &metadata);
 
     /**
      * Calculate the fees that will be required to perform this send.
@@ -88,11 +89,19 @@ private:
     Wallet &wallet_;
     std::map<std::string, uint64_t> addresses_;
     std::set<PaymentRequest *> paymentRequests_;
-    std::map<Wallet *, TxMetadata> transfers_;
-    TxMetadata metadata_;
+    std::map<Wallet *, Metadata> transfers_;
+
+    uint64_t airbitzFeePending_;
+    uint64_t airbitzFeeWanted_;
+    uint64_t airbitzFeeSent_;
+    Metadata metadata_;
 
     Status
     makeOutputs(bc::transaction_output_list &result);
+
+    Status
+    addAirbitzFeeOutput(bc::transaction_output_list &outputs,
+                        const AirbitzFeeInfo &info);
 
     Status
     makeTx(libbitcoin::transaction_type &result,

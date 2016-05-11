@@ -16,14 +16,11 @@
 #ifndef ABCD_GENERAL_HPP
 #define ABCD_GENERAL_HPP
 
-#include "util/Status.hpp"
+#include "bitcoin/Typedefs.hpp"
 #include <map>
-#include <set>
 #include <vector>
 
 namespace abcd {
-
-typedef std::set<std::string> AddressSet;
 
 /**
  * Maps from transaction sizes to corresponding fees.
@@ -36,10 +33,23 @@ typedef std::map<size_t, uint64_t> BitcoinFeeInfo;
 struct AirbitzFeeInfo
 {
     AddressSet addresses;
-    int64_t minSatoshi;
-    int64_t maxSatoshi;
+
+    // Fee amounts for incoming funds:
+    double incomingRate;
+    int64_t incomingMax;
+    int64_t incomingMin;
+
+    // Fee amounts for outgoing funds:
+    double outgoingRate;
+    int64_t outgoingMax;
+    int64_t outgoingMin;
     int64_t noFeeMinSatoshi;
-    double rate;
+
+    // When to actually send fees:
+    int64_t sendMin;
+    time_t sendPeriod;
+    std::string sendCategory;
+    std::string sendPayee;
 };
 
 /**
@@ -61,20 +71,6 @@ generalBitcoinFeeInfo();
  */
 AirbitzFeeInfo
 generalAirbitzFeeInfo();
-
-/**
- * Calculates the Airbitz fee for a particular transaction amount.
- */
-uint64_t
-generalAirbitzFee(const AirbitzFeeInfo &info, uint64_t spend, bool transfer);
-
-/**
- * Calculates the maximum amount spendable,
- * factoring in the need for an Airbitz fee.
- */
-uint64_t
-generalAirbitzFeeSpendable(const AirbitzFeeInfo &info,
-                           uint64_t usable, bool transfer);
 
 /**
  * Obtains a list of libbitcoin servers for the current network

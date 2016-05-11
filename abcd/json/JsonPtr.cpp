@@ -6,6 +6,7 @@
  */
 
 #include "JsonPtr.hpp"
+#include "JsonBox.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
@@ -15,7 +16,7 @@
 namespace abcd {
 
 constexpr size_t loadFlags = 0;
-constexpr size_t saveFlags = JSON_INDENT(4) | JSON_SORT_KEYS;
+constexpr size_t saveFlags = JSON_INDENT(1) | JSON_SORT_KEYS;
 constexpr size_t saveFlagsCompact = JSON_COMPACT | JSON_SORT_KEYS;
 
 /**
@@ -121,10 +122,13 @@ JsonPtr::load(const std::string &path)
 Status
 JsonPtr::load(const std::string &path, DataSlice dataKey)
 {
-    json_t *root = nullptr;
-    ABC_CHECK_OLD(ABC_CryptoDecryptJSONFileObject(path.c_str(),
-                  toU08Buf(dataKey), &root, &error));
-    reset(root);
+    JsonBox box;
+    ABC_CHECK(box.load(path));
+
+    DataChunk data;
+    ABC_CHECK(box.decrypt(data, dataKey));
+    ABC_CHECK(decode(toString(data)));
+
     return Status();
 }
 
@@ -158,9 +162,16 @@ JsonPtr::save(const std::string &path) const
 Status
 JsonPtr::save(const std::string &path, DataSlice dataKey) const
 {
-    ABC_CHECK_OLD(ABC_CryptoEncryptJSONFileObject(root_,
-                  toU08Buf(dataKey), ABC_CryptoType_AES256,
-                  path.c_str(), &error));
+    // Some downstream decoders forgot to null-terminate their input.
+    // This is a bug, but we can save old versions of the app from crashing
+    // by including a null byte in the encrypted data.
+    auto data = encode();
+    data.push_back(0);
+
+    JsonBox box;
+    ABC_CHECK(box.encrypt(data, dataKey));
+    ABC_CHECK(box.save(path));
+
     return Status();
 }
 

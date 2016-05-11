@@ -7,9 +7,9 @@
 
 #include "TxUpdater.hpp"
 #include "AddressCache.hpp"
+#include "TxCache.hpp"
 #include "../General.hpp"
 #include "../util/Debug.hpp"
-#include <list>
 
 namespace abcd {
 

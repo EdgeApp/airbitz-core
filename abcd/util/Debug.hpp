@@ -34,6 +34,12 @@ debugLogLoad();
 
 void ABC_DebugLog(const char *format, ...);
 
+/**
+ * Like `ABC_DebugLog`, but takes `std::string`.
+ */
+void
+logInfo(const std::string &message);
+
 } // namespace abcd
 
 #endif
