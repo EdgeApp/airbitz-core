@@ -58,6 +58,7 @@ public:
     const std::string &certPath() const { return certPath_; }
     std::string blockCachePath() const { return dir_ + "Blocks.json"; }
     std::string exchangeCachePath() const { return dir_ + "Exchange.json"; }
+    std::string feeCachePath() const { return dir_ + "Fees.json"; }
     std::string generalPath() const { return dir_ + "Servers.json"; }
     std::string questionsPath() const { return dir_ + "Questions.json"; }
     std::string logPath() const { return dir_ + "abc.log"; }

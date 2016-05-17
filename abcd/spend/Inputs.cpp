@@ -67,48 +67,30 @@ static uint64_t
 minerFee(const bc::transaction_type &tx, uint64_t sourced,
          const BitcoinFeeInfo &feeInfo)
 {
+    // The satoshi per KB rate should depend on the amount sent:
+    auto rate = static_cast<double>(sourced) *
+                (feeInfo.targetFeePercentage / 100);
+
+    // We want the transaction to confirm between 1 and 3 blocks:
+    rate = std::min(rate, feeInfo.confirmFees1);
+    rate = std::max(rate, feeInfo.confirmFees3);
+
     // Signature scripts have a 72-byte signature plus a 32-byte pubkey:
     size_t size = satoshi_raw_size(tx);
     size += (104 * tx.inputs.size());
     size += 35; // For one extra output for change.
 
-    // Look up the size-based fees from the table:
-    uint64_t sizeFee = 0;
-    uint64_t bytesPerFee = 0;
-    for (const auto &row: feeInfo)
-    {
-        if (size <= row.first)
-        {
-            sizeFee = row.second;
-            bytesPerFee = row.first;
-            break;
-        }
-    }
-    if (!sizeFee)
-    {
-        sizeFee = feeInfo.rbegin()->second;
-        bytesPerFee = feeInfo.rbegin()->first;
-    }
+    // Scale the rate by the size of the transaction:
+    auto out = static_cast<uint64_t>(size * (rate / 1000));
 
-    // The amount-based fee is 0.1% of total funds sent:
-    uint64_t amountFee = sourced / 1000;
+    // Round the result up to the nearest 100 satoshis:
+    out += 99;
+    out -= out % 100;
 
-    // Clamp the amount fee between 50% and 100% of the size-based fee:
-    uint64_t minFee = sizeFee / 2;
-    uint64_t incFee = sizeFee / 10;
-    amountFee = std::max(amountFee, minFee);
-    amountFee = std::min(amountFee, sizeFee);
+    // Cap the fee at 0.01 BTC to guard against any potential insanity:
+    out = std::min<uint64_t>(1000000, out);
 
-    // Scale the fee by the size of the transaction
-    amountFee = (uint64_t) ((float)amountFee * ((float)size / (float)bytesPerFee));
-
-    // Still make sure amountFee is larger than the minimum
-    amountFee = std::max(amountFee, minFee);
-
-    // Make the result an integer multiple of the minimum fee:
-    amountFee = amountFee - amountFee % incFee;
-
-    return amountFee;
+    return out;
 }
 
 Status
@@ -138,9 +120,6 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
             tx.inputs.push_back(input);
         }
         fee = minerFee(tx, sourced, feeInfo);
-
-        // Guard against any potential fee insanity:
-        fee = std::min<uint64_t>(1000000, fee);
     }
     while (sourced < totalOut + fee);
 

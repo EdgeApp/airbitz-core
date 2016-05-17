@@ -124,7 +124,6 @@ struct CacheJson:
     ABC_JSON_VALUE(heights, "heights", JsonArray)
 };
 
-
 struct TxJson:
     public JsonObject
 {

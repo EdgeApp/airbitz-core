@@ -26,6 +26,7 @@ class StratumConnection:
 {
 public:
     typedef std::function<void (const std::string &version)> VersionHandler;
+    typedef std::function<void (double fee)> FeeCallback;
 
     ~StratumConnection();
 
@@ -34,6 +35,15 @@ public:
      */
     void
     version(const StatusCallback &onError, const VersionHandler &onReply);
+
+    /**
+     * Fetches an estimate of the mining fees needed
+     * to confirm a transaction in the given number of blocks.
+     */
+    void
+    feeEstimateFetch(const StatusCallback &onError,
+                     const FeeCallback &onReply,
+                     size_t blocks);
 
     /**
      * Broadcasts a transaction over the Bitcoin network.

@@ -321,6 +321,7 @@ TxUpdater::connectTo(long index)
         untriedStratum_.erase(index);
         auto *sc = new StratumConnection();
         ABC_CHECK(sc->connect(server));
+
         bc.reset(sc);
     }
     else
@@ -341,6 +342,15 @@ TxUpdater::connectTo(long index)
         cache_.blocks.heightSet(height);
     };
     bc->heightSubscribe(onError, onReply);
+
+    // Check for mining fees:
+    auto sc = dynamic_cast<StratumConnection *>(bc.get());
+    if (generalEstimateFeesNeedUpdate() && sc)
+    {
+        fetchFeeEstimate(1, sc);
+        fetchFeeEstimate(2, sc);
+        fetchFeeEstimate(3, sc);
+    }
 
     connections_.push_back(bc.release());
     ABC_DebugLog("Connected to %s as %d", server.c_str(), index);
@@ -441,6 +451,30 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
     };
 
     bc->txDataFetch(onError, onReply, txid);
+}
+
+void
+TxUpdater::fetchFeeEstimate(size_t blocks, StratumConnection *sc)
+{
+    const auto uri = sc->uri();
+    auto onError = [this, blocks, uri](Status s)
+    {
+        ABC_DebugLog("Server %s failed to get fees for blocks=%d",
+                     uri.c_str(), blocks);
+    };
+
+    auto onReply = [this, blocks, uri](double fee)
+    {
+        ABC_DebugLog("Server %s returned fee %lf for blocks=%d",
+                     uri.c_str(), fee, blocks);
+
+        if (fee > 0)
+        {
+            generalEstimateFeesUpdate(blocks, fee);
+        }
+    };
+
+    sc->feeEstimateFetch(onError, onReply, blocks);
 }
 
 } // namespace abcd
