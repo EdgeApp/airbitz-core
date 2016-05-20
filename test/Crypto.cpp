@@ -22,7 +22,7 @@ TEST_CASE("File name", "[crypto]")
           "5vJNMWZ68tsp2HJa1AfMhZpcpU9Wm9ccEw7cTwvARHXh");
 }
 
-TEST_CASE("Decryption", "[crypto][encryption]")
+TEST_CASE("AES Decryption", "[crypto][encryption]")
 {
     tABC_Error error;
     abcd::DataChunk key;
@@ -41,6 +41,24 @@ TEST_CASE("Decryption", "[crypto][encryption]")
         "y2s4gvMdFQ==\","
         "\"encryptionType\": 0,"
         "\"iv_hex\": \"96a4cd52670c13df9712fdc1b564d44b\""
+        "}");
+
+    abcd::DataChunk data;
+    CHECK(box.decrypt(data, key));
+    CHECK(abcd::toString(data) == "payload");
+}
+
+TEST_CASE("ChaCha20-Poly1305 Decryption", "[crypto][encryption]")
+{
+    tABC_Error error;
+    abcd::DataChunk key;
+    abcd::base16Decode(key, keyHex);
+    abcd::JsonBox box;
+    box.decode(
+        "{"
+        "\"data_base64\": \"enXJcWh6uKdTsAGGtT91dULURYlnsCs=\","
+        "\"encryptionType\": 1,"
+        "\"iv_hex\": \"0ed6eb831af3b55470f15c39\""
         "}");
 
     abcd::DataChunk data;
