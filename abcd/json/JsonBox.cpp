@@ -8,6 +8,7 @@
 #include "JsonBox.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
+#include "../crypto/Random.hpp"
 #include <sodium.h>
 
 namespace abcd {
@@ -36,12 +37,28 @@ enum CryptoType
 Status
 JsonBox::encrypt(DataSlice data, DataSlice key)
 {
-    DataChunk nonce;
-    AutoU08Buf cyphertext;
-    ABC_CHECK_OLD(ABC_CryptoEncryptAES256Package(data, key,
-                  &cyphertext, nonce, &error));
+    DataChunk cyphertext(data.size() +
+                         crypto_aead_chacha20poly1305_IETF_ABYTES);
+    unsigned long long cyphertextSize;
 
-    ABC_CHECK(typeSet(AES256_CBC_AIRBITZ));
+    // Note: Using random data for the nonce opens us up to risk of reuse.
+    // This is the best we can do, though, since multiple devices need
+    // independent encryption ability.
+    DataChunk nonce;
+    ABC_CHECK(randomData(nonce, crypto_aead_chacha20poly1305_IETF_NPUBBYTES));
+
+    if (crypto_aead_chacha20poly1305_IETF_KEYBYTES != key.size())
+        return ABC_ERROR(ABC_CC_DecryptError, "Bad key size");
+
+    ABC_CHECK(sodiumInit.status);
+    crypto_aead_chacha20poly1305_ietf_encrypt(
+        cyphertext.data(), &cyphertextSize,
+        data.data(), data.size(),
+        nullptr, 0,
+        nullptr,
+        nonce.data(), key.data());
+
+    ABC_CHECK(typeSet(CHACHA20_POLY1305_IETF));
     ABC_CHECK(nonceSet(base16Encode(nonce)));
     ABC_CHECK(cyphertextSet(base64Encode(cyphertext)));
 
