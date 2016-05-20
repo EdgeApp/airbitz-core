@@ -8,7 +8,7 @@
 #ifndef ABCD_JSON_JSON_BOX_HPP
 #define ABCD_JSON_JSON_BOX_HPP
 
-#include "JsonPtr.hpp"
+#include "JsonObject.hpp"
 #include "../util/Data.hpp"
 
 namespace abcd {
@@ -17,10 +17,10 @@ namespace abcd {
  * A json object holding encrypted data.
  */
 class JsonBox:
-    public JsonPtr
+    public JsonObject
 {
 public:
-    ABC_JSON_CONSTRUCTORS(JsonBox, JsonPtr)
+    ABC_JSON_CONSTRUCTORS(JsonBox, JsonObject)
 
     /**
      * Puts a value into the box, encrypting it with the given key.
@@ -33,6 +33,11 @@ public:
      */
     Status
     decrypt(DataChunk &result, DataSlice key);
+
+private:
+    ABC_JSON_INTEGER(type, "encryptionType", 0)
+    ABC_JSON_STRING(nonce, "iv_hex", nullptr)
+    ABC_JSON_STRING(cyphertext, "data_base64", nullptr)
 };
 
 } // namespace abcd

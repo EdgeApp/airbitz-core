@@ -22,12 +22,6 @@ namespace abcd {
 #define AES_256_BLOCK_LENGTH    16
 #define AES_256_KEY_LENGTH      32
 
-typedef enum eABC_CryptoType
-{
-    ABC_CryptoType_AES256 = 0,
-    ABC_CryptoType_Count
-} tABC_CryptoType;
-
 /**
  * Creates a cryptographically secure filename from a meaningful name
  * and a secret key.
@@ -37,17 +31,17 @@ typedef enum eABC_CryptoType
 std::string
 cryptoFilename(DataSlice key, const std::string &name);
 
-// Encryption:
-tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
-                                    const tABC_U08Buf Key,
-                                    tABC_CryptoType   cryptoType,
-                                    json_t            **ppJSON_Enc,
-                                    tABC_Error        *pError);
+tABC_CC ABC_CryptoEncryptAES256Package(DataSlice         Data,
+                                       DataSlice         Key,
+                                       tABC_U08Buf       *pEncData,
+                                       DataChunk         &IV,
+                                       tABC_Error        *pError);
 
-tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
-                                    const tABC_U08Buf Key,
-                                    tABC_U08Buf       *pData,
-                                    tABC_Error        *pError);
+tABC_CC ABC_CryptoDecryptAES256Package(DataChunk &result,
+                                       DataSlice EncData,
+                                       DataSlice Key,
+                                       DataSlice IV,
+                                       tABC_Error *pError);
 
 } // namespace abcd
 

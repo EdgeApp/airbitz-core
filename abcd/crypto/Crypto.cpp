@@ -22,18 +22,6 @@ namespace abcd {
 #define JSON_ENC_DATA_FIELD     "data_base64"
 
 static
-tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
-                                       const tABC_U08Buf Key,
-                                       tABC_U08Buf       *pEncData,
-                                       DataChunk         &IV,
-                                       tABC_Error        *pError);
-static
-tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
-                                       const tABC_U08Buf Key,
-                                       const tABC_U08Buf IV,
-                                       tABC_U08Buf       *pData,
-                                       tABC_Error        *pError);
-static
 tABC_CC ABC_CryptoEncryptAES256(const tABC_U08Buf Data,
                                 const tABC_U08Buf Key,
                                 const tABC_U08Buf IV,
@@ -67,108 +55,6 @@ cryptoFilename(DataSlice key, const std::string &name)
 }
 
 /**
- * Encrypt data into a jansson object
- */
-tABC_CC ABC_CryptoEncryptJSONObject(const tABC_U08Buf Data,
-                                    const tABC_U08Buf Key,
-                                    tABC_CryptoType   cryptoType,
-                                    json_t            **ppJSON_Enc,
-                                    tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    AutoU08Buf     EncData;
-    DataChunk      IV;
-    json_t          *jsonRoot       = NULL;
-
-    ABC_CHECK_NULL_BUF(Data);
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_ASSERT(cryptoType < ABC_CryptoType_Count, ABC_CC_UnknownCryptoType,
-                     "Invalid encryption type");
-    ABC_CHECK_NULL(ppJSON_Enc);
-
-    if (cryptoType == ABC_CryptoType_AES256)
-    {
-        // encrypt
-        ABC_CHECK_RET(ABC_CryptoEncryptAES256Package(Data,
-                      Key,
-                      &EncData,
-                      IV,
-                      pError));
-
-        // Encoding
-        jsonRoot = json_pack("{sissss}",
-                             JSON_ENC_TYPE_FIELD, cryptoType,
-                             JSON_ENC_IV_FIELD,   base16Encode(IV).c_str(),
-                             JSON_ENC_DATA_FIELD, base64Encode(EncData).c_str());
-
-        // assign our final result
-        *ppJSON_Enc = jsonRoot;
-        json_incref(jsonRoot);  // because we will decl below
-    }
-    else
-    {
-        ABC_RET_ERROR(ABC_CC_InvalidCryptoType, "Unsupported encryption type");
-    }
-
-exit:
-    if (jsonRoot)     json_decref(jsonRoot);
-
-    return cc;
-}
-
-/**
- * Given a JSON object holding encrypted data, this function decrypts it
- */
-tABC_CC ABC_CryptoDecryptJSONObject(const json_t      *pJSON_Enc,
-                                    const tABC_U08Buf Key,
-                                    tABC_U08Buf       *pData,
-                                    tABC_Error        *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-
-    DataChunk data;
-    DataChunk iv;
-    int type;
-    json_t *jsonVal = NULL;
-
-    ABC_CHECK_NULL(pJSON_Enc);
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL(pData);
-
-    jsonVal = json_object_get(pJSON_Enc, JSON_ENC_TYPE_FIELD);
-    ABC_CHECK_ASSERT((jsonVal
-                      && json_is_number(jsonVal)), ABC_CC_DecryptError,
-                     "Error parsing JSON encrypt package - missing type");
-    type = (int) json_integer_value(jsonVal);
-    ABC_CHECK_ASSERT(ABC_CryptoType_AES256 == type, ABC_CC_UnknownCryptoType,
-                     "Invalid encryption type");
-
-    // get the IV
-    jsonVal = json_object_get(pJSON_Enc, JSON_ENC_IV_FIELD);
-    ABC_CHECK_ASSERT((jsonVal
-                      && json_is_string(jsonVal)), ABC_CC_DecryptError,
-                     "Error parsing JSON encrypt package - missing iv");
-    ABC_CHECK_NEW(base16Decode(iv, json_string_value(jsonVal)));
-
-    // get the encrypted data
-    jsonVal = json_object_get(pJSON_Enc, JSON_ENC_DATA_FIELD);
-    ABC_CHECK_ASSERT((jsonVal
-                      && json_is_string(jsonVal)), ABC_CC_DecryptError,
-                     "Error parsing JSON encrypt package - missing data");
-    ABC_CHECK_NEW(base64Decode(data, json_string_value(jsonVal)));
-
-    // decrypted the data
-    ABC_CHECK_RET(ABC_CryptoDecryptAES256Package(U08Buf(data), Key, U08Buf(iv),
-                  pData, pError));
-
-exit:
-    return cc;
-}
-
-/**
  * Creates an encrypted aes256 package that includes data, random header/footer and sha256
  * Package format:
  *   1 byte:     h (the number of random header bytes)
@@ -179,9 +65,8 @@ exit:
  *   f bytes:    f random header bytes
  *   32 bytes:   32 bytes SHA256 of all data up to this point
  */
-static
-tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
-                                       const tABC_U08Buf Key,
+tABC_CC ABC_CryptoEncryptAES256Package(DataSlice         Data,
+                                       DataSlice         Key,
                                        tABC_U08Buf       *pEncData,
                                        DataChunk         &IV,
                                        tABC_Error        *pError)
@@ -199,8 +84,6 @@ tABC_CC ABC_CryptoEncryptAES256Package(const tABC_U08Buf Data,
     unsigned char nSizeByte = 0;
     unsigned char sha256Output[SHA256_DIGEST_LENGTH];
 
-    ABC_CHECK_NULL_BUF(Data);
-    ABC_CHECK_NULL_BUF(Key);
     ABC_CHECK_NULL(pEncData);
 
     // create a random IV
@@ -295,12 +178,11 @@ exit:
  *   f bytes:    f random header bytes
  *   32 bytes:   32 bytes SHA256 of all data up to this point
  */
-static
-tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
-                                       const tABC_U08Buf Key,
-                                       const tABC_U08Buf IV,
-                                       tABC_U08Buf       *pData,
-                                       tABC_Error        *pError)
+tABC_CC ABC_CryptoDecryptAES256Package(DataChunk &result,
+                                       DataSlice EncData,
+                                       DataSlice Key,
+                                       DataSlice IV,
+                                       tABC_Error *pError)
 {
     tABC_CC cc = ABC_CC_Ok;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
@@ -315,11 +197,6 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
     unsigned char *pSHALoc;
     unsigned char sha256Output[SHA256_DIGEST_LENGTH];
     unsigned char *pFinalDataPos;
-
-    ABC_CHECK_NULL_BUF(EncData);
-    ABC_CHECK_NULL_BUF(Key);
-    ABC_CHECK_NULL_BUF(IV);
-    ABC_CHECK_NULL(pData);
 
     // start by decrypting the pacakge
     if (ABC_CC_Ok != ABC_CryptoDecryptAES256(EncData, Key, IV, &Data, pError))
@@ -384,8 +261,7 @@ tABC_CC ABC_CryptoDecryptAES256Package(const tABC_U08Buf EncData,
 
     // all is good, so create the final data
     pFinalDataPos = Data.data() + 1 + headerLength + 4;
-    ABC_BUF_NEW(*pData, dataSecLength);
-    memcpy(pData->data(), pFinalDataPos, dataSecLength);
+    result = DataChunk(pFinalDataPos, pFinalDataPos + dataSecLength);
 
 exit:
     return cc;
