@@ -26,7 +26,7 @@ Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
               const LoginPackage &loginPackage, JsonBox rootKeyBox, bool offline)
 {
     std::shared_ptr<Login> out(new Login(lobby, dataKey));
-    ABC_CHECK(out->loadKeys(loginPackage, JsonBox(), true));
+    ABC_CHECK(out->loadKeys(loginPackage, rootKeyBox, offline));
 
     result = std::move(out);
     return Status();
