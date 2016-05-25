@@ -34,6 +34,7 @@ struct BitcoinFeeInfo
 {
     /**
      * Fee per KB aimed at getting approved within 1 confirmation.
+     * This is used when user manually selects "high" fees.
      */
     double confirmFees1;
 
@@ -44,6 +45,7 @@ struct BitcoinFeeInfo
 
     /**
      * Fee per KB aimed at getting approved within 3 confirmations.
+     * This is used when user manually selects "low" fees.
      */
     double confirmFees3;
 

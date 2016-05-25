@@ -23,7 +23,8 @@ namespace abcd {
 
 Spend::Spend(Wallet &wallet):
     wallet_(wallet),
-    airbitzFeePending_(wallet_.txs.airbitzFeePending())
+    airbitzFeePending_(wallet_.txs.airbitzFeePending()),
+    feeLevel_(ABC_SpendFeeLevelStandard)
 {
 }
 
@@ -65,6 +66,14 @@ Status
 Spend::metadataSet(const Metadata &metadata)
 {
     metadata_ = metadata;
+    return Status();
+}
+
+Status
+Spend::feeSet(tABC_SpendFeeLevel feeLevel, uint64_t customFeeSatoshi)
+{
+    feeLevel_ = feeLevel;
+    customFeeSatoshi_ = customFeeSatoshi;
     return Status();
 }
 
@@ -126,7 +135,8 @@ Spend::calculateMax(uint64_t &maxSatoshi)
         ABC_CHECK(addAirbitzFeeOutput(tx.outputs, info));
 
         uint64_t fee, change;
-        if (inputsPickOptimal(fee, change, tx, utxos))
+        if (inputsPickOptimal(fee, change, tx, utxos,
+                              feeLevel_, customFeeSatoshi_))
             min = guess;
         else
             max = guess;
@@ -323,10 +333,12 @@ Spend::makeTx(libbitcoin::transaction_type &result,
     // otherwise use unconfirmed inputs too:
     uint64_t fee, change;
     auto utxos = wallet_.cache.txs.utxos(wallet_.addresses.list(), true);
-    if (!inputsPickOptimal(fee, change, tx, utxos))
+    if (!inputsPickOptimal(fee, change, tx, utxos,
+                           feeLevel_, customFeeSatoshi_))
     {
         auto utxos = wallet_.cache.txs.utxos(wallet_.addresses.list(), false);
-        ABC_CHECK(inputsPickOptimal(fee, change, tx, utxos));
+        ABC_CHECK(inputsPickOptimal(fee, change, tx, utxos,
+                                    feeLevel_, customFeeSatoshi_));
     }
 
     ABC_CHECK(outputsFinalize(tx.outputs, change, changeAddress));

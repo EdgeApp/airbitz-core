@@ -65,15 +65,34 @@ signTx(bc::transaction_type &result, const TxCache &txCache,
 
 static uint64_t
 minerFee(const bc::transaction_type &tx, uint64_t sourced,
-         const BitcoinFeeInfo &feeInfo)
+         const BitcoinFeeInfo &feeInfo,
+         tABC_SpendFeeLevel feeLevel, uint64_t customFeeSatoshi)
 {
-    // The satoshi per KB rate should depend on the amount sent:
-    auto rate = static_cast<double>(sourced) *
-                (feeInfo.targetFeePercentage / 100);
+    double rate;
 
-    // We want the transaction to confirm between 1 and 3 blocks:
-    rate = std::min(rate, feeInfo.confirmFees1);
-    rate = std::max(rate, feeInfo.confirmFees3);
+    switch (feeLevel)
+    {
+    case ABC_SpendFeeLevelStandard:
+        // The satoshi per KB rate should depend on the amount sent:
+        rate = static_cast<double>(sourced) *
+               (feeInfo.targetFeePercentage / 100);
+
+        // We want the transaction to confirm between 1 and 3 blocks:
+        rate = std::min(rate, feeInfo.confirmFees1);
+        rate = std::max(rate, feeInfo.confirmFees3);
+        break;
+
+    case ABC_SpendFeeLevelLow:
+        rate = feeInfo.confirmFees3;
+        break;
+
+    case ABC_SpendFeeLevelHigh:
+        rate = feeInfo.confirmFees1;
+        break;
+
+    case ABC_SpendFeeLevelCustom:
+        return customFeeSatoshi;
+    }
 
     // Signature scripts have a 72-byte signature plus a 32-byte pubkey:
     size_t size = satoshi_raw_size(tx);
@@ -95,7 +114,8 @@ minerFee(const bc::transaction_type &tx, uint64_t sourced,
 
 Status
 inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
-                  bc::transaction_type &tx, const bc::output_info_list &utxos)
+                  bc::transaction_type &tx, const bc::output_info_list &utxos,
+                  tABC_SpendFeeLevel feeLevel, uint64_t customFeeSatoshi)
 {
     auto totalOut = outputsTotal(tx.outputs);
 
@@ -119,7 +139,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
             input.previous_output = point;
             tx.inputs.push_back(input);
         }
-        fee = minerFee(tx, sourced, feeInfo);
+        fee = minerFee(tx, sourced, feeInfo, feeLevel, customFeeSatoshi);
     }
     while (sourced < totalOut + fee);
 
@@ -144,7 +164,7 @@ inputsPickMaximum(uint64_t &resultFee, uint64_t &resultUsable,
         sourced += utxo.value;
     }
     const auto feeInfo = generalBitcoinFeeInfo();
-    uint64_t fee = minerFee(tx, sourced, feeInfo);
+    uint64_t fee = minerFee(tx, sourced, feeInfo, ABC_SpendFeeLevelStandard, 0);
 
     // Verify that we have enough:
     uint64_t totalIn = 0;
