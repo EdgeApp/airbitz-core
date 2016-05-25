@@ -68,7 +68,9 @@ minerFee(const bc::transaction_type &tx, uint64_t sourced,
          const BitcoinFeeInfo &feeInfo)
 {
     // Signature scripts have a 72-byte signature plus a 32-byte pubkey:
-    size_t size = satoshi_raw_size(tx) + 104 * tx.inputs.size();
+    size_t size = satoshi_raw_size(tx);
+    size += (104 * tx.inputs.size());
+    size += 35; // For one extra output for change.
 
     // Look up the size-based fees from the table:
     uint64_t sizeFee = 0;
