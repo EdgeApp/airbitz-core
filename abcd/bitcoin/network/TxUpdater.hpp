@@ -58,6 +58,9 @@ private:
     void *ctx_;
 
     bool wantConnection = false;
+    bool cacheDirty = false;
+    time_t cacheLastSave = 0;
+
     std::vector<IBitcoinConnection *> connections_;
     std::vector<std::string> serverList_;
     std::set<int> untriedLibbitcoin_;

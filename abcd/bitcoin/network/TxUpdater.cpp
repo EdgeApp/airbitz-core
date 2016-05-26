@@ -209,6 +209,19 @@ TxUpdater::wakeup()
         }
     }
 
+    // Save the cache if it is dirty and enough time has elapsed:
+    if (cacheDirty)
+    {
+        time_t now = time(nullptr);
+
+        if (10 <= now - cacheLastSave)
+        {
+            cache_.save().log(); // Failure is fine
+            cacheLastSave = now;
+            cacheDirty = false;
+        }
+    }
+
     // Prune failed servers:
     for (const auto &uri: failedServers_)
     {
@@ -424,9 +437,7 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
 
         cache_.txs.insert(tx);
         cache_.addresses.update();
-        cache_.save().log(); // Failure is fine
-
-        return Status(); // TODO: Actually bop up to the error handler?
+        cacheDirty = true;
     };
 
     bc->txDataFetch(onError, onReply, txid);
