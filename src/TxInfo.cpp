@@ -42,18 +42,23 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
         out->aOutputs[i++] = txo;
     }
 
+    // Best-effort timestamp:
+    time_t timestamp = time(nullptr);
+    if (status.height)
+        self.cache.blocks.headerTime(timestamp, status.height);
+
     // Details:
     TxMeta meta;
     if (self.txs.get(meta, info.ntxid))
     {
-        out->timeCreation = meta.timeCreation;
+        out->timeCreation = std::min(timestamp, meta.timeCreation);
         out->airbitzFeeWanted = meta.airbitzFeeWanted;
         out->airbitzFeeSent = meta.airbitzFeeSent;
         out->pDetails = meta.metadata.toDetails();
     }
     else
     {
-        out->timeCreation = time(nullptr);
+        out->timeCreation = timestamp;
         out->airbitzFeeWanted = 0;
         out->airbitzFeeSent = 0;
         out->pDetails = Metadata().toDetails();
