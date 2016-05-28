@@ -41,6 +41,12 @@ makePushOperation(bc::data_slice data);
 Status
 decodeTx(bc::transaction_type &result, bc::data_slice rawTx);
 
+/**
+ * Decodes a blob of raw data into a block header.
+ */
+Status
+decodeHeader(bc::block_header_type &result, bc::data_slice rawHeader);
+
 } // namespace abcd
 
 #endif

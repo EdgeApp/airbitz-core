@@ -15,6 +15,7 @@
 
 namespace abcd {
 
+class BlockCache;
 class JsonObject;
 
 /**
@@ -62,6 +63,8 @@ class TxCache
 {
 public:
     // Lifetime -----------------------------------------------------------
+
+    TxCache(BlockCache &blockCache);
 
     /**
      * Clears the database for debugging purposes.
@@ -171,6 +174,7 @@ private:
     mutable std::mutex mutex_;
     std::map<std::string, bc::transaction_type> txs_;
     std::map<std::string, HeightInfo> heights_;
+    BlockCache &blocks_;
 
     /**
      * Same as `txInfo`, but should be called with the mutex held.

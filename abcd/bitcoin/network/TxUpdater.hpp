@@ -107,6 +107,9 @@ private:
 
     void
     fetchFeeEstimate(size_t blocks, StratumConnection *sc);
+
+    void
+    blockHeaderFetch(size_t height, IBitcoinConnection *bc);
 };
 
 } // namespace abcd
