@@ -193,7 +193,8 @@ typedef enum eABC_AsyncEventType
     ABC_AsyncEventType_BlockHeightChange,
     ABC_AsyncEventType_BalanceUpdate,
     ABC_AsyncEventType_AddressCheckDone,
-    ABC_AsyncEventType_IncomingSweep
+    ABC_AsyncEventType_IncomingSweep,
+    ABC_AsyncEventType_TransactionUpdate,
 } tABC_AsyncEventType;
 
 /**

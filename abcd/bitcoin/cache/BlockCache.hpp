@@ -24,6 +24,7 @@ class BlockCache
 {
 public:
     typedef std::function<void (size_t height)> HeightCallback;
+    typedef std::function<void (void)> HeaderCallback;
 
     // Lifetime ------------------------------------------------------------
 
@@ -81,6 +82,19 @@ public:
     bool
     headerInsert(size_t height, const libbitcoin::block_header_type &header);
 
+    /**
+     * Provides a callback to be invoked when a new header is inserted.
+     */
+    void
+    onHeaderSet(const HeaderCallback &onHeader);
+
+    /**
+     * Invokes the `onHeader` callback, but only if there are new headers,
+     * and enough time has elapsed.
+     */
+    void
+    onHeaderInvoke(void);
+
     // Missing header list -------------------------------------------------
 
     /**
@@ -107,6 +121,11 @@ private:
 
     // Chain headers:
     std::map<size_t, libbitcoin::block_header_type> headers_;
+    bool headersDirty_ = false;
+    time_t onHeaderLastCall_ = 0;
+    HeaderCallback onHeader_;
+
+    // Missing headers:
     std::set<size_t> headersNeeded_;
 };
 

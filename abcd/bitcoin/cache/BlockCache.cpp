@@ -14,6 +14,8 @@
 
 namespace abcd {
 
+constexpr time_t onHeaderTimeout = 5;
+
 struct BlockHeaderJson:
     public JsonObject
 {
@@ -159,11 +161,41 @@ BlockCache::headerInsert(size_t height, const bc::block_header_type &header)
         ABC_DebugLog("Adding header %d", height);
         headers_[height] = header;
         dirty_ = true;
+        headersDirty_ = true;
 
         return true;
     }
 
     return false;
+}
+
+void
+BlockCache::onHeaderSet(const HeaderCallback &onHeader)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    onHeader_ = onHeader;
+}
+
+void
+BlockCache::onHeaderInvoke(void)
+{
+    std::unique_lock<std::mutex> lock(mutex_);
+
+    if (onHeader_ && headersDirty_)
+    {
+        const auto now = time(nullptr);
+        if (onHeaderTimeout <= now - onHeaderLastCall_)
+        {
+            ABC_DebugLog("onHeaderInvoke SENDING NOTIFICATION");
+            onHeader_();
+            onHeaderLastCall_ = now;
+            headersDirty_ = false;
+        }
+        else
+        {
+            ABC_DebugLog("onHeaderInvoke PENDING NOTIFICATION");
+        }
+    }
 }
 
 size_t

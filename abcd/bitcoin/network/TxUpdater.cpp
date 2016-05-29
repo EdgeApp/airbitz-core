@@ -223,6 +223,7 @@ TxUpdater::wakeup()
         blockHeaderFetch(headerNeeded, bc);
     }
     cache_.blocks.save();
+    cache_.blocks.onHeaderInvoke();
 
     // Save the cache if it is dirty and enough time has elapsed:
     if (cacheDirty)
