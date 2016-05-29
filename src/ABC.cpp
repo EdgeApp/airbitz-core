@@ -1559,6 +1559,23 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_SpendSetFee(void *pSpend,
+                        tABC_SpendFeeLevel feeLevel,
+                        uint64_t customFeeSatoshi,
+                        tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pSpend);
+
+    {
+        auto *spend = static_cast<Spend *>(pSpend);
+        ABC_CHECK_NEW(spend->feeSet(feeLevel, customFeeSatoshi));
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_SpendGetFee(void *pSpend,
                         uint64_t *pFee,
                         tABC_Error *pError)

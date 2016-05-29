@@ -55,6 +55,12 @@ public:
     metadataSet(const Metadata &metadata);
 
     /**
+     * Change the mining fee level of this Spend object
+     */
+    Status
+    feeSet(tABC_SpendFeeLevel feeLevel, uint64_t customFeeSatoshi);
+
+    /**
      * Calculate the fees that will be required to perform this send.
      */
     Status
@@ -94,7 +100,10 @@ private:
     uint64_t airbitzFeePending_;
     uint64_t airbitzFeeWanted_;
     uint64_t airbitzFeeSent_;
+
     Metadata metadata_;
+    tABC_SpendFeeLevel feeLevel_;
+    uint64_t customFeeSatoshi_;
 
     Status
     makeOutputs(bc::transaction_output_list &result);

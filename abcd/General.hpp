@@ -25,7 +25,41 @@ namespace abcd {
 /**
  * Maps from transaction sizes to corresponding fees.
  */
-typedef std::map<size_t, uint64_t> BitcoinFeeInfo;
+//typedef std::map<size_t, uint64_t> BitcoinFeeInfo;
+
+/**
+ * New Bitcoin fee information.
+ */
+struct BitcoinFeeInfo
+{
+    /**
+     * Fee per KB aimed at getting approved within 1 confirmation.
+     * This is used when user manually selects "high" fees.
+     */
+    double confirmFees1;
+
+    /**
+     * Fee per KB aimed at getting approved within 2 confirmations.
+     */
+    double confirmFees2;
+
+    /**
+     * Fee per KB aimed at getting approved within 3 confirmations.
+     * This is used when user manually selects "low" fees.
+     */
+    double confirmFees3;
+
+    /**
+     * The percentage of the outgoing funds that we will try to send as a mining fee
+     * ie. If outgoing funds = 1 BTC and targetFeePercentage = 0.2, then we will try
+     * to send 0.002 BTC as the per KB mining fee. Note that we will not go below
+     * the confirmFees3 value. We will cap the fees to confirmFees2 unless the user chooses
+     * to send a "High" fee in which case we will use confirmFees1 regardless
+     * of amount of outgoing funds.
+     */
+    double targetFeePercentage;
+};
+
 
 /**
  * Airbitz transaction fee information.
@@ -57,6 +91,21 @@ struct AirbitzFeeInfo
  */
 Status
 generalUpdate();
+
+/**
+ * Returns true if the estimated fees should be redownloaded from a Stratum
+ * server. Occurs if estimated fees file is out of date or doesn't exist.
+ */
+bool
+generalEstimateFeesNeedUpdate();
+
+/**
+ * Updates the cached estimated fees with the specified fee.
+ * Value is denoted as the fee amount in BTC / kB to gain a confirmation
+ * in 'blocks' number of blocks.
+ */
+Status
+generalEstimateFeesUpdate(size_t blocks, double fee);
 
 /**
  * Obtains the Bitcoin mining fee information.

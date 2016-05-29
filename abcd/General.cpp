@@ -21,25 +21,17 @@
 #include "json/JsonArray.hpp"
 #include "util/FileIO.hpp"
 #include <time.h>
+#include <mutex>
 
 namespace abcd {
-
-constexpr unsigned fallbackFee = 10000; // Satoshi per KB
 
 #define FALLBACK_BITCOIN_SERVERS {  "tcp://obelisk.airbitz.co:9091", \
                                     "stratum://stratum-az-wusa.airbitz.co:50001", \
                                     "stratum://stratum-az-wjapan.airbitz.co:50001", \
                                     "stratum://stratum-az-neuro.airbitz.co:50001" }
 #define TESTNET_BITCOIN_SERVERS {   "tcp://obelisk-testnet.airbitz.co:9091" }
-#define GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS   (24 * 60 * 60) // how many seconds old can the info file before it should be updated
-
-struct BitcoinFeeJson:
-    public JsonObject
-{
-    ABC_JSON_CONSTRUCTORS(BitcoinFeeJson, JsonObject)
-    ABC_JSON_INTEGER(size, "txSizeBytes", 0)
-    ABC_JSON_INTEGER(fee, "feeSatoshi", fallbackFee)
-};
+#define GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS   (8 * 60 * 60) // how many seconds old can the info file be before it should be updated
+#define ESTIMATED_FEES_ACCEPTABLE_INFO_FILE_AGE_SECS   (3 * 60 * 60) // how many seconds old can the info file be before it should be updated
 
 struct AirbitzFeesJson:
     public JsonObject
@@ -59,10 +51,30 @@ struct AirbitzFeesJson:
     ABC_JSON_STRING(sendCategory, "sendCategory", "Expense:Fees")
 };
 
+struct BitcoinFeesJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(BitcoinFeesJson, JsonObject)
+    ABC_JSON_INTEGER(confirmFees1, "confirmFees1", 43210)
+    ABC_JSON_INTEGER(confirmFees2, "confirmFees2", 32110)
+    ABC_JSON_INTEGER(confirmFees3, "confirmFees3", 21098)
+    ABC_JSON_NUMBER(targetFeePercentage, "targetFeePercentage", 0.1)
+};
+
+struct EstimateFeesJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(EstimateFeesJson, JsonObject)
+    ABC_JSON_INTEGER(confirmFees1, "confirmFees1", 0)
+    ABC_JSON_INTEGER(confirmFees2, "confirmFees2", 0)
+    ABC_JSON_INTEGER(confirmFees3, "confirmFees3", 0)
+};
+
+
 struct GeneralJson:
     public JsonObject
 {
-    ABC_JSON_VALUE(bitcoinFees,    "minersFees", JsonArray)
+    ABC_JSON_VALUE(bitcoinFees,    "minersFees2", BitcoinFeesJson)
     ABC_JSON_VALUE(airbitzFees,    "feesAirBitz", AirbitzFeesJson)
     ABC_JSON_VALUE(bitcoinServers, "obeliskServers", JsonArray)
     ABC_JSON_VALUE(syncServers,    "syncServers", JsonArray)
@@ -103,21 +115,95 @@ generalUpdate()
     return Status();
 }
 
+static EstimateFeesJson
+estimateFeesLoad()
+{
+    if (!gContext)
+        return EstimateFeesJson();
+
+    const auto path = gContext->paths.feeCachePath();
+    if (!fileExists(path))
+        return EstimateFeesJson();
+
+    EstimateFeesJson out;
+    out.load(path).log();
+    return out;
+}
+
+
+bool
+generalEstimateFeesNeedUpdate()
+{
+    const auto path = gContext->paths.feeCachePath();
+
+    time_t lastTime;
+    if (!fileTime(lastTime, path) ||
+            lastTime + ESTIMATED_FEES_ACCEPTABLE_INFO_FILE_AGE_SECS < time(nullptr))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+static bool estimatedFeesInitialized = 0;
+static double estimatedFees[4];
+static size_t estimatedFeesNumResponses[4];
+static std::mutex mutex_;
+
+Status
+generalEstimateFeesUpdate(size_t blocks, double fee)
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (!estimatedFeesInitialized)
+    {
+        estimatedFees[1] = estimatedFeesNumResponses[1] = 0;
+        estimatedFees[2] = estimatedFeesNumResponses[2] = 0;
+        estimatedFees[3] = estimatedFeesNumResponses[3] = 0;
+        estimatedFeesInitialized = true;
+    }
+
+    // Take the average of all the responses for a given block target
+    uint64_t tempFee = (estimatedFees[blocks] * estimatedFeesNumResponses[blocks])
+                       + (uint64_t) (fee * 100000000.0);
+    estimatedFeesNumResponses[blocks]++;
+    estimatedFees[blocks] = tempFee / estimatedFeesNumResponses[blocks];
+
+    if (estimatedFees[1] > 0 &&
+            estimatedFees[2] > 0 &&
+            estimatedFees[3] > 0)
+    {
+        // Save the fees in a Json file
+        EstimateFeesJson feesJson;
+        feesJson.confirmFees1Set(estimatedFees[1]);
+        feesJson.confirmFees2Set(estimatedFees[2]);
+        feesJson.confirmFees3Set(estimatedFees[3]);
+
+        const auto path = gContext->paths.feeCachePath();
+
+        ABC_CHECK(feesJson.save(path));
+    }
+    return Status();
+}
+
+
 BitcoinFeeInfo
 generalBitcoinFeeInfo()
 {
-    auto arrayJson = generalLoad().bitcoinFees();
+    BitcoinFeesJson feeJson = generalLoad().bitcoinFees();
+    EstimateFeesJson estimateFeesJson = estimateFeesLoad();
 
     BitcoinFeeInfo out;
-    size_t size = arrayJson.size();
-    for (size_t i = 0; i < size; i++)
-    {
-        BitcoinFeeJson feeJson = arrayJson[i];
-        out[feeJson.size()] = feeJson.fee();
-    }
 
-    if (!out.size())
-        out[1000] = fallbackFee;
+    out.confirmFees1 = estimateFeesJson.confirmFees1() ?
+                       estimateFeesJson.confirmFees1() : feeJson.confirmFees1();
+    out.confirmFees2 = estimateFeesJson.confirmFees2() ?
+                       estimateFeesJson.confirmFees2() : feeJson.confirmFees2();
+    out.confirmFees3 = estimateFeesJson.confirmFees3() ?
+                       estimateFeesJson.confirmFees3() : feeJson.confirmFees3();
+    out.targetFeePercentage = feeJson.targetFeePercentage();
+
     return out;
 }
 

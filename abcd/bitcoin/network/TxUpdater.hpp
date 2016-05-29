@@ -18,6 +18,7 @@ namespace abcd {
 
 class Cache;
 class IBitcoinConnection;
+class StratumConnection;
 
 /**
  * Syncs a set of transactions with the bitcoin server.
@@ -103,6 +104,9 @@ private:
 
     void
     fetchTx(const std::string &txid, IBitcoinConnection *bc);
+
+    void
+    fetchFeeEstimate(size_t blocks, StratumConnection *sc);
 };
 
 } // namespace abcd

@@ -65,6 +65,26 @@ StratumConnection::version(const StatusCallback &onError,
 }
 
 void
+StratumConnection::feeEstimateFetch(const StatusCallback &onError,
+                                    const FeeCallback &onReply,
+                                    size_t blocks)
+{
+    JsonArray params;
+    params.append(json_integer(blocks));
+
+    auto decoder = [onReply](JsonPtr payload) -> Status
+    {
+        if (!json_is_number(payload.get()))
+            return ABC_ERROR(ABC_CC_JSONError, "Bad reply format");
+
+        onReply(json_number_value(payload.get()));
+        return Status();
+    };
+
+    sendMessage("blockchain.estimatefee", params, onError, decoder);
+}
+
+void
 StratumConnection::sendTx(const StatusCallback &onDone, DataSlice tx)
 {
     JsonArray params;

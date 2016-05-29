@@ -197,6 +197,17 @@ typedef enum eABC_AsyncEventType
 } tABC_AsyncEventType;
 
 /**
+ * Mining fee slider settings.
+ */
+typedef enum eABC_SpendFeeLevel
+{
+    ABC_SpendFeeLevelLow = 0,
+    ABC_SpendFeeLevelStandard,
+    ABC_SpendFeeLevelHigh,
+    ABC_SpendFeeLevelCustom,
+} tABC_SpendFeeLevel;
+
+/**
  * AirBitz Core Asynchronous Structure
  *
  * This structure contains the detailed information associated
@@ -1133,6 +1144,14 @@ tABC_CC ABC_SpendAddTransfer(void *pSpend,
 tABC_CC ABC_SpendSetMetadata(void *pSpend,
                              tABC_TxDetails *pDetails,
                              tABC_Error *pError);
+
+/**
+ * Change the desired fee level of the current spend
+ */
+tABC_CC ABC_SpendSetFee(void *pSpend,
+                        tABC_SpendFeeLevel feeLevel,
+                        uint64_t customFeeSatoshi,
+                        tABC_Error *pError);
 
 /**
  * Calculate the fee needed to perform this spend.
