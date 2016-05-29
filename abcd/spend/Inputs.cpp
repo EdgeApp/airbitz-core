@@ -79,7 +79,7 @@ minerFee(const bc::transaction_type &tx, uint64_t sourced,
 
         // We want the transaction to confirm between 1 and 3 blocks:
         rate = std::min(rate, feeInfo.confirmFees1);
-        rate = std::max(rate, feeInfo.confirmFees3);
+        rate = std::max(rate, feeInfo.confirmFees2);
         break;
 
     case ABC_SpendFeeLevelLow:
