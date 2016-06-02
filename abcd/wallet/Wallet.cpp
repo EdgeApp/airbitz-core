@@ -31,13 +31,13 @@ struct WalletJson:
 struct CurrencyJson:
     public JsonObject
 {
-    ABC_JSON_INTEGER(currency, "num", 0)
+    ABC_JSON_INTEGER(currency, "num", 840)
 };
 
 struct NameJson:
     public JsonObject
 {
-    ABC_JSON_STRING(name, "walletName", "")
+    ABC_JSON_STRING(name, "walletName", "Wallet With No Name")
 };
 
 Wallet::~Wallet()
@@ -241,7 +241,6 @@ Wallet::loadSync()
     // Load the currency:
     CurrencyJson currencyJson;
     currencyJson.load(paths.currencyPath(), dataKey());
-    ABC_CHECK(currencyJson.currencyOk());
     currency_ = currencyJson.currency();
 
     // Load the name (failure is acceptable):
