@@ -58,6 +58,11 @@ using namespace abcd;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok); \
     ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized")
 
+#define ABC_PROLOG_QUIET() \
+    tABC_CC cc = ABC_CC_Ok; \
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok); \
+    ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized")
+
 #define ABC_GET_LOBBY() \
     std::shared_ptr<Lobby> lobby; \
     ABC_CHECK_NEW(cacheLobby(lobby, szUserName))
@@ -1247,7 +1252,7 @@ tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
                               int currencyNum,
                               tABC_Error *pError)
 {
-    ABC_PROLOG();
+    ABC_PROLOG_QUIET();
 
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(*pCurrency, satoshi,
                   static_cast<Currency>(currencyNum)));
@@ -1316,23 +1321,23 @@ tABC_CC ABC_FormatAmount(int64_t amount,
                          bool bAddSign,
                          tABC_Error *pError)
 {
-    // Cannot use ABC_PROLOG - too much debug output
-    tABC_CC cc = ABC_CC_Ok;
-    std::string out;
-
+    ABC_PROLOG_QUIET();
     ABC_CHECK_NULL(pszAmountOut);
 
-    if (amount < 0)
     {
-        out = bc::encode_base10(-amount, decimalPlaces);
-        if (bAddSign)
-            out.insert(0, 1, '-');
+        std::string out;
+        if (amount < 0)
+        {
+            out = bc::encode_base10(-amount, decimalPlaces);
+            if (bAddSign)
+                out.insert(0, 1, '-');
+        }
+        else
+        {
+            out = bc::encode_base10(amount, decimalPlaces);
+        }
+        *pszAmountOut = stringCopy(out);
     }
-    else
-    {
-        out = bc::encode_base10(amount, decimalPlaces);
-    }
-    *pszAmountOut = stringCopy(out);
 
 exit:
     return cc;
@@ -2625,12 +2630,7 @@ exit:
 tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxid,
                      int *height, tABC_Error *pError)
 {
-    // Cannot use ABC_PROLOG - too much debug spew
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized,
-                     "The core library has not been initalized");
-
+    ABC_PROLOG_QUIET();
     ABC_CHECK_NULL(szTxid);
 
     {
@@ -2654,11 +2654,7 @@ exit:
 tABC_CC ABC_BlockHeight(const char *szWalletUUID, int *height,
                         tABC_Error *pError)
 {
-    // Cannot use ABC_PROLOG - too much debug spew
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized,
-                     "The core library has not been initalized");
+    ABC_PROLOG_QUIET();
 
     {
         *height = gContext->blockCache.height();
