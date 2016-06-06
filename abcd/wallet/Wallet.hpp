@@ -13,7 +13,6 @@
 #include "../util/Status.hpp"
 #include "AddressDb.hpp"
 #include "TxDb.hpp"
-#import "../../minilibs/libbitcoin-client/client.hpp"
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -76,8 +75,8 @@ private:
     // Account data:
     DataChunk bitcoinKey_;
     DataChunk bitcoinKeyBackup_;
-    bc::hd_public_key bitcoinXPub_;
-    bc::hd_public_key bitcoinXPubBackup_;
+    std::string bitcoinXPub_;
+    std::string bitcoinXPubBackup_;
     DataChunk dataKey_;
     std::string syncKey_;
 
