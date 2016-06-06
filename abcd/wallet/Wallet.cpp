@@ -239,11 +239,10 @@ Wallet::loadKeys()
     bitcoinKeyBackup_ = bitcoinKey_;
     ABC_CHECK(base16Decode(dataKey_, json.dataKey()));
     syncKey_ = json.syncKey();
-    auto m00 = bc::hd_private_key(bitcoinKey_).
-    generate_private_key(0).
+    auto m0 = bc::hd_private_key(bitcoinKey_).
     generate_private_key(0);
-    
-    bitcoinXPub_ = m00;
+
+    bitcoinXPub_ = m0;
     bitcoinXPubBackup_ = bitcoinXPub_;
 
     return Status();
