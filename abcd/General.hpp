@@ -50,6 +50,17 @@ struct BitcoinFeeInfo
     double confirmFees3;
 
     /**
+     * Fee per KB aimed at getting approved within 4 confirmations.
+     */
+    double confirmFees4;
+
+    /**
+     * Fee per KB aimed at getting approved within 5 confirmations.
+     * This is used when user manually selects "low" fees.
+     */
+    double confirmFees5;
+
+    /**
      * The percentage of the outgoing funds that we will try to send as a mining fee
      * ie. If outgoing funds = 1 BTC and targetFeePercentage = 0.2, then we will try
      * to send 0.002 BTC as the per KB mining fee. Note that we will not go below

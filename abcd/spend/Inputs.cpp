@@ -64,7 +64,7 @@ signTx(bc::transaction_type &result, const TxCache &txCache,
 }
 
 static uint64_t
-minerFee(const bc::transaction_type &tx, uint64_t sourced,
+minerFee(const bc::transaction_type &tx, uint64_t amountSatoshi,
          const BitcoinFeeInfo &feeInfo,
          tABC_SpendFeeLevel feeLevel, uint64_t customFeeSatoshi)
 {
@@ -74,16 +74,16 @@ minerFee(const bc::transaction_type &tx, uint64_t sourced,
     {
     case ABC_SpendFeeLevelStandard:
         // The satoshi per KB rate should depend on the amount sent:
-        rate = static_cast<double>(sourced) *
+        rate = static_cast<double>(amountSatoshi) *
                (feeInfo.targetFeePercentage / 100);
 
-        // We want the transaction to confirm between 1 and 3 blocks:
-        rate = std::min(rate, feeInfo.confirmFees1);
-        rate = std::max(rate, feeInfo.confirmFees2);
+        // We want the transaction to confirm between 2 and 4 blocks:
+        rate = std::min(rate, feeInfo.confirmFees2);
+        rate = std::max(rate, feeInfo.confirmFees4);
         break;
 
     case ABC_SpendFeeLevelLow:
-        rate = feeInfo.confirmFees3;
+        rate = feeInfo.confirmFees5;
         break;
 
     case ABC_SpendFeeLevelHigh:
@@ -91,7 +91,8 @@ minerFee(const bc::transaction_type &tx, uint64_t sourced,
         break;
 
     case ABC_SpendFeeLevelCustom:
-        return customFeeSatoshi;
+        rate = customFeeSatoshi;
+        break;
     }
 
     // Signature scripts have a 72-byte signature plus a 32-byte pubkey:
@@ -139,7 +140,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
             input.previous_output = point;
             tx.inputs.push_back(input);
         }
-        fee = minerFee(tx, sourced, feeInfo, feeLevel, customFeeSatoshi);
+        fee = minerFee(tx, totalOut, feeInfo, feeLevel, customFeeSatoshi);
     }
     while (sourced < totalOut + fee);
 

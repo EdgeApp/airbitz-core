@@ -350,6 +350,8 @@ TxUpdater::connectTo(long index)
         fetchFeeEstimate(1, sc);
         fetchFeeEstimate(2, sc);
         fetchFeeEstimate(3, sc);
+        fetchFeeEstimate(4, sc);
+        fetchFeeEstimate(5, sc);
     }
 
     connections_.push_back(bc.release());
