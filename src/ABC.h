@@ -1047,6 +1047,15 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
                              char **pszWalletSeed,
                              tABC_Error *pError);
 
+/**
+ * Export the HD public seed (XPub) used to generate all addresses within a wallet.
+ */
+tABC_CC ABC_ExportWalletXPub(const char *szUserName,
+                             const char *szPassword,
+                             const char *szWalletUUID,
+                             char **pszWalletXPub,
+                             tABC_Error *pError);
+
 tABC_CC ABC_CsvExport(const char *szUserName,
                       const char *szPassword,
                       const char *szUUID,

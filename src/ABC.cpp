@@ -1064,6 +1064,27 @@ exit:
 }
 
 /**
+ * Export the private seed used to generate all addresses within a wallet.
+ * For now, this uses a simple hex dump of the raw data.
+ */
+tABC_CC ABC_ExportWalletXPub(const char *szUserName,
+                             const char *szPassword,
+                             const char *szWalletUUID,
+                             char **pszWalletXPub,
+                             tABC_Error *pError)
+{
+    ABC_PROLOG();
+
+    {
+        ABC_GET_WALLET();
+        *pszWalletXPub = stringCopy(wallet->bitcoinXPub());
+    }
+
+exit:
+    return cc;
+}
+
+/**
  * Gets wallet UUIDs for a specified account.
  *
  * @param szUserName            UserName for the account associated with this wallet

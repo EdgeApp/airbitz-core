@@ -83,6 +83,18 @@ Wallet::bitcoinKey() const
     return bitcoinKey_;
 }
 
+std::string
+Wallet::bitcoinXPub()
+{
+    // We do not want memory corruption here.
+    // Otherwise, we might generate a bad bitcoin address and lose money:
+    uint32_t fingerprint = bitcoinXPub_.fingerprint();
+    uint32_t fingerprintBackup = bitcoinXPubBackup_.fingerprint();
+
+    assert(fingerprint == fingerprintBackup);
+    return bitcoinXPub_.encoded();
+}
+
 int
 Wallet::currency() const
 {
@@ -227,6 +239,12 @@ Wallet::loadKeys()
     bitcoinKeyBackup_ = bitcoinKey_;
     ABC_CHECK(base16Decode(dataKey_, json.dataKey()));
     syncKey_ = json.syncKey();
+    auto m00 = bc::hd_private_key(bitcoinKey_).
+    generate_private_key(0).
+    generate_private_key(0);
+    
+    bitcoinXPub_ = m00;
+    bitcoinXPubBackup_ = bitcoinXPub_;
 
     return Status();
 }
