@@ -102,8 +102,8 @@ public:
     info(TxInfo &result, const std::string &txid) const;
 
     /**
-     * Returns true if the transaction is present in the cache
-     * along with its inputs.
+     * Returns true if the transaction or its inputs
+     * are missing from the cache.
      */
     bool
     missing(const std::string &txid) const;

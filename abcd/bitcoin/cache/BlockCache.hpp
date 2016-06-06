@@ -55,13 +55,13 @@ private:
     HeightCallback onHeight_;
 
     /**
-     * Loads the cache from the specified file.
+     * Reads the database contents from disk.
      */
     Status
     load();
 
     /**
-     * Saves the cache to the specified file.
+     * Saves the database contents to disk.
      */
     Status
     save();
