@@ -22,6 +22,8 @@ class BlockCache
 public:
     typedef std::function<void (size_t height)> HeightCallback;
 
+    // Lifetime -----------------------------------------------------------
+
     BlockCache(const std::string &path);
 
     /**
@@ -31,10 +33,26 @@ public:
     clear();
 
     /**
+     * Reads the database contents from disk.
+     */
+    Status
+    load();
+
+    /**
+     * Saves the database contents to disk, but only if there are changes.
+     */
+    Status
+    save();
+
+    // Queries ------------------------------------------------------------
+
+    /**
      * Returns the highest block that this cache has seen.
      */
     size_t
     height() const;
+
+    // Updates ------------------------------------------------------------
 
     /**
      * Updates the block height.
@@ -51,20 +69,11 @@ public:
 private:
     mutable std::mutex mutex_;
     const std::string path_;
+    bool dirty_;
+
+    // Chain height:
     size_t height_;
     HeightCallback onHeight_;
-
-    /**
-     * Reads the database contents from disk.
-     */
-    Status
-    load();
-
-    /**
-     * Saves the database contents to disk.
-     */
-    Status
-    save();
 };
 
 } // namespace abcd

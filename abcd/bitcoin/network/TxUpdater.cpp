@@ -340,6 +340,7 @@ TxUpdater::connectTo(long index)
     {
         ABC_DebugLog("Server %s sent height %d", uri.c_str(), height);
         cache_.blocks.heightSet(height);
+        cache_.blocks.save();
     };
     bc->heightSubscribe(onError, onReply);
 

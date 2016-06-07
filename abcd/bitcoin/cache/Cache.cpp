@@ -22,6 +22,7 @@ void
 Cache::clear()
 {
     blocks.clear();
+    blocks.save();
     txs.clear();
     save();
 }

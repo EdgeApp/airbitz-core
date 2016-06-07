@@ -18,9 +18,9 @@ struct BlockCacheJson:
 
 BlockCache::BlockCache(const std::string &path):
     path_(path),
+    dirty_(false),
     height_(0)
 {
-    load().log(); // Failure is fine
 }
 
 void
@@ -28,7 +28,36 @@ BlockCache::clear()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     height_ = 0;
-    save().log(); // Failure is fine
+    dirty_ = true;
+}
+
+Status
+BlockCache::load()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    BlockCacheJson json;
+    ABC_CHECK(json.load(path_));
+    height_ = json.height();
+    dirty_ = false;
+
+    return Status();
+}
+
+Status
+BlockCache::save()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (dirty_)
+    {
+        BlockCacheJson json;
+        ABC_CHECK(json.heightSet(height_));
+        ABC_CHECK(json.save(path_));
+        dirty_ = false;
+    }
+
+    return Status();
 }
 
 size_t
@@ -46,7 +75,7 @@ BlockCache::heightSet(size_t height)
     if (height_ < height)
     {
         height_ = height;
-        save().log(); // Failure is fine
+        dirty_ = true;
 
         if (onHeight_)
             onHeight_(height_);
@@ -58,24 +87,6 @@ BlockCache::onHeightSet(const HeightCallback &onHeight)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     onHeight_ = onHeight;
-}
-
-Status
-BlockCache::load()
-{
-    BlockCacheJson json;
-    ABC_CHECK(json.load(path_));
-    height_ = json.height();
-    return Status();
-}
-
-Status
-BlockCache::save()
-{
-    BlockCacheJson json;
-    ABC_CHECK(json.heightSet(height_));
-    ABC_CHECK(json.save(path_));
-    return Status();
 }
 
 } // namespace abcd
