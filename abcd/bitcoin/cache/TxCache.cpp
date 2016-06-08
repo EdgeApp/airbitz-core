@@ -6,6 +6,7 @@
  */
 
 #include "TxCache.hpp"
+#include "BlockCache.hpp"
 #include "../Utility.hpp"
 #include "../../crypto/Encoding.hpp"
 #include "../../json/JsonArray.hpp"
@@ -143,6 +144,12 @@ struct HeightJson:
     ABC_JSON_INTEGER(firstSeen, "firstSeen", 0)
 };
 
+
+TxCache::TxCache(BlockCache &blockCache):
+    blocks_(blockCache)
+{
+}
+
 void
 TxCache::clear()
 {
@@ -186,6 +193,7 @@ TxCache::load(JsonObject &json)
             info.height = heightJson.height();
             info.firstSeen = heightJson.firstSeen();
             heights_[heightJson.txid()] = info;
+            blocks_.headerNeededAdd(info.height);
         }
     }
 
@@ -466,6 +474,7 @@ TxCache::confirmed(const std::string &txid, size_t height, time_t now)
 
     auto &info = heights_[txid];
     info.height = height;
+    blocks_.headerNeededAdd(height);
     if (0 == info.firstSeen)
         info.firstSeen = now;
 }

@@ -19,6 +19,7 @@
 
 namespace libbitcoin {
 
+struct block_header_type;
 struct transaction_type;
 
 } // namespace libbitcoin

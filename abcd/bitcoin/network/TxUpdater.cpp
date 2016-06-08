@@ -209,6 +209,22 @@ TxUpdater::wakeup()
         }
     }
 
+    // Grab block headers that we don't have:
+    while (true)
+    {
+        size_t headerNeeded = cache_.blocks.headerNeeded();
+        if (!headerNeeded)
+            break;
+
+        auto *bc = pickOtherServer();
+        if (!bc)
+            break;
+
+        blockHeaderFetch(headerNeeded, bc);
+    }
+    cache_.blocks.save();
+    cache_.blocks.onHeaderInvoke();
+
     // Save the cache if it is dirty and enough time has elapsed:
     if (cacheDirty)
     {
@@ -477,6 +493,28 @@ TxUpdater::fetchFeeEstimate(size_t blocks, StratumConnection *sc)
     };
 
     sc->feeEstimateFetch(onError, onReply, blocks);
+}
+
+void
+TxUpdater::blockHeaderFetch(size_t height, IBitcoinConnection *bc)
+{
+    const auto uri = bc->uri();
+    auto onError = [this, height, uri](Status s)
+    {
+        ABC_DebugLog("Server %s failed to get header %d",
+                     uri.c_str(), height);
+        failedServers_.insert(uri);
+    };
+
+    auto onReply = [this, height, uri](const bc::block_header_type &header)
+    {
+        ABC_DebugLog("Server %s returned header %d",
+                     uri.c_str(), height);
+
+        cache_.blocks.headerInsert(height, header);
+    };
+
+    bc->blockHeaderFetch(onError, onReply, height);
 }
 
 } // namespace abcd

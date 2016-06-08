@@ -70,6 +70,37 @@ onHeight(size_t height)
 }
 
 /**
+ * Tells all running watchers that a new header was found.
+ * This is a temporary hack until we gain support for app-wide callbacks.
+ */
+static void
+onHeader(void)
+{
+    for (auto &watcher: watchers_)
+    {
+        if (watcher.second->fCallback)
+        {
+            ABC_DebugLog("BlockHeader callback: wallet %s",
+                         watcher.second->wallet.id().c_str());
+            tABC_AsyncBitCoinInfo info;
+            info.pData = watcher.second->pData;
+            info.eventType = ABC_AsyncEventType_TransactionUpdate;
+            Status().toError(info.status, ABC_HERE());
+            info.szWalletUUID = watcher.second->wallet.id().c_str();
+
+            // XXX Todo: Look up TxIDs that actually have a matching height and
+            // send a notification for each one OR send one notification with all
+            // affected TxIDs in a std::set.
+            info.szTxID = nullptr;
+            info.sweepSatoshi = 0;
+            watcher.second->fCallback(&info);
+
+            break;
+        }
+    }
+}
+
+/**
  * Called when an address is completely loaded into the cache.
  */
 static void
@@ -167,6 +198,7 @@ bridgeWatcherLoop(Wallet &self,
     watcherInfo->fCallback = fCallback;
     watcherInfo->pData = pData;
     gContext->blockCache.onHeightSet(onHeight);
+    gContext->blockCache.onHeaderSet(onHeader);
 
     // Set up the address-changed callback:
     auto wakeupCallback = [watcherInfo]()

@@ -27,6 +27,20 @@ struct RequestJson:
     ABC_JSON_VALUE(params, "params", JsonArray);
 };
 
+struct HeaderJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(HeaderJson, JsonObject)
+
+    ABC_JSON_INTEGER(nonce, "nonce", 0);
+    ABC_JSON_STRING(prev_block_hash, "prev_block_hash", "");
+    ABC_JSON_INTEGER(timestamp, "timestamp", 0);
+    ABC_JSON_STRING(merkle_root, "merkle_root", "");
+    ABC_JSON_INTEGER(block_height, "block_height", 0);
+    ABC_JSON_INTEGER(version, "version", 0);
+    ABC_JSON_INTEGER(bits, "bits", 0);
+};
+
 struct ReplyJson:
     public JsonObject
 {
@@ -275,6 +289,40 @@ StratumConnection::txDataFetch(const StatusCallback &onError,
     };
 
     sendMessage("blockchain.transaction.get", params, onError, decoder);
+}
+
+void
+StratumConnection::blockHeaderFetch(const StatusCallback &onError,
+                                    const HeaderCallback &onReply,
+                                    size_t height)
+{
+    JsonArray params;
+    params.append(json_integer(height));
+
+    auto decoder = [onReply](JsonPtr payload) -> Status
+    {
+        HeaderJson headerJson(payload);
+
+        bc::hash_digest previous_block_hash;
+        bc::hash_digest merkle;
+        if (!bc::decode_hash(previous_block_hash, headerJson.prev_block_hash()))
+            return ABC_ERROR(ABC_CC_ParseError, "Bad hash");
+        if (!bc::decode_hash(merkle, headerJson.merkle_root()))
+            return ABC_ERROR(ABC_CC_ParseError, "Bad hash");
+
+        bc::block_header_type header;
+        header.previous_block_hash = previous_block_hash;
+        header.merkle = merkle;
+        header.version = headerJson.version();
+        header.timestamp = headerJson.timestamp();
+        header.bits = headerJson.bits();
+        header.nonce = headerJson.nonce();
+
+        onReply(header);
+        return Status();
+    };
+
+    sendMessage("blockchain.block.get_header", params, onError, decoder);
 }
 
 void

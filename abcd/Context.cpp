@@ -27,6 +27,7 @@ Context::Context(const std::string &rootDir, const std::string &certPath,
     blockCache(*new BlockCache(paths.blockCachePath())),
     exchangeCache(*new ExchangeCache(paths.exchangeCachePath()))
 {
+    blockCache.load().log(); // Failure is fine
 }
 
 } // namespace abcd

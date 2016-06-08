@@ -155,6 +155,27 @@ LibbitcoinConnection::txDataFetch(const StatusCallback &onError,
 }
 
 void
+LibbitcoinConnection::blockHeaderFetch(const StatusCallback &onError,
+                                       const HeaderCallback &onReply,
+                                       size_t height)
+{
+    auto errorShim = [this, onError](const std::error_code &error)
+    {
+        --queuedQueries_;
+        onError(ABC_ERROR(ABC_CC_Error, error.message()));
+    };
+
+    auto replyShim = [this, onReply](const bc::block_header_type &header)
+    {
+        --queuedQueries_;
+        onReply(header);
+    };
+
+    ++queuedQueries_;
+    codec_.fetch_block_header(errorShim, replyShim, height);
+}
+
+void
 LibbitcoinConnection::fetchHeight()
 {
     auto errorShim = [this](const std::error_code &error)

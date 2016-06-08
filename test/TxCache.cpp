@@ -5,6 +5,7 @@
  * See the LICENSE file for more information.
  */
 
+#include "../abcd/bitcoin/cache/BlockCache.hpp"
 #include "../abcd/bitcoin/cache/TxCache.hpp"
 #include "../abcd/bitcoin/Utility.hpp"
 #include "../abcd/spend/Outputs.hpp"
@@ -182,7 +183,8 @@ hasTxid(const bc::output_info_list &utxos, bc::hash_digest txid, uint32_t index)
 
 TEST_CASE("Transaction database", "[bitcoin][database]")
 {
-    abcd::TxCache txCache;
+    abcd::BlockCache blockCache("");
+    abcd::TxCache txCache(blockCache);
     abcd::TxCacheTest test(txCache);
 
     SECTION("filtered utxos")
