@@ -27,7 +27,7 @@ public:
     zmq_pollitem_t pollitem();
 
     // Sleeper interface:
-    bc::client::sleep_time wakeup() override;
+    std::chrono::milliseconds wakeup() override;
 
     // IBitcoinConnection interface:
     std::string
@@ -66,7 +66,7 @@ private:
     std::chrono::steady_clock::time_point lastHeightCheck_;
 
     // The actual obelisk connection (destructor called first):
-    bc::client::zeromq_socket socket_;
+    std::shared_ptr<bc::client::zeromq_socket> socket_;
     bc::client::obelisk_codec codec_;
 
     void

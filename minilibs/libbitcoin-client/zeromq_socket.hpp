@@ -69,10 +69,8 @@ public:
      */
     BC_API bool forward(zeromq_socket& dest);
 
-    /**
-     * Sends an outgoing message through the socket.
-     */
-    BC_API virtual void message(const data_chunk& data, bool more);
+    // message_stream interface:
+    virtual void write(const data_stack& data);
 
 private:
     /**

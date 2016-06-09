@@ -1,17 +1,17 @@
-/*
- * Copyright (c) 2011-2014 libbitcoin developers (see AUTHORS)
+/**
+ * Copyright (c) 2011-2015 libbitcoin developers (see AUTHORS)
  *
- * This file is part of libbitcoin.
+ * This file is part of libbitcoin-client.
  *
- * libbitcoin is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License with
+ * libbitcoin-client is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Affero General Public License with
  * additional permissions to the one published by the Free Software
  * Foundation, either version 3 of the License, or (at your option)
  * any later version. For more information see LICENSE.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Affero General Public License for more details.
  *
  * You should have received a copy of the GNU Affero General Public License
@@ -26,7 +26,15 @@
 namespace libbitcoin {
 namespace client {
 
-typedef std::chrono::milliseconds sleep_time;
+/**
+ * Sentinel value interpreted in sleep timer as infinity.
+ */
+BC_CONSTEXPR int period_forever = 0;
+
+/**
+ * A sleep timer period in milliseconds.
+ */
+typedef std::chrono::milliseconds period_ms;
 
 /**
  * An interface for objects that need to perform delayed work in a
@@ -42,24 +50,24 @@ typedef std::chrono::milliseconds sleep_time;
 class sleeper
 {
 public:
-    virtual ~sleeper() {}
+    virtual ~sleeper() {};
 
     /**
      * Performs any pending time-based work, and returns the number of
      * milliseconds between now and the next time work needs to be done.
      * Returns 0 if the class has no future work to do.
      */
-    virtual sleep_time wakeup() = 0;
+    virtual period_ms wakeup() = 0;
 };
 
 /**
  * Returns the smaller of two time periods, treating 0 as infinity.
  */
-inline sleep_time min_sleep(sleep_time a, sleep_time b)
+inline period_ms min_sleep(period_ms a, period_ms b)
 {
-    if (!a.count())
+    if (a.count() == period_forever)
         return b;
-    if (!b.count())
+    if (b.count() == period_forever)
         return a;
     return std::min(a, b);
 }
@@ -68,4 +76,3 @@ inline sleep_time min_sleep(sleep_time a, sleep_time b)
 } // namespace libbitcoin
 
 #endif
-

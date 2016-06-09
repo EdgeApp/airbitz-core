@@ -84,16 +84,23 @@ bool zeromq_socket::forward(message_stream& dest)
 
     while (pending())
     {
-        zmq_msg_t msg;
-        zmq_msg_init(&msg);
+        bc::data_stack message;
+        bool more = false;
+        do
+        {
+            zmq_msg_t msg;
+            zmq_msg_init(&msg);
 
-        if (zmq_msg_recv(&msg, socket_, ZMQ_DONTWAIT) < 0)
-            return false;
+            if (zmq_msg_recv(&msg, socket_, ZMQ_DONTWAIT) < 0)
+                return false;
 
-        const char* raw = reinterpret_cast<const char*>(zmq_msg_data(&msg));
-        libbitcoin::data_chunk data(raw, raw + zmq_msg_size(&msg));
-        dest.message(data, zmq_msg_more(&msg));
-        zmq_msg_close(&msg);
+            const char* raw = reinterpret_cast<const char*>(zmq_msg_data(&msg));
+            message.emplace_back(raw, raw + zmq_msg_size(&msg));
+            more = zmq_msg_more(&msg);
+            zmq_msg_close(&msg);
+        } while (more);
+
+        dest.write(message);
     }
     return true;
 }
@@ -123,16 +130,17 @@ bool zeromq_socket::forward(zeromq_socket& dest)
     return true;
 }
 
-void zeromq_socket::message(const data_chunk& data, bool more)
+void zeromq_socket::write(const data_stack& data)
 {
     BITCOIN_ASSERT(socket_);
 
-    int flags = 0;
-    if (more)
-        flags = ZMQ_SNDMORE;
-    // The message won't go through if this fails,
-    // but we are prepared for that possibility anyhow:
-    zmq_send(socket_, data.data(), data.size(), flags);
+    for (size_t i = 0; i < data.size(); ++i)
+    {
+        const auto flags = i < data.size() - 1 ? ZMQ_SNDMORE : 0;
+        // The message won't go through if this fails,
+        // but we are prepared for that possibility anyhow:
+        zmq_send(socket_, data[i].data(), data[i].size(), flags);
+    }
 }
 
 bool zeromq_socket::pending()

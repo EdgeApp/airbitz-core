@@ -9,15 +9,13 @@
 
 namespace abcd {
 
-static void
-onUnknownNop(const std::string &)
-{
-}
-
 LibbitcoinConnection::LibbitcoinConnection(void *ctx):
     queuedQueries_(0),
-    socket_(ctx),
-    codec_(socket_, onUnknownNop, std::chrono::seconds(10), 0)
+    socket_(std::make_shared<bc::client::zeromq_socket>(ctx)),
+    codec_(socket_,
+           bc::client::obelisk_router::on_update_nop,
+           bc::client::obelisk_router::on_unknown_nop,
+           std::chrono::seconds(10), 0)
 {
 }
 
@@ -26,35 +24,35 @@ LibbitcoinConnection::connect(const std::string &uri, const std::string &key)
 {
     uri_ = uri;
 
-    if(!socket_.connect(uri_, key))
+    if(!socket_->connect(uri_, key))
         return ABC_ERROR(ABC_CC_Error, "Could not connect to " + uri_);
 
     return Status();
 }
 
-bc::client::sleep_time
+std::chrono::milliseconds
 LibbitcoinConnection::wakeup()
 {
-    bc::client::sleep_time nextWakeup(0);
+    std::chrono::milliseconds nextWakeup(0);
     auto now = std::chrono::steady_clock::now();
 
     // Figure out when our next block check is:
     if (heightCallback_)
     {
         auto period = std::chrono::seconds(30);
-        auto elapsed = std::chrono::duration_cast<bc::client::sleep_time>(
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                            now - lastHeightCheck_);
         if (period <= elapsed)
         {
             fetchHeight();
             lastHeightCheck_ = now;
-            elapsed = bc::client::sleep_time::zero();
+            elapsed = std::chrono::milliseconds::zero();
         }
         nextWakeup = period - elapsed;
     }
 
     // Handle the socket:
-    socket_.forward(codec_);
+    socket_->forward(codec_);
     nextWakeup = bc::client::min_sleep(nextWakeup, codec_.wakeup());
 
     return nextWakeup;
@@ -63,7 +61,7 @@ LibbitcoinConnection::wakeup()
 zmq_pollitem_t
 LibbitcoinConnection::pollitem()
 {
-    return socket_.pollitem();
+    return socket_->pollitem();
 }
 
 std::string

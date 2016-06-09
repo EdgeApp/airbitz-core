@@ -162,7 +162,7 @@ std::chrono::milliseconds
 TxUpdater::wakeup()
 {
     // Handle any old work that has finished:
-    bc::client::sleep_time nextWakeup(0);
+    std::chrono::milliseconds nextWakeup(0);
     for (auto *bc: connections_)
     {
         auto *sc = dynamic_cast<StratumConnection *>(bc);
