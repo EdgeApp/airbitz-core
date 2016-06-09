@@ -228,6 +228,40 @@ StratumConnection::heightSubscribe(const StatusCallback &onError,
 }
 
 void
+StratumConnection::addressSubscribe(const StatusCallback &onError,
+                                    const EmptyCallback &onReply,
+                                    const std::string &address)
+{
+    // Add the callback to our subscription list:
+    if (addressCallbacks_.count(address))
+        return;
+    addressCallbacks_[address] = onReply;
+
+    JsonArray params;
+    params.append(json_string(address.c_str()));
+
+    auto errorShim = [this, onError, address](Status s)
+    {
+        addressCallbacks_.erase(address);
+        onError(s);
+    };
+
+    auto decoder = [onReply](JsonPtr payload) -> Status
+    {
+        onReply();
+        return Status();
+    };
+
+    sendMessage("blockchain.address.subscribe", params, errorShim, decoder);
+}
+
+bool
+StratumConnection::addressSubscribed(const std::string &address)
+{
+    return addressCallbacks_.count(address);
+}
+
+void
 StratumConnection::addressHistoryFetch(const StatusCallback &onError,
                                        const AddressCallback &onReply,
                                        const std::string &address)
@@ -374,13 +408,26 @@ StratumConnection::handleMessage(const std::string &message)
     {
         // Handle subscription updates:
         std::string method = json.method();
-        if ("blockchain.numblocks.subscribe" == method && heightCallback_)
+        if ("blockchain.numblocks.subscribe" == method)
         {
             auto payload = json.params();
             if (!json_is_number(payload.get()))
                 return ABC_ERROR(ABC_CC_Error, "Bad reply format");
 
-            heightCallback_(json_number_value(payload.get()));
+            if (heightCallback_)
+                heightCallback_(json_number_value(payload.get()));
+        }
+        else if ("blockchain.address.subscribe" == method)
+        {
+            JsonArray payload = json.params();
+            if (!payload.ok() || payload.size() < 2 ||
+                    !json_is_string(payload[0].get()))
+                return ABC_ERROR(ABC_CC_Error, "Bad reply format");
+
+            const std::string address = json_string_value(payload[0].get());
+            const auto i = addressCallbacks_.find(address);
+            if (addressCallbacks_.end() != i)
+                i->second();
         }
     }
 

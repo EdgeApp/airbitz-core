@@ -9,11 +9,13 @@
 
 namespace abcd {
 
+using namespace std::placeholders;
+
 LibbitcoinConnection::LibbitcoinConnection(void *ctx):
     queuedQueries_(0),
     socket_(std::make_shared<bc::client::zeromq_socket>(ctx)),
     codec_(socket_,
-           bc::client::obelisk_router::on_update_nop,
+           std::bind(&LibbitcoinConnection::onUpdate, this, _1, _2, _3, _4),
            bc::client::obelisk_router::on_unknown_nop,
            std::chrono::seconds(10), 0)
 {
@@ -85,6 +87,43 @@ LibbitcoinConnection::heightSubscribe(const StatusCallback &onError,
     lastHeightCheck_ = std::chrono::steady_clock::now();
 
     fetchHeight();
+}
+
+void
+LibbitcoinConnection::addressSubscribe(const StatusCallback &onError,
+                                       const EmptyCallback &onReply,
+                                       const std::string &address)
+{
+    bc::payment_address parsed;
+    if (!parsed.set_encoded(address))
+        return onError(ABC_ERROR(ABC_CC_ParseError, "Bad address " + address));
+
+    // Add the callback to our subscription list:
+    if (addressCallbacks_.count(address))
+        return;
+    addressCallbacks_[address] = onReply;
+
+    auto errorShim = [this, onError, address](const std::error_code &error)
+    {
+        --queuedQueries_;
+        addressSubscribes_.erase(address);
+        onError(ABC_ERROR(ABC_CC_Error, error.message()));
+    };
+
+    auto replyShim = [this, onReply]()
+    {
+        --queuedQueries_;
+        onReply();
+    };
+
+    ++queuedQueries_;
+    codec_.subscribe(errorShim, replyShim, parsed);
+}
+
+bool
+LibbitcoinConnection::addressSubscribed(const std::string &address)
+{
+    return addressCallbacks_.count(address);
 }
 
 void
@@ -190,6 +229,16 @@ LibbitcoinConnection::fetchHeight()
 
     ++queuedQueries_;
     codec_.fetch_last_height(errorShim, replyShim);
+}
+
+void
+LibbitcoinConnection::onUpdate(const bc::payment_address &address,
+                               size_t height, const bc::hash_digest &blk_hash,
+                               const bc::transaction_type &tx)
+{
+    const auto i = addressCallbacks_.find(address.encoded());
+    if (addressCallbacks_.end() != i)
+        i->second();
 }
 
 } // namespace abcd
