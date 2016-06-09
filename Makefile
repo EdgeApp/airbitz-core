@@ -69,7 +69,7 @@ $(WORK_DIR)/libabc.a: $(abc_objects)
 	$(RUN) $(RM) $@; $(AR) rcs $@ $^
 
 $(WORK_DIR)/libabc.so: $(abc_objects)
-	$(RUN) $(CXX) -shared -o $@ $^ $(LDFLAGS) $(LIBS)
+	$(RUN) $(CXX) -shared -Wl,-soname=libabc.so -o $@ $^ $(LDFLAGS) $(LIBS)
 
 $(WORK_DIR)/abc-cli: $(cli_objects) $(WORK_DIR)/libabc.a
 	$(RUN) $(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
