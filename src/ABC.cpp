@@ -2298,10 +2298,10 @@ tABC_CC ABC_FetchPaymentRequest(char *szRequestUri,
         std::unique_ptr<PaymentRequest> request(new PaymentRequest());
         ABC_CHECK_NEW(request->fetch(szRequestUri));
         std::string domain;
-        ABC_CHECK_NEW(request->signatureOk(domain, szRequestUri));
+        const auto sigOk = request->signatureOk(domain, szRequestUri);
 
         tABC_PaymentRequest *pResult = structAlloc<tABC_PaymentRequest>();
-        pResult->bSigned = request->signatureExists();
+        pResult->bSigned = request->signatureExists() && sigOk;
         pResult->szDomain = stringCopy(domain);
         pResult->amountSatoshi = request->amount();
         pResult->szMemo = request->memoOk() ?
