@@ -123,7 +123,7 @@ public:
     prioritize(const std::string &address);
 
     /**
-     * Fires callbacks in response to adding new transactions to the cache.
+     * Indicates that the transaction cache has been updated.
      */
     void
     update();
@@ -139,6 +139,12 @@ public:
      */
     void
     updateSpend(TxInfo &info);
+
+    /**
+     * Indicates that an address is up-to-date with no changes needed.
+     */
+    void
+    updateSubscribe(const std::string &address);
 
     /**
      * Sets up a callback to notify when addresses change.

@@ -205,7 +205,7 @@ TxUpdater::wakeup()
                 break;
 
             addressServers_[status.address] = bc->uri();
-            fetchAddress(status.address, bc);
+            subscribeAddress(status.address, bc);
         }
     }
 
@@ -406,6 +406,34 @@ TxUpdater::pickOtherServer(const std::string &name)
     }
 
     return fallback;
+}
+
+void
+TxUpdater::subscribeAddress(const std::string &address, IBitcoinConnection *bc)
+{
+    // If we are already subscribed, mark the address as up-to-date:
+    if (bc->addressSubscribed(address))
+    {
+        cache_.addresses.updateSubscribe(address);
+        return;
+    }
+
+    const auto uri = bc->uri();
+    auto onError = [this, address, uri](Status s)
+    {
+        ABC_DebugLog("Server %s failed to subscribe to address %s (%s)",
+                     uri.c_str(), address.c_str(), s.message().c_str());
+        failedServers_.insert(uri);
+    };
+
+    auto onReply = [this, address, bc]()
+    {
+        ABC_DebugLog("Server %s subscribed to address %s",
+                     bc->uri().c_str(), address.c_str());
+        fetchAddress(address, bc);
+    };
+
+    bc->addressSubscribe(onError, onReply, address);
 }
 
 void

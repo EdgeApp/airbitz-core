@@ -254,6 +254,16 @@ AddressCache::updateSpend(TxInfo &info)
 }
 
 void
+AddressCache::updateSubscribe(const std::string &address)
+{
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    auto &row = rows_[address];
+
+    if (row.checkedOnce)
+        row.lastCheck = time(nullptr);
+}
+
+void
 AddressCache::wakeupCallbackSet(const Callback &callback)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
