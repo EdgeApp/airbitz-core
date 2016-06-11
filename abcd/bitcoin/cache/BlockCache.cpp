@@ -206,12 +206,12 @@ BlockCache::headerNeeded()
     while (!headersNeeded_.empty())
     {
         // Pull an item from the set:
-        const auto out = headersNeeded_.begin();
-        headersNeeded_.erase(out);
+        const auto out = *headersNeeded_.begin();
+        headersNeeded_.erase(headersNeeded_.begin());
 
         // Only return the item if it is truly missing:
-        if (headers_.end() == headers_.find(*out))
-            return *out;
+        if (headers_.end() == headers_.find(out))
+            return out;
     }
 
     // There is none:
