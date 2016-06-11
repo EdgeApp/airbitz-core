@@ -123,3 +123,24 @@ TEST_CASE("JsonObject manipulation", "[util][json]")
         REQUIRE(2 == value.get()->refcount);
     }
 }
+
+TEST_CASE("JsonPtr encoding", "[util][json]")
+{
+    SECTION("string")
+    {
+        abcd::JsonPtr json(json_string("fun"));
+        REQUIRE("\"fun\"" == json.encode());
+    }
+
+    SECTION("explicit null")
+    {
+        abcd::JsonPtr json(json_null());
+        REQUIRE("null" == json.encode());
+    }
+
+    SECTION("implicit null")
+    {
+        abcd::JsonPtr json;
+        REQUIRE("null" == json.encode());
+    }
+}
