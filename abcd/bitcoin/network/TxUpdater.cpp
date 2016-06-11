@@ -349,7 +349,8 @@ TxUpdater::connectTo(long index)
     const auto uri = bc->uri();
     auto onError = [this, uri](Status s)
     {
-        ABC_DebugLog("Server %s failed to get height", uri.c_str());
+        ABC_DebugLog("Server %s failed to get height (%s)",
+                     uri.c_str(), s.message().c_str());
         failedServers_.insert(uri);
     };
     auto onReply = [this, uri](size_t height)
@@ -417,8 +418,8 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
     const auto uri = bc->uri();
     auto onError = [this, address, uri](Status s)
     {
-        ABC_DebugLog("Server %s failed to check address %s",
-                     uri.c_str(), address.c_str());
+        ABC_DebugLog("Server %s failed to check address (%s)",
+                     uri.c_str(), address.c_str(), s.message().c_str());
         failedServers_.insert(uri);
         wipAddresses_.erase(address);
     };
@@ -451,8 +452,8 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
     const auto uri = bc->uri();
     auto onError = [this, txid, uri](Status s)
     {
-        ABC_DebugLog("Server %s failed to get tx %s",
-                     uri.c_str(), txid.c_str());
+        ABC_DebugLog("Server %s failed to get tx (%s)",
+                     uri.c_str(), txid.c_str(), s.message().c_str());
         failedServers_.insert(uri);
         wipTxids_.erase(txid);
     };
@@ -477,13 +478,13 @@ TxUpdater::fetchFeeEstimate(size_t blocks, StratumConnection *sc)
     const auto uri = sc->uri();
     auto onError = [this, blocks, uri](Status s)
     {
-        ABC_DebugLog("Server %s failed to get fees for blocks=%d",
-                     uri.c_str(), blocks);
+        ABC_DebugLog("Server %s failed to get fees for %d blocks (%s)",
+                     uri.c_str(), blocks, s.message().c_str());
     };
 
     auto onReply = [this, blocks, uri](double fee)
     {
-        ABC_DebugLog("Server %s returned fee %lf for blocks=%d",
+        ABC_DebugLog("Server %s returned fee %lf for %d blocks",
                      uri.c_str(), fee, blocks);
 
         if (fee > 0)
@@ -501,8 +502,8 @@ TxUpdater::blockHeaderFetch(size_t height, IBitcoinConnection *bc)
     const auto uri = bc->uri();
     auto onError = [this, height, uri](Status s)
     {
-        ABC_DebugLog("Server %s failed to get header %d",
-                     uri.c_str(), height);
+        ABC_DebugLog("Server %s failed to get header %d (%s)",
+                     uri.c_str(), height, s.message().c_str());
         failedServers_.insert(uri);
     };
 
