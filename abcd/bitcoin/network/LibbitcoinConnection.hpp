@@ -74,7 +74,12 @@ private:
     std::chrono::steady_clock::time_point lastHeightCheck_;
 
     // Address-check state:
-    std::map<std::string, EmptyCallback> addressCallbacks_;
+    struct AddressSubscribe
+    {
+        EmptyCallback onReply;
+        std::chrono::steady_clock::time_point lastRefresh;
+    };
+    std::map<std::string, AddressSubscribe> addressSubscribes_;
 
     // The actual obelisk connection (destructor called first):
     std::shared_ptr<bc::client::zeromq_socket> socket_;
@@ -82,6 +87,9 @@ private:
 
     void
     fetchHeight();
+
+    void
+    renewAddress(const std::string &address);
 
     void
     onUpdate(const bc::payment_address &address,

@@ -105,6 +105,9 @@ public:
     void subscribe(error_handler on_error,
         empty_handler on_reply,
         const bc::payment_address& address);
+    void renew(error_handler on_error,
+        empty_handler on_reply,
+        const bc::payment_address& address);
     void subscribe(error_handler on_error,
         empty_handler on_reply,
         subscribe_type discriminator,
