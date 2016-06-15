@@ -34,6 +34,9 @@ struct AddressStatus
     /** The time of the next check. Used for sorting. */
     time_t nextCheck;
 
+    /** The size of the known transaction list. */
+    bool count;
+
     /** A list of transactions that are missing from the cache. */
     TxidSet missingTxids;
 };

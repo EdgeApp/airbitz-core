@@ -41,6 +41,10 @@ operator <(const AddressStatus &a, const AddressStatus &b)
     if (a.missingTxids.size() != b.missingTxids.size())
         return a.missingTxids.size() > b.missingTxids.size();
 
+    // Empty addresses and heavily-used addresses sort first:
+    if (a.count != b.count)
+        return !a.count || a.count > b.count;
+
     // Earlier times are more urgent:
     return a.nextCheck < b.nextCheck;
 }
@@ -326,6 +330,7 @@ AddressCache::status(const std::string &address, const AddressRow &row,
     AddressStatus out{address};
     out.nextCheck = nextCheck(address, row);
     out.needsCheck = out.nextCheck <= now;
+    out.count = row.txids.size();
 
     if (!row.complete)
         out.missingTxids = txCache_.missingTxids(row.txids);
