@@ -220,6 +220,25 @@ void obelisk_codec::subscribe(error_handler on_error,
         std::bind(decode_empty, _1, std::move(on_reply)));
 }
 
+void obelisk_codec::renew(error_handler on_error,
+    empty_handler on_reply,
+    const payment_address& address)
+{
+    binary_type prefix((short_hash_size * byte_bits), address.hash());
+
+    // [ type:1 ] (0 = address prefix, 1 = stealth prefix)
+    // [ prefix_bitsize:1 ]
+    // [ prefix_blocks:...  ]
+    auto data = build_data({
+        to_byte(static_cast<uint8_t>(subscribe_type::address)),
+        to_byte(static_cast<uint8_t>(prefix.size())),
+        prefix.blocks()
+    });
+
+    send_request("address.renew", data, std::move(on_error),
+        std::bind(decode_empty, _1, std::move(on_reply)));
+}
+
 void obelisk_codec::subscribe(error_handler on_error,
     empty_handler on_reply,
     subscribe_type discriminator,

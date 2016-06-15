@@ -83,6 +83,14 @@ public:
                     const HeightCallback &onReply) override;
 
     void
+    addressSubscribe(const StatusCallback &onError,
+                     const EmptyCallback &onReply,
+                     const std::string &address) override;
+
+    bool
+    addressSubscribed(const std::string &address) override;
+
+    void
     addressHistoryFetch(const StatusCallback &onError,
                         const AddressCallback &onReply,
                         const std::string &address) override;
@@ -123,6 +131,7 @@ private:
 
     // Subscriptions:
     HeightCallback heightCallback_;
+    std::map<std::string, EmptyCallback> addressCallbacks_;
 
     /**
      * Sends a message and sets up the reply decoder.

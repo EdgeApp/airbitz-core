@@ -19,6 +19,7 @@ namespace abcd {
  */
 typedef std::map<std::string, size_t> AddressHistory;
 
+typedef std::function<void ()> EmptyCallback;
 typedef std::function<void (unsigned height)> HeightCallback;
 typedef std::function<void (const AddressHistory &history)> AddressCallback;
 typedef std::function<void (const libbitcoin::transaction_type &tx)> TxCallback;
@@ -52,6 +53,21 @@ public:
     virtual void
     heightSubscribe(const StatusCallback &onError,
                     const HeightCallback &onReply) = 0;
+
+    /**
+     * Begins watching for address history changes.
+     * @param onReply called any time a change happens to this address.
+     */
+    virtual void
+    addressSubscribe(const StatusCallback &onError,
+                     const EmptyCallback &onReply,
+                     const std::string &address) = 0;
+
+    /**
+     * Returns true if the connection is subscribed to this address.
+     */
+    virtual bool
+    addressSubscribed(const std::string &address) = 0;
 
     /**
      * Fetches the transaction history for an address.

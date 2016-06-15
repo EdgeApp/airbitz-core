@@ -6,14 +6,17 @@
  */
 
 #include "LibbitcoinConnection.hpp"
+#include "../../util/Debug.hpp"
 
 namespace abcd {
+
+using namespace std::placeholders;
 
 LibbitcoinConnection::LibbitcoinConnection(void *ctx):
     queuedQueries_(0),
     socket_(std::make_shared<bc::client::zeromq_socket>(ctx)),
     codec_(socket_,
-           bc::client::obelisk_router::on_update_nop,
+           std::bind(&LibbitcoinConnection::onUpdate, this, _1, _2, _3, _4),
            bc::client::obelisk_router::on_unknown_nop,
            std::chrono::seconds(10), 0)
 {
@@ -51,6 +54,18 @@ LibbitcoinConnection::wakeup()
         nextWakeup = period - elapsed;
     }
 
+    // Renew any outdated subscriptions:
+    for (auto &sub: addressSubscribes_)
+    {
+        if (sub.second.lastRefresh + std::chrono::minutes(8) < now)
+        {
+            sub.second.lastRefresh = std::chrono::steady_clock::now();
+            renewAddress(sub.first);
+        }
+        // TODO: factor the time into nextWakeup. This isn't super-critical,
+        // since the height subscribes keep us awake.
+    }
+
     // Handle the socket:
     socket_->forward(codec_);
     nextWakeup = bc::client::min_sleep(nextWakeup, codec_.wakeup());
@@ -85,6 +100,46 @@ LibbitcoinConnection::heightSubscribe(const StatusCallback &onError,
     lastHeightCheck_ = std::chrono::steady_clock::now();
 
     fetchHeight();
+}
+
+void
+LibbitcoinConnection::addressSubscribe(const StatusCallback &onError,
+                                       const EmptyCallback &onReply,
+                                       const std::string &address)
+{
+    bc::payment_address parsed;
+    if (!parsed.set_encoded(address))
+        return onError(ABC_ERROR(ABC_CC_ParseError, "Bad address " + address));
+
+    // Add the callback to our subscription list:
+    if (addressSubscribes_.count(address))
+        return;
+    addressSubscribes_[address] = AddressSubscribe
+    {
+        onReply, std::chrono::steady_clock::now()
+    };
+
+    auto errorShim = [this, onError, address](const std::error_code &error)
+    {
+        --queuedQueries_;
+        addressSubscribes_.erase(address);
+        onError(ABC_ERROR(ABC_CC_Error, error.message()));
+    };
+
+    auto replyShim = [this, onReply]()
+    {
+        --queuedQueries_;
+        onReply();
+    };
+
+    ++queuedQueries_;
+    codec_.subscribe(errorShim, replyShim, parsed);
+}
+
+bool
+LibbitcoinConnection::addressSubscribed(const std::string &address)
+{
+    return addressSubscribes_.count(address);
 }
 
 void
@@ -190,6 +245,36 @@ LibbitcoinConnection::fetchHeight()
 
     ++queuedQueries_;
     codec_.fetch_last_height(errorShim, replyShim);
+}
+
+void
+LibbitcoinConnection::renewAddress(const std::string &address)
+{
+    auto errorShim = [this, address](const std::error_code &error)
+    {
+        --queuedQueries_;
+        ABC_DebugLog("Subscribe renew failed for %s", address.c_str());
+        addressSubscribes_.erase(address);
+    };
+
+    auto replyShim = [this, address]()
+    {
+        --queuedQueries_;
+        ABC_DebugLog("Subscribe renew completed for %s", address.c_str());
+    };
+
+    ++queuedQueries_;
+    codec_.renew(errorShim, replyShim, bc::payment_address(address));
+}
+
+void
+LibbitcoinConnection::onUpdate(const bc::payment_address &address,
+                               size_t height, const bc::hash_digest &blk_hash,
+                               const bc::transaction_type &tx)
+{
+    const auto i = addressSubscribes_.find(address.encoded());
+    if (addressSubscribes_.end() != i)
+        i->second.onReply();
 }
 
 } // namespace abcd

@@ -100,6 +100,9 @@ private:
     pickOtherServer(const std::string &name="");
 
     void
+    subscribeAddress(const std::string &address, IBitcoinConnection *bc);
+
+    void
     fetchAddress(const std::string &address, IBitcoinConnection *bc);
 
     void

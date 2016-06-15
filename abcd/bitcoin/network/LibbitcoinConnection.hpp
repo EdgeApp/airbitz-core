@@ -41,6 +41,14 @@ public:
                     const HeightCallback &onReply) override;
 
     void
+    addressSubscribe(const StatusCallback &onError,
+                     const EmptyCallback &onReply,
+                     const std::string &address) override;
+
+    bool
+    addressSubscribed(const std::string &address) override;
+
+    void
     addressHistoryFetch(const StatusCallback &onError,
                         const AddressCallback &onReply,
                         const std::string &address) override;
@@ -65,12 +73,28 @@ private:
     HeightCallback heightCallback_;
     std::chrono::steady_clock::time_point lastHeightCheck_;
 
+    // Address-check state:
+    struct AddressSubscribe
+    {
+        EmptyCallback onReply;
+        std::chrono::steady_clock::time_point lastRefresh;
+    };
+    std::map<std::string, AddressSubscribe> addressSubscribes_;
+
     // The actual obelisk connection (destructor called first):
     std::shared_ptr<bc::client::zeromq_socket> socket_;
     bc::client::obelisk_codec codec_;
 
     void
     fetchHeight();
+
+    void
+    renewAddress(const std::string &address);
+
+    void
+    onUpdate(const bc::payment_address &address,
+             size_t height, const bc::hash_digest &blk_hash,
+             const bc::transaction_type &tx);
 };
 
 } // namespace abcd
