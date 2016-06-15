@@ -229,7 +229,7 @@ StratumConnection::heightSubscribe(const StatusCallback &onError,
 
 void
 StratumConnection::addressSubscribe(const StatusCallback &onError,
-                                    const EmptyCallback &onReply,
+                                    const AddressUpdateCallback &onReply,
                                     const std::string &address)
 {
     // Add the callback to our subscription list:
@@ -248,7 +248,11 @@ StratumConnection::addressSubscribe(const StatusCallback &onError,
 
     auto decoder = [onReply](JsonPtr payload) -> Status
     {
-        onReply();
+        std::string stateHash;
+        if (json_is_string(payload.get()))
+            stateHash = json_string_value(payload.get());
+
+        onReply(stateHash);
         return Status();
     };
 
@@ -420,14 +424,16 @@ StratumConnection::handleMessage(const std::string &message)
         else if ("blockchain.address.subscribe" == method)
         {
             JsonArray payload = json.params();
-            if (!payload.ok() || payload.size() < 2 ||
-                    !json_is_string(payload[0].get()))
+            if (!payload.ok() || payload.size() < 2
+                    || !json_is_string(payload[0].get())
+                    || !json_is_string(payload[1].get()))
                 return ABC_ERROR(ABC_CC_Error, "Bad reply format");
 
             const std::string address = json_string_value(payload[0].get());
+            const std::string stateHash = json_string_value(payload[1].get());
             const auto i = addressCallbacks_.find(address);
             if (addressCallbacks_.end() != i)
-                i->second();
+                i->second(stateHash);
         }
     }
 

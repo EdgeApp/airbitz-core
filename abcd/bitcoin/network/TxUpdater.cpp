@@ -426,18 +426,20 @@ TxUpdater::subscribeAddress(const std::string &address, IBitcoinConnection *bc)
         failedServers_.insert(uri);
     };
 
-    auto onReply = [this, address, bc]()
+    auto onReply = [this, address, bc](const std::string &stateHash)
     {
         ABC_DebugLog("Server %s subscribed to address %s",
                      bc->uri().c_str(), address.c_str());
-        fetchAddress(address, bc);
+        if (cache_.addresses.stateHashDirty(address, stateHash))
+            fetchAddress(address, stateHash, bc);
     };
 
     bc->addressSubscribe(onError, onReply, address);
 }
 
 void
-TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
+TxUpdater::fetchAddress(const std::string &address,
+                        const std::string &stateHash, IBitcoinConnection *bc)
 {
     if (wipAddresses_.count(address))
         return;
@@ -452,7 +454,7 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
         wipAddresses_.erase(address);
     };
 
-    auto onReply = [this, address, uri](const AddressHistory &history)
+    auto onReply = [this, address, stateHash, uri](const AddressHistory &history)
     {
         ABC_DebugLog("Server %s checked address %s",
                      uri.c_str(), address.c_str());
@@ -464,7 +466,7 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
             cache_.txs.confirmed(row.first, row.second);
             txids.insert(row.first);
         }
-        cache_.addresses.update(address, txids);
+        cache_.addresses.update(address, txids, stateHash);
     };
 
     bc->addressHistoryFetch(onError, onReply, address);

@@ -103,7 +103,8 @@ private:
     subscribeAddress(const std::string &address, IBitcoinConnection *bc);
 
     void
-    fetchAddress(const std::string &address, IBitcoinConnection *bc);
+    fetchAddress(const std::string &address,
+                 const std::string &stateHash, IBitcoinConnection *bc);
 
     void
     fetchTx(const std::string &txid, IBitcoinConnection *bc);

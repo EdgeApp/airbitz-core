@@ -107,6 +107,14 @@ public:
     TxidSet
     txids() const;
 
+    /**
+     * Returns true if the provided status hash indicates that the address
+     * needs checking. Stores the provided status hash for the next query.
+     */
+    bool
+    stateHashDirty(const std::string &address,
+                   const std::string &stateHash) const;
+
     // Updates -------------------------------------------------------------
 
     /**
@@ -132,7 +140,8 @@ public:
      * Updates an address with a new list of relevant transactions.
      */
     void
-    update(const std::string &address, const TxidSet &txids);
+    update(const std::string &address, const TxidSet &txids,
+           const std::string &stateHash);
 
     /**
      * Updates all addresses touched by a spend.
@@ -175,6 +184,7 @@ private:
         // Persistent state:
         TxidSet txids;
         time_t lastCheck = 0;
+        std::string stateHash;
 
         // Dynamic state:
         bool checkedOnce = false;

@@ -42,7 +42,7 @@ public:
 
     void
     addressSubscribe(const StatusCallback &onError,
-                     const EmptyCallback &onReply,
+                     const AddressUpdateCallback &onReply,
                      const std::string &address) override;
 
     bool
@@ -76,7 +76,7 @@ private:
     // Address-check state:
     struct AddressSubscribe
     {
-        EmptyCallback onReply;
+        AddressUpdateCallback onReply;
         std::chrono::steady_clock::time_point lastRefresh;
     };
     std::map<std::string, AddressSubscribe> addressSubscribes_;

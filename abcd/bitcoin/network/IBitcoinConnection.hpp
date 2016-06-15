@@ -19,9 +19,10 @@ namespace abcd {
  */
 typedef std::map<std::string, size_t> AddressHistory;
 
-typedef std::function<void ()> EmptyCallback;
 typedef std::function<void (unsigned height)> HeightCallback;
 typedef std::function<void (const AddressHistory &history)> AddressCallback;
+typedef std::function<void (const std::string &stateHash)>
+AddressUpdateCallback;
 typedef std::function<void (const libbitcoin::transaction_type &tx)> TxCallback;
 typedef std::function<void (const libbitcoin::block_header_type &header)>
 HeaderCallback;
@@ -60,7 +61,7 @@ public:
      */
     virtual void
     addressSubscribe(const StatusCallback &onError,
-                     const EmptyCallback &onReply,
+                     const AddressUpdateCallback &onReply,
                      const std::string &address) = 0;
 
     /**

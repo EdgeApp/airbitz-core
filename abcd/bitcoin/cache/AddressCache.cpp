@@ -31,6 +31,7 @@ struct AddressJson:
     ABC_JSON_STRING(address, "address", 0)
     ABC_JSON_VALUE(txids, "txids", JsonArray)
     ABC_JSON_INTEGER(lastCheck, "lastCheck", 0)
+    ABC_JSON_STRING(stateHash, "stratumHash", 0)
 };
 
 bool
@@ -90,6 +91,9 @@ AddressCache::load(JsonObject &json)
             if (now < nextCheck(address, row))
                 row.checkedOnce = true;
 
+            if (addressJson.stateHashOk())
+                row.stateHash = addressJson.stateHash();
+
             rows_[address] = row;
         }
     }
@@ -118,6 +122,8 @@ AddressCache::save(JsonObject &json)
         ABC_CHECK(address.addressSet(row.first));
         ABC_CHECK(address.txidsSet(txidsJson));
         ABC_CHECK(address.lastCheckSet(row.second.lastCheck));
+        if (!row.second.stateHash.empty())
+            ABC_CHECK(address.stateHashSet(row.second.stateHash));
         ABC_CHECK(addressesJson.append(address));
     }
     cacheJson.addressesSet(addressesJson);
@@ -169,6 +175,21 @@ AddressCache::txids() const
     return knownTxids_;
 }
 
+bool
+AddressCache::stateHashDirty(const std::string &address,
+                             const std::string &stateHash) const
+{
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    const auto i = rows_.find(address);
+    if (rows_.end() == i)
+        return true;
+    auto &row = i->second;
+    if (row.stateHash.empty())
+        return true;
+    return row.stateHash != stateHash;
+}
+
 void
 AddressCache::insert(const std::string &address, bool sweep)
 {
@@ -203,7 +224,8 @@ AddressCache::update()
 }
 
 void
-AddressCache::update(const std::string &address, const TxidSet &txids)
+AddressCache::update(const std::string &address, const TxidSet &txids,
+                     const std::string &stateHash)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     auto &row = rows_[address];
@@ -232,6 +254,9 @@ AddressCache::update(const std::string &address, const TxidSet &txids)
     // Update timestamp:
     row.lastCheck = time(nullptr);
     row.checkedOnce = true;
+
+    if (!stateHash.empty())
+        row.stateHash = stateHash;
 
     // Fire callbacks:
     updateInternal();

@@ -104,7 +104,7 @@ LibbitcoinConnection::heightSubscribe(const StatusCallback &onError,
 
 void
 LibbitcoinConnection::addressSubscribe(const StatusCallback &onError,
-                                       const EmptyCallback &onReply,
+                                       const AddressUpdateCallback &onReply,
                                        const std::string &address)
 {
     bc::payment_address parsed;
@@ -129,7 +129,7 @@ LibbitcoinConnection::addressSubscribe(const StatusCallback &onError,
     auto replyShim = [this, onReply]()
     {
         --queuedQueries_;
-        onReply();
+        onReply("");
     };
 
     ++queuedQueries_;
@@ -274,7 +274,7 @@ LibbitcoinConnection::onUpdate(const bc::payment_address &address,
 {
     const auto i = addressSubscribes_.find(address.encoded());
     if (addressSubscribes_.end() != i)
-        i->second.onReply();
+        i->second.onReply("");
 }
 
 } // namespace abcd
