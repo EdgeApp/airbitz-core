@@ -207,6 +207,15 @@ AddressCache::insert(const std::string &address, bool sweep)
         if (wakeupCallback_)
             wakeupCallback_();
     }
+    else
+    {
+        if (sweep)
+        {
+            // We are re-sweeping a key, so re-arm the callback:
+            rows_[address].knownComplete = false;
+            updateInternal();
+        }
+    }
 }
 
 void
