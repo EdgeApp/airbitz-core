@@ -193,7 +193,7 @@ TxUpdater::wakeup()
             nextWakeup = bc::client::min_sleep(nextWakeup, lc->wakeup());
     }
 
-    // Schedule new address work:
+    // Schedule new transaction work:
     time_t sleep;
     const auto statuses = cache_.addresses.statuses(sleep);
     nextWakeup = bc::client::min_sleep(nextWakeup, std::chrono::seconds(sleep));
@@ -209,7 +209,11 @@ TxUpdater::wakeup()
 
             fetchTx(txid, bc);
         }
+    }
 
+    // Schedule new address work:
+    for (const auto &status: statuses)
+    {
         // Update address history:
         if (status.needsCheck)
         {
