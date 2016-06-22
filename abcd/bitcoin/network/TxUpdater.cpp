@@ -19,9 +19,9 @@ constexpr auto STRATUM_PREFIX = "stratum://";
 constexpr auto LIBBITCOIN_PREFIX_LENGTH = 6;
 constexpr auto STRATUM_PREFIX_LENGTH = 10;
 
-constexpr auto NUM_CONNECT_SERVERS = 8;
+constexpr auto NUM_CONNECT_SERVERS = 4;
 constexpr auto MINIMUM_LIBBITCOIN_SERVERS = 0;
-constexpr auto MINIMUM_STRATUM_SERVERS = 4;
+constexpr auto MINIMUM_STRATUM_SERVERS = 2;
 
 TxUpdater::~TxUpdater()
 {
@@ -109,29 +109,42 @@ TxUpdater::connect()
     // Let's make some connections:
     srand(time(nullptr));
     int numConnections = 0;
-    while (connections_.size() < NUM_CONNECT_SERVERS &&
-            (untriedLibbitcoin_.size() || untriedStratum_.size()))
+    while (connections_.size() < NUM_CONNECT_SERVERS)
+//           &&
+//            (untriedLibbitcoin_.size() || untriedStratum_.size()))
+//           &&
+//            (untriedLibbitcoin_.size() || untriedStratum_.size()))
     {
         auto *untriedPrimary = &untriedStratum_;
-        auto *untriedSecondary = &untriedLibbitcoin_;
         auto *primaryCount = &stratumCount;
-        auto *secondaryCount = &libbitcoinCount;
-        long minPrimary = MINIMUM_STRATUM_SERVERS;
-        long minSecondary = MINIMUM_LIBBITCOIN_SERVERS;
+//        auto *untriedSecondary = &untriedLibbitcoin_;
+//        auto *secondaryCount = &libbitcoinCount;
+//        long minPrimary = MINIMUM_STRATUM_SERVERS;
+//        long minSecondary = MINIMUM_LIBBITCOIN_SERVERS;
 
-        if (numConnections % 2 == 1)
-        {
-            untriedPrimary = &untriedLibbitcoin_;
-            untriedSecondary = &untriedStratum_;
-            primaryCount = &libbitcoinCount;
-            secondaryCount = &stratumCount;
-            minPrimary = MINIMUM_LIBBITCOIN_SERVERS;
-            minSecondary = MINIMUM_STRATUM_SERVERS;
-        }
-
-        if (untriedPrimary->size() &&
-                ((minSecondary - *secondaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
-                 (rand() & 8)))
+//        if (numConnections % 2 == 1)
+//        {
+//            untriedPrimary = &untriedLibbitcoin_;
+//            untriedSecondary = &untriedStratum_;
+//            primaryCount = &libbitcoinCount;
+//            secondaryCount = &stratumCount;
+//            minPrimary = MINIMUM_LIBBITCOIN_SERVERS;
+//            minSecondary = MINIMUM_STRATUM_SERVERS;
+//        }
+//
+//        if (numConnections % 2 == 1)
+//        {
+//            untriedPrimary = &untriedLibbitcoin_;
+//            untriedSecondary = &untriedStratum_;
+//            primaryCount = &libbitcoinCount;
+//            secondaryCount = &stratumCount;
+//            minPrimary = MINIMUM_LIBBITCOIN_SERVERS;
+//            minSecondary = MINIMUM_STRATUM_SERVERS;
+//        }
+//
+//        if (untriedPrimary->size() &&
+//                ((minSecondary - *secondaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
+//                 (rand() & 8)))
         {
             auto i = untriedPrimary->begin();
             std::advance(i, rand() % untriedPrimary->size());
@@ -141,18 +154,18 @@ TxUpdater::connect()
                 ++numConnections;
             }
         }
-        else if (untriedSecondary->size() &&
-                 ((minPrimary - *primaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
-                  (rand() & 8)))
-        {
-            auto i = untriedSecondary->begin();
-            std::advance(i, rand() % untriedSecondary->size());
-            if (connectTo(*i).log())
-            {
-                (*secondaryCount)++;
-                ++numConnections;
-            }
-        }
+//        else if (untriedSecondary->size() &&
+//                 ((minPrimary - *primaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
+//                  (rand() & 8)))
+//        {
+//            auto i = untriedSecondary->begin();
+//            std::advance(i, rand() % untriedSecondary->size());
+//            if (connectTo(*i).log())
+//            {
+//                (*secondaryCount)++;
+//                ++numConnections;
+//            }
+//        }
     }
 
     return Status();
