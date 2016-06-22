@@ -476,6 +476,10 @@ TxUpdater::fetchAddress(const std::string &address,
         TxidSet txids;
         for (auto &row: history)
         {
+            ABC_DebugLog("\n**************************************************************");
+            ABC_DebugLog("** Server %s FOUND NEW TRANSACTIONS for address %s",
+                         uri.c_str(), address.c_str());
+            ABC_DebugLog("**************************************************************\n");
             cache_.txs.confirmed(row.first, row.second);
             txids.insert(row.first);
         }
@@ -503,8 +507,10 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
 
     auto onReply = [this, txid, uri](const bc::transaction_type &tx)
     {
-        ABC_DebugLog("Server %s returned tx %s",
+        ABC_DebugLog("\n**************************************************************");
+        ABC_DebugLog("fetchTx() onReply() Server %s returned tx %s",
                      uri.c_str(), txid.c_str());
+        ABC_DebugLog("**************************************************************\n");
         wipTxids_.erase(txid);
 
         cache_.txs.insert(tx);
@@ -512,6 +518,9 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
         cacheDirty = true;
     };
 
+    ABC_DebugLog("\n**************************************************************");
+    ABC_DebugLog("**** txDataFetch() txid %s", txid.c_str());
+    ABC_DebugLog("**************************************************************\n");
     bc->txDataFetch(onError, onReply, txid);
 }
 

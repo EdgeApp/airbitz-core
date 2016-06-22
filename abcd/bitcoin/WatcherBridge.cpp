@@ -211,6 +211,10 @@ bridgeWatcherLoop(Wallet &self,
     auto onTx = [watcherInfo, fCallback, pData]
                 (const std::string &txid)
     {
+        ABC_DebugLog("\n**************************************************************");
+        ABC_DebugLog("**** GUI Notified of NEW TRANSACTION txid %s", txid.c_str());
+        ABC_DebugLog("**************************************************************\n");
+
         TxInfo info;
         if (watcherInfo->wallet.cache.txs.info(info, txid).log())
             onReceive(watcherInfo->wallet, info, fCallback, pData).log();
