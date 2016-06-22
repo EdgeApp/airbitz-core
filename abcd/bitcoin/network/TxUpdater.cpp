@@ -145,6 +145,7 @@ TxUpdater::connect()
 //        if (untriedPrimary->size() &&
 //                ((minSecondary - *secondaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
 //                 (rand() & 8)))
+        if (untriedPrimary->size())
         {
             auto i = untriedPrimary->begin();
             std::advance(i, rand() % untriedPrimary->size());
