@@ -109,7 +109,7 @@ TxUpdater::connect()
     // Let's make some connections:
     srand(time(nullptr));
     int numConnections = 0;
-    while (connections_.size() < NUM_CONNECT_SERVERS)
+    while (connections_.size() < NUM_CONNECT_SERVERS && (untriedStratum_.size()))
 //           &&
 //            (untriedLibbitcoin_.size() || untriedStratum_.size()))
 //           &&
