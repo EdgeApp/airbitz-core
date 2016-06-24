@@ -49,7 +49,7 @@ struct ReplyJson:
 
     // Only used on subscription updates:
     ABC_JSON_STRING(method, "method", "");
-    ABC_JSON_VALUE(params, "params", JsonPtr);
+    ABC_JSON_VALUE(params, "params", JsonArray);
 };
 
 StratumConnection::~StratumConnection()
@@ -412,25 +412,46 @@ StratumConnection::handleMessage(const std::string &message)
     {
         // Handle subscription updates:
         std::string method = json.method();
+        auto params = json.params();
+
         if ("blockchain.numblocks.subscribe" == method)
         {
-            auto payload = json.params();
-            if (!json_is_number(payload.get()))
-                return ABC_ERROR(ABC_CC_Error, "Bad reply format");
+            size_t height;
+            if (params.ok() && 1 <= params.size()
+                    && json_is_number(params[0].get()))
+            {
+                height = json_integer_value(params[0].get());
+            }
+            else if (json_is_number(params.get()))
+            {
+                height = json_integer_value(params.get());
+            }
+            else
+            {
+                return ABC_ERROR(ABC_CC_Error,
+                                 "Bad reply format" + json.encode());
+            }
 
             if (heightCallback_)
-                heightCallback_(json_number_value(payload.get()));
+                heightCallback_(height);
         }
         else if ("blockchain.address.subscribe" == method)
         {
-            JsonArray payload = json.params();
-            if (!payload.ok() || payload.size() < 2
-                    || !json_is_string(payload[0].get())
-                    || !json_is_string(payload[1].get()))
-                return ABC_ERROR(ABC_CC_Error, "Bad reply format");
+            std::string address;
+            std::string stateHash;
+            if (params.ok() && 2 <= params.size()
+                    && json_is_string(params[0].get())
+                    && json_is_string(params[1].get()))
+            {
+                address = json_string_value(params[0].get());
+                stateHash = json_string_value(params[1].get());
+            }
+            else
+            {
+                return ABC_ERROR(ABC_CC_Error,
+                                 "Bad reply format" + json.encode());
+            }
 
-            const std::string address = json_string_value(payload[0].get());
-            const std::string stateHash = json_string_value(payload[1].get());
             const auto i = addressCallbacks_.find(address);
             if (addressCallbacks_.end() != i)
                 i->second(stateHash);
