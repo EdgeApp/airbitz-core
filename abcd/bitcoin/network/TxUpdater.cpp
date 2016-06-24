@@ -355,19 +355,7 @@ TxUpdater::connectTo(long index)
     }
 
     // Height callbacks:
-    const auto uri = bc->uri();
-    auto onError = [this, uri](Status s)
-    {
-        ABC_DebugLog("%s: height subscribe failed (%s)",
-                     uri.c_str(), s.message().c_str());
-        failedServers_.insert(uri);
-    };
-    auto onReply = [this, uri](size_t height)
-    {
-        ABC_DebugLog("%s: height %d returned", uri.c_str(), height);
-        cache_.blocks.heightSet(height);
-    };
-    bc->heightSubscribe(onError, onReply);
+    subscribeHeight(bc.get());
 
     // Check for mining fees:
     auto sc = dynamic_cast<StratumConnection *>(bc.get());
@@ -415,6 +403,26 @@ TxUpdater::pickOtherServer(const std::string &name)
     }
 
     return fallback;
+}
+
+void
+TxUpdater::subscribeHeight(IBitcoinConnection *bc)
+{
+    const auto uri = bc->uri();
+    auto onError = [this, uri](Status s)
+    {
+        ABC_DebugLog("%s: height subscribe failed (%s)",
+                     uri.c_str(), s.message().c_str());
+        failedServers_.insert(uri);
+    };
+
+    auto onReply = [this, uri](size_t height)
+    {
+        ABC_DebugLog("%s: height %d returned", uri.c_str(), height);
+        cache_.blocks.heightSet(height);
+    };
+
+    bc->heightSubscribe(onError, onReply);
 }
 
 void
