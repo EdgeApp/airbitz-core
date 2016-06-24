@@ -168,7 +168,8 @@ TxUpdater::wakeup()
             SleepTime sleep;
             if (!sc->wakeup(sleep).log())
                 failedServers_.insert(bc->uri());
-            nextWakeup = bc::client::min_sleep(nextWakeup, sleep);
+            else
+                nextWakeup = bc::client::min_sleep(nextWakeup, sleep);
         }
 
         auto *lc = dynamic_cast<LibbitcoinConnection *>(bc);
@@ -328,18 +329,17 @@ TxUpdater::connectTo(long index)
     {
         // Libbitcoin server:
         untriedLibbitcoin_.erase(index);
-        auto *lc = new LibbitcoinConnection(ctx_);
+        std::unique_ptr<LibbitcoinConnection> lc(new LibbitcoinConnection(ctx_));
         ABC_CHECK(lc->connect(server, key));
-        bc.reset(lc);
+        bc.reset(lc.release());
     }
     else if (0 == server.compare(0, STRATUM_PREFIX_LENGTH, STRATUM_PREFIX))
     {
         // Stratum server:
         untriedStratum_.erase(index);
-        auto *sc = new StratumConnection();
+        std::unique_ptr<StratumConnection> sc(new StratumConnection());
         ABC_CHECK(sc->connect(server));
-
-        bc.reset(sc);
+        bc.reset(sc.release());
     }
     else
     {
