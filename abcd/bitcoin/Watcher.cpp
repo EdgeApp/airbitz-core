@@ -83,6 +83,10 @@ void Watcher::stop()
 
     uint8_t req = msg_quit;
     socket_.send(&req, 1);
+
+    // Log time to start logout
+    ABC_DebugLog("Watcher::stop() %lu", this);
+
 }
 
 void throw_term()
@@ -147,6 +151,8 @@ bool Watcher::command(uint8_t *data, size_t size)
     {
     default:
     case msg_quit:
+        // Log time to finish watcher.
+        ABC_DebugLog("Watcher Successfully Quit %lu", this);
         return false;
 
     case msg_wakeup:
