@@ -106,8 +106,7 @@ TxUpdater::connect()
     srand(time(nullptr));
     int numConnections = 0;
     while (connections_.size() < NUM_CONNECT_SERVERS
-           &&
-           (untriedLibbitcoin_.size() || untriedStratum_.size()))
+            && (untriedLibbitcoin_.size() || untriedStratum_.size()))
     {
         auto *untriedPrimary = &untriedStratum_;
         auto *primaryCount = &stratumCount;
@@ -350,13 +349,13 @@ TxUpdater::connectTo(long index)
     const auto uri = bc->uri();
     auto onError = [this, uri](Status s)
     {
-        ABC_DebugLog("Server %s failed to get height (%s)",
+        ABC_DebugLog("%s: height subscribe failed (%s)",
                      uri.c_str(), s.message().c_str());
         failedServers_.insert(uri);
     };
     auto onReply = [this, uri](size_t height)
     {
-        ABC_DebugLog("Server %s sent height %d", uri.c_str(), height);
+        ABC_DebugLog("%s: height %d returned", uri.c_str(), height);
         cache_.blocks.heightSet(height);
     };
     bc->heightSubscribe(onError, onReply);
@@ -422,21 +421,24 @@ TxUpdater::subscribeAddress(const std::string &address, IBitcoinConnection *bc)
     const auto uri = bc->uri();
     auto onError = [this, address, uri](Status s)
     {
-        ABC_DebugLog("*** %s %s failed to subscribe (%s)",
+        ABC_DebugLog("%s: %s subscribe failed (%s)",
                      uri.c_str(), address.c_str(), s.message().c_str());
         failedServers_.insert(uri);
     };
 
     auto onReply = [this, address, bc](const std::string &stateHash)
     {
-        ABC_DebugLog("*** %s %s address changed",
-                     bc->uri().c_str(), address.c_str());
         if (cache_.addresses.stateHashDirty(address, stateHash))
-            fetchAddress(address, stateHash, bc);
-        else
-            ABC_DebugLog("*** %s %s HASH NOT DIRTY",
+        {
+            ABC_DebugLog("%s: %s subscribe reply (dirty)",
                          bc->uri().c_str(), address.c_str());
-
+            fetchAddress(address, stateHash, bc);
+        }
+        else
+        {
+            ABC_DebugLog("%s: %s subscribe reply (clean)",
+                         bc->uri().c_str(), address.c_str());
+        }
     };
 
     bc->addressSubscribe(onError, onReply, address);
@@ -453,7 +455,7 @@ TxUpdater::fetchAddress(const std::string &address,
     const auto uri = bc->uri();
     auto onError = [this, address, uri](Status s)
     {
-        ABC_DebugLog("%s failed to check address (%s)",
+        ABC_DebugLog("%s: %s fetch failed (%s)",
                      uri.c_str(), address.c_str(), s.message().c_str());
         failedServers_.insert(uri);
         wipAddresses_.erase(address);
@@ -461,17 +463,12 @@ TxUpdater::fetchAddress(const std::string &address,
 
     auto onReply = [this, address, stateHash, uri](const AddressHistory &history)
     {
-        ABC_DebugLog("%s checked address %s",
-                     uri.c_str(), address.c_str());
+        ABC_DebugLog("%s: %s fetched", uri.c_str(), address.c_str());
         wipAddresses_.erase(address);
 
         TxidSet txids;
         for (auto &row: history)
         {
-            ABC_DebugLog("**************************************************************");
-            ABC_DebugLog("** %s FOUND NEW TRANSACTIONS for %s",
-                         uri.c_str(), address.c_str());
-            ABC_DebugLog("**************************************************************\n");
             cache_.txs.confirmed(row.first, row.second);
             txids.insert(row.first);
         }
@@ -491,7 +488,7 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
     const auto uri = bc->uri();
     auto onError = [this, txid, uri](Status s)
     {
-        ABC_DebugLog("Server %s failed to get tx (%s)",
+        ABC_DebugLog("%s: tx %s fetch failed (%s)",
                      uri.c_str(), txid.c_str(), s.message().c_str());
         failedServers_.insert(uri);
         wipTxids_.erase(txid);
@@ -500,9 +497,8 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
     auto onReply = [this, txid, uri](const bc::transaction_type &tx)
     {
         ABC_DebugLog("**************************************************************");
-        ABC_DebugLog("fetchTx() onReply() %s returned tx %s",
-                     uri.c_str(), txid.c_str());
-        ABC_DebugLog("**************************************************************\n");
+        ABC_DebugLog("%s: tx %s fetched", uri.c_str(), txid.c_str());
+        ABC_DebugLog("**************************************************************");
         wipTxids_.erase(txid);
 
         cache_.txs.insert(tx);
@@ -510,9 +506,7 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
         cacheDirty = true;
     };
 
-    ABC_DebugLog("**************************************************************");
-    ABC_DebugLog("**** txDataFetch() txid %s", txid.c_str());
-    ABC_DebugLog("**************************************************************\n");
+    ABC_DebugLog("%s: tx %s requested", uri.c_str(), txid.c_str());
     bc->txDataFetch(onError, onReply, txid);
 }
 
@@ -522,13 +516,13 @@ TxUpdater::fetchFeeEstimate(size_t blocks, StratumConnection *sc)
     const auto uri = sc->uri();
     auto onError = [this, blocks, uri](Status s)
     {
-        ABC_DebugLog("Server %s failed to get fees for %d blocks (%s)",
+        ABC_DebugLog("%s: get fees for %d blocks failed (%s)",
                      uri.c_str(), blocks, s.message().c_str());
     };
 
     auto onReply = [this, blocks, uri](double fee)
     {
-        ABC_DebugLog("Server %s returned fee %lf for %d blocks",
+        ABC_DebugLog("%s: returned fee %lf for %d blocks",
                      uri.c_str(), fee, blocks);
 
         if (fee > 0)
@@ -546,14 +540,14 @@ TxUpdater::blockHeaderFetch(size_t height, IBitcoinConnection *bc)
     const auto uri = bc->uri();
     auto onError = [this, height, uri](Status s)
     {
-        ABC_DebugLog("Server %s failed to get header %d (%s)",
+        ABC_DebugLog("%s: header %d fetch failed (%s)",
                      uri.c_str(), height, s.message().c_str());
         failedServers_.insert(uri);
     };
 
     auto onReply = [this, height, uri](const bc::block_header_type &header)
     {
-        ABC_DebugLog("Server %s returned header %d",
+        ABC_DebugLog("%s: header %d fetched",
                      uri.c_str(), height);
 
         cache_.blocks.headerInsert(height, header);
