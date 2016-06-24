@@ -85,6 +85,9 @@ TxUpdater::connect()
         }
     }
 
+    // XXX disable Libbitcoin for now until we get better reliability
+    untriedLibbitcoin_.clear();
+
     ABC_DebugLevel(2,"%d libbitcoin untried, %d stratrum untried",
                    untriedLibbitcoin_.size(), untriedStratum_.size());
 
@@ -102,43 +105,30 @@ TxUpdater::connect()
     // Let's make some connections:
     srand(time(nullptr));
     int numConnections = 0;
-    while (connections_.size() < NUM_CONNECT_SERVERS && (untriedStratum_.size()))
-//           &&
-//            (untriedLibbitcoin_.size() || untriedStratum_.size()))
-//           &&
-//            (untriedLibbitcoin_.size() || untriedStratum_.size()))
+    while (connections_.size() < NUM_CONNECT_SERVERS
+           &&
+           (untriedLibbitcoin_.size() || untriedStratum_.size()))
     {
         auto *untriedPrimary = &untriedStratum_;
         auto *primaryCount = &stratumCount;
-//        auto *untriedSecondary = &untriedLibbitcoin_;
-//        auto *secondaryCount = &libbitcoinCount;
-//        long minPrimary = MINIMUM_STRATUM_SERVERS;
-//        long minSecondary = MINIMUM_LIBBITCOIN_SERVERS;
+        auto *untriedSecondary = &untriedLibbitcoin_;
+        auto *secondaryCount = &libbitcoinCount;
+        long minPrimary = MINIMUM_STRATUM_SERVERS;
+        long minSecondary = MINIMUM_LIBBITCOIN_SERVERS;
 
-//        if (numConnections % 2 == 1)
-//        {
-//            untriedPrimary = &untriedLibbitcoin_;
-//            untriedSecondary = &untriedStratum_;
-//            primaryCount = &libbitcoinCount;
-//            secondaryCount = &stratumCount;
-//            minPrimary = MINIMUM_LIBBITCOIN_SERVERS;
-//            minSecondary = MINIMUM_STRATUM_SERVERS;
-//        }
-//
-//        if (numConnections % 2 == 1)
-//        {
-//            untriedPrimary = &untriedLibbitcoin_;
-//            untriedSecondary = &untriedStratum_;
-//            primaryCount = &libbitcoinCount;
-//            secondaryCount = &stratumCount;
-//            minPrimary = MINIMUM_LIBBITCOIN_SERVERS;
-//            minSecondary = MINIMUM_STRATUM_SERVERS;
-//        }
-//
-//        if (untriedPrimary->size() &&
-//                ((minSecondary - *secondaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
-//                 (rand() & 8)))
-        if (untriedPrimary->size())
+        if (numConnections % 2 == 1)
+        {
+            untriedPrimary = &untriedLibbitcoin_;
+            untriedSecondary = &untriedStratum_;
+            primaryCount = &libbitcoinCount;
+            secondaryCount = &stratumCount;
+            minPrimary = MINIMUM_LIBBITCOIN_SERVERS;
+            minSecondary = MINIMUM_STRATUM_SERVERS;
+        }
+
+        if (untriedPrimary->size() &&
+                ((minSecondary - *secondaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
+                 (rand() & 8)))
         {
             auto i = untriedPrimary->begin();
             std::advance(i, rand() % untriedPrimary->size());
@@ -148,18 +138,18 @@ TxUpdater::connect()
                 ++numConnections;
             }
         }
-//        else if (untriedSecondary->size() &&
-//                 ((minPrimary - *primaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
-//                  (rand() & 8)))
-//        {
-//            auto i = untriedSecondary->begin();
-//            std::advance(i, rand() % untriedSecondary->size());
-//            if (connectTo(*i).log())
-//            {
-//                (*secondaryCount)++;
-//                ++numConnections;
-//            }
-//        }
+        else if (untriedSecondary->size() &&
+                 ((minPrimary - *primaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
+                  (rand() & 8)))
+        {
+            auto i = untriedSecondary->begin();
+            std::advance(i, rand() % untriedSecondary->size());
+            if (connectTo(*i).log())
+            {
+                (*secondaryCount)++;
+                ++numConnections;
+            }
+        }
     }
 
     return Status();
