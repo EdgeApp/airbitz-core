@@ -29,9 +29,10 @@ struct AddressJson:
     ABC_JSON_CONSTRUCTORS(AddressJson, JsonObject)
 
     ABC_JSON_STRING(address, "address", 0)
+    ABC_JSON_BOOLEAN(dirty, "dirty", false)
     ABC_JSON_VALUE(txids, "txids", JsonArray)
     ABC_JSON_INTEGER(lastCheck, "lastCheck", 0)
-    ABC_JSON_STRING(stateHash, "stratumHash", 0)
+    ABC_JSON_STRING(stratumHash, "stratumHash", 0)
 };
 
 bool
@@ -91,12 +92,13 @@ AddressCache::load(JsonObject &json)
                     row.insertTxid(json_string_value(stringJson.get()));
             }
 
+            row.dirty = addressJson.dirty();
             row.lastCheck = addressJson.lastCheck();
             if (now < nextCheck(address, row))
                 row.checkedOnce = true;
 
-            if (addressJson.stateHashOk())
-                row.stateHash = addressJson.stateHash();
+            if (addressJson.stratumHashOk())
+                row.stratumHash = addressJson.stratumHash();
 
             rows_[address] = row;
         }
@@ -124,10 +126,12 @@ AddressCache::save(JsonObject &json)
 
         AddressJson address;
         ABC_CHECK(address.addressSet(row.first));
+        if (row.second.dirty)
+            ABC_CHECK(address.dirtySet(row.second.dirty));
         ABC_CHECK(address.txidsSet(txidsJson));
         ABC_CHECK(address.lastCheckSet(row.second.lastCheck));
-        if (!row.second.stateHash.empty())
-            ABC_CHECK(address.stateHashSet(row.second.stateHash));
+        if (!row.second.stratumHash.empty())
+            ABC_CHECK(address.stratumHashSet(row.second.stratumHash));
         ABC_CHECK(addressesJson.append(address));
     }
     cacheJson.addressesSet(addressesJson);
@@ -159,7 +163,7 @@ AddressCache::statuses(time_t &sleep) const
     for (auto &row: rows_)
     {
         const auto s = status(row.first, row.second, now);
-        if (s.needsCheck || s.missingTxids.size())
+        if (s.dirty || s.needsCheck || s.missingTxids.size())
             out.push_back(std::move(s));
 
         if (now < s.nextCheck
@@ -177,21 +181,6 @@ AddressCache::txids() const
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     return knownTxids_;
-}
-
-bool
-AddressCache::stateHashDirty(const std::string &address,
-                             const std::string &stateHash) const
-{
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-
-    const auto i = rows_.find(address);
-    if (rows_.end() == i)
-        return true;
-    auto &row = i->second;
-    if (row.stateHash.empty())
-        return true;
-    return row.stateHash != stateHash;
 }
 
 void
@@ -237,8 +226,7 @@ AddressCache::update()
 }
 
 void
-AddressCache::update(const std::string &address, const TxidSet &txids,
-                     const std::string &stateHash)
+AddressCache::update(const std::string &address, const TxidSet &txids)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     auto &row = rows_[address];
@@ -265,11 +253,9 @@ AddressCache::update(const std::string &address, const TxidSet &txids,
             row.insertTxid(txid);
 
     // Update timestamp:
+    row.dirty = false;
     row.lastCheck = time(nullptr);
     row.checkedOnce = true;
-
-    if (!stateHash.empty())
-        row.stateHash = stateHash;
 
     // Fire callbacks:
     updateInternal();
@@ -299,6 +285,25 @@ AddressCache::updateSubscribe(const std::string &address)
 
     if (row.checkedOnce)
         row.lastCheck = time(nullptr);
+}
+
+bool
+AddressCache::updateStratumHash(const std::string &address,
+                                const std::string &hash)
+{
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    auto i = rows_.find(address);
+    if (rows_.end() == i)
+        return true;
+    auto &row = i->second;
+
+    row.dirty = row.stratumHash.empty() || hash != row.stratumHash;
+    if (!hash.empty())
+        row.stratumHash = hash;
+    if (!row.dirty)
+        row.checkedOnce = true;
+    return row.dirty;
 }
 
 void
@@ -337,6 +342,7 @@ AddressCache::status(const std::string &address, const AddressRow &row,
                      time_t now) const
 {
     AddressStatus out{address};
+    out.dirty = row.dirty;
     out.nextCheck = nextCheck(address, row);
     out.needsCheck = out.nextCheck <= now;
     out.count = row.txids.size();

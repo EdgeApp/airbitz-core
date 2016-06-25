@@ -28,7 +28,10 @@ struct AddressStatus
     /** The address in question. */
     std::string address;
 
-    /** True if this address needs to be checked. */
+    /** True if our address state is known to be dirty. */
+    bool dirty;
+
+    /** True if this address hasn't been checked in a while. */
     bool needsCheck;
 
     /** The time of the next check. Used for sorting. */
@@ -110,14 +113,6 @@ public:
     TxidSet
     txids() const;
 
-    /**
-     * Returns true if the provided status hash indicates that the address
-     * needs checking. Stores the provided status hash for the next query.
-     */
-    bool
-    stateHashDirty(const std::string &address,
-                   const std::string &stateHash) const;
-
     // Updates -------------------------------------------------------------
 
     /**
@@ -143,8 +138,7 @@ public:
      * Updates an address with a new list of relevant transactions.
      */
     void
-    update(const std::string &address, const TxidSet &txids,
-           const std::string &stateHash);
+    update(const std::string &address, const TxidSet &txids);
 
     /**
      * Updates all addresses touched by a spend.
@@ -153,10 +147,18 @@ public:
     updateSpend(TxInfo &info);
 
     /**
-     * Indicates that an address is up-to-date with no changes needed.
+     * Indicates that an address has been subscribed to,
+     * so it's not really outdated.
      */
     void
     updateSubscribe(const std::string &address);
+
+    /**
+     * Updates the state hash stored with the address.
+     * Returns true if the new hash differs from the old hash.
+     */
+    bool
+    updateStratumHash(const std::string &address, const std::string &hash);
 
     /**
      * Sets up a callback to notify when addresses change.
@@ -187,13 +189,14 @@ private:
         // Persistent state:
         TxidSet txids;
         time_t lastCheck = 0;
-        std::string stateHash;
+        std::string stratumHash;
 
         // Dynamic state:
+        bool dirty = true;
         bool checkedOnce = false;
         bool complete = false; // True if all txids are known to the GUI.
         bool knownComplete = false; // True if `onComplete` has been called.
-        bool sweep = false;
+        bool sweep = false; // True if we don't own this address
 
         void
         insertTxid(const std::string &txid)
