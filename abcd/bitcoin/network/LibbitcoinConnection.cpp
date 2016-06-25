@@ -240,7 +240,11 @@ LibbitcoinConnection::fetchHeight()
     auto replyShim = [this](size_t height)
     {
         --queuedQueries_;
-        heightCallback_(height);
+        if (lastHeight_ < height)
+        {
+            lastHeight_ = height;
+            heightCallback_(height);
+        }
     };
 
     ++queuedQueries_;

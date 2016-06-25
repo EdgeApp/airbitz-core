@@ -158,7 +158,7 @@ public:
      * Returns true if the new hash differs from the old hash.
      */
     bool
-    updateStratumHash(const std::string &address, const std::string &hash);
+    updateStratumHash(const std::string &address, const std::string &hash="");
 
     /**
      * Sets up a callback to notify when addresses change.

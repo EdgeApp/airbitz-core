@@ -420,6 +420,21 @@ TxUpdater::subscribeHeight(IBitcoinConnection *bc)
     {
         ABC_DebugLog("%s: height %d returned", uri.c_str(), height);
         cache_.blocks.heightSet(height);
+
+        // Update addresses with unconfirmed txs:
+        const auto statuses = cache_.txs.statuses(cache_.addresses.txids());
+        for (const auto status: statuses)
+        {
+            if (!status.second.height)
+            {
+                for (const auto &io: status.first.ios)
+                {
+                    ABC_DebugLog("Marking %s dirty (tx height check)",
+                                 io.address.c_str());
+                    cache_.addresses.updateStratumHash(io.address);
+                }
+            }
+        }
     };
 
     bc->heightSubscribe(onError, onReply);

@@ -71,6 +71,7 @@ private:
     // Height-check state:
     StatusCallback heightError_;
     HeightCallback heightCallback_;
+    size_t lastHeight_ = 0;
     std::chrono::steady_clock::time_point lastHeightCheck_;
 
     // Address-check state:
