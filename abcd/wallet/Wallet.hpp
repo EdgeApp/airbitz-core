@@ -11,7 +11,6 @@
 #include "../WalletPaths.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
-#include "../bitcoin/AddressCache.hpp"
 #include "AddressDb.hpp"
 #include "TxDb.hpp"
 #include <atomic>
@@ -21,7 +20,7 @@
 namespace abcd {
 
 class Account;
-class TxCache;
+class Cache;
 
 /**
  * Manages the information stored in the top-level wallet sync directory.
@@ -56,6 +55,12 @@ public:
     void balanceDirty();
 
     /**
+     * Return the XPub of this wallet
+     */
+    std::string
+    bitcoinXPub(void);
+
+    /**
      * Syncs the account with the file server.
      * This is a blocking network operation.
      */
@@ -70,6 +75,8 @@ private:
     // Account data:
     DataChunk bitcoinKey_;
     DataChunk bitcoinKeyBackup_;
+    std::string bitcoinXPub_;
+    std::string bitcoinXPubBackup_;
     DataChunk dataKey_;
     std::string syncKey_;
 
@@ -97,10 +104,10 @@ private:
     loadSync();
 
 public:
-    AddressCache addressCache;
     AddressDb addresses;
     TxDb txs;
-    TxCache &txCache;
+
+    Cache &cache;
 };
 
 } // namespace abcd

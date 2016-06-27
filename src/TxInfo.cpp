@@ -7,7 +7,7 @@
 
 #include "TxInfo.hpp"
 #include "TxDetails.hpp"
-#include "../abcd/bitcoin/TxCache.hpp"
+#include "../abcd/bitcoin/cache/Cache.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include "../abcd/util/Util.hpp"
 
@@ -26,6 +26,8 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
 
     // Basic information:
     out->szID = stringCopy(info.txid);
+    out->balance = self.addresses.balance(info);
+    out->minerFee = info.fee;
 
     // Outputs array:
     out->countOutputs = info.ios.size();
@@ -40,22 +42,30 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
         out->aOutputs[i++] = txo;
     }
 
+    // Best-effort timestamp:
+    time_t timestamp = time(nullptr);
+    if (status.height)
+        self.cache.blocks.headerTime(timestamp, status.height);
+
     // Details:
     TxMeta meta;
     if (self.txs.get(meta, info.ntxid))
     {
+        out->timeCreation = std::min(timestamp, meta.timeCreation);
+        out->airbitzFeeWanted = meta.airbitzFeeWanted;
+        out->airbitzFeeSent = meta.airbitzFeeSent;
         out->pDetails = meta.metadata.toDetails();
-        out->timeCreation = meta.timeCreation;
-        out->pDetails->amountFeesAirbitzSatoshi = meta.airbitzFeeSent;
     }
     else
     {
-        out->timeCreation = time(nullptr);
+        out->timeCreation = timestamp;
+        out->airbitzFeeWanted = 0;
+        out->airbitzFeeSent = 0;
         out->pDetails = Metadata().toDetails();
-        out->pDetails->amountFeesAirbitzSatoshi = 0;
     }
-    out->pDetails->amountSatoshi = self.addresses.balance(info);
-    out->pDetails->amountFeesMinersSatoshi = info.fee;
+    out->pDetails->amountSatoshi = out->balance;
+    out->pDetails->amountFeesMinersSatoshi = out->minerFee;
+    out->pDetails->amountFeesAirbitzSatoshi = out->airbitzFeeSent;
 
     // Status:
     out->height = status.height;
@@ -87,7 +97,7 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
     tABC_TxInfo **aTransactions = NULL;
     unsigned int count = 0;
 
-    const auto infos = self.txCache.list(self.addresses.list());
+    const auto infos = self.cache.txs.statuses(self.cache.addresses.txids());
     for (const auto &info: infos)
     {
         pTransaction = makeTxInfo(self, info.first, info.second);

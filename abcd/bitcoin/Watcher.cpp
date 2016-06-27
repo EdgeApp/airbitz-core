@@ -7,6 +7,7 @@
 
 #include "Watcher.hpp"
 #include "../util/Debug.hpp"
+#include <bitcoin/bitcoin.hpp>
 #include <sstream>
 
 namespace abcd {
@@ -25,9 +26,9 @@ enum
     msg_send
 };
 
-Watcher::Watcher(TxCache &db, AddressCache &addressCache):
+Watcher::Watcher(Cache &cache):
     socket_(ctx_, ZMQ_PAIR),
-    txu_(db, addressCache, ctx_, *this)
+    txu_(cache, ctx_)
 {
     std::stringstream name;
     name << "inproc://watcher-" << watcher_id++;
@@ -76,40 +77,16 @@ Watcher::sendTx(StatusCallback status, DataSlice tx)
     socket_.send(data.data(), data.size());
 }
 
-/**
- * Sets up the new-transaction callback. This callback will be called from
- * some random thread, so be sure to handle that with a mutex or such.
- */
-void Watcher::set_tx_callback(tx_callback cb)
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    cb_ = std::move(cb);
-}
-
-/**
- * Sets up the change in block heightcallback.
- */
-void Watcher::set_height_callback(block_height_callback cb)
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    height_cb_ = std::move(cb);
-}
-
-/**
- * Sets up the server failure callback
- */
-void Watcher::set_quiet_callback(quiet_callback cb)
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    quiet_cb_ = std::move(cb);
-}
-
 void Watcher::stop()
 {
     std::lock_guard<std::mutex> lock(socket_mutex_);
 
     uint8_t req = msg_quit;
     socket_.send(&req, 1);
+
+    // Log time to start logout
+    ABC_DebugLog("Watcher::stop() %lu", this);
+
 }
 
 void throw_term()
@@ -174,6 +151,8 @@ bool Watcher::command(uint8_t *data, size_t size)
     {
     default:
     case msg_quit:
+        // Log time to finish watcher.
+        ABC_DebugLog("Watcher Successfully Quit %lu", this);
         return false;
 
     case msg_wakeup:
@@ -191,32 +170,11 @@ bool Watcher::command(uint8_t *data, size_t size)
     {
         auto statusInt = serial.read_little_endian<uintptr_t>();
         auto statusCopy = reinterpret_cast<StatusCallback *>(statusInt);
-        txu_.send(*statusCopy, DataSlice(serial.iterator(), data + size));
+        txu_.sendTx(*statusCopy, DataSlice(serial.iterator(), data + size));
         delete statusCopy;
     }
     return true;
     }
-}
-
-void Watcher::on_add(const bc::transaction_type &tx)
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    if (cb_)
-        cb_(tx);
-}
-
-void Watcher::on_height(size_t height)
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    if (height_cb_)
-        height_cb_(height);
-}
-
-void Watcher::on_quiet()
-{
-    std::lock_guard<std::mutex> lock(cb_mutex_);
-    if (quiet_cb_)
-        quiet_cb_();
 }
 
 } // namespace abcd

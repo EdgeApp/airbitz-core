@@ -24,6 +24,12 @@ public:
     JsonArray(const JsonPtr &copy);
 
     /**
+     * Returns an error if this is not actually pointing to a JSON array.
+     */
+    Status
+    ok();
+
+    /**
      * Returns the number of values in the array.
      */
     size_t size() { return json_array_size(root_); }

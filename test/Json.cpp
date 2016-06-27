@@ -47,6 +47,7 @@ TEST_CASE("JsonArray manipulation", "[util][json]")
 {
     abcd::JsonArray a;
     REQUIRE(json_is_array(a.get()));
+    REQUIRE(a.ok());
 
     abcd::JsonPtr temp(json_integer(42));
     REQUIRE(a.append(temp));
@@ -73,6 +74,7 @@ TEST_CASE("JsonObject manipulation", "[util][json]")
     SECTION("empty")
     {
         REQUIRE(json_is_object(test.get()));
+        REQUIRE(test.ok());
         REQUIRE_FALSE(test.stringOk());
         REQUIRE_FALSE(test.numberOk());
         REQUIRE_FALSE(test.booleanOk());

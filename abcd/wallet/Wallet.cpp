@@ -9,8 +9,7 @@
 #include "../Context.hpp"
 #include "../account/Account.hpp"
 #include "../auth/LoginServer.hpp"
-#include "../bitcoin/TxCache.hpp"
-#include "../bitcoin/WatcherBridge.hpp"
+#include "../bitcoin/cache/Cache.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
 #include "../json/JsonObject.hpp"
@@ -32,18 +31,18 @@ struct WalletJson:
 struct CurrencyJson:
     public JsonObject
 {
-    ABC_JSON_INTEGER(currency, "num", 0)
+    ABC_JSON_INTEGER(currency, "num", 840)
 };
 
 struct NameJson:
     public JsonObject
 {
-    ABC_JSON_STRING(name, "walletName", "")
+    ABC_JSON_STRING(name, "walletName", "Wallet With No Name")
 };
 
 Wallet::~Wallet()
 {
-    delete &txCache;
+    delete &cache;
 }
 
 Status
@@ -54,10 +53,9 @@ Wallet::create(std::shared_ptr<Wallet> &result, Account &account,
     ABC_CHECK(out->loadKeys());
     ABC_CHECK(out->loadSync());
 
-    // Load the transaction cache (failure is acceptable):
-    DataChunk data;
-    if (fileLoad(data, out->paths.watcherPath()).log())
-        out->txCache.load(data).log();
+    // Load the transaction cache (failure is fine):
+    if (!out->cache.load().log())
+        out->cache.loadLegacy(out->paths.cachePathOld());
 
     result = std::move(out);
     return Status();
@@ -83,6 +81,13 @@ Wallet::bitcoinKey() const
     // Otherwise, we might generate a bad bitcoin address and lose money:
     assert(bitcoinKeyBackup_ == bitcoinKey_);
     return bitcoinKey_;
+}
+
+std::string
+Wallet::bitcoinXPub()
+{
+    assert(bitcoinXPub_ == bitcoinXPubBackup_);
+    return bitcoinXPub_;
 }
 
 int
@@ -137,7 +142,7 @@ Wallet::balance(int64_t &result)
     std::lock_guard<std::mutex> lock(mutex_);
     if (dirty)
     {
-        const auto utxos = txCache.get_utxos(addresses.list(), false);
+        const auto utxos = cache.txs.utxos(addresses.list(), false);
 
         balance_ = 0;
         for (const auto &utxo: utxos)
@@ -175,7 +180,7 @@ Wallet::Wallet(Account &account, const std::string &id):
     balanceDirty_(true),
     addresses(*this),
     txs(*this),
-    txCache(*new TxCache())
+    cache(*new Cache(paths.cachePath(), gContext->blockCache))
 {}
 
 Status
@@ -230,6 +235,10 @@ Wallet::loadKeys()
     ABC_CHECK(base16Decode(dataKey_, json.dataKey()));
     syncKey_ = json.syncKey();
 
+    const auto m0 = bc::hd_private_key(bitcoinKey_).generate_public_key(0);
+    bitcoinXPub_ = m0.encoded();
+    bitcoinXPubBackup_ = bitcoinXPub_;
+
     return Status();
 }
 
@@ -243,7 +252,6 @@ Wallet::loadSync()
     // Load the currency:
     CurrencyJson currencyJson;
     currencyJson.load(paths.currencyPath(), dataKey());
-    ABC_CHECK(currencyJson.currencyOk());
     currency_ = currencyJson.currency();
 
     // Load the name (failure is acceptable):

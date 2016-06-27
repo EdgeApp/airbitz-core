@@ -5,13 +5,13 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_BITCOIN_STRATUM_CODEC_HPP
-#define ABCD_BITCOIN_STRATUM_CODEC_HPP
+#ifndef ABCD_BITCOIN_NETWORK_STRATUM_CODEC_HPP
+#define ABCD_BITCOIN_NETWORK_STRATUM_CODEC_HPP
 
+#include "IBitcoinConnection.hpp"
 #include "TcpConnection.hpp"
-#include "Typedefs.hpp"
-#include "../../minilibs/libbitcoin-client/client.hpp"
 #include <chrono>
+#include <map>
 
 namespace abcd {
 
@@ -21,11 +21,12 @@ typedef std::chrono::milliseconds SleepTime;
 // Scheme used for stratum URI's:
 constexpr auto stratumScheme = "stratum";
 
-class StratumConnection
+class StratumConnection:
+    public IBitcoinConnection
 {
 public:
     typedef std::function<void (const std::string &version)> VersionHandler;
-    typedef std::function<void (const size_t &height)> HeightHandler;
+    typedef std::function<void (double fee)> FeeCallback;
 
     ~StratumConnection();
 
@@ -36,19 +37,13 @@ public:
     version(const StatusCallback &onError, const VersionHandler &onReply);
 
     /**
-     * Requests a transaction from the server.
+     * Fetches an estimate of the mining fees needed
+     * to confirm a transaction in the given number of blocks.
      */
     void
-    getTx(
-        const bc::client::obelisk_codec::error_handler &onError,
-        const bc::client::obelisk_codec::fetch_transaction_handler &onReply,
-        const bc::hash_digest &txid);
-
-    void
-    getAddressHistory(
-        const bc::client::obelisk_codec::error_handler &onError,
-        const bc::client::obelisk_codec::fetch_history_handler &onReply,
-        const bc::payment_address &address, size_t fromHeight=0);
+    feeEstimateFetch(const StatusCallback &onError,
+                     const FeeCallback &onReply,
+                     size_t blocks);
 
     /**
      * Broadcasts a transaction over the Bitcoin network.
@@ -57,14 +52,6 @@ public:
      */
     void
     sendTx(const StatusCallback &onDone, DataSlice tx);
-
-    /**
-     * Requests current blockchain height from the server.
-     */
-    void
-    getHeight(
-        const bc::client::obelisk_codec::error_handler &onError,
-        const HeightHandler &onReply);
 
     /**
      * Connects to the specified stratum server.
@@ -84,10 +71,45 @@ public:
      */
     int pollfd() const { return connection_.pollfd(); }
 
+    // IBitcoinConnection interface:
+    std::string
+    uri() override;
+
+    bool
+    queueFull() override;
+
+    void
+    heightSubscribe(const StatusCallback &onError,
+                    const HeightCallback &onReply) override;
+
+    void
+    addressSubscribe(const StatusCallback &onError,
+                     const AddressUpdateCallback &onReply,
+                     const std::string &address) override;
+
+    bool
+    addressSubscribed(const std::string &address) override;
+
+    void
+    addressHistoryFetch(const StatusCallback &onError,
+                        const AddressCallback &onReply,
+                        const std::string &address) override;
+
+    void
+    txDataFetch(const StatusCallback &onError,
+                const TxCallback &onReply,
+                const std::string &txid) override;
+
+    void
+    blockHeaderFetch(const StatusCallback &onError,
+                     const HeaderCallback &onReply,
+                     size_t height) override;
+
 private:
     typedef std::function<Status (JsonPtr payload)> Decoder;
 
     // Socket:
+    std::string uri_;
     TcpConnection connection_;
     std::string incoming_;
 
@@ -106,6 +128,10 @@ private:
 
     // Server heartbeat:
     std::chrono::steady_clock::time_point lastKeepalive_;
+
+    // Subscriptions:
+    HeightCallback heightCallback_;
+    std::map<std::string, AddressUpdateCallback> addressCallbacks_;
 
     /**
      * Sends a message and sets up the reply decoder.

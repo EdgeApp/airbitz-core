@@ -7,7 +7,7 @@
 
 #include "../abcd/crypto/Crypto.hpp"
 #include "../abcd/crypto/Encoding.hpp"
-#include "../abcd/json/JsonPtr.hpp"
+#include "../abcd/json/JsonBox.hpp"
 #include "../minilibs/catch/catch.hpp"
 
 // sha256("Satoshi"):
@@ -27,8 +27,8 @@ TEST_CASE("Decryption", "[crypto][encryption]")
     tABC_Error error;
     abcd::DataChunk key;
     abcd::base16Decode(key, keyHex);
-    abcd::JsonPtr package;
-    package.decode(
+    abcd::JsonBox box;
+    box.decode(
         "{"
         "\"data_base64\": "
         "\"X08Snnou2PrMW21ZNyJo5C8StDjTNgMtuEoAJL5bJ6LDPdZGQLhjaUMetOknaPYn"
@@ -43,9 +43,8 @@ TEST_CASE("Decryption", "[crypto][encryption]")
         "\"iv_hex\": \"96a4cd52670c13df9712fdc1b564d44b\""
         "}");
 
-    abcd::AutoU08Buf data;
-    CHECK(ABC_CC_Ok == ABC_CryptoDecryptJSONObject(
-              package.get(), abcd::U08Buf(key), &data, &error));
+    abcd::DataChunk data;
+    CHECK(box.decrypt(data, key));
     CHECK(abcd::toString(data) == "payload");
 }
 
@@ -56,16 +55,10 @@ TEST_CASE("Encryption round-trip", "[crypto][encryption]")
     abcd::base16Decode(key, keyHex);
     const std::string payload("payload");
 
-    json_t *json = nullptr;
-    CHECK(ABC_CC_Ok == ABC_CryptoEncryptJSONObject(
-              abcd::U08Buf(payload), abcd::U08Buf(key),
-              abcd::ABC_CryptoType_AES256, &json, &error));
+    abcd::JsonBox box;
+    CHECK(box.encrypt(payload, key));
 
-    abcd::AutoU08Buf data;
-    CHECK(ABC_CC_Ok == ABC_CryptoDecryptJSONObject(
-              json, abcd::U08Buf(key), &data, &error));
+    abcd::DataChunk data;
+    CHECK(box.decrypt(data, key));
     CHECK(abcd::toString(data) == payload);
-
-    if (json)
-        json_decref(json);
 }

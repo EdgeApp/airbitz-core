@@ -193,8 +193,20 @@ typedef enum eABC_AsyncEventType
     ABC_AsyncEventType_BlockHeightChange,
     ABC_AsyncEventType_BalanceUpdate,
     ABC_AsyncEventType_AddressCheckDone,
-    ABC_AsyncEventType_IncomingSweep
+    ABC_AsyncEventType_IncomingSweep,
+    ABC_AsyncEventType_TransactionUpdate,
 } tABC_AsyncEventType;
+
+/**
+ * Mining fee slider settings.
+ */
+typedef enum eABC_SpendFeeLevel
+{
+    ABC_SpendFeeLevelLow = 0,
+    ABC_SpendFeeLevelStandard,
+    ABC_SpendFeeLevelHigh,
+    ABC_SpendFeeLevelCustom,
+} tABC_SpendFeeLevel;
 
 /**
  * AirBitz Core Asynchronous Structure
@@ -284,9 +296,9 @@ typedef struct sABC_TxDetails
 {
     /** amount of bitcoins in satoshi (including fees if any) */
     int64_t amountSatoshi;
-    /** airbitz fees in satoshi */
+    /** airbitz fees in satoshi (DEPRECATED, moved to tABC_TxInfo) */
     int64_t amountFeesAirbitzSatoshi;
-    /** miners fees in satoshi */
+    /** miners fees in satoshi (DEPRECATED, moved to tABC_TxInfo) */
     int64_t amountFeesMinersSatoshi;
     /** amount in currency */
     double amountCurrency;
@@ -328,12 +340,22 @@ typedef struct sABC_TxInfo
     const char *szID;
     /** time of creation */
     int64_t timeCreation;
+    /** The net impact on the wallet balance. */
+    int64_t balance;
+    /** The mining fees paid. */
+    int64_t minerFee;
     /** count of bitcoin addresses associated with this transaciton */
     unsigned int countOutputs;
     /** bitcoin addresses associated with this transaction */
     tABC_TxOutput **aOutputs;
     /** transaction details */
     tABC_TxDetails *pDetails;
+
+    /** The Airbitz fee owed for this transaction. */
+    int64_t airbitzFeeWanted;
+    /** The Airbitz fee actually sent with this transaction. */
+    int64_t airbitzFeeSent;
+
     /** The confirmation height of the transaction, or 0 for unconfirmed. */
     unsigned long height;
     /** True if the transaction is a double-spend. */
@@ -1026,6 +1048,15 @@ tABC_CC ABC_ExportWalletSeed(const char *szUserName,
                              char **pszWalletSeed,
                              tABC_Error *pError);
 
+/**
+ * Export the HD public seed (XPub) used to generate all addresses within a wallet.
+ */
+tABC_CC ABC_ExportWalletXPub(const char *szUserName,
+                             const char *szPassword,
+                             const char *szWalletUUID,
+                             char **pszWalletXPub,
+                             tABC_Error *pError);
+
 tABC_CC ABC_CsvExport(const char *szUserName,
                       const char *szPassword,
                       const char *szUUID,
@@ -1123,6 +1154,14 @@ tABC_CC ABC_SpendAddTransfer(void *pSpend,
 tABC_CC ABC_SpendSetMetadata(void *pSpend,
                              tABC_TxDetails *pDetails,
                              tABC_Error *pError);
+
+/**
+ * Change the desired fee level of the current spend
+ */
+tABC_CC ABC_SpendSetFee(void *pSpend,
+                        tABC_SpendFeeLevel feeLevel,
+                        uint64_t customFeeSatoshi,
+                        tABC_Error *pError);
 
 /**
  * Calculate the fee needed to perform this spend.

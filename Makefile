@@ -37,7 +37,7 @@ endif
 
 # Source files:
 abc_sources = \
-	$(wildcard abcd/*.cpp abcd/*/*.cpp src/*.cpp) \
+	$(wildcard abcd/*.cpp abcd/*/*.cpp abcd/*/*/*.cpp src/*.cpp) \
 	$(wildcard minilibs/libbitcoin-client/*.cpp) \
 	minilibs/git-sync/sync.c \
 	minilibs/scrypt/crypto_scrypt.c \
@@ -45,7 +45,6 @@ abc_sources = \
 
 cli_sources = $(wildcard cli/*.cpp cli/*/*.cpp)
 test_sources = $(wildcard test/*.cpp)
-watcher_sources = $(wildcard util/*.cpp)
 
 generated_headers = \
 	codegen/paymentrequest.pb.h
@@ -54,7 +53,6 @@ generated_headers = \
 abc_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(abc_sources))))
 cli_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(cli_sources))))
 test_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(test_sources))))
-watcher_objects = $(addprefix $(WORK_DIR)/, $(addsuffix .o, $(basename $(watcher_sources))))
 
 # Adjustable verbosity:
 V ?= 0
@@ -63,7 +61,7 @@ ifeq ($V,0)
 endif
 
 # Targets:
-all: $(WORK_DIR)/abc-cli check $(WORK_DIR)/abc-watcher format-check
+all: $(WORK_DIR)/abc-cli check format-check
 libabc.a:  $(WORK_DIR)/libabc.a
 libabc.so: $(WORK_DIR)/libabc.so
 
@@ -71,15 +69,12 @@ $(WORK_DIR)/libabc.a: $(abc_objects)
 	$(RUN) $(RM) $@; $(AR) rcs $@ $^
 
 $(WORK_DIR)/libabc.so: $(abc_objects)
-	$(RUN) $(CXX) -shared -o $@ $^ $(LDFLAGS) $(LIBS)
+	$(RUN) $(CXX) -shared -Wl,-soname=libabc.so -o $@ $^ $(LDFLAGS) $(LIBS)
 
 $(WORK_DIR)/abc-cli: $(cli_objects) $(WORK_DIR)/libabc.a
 	$(RUN) $(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 $(WORK_DIR)/abc-test: $(test_objects) $(WORK_DIR)/libabc.a
-	$(RUN) $(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
-
-$(WORK_DIR)/abc-watcher: $(watcher_objects) $(WORK_DIR)/libabc.a
 	$(RUN) $(CXX) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 check: $(WORK_DIR)/abc-test
@@ -147,7 +142,7 @@ $(WORK_DIR)/%.o: %.cpp | $(generated_headers)
 	@mkdir -p $(dir $@)
 	$(RUN) $(CXX) -c -MD $(CXXFLAGS) -o $@ $<
 
-include $(wildcard $(WORK_DIR)/*/*.d $(WORK_DIR)/*/*/*.d)
+include $(wildcard $(WORK_DIR)/*/*.d $(WORK_DIR)/*/*/*.d $(WORK_DIR)/*/*/*/*.d)
 %.h: ;
 %.hpp: ;
 

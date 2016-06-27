@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2014, Airbitz, Inc.
  * All rights reserved.
@@ -24,7 +25,12 @@ public:
     JsonObject(JsonPtr &&move);
     JsonObject(const JsonPtr &copy);
 
-protected:
+    /**
+     * Returns an error if this is not actually pointing to a JSON object.
+     */
+    Status
+    ok();
+
     /**
      * Writes a key-value pair to the root object,
      * creating the root if necessary.

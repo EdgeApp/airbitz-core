@@ -79,7 +79,7 @@ TcpConnection::connect(const std::string &hostname, unsigned port)
         if (fd_ < 0)
         {
             freeaddrinfo(list);
-            return ABC_ERROR(ABC_CC_ServerError, "Cannot create socket");
+            return ABC_ERROR(ABC_CC_ServerError, "Cannot create socket to " + hostname);
         }
 
         struct timeval sto;

@@ -35,7 +35,8 @@ signTx(bc::transaction_type &result, const TxCache &txCache,
  */
 Status
 inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
-                  bc::transaction_type &tx, const bc::output_info_list &utxos);
+                  bc::transaction_type &tx, const bc::output_info_list &utxos,
+                  tABC_SpendFeeLevel feeLevel, uint64_t customFeeSatoshi);
 
 /**
  * Populate the transaction's input list with all the utxo's in the wallet,

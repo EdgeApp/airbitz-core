@@ -646,7 +646,7 @@ loginServerUploadLogs(const Account *account)
         for (const auto &id: ids)
         {
             DataChunk watchData;
-            if (fileLoad(watchData, WalletPaths(id).watcherPath()))
+            if (fileLoad(watchData, WalletPaths(id).cachePath()))
             {
                 jsonArray.append(
                     json_string(base64Encode(watchData).c_str()));

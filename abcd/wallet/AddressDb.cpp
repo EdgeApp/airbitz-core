@@ -7,7 +7,7 @@
 
 #include "AddressDb.hpp"
 #include "Wallet.hpp"
-#include "../bitcoin/TxCache.hpp"
+#include "../bitcoin/cache/Cache.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/Debug.hpp"
@@ -143,7 +143,7 @@ AddressDb::load()
                 addresses_[address.address] = address;
                 files_[address.address] = json;
 
-                wallet_.addressCache.insert(address.address);
+                wallet_.cache.addresses.insert(address.address);
             }
         }
         closedir(dir);
@@ -325,7 +325,7 @@ AddressDb::stockpile()
                 ABC_CHECK(json.save(path(address), wallet_.dataKey()));
                 files_[address.address] = json;
 
-                wallet_.addressCache.insert(address.address);
+                wallet_.cache.addresses.insert(address.address);
             }
         }
         else if (!index->second)

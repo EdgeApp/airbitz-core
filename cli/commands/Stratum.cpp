@@ -6,7 +6,8 @@
  */
 
 #include "../Command.hpp"
-#include "../../abcd/bitcoin/StratumConnection.hpp"
+#include "../../abcd/bitcoin/network/StratumConnection.hpp"
+#include <zmq.h>
 #include <iostream>
 
 using namespace abcd;

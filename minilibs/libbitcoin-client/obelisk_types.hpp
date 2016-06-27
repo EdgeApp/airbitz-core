@@ -17,34 +17,42 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef LIBBITCOIN_CLIENT_MESSAGE_STREAM_HPP
-#define LIBBITCOIN_CLIENT_MESSAGE_STREAM_HPP
+#ifndef LIBBITCOIN_CLIENT_OBELISK_OBELISK_TYPES_HPP
+#define LIBBITCOIN_CLIENT_OBELISK_OBELISK_TYPES_HPP
 
 #include <bitcoin/bitcoin.hpp>
 
 namespace libbitcoin {
 namespace client {
 
-/**
- * Represents a stream of multi-part messages.
- *
- * One of this library's design goals is completely separate the networking
- * code from the message-handling code. This interface is the glue between
- * the two worlds.
- */
-class message_stream
+struct history_row
 {
-public:
-    virtual ~message_stream() {};
-
-    /**
-     * Sends one multi-part message.
-     */
-    virtual void write(const data_stack& data) = 0;
+    output_point output;
+    size_t output_height;
+    uint64_t value;
+    input_point spend;
+    size_t spend_height;
 };
 
-} // namespace client
-} // namespace libbitcoin
+typedef std::vector<history_row> history_list;
+
+struct stealth_row
+{
+    data_chunk ephemkey;
+    payment_address address;
+    hash_digest transaction_hash;
+};
+
+typedef std::vector<stealth_row> stealth_list;
+
+// See below for description of updates data format.
+enum class subscribe_type : uint8_t
+{
+    address = 0,
+    stealth = 1
+};
+
+}
+}
 
 #endif
-

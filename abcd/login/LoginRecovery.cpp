@@ -108,25 +108,27 @@ loginRecoverySet(Login &login,
     ABC_CHECK(carePackage.snrp4().hash(questionKey, login.lobby.username()));
 
     // Encrypt the questions:
-    JsonBox box;
-    ABC_CHECK(box.encrypt(recoveryQuestions, questionKey));
-    ABC_CHECK(carePackage.questionBoxSet(box));
+    JsonBox questionBox;
+    ABC_CHECK(questionBox.encrypt(recoveryQuestions, questionKey));
+    ABC_CHECK(carePackage.questionBoxSet(questionBox));
 
     // Make recoveryKey (unlocks dataKey):
     DataChunk recoveryKey;
     ABC_CHECK(carePackage.snrp3().hash(recoveryKey, LRA));
 
     // Encrypt dataKey:
-    ABC_CHECK(box.encrypt(login.dataKey(), recoveryKey));
-    ABC_CHECK(loginPackage.recoveryBoxSet(box));
+    JsonBox recoveryBox;
+    ABC_CHECK(recoveryBox.encrypt(login.dataKey(), recoveryKey));
+    ABC_CHECK(loginPackage.recoveryBoxSet(recoveryBox));
 
     // Make recoveryAuthKey (unlocks the server):
     DataChunk recoveryAuthKey;
     ABC_CHECK(usernameSnrp().hash(recoveryAuthKey, LRA));
 
     // Encrypt recoveryAuthKey (needed for atomic password updates):
-    ABC_CHECK(box.encrypt(recoveryAuthKey, login.dataKey()));
-    ABC_CHECK(loginPackage.ELRA1Set(box));
+    JsonBox recoveryAuthBox;
+    ABC_CHECK(recoveryAuthBox.encrypt(recoveryAuthKey, login.dataKey()));
+    ABC_CHECK(loginPackage.ELRA1Set(recoveryAuthBox));
 
     // Change the server login:
     ABC_CHECK(loginServerChangePassword(login, authKey, recoveryAuthKey,

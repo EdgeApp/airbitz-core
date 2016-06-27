@@ -26,7 +26,7 @@ Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
               const LoginPackage &loginPackage, JsonBox rootKeyBox, bool offline)
 {
     std::shared_ptr<Login> out(new Login(lobby, dataKey));
-    ABC_CHECK(out->loadKeys(loginPackage, JsonBox(), true));
+    ABC_CHECK(out->loadKeys(loginPackage, rootKeyBox, offline));
 
     result = std::move(out);
     return Status();
@@ -77,7 +77,6 @@ Status
 Login::createNew(const char *password)
 {
     LoginPackage loginPackage;
-    JsonBox box;
     JsonSnrp snrp;
 
     // Set up care package:
@@ -86,9 +85,10 @@ Login::createNew(const char *password)
     ABC_CHECK(carePackage.snrp2Set(snrp));
 
     // Set up syncKey:
+    JsonBox syncKeyBox;
     ABC_CHECK(randomData(syncKey_, SYNC_KEY_LENGTH));
-    ABC_CHECK(box.encrypt(syncKey_, dataKey_));
-    ABC_CHECK(loginPackage.syncKeyBoxSet(box));
+    ABC_CHECK(syncKeyBox.encrypt(syncKey_, dataKey_));
+    ABC_CHECK(loginPackage.syncKeyBoxSet(syncKeyBox));
 
     // Set up authKey (LP1):
     if (password)
@@ -100,17 +100,19 @@ Login::createNew(const char *password)
 
         // We have a password, so use it to encrypt dataKey:
         DataChunk passwordKey;
+        JsonBox passwordBox;
         ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
-        ABC_CHECK(box.encrypt(dataKey_, passwordKey));
-        ABC_CHECK(loginPackage.passwordBoxSet(box));
+        ABC_CHECK(passwordBox.encrypt(dataKey_, passwordKey));
+        ABC_CHECK(loginPackage.passwordBoxSet(passwordBox));
     }
     else
     {
         // Generate authKey:
         ABC_CHECK(randomData(authKey_, scryptDefaultSize));
     }
-    ABC_CHECK(box.encrypt(authKey_, dataKey_));
-    ABC_CHECK(loginPackage.authKeyBoxSet(box));
+    JsonBox authKeyBox;
+    ABC_CHECK(authKeyBox.encrypt(authKey_, dataKey_));
+    ABC_CHECK(loginPackage.authKeyBoxSet(authKeyBox));
 
     // Create the account and repo on server:
     ABC_CHECK(loginServerCreate(lobby, authKey_,

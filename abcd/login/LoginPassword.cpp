@@ -41,7 +41,7 @@ loginPasswordDisk(std::shared_ptr<Login> &result,
     // Create the Login object:
     std::shared_ptr<Login> out;
     ABC_CHECK(Login::create(out, lobby, dataKey,
-                            loginPackage, JsonBox(), true));
+                            loginPackage, JsonPtr(), true));
 
     result = std::move(out);
     return Status();
@@ -129,15 +129,16 @@ loginPasswordSet(Login &login, const std::string &password)
     // Update EMK_LP2:
     DataChunk passwordKey;      // Unlocks dataKey
     ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
-    JsonBox box;
-    ABC_CHECK(box.encrypt(login.dataKey(), passwordKey));
-    ABC_CHECK(loginPackage.passwordBoxSet(box));
+    JsonBox passwordBox;
+    ABC_CHECK(passwordBox.encrypt(login.dataKey(), passwordKey));
+    ABC_CHECK(loginPackage.passwordBoxSet(passwordBox));
 
     // Update ELP1:
     DataChunk newAuthKey;       // Unlocks the server
     ABC_CHECK(usernameSnrp().hash(newAuthKey, LP));
-    ABC_CHECK(box.encrypt(newAuthKey, login.dataKey()));
-    ABC_CHECK(loginPackage.authKeyBoxSet(box));
+    JsonBox authKeyBox;
+    ABC_CHECK(authKeyBox.encrypt(newAuthKey, login.dataKey()));
+    ABC_CHECK(loginPackage.authKeyBoxSet(authKeyBox));
 
     // Change the server login:
     ABC_CHECK(loginServerChangePassword(login, newAuthKey, oldLRA1,

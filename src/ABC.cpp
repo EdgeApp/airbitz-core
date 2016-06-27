@@ -20,7 +20,7 @@
 #include "../abcd/auth/LoginServer.hpp"
 #include "../abcd/bitcoin/Testnet.hpp"
 #include "../abcd/bitcoin/Text.hpp"
-#include "../abcd/bitcoin/TxCache.hpp"
+#include "../abcd/bitcoin/cache/Cache.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
@@ -54,6 +54,11 @@ using namespace abcd;
 
 #define ABC_PROLOG() \
     ABC_DebugLog("%s called", __FUNCTION__); \
+    tABC_CC cc = ABC_CC_Ok; \
+    ABC_SET_ERR_CODE(pError, ABC_CC_Ok); \
+    ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized")
+
+#define ABC_PROLOG_QUIET() \
     tABC_CC cc = ABC_CC_Ok; \
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok); \
     ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized")
@@ -1059,6 +1064,27 @@ exit:
 }
 
 /**
+ * Export the private seed used to generate all addresses within a wallet.
+ * For now, this uses a simple hex dump of the raw data.
+ */
+tABC_CC ABC_ExportWalletXPub(const char *szUserName,
+                             const char *szPassword,
+                             const char *szWalletUUID,
+                             char **pszWalletXPub,
+                             tABC_Error *pError)
+{
+    ABC_PROLOG();
+
+    {
+        ABC_GET_WALLET();
+        *pszWalletXPub = stringCopy(wallet->bitcoinXPub());
+    }
+
+exit:
+    return cc;
+}
+
+/**
  * Gets wallet UUIDs for a specified account.
  *
  * @param szUserName            UserName for the account associated with this wallet
@@ -1247,7 +1273,7 @@ tABC_CC ABC_SatoshiToCurrency(const char *szUserName,
                               int currencyNum,
                               tABC_Error *pError)
 {
-    ABC_PROLOG();
+    ABC_PROLOG_QUIET();
 
     ABC_CHECK_NEW(gContext->exchangeCache.satoshiToCurrency(*pCurrency, satoshi,
                   static_cast<Currency>(currencyNum)));
@@ -1316,23 +1342,23 @@ tABC_CC ABC_FormatAmount(int64_t amount,
                          bool bAddSign,
                          tABC_Error *pError)
 {
-    // Cannot use ABC_PROLOG - too much debug output
-    tABC_CC cc = ABC_CC_Ok;
-    std::string out;
-
+    ABC_PROLOG_QUIET();
     ABC_CHECK_NULL(pszAmountOut);
 
-    if (amount < 0)
     {
-        out = bc::encode_base10(-amount, decimalPlaces);
-        if (bAddSign)
-            out.insert(0, 1, '-');
+        std::string out;
+        if (amount < 0)
+        {
+            out = bc::encode_base10(-amount, decimalPlaces);
+            if (bAddSign)
+                out.insert(0, 1, '-');
+        }
+        else
+        {
+            out = bc::encode_base10(amount, decimalPlaces);
+        }
+        *pszAmountOut = stringCopy(out);
     }
-    else
-    {
-        out = bc::encode_base10(amount, decimalPlaces);
-    }
-    *pszAmountOut = stringCopy(out);
 
 exit:
     return cc;
@@ -1559,6 +1585,23 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_SpendSetFee(void *pSpend,
+                        tABC_SpendFeeLevel feeLevel,
+                        uint64_t customFeeSatoshi,
+                        tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pSpend);
+
+    {
+        auto *spend = static_cast<Spend *>(pSpend);
+        ABC_CHECK_NEW(spend->feeSet(feeLevel, customFeeSatoshi));
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_SpendGetFee(void *pSpend,
                         uint64_t *pFee,
                         tABC_Error *pError)
@@ -1729,8 +1772,8 @@ tABC_CC ABC_GetTransaction(const char *szUserName,
 
         TxInfo info;
         TxStatus status;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
-        ABC_CHECK_NEW(wallet->txCache.txidStatus(status, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.info(info, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.status(status, szID));
         *ppTransaction = makeTxInfo(*wallet, info, status);
     }
 
@@ -1853,7 +1896,7 @@ tABC_CC ABC_SetTransactionDetails(const char *szUserName,
         ABC_GET_WALLET();
 
         TxInfo info;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.info(info, szID));
         auto balance = wallet->addresses.balance(info);
 
         TxMeta meta;
@@ -1893,7 +1936,7 @@ tABC_CC ABC_GetTransactionDetails(const char *szUserName,
         ABC_GET_WALLET();
 
         TxInfo info;
-        ABC_CHECK_NEW(wallet->txCache.txidInfo(info, szID));
+        ABC_CHECK_NEW(wallet->cache.txs.info(info, szID));
 
         TxMeta meta;
         ABC_CHECK_NEW(wallet->txs.get(meta, info.ntxid));
@@ -2255,10 +2298,10 @@ tABC_CC ABC_FetchPaymentRequest(char *szRequestUri,
         std::unique_ptr<PaymentRequest> request(new PaymentRequest());
         ABC_CHECK_NEW(request->fetch(szRequestUri));
         std::string domain;
-        ABC_CHECK_NEW(request->signatureOk(domain, szRequestUri));
+        const auto sigOk = request->signatureOk(domain, szRequestUri);
 
         tABC_PaymentRequest *pResult = structAlloc<tABC_PaymentRequest>();
-        pResult->bSigned = request->signatureExists();
+        pResult->bSigned = request->signatureExists() && sigOk;
         pResult->szDomain = stringCopy(domain);
         pResult->amountSatoshi = request->amount();
         pResult->szMemo = request->memoOk() ?
@@ -2520,7 +2563,7 @@ tABC_CC ABC_PrioritizeAddress(const char *szUserName, const char *szPassword,
         std::string address;
         if (szAddress)
             address = szAddress;
-        wallet->addressCache.prioritize(address);
+        wallet->cache.addresses.prioritize(address);
     }
 
 exit:
@@ -2591,8 +2634,7 @@ tABC_CC ABC_WatcherDeleteCache(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_NEW(watcherDeleteCache(*wallet));
-        wallet->txCache.clear();
+        wallet->cache.clear();
     }
 
 exit:
@@ -2609,22 +2651,15 @@ exit:
 tABC_CC ABC_TxHeight(const char *szWalletUUID, const char *szTxid,
                      int *height, tABC_Error *pError)
 {
-    // Cannot use ABC_PROLOG - too much debug spew
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized,
-                     "The core library has not been initalized");
-
+    ABC_PROLOG_QUIET();
     ABC_CHECK_NULL(szTxid);
 
     {
         ABC_GET_WALLET_N();
 
-        bc::hash_digest hash;
-        if (!bc::decode_hash(hash, szTxid))
-            ABC_RET_ERROR(ABC_CC_ParseError, "Bad txid");
-
-        *height = wallet->txCache.txidHeight(hash);
+        TxStatus status;
+        ABC_CHECK_NEW(wallet->cache.txs.status(status, szTxid));
+        *height = status.height;
     }
 
 exit:
@@ -2640,16 +2675,10 @@ exit:
 tABC_CC ABC_BlockHeight(const char *szWalletUUID, int *height,
                         tABC_Error *pError)
 {
-    // Cannot use ABC_PROLOG - too much debug spew
-    tABC_CC cc = ABC_CC_Ok;
-    ABC_SET_ERR_CODE(pError, ABC_CC_Ok);
-    ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized,
-                     "The core library has not been initalized");
+    ABC_PROLOG_QUIET();
 
     {
-        ABC_GET_WALLET_N();
-
-        *height = wallet->txCache.last_height();
+        *height = gContext->blockCache.height();
         if (*height == 0)
         {
             cc = ABC_CC_Synchronizing;

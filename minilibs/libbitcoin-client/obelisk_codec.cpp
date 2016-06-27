@@ -1,17 +1,17 @@
-/*
- * Copyright (c) 2011-2014 libbitcoin developers (see AUTHORS)
+/**
+ * Copyright (c) 2011-2015 libbitcoin developers (see AUTHORS)
  *
- * This file is part of libbitcoin.
+ * This file is part of libbitcoin-client.
  *
- * libbitcoin is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License with
+ * libbitcoin-client is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Affero General Public License with
  * additional permissions to the one published by the Free Software
  * Foundation, either version 3 of the License, or (at your option)
  * any later version. For more information see LICENSE.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU Affero General Public License for more details.
  *
  * You should have received a copy of the GNU Affero General Public License
@@ -37,99 +37,27 @@ T reverse(const T& in)
     return out;
 }
 
-BC_API obelisk_codec::~obelisk_codec()
+obelisk_codec::obelisk_codec(
+    std::shared_ptr<message_stream> out,
+    update_handler on_update,
+    unknown_handler on_unknown,
+    period_ms timeout,
+    uint8_t retries)
+  : obelisk_router(out)
 {
-    for (const auto &request: pending_requests_)
-    {
-        const auto ec = std::make_error_code(std::errc::operation_canceled);
-        request.second.on_error(ec);
-    }
+    set_on_update(std::move(on_update));
+    set_on_unknown(std::move(on_unknown));
+    set_timeout(timeout);
+    set_retries(retries);
 }
 
-BC_API obelisk_codec::obelisk_codec(message_stream& out,
-    unknown_handler&& on_unknown,
-    sleep_time timeout, unsigned retries)
-  : next_part_(command_part), last_request_id_(0),
-    timeout_(timeout), retries_(retries),
-    on_unknown_(std::move(on_unknown)),
-    out_(out)
+obelisk_codec::~obelisk_codec()
 {
 }
 
-BC_API void obelisk_codec::message(const data_chunk& data, bool more)
-{
-    switch (next_part_)
-    {
-        case command_part:
-            wip_message_.command = std::string(data.begin(), data.end());
-            break;
-
-        case id_part:
-            if (4 != data.size())
-            {
-                next_part_ = error_part;
-                break;
-            }
-            wip_message_.id = from_little_endian<uint32_t>(data.begin(), data.end());
-            break;
-
-        case payload_part:
-            wip_message_.payload = data;
-            break;
-
-        case error_part:
-            break;
-    }
-    if (!more)
-    {
-        if (next_part_ == payload_part)
-            receive(wip_message_);
-        else
-            on_unknown_(wip_message_.command);
-        next_part_ = command_part;
-    }
-    else if (next_part_ < error_part)
-        next_part_ = static_cast<message_part>(next_part_ + 1);
-}
-
-BC_API sleep_time obelisk_codec::wakeup()
-{
-    sleep_time next_wakeup(0);
-    auto now = std::chrono::steady_clock::now();
-
-    auto i = pending_requests_.begin();
-    while (i != pending_requests_.end())
-    {
-        auto request = i++;
-        auto elapsed = std::chrono::duration_cast<sleep_time>(
-            now - request->second.last_action);
-        if (timeout_ <= elapsed)
-        {
-            if (request->second.retries < retries_)
-            {
-                // Resend:
-                ++request->second.retries;
-                request->second.last_action = now;
-                next_wakeup = min_sleep(next_wakeup, timeout_);
-                send(request->second.message);
-            }
-            else
-            {
-                // Cancel:
-                auto ec = std::make_error_code(std::errc::timed_out);
-                request->second.on_error(ec);
-                pending_requests_.erase(request);
-            }
-        }
-        else
-            next_wakeup = min_sleep(next_wakeup, timeout_ - elapsed);
-    }
-    return next_wakeup;
-}
-
-BC_API void obelisk_codec::fetch_history(error_handler&& on_error,
-    fetch_history_handler&& on_reply,
-    const payment_address& address, size_t from_height)
+void obelisk_codec::fetch_history(error_handler on_error,
+    fetch_history_handler on_reply,
+    const payment_address& address, uint32_t from_height)
 {
     auto data = build_data({
         to_byte(address.version()),
@@ -141,8 +69,8 @@ BC_API void obelisk_codec::fetch_history(error_handler&& on_error,
         std::bind(decode_fetch_history, _1, std::move(on_reply)));
 }
 
-BC_API void obelisk_codec::fetch_transaction(error_handler&& on_error,
-    fetch_transaction_handler&& on_reply,
+void obelisk_codec::fetch_transaction(error_handler on_error,
+    fetch_transaction_handler on_reply,
     const hash_digest& tx_hash)
 {
     auto data = build_data({
@@ -153,26 +81,30 @@ BC_API void obelisk_codec::fetch_transaction(error_handler&& on_error,
         std::bind(decode_fetch_transaction, _1, std::move(on_reply)));
 }
 
-BC_API void obelisk_codec::fetch_last_height(error_handler&& on_error,
-    fetch_last_height_handler&& on_reply)
+void obelisk_codec::fetch_last_height(error_handler on_error,
+    fetch_last_height_handler on_reply)
 {
-    send_request("blockchain.fetch_last_height", data_chunk(),
+    auto data = data_chunk();
+
+    send_request("blockchain.fetch_last_height", data,
         std::move(on_error),
         std::bind(decode_fetch_last_height, _1, std::move(on_reply)));
 }
 
-BC_API void obelisk_codec::fetch_block_header(error_handler&& on_error,
-    fetch_block_header_handler&& on_reply,
-    size_t height)
+void obelisk_codec::fetch_block_header(error_handler on_error,
+    fetch_block_header_handler on_reply,
+    uint32_t height)
 {
-    data_chunk data = to_data_chunk(to_little_endian<uint32_t>(height));
+    auto data = build_data({
+        to_little_endian<uint32_t>(height)
+    });
 
     send_request("blockchain.fetch_block_header", data, std::move(on_error),
         std::bind(decode_fetch_block_header, _1, std::move(on_reply)));
 }
 
-BC_API void obelisk_codec::fetch_block_header(error_handler&& on_error,
-    fetch_block_header_handler&& on_reply,
+void obelisk_codec::fetch_block_header(error_handler on_error,
+    fetch_block_header_handler on_reply,
     const hash_digest& blk_hash)
 {
     auto data = build_data({
@@ -183,8 +115,8 @@ BC_API void obelisk_codec::fetch_block_header(error_handler&& on_error,
         std::bind(decode_fetch_block_header, _1, std::move(on_reply)));
 }
 
-BC_API void obelisk_codec::fetch_transaction_index(error_handler&& on_error,
-    fetch_transaction_index_handler&& on_reply,
+void obelisk_codec::fetch_transaction_index(error_handler on_error,
+    fetch_transaction_index_handler on_reply,
     const hash_digest& tx_hash)
 {
     auto data = build_data({
@@ -196,21 +128,42 @@ BC_API void obelisk_codec::fetch_transaction_index(error_handler&& on_error,
         std::bind(decode_fetch_transaction_index, _1, std::move(on_reply)));
 }
 
-BC_API void obelisk_codec::validate(error_handler&& on_error,
-    validate_handler&& on_reply,
+void obelisk_codec::fetch_stealth(error_handler on_error,
+    fetch_stealth_handler on_reply,
+    const binary_type& prefix, uint32_t from_height)
+{
+    // should this be a throw or should there be a return type instead?
+    if (prefix.size() > max_uint8)
+    {
+        on_error(std::make_error_code(std::errc::bad_address));
+        return;
+    }
+
+    auto data = build_data({
+        to_byte(static_cast<uint8_t>(prefix.size())),
+        prefix.blocks(),
+        to_little_endian<uint32_t>(from_height)
+    });
+
+    send_request("blockchain.fetch_stealth", data, std::move(on_error),
+        std::bind(decode_fetch_stealth, _1, std::move(on_reply)));
+}
+
+void obelisk_codec::validate(error_handler on_error,
+    validate_handler on_reply,
     const transaction_type& tx)
 {
     data_chunk data(satoshi_raw_size(tx));
-    auto it = satoshi_save(tx, data.begin());
+    DEBUG_ONLY(auto it =) satoshi_save(tx, data.begin());
     BITCOIN_ASSERT(it == data.end());
 
     send_request("transaction_pool.validate", data, std::move(on_error),
         std::bind(decode_validate, _1, std::move(on_reply)));
 }
 
-BC_API void obelisk_codec::fetch_unconfirmed_transaction(
-    error_handler&& on_error,
-    fetch_transaction_handler&& on_reply,
+void obelisk_codec::fetch_unconfirmed_transaction(
+    error_handler on_error,
+    fetch_transaction_handler on_reply,
     const hash_digest& tx_hash)
 {
     auto data = build_data({
@@ -222,21 +175,21 @@ BC_API void obelisk_codec::fetch_unconfirmed_transaction(
         std::bind(decode_fetch_transaction, _1, std::move(on_reply)));
 }
 
-BC_API void obelisk_codec::broadcast_transaction(error_handler&& on_error,
-    empty_handler&& on_reply,
+void obelisk_codec::broadcast_transaction(error_handler on_error,
+    empty_handler on_reply,
     const transaction_type& tx)
 {
     data_chunk data(satoshi_raw_size(tx));
-    auto it = satoshi_save(tx, data.begin());
+    DEBUG_ONLY(auto it =) satoshi_save(tx, data.begin());
     BITCOIN_ASSERT(it == data.end());
 
     send_request("protocol.broadcast_transaction", data, std::move(on_error),
         std::bind(decode_empty, _1, std::move(on_reply)));
 }
 
-BC_API void obelisk_codec::address_fetch_history(error_handler&& on_error,
-    fetch_history_handler&& on_reply,
-    const payment_address& address, size_t from_height)
+void obelisk_codec::address_fetch_history(error_handler on_error,
+    fetch_history_handler on_reply,
+    const payment_address& address, uint32_t from_height)
 {
     auto data = build_data({
         to_byte(address.version()),
@@ -247,6 +200,138 @@ BC_API void obelisk_codec::address_fetch_history(error_handler&& on_error,
     send_request("address.fetch_history", data, std::move(on_error),
         std::bind(decode_fetch_history, _1, std::move(on_reply)));
 }
+
+void obelisk_codec::subscribe(error_handler on_error,
+    empty_handler on_reply,
+    const payment_address& address)
+{
+    binary_type prefix((short_hash_size * byte_bits), address.hash());
+
+    // [ type:1 ] (0 = address prefix, 1 = stealth prefix)
+    // [ prefix_bitsize:1 ]
+    // [ prefix_blocks:...  ]
+    auto data = build_data({
+        to_byte(static_cast<uint8_t>(subscribe_type::address)),
+        to_byte(static_cast<uint8_t>(prefix.size())),
+        prefix.blocks()
+    });
+
+    send_request("address.subscribe", data, std::move(on_error),
+        std::bind(decode_empty, _1, std::move(on_reply)));
+}
+
+void obelisk_codec::renew(error_handler on_error,
+    empty_handler on_reply,
+    const payment_address& address)
+{
+    binary_type prefix((short_hash_size * byte_bits), address.hash());
+
+    // [ type:1 ] (0 = address prefix, 1 = stealth prefix)
+    // [ prefix_bitsize:1 ]
+    // [ prefix_blocks:...  ]
+    auto data = build_data({
+        to_byte(static_cast<uint8_t>(subscribe_type::address)),
+        to_byte(static_cast<uint8_t>(prefix.size())),
+        prefix.blocks()
+    });
+
+    send_request("address.renew", data, std::move(on_error),
+        std::bind(decode_empty, _1, std::move(on_reply)));
+}
+
+void obelisk_codec::subscribe(error_handler on_error,
+    empty_handler on_reply,
+    subscribe_type discriminator,
+    const binary_type& prefix)
+{
+    // should this be a throw or should there be a return type instead?
+    if (prefix.size() > max_uint8)
+    {
+        on_error(std::make_error_code(std::errc::bad_address));
+        return;
+    }
+
+    auto data = build_data({
+        to_byte(static_cast<uint8_t>(discriminator)),
+        to_byte(static_cast<uint8_t>(prefix.size())),
+        prefix.blocks()
+    });
+
+    send_request("address.subscribe", data, std::move(on_error),
+        std::bind(decode_empty, _1, std::move(on_reply)));
+}
+
+// See below for description of updates data format.
+//enum class subscribe_type : uint8_t
+//{
+//    address = 0,
+//    stealth = 1
+//};
+//
+//void obelisk_codec::subscribe(error_handler on_error,
+//    empty_handler on_reply,
+//    const address_prefix& prefix)
+//{
+//    // BUGBUG: assertion is not good enough here.
+//    BITCOIN_ASSERT(prefix.size() <= 255);
+//
+//    // [ type:1 ] (0 = address prefix, 1 = stealth prefix)
+//    // [ prefix_bitsize:1 ]
+//    // [ prefix_blocks:...  ]
+//    auto data = build_data({
+//        to_byte(static_cast<uint8_t>(subscribe_type::address)),
+//        to_byte(prefix.size()),
+//        prefix.blocks()
+//    });
+//
+//    send_request("address.subscribe", data, std::move(on_error),
+//        std::bind(decode_empty, _1, std::move(on_reply)));
+//}
+
+/**
+See also libbitcoin-server repo subscribe_manager::post_updates() and
+subscribe_manager::post_stealth_updates().
+
+The address result is:
+
+    Response command = "address.update"
+
+    [ version:1 ]
+    [ hash:20 ]
+    [ height:4 ]
+    [ block_hash:32 ]
+
+    struct address_subscribe_result
+    {
+        payment_address address;
+        uint32_t height;
+        hash_digest block_hash;
+    };
+
+When the subscription type is stealth, then the result is:
+
+    Response command = "address.stealth_update"
+
+    [ 32 bit prefix:4 ]
+    [ height:4 ]
+    [ block_hash:32 ]
+
+    // Currently not used.
+    struct stealth_subscribe_result
+    {
+        typedef byte_array<4> stealth_prefix_bytes;
+        // Protocol will send back 4 bytes of prefix.
+        // See libbitcoin-server repo subscribe_manager::post_stealth_updates()
+        stealth_prefix_bytes prefix;
+        uint32_t height;
+        hash_digest block_hash;
+    };
+
+Subscriptions expire after 10 minutes. Therefore messages with the command
+"address.renew" should be sent periodically to the server. The format
+is the same as for "address.subscribe, and the server will respond
+with a 4 byte error code.
+*/
 
 void obelisk_codec::decode_empty(data_deserial& payload,
     empty_handler& handler)
@@ -287,7 +372,7 @@ void obelisk_codec::decode_fetch_transaction(data_deserial& payload,
 void obelisk_codec::decode_fetch_last_height(data_deserial& payload,
     fetch_last_height_handler& handler)
 {
-    size_t last_height = payload.read_4_bytes();
+    uint32_t last_height = payload.read_4_bytes();
     check_end(payload);
     handler(last_height);
 }
@@ -311,81 +396,41 @@ void obelisk_codec::decode_fetch_transaction_index(data_deserial& payload,
     handler(block_height, index);
 }
 
+void obelisk_codec::decode_fetch_stealth(data_deserial& payload,
+    fetch_stealth_handler& handler)
+{
+    stealth_list results;
+    while (payload.iterator() != payload.end())
+    {
+        stealth_row row;
+
+        // presume first byte based on convention
+        row.ephemkey = payload.read_data(32);
+        row.ephemkey.insert(row.ephemkey.begin(), 0x02);
+
+        // presume address_version
+        uint8_t address_version = payment_address::pubkey_version;
+        const short_hash address_hash = payload.read_short_hash();
+        row.address.set(address_version, reverse(address_hash));
+
+        row.transaction_hash = payload.read_hash();
+
+        results.push_back(row);
+    }
+
+    handler(results);
+}
+
 void obelisk_codec::decode_validate(data_deserial& payload,
     validate_handler& handler)
 {
     index_list unconfirmed;
     while (payload.iterator() != payload.end())
     {
-        size_t unconfirm_index = payload.read_4_bytes();
+        uint32_t unconfirm_index = payload.read_4_bytes();
         unconfirmed.push_back(unconfirm_index);
     }
     handler(unconfirmed);
-}
-
-void obelisk_codec::check_end(data_deserial& payload)
-{
-    if (payload.iterator() != payload.end())
-        throw end_of_stream();
-}
-
-void obelisk_codec::send_request(const std::string& command,
-    const data_chunk& payload,
-    error_handler&& on_error, decoder&& on_reply)
-{
-    uint32_t id = ++last_request_id_;
-    pending_request& request = pending_requests_[id];
-    request.message = obelisk_message{command, id, payload};
-    request.on_error = std::move(on_error);
-    request.on_reply = std::move(on_reply);
-    request.retries = 0;
-    request.last_action = std::chrono::steady_clock::now();
-    send(request.message);
-}
-
-void obelisk_codec::send(const obelisk_message& message)
-{
-    out_.message(to_data_chunk(message.command), true);
-    out_.message(to_data_chunk(to_little_endian(message.id)), true);
-    out_.message(message.payload, false);
-}
-
-void obelisk_codec::receive(const obelisk_message& message)
-{
-    auto i = pending_requests_.find(message.id);
-    if (i == pending_requests_.end())
-    {
-        on_unknown_(message.command);
-        return;
-    }
-    decode_reply(message, i->second.on_error, i->second.on_reply);
-    pending_requests_.erase(i);
-}
-
-void obelisk_codec::decode_reply(const obelisk_message& message,
-    error_handler& on_error, decoder& on_reply)
-{
-    std::error_code ec;
-    data_deserial deserial = make_deserializer(
-        message.payload.begin(), message.payload.end());
-    try
-    {
-        uint32_t val = deserial.read_4_bytes();
-        if (val)
-            ec = static_cast<error::error_code_t>(val);
-        else
-            on_reply(deserial);
-    }
-    catch (end_of_stream)
-    {
-        ec = std::make_error_code(std::errc::bad_message);
-    }
-    if (ec)
-        on_error(ec);
-}
-
-BC_API void obelisk_codec::on_unknown_nop(const std::string&)
-{
 }
 
 } // namespace client

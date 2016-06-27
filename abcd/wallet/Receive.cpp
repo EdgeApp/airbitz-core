@@ -9,8 +9,7 @@
 #include "Wallet.hpp"
 #include "../Context.hpp"
 #include "../General.hpp"
-#include "../bitcoin/TxCache.hpp"
-#include "../bitcoin/WatcherBridge.hpp"
+#include "../bitcoin/cache/Cache.hpp"
 #include "../exchange/ExchangeCache.hpp"
 #include "../spend/AirbitzFee.hpp"
 #include "../util/Debug.hpp"
@@ -21,6 +20,9 @@ Status
 onReceive(Wallet &wallet, const TxInfo &info,
           tABC_BitCoin_Event_Callback fCallback, void *pData)
 {
+    wallet.balanceDirty();
+    ABC_CHECK(wallet.addresses.markOutputs(info));
+
     // Does the transaction already exist?
     TxMeta meta;
     if (!wallet.txs.get(meta, info.ntxid))
@@ -55,11 +57,6 @@ onReceive(Wallet &wallet, const TxInfo &info,
         // Save the metadata:
         ABC_CHECK(wallet.txs.save(meta, balance, info.fee));
 
-        // Update the transaction cache:
-        watcherSave(wallet).log(); // Failure is not fatal
-        wallet.balanceDirty();
-        ABC_CHECK(wallet.addresses.markOutputs(info));
-
         // Update the GUI:
         ABC_DebugLog("IncomingBitCoin callback: wallet %s, txid: %s",
                      wallet.id().c_str(), info.txid.c_str());
@@ -74,11 +71,6 @@ onReceive(Wallet &wallet, const TxInfo &info,
     }
     else
     {
-        // Update the transaction cache:
-        watcherSave(wallet).log(); // Failure is not fatal
-        wallet.balanceDirty();
-        ABC_CHECK(wallet.addresses.markOutputs(info));
-
         // Update the GUI:
         ABC_DebugLog("BalanceUpdate callback: wallet %s, txid: %s",
                      wallet.id().c_str(), info.txid.c_str());

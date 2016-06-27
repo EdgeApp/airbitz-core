@@ -103,7 +103,7 @@ loginPin(std::shared_ptr<Login> &result,
     // Create the Login object:
     std::shared_ptr<Login> out;
     ABC_CHECK(Login::create(out, lobby, dataKey,
-                            loginPackage, JsonBox(), true));
+                            loginPackage, JsonPtr(), true));
 
     result = std::move(out);
     return Status();

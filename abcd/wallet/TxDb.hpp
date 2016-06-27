@@ -23,7 +23,7 @@ struct TxMeta
 {
     std::string ntxid;
     std::string txid;
-    int64_t timeCreation;
+    time_t timeCreation;
     bool internal;
     uint64_t airbitzFeeWanted = 0; // The fee owed for this transaction
     int64_t airbitzFeeSent = 0; // The fee actually sent

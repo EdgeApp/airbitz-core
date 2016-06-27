@@ -25,12 +25,6 @@ namespace abcd {
 class Wallet;
 
 Status
-watcherDeleteCache(Wallet &self);
-
-Status
-watcherSave(Wallet &self);
-
-Status
 bridgeSweepKey(Wallet &self, const std::string &wif,
                const std::string &address);
 
