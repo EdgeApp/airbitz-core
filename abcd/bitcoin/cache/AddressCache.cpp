@@ -9,6 +9,7 @@
 #include "TxCache.hpp"
 #include "../../json/JsonArray.hpp"
 #include "../../json/JsonObject.hpp"
+#include "../../util/Debug.hpp"
 
 namespace abcd {
 
@@ -298,7 +299,7 @@ AddressCache::updateStratumHash(const std::string &address,
         return true;
     auto &row = i->second;
 
-    row.dirty = row.stratumHash.empty() || hash != row.stratumHash;
+    row.dirty |= (row.stratumHash.empty() || hash != row.stratumHash);
     if (!hash.empty())
         row.stratumHash = hash;
     if (!row.dirty)
