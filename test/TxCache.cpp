@@ -186,10 +186,11 @@ TEST_CASE("Transaction database", "[bitcoin][database]")
     abcd::BlockCache blockCache("");
     abcd::TxCache txCache(blockCache);
     abcd::TxCacheTest test(txCache);
+    const auto rawUtxos = txCache.utxos(test.ourAddresses);
 
     SECTION("filtered utxos")
     {
-        auto utxos = txCache.utxos(test.ourAddresses, true);
+        const auto utxos = filterOutputs(rawUtxos, true);
         if (false)
             dumpUtxos(utxos);
         REQUIRE(2 == utxos.size());
@@ -200,7 +201,7 @@ TEST_CASE("Transaction database", "[bitcoin][database]")
 
     SECTION("all utxos")
     {
-        auto utxos = txCache.utxos(test.ourAddresses, false);
+        const auto utxos = filterOutputs(rawUtxos, false);
         REQUIRE(3 == utxos.size());
         REQUIRE(hasTxid(utxos, test.incomingId, 0));
         REQUIRE(hasTxid(utxos, test.confirmedId, 0));

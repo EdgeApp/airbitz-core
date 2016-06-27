@@ -50,6 +50,26 @@ struct TxStatus
 };
 
 /**
+ * An unspent transaction output.
+ */
+struct TxOutput
+{
+    libbitcoin::output_point point;
+    uint64_t value;
+    bool isSpendable; // Not RBF or double-spent.
+    bool isIncoming; // Unconfirmed incoming funds.
+};
+
+typedef std::list<TxOutput> TxOutputList;
+
+/**
+ * Translates a list of `TxOutput` structures to the libbitcoin equivalent.
+ * @param filter true to filter out unconfirmed outputs.
+ */
+libbitcoin::output_info_list
+filterOutputs(const TxOutputList &utxos, bool filter=false);
+
+/**
  * A list of transactions.
  *
  * This will eventually become a full database with queires mirroring what
@@ -134,10 +154,9 @@ public:
 
     /**
      * Get just the utxos corresponding to a set of addresses.
-     * @param filter true to filter out unconfirmed outputs.
      */
-    bc::output_info_list
-    utxos(const AddressSet &addresses, bool filter=false) const;
+    TxOutputList
+    utxos(const AddressSet &addresses) const;
 
     // Updates ------------------------------------------------------------
 
