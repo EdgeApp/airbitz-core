@@ -154,6 +154,13 @@ public:
     updateSubscribe(const std::string &address);
 
     /**
+     * Gets the stratumHash of an address;
+     */
+    std::string
+    getStratumHash(const std::string &address);
+
+
+    /**
      * Updates the state hash stored with the address.
      * Returns true if the new hash differs from the old hash.
      */
