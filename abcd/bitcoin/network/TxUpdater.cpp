@@ -463,13 +463,13 @@ TxUpdater::subscribeAddress(const std::string &address, IBitcoinConnection *bc)
         if (cache_.addresses.updateStratumHash(address, stateHash))
         {
             addressServers_[address] = uri;
-            ABC_DebugLog("%s: %s subscribe reply (dirty)",
-                         uri.c_str(), address.c_str());
+            ABC_DebugLog("%s: %s subscribe reply (dirty) %s",
+                         uri.c_str(), address.c_str(), stateHash.c_str());
         }
         else
         {
-            ABC_DebugLog("%s: %s subscribe reply (clean)",
-                         uri.c_str(), address.c_str());
+            ABC_DebugLog("%s: %s subscribe reply (clean) %s",
+                         uri.c_str(), address.c_str(), stateHash.c_str());
         }
     };
 
@@ -494,7 +494,7 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
 
     auto onReply = [this, address, uri](const AddressHistory &history)
     {
-        ABC_DebugLog("%s: %s fetched", uri.c_str(), address.c_str());
+        ABC_DebugLog("%s: %s fetched %d TXIDs", uri.c_str(), address.c_str(), history.size());
         wipAddresses_.erase(address);
         addressServers_[address] = uri;
 
@@ -504,7 +504,25 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
             cache_.txs.confirmed(row.first, row.second);
             txids.insert(row.first);
         }
-        cache_.addresses.update(address, txids);
+
+        if (!history.empty())
+        {
+            cache_.addresses.update(address, txids);
+        }
+        else
+        {
+            std::string hash = cache_.addresses.getStratumHash(address);
+            if (hash.empty())
+            {
+                cache_.addresses.update(address, txids);
+            }
+            else
+            {
+                ABC_DebugLog("%s: %s SERVER ERROR EMPTY TXIDs with hash %s", uri.c_str(), address.c_str(), hash.c_str());
+                // Do not trust current server. Force a new server.
+                addressServers_[address] = "";
+            }
+        }
     };
 
     bc->addressHistoryFetch(onError, onReply, address);

@@ -288,6 +288,20 @@ AddressCache::updateSubscribe(const std::string &address)
         row.lastCheck = time(nullptr);
 }
 
+std::string
+AddressCache::getStratumHash(const std::string &address)
+{
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+
+    auto i = rows_.find(address);
+    if (rows_.end() == i)
+        return "";
+    auto &row = i->second;
+
+    return row.stratumHash;
+}
+
+
 bool
 AddressCache::updateStratumHash(const std::string &address,
                                 const std::string &hash)
