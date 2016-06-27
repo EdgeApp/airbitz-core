@@ -37,6 +37,24 @@ template<> struct hash<bc::point_type>
 
 namespace abcd {
 
+libbitcoin::output_info_list
+filterOutputs(const TxOutputList &utxos, bool filter)
+{
+    libbitcoin::output_info_list out;
+    out.reserve(utxos.size());
+    for (const auto &utxo: utxos)
+    {
+        if (utxo.isSpendable && (!filter || !utxo.isIncoming))
+        {
+            out.push_back(libbitcoin::output_info_type
+            {
+                utxo.point, utxo.value
+            });
+        }
+    }
+    return out;
+}
+
 typedef std::unordered_set<bc::point_type> PointSet;
 
 /**
@@ -397,8 +415,8 @@ TxCache::statuses(const TxidSet &txids) const
     return out;
 }
 
-bc::output_info_list
-TxCache::utxos(const AddressSet &addresses, bool filter) const
+TxOutputList
+TxCache::utxos(const AddressSet &addresses) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -406,7 +424,7 @@ TxCache::utxos(const AddressSet &addresses, bool filter) const
     TxGraph graph(*this);
 
     // Check each output against the list:
-    bc::output_info_list out;
+    TxOutputList out;
     for (auto &row: txs_)
     {
         for (uint32_t i = 0; i < row.second.outputs.size(); ++i)
@@ -419,16 +437,17 @@ TxCache::utxos(const AddressSet &addresses, bool filter) const
             bc::payment_address address;
             const auto txid = row.first;
 
-            // The output is interesting if it isn't spent, belongs to us,
-            // and its transaction passes the safety checks:
+            // The output is interesting if it isn't spent and belongs to us:
             if (!graph.isSpent(point) &&
                     bc::extract(address, output.script) &&
-                    addresses.count(address.encoded()) &&
-                    !graph.problems(row.first) &&
-                    !(filter && isIncoming(row.second, txid, addresses)))
+                    addresses.count(address.encoded()))
             {
-                bc::output_info_type info = {point, output.value};
-                out.push_back(info);
+                out.push_back(TxOutput
+                {
+                    point, output.value,
+                    !graph.problems(row.first),
+                    isIncoming(row.second, txid, addresses)
+                });
             }
         }
     }

@@ -98,7 +98,7 @@ Status
 Spend::calculateMax(uint64_t &maxSatoshi)
 {
     const auto addresses = wallet_.addresses.list();
-    const auto utxos = wallet_.cache.txs.utxos(addresses, false);
+    const auto utxos = wallet_.cache.txs.utxos(addresses);
     const auto info = generalAirbitzFeeInfo();
 
     // Set up a fake transaction:
@@ -135,7 +135,7 @@ Spend::calculateMax(uint64_t &maxSatoshi)
         ABC_CHECK(addAirbitzFeeOutput(tx.outputs, info));
 
         uint64_t fee, change;
-        if (inputsPickOptimal(fee, change, tx, utxos,
+        if (inputsPickOptimal(fee, change, tx, filterOutputs(utxos),
                               feeLevel_, customFeeSatoshi_))
             min = guess;
         else
@@ -332,12 +332,11 @@ Spend::makeTx(libbitcoin::transaction_type &result,
     // Check if enough confirmed inputs are available,
     // otherwise use unconfirmed inputs too:
     uint64_t fee, change;
-    auto utxos = wallet_.cache.txs.utxos(wallet_.addresses.list(), true);
-    if (!inputsPickOptimal(fee, change, tx, utxos,
+    auto utxos = wallet_.cache.txs.utxos(wallet_.addresses.list());
+    if (!inputsPickOptimal(fee, change, tx, filterOutputs(utxos, true),
                            feeLevel_, customFeeSatoshi_))
     {
-        auto utxos = wallet_.cache.txs.utxos(wallet_.addresses.list(), false);
-        ABC_CHECK(inputsPickOptimal(fee, change, tx, utxos,
+        ABC_CHECK(inputsPickOptimal(fee, change, tx, filterOutputs(utxos),
                                     feeLevel_, customFeeSatoshi_));
     }
 

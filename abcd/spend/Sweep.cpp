@@ -61,7 +61,7 @@ sweepSend(Wallet &wallet,
 
     // Set up the inputs:
     uint64_t fee, funds;
-    ABC_CHECK(inputsPickMaximum(fee, funds, tx, utxos));
+    ABC_CHECK(inputsPickMaximum(fee, funds, tx, filterOutputs(utxos)));
     if (outputIsDust(funds))
         return ABC_ERROR(ABC_CC_InsufficientFunds, "Not enough funds");
     tx.outputs[0].value = funds;

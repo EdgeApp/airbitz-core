@@ -494,7 +494,8 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
 
     auto onReply = [this, address, uri](const AddressHistory &history)
     {
-        ABC_DebugLog("%s: %s fetched %d TXIDs", uri.c_str(), address.c_str(), history.size());
+        ABC_DebugLog("%s: %s fetched %d TXIDs", uri.c_str(), address.c_str(),
+                     history.size());
         wipAddresses_.erase(address);
         addressServers_[address] = uri;
 
@@ -518,7 +519,8 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
             }
             else
             {
-                ABC_DebugLog("%s: %s SERVER ERROR EMPTY TXIDs with hash %s", uri.c_str(), address.c_str(), hash.c_str());
+                ABC_DebugLog("%s: %s SERVER ERROR EMPTY TXIDs with hash %s", uri.c_str(),
+                             address.c_str(), hash.c_str());
                 // Do not trust current server. Force a new server.
                 addressServers_[address] = "";
             }
