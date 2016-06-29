@@ -293,7 +293,14 @@ StratumConnection::addressHistoryFetch(const StatusCallback &onError,
             if (!json.txidOk())
                 return ABC_ERROR(ABC_CC_Error, "Missing txid");
 
-            history[json.txid()] = json.height();
+            if (json.heightOk() && json.height() >= 0)
+            {
+                history[json.txid()] = json.height();
+            }
+            else
+            {
+                history[json.txid()] = 0;
+            }
         }
 
         onReply(history);
