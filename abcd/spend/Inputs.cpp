@@ -128,7 +128,7 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
         // Select a collection of outputs that satisfies our requirements:
         auto chosen = select_outputs(utxos, totalOut + fee);
         if (!chosen.points.size())
-            return ABC_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds");
+            return ABC_ERROR(ABC_CC_InsufficientFunds, "Insufficient funds");
         sourced = totalOut + fee + chosen.change;
 
         // Calculate the fees for this input combination:
@@ -172,7 +172,7 @@ inputsPickMaximum(uint64_t &resultFee, uint64_t &resultUsable,
     for (auto &utxo: utxos)
         totalIn += utxo.value;
     if (totalIn < fee)
-        return ABC_ERROR(ABC_CC_InsufficientFunds, "Insufficent funds");
+        return ABC_ERROR(ABC_CC_InsufficientFunds, "Insufficient funds");
 
     resultFee = fee;
     resultUsable = totalIn - fee;
