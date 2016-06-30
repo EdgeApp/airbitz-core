@@ -20,6 +20,7 @@
 #include "json/JsonObject.hpp"
 #include "json/JsonArray.hpp"
 #include "util/FileIO.hpp"
+#include "util/Debug.hpp"
 #include <time.h>
 #include <mutex>
 
@@ -55,12 +56,12 @@ struct BitcoinFeesJson:
     public JsonObject
 {
     ABC_JSON_CONSTRUCTORS(BitcoinFeesJson, JsonObject)
-    ABC_JSON_INTEGER(confirmFees1, "confirmFees1", 43210)
-    ABC_JSON_INTEGER(confirmFees2, "confirmFees2", 32110)
-    ABC_JSON_INTEGER(confirmFees3, "confirmFees3", 21098)
-    ABC_JSON_INTEGER(confirmFees4, "confirmFees4", 16001)
-    ABC_JSON_INTEGER(confirmFees5, "confirmFees5", 11002)
-    ABC_JSON_NUMBER(targetFeePercentage, "targetFeePercentage", 0.1)
+    ABC_JSON_INTEGER(confirmFees1, "confirmFees1", 73210)
+    ABC_JSON_INTEGER(confirmFees2, "confirmFees2", 62110)
+    ABC_JSON_INTEGER(confirmFees3, "confirmFees3", 51098)
+    ABC_JSON_INTEGER(confirmFees4, "confirmFees4", 46001)
+    ABC_JSON_INTEGER(confirmFees5, "confirmFees5", 31002)
+    ABC_JSON_NUMBER(targetFeePercentage, "targetFeePercentage", 0.25)
 };
 
 struct EstimateFeesJson:
@@ -227,6 +228,9 @@ generalBitcoinFeeInfo()
         out.confirmFees4 = out.confirmFees3;
     if (out.confirmFees5 > out.confirmFees4)
         out.confirmFees5 = out.confirmFees4;
+
+    ABC_DebugLevel(1, "generalBitcoinFeeInfo: 1:%.0f, 2:%.0f, 3:%.0f, 4:%.0f, 5:%.0f",
+                   out.confirmFees1, out.confirmFees2, out.confirmFees3, out.confirmFees4, out.confirmFees5);
 
     return out;
 }
