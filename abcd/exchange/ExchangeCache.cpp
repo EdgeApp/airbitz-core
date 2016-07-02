@@ -9,6 +9,7 @@
 #include "../RootPaths.hpp"
 #include "../json/JsonArray.hpp"
 #include "../json/JsonObject.hpp"
+#include "../util/Debug.hpp"
 
 namespace abcd {
 
@@ -52,6 +53,8 @@ ExchangeCache::update(Currencies currencies, const ExchangeSources &sources)
         if (currencies.empty())
             break;
 
+        ABC_DebugLevel(1, "ExchangeCache::update() %s", source.c_str());
+
         // Grab the rates from the server:
         ExchangeRates rates;
         ExchangeRates ratesWanted;
@@ -66,6 +69,10 @@ ExchangeCache::update(Currencies currencies, const ExchangeSources &sources)
             {
                 currencies.erase(i);
                 ratesWanted.insert(rate);
+
+                std::string code;
+                ABC_CHECK(currencyCode(code, rate.first));
+                ABC_DebugLevel(1, "ExchangeCache::update() %s %s %.2f", source.c_str(), code.c_str(), rate.second);
             }
         }
 
@@ -157,14 +164,22 @@ ExchangeCache::save()
     return Status();
 }
 
+// Do not use the cached exchage rate value if it is older than the specified
+// number of seconds
+#define ABC_EXCHANGE_RATE_EXPIRE_INTERVAL_SECONDS 86400 // 24 hours
+
 Status
 ExchangeCache::rate(double &result, Currency currency)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
+    time_t now = time(nullptr);
+
     const auto &i = cache_.find(currency);
     if (cache_.end() == i)
         return ABC_ERROR(ABC_CC_Error, "Currency not in cache");
+    if (i->second.timestamp + ABC_EXCHANGE_RATE_EXPIRE_INTERVAL_SECONDS < now)
+        return ABC_ERROR(ABC_CC_Error, "Currency expired. Need to update");
 
     result = i->second.rate;
     return Status();
