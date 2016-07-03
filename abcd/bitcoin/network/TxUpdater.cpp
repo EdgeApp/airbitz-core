@@ -19,9 +19,9 @@ constexpr auto STRATUM_PREFIX = "stratum://";
 constexpr auto LIBBITCOIN_PREFIX_LENGTH = 6;
 constexpr auto STRATUM_PREFIX_LENGTH = 10;
 
-constexpr auto NUM_CONNECT_SERVERS = 4;
-constexpr auto MINIMUM_LIBBITCOIN_SERVERS = 0;
-constexpr auto MINIMUM_STRATUM_SERVERS = 2;
+constexpr auto NUM_CONNECT_SERVERS = 5;
+constexpr auto MINIMUM_LIBBITCOIN_SERVERS = 1;
+constexpr auto MINIMUM_STRATUM_SERVERS = 4;
 
 TxUpdater::~TxUpdater()
 {
@@ -84,9 +84,6 @@ TxUpdater::connect()
                 untriedStratum_.insert(i);
         }
     }
-
-    // XXX disable Libbitcoin for now until we get better reliability
-    untriedLibbitcoin_.clear();
 
     ABC_DebugLevel(2,"%d libbitcoin untried, %d stratrum untried",
                    untriedLibbitcoin_.size(), untriedStratum_.size());
@@ -548,9 +545,7 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
 
     auto onReply = [this, txid, uri](const bc::transaction_type &tx)
     {
-        ABC_DebugLog("**************************************************************");
         ABC_DebugLog("%s: tx %s fetched", uri.c_str(), txid.c_str());
-        ABC_DebugLog("**************************************************************");
         wipTxids_.erase(txid);
 
         cache_.txs.insert(tx);

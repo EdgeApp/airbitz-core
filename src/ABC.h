@@ -49,7 +49,7 @@
 #define ABC_BITCOIN_DECIMAL_PLACES   8
 
 /** Frequency of exchange rate updates **/
-#define ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS 60
+#define ABC_EXCHANGE_RATE_REFRESH_INTERVAL_SECONDS 20
 
 /** Denomination Type **/
 #define ABC_DENOMINATION_BTC 0
