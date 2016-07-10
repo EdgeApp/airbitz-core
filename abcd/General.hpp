@@ -33,32 +33,32 @@ namespace abcd {
 struct BitcoinFeeInfo
 {
     /**
-     * Fee per KB aimed at getting approved within 1 confirmation.
-     * This is used when user manually selects "high" fees.
+     * Fee per KB aimed at getting approved within n confirmations,
+     * where n is the index into this array. Index 0 is unused
      */
-    double confirmFees1;
+    double confirmFees[7];
 
     /**
-     * Fee per KB aimed at getting approved within 2 confirmations.
+     * Target number of blocks to get transaction confirmed when set to Low
      */
-    double confirmFees2;
+    unsigned int lowFeeBlock;
 
     /**
-     * Fee per KB aimed at getting approved within 3 confirmations.
-     * This is used when user manually selects "low" fees.
+     * Target number of blocks to get transaction confirmed when set to Standard
+     * for low value transactions
      */
-    double confirmFees3;
+    unsigned int standardFeeBlockLow;
 
     /**
-     * Fee per KB aimed at getting approved within 4 confirmations.
+     * Target number of blocks to get transaction confirmed when set to Standard
+     * for high value transactions
      */
-    double confirmFees4;
+    unsigned int standardFeeBlockHigh;
 
     /**
-     * Fee per KB aimed at getting approved within 5 confirmations.
-     * This is used when user manually selects "low" fees.
+     * Target number of blocks to get transaction confirmed when set to High
      */
-    double confirmFees5;
+    unsigned int highFeeBlock;
 
     /**
      * The percentage of the outgoing funds that we will try to send as a mining fee

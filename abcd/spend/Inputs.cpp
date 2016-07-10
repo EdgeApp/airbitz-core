@@ -78,16 +78,16 @@ minerFee(const bc::transaction_type &tx, uint64_t amountSatoshi,
                (feeInfo.targetFeePercentage / 100);
 
         // We want the transaction to confirm between 2 and 3 blocks:
-        rate = std::min(rate, feeInfo.confirmFees2);
-        rate = std::max(rate, feeInfo.confirmFees3);
+        rate = std::min(rate, feeInfo.confirmFees[feeInfo.standardFeeBlockHigh]);
+        rate = std::max(rate, feeInfo.confirmFees[feeInfo.standardFeeBlockLow]);
         break;
 
     case ABC_SpendFeeLevelLow:
-        rate = feeInfo.confirmFees4;
+        rate = feeInfo.confirmFees[feeInfo.lowFeeBlock];
         break;
 
     case ABC_SpendFeeLevelHigh:
-        rate = feeInfo.confirmFees1;
+        rate = feeInfo.confirmFees[feeInfo.highFeeBlock];
         break;
 
     case ABC_SpendFeeLevelCustom:
