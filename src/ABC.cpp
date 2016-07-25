@@ -629,7 +629,7 @@ tABC_CC ABC_WalletName(const char *szUserName,
                        char **pszResult,
                        tABC_Error *pError)
 {
-    ABC_PROLOG();
+    ABC_PROLOG_QUIET();
     ABC_CHECK_NULL(pszResult);
 
     {
@@ -647,7 +647,7 @@ tABC_CC ABC_WalletCurrency(const char *szUserName,
                            int *pResult,
                            tABC_Error *pError)
 {
-    ABC_PROLOG();
+    ABC_PROLOG_QUIET();
     ABC_CHECK_NULL(pResult);
 
     {
@@ -664,7 +664,7 @@ tABC_CC ABC_WalletBalance(const char *szUserName,
                           int64_t *pResult,
                           tABC_Error *pError)
 {
-    ABC_PROLOG();
+    ABC_PROLOG_QUIET();
     ABC_CHECK_NULL(pResult);
 
     {
@@ -860,7 +860,7 @@ tABC_CC ABC_WalletArchived(const char *szUserName,
                            bool *pResult,
                            tABC_Error *pError)
 {
-    ABC_PROLOG();
+    ABC_PROLOG_QUIET();
     ABC_CHECK_NULL(szWalletUUID);
     ABC_CHECK_NULL(pResult);
 
@@ -1800,7 +1800,7 @@ tABC_CC ABC_GetTransactions(const char *szUserName,
                             unsigned int *pCount,
                             tABC_Error *pError)
 {
-    ABC_PROLOG();
+    ABC_PROLOG_QUIET();
 
     {
         ABC_GET_WALLET();
@@ -1866,7 +1866,7 @@ void ABC_FreeTransactions(tABC_TxInfo **aTransactions,
                           unsigned int count)
 {
     // Cannot use ABC_PROLOG - no pError
-    ABC_DebugLog("%s called", __FUNCTION__);
+//    ABC_DebugLog("%s called", __FUNCTION__);
 
     ABC_TxFreeTransactions(aTransactions, count);
 }
