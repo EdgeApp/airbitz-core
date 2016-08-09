@@ -106,6 +106,8 @@ int ABC_PinCertCallback(int pok, X509_STORE_CTX *ctx)
     BUF_MEM *bptr = NULL;
     char *szCert = NULL;
 
+    goto exit; // Disable pinning for the test server
+
     PIN_ASSERT((cert = ctx->current_cert) != NULL,
                ABC_CC_Error, "Unable to retrieve certificate");
     PIN_ASSERT((b64 = BIO_new(BIO_s_mem())) != NULL,

@@ -28,7 +28,7 @@ namespace abcd {
 // Server strings:
 #define JSON_ACCT_PIN_PACKAGE                   "pin_package"
 
-#define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api/v1"
+#define ABC_SERVER_ROOT                     "https://test-auth.airbitz.co/api/v1"
 
 #define ABC_SERVER_JSON_L1_FIELD            "l1"
 #define ABC_SERVER_JSON_LP1_FIELD           "lp1"
