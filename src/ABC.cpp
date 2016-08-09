@@ -497,6 +497,7 @@ tABC_CC ABC_BitidParseUri(const char *szUserName,
                           const char *szPassword,
                           const char *szBitidURI,
                           char **pszDomain,
+                          char **pszBitidCallbackURI,
                           tABC_Error *pError)
 {
     ABC_PROLOG();
@@ -506,6 +507,8 @@ tABC_CC ABC_BitidParseUri(const char *szUserName,
     {
         Uri callback;
         ABC_CHECK_NEW(bitidCallback(callback, trimSpace(szBitidURI)));
+        *pszBitidCallbackURI = stringCopy(callback.encode());
+
         callback.pathSet("");
         *pszDomain = stringCopy(callback.encode());
     }
@@ -525,6 +528,33 @@ tABC_CC ABC_BitidLogin(const char *szUserName,
     {
         ABC_GET_LOGIN();
         ABC_CHECK_NEW(bitidLogin(login->rootKey(), trimSpace(szBitidURI)));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_BitidLoginMeta(const char *szUserName,
+                           const char *szPassword,
+                           const char *szBitidURI,
+                           const char *szWalletUUID,
+                           const char *szBitIDKYCURI,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szBitidURI);
+    ABC_CHECK_NULL(szWalletUUID);
+
+    {
+        ABC_GET_LOGIN();
+        ABC_GET_WALLET();
+
+        std::string kycUri;
+        if (szBitIDKYCURI)
+            kycUri = szBitIDKYCURI;
+
+        ABC_CHECK_NEW(bitidLogin(login->rootKey(), trimSpace(szBitidURI), 0,
+                                 wallet.get(), kycUri));
     }
 
 exit:
@@ -2259,6 +2289,10 @@ tABC_CC ABC_ParseUri(char *szURI,
                              stringCopy(uri.message);
         pResult->szCategory = uri.category.empty() ? nullptr :
                               stringCopy(uri.category);
+        pResult->bitidPaymentAddress = uri.bitidPaymentAddress;
+        pResult->bitidKYCProvider = uri.bitidKycProvider;
+        pResult->bitidKYCRequest = uri.bitidKycRequest;
+
         pResult->szRet = uri.ret.empty() ? nullptr : stringCopy(uri.ret);
         *ppResult = pResult;
     }

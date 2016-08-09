@@ -7,10 +7,13 @@
 
 #include "Bitid.hpp"
 #include "Login.hpp"
+#include "../account/PluginData.hpp"
+#include "../bitcoin/Text.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../http/HttpRequest.hpp"
 #include "../http/Uri.hpp"
 #include "../json/JsonObject.hpp"
+#include "../wallet/Wallet.hpp"
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
@@ -73,11 +76,13 @@ bitidSign(DataSlice rootKey, const std::string &message,
 }
 
 Status
-bitidLogin(DataSlice rootKey, const std::string &bitidUri, uint32_t index)
+bitidLogin(DataSlice rootKey, const std::string &bitidUri, uint32_t index,
+           Wallet *wallet, const std::string &kycUri)
 {
     Uri callbackUri;
     ABC_CHECK(bitidCallback(callbackUri, bitidUri, false));
-    auto callback = callbackUri.encode();
+    const auto callback = callbackUri.encode();
+    const auto domain = callbackUri.authority();
 
     const auto signature = bitidSign(rootKey, bitidUri, callback, index);
 
@@ -87,16 +92,51 @@ bitidLogin(DataSlice rootKey, const std::string &bitidUri, uint32_t index)
         ABC_JSON_STRING(uri, "uri", nullptr);
         ABC_JSON_STRING(address, "address", nullptr);
         ABC_JSON_STRING(signature, "signature", nullptr);
+        ABC_JSON_STRING(paymentAddress, "a", nullptr);
+        ABC_JSON_STRING(idaddr, "idaddr", nullptr);
+        ABC_JSON_STRING(idsig, "idsig", nullptr);
     };
     BitidJson json;
     ABC_CHECK(json.uriSet(bitidUri));
     ABC_CHECK(json.addressSet(signature.address));
     ABC_CHECK(json.signatureSet(signature.signature));
 
+    // Check for extra request flags:
+    ParsedUri parsedUri;
+    ABC_CHECK(parseUri(parsedUri, bitidUri));
+
+    // Attach a payment address if one is needed:
+    if (parsedUri.bitidPaymentAddress && wallet)
+    {
+        AddressMeta address;
+        wallet->addresses.getNew(address);
+        ABC_CHECK(json.paymentAddressSet(address.address));
+
+        // Set payee metadata to the domain name,
+        // and finalize the address so it can't be used by others:
+        address.metadata.name = domain;
+        address.recyclable = false;
+        wallet->addresses.save(address);
+    }
+
+    // Create a second signature signed by private key derived from specified kycUri:
+    if (parsedUri.bitidKycRequest)
+    {
+        const auto signatureKyc = bitidSign(rootKey, bitidUri, kycUri);
+        ABC_CHECK(json.idaddrSet(signatureKyc.address));
+        ABC_CHECK(json.idsigSet(signatureKyc.signature));
+    }
+
     HttpReply reply;
     HttpRequest().header("Content-Type", "application/json").
     post(reply, callback, json.encode());
     ABC_CHECK(reply.codeOk());
+
+    // Save the domain in the account repo:
+    if (parsedUri.bitidKycProvider && wallet)
+    {
+        ABC_CHECK(pluginDataSet(wallet->account, "Identities", domain, callback));
+    }
 
     return Status();
 }

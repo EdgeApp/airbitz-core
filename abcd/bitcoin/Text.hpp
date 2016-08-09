@@ -33,6 +33,11 @@ struct ParsedUri
     std::string message;
     std::string category; // Airbitz extension
     std::string ret; // Airbitz extension
+
+    // BitID metadata requests:
+    bool bitidPaymentAddress = false;
+    bool bitidKycProvider = false;
+    bool bitidKycRequest = false;
 };
 
 /**
