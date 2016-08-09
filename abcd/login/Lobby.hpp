@@ -48,7 +48,7 @@ public:
      * formerly known an L1.
      */
     DataSlice
-    authId() const { return authId_; }
+    userId() const { return userId_; }
 
     /**
      * Obtains the OTP key associated with this user, if any.
@@ -79,7 +79,7 @@ private:
     mutable std::mutex mutex_;
     std::string username_;
     AccountPaths paths_;
-    DataChunk authId_;
+    DataChunk userId_;
 
     bool otpKeyOk_ = false;
     OtpKey otpKey_;

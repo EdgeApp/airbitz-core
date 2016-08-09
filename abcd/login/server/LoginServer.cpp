@@ -149,9 +149,9 @@ ServerReplyJson::decode(const HttpReply &reply, AuthError *authError)
 struct ServerRequestJson:
     public JsonObject
 {
-    ABC_JSON_STRING(authId, "l1", nullptr)
-    ABC_JSON_STRING(authKey, "lp1", nullptr)
-    ABC_JSON_STRING(recoveryAuthKey, "lra1", nullptr)
+    ABC_JSON_STRING(userId, "l1", nullptr)
+    ABC_JSON_STRING(passwordAuth, "lp1", nullptr)
+    ABC_JSON_STRING(recoveryAuth, "lra1", nullptr)
     ABC_JSON_STRING(otp, "otp", nullptr)
 
     /**
@@ -167,7 +167,7 @@ struct ServerRequestJson:
 Status
 ServerRequestJson::setup(const Lobby &lobby)
 {
-    ABC_CHECK(authIdSet(base64Encode(lobby.authId())));
+    ABC_CHECK(userIdSet(base64Encode(lobby.userId())));
     if (lobby.otpKey())
         ABC_CHECK(otpSet(lobby.otpKey()->totp()));
     return Status();
@@ -177,7 +177,7 @@ Status
 ServerRequestJson::setup(const Login &login)
 {
     ABC_CHECK(setup(login.lobby));
-    ABC_CHECK(authKeySet(base64Encode(login.authKey())));
+    ABC_CHECK(passwordAuthSet(base64Encode(login.passwordAuth())));
     return Status();
 }
 
@@ -218,7 +218,7 @@ loginServerCreate(const Lobby &lobby, DataSlice LP1,
     const auto url = ABC_SERVER_ROOT "/v1/account/create";
     ServerRequestJson json;
     ABC_CHECK(json.setup(lobby));
-    ABC_CHECK(json.authKeySet(base64Encode(LP1)));
+    ABC_CHECK(json.passwordAuthSet(base64Encode(LP1)));
     ABC_CHECK(json.set(ABC_SERVER_JSON_CARE_PACKAGE_FIELD, carePackage.encode()));
     ABC_CHECK(json.set(ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode()));
     ABC_CHECK(json.set(ABC_SERVER_JSON_REPO_FIELD, syncKey));
@@ -345,9 +345,9 @@ loginServerGetLoginPackage(const Lobby &lobby,
     ServerRequestJson json;
     ABC_CHECK(json.setup(lobby));
     if (LP1.size())
-        ABC_CHECK(json.authKeySet(base64Encode(LP1)));
+        ABC_CHECK(json.passwordAuthSet(base64Encode(LP1)));
     if (LRA1.size())
-        ABC_CHECK(json.recoveryAuthKeySet(base64Encode(LRA1)));
+        ABC_CHECK(json.recoveryAuthSet(base64Encode(LRA1)));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));

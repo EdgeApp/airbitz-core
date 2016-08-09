@@ -53,17 +53,17 @@ Login::syncKey() const
 }
 
 DataChunk
-Login::authKey() const
+Login::passwordAuth() const
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    return authKey_;
+    return passwordAuth_;
 }
 
 Status
-Login::authKeySet(DataSlice authKey)
+Login::passwordAuthSet(DataSlice passwordAuth)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    authKey_ = DataChunk(authKey.begin(), authKey.end());
+    passwordAuth_ = DataChunk(passwordAuth.begin(), passwordAuth.end());
     return Status();
 }
 
@@ -90,13 +90,13 @@ Login::createNew(const char *password)
     ABC_CHECK(syncKeyBox.encrypt(syncKey_, dataKey_));
     ABC_CHECK(loginPackage.syncKeyBoxSet(syncKeyBox));
 
-    // Set up authKey (LP1):
+    // Set up passwordAuth (LP1):
     if (password)
     {
         std::string LP = lobby.username() + password;
 
-        // Generate authKey:
-        ABC_CHECK(usernameSnrp().hash(authKey_, LP));
+        // Generate passwordAuth:
+        ABC_CHECK(usernameSnrp().hash(passwordAuth_, LP));
 
         // We have a password, so use it to encrypt dataKey:
         DataChunk passwordKey;
@@ -107,15 +107,15 @@ Login::createNew(const char *password)
     }
     else
     {
-        // Generate authKey:
-        ABC_CHECK(randomData(authKey_, scryptDefaultSize));
+        // Generate passwordAuth:
+        ABC_CHECK(randomData(passwordAuth_, scryptDefaultSize));
     }
-    JsonBox authKeyBox;
-    ABC_CHECK(authKeyBox.encrypt(authKey_, dataKey_));
-    ABC_CHECK(loginPackage.authKeyBoxSet(authKeyBox));
+    JsonBox passwordAuthBox;
+    ABC_CHECK(passwordAuthBox.encrypt(passwordAuth_, dataKey_));
+    ABC_CHECK(loginPackage.passwordAuthBoxSet(passwordAuthBox));
 
     // Create the account and repo on server:
-    ABC_CHECK(loginServerCreate(lobby, authKey_,
+    ABC_CHECK(loginServerCreate(lobby, passwordAuth_,
                                 carePackage, loginPackage, base16Encode(syncKey_)));
 
     // Set up the on-disk login:
@@ -135,7 +135,7 @@ Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox,
                 bool diskBased)
 {
     ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey_, dataKey_));
-    ABC_CHECK(loginPackage.authKeyBox().decrypt(authKey_, dataKey_));
+    ABC_CHECK(loginPackage.passwordAuthBox().decrypt(passwordAuth_, dataKey_));
 
     ABC_CHECK(lobby.paths(paths, true));
 
@@ -155,7 +155,7 @@ Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox,
             // The server hasn't been asked yet, so do that now:
             LoginPackage unused;
             AuthError authError;
-            ABC_CHECK(loginServerGetLoginPackage(lobby, authKey_, DataChunk(),
+            ABC_CHECK(loginServerGetLoginPackage(lobby, passwordAuth_, DataChunk(),
                                                  unused, rootKeyBox,
                                                  authError));
 

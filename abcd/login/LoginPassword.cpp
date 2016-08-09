@@ -58,14 +58,14 @@ loginPasswordServer(std::shared_ptr<Login> &result,
     CarePackage carePackage;
     ABC_CHECK(loginServerGetCarePackage(lobby, carePackage));
 
-    // Make the authKey (unlocks the server):
-    DataChunk authKey;
-    ABC_CHECK(usernameSnrp().hash(authKey, LP));
+    // Make the passwordAuth (unlocks the server):
+    DataChunk passwordAuth;
+    ABC_CHECK(usernameSnrp().hash(passwordAuth, LP));
 
     // Get the LoginPackage:
     LoginPackage loginPackage;
     JsonPtr rootKeyBox;
-    ABC_CHECK(loginServerGetLoginPackage(lobby, authKey, DataSlice(),
+    ABC_CHECK(loginServerGetLoginPackage(lobby, passwordAuth, DataSlice(),
                                          loginPackage, rootKeyBox,
                                          authError));
 
@@ -114,7 +114,7 @@ loginPasswordSet(Login &login, const std::string &password)
     ABC_CHECK(loginPackage.load(login.paths.loginPackagePath()));
 
     // Load the old keys:
-    DataChunk authKey = login.authKey();
+    DataChunk passwordAuth = login.passwordAuth();
     DataChunk oldLRA1;
     if (loginPackage.ELRA1())
     {
@@ -134,18 +134,18 @@ loginPasswordSet(Login &login, const std::string &password)
     ABC_CHECK(loginPackage.passwordBoxSet(passwordBox));
 
     // Update ELP1:
-    DataChunk newAuthKey;       // Unlocks the server
-    ABC_CHECK(usernameSnrp().hash(newAuthKey, LP));
-    JsonBox authKeyBox;
-    ABC_CHECK(authKeyBox.encrypt(newAuthKey, login.dataKey()));
-    ABC_CHECK(loginPackage.authKeyBoxSet(authKeyBox));
+    DataChunk newPasswordAuth;       // Unlocks the server
+    ABC_CHECK(usernameSnrp().hash(newPasswordAuth, LP));
+    JsonBox passwordAuthBox;
+    ABC_CHECK(passwordAuthBox.encrypt(newPasswordAuth, login.dataKey()));
+    ABC_CHECK(loginPackage.passwordAuthBoxSet(passwordAuthBox));
 
     // Change the server login:
-    ABC_CHECK(loginServerChangePassword(login, newAuthKey, oldLRA1,
+    ABC_CHECK(loginServerChangePassword(login, newPasswordAuth, oldLRA1,
                                         carePackage, loginPackage));
 
     // Change the on-disk login:
-    ABC_CHECK(login.authKeySet(newAuthKey));
+    ABC_CHECK(login.passwordAuthSet(newPasswordAuth));
     ABC_CHECK(carePackage.save(login.paths.carePackagePath()));
     ABC_CHECK(loginPackage.save(login.paths.loginPackagePath()));
 

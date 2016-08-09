@@ -46,18 +46,18 @@ otpResetGet(std::list<std::string> &result,
             const std::list<std::string> &usernames)
 {
     // List the users:
-    std::list<DataChunk> authIds;
+    std::list<DataChunk> userIds;
     for (const auto &i: usernames)
     {
         std::shared_ptr<Lobby> lobby;
         ABC_CHECK(Lobby::create(lobby, i));
-        auto authId = lobby->authId();
-        authIds.emplace_back(authId.begin(), authId.end());
+        auto userId = lobby->userId();
+        userIds.emplace_back(userId.begin(), userId.end());
     }
 
     // Make the request:
     std::list<bool> flags;
-    ABC_CHECK(loginServerOtpPending(authIds, flags));
+    ABC_CHECK(loginServerOtpPending(userIds, flags));
 
     // Smush the results:
     result.clear();

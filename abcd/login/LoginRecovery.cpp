@@ -48,14 +48,14 @@ loginRecovery(std::shared_ptr<Login> &result,
     CarePackage carePackage;
     ABC_CHECK(loginServerGetCarePackage(lobby, carePackage));
 
-    // Make recoveryAuthKey (unlocks the server):
-    DataChunk recoveryAuthKey;
-    ABC_CHECK(usernameSnrp().hash(recoveryAuthKey, LRA));
+    // Make recoveryAuth (unlocks the server):
+    DataChunk recoveryAuth;
+    ABC_CHECK(usernameSnrp().hash(recoveryAuth, LRA));
 
     // Get the LoginPackage:
     LoginPackage loginPackage;
     JsonPtr rootKeyBox;
-    ABC_CHECK(loginServerGetLoginPackage(lobby, DataSlice(), recoveryAuthKey,
+    ABC_CHECK(loginServerGetLoginPackage(lobby, DataSlice(), recoveryAuth,
                                          loginPackage, rootKeyBox,
                                          authError));
 
@@ -94,7 +94,7 @@ loginRecoverySet(Login &login,
     ABC_CHECK(loginPackage.load(login.paths.loginPackagePath()));
 
     // Load the old keys:
-    DataChunk authKey = login.authKey();
+    DataChunk passwordAuth = login.passwordAuth();
 
     // Update scrypt parameters:
     JsonSnrp snrp;
@@ -121,17 +121,17 @@ loginRecoverySet(Login &login,
     ABC_CHECK(recoveryBox.encrypt(login.dataKey(), recoveryKey));
     ABC_CHECK(loginPackage.recoveryBoxSet(recoveryBox));
 
-    // Make recoveryAuthKey (unlocks the server):
-    DataChunk recoveryAuthKey;
-    ABC_CHECK(usernameSnrp().hash(recoveryAuthKey, LRA));
+    // Make recoveryAuth (unlocks the server):
+    DataChunk recoveryAuth;
+    ABC_CHECK(usernameSnrp().hash(recoveryAuth, LRA));
 
-    // Encrypt recoveryAuthKey (needed for atomic password updates):
+    // Encrypt recoveryAuth (needed for atomic password updates):
     JsonBox recoveryAuthBox;
-    ABC_CHECK(recoveryAuthBox.encrypt(recoveryAuthKey, login.dataKey()));
+    ABC_CHECK(recoveryAuthBox.encrypt(recoveryAuth, login.dataKey()));
     ABC_CHECK(loginPackage.ELRA1Set(recoveryAuthBox));
 
     // Change the server login:
-    ABC_CHECK(loginServerChangePassword(login, authKey, recoveryAuthKey,
+    ABC_CHECK(loginServerChangePassword(login, passwordAuth, recoveryAuth,
                                         carePackage, loginPackage));
 
     // Change the on-disk login:

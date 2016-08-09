@@ -40,7 +40,7 @@ struct LoginPackage:
 
     // These are all encrypted with MK:
     ABC_JSON_VALUE(syncKeyBox,  "ESyncKey", JsonBox)
-    ABC_JSON_VALUE(authKeyBox,  "ELP1",     JsonBox)
+    ABC_JSON_VALUE(passwordAuthBox, "ELP1", JsonBox)
     ABC_JSON_VALUE(ELRA1,       "ELRA1",    JsonBox) // Optional
     /* There was a time when the login and password were not orthogonal.
      * Therefore, any updates to one needed to include the other for

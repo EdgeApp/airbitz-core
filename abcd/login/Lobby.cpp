@@ -123,9 +123,9 @@ Lobby::init(const std::string &username)
     // Failure is acceptable:
     gContext->paths.accountDir(paths_, username_);
 
-    // Create authId:
-    ABC_CHECK(usernameSnrp().hash(authId_, username_));
-    ABC_DebugLog("authId: %s", base64Encode(authId()).c_str());
+    // Create userId:
+    ABC_CHECK(usernameSnrp().hash(userId_, username_));
+    ABC_DebugLog("userId: %s", base64Encode(userId()).c_str());
 
     // Load the OTP key, if possible:
     OtpFile file;

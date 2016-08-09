@@ -2471,7 +2471,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         JsonPtr rootKeyBox;
         AuthError authError;
         auto s = loginServerGetLoginPackage(account->login.lobby,
-                                            account->login.authKey(),
+                                            account->login.passwordAuth(),
                                             DataChunk(),
                                             loginPackage, rootKeyBox,
                                             authError);

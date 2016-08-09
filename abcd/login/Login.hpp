@@ -60,10 +60,13 @@ public:
      * Loads the server authentication key (LP1) for the account.
      */
     DataChunk
-    authKey() const;
+    passwordAuth() const;
 
+    /**
+     * Used when changing the password for the login.
+     */
     Status
-    authKeySet(DataSlice authKey);
+    passwordAuthSet(DataSlice passwordAuth);
 
 private:
     mutable std::mutex mutex_;
@@ -73,7 +76,7 @@ private:
     const DataChunk dataKey_;
     DataChunk rootKey_;
     DataChunk syncKey_;
-    DataChunk authKey_;
+    DataChunk passwordAuth_;
 
     Login(Lobby &lobby, DataSlice dataKey);
 
