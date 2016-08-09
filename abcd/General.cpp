@@ -214,17 +214,17 @@ generalBitcoinFeeInfo()
     BitcoinFeeInfo out;
 
     out.confirmFees[1] = estimateFeesJson.confirmFees1() ?
-                       estimateFeesJson.confirmFees1() : feeJson.confirmFees1();
+                         estimateFeesJson.confirmFees1() : feeJson.confirmFees1();
     out.confirmFees[2] = estimateFeesJson.confirmFees2() ?
-                       estimateFeesJson.confirmFees2() : feeJson.confirmFees2();
+                         estimateFeesJson.confirmFees2() : feeJson.confirmFees2();
     out.confirmFees[3] = estimateFeesJson.confirmFees3() ?
-                       estimateFeesJson.confirmFees3() : feeJson.confirmFees3();
+                         estimateFeesJson.confirmFees3() : feeJson.confirmFees3();
     out.confirmFees[4] = estimateFeesJson.confirmFees4() ?
-                       estimateFeesJson.confirmFees4() : feeJson.confirmFees4();
+                         estimateFeesJson.confirmFees4() : feeJson.confirmFees4();
     out.confirmFees[5] = estimateFeesJson.confirmFees5() ?
-                       estimateFeesJson.confirmFees5() : feeJson.confirmFees5();
+                         estimateFeesJson.confirmFees5() : feeJson.confirmFees5();
     out.confirmFees[6] = estimateFeesJson.confirmFees6() ?
-                       estimateFeesJson.confirmFees6() : feeJson.confirmFees6();
+                         estimateFeesJson.confirmFees6() : feeJson.confirmFees6();
     out.lowFeeBlock             = feeJson.lowFeeBlock();
     out.standardFeeBlockLow     = feeJson.standardFeeBlockLow();
     out.standardFeeBlockHigh    = feeJson.standardFeeBlockHigh();
@@ -243,8 +243,10 @@ generalBitcoinFeeInfo()
     if (out.confirmFees[6] > out.confirmFees[5])
         out.confirmFees[6] = out.confirmFees[5];
 
-    ABC_DebugLevel(1, "generalBitcoinFeeInfo: 1:%.0f, 2:%.0f, 3:%.0f, 4:%.0f, 5:%.0f, 6:%.0f",
-                   out.confirmFees[1], out.confirmFees[2], out.confirmFees[3], out.confirmFees[4], out.confirmFees[5], out.confirmFees[6]);
+    ABC_DebugLevel(1,
+                   "generalBitcoinFeeInfo: 1:%.0f, 2:%.0f, 3:%.0f, 4:%.0f, 5:%.0f, 6:%.0f",
+                   out.confirmFees[1], out.confirmFees[2], out.confirmFees[3], out.confirmFees[4],
+                   out.confirmFees[5], out.confirmFees[6]);
 
     return out;
 }
