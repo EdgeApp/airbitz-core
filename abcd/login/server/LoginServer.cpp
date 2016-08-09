@@ -29,8 +29,7 @@ namespace abcd {
 #define DATETIME_LENGTH 20
 
 // Server strings:
-#define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api"
-//#define ABC_SERVER_ROOT                     "https://test-auth.airbitz.co/api"
+#define ABC_SERVER_ROOT                     "https://test-auth.airbitz.co/api"
 
 #define ABC_SERVER_JSON_NEW_LP1_FIELD       "new_lp1"
 #define ABC_SERVER_JSON_NEW_LRA1_FIELD      "new_lra1"
