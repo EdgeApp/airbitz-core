@@ -26,7 +26,7 @@ namespace abcd {
 #define DATETIME_LENGTH 20
 
 // Server strings:
-#define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api/v1"
+#define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api"
 
 #define ABC_SERVER_JSON_NEW_LP1_FIELD       "new_lp1"
 #define ABC_SERVER_JSON_NEW_LRA1_FIELD      "new_lra1"
@@ -184,7 +184,7 @@ ServerRequestJson::setup(const Login &login)
 Status
 loginServerGetGeneral(JsonPtr &result)
 {
-    const auto url = ABC_SERVER_ROOT "/getinfo";
+    const auto url = ABC_SERVER_ROOT "/v1/getinfo";
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url));
@@ -198,7 +198,7 @@ loginServerGetGeneral(JsonPtr &result)
 Status
 loginServerGetQuestions(JsonPtr &result)
 {
-    const auto url = ABC_SERVER_ROOT "/questions";
+    const auto url = ABC_SERVER_ROOT "/v1/questions";
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url));
@@ -215,7 +215,7 @@ loginServerCreate(const Lobby &lobby, DataSlice LP1,
                   const LoginPackage &loginPackage,
                   const std::string &syncKey)
 {
-    const auto url = ABC_SERVER_ROOT "/account/create";
+    const auto url = ABC_SERVER_ROOT "/v1/account/create";
     ServerRequestJson json;
     ABC_CHECK(json.setup(lobby));
     ABC_CHECK(json.authKeySet(base64Encode(LP1)));
@@ -234,7 +234,7 @@ loginServerCreate(const Lobby &lobby, DataSlice LP1,
 Status
 loginServerActivate(const Login &login)
 {
-    const auto url = ABC_SERVER_ROOT "/account/activate";
+    const auto url = ABC_SERVER_ROOT "/v1/account/activate";
     ServerRequestJson json;
     ABC_CHECK(json.setup(login));
 
@@ -249,7 +249,7 @@ loginServerActivate(const Login &login)
 Status
 loginServerAvailable(const Lobby &lobby)
 {
-    const auto url = ABC_SERVER_ROOT "/account/available";
+    const auto url = ABC_SERVER_ROOT "/v1/account/available";
     ServerRequestJson json;
     ABC_CHECK(json.setup(lobby));
 
@@ -265,7 +265,7 @@ Status
 loginServerAccountUpgrade(const Login &login, JsonPtr rootKeyBox,
                           JsonPtr mnemonicBox, JsonPtr dataKeyBox)
 {
-    const auto url = ABC_SERVER_ROOT "/account/upgrade";
+    const auto url = ABC_SERVER_ROOT "/v1/account/upgrade";
     struct RequestJson:
         public ServerRequestJson
     {
@@ -292,7 +292,7 @@ loginServerChangePassword(const Login &login,
                           const CarePackage &carePackage,
                           const LoginPackage &loginPackage)
 {
-    const auto url = ABC_SERVER_ROOT "/account/password/update";
+    const auto url = ABC_SERVER_ROOT "/v1/account/password/update";
     ServerRequestJson json;
     ABC_CHECK(json.setup(login));
     ABC_CHECK(json.set(ABC_SERVER_JSON_NEW_LP1_FIELD, base64Encode(newLP1)));
@@ -314,7 +314,7 @@ loginServerChangePassword(const Login &login,
 Status
 loginServerGetCarePackage(const Lobby &lobby, CarePackage &result)
 {
-    const auto url = ABC_SERVER_ROOT "/account/carepackage/get";
+    const auto url = ABC_SERVER_ROOT "/v1/account/carepackage/get";
     ServerRequestJson json;
     ABC_CHECK(json.setup(lobby));
 
@@ -341,7 +341,7 @@ loginServerGetLoginPackage(const Lobby &lobby,
                            LoginPackage &result, JsonPtr &rootKeyBox,
                            AuthError &authError)
 {
-    const auto url = ABC_SERVER_ROOT "/account/loginpackage/get";
+    const auto url = ABC_SERVER_ROOT "/v1/account/loginpackage/get";
     ServerRequestJson json;
     ABC_CHECK(json.setup(lobby));
     if (LP1.size())
@@ -373,7 +373,7 @@ Status
 loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
                          AuthError &authError)
 {
-    const auto url = ABC_SERVER_ROOT "/account/pinpackage/get";
+    const auto url = ABC_SERVER_ROOT "/v1/account/pinpackage/get";
     ServerRequestJson json;
     ABC_CHECK(json.set(ABC_SERVER_JSON_DID_FIELD, base64Encode(DID)));
     ABC_CHECK(json.set(ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1)));
@@ -400,7 +400,7 @@ loginServerUpdatePinPackage(const Login &login,
                             DataSlice DID, DataSlice LPIN1,
                             const std::string &pinPackage, time_t ali)
 {
-    const auto url = ABC_SERVER_ROOT "/account/pinpackage/update";
+    const auto url = ABC_SERVER_ROOT "/v1/account/pinpackage/update";
 
     // format the ali
     char szALI[DATETIME_LENGTH];
@@ -425,7 +425,7 @@ loginServerUpdatePinPackage(const Login &login,
 Status
 loginServerWalletCreate(const Login &login, const std::string &syncKey)
 {
-    const auto url = ABC_SERVER_ROOT "/wallet/create";
+    const auto url = ABC_SERVER_ROOT "/v1/wallet/create";
     ServerRequestJson json;
     ABC_CHECK(json.setup(login));
     ABC_CHECK(json.set(ABC_SERVER_JSON_REPO_WALLET_FIELD, syncKey));
@@ -441,7 +441,7 @@ loginServerWalletCreate(const Login &login, const std::string &syncKey)
 Status
 loginServerWalletActivate(const Login &login, const std::string &syncKey)
 {
-    const auto url = ABC_SERVER_ROOT "/wallet/activate";
+    const auto url = ABC_SERVER_ROOT "/v1/wallet/activate";
     ServerRequestJson json;
     ABC_CHECK(json.setup(login));
     ABC_CHECK(json.set(ABC_SERVER_JSON_REPO_WALLET_FIELD, syncKey));
@@ -458,7 +458,7 @@ Status
 loginServerOtpEnable(const Login &login, const std::string &otpToken,
                      const long timeout)
 {
-    const auto url = ABC_SERVER_ROOT "/otp/on";
+    const auto url = ABC_SERVER_ROOT "/v1/otp/on";
     ServerRequestJson json;
     ABC_CHECK(json.setup(login));
     ABC_CHECK(json.set(ABC_SERVER_JSON_OTP_SECRET_FIELD, otpToken));
@@ -476,7 +476,7 @@ loginServerOtpEnable(const Login &login, const std::string &otpToken,
 Status
 loginServerOtpDisable(const Login &login)
 {
-    const auto url = ABC_SERVER_ROOT "/otp/off";
+    const auto url = ABC_SERVER_ROOT "/v1/otp/off";
     ServerRequestJson json;
     ABC_CHECK(json.setup(login));
 
@@ -491,7 +491,7 @@ loginServerOtpDisable(const Login &login)
 Status
 loginServerOtpStatus(const Login &login, bool &on, long &timeout)
 {
-    const auto url = ABC_SERVER_ROOT "/otp/status";
+    const auto url = ABC_SERVER_ROOT "/v1/otp/status";
     ServerRequestJson json;
     ABC_CHECK(json.setup(login));
 
@@ -520,7 +520,7 @@ loginServerOtpStatus(const Login &login, bool &on, long &timeout)
 Status
 loginServerOtpReset(const Lobby &lobby, const std::string &token)
 {
-    const auto url = ABC_SERVER_ROOT "/otp/reset";
+    const auto url = ABC_SERVER_ROOT "/v1/otp/reset";
     struct ResetJson:
         public ServerRequestJson
     {
@@ -540,7 +540,7 @@ loginServerOtpReset(const Lobby &lobby, const std::string &token)
 Status
 loginServerOtpPending(std::list<DataChunk> users, std::list<bool> &isPending)
 {
-    const auto url = ABC_SERVER_ROOT "/otp/pending/check";
+    const auto url = ABC_SERVER_ROOT "/v1/otp/pending/check";
 
     std::string param;
     std::map<std::string, bool> userMap;
@@ -593,7 +593,7 @@ loginServerOtpPending(std::list<DataChunk> users, std::list<bool> &isPending)
 Status
 loginServerOtpResetCancelPending(const Login &login)
 {
-    const auto url = ABC_SERVER_ROOT "/otp/pending/cancel";
+    const auto url = ABC_SERVER_ROOT "/v1/otp/pending/cancel";
     ServerRequestJson json;
     ABC_CHECK(json.setup(login));
 
@@ -608,7 +608,7 @@ loginServerOtpResetCancelPending(const Login &login)
 Status
 loginServerUploadLogs(const Account *account)
 {
-    const auto url = ABC_SERVER_ROOT "/account/debug";
+    const auto url = ABC_SERVER_ROOT "/v1/account/debug";
     ServerRequestJson json;
 
     if (account)
