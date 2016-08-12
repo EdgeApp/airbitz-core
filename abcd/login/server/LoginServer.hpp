@@ -12,8 +12,8 @@
 #ifndef ABCD_LOGIN_LOGIN_SERVER_HPP
 #define ABCD_LOGIN_LOGIN_SERVER_HPP
 
-#include "../util/Data.hpp"
-#include "../util/Status.hpp"
+#include "../../util/Data.hpp"
+#include "../../util/Status.hpp"
 #include <time.h>
 #include <list>
 

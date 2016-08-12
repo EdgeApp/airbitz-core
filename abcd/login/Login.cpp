@@ -8,7 +8,7 @@
 #include "Login.hpp"
 #include "Lobby.hpp"
 #include "LoginPackages.hpp"
-#include "../auth/LoginServer.hpp"
+#include "server/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
 #include "../json/JsonBox.hpp"

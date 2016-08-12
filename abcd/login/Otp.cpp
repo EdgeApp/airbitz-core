@@ -8,7 +8,7 @@
 #include "Otp.hpp"
 #include "Lobby.hpp"
 #include "Login.hpp"
-#include "../auth/LoginServer.hpp"
+#include "server/LoginServer.hpp"
 
 namespace abcd {
 

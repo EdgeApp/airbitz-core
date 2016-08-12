@@ -6,7 +6,7 @@
  */
 
 #include "Pinning.hpp"
-#include "../util/Util.hpp"
+#include "../../util/Util.hpp"
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
 #include <openssl/err.h>

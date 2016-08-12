@@ -9,8 +9,8 @@
 #include "Lobby.hpp"
 #include "Login.hpp"
 #include "LoginPackages.hpp"
+#include "server/LoginServer.hpp"
 #include "../Context.hpp"
-#include "../auth/LoginServer.hpp"
 #include "../json/JsonBox.hpp"
 
 namespace abcd {

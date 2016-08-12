@@ -7,19 +7,19 @@
 
 #include "LoginServer.hpp"
 #include "AirbitzRequest.hpp"
-#include "../login/Lobby.hpp"
-#include "../login/Login.hpp"
-#include "../login/LoginPackages.hpp"
-#include "../crypto/Encoding.hpp"
-#include "../json/JsonObject.hpp"
-#include "../json/JsonArray.hpp"
-#include "../util/Debug.hpp"
+#include "../Lobby.hpp"
+#include "../Login.hpp"
+#include "../LoginPackages.hpp"
+#include "../../crypto/Encoding.hpp"
+#include "../../json/JsonObject.hpp"
+#include "../../json/JsonArray.hpp"
+#include "../../util/Debug.hpp"
 #include <map>
 
 // For debug upload:
-#include "../WalletPaths.hpp"
-#include "../account/Account.hpp"
-#include "../util/FileIO.hpp"
+#include "../../WalletPaths.hpp"
+#include "../../account/Account.hpp"
+#include "../../util/FileIO.hpp"
 
 namespace abcd {
 

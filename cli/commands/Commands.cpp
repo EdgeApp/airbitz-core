@@ -7,10 +7,10 @@
 
 #include "../Command.hpp"
 #include "../../abcd/General.hpp"
-#include "../../abcd/auth/LoginServer.hpp"
 #include "../../abcd/login/LoginPassword.hpp"
 #include "../../abcd/login/LoginPin.hpp"
 #include "../../abcd/login/LoginRecovery.hpp"
+#include "../../abcd/login/server/LoginServer.hpp"
 #include "../../abcd/util/Util.hpp"
 #include "../../abcd/wallet/Wallet.hpp"
 #include <iostream>

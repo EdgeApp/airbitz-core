@@ -7,8 +7,8 @@
 
 #include "Lobby.hpp"
 #include "LoginPackages.hpp"
+#include "server/LoginServer.hpp"
 #include "../Context.hpp"
-#include "../auth/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
