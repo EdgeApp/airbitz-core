@@ -96,7 +96,7 @@ loginPin(std::shared_ptr<Login> &result,
     DataChunk pinKeyKey;        // Unlocks pinKey
     DataChunk pinKey;           // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
-    ABC_CHECK(carePackage.snrp2().hash(pinKeyKey, LPIN));
+    ABC_CHECK(carePackage.passwordKeySnrp().hash(pinKeyKey, LPIN));
     ABC_CHECK(pinKeyBox.decrypt(pinKey, pinKeyKey));
     ABC_CHECK(local.pinBox().decrypt(dataKey, pinKey));
 
@@ -134,7 +134,7 @@ loginPinSetup(Login &login, const std::string &pin, time_t expires)
     // Put pinKey in a box:
     DataChunk pinKeyKey;        // Unlocks pinKey
     JsonBox pinKeyBox;          // Holds pinKey
-    ABC_CHECK(carePackage.snrp2().hash(pinKeyKey, LPIN));
+    ABC_CHECK(carePackage.passwordKeySnrp().hash(pinKeyKey, LPIN));
     ABC_CHECK(pinKeyBox.encrypt(pinKey, pinKeyKey));
 
     // Set up the server:

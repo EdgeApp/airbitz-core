@@ -32,7 +32,7 @@ loginPasswordDisk(std::shared_ptr<Login> &result,
 
     // Make passwordKey (unlocks dataKey):
     DataChunk passwordKey;
-    ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
+    ABC_CHECK(carePackage.passwordKeySnrp().hash(passwordKey, LP));
 
     // Decrypt dataKey (unlocks the account):
     DataChunk dataKey;
@@ -71,7 +71,7 @@ loginPasswordServer(std::shared_ptr<Login> &result,
 
     // Make passwordKey (unlocks dataKey):
     DataChunk passwordKey;
-    ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
+    ABC_CHECK(carePackage.passwordKeySnrp().hash(passwordKey, LP));
 
     // Decrypt dataKey (unlocks the account):
     DataChunk dataKey;
@@ -121,14 +121,14 @@ loginPasswordSet(Login &login, const std::string &password)
         ABC_CHECK(loginPackage.ELRA1().decrypt(oldLRA1, login.dataKey()));
     }
 
-    // Update SNRP2:
+    // Update passwordKeySnrp:
     JsonSnrp snrp;
     ABC_CHECK(snrp.create());
-    ABC_CHECK(carePackage.snrp2Set(snrp));
+    ABC_CHECK(carePackage.passwordKeySnrpSet(snrp));
 
     // Update EMK_LP2:
     DataChunk passwordKey;      // Unlocks dataKey
-    ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
+    ABC_CHECK(carePackage.passwordKeySnrp().hash(passwordKey, LP));
     JsonBox passwordBox;
     ABC_CHECK(passwordBox.encrypt(login.dataKey(), passwordKey));
     ABC_CHECK(loginPackage.passwordBoxSet(passwordBox));
@@ -165,7 +165,7 @@ loginPasswordOk(bool &result, Login &login, const std::string &password)
 
     // Make passwordKey (unlocks dataKey):
     DataChunk passwordKey;
-    ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
+    ABC_CHECK(carePackage.passwordKeySnrp().hash(passwordKey, LP));
 
     // Try to decrypt dataKey (unlocks the account):
     DataChunk dataKey;

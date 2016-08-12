@@ -27,7 +27,7 @@ loginRecoveryQuestions(std::string &result, Lobby &lobby)
 
     // Create questionKey (unlocks questions):
     DataChunk questionKey;
-    ABC_CHECK(carePackage.snrp4().hash(questionKey, lobby.username()));
+    ABC_CHECK(carePackage.questionKeySnrp().hash(questionKey, lobby.username()));
 
     // Decrypt:
     DataChunk questions;
@@ -61,7 +61,7 @@ loginRecovery(std::shared_ptr<Login> &result,
 
     // Make recoveryKey (unlocks dataKey):
     DataChunk recoveryKey;
-    ABC_CHECK(carePackage.snrp3().hash(recoveryKey, LRA));
+    ABC_CHECK(carePackage.recoveryKeySnrp().hash(recoveryKey, LRA));
 
     // Decrypt dataKey (unlocks the account):
     DataChunk dataKey;
@@ -99,13 +99,14 @@ loginRecoverySet(Login &login,
     // Update scrypt parameters:
     JsonSnrp snrp;
     ABC_CHECK(snrp.create());
-    ABC_CHECK(carePackage.snrp3Set(snrp));
+    ABC_CHECK(carePackage.recoveryKeySnrpSet(snrp));
     ABC_CHECK(snrp.create());
-    ABC_CHECK(carePackage.snrp4Set(snrp));
+    ABC_CHECK(carePackage.questionKeySnrpSet(snrp));
 
     // Make questionKey (unlocks questions):
     DataChunk questionKey;
-    ABC_CHECK(carePackage.snrp4().hash(questionKey, login.lobby.username()));
+    ABC_CHECK(carePackage.questionKeySnrp().hash(questionKey,
+              login.lobby.username()));
 
     // Encrypt the questions:
     JsonBox questionBox;
@@ -114,7 +115,7 @@ loginRecoverySet(Login &login,
 
     // Make recoveryKey (unlocks dataKey):
     DataChunk recoveryKey;
-    ABC_CHECK(carePackage.snrp3().hash(recoveryKey, LRA));
+    ABC_CHECK(carePackage.recoveryKeySnrp().hash(recoveryKey, LRA));
 
     // Encrypt dataKey:
     JsonBox recoveryBox;

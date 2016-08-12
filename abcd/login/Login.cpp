@@ -82,7 +82,7 @@ Login::createNew(const char *password)
     // Set up care package:
     CarePackage carePackage;
     ABC_CHECK(snrp.create());
-    ABC_CHECK(carePackage.snrp2Set(snrp));
+    ABC_CHECK(carePackage.passwordKeySnrpSet(snrp));
 
     // Set up syncKey:
     JsonBox syncKeyBox;
@@ -101,7 +101,7 @@ Login::createNew(const char *password)
         // We have a password, so use it to encrypt dataKey:
         DataChunk passwordKey;
         JsonBox passwordBox;
-        ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
+        ABC_CHECK(carePackage.passwordKeySnrp().hash(passwordKey, LP));
         ABC_CHECK(passwordBox.encrypt(dataKey_, passwordKey));
         ABC_CHECK(loginPackage.passwordBoxSet(passwordBox));
     }

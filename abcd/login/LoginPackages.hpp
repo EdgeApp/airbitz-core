@@ -23,10 +23,10 @@ namespace abcd {
 struct CarePackage:
     public JsonObject
 {
-    ABC_JSON_VALUE(snrp2,       "SNRP2",    JsonSnrp)
-    ABC_JSON_VALUE(snrp3,       "SNRP3",    JsonSnrp)
-    ABC_JSON_VALUE(snrp4,       "SNRP4",    JsonSnrp)
-    ABC_JSON_VALUE(questionBox, "ERQ",      JsonBox) // Optional
+    ABC_JSON_VALUE(passwordKeySnrp, "SNRP2", JsonSnrp)
+    ABC_JSON_VALUE(recoveryKeySnrp, "SNRP3", JsonSnrp)
+    ABC_JSON_VALUE(questionKeySnrp, "SNRP4", JsonSnrp)
+    ABC_JSON_VALUE(questionBox, "ERQ", JsonBox) // Optional
 };
 
 /**
