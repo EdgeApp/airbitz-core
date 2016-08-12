@@ -115,4 +115,11 @@ TEST_CASE("JsonObject manipulation", "[util][json]")
         REQUIRE(test.integerSet(65537));
         REQUIRE(test.integer() == 65537);
     }
+    SECTION("value set")
+    {
+        abcd::JsonPtr value;
+        REQUIRE(value.decode("{}"));
+        REQUIRE(test.valueSet(value));
+        REQUIRE(2 == value.get()->refcount);
+    }
 }

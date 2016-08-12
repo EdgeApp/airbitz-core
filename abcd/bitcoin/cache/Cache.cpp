@@ -61,7 +61,7 @@ Cache::addressCheckDoneLoad(JsonObject &json)
 Status
 Cache::addressCheckDoneSave(JsonObject &json)
 {
-    return json.setValue("addressCheckDone", json_boolean(addressCheckDone_));
+    return json.set("addressCheckDone", addressCheckDone_);
 }
 
 Status
