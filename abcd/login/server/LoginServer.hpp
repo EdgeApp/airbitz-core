@@ -20,6 +20,7 @@
 namespace abcd {
 
 class Account;
+class AuthJson;
 class JsonPtr;
 class Login;
 class LoginStore;
@@ -170,6 +171,16 @@ loginServerOtpResetCancelPending(const Login &login);
  */
 Status
 loginServerUploadLogs(const Account *account);
+
+/**
+ * Changes the password on the server using the v2 endpoint.
+ */
+Status
+loginServerPasswordSet(AuthJson authJson,
+                       DataSlice passwordAuth,
+                       JsonPtr passwordKeySnrp,
+                       JsonPtr passwordBox,
+                       JsonPtr passwordAuthBox);
 
 } // namespace abcd
 

@@ -9,6 +9,7 @@
 #include "Login.hpp"
 #include "LoginPackages.hpp"
 #include "LoginStore.hpp"
+#include "server/AuthJson.hpp"
 #include "server/LoginServer.hpp"
 #include "../Context.hpp"
 #include "../json/JsonBox.hpp"
@@ -103,46 +104,40 @@ loginPasswordSet(Login &login, const std::string &password)
 {
     std::string LP = login.store.username() + password;
 
-    // Load the packages:
-    CarePackage carePackage;
-    LoginPackage loginPackage;
-    ABC_CHECK(carePackage.load(login.paths.carePackagePath()));
-    ABC_CHECK(loginPackage.load(login.paths.loginPackagePath()));
-
-    // Load the old keys:
-    DataChunk passwordAuth = login.passwordAuth();
-    DataChunk oldLRA1;
-    if (loginPackage.ELRA1())
-    {
-        ABC_CHECK(loginPackage.ELRA1().decrypt(oldLRA1, login.dataKey()));
-    }
-
-    // Update passwordKeySnrp:
-    JsonSnrp snrp;
-    ABC_CHECK(snrp.create());
-    ABC_CHECK(carePackage.passwordKeySnrpSet(snrp));
-
-    // Update EMK_LP2:
-    DataChunk passwordKey;      // Unlocks dataKey
-    ABC_CHECK(carePackage.passwordKeySnrp().hash(passwordKey, LP));
+    // Create passwordBox:
+    JsonSnrp passwordKeySnrp;
+    DataChunk passwordKey;
     JsonBox passwordBox;
+    ABC_CHECK(passwordKeySnrp.create());
+    ABC_CHECK(passwordKeySnrp.hash(passwordKey, LP));
     ABC_CHECK(passwordBox.encrypt(login.dataKey(), passwordKey));
-    ABC_CHECK(loginPackage.passwordBoxSet(passwordBox));
 
-    // Update ELP1:
-    DataChunk newPasswordAuth;       // Unlocks the server
-    ABC_CHECK(usernameSnrp().hash(newPasswordAuth, LP));
+    // Create passwordAuth:
+    DataChunk passwordAuth;
     JsonBox passwordAuthBox;
-    ABC_CHECK(passwordAuthBox.encrypt(newPasswordAuth, login.dataKey()));
-    ABC_CHECK(loginPackage.passwordAuthBoxSet(passwordAuthBox));
+    ABC_CHECK(usernameSnrp().hash(passwordAuth, LP));
+    ABC_CHECK(passwordAuthBox.encrypt(passwordAuth, login.dataKey()));
 
     // Change the server login:
-    ABC_CHECK(loginServerChangePassword(login, newPasswordAuth, oldLRA1,
-                                        carePackage, loginPackage));
+    AuthJson authJson;
+    ABC_CHECK(authJson.loginSet(login));
+    ABC_CHECK(loginServerPasswordSet(authJson,
+                                     passwordAuth, passwordKeySnrp,
+                                     passwordBox, passwordAuthBox));
+
+    // Change the in-memory login:
+    ABC_CHECK(login.passwordAuthSet(passwordAuth));
 
     // Change the on-disk login:
-    ABC_CHECK(login.passwordAuthSet(newPasswordAuth));
+    CarePackage carePackage;
+    ABC_CHECK(carePackage.load(login.paths.carePackagePath()));
+    ABC_CHECK(carePackage.passwordKeySnrpSet(passwordKeySnrp));
     ABC_CHECK(carePackage.save(login.paths.carePackagePath()));
+
+    LoginPackage loginPackage;
+    ABC_CHECK(loginPackage.load(login.paths.loginPackagePath()));
+    ABC_CHECK(loginPackage.passwordBoxSet(passwordBox));
+    ABC_CHECK(loginPackage.passwordAuthBoxSet(passwordAuthBox));
     ABC_CHECK(loginPackage.save(login.paths.loginPackagePath()));
 
     return Status();

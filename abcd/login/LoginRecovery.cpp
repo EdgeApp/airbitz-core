@@ -126,11 +126,6 @@ loginRecoverySet(Login &login,
     DataChunk recoveryAuth;
     ABC_CHECK(usernameSnrp().hash(recoveryAuth, LRA));
 
-    // Encrypt recoveryAuth (needed for atomic password updates):
-    JsonBox recoveryAuthBox;
-    ABC_CHECK(recoveryAuthBox.encrypt(recoveryAuth, login.dataKey()));
-    ABC_CHECK(loginPackage.ELRA1Set(recoveryAuthBox));
-
     // Change the server login:
     ABC_CHECK(loginServerChangePassword(login, passwordAuth, recoveryAuth,
                                         carePackage, loginPackage));

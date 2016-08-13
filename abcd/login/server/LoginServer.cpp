@@ -7,6 +7,7 @@
 
 #include "LoginServer.hpp"
 #include "AirbitzRequest.hpp"
+#include "AuthJson.hpp"
 #include "../Login.hpp"
 #include "../LoginPackages.hpp"
 #include "../LoginStore.hpp"
@@ -634,6 +635,35 @@ loginServerUploadLogs(const Account *account)
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
+
+    return Status();
+}
+
+Status
+loginServerPasswordSet(AuthJson authJson,
+                       DataSlice passwordAuth,
+                       JsonPtr passwordKeySnrp,
+                       JsonPtr passwordBox,
+                       JsonPtr passwordAuthBox)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/login/password";
+
+    JsonSnrp passwordAuthSnrp;
+    ABC_CHECK(passwordAuthSnrp.snrpSet(usernameSnrp()));
+
+    JsonObject dataJson;
+    ABC_CHECK(dataJson.set("passwordAuth", base64Encode(passwordAuth)));
+    ABC_CHECK(dataJson.set("passwordAuthSnrp", passwordAuthSnrp));
+    ABC_CHECK(dataJson.set("passwordKeySnrp", passwordKeySnrp));
+    ABC_CHECK(dataJson.set("passwordBox", passwordBox));
+    ABC_CHECK(dataJson.set("passwordAuthBox", passwordAuthBox));
+
+    ABC_CHECK(authJson.set("password", dataJson));
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().put(reply, url, authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
 
     return Status();
 }
