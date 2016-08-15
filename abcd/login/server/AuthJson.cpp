@@ -14,13 +14,47 @@
 namespace abcd {
 
 Status
-AuthJson::loginSet(const Login &login)
+AuthJson::otpSet(const LoginStore &store)
 {
-    auto otpKey = login.store.otpKey();
+    auto otpKey = store.otpKey();
     if (otpKey)
         ABC_CHECK(otpSet(otpKey->totp()));
-    ABC_CHECK(userIdSet(base64Encode(login.store.userId())));
-    ABC_CHECK(passwordAuthSet(base64Encode(login.passwordAuth())));
+
+    return Status();
+}
+
+Status
+AuthJson::userIdSet(const LoginStore &store)
+{
+    ABC_CHECK(userIdSet(base64Encode(store.userId())));
+
+    return Status();
+}
+
+Status
+AuthJson::passwordSet(const LoginStore &store, DataSlice passwordAuth)
+{
+    ABC_CHECK(otpSet(store));
+    ABC_CHECK(userIdSet(store));
+    ABC_CHECK(passwordAuthSet(base64Encode(passwordAuth)));
+
+    return Status();
+}
+
+Status
+AuthJson::recoverySet(const LoginStore &store, DataSlice recoveryAuth)
+{
+    ABC_CHECK(otpSet(store));
+    ABC_CHECK(userIdSet(store));
+    ABC_CHECK(recoveryAuthSet(base64Encode(recoveryAuth)));
+
+    return Status();
+}
+
+Status
+AuthJson::loginSet(const Login &login)
+{
+    ABC_CHECK(passwordSet(login.store, login.passwordAuth()));
 
     return Status();
 }

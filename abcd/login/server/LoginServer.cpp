@@ -8,6 +8,7 @@
 #include "LoginServer.hpp"
 #include "AirbitzRequest.hpp"
 #include "AuthJson.hpp"
+#include "LoginJson.hpp"
 #include "../Login.hpp"
 #include "../LoginPackages.hpp"
 #include "../LoginStore.hpp"
@@ -313,64 +314,6 @@ loginServerChangePassword(const Login &login,
 }
 
 Status
-loginServerGetCarePackage(const LoginStore &store, CarePackage &result)
-{
-    const auto url = ABC_SERVER_ROOT "/v1/account/carepackage/get";
-    ServerRequestJson json;
-    ABC_CHECK(json.setup(store));
-
-    HttpReply reply;
-    ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
-    ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply));
-
-    struct ResultJson:
-        public JsonObject
-    {
-        ABC_JSON_CONSTRUCTORS(ResultJson, JsonObject)
-        ABC_JSON_STRING(package, "care_package", nullptr)
-    } resultJson(replyJson.results());
-
-    ABC_CHECK(resultJson.packageOk());
-    ABC_CHECK(result.decode(resultJson.package()));
-    return Status();
-}
-
-Status
-loginServerGetLoginPackage(const LoginStore &store,
-                           DataSlice LP1, DataSlice LRA1,
-                           LoginPackage &result, JsonPtr &rootKeyBox,
-                           AuthError &authError)
-{
-    const auto url = ABC_SERVER_ROOT "/v1/account/loginpackage/get";
-    ServerRequestJson json;
-    ABC_CHECK(json.setup(store));
-    if (LP1.size())
-        ABC_CHECK(json.passwordAuthSet(base64Encode(LP1)));
-    if (LRA1.size())
-        ABC_CHECK(json.recoveryAuthSet(base64Encode(LRA1)));
-
-    HttpReply reply;
-    ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
-    ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply, &authError));
-
-    struct ResultJson:
-        public JsonObject
-    {
-        ABC_JSON_CONSTRUCTORS(ResultJson, JsonObject)
-        ABC_JSON_STRING(package, "login_package", nullptr)
-        ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonPtr)
-    } resultJson(replyJson.results());
-
-    ABC_CHECK(resultJson.packageOk());
-    ABC_CHECK(result.decode(resultJson.package()));
-    if (json_is_object(resultJson.rootKeyBox().get()))
-        rootKeyBox = resultJson.rootKeyBox();
-    return Status();
-}
-
-Status
 loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
                          AuthError &authError)
 {
@@ -636,6 +579,20 @@ loginServerUploadLogs(const Account *account)
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
 
+    return Status();
+}
+
+Status
+loginServerLogin(LoginJson &result, AuthJson authJson, AuthError *authError)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/login";
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().get(reply, url, authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply, authError));
+
+    result = replyJson.results();
     return Status();
 }
 

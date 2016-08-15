@@ -19,6 +19,7 @@ namespace abcd {
 class JsonBox;
 class LoginStore;
 struct LoginPackage;
+class LoginJson;
 
 /**
  * Holds the keys for a logged-in account.
@@ -36,8 +37,7 @@ public:
 
     static Status
     createOnline(std::shared_ptr<Login> &result,
-                 LoginStore &store, DataSlice dataKey,
-                 const LoginPackage &loginPackage, JsonBox rootKeyBox);
+                 LoginStore &store, DataSlice dataKey, LoginJson loginJson);
 
     static Status
     createNew(std::shared_ptr<Login> &result,
@@ -95,7 +95,7 @@ private:
     loadOffline();
 
     Status
-    loadOnline(const LoginPackage &loginPackage, JsonBox rootKeyBox);
+    loadOnline(LoginJson loginJson);
 
     Status
     rootKeyUpgrade();

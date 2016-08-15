@@ -35,6 +35,8 @@
 #include "../abcd/login/LoginStore.hpp"
 #include "../abcd/login/Otp.hpp"
 #include "../abcd/login/RecoveryQuestions.hpp"
+#include "../abcd/login/server/AuthJson.hpp"
+#include "../abcd/login/server/LoginJson.hpp"
 #include "../abcd/login/server/LoginServer.hpp"
 #include "../abcd/spend/AirbitzFee.hpp"
 #include "../abcd/spend/PaymentProto.hpp"
@@ -2467,16 +2469,15 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         generalUpdate().log();
 
         // Has the password changed?
-        LoginPackage loginPackage;
-        JsonPtr rootKeyBox;
-        AuthError authError;
-        auto s = loginServerGetLoginPackage(account->login.store,
-                                            account->login.passwordAuth(),
-                                            DataChunk(),
-                                            loginPackage, rootKeyBox,
-                                            authError);
-
-        if (s.value() == ABC_CC_InvalidOTP)
+        AuthJson authJson;
+        LoginJson loginJson;
+        ABC_CHECK_NEW(authJson.loginSet(account->login));
+        auto s = loginServerLogin(loginJson, authJson);
+        if (s)
+        {
+            ABC_CHECK_NEW(loginJson.save(account->login.paths));
+        }
+        else if (s.value() == ABC_CC_InvalidOTP)
         {
             ABC_RET_ERROR(s.value(), s.message().c_str());
         }

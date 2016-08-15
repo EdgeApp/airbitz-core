@@ -23,6 +23,7 @@ class Account;
 class AuthJson;
 class JsonPtr;
 class Login;
+class LoginJson;
 class LoginStore;
 struct CarePackage;
 struct LoginPackage;
@@ -86,21 +87,6 @@ loginServerChangePassword(const Login &login,
                           DataSlice newLP1, DataSlice newLRA1,
                           const CarePackage &carePackage,
                           const LoginPackage &loginPackage);
-
-Status
-loginServerGetCarePackage(const LoginStore &store, CarePackage &result);
-
-/**
- * Retrieves the LoginPackage for the account.
- * The caller must supply at least one form of credentials (LP1/LRA1).
- * @param rootKeyBox Returns the rootKey encrypted with the dataKey,
- * but only on accounts that have already been upgraded.
- */
-Status
-loginServerGetLoginPackage(const LoginStore &store,
-                           DataSlice LP1, DataSlice LRA1,
-                           LoginPackage &result, JsonPtr &rootKeyBox,
-                           AuthError &authError);
 
 Status
 loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
@@ -171,6 +157,13 @@ loginServerOtpResetCancelPending(const Login &login);
  */
 Status
 loginServerUploadLogs(const Account *account);
+
+/**
+ * Accesses the v2 login endpoint.
+ */
+Status
+loginServerLogin(LoginJson &result, AuthJson authJson,
+                 AuthError *authError=nullptr);
 
 /**
  * Changes the password on the server using the v2 endpoint.

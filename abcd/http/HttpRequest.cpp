@@ -165,6 +165,17 @@ HttpRequest::put(HttpReply &result, const std::string &url,
 }
 
 Status
+HttpRequest::get(HttpReply &result, const std::string &url,
+                 const std::string &body)
+{
+    if (!status_)
+        return status_;
+
+    ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_CUSTOMREQUEST, "GET"));
+    return post(result, url, body);
+}
+
+Status
 HttpRequest::init()
 {
     handle_ = curl_easy_init();

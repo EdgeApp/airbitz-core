@@ -17,6 +17,7 @@
 namespace abcd {
 
 class Login;
+class LoginStore;
 
 /**
  * A proof of a user's identity for the login server.
@@ -28,12 +29,25 @@ public:
     ABC_JSON_CONSTRUCTORS(AuthJson, JsonObject)
 
     Status
+    otpSet(const LoginStore &store);
+
+    Status
+    userIdSet(const LoginStore &store);
+
+    Status
+    passwordSet(const LoginStore &store, DataSlice passwordAuth);
+
+    Status
+    recoverySet(const LoginStore &store, DataSlice recoveryAuth);
+
+    Status
     loginSet(const Login &login);
 
 protected:
     ABC_JSON_STRING(otp, "otp", nullptr)
     ABC_JSON_STRING(userId, "userId", nullptr)
     ABC_JSON_STRING(passwordAuth, "passwordAuth", nullptr)
+    ABC_JSON_STRING(recoveryAuth, "recoveryAuth", nullptr)
 };
 
 } // namespace abcd

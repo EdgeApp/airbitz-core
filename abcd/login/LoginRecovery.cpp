@@ -9,6 +9,8 @@
 #include "Login.hpp"
 #include "LoginPackages.hpp"
 #include "LoginStore.hpp"
+#include "server/AuthJson.hpp"
+#include "server/LoginJson.hpp"
 #include "server/LoginServer.hpp"
 #include "../json/JsonBox.hpp"
 
@@ -17,21 +19,21 @@ namespace abcd {
 Status
 loginRecoveryQuestions(std::string &result, LoginStore &store)
 {
-    // Load CarePackage:
-    CarePackage carePackage;
-    ABC_CHECK(loginServerGetCarePackage(store, carePackage));
+    // Grab the login information from the server:
+    AuthJson authJson;
+    LoginJson loginJson;
+    ABC_CHECK(authJson.userIdSet(store));
+    ABC_CHECK(loginServerLogin(loginJson, authJson));
 
     // Verify that the questions exist:
-    if (!carePackage.questionBox())
+    if (!loginJson.questionBox())
         return ABC_ERROR(ABC_CC_NoRecoveryQuestions, "No recovery questions");
 
-    // Create questionKey (unlocks questions):
-    DataChunk questionKey;
-    ABC_CHECK(carePackage.questionKeySnrp().hash(questionKey, store.username()));
-
     // Decrypt:
+    DataChunk questionKey;
     DataChunk questions;
-    ABC_CHECK(carePackage.questionBox().decrypt(questions, questionKey));
+    ABC_CHECK(loginJson.questionKeySnrp().hash(questionKey, store.username()));
+    ABC_CHECK(loginJson.questionBox().decrypt(questions, questionKey));
 
     result = toString(questions);
     return Status();
@@ -42,41 +44,26 @@ loginRecovery(std::shared_ptr<Login> &result,
               LoginStore &store, const std::string &recoveryAnswers,
               AuthError &authError)
 {
-    std::string LRA = store.username() + recoveryAnswers;
+    const auto LRA = store.username() + recoveryAnswers;
 
-    // Get the CarePackage:
-    CarePackage carePackage;
-    ABC_CHECK(loginServerGetCarePackage(store, carePackage));
-
-    // Make recoveryAuth (unlocks the server):
+    // Create recoveryAuth:
     DataChunk recoveryAuth;
     ABC_CHECK(usernameSnrp().hash(recoveryAuth, LRA));
 
-    // Get the LoginPackage:
-    LoginPackage loginPackage;
-    JsonPtr rootKeyBox;
-    ABC_CHECK(loginServerGetLoginPackage(store, DataSlice(), recoveryAuth,
-                                         loginPackage, rootKeyBox,
-                                         authError));
+    // Grab the login information from the server:
+    AuthJson authJson;
+    LoginJson loginJson;
+    ABC_CHECK(authJson.recoverySet(store, recoveryAuth));
+    ABC_CHECK(loginServerLogin(loginJson, authJson, &authError));
 
-    // Make recoveryKey (unlocks dataKey):
+    // Unlock recoveryBox:
     DataChunk recoveryKey;
-    ABC_CHECK(carePackage.recoveryKeySnrp().hash(recoveryKey, LRA));
-
-    // Decrypt dataKey (unlocks the account):
     DataChunk dataKey;
-    ABC_CHECK(loginPackage.recoveryBox().decrypt(dataKey, recoveryKey));
+    ABC_CHECK(loginJson.recoveryKeySnrp().hash(recoveryKey, LRA));
+    ABC_CHECK(loginJson.recoveryBox().decrypt(dataKey, recoveryKey));
 
     // Create the Login object:
-    std::shared_ptr<Login> out;
-    ABC_CHECK(Login::createOnline(out, store, dataKey,
-                                  loginPackage, rootKeyBox));
-
-    // Set up the on-disk login:
-    ABC_CHECK(carePackage.save(out->paths.carePackagePath()));
-    ABC_CHECK(loginPackage.save(out->paths.loginPackagePath()));
-
-    result = std::move(out);
+    ABC_CHECK(Login::createOnline(result, store, dataKey, loginJson));
     return Status();
 }
 

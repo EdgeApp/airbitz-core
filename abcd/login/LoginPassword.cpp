@@ -10,6 +10,7 @@
 #include "LoginPackages.hpp"
 #include "LoginStore.hpp"
 #include "server/AuthJson.hpp"
+#include "server/LoginJson.hpp"
 #include "server/LoginServer.hpp"
 #include "../Context.hpp"
 #include "../json/JsonBox.hpp"
@@ -20,7 +21,7 @@ static Status
 loginPasswordDisk(std::shared_ptr<Login> &result,
                   LoginStore &store, const std::string &password)
 {
-    std::string LP = store.username() + password;
+    const auto LP = store.username() + password;
 
     AccountPaths paths;
     ABC_CHECK(store.paths(paths));
@@ -49,41 +50,26 @@ loginPasswordServer(std::shared_ptr<Login> &result,
                     LoginStore &store, const std::string &password,
                     AuthError &authError)
 {
-    std::string LP = store.username() + password;
+    const auto LP = store.username() + password;
 
-    // Get the CarePackage:
-    CarePackage carePackage;
-    ABC_CHECK(loginServerGetCarePackage(store, carePackage));
-
-    // Make the passwordAuth (unlocks the server):
+    // Create passwordAuth:
     DataChunk passwordAuth;
     ABC_CHECK(usernameSnrp().hash(passwordAuth, LP));
 
-    // Get the LoginPackage:
-    LoginPackage loginPackage;
-    JsonPtr rootKeyBox;
-    ABC_CHECK(loginServerGetLoginPackage(store, passwordAuth, DataSlice(),
-                                         loginPackage, rootKeyBox,
-                                         authError));
+    // Grab the login information from the server:
+    AuthJson authJson;
+    LoginJson loginJson;
+    ABC_CHECK(authJson.passwordSet(store, passwordAuth));
+    ABC_CHECK(loginServerLogin(loginJson, authJson, &authError));
 
-    // Make passwordKey (unlocks dataKey):
+    // Unlock passwordBox:
     DataChunk passwordKey;
-    ABC_CHECK(carePackage.passwordKeySnrp().hash(passwordKey, LP));
-
-    // Decrypt dataKey (unlocks the account):
     DataChunk dataKey;
-    ABC_CHECK(loginPackage.passwordBox().decrypt(dataKey, passwordKey));
+    ABC_CHECK(loginJson.passwordKeySnrp().hash(passwordKey, LP));
+    ABC_CHECK(loginJson.passwordBox().decrypt(dataKey, passwordKey));
 
     // Create the Login object:
-    std::shared_ptr<Login> out;
-    ABC_CHECK(Login::createOnline(out, store, dataKey,
-                                  loginPackage, rootKeyBox));
-
-    // Set up the on-disk login:
-    ABC_CHECK(carePackage.save(out->paths.carePackagePath()));
-    ABC_CHECK(loginPackage.save(out->paths.loginPackagePath()));
-
-    result = std::move(out);
+    ABC_CHECK(Login::createOnline(result, store, dataKey, loginJson));
     return Status();
 }
 

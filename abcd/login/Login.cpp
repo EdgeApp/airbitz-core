@@ -8,6 +8,8 @@
 #include "Login.hpp"
 #include "LoginPackages.hpp"
 #include "LoginStore.hpp"
+#include "server/AuthJson.hpp"
+#include "server/LoginJson.hpp"
 #include "server/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
@@ -34,11 +36,10 @@ Login::createOffline(std::shared_ptr<Login> &result,
 
 Status
 Login::createOnline(std::shared_ptr<Login> &result,
-                    LoginStore &store, DataSlice dataKey,
-                    const LoginPackage &loginPackage, JsonBox rootKeyBox)
+                    LoginStore &store, DataSlice dataKey, LoginJson loginJson)
 {
     std::shared_ptr<Login> out(new Login(store, dataKey));
-    ABC_CHECK(out->loadOnline(loginPackage, rootKeyBox));
+    ABC_CHECK(out->loadOnline(loginJson));
 
     result = std::move(out);
     return Status();
@@ -161,15 +162,12 @@ Login::loadOffline()
     else
     {
         // Try asking the server:
-        LoginPackage unused;
-        AuthError authError;
-        ABC_CHECK(loginServerGetLoginPackage(store, passwordAuth_, DataChunk(),
-                                             unused, rootKeyBox,
-                                             authError));
-
-        // If the server had one, save it for the future:
-        if (rootKeyBox.ok())
-            ABC_CHECK(rootKeyBox.save(paths.rootKeyPath()));
+        AuthJson authJson;
+        LoginJson loginJson;
+        ABC_CHECK(authJson.loginSet(*this));
+        ABC_CHECK(loginServerLogin(loginJson, authJson));
+        ABC_CHECK(loginJson.save(paths));
+        rootKeyBox = loginJson.rootKeyBox();
     }
     // Otherwise, there just isn't one.
 
@@ -183,14 +181,16 @@ Login::loadOffline()
 }
 
 Status
-Login::loadOnline(const LoginPackage &loginPackage, JsonBox rootKeyBox)
+Login::loadOnline(LoginJson loginJson)
 {
     ABC_CHECK(store.paths(paths, true));
+    ABC_CHECK(loginJson.save(paths));
 
-    ABC_CHECK(loginPackage.passwordAuthBox().decrypt(passwordAuth_, dataKey_));
-    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey_, dataKey_));
+    ABC_CHECK(loginJson.passwordAuthBox().decrypt(passwordAuth_, dataKey_));
+    ABC_CHECK(loginJson.syncKeyBox().decrypt(syncKey_, dataKey_));
 
     // Extract the rootKey:
+    auto rootKeyBox = loginJson.rootKeyBox();
     if (!rootKeyBox.ok() && fileExists(paths.rootKeyPath()))
         return ABC_ERROR(ABC_CC_Error,
                          "The account has a rootKey, but it's not on the server.");

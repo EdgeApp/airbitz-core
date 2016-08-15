@@ -68,6 +68,12 @@ public:
     put(HttpReply &result, const std::string &url,
         const std::string body="");
 
+    /**
+     * Performs a non-standard GET request including a body.
+     */
+    Status
+    get(HttpReply &result, const std::string &url, const std::string &body);
+
 protected:
     Status status_;
     CURL *handle_;
