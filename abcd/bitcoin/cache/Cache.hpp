@@ -24,6 +24,34 @@ public:
     Cache(const std::string &path, BlockCache &blockCache);
 
     /**
+     * Sets the address check done for this wallet meaning that
+     * this wallet has had all addresses checked at least once on
+     * this device
+     */
+    void
+    addressCheckDoneSet();
+
+    /**
+     * Gets the address check done for this wallet meaning that
+     * this wallet has had all addresses checked at least once on
+     * this device
+     */
+    bool
+    addressCheckDoneGet();
+
+    /**
+     *
+     */
+    void
+    addressCheckDoneSave(JsonObject &json);
+
+    /**
+     *
+     */
+    void
+    addressCheckDoneLoad(JsonObject &json);
+
+    /**
      * Clears the cache in case something goes wrong.
      */
     void
@@ -49,6 +77,7 @@ public:
 
 private:
     const std::string path_;
+    bool bAddressCheckDone;
 };
 
 } // namespace abcd

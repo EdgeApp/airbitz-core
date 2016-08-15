@@ -2506,9 +2506,19 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
 
         airbitzFeeAutoSend(*wallet).log();
 
-        bool dirty = false;
-        ABC_CHECK_NEW(wallet->sync(dirty));
-        *pbDirty = dirty;
+        bool isArchived = false;
+        ABC_CHECK_NEW(wallet->account.wallets.archived(isArchived, szWalletUUID));
+
+        // If wallet has been fully loaded in the past and is now archived, do not launch the
+        // watchers.
+        if (wallet->cache.addressCheckDoneGet() && isArchived)
+            ABC_DebugLog("Skipping ABC_DataSyncWallet for archived and address checked wallet");
+        else
+        {
+            bool dirty = false;
+            ABC_CHECK_NEW(wallet->sync(dirty));
+            *pbDirty = dirty;
+        }
     }
 
 exit:
@@ -2569,7 +2579,16 @@ tABC_CC ABC_WatcherConnect(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_NEW(bridgeWatcherConnect(*wallet));
+
+        bool isArchived = false;
+        ABC_CHECK_NEW(wallet->account.wallets.archived(isArchived, szWalletUUID));
+
+        // If wallet has been fully loaded in the past and is now archived, do not launch the
+        // watchers.
+        if (wallet->cache.addressCheckDoneGet() && isArchived)
+            ABC_DebugLog("Skipping ABC_WatcherConnect for archived and address checked wallet");
+        else
+            ABC_CHECK_NEW(bridgeWatcherConnect(*wallet));
     }
 
 exit:
