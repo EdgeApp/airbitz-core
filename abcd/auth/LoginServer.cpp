@@ -26,12 +26,8 @@ namespace abcd {
 #define DATETIME_LENGTH 20
 
 // Server strings:
-#define JSON_ACCT_PIN_PACKAGE                   "pin_package"
-
 #define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api/v1"
 
-#define ABC_SERVER_JSON_L1_FIELD            "l1"
-#define ABC_SERVER_JSON_LP1_FIELD           "lp1"
 #define ABC_SERVER_JSON_NEW_LP1_FIELD       "new_lp1"
 #define ABC_SERVER_JSON_NEW_LRA1_FIELD      "new_lra1"
 #define ABC_SERVER_JSON_REPO_FIELD          "repo_account_key"
@@ -40,13 +36,11 @@ namespace abcd {
 #define ABC_SERVER_JSON_DID_FIELD           "did"
 #define ABC_SERVER_JSON_LPIN1_FIELD         "lpin1"
 #define ABC_SERVER_JSON_ALI_FIELD           "ali"
-#define ABC_SERVER_JSON_OTP_FIELD           "otp"
 #define ABC_SERVER_JSON_OTP_SECRET_FIELD    "otp_secret"
 #define ABC_SERVER_JSON_OTP_TIMEOUT         "otp_timeout"
 #define ABC_SERVER_JSON_OTP_PENDING         "pending"
-
 #define ABC_SERVER_JSON_REPO_WALLET_FIELD       "repo_wallet_key"
-#define ABC_SERVER_JSON_EREPO_WALLET_FIELD      "erepo_wallet_key"
+#define JSON_ACCT_PIN_PACKAGE                   "pin_package"
 
 typedef enum eABC_Server_Code
 {
@@ -81,10 +75,6 @@ struct ServerReplyJson:
     Status
     decode(const HttpReply &reply, AuthError *authError=nullptr);
 };
-
-static tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby, DataSlice LP1,
-                                        const std::string &szWalletAcctKey,
-                                        const char *szPath, tABC_Error *pError);
 
 Status
 ServerReplyJson::decode(const HttpReply &reply, AuthError *authError)
@@ -177,9 +167,9 @@ struct ServerRequestJson:
 Status
 ServerRequestJson::setup(const Lobby &lobby)
 {
-    ABC_CHECK(authIdSet(base64Encode(lobby.authId()).c_str()));
+    ABC_CHECK(authIdSet(base64Encode(lobby.authId())));
     if (lobby.otpKey())
-        ABC_CHECK(otpSet(lobby.otpKey()->totp().c_str()));
+        ABC_CHECK(otpSet(lobby.otpKey()->totp()));
     return Status();
 }
 
@@ -226,12 +216,12 @@ loginServerCreate(const Lobby &lobby, DataSlice LP1,
                   const std::string &syncKey)
 {
     const auto url = ABC_SERVER_ROOT "/account/create";
-    JsonPtr json(json_pack("{ssssssssss}",
-                           ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
-                           ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
-                           ABC_SERVER_JSON_CARE_PACKAGE_FIELD, carePackage.encode().c_str(),
-                           ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode().c_str(),
-                           ABC_SERVER_JSON_REPO_FIELD, syncKey.c_str()));
+    ServerRequestJson json;
+    ABC_CHECK(json.setup(lobby));
+    ABC_CHECK(json.authKeySet(base64Encode(LP1)));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_CARE_PACKAGE_FIELD, carePackage.encode()));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode()));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_REPO_FIELD, syncKey));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
@@ -303,16 +293,14 @@ loginServerChangePassword(const Login &login,
                           const LoginPackage &loginPackage)
 {
     const auto url = ABC_SERVER_ROOT "/account/password/update";
-    JsonPtr json(json_pack("{ss, ss, ss, ss, ss}",
-                           ABC_SERVER_JSON_L1_FIELD,      base64Encode(login.lobby.authId()).c_str(),
-                           ABC_SERVER_JSON_LP1_FIELD,     base64Encode(login.authKey()).c_str(),
-                           ABC_SERVER_JSON_NEW_LP1_FIELD, base64Encode(newLP1).c_str(),
-                           ABC_SERVER_JSON_CARE_PACKAGE_FIELD,  carePackage.encode().c_str(),
-                           ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode().c_str()));
+    ServerRequestJson json;
+    ABC_CHECK(json.setup(login));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_NEW_LP1_FIELD, base64Encode(newLP1)));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_CARE_PACKAGE_FIELD, carePackage.encode()));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode()));
     if (newLRA1.size())
     {
-        json_object_set_new(json.get(), ABC_SERVER_JSON_NEW_LRA1_FIELD,
-                            json_string(base64Encode(newLRA1).c_str()));
+        ABC_CHECK(json.set(ABC_SERVER_JSON_NEW_LRA1_FIELD, base64Encode(newLRA1)));
     }
 
     HttpReply reply;
@@ -386,9 +374,9 @@ loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
                          AuthError &authError)
 {
     const auto url = ABC_SERVER_ROOT "/account/pinpackage/get";
-    JsonPtr json(json_pack("{ss, ss}",
-                           ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
-                           ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1).c_str()));
+    ServerRequestJson json;
+    ABC_CHECK(json.set(ABC_SERVER_JSON_DID_FIELD, base64Encode(DID)));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1)));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
@@ -419,13 +407,12 @@ loginServerUpdatePinPackage(const Login &login,
     strftime(szALI, DATETIME_LENGTH, "%Y-%m-%dT%H:%M:%S", gmtime(&ali));
 
     // Encode those:
-    JsonPtr json(json_pack("{ss, ss, ss, ss, ss, ss}",
-                           ABC_SERVER_JSON_L1_FIELD, base64Encode(login.lobby.authId()).c_str(),
-                           ABC_SERVER_JSON_LP1_FIELD, base64Encode(login.authKey()).c_str(),
-                           ABC_SERVER_JSON_DID_FIELD, base64Encode(DID).c_str(),
-                           ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1).c_str(),
-                           JSON_ACCT_PIN_PACKAGE, pinPackage.c_str(),
-                           ABC_SERVER_JSON_ALI_FIELD, szALI));
+    ServerRequestJson json;
+    ABC_CHECK(json.setup(login));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_DID_FIELD, base64Encode(DID)));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1)));
+    ABC_CHECK(json.set(JSON_ACCT_PIN_PACKAGE, pinPackage));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_ALI_FIELD, szALI));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
@@ -438,42 +425,33 @@ loginServerUpdatePinPackage(const Login &login,
 Status
 loginServerWalletCreate(const Login &login, const std::string &syncKey)
 {
-    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, login.authKey(),
-                                           syncKey, "wallet/create", &error));
+    const auto url = ABC_SERVER_ROOT "/wallet/create";
+    ServerRequestJson json;
+    ABC_CHECK(json.setup(login));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_REPO_WALLET_FIELD, syncKey));
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
     return Status();
 }
 
 Status
 loginServerWalletActivate(const Login &login, const std::string &syncKey)
 {
-    ABC_CHECK_OLD(ABC_WalletServerRepoPost(login.lobby, login.authKey(),
-                                           syncKey, "wallet/activate", &error));
-    return Status();
-}
+    const auto url = ABC_SERVER_ROOT "/wallet/activate";
+    ServerRequestJson json;
+    ABC_CHECK(json.setup(login));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_REPO_WALLET_FIELD, syncKey));
 
-static
-tABC_CC ABC_WalletServerRepoPost(const Lobby &lobby, DataSlice LP1,
-                                 const std::string &szWalletAcctKey,
-                                 const char *szPath, tABC_Error *pError)
-{
-    tABC_CC cc = ABC_CC_Ok;
-
-    const auto url = ABC_SERVER_ROOT "/" + std::string(szPath);
     HttpReply reply;
+    ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
     ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
 
-    JsonPtr json(json_pack("{ssssss}",
-                           ABC_SERVER_JSON_L1_FIELD, base64Encode(lobby.authId()).c_str(),
-                           ABC_SERVER_JSON_LP1_FIELD, base64Encode(LP1).c_str(),
-                           ABC_SERVER_JSON_REPO_WALLET_FIELD, szWalletAcctKey.c_str()));
-
-    // send the command
-    ABC_CHECK_NEW(AirbitzRequest().post(reply, url, json.encode()));
-
-    ABC_CHECK_NEW(replyJson.decode(reply));
-
-exit:
-    return cc;
+    return Status();
 }
 
 Status
@@ -481,16 +459,11 @@ loginServerOtpEnable(const Login &login, const std::string &otpToken,
                      const long timeout)
 {
     const auto url = ABC_SERVER_ROOT "/otp/on";
-    JsonPtr json(json_pack("{sssssssi}",
-                           ABC_SERVER_JSON_L1_FIELD, base64Encode(login.lobby.authId()).c_str(),
-                           ABC_SERVER_JSON_LP1_FIELD, base64Encode(login.authKey()).c_str(),
-                           ABC_SERVER_JSON_OTP_SECRET_FIELD, otpToken.c_str(),
-                           ABC_SERVER_JSON_OTP_TIMEOUT, timeout));
-
-    auto key = login.lobby.otpKey();
-    if (key)
-        json_object_set_new(json.get(), ABC_SERVER_JSON_OTP_FIELD,
-                            json_string(key->totp().c_str()));
+    ServerRequestJson json;
+    ABC_CHECK(json.setup(login));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_OTP_SECRET_FIELD, otpToken));
+    ABC_CHECK(json.set(ABC_SERVER_JSON_OTP_TIMEOUT,
+                       static_cast<json_int_t>(timeout)));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
@@ -579,7 +552,8 @@ loginServerOtpPending(std::list<DataChunk> users, std::list<bool> &isPending)
         userMap[username] = false;
         usersEncoded.push_back(username);
     }
-    JsonPtr json(json_pack("{ss}", "l1s", param.c_str()));
+    JsonObject json;
+    ABC_CHECK(json.set("l1s", param));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
@@ -635,12 +609,12 @@ Status
 loginServerUploadLogs(const Account *account)
 {
     const auto url = ABC_SERVER_ROOT "/account/debug";
-    JsonPtr json;
-    HttpReply reply;
-    DataChunk logData = debugLogLoad();
+    ServerRequestJson json;
 
     if (account)
     {
+        json.setup(account->login); // Failure is fine
+
         JsonArray jsonArray;
         auto ids = account->wallets.list();
         for (const auto &id: ids)
@@ -652,19 +626,15 @@ loginServerUploadLogs(const Account *account)
                     json_string(base64Encode(watchData).c_str()));
             }
         }
-
-        json.reset(json_pack("{ss, ss, ss}",
-                             ABC_SERVER_JSON_L1_FIELD, base64Encode(account->login.lobby.authId()).c_str(),
-                             ABC_SERVER_JSON_LP1_FIELD, base64Encode(account->login.authKey()).c_str(),
-                             "log", base64Encode(logData).c_str()));
-        json_object_set(json.get(), "watchers", jsonArray.get());
-    }
-    else
-    {
-        json.reset(json_pack("{ss}", "log", base64Encode(logData).c_str()));
+        json.set("watchers", jsonArray); // Failure is fine
     }
 
+    DataChunk logData = debugLogLoad();
+    json.set("log", base64Encode(logData)); // Failure is fine
+
+    HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
+
     return Status();
 }
 
