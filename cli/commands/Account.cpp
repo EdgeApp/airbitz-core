@@ -15,7 +15,7 @@
 
 using namespace abcd;
 
-COMMAND(InitLevel::lobby, AccountAvailable, "account-available",
+COMMAND(InitLevel::store, AccountAvailable, "account-available",
         "")
 {
     if (argc != 0)

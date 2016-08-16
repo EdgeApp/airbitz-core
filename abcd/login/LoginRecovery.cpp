@@ -6,20 +6,20 @@
  */
 
 #include "LoginRecovery.hpp"
-#include "Lobby.hpp"
 #include "Login.hpp"
 #include "LoginPackages.hpp"
+#include "LoginStore.hpp"
 #include "server/LoginServer.hpp"
 #include "../json/JsonBox.hpp"
 
 namespace abcd {
 
 Status
-loginRecoveryQuestions(std::string &result, Lobby &lobby)
+loginRecoveryQuestions(std::string &result, LoginStore &store)
 {
     // Load CarePackage:
     CarePackage carePackage;
-    ABC_CHECK(loginServerGetCarePackage(lobby, carePackage));
+    ABC_CHECK(loginServerGetCarePackage(store, carePackage));
 
     // Verify that the questions exist:
     if (!carePackage.questionBox())
@@ -27,7 +27,7 @@ loginRecoveryQuestions(std::string &result, Lobby &lobby)
 
     // Create questionKey (unlocks questions):
     DataChunk questionKey;
-    ABC_CHECK(carePackage.questionKeySnrp().hash(questionKey, lobby.username()));
+    ABC_CHECK(carePackage.questionKeySnrp().hash(questionKey, store.username()));
 
     // Decrypt:
     DataChunk questions;
@@ -39,14 +39,14 @@ loginRecoveryQuestions(std::string &result, Lobby &lobby)
 
 Status
 loginRecovery(std::shared_ptr<Login> &result,
-              Lobby &lobby, const std::string &recoveryAnswers,
+              LoginStore &store, const std::string &recoveryAnswers,
               AuthError &authError)
 {
-    std::string LRA = lobby.username() + recoveryAnswers;
+    std::string LRA = store.username() + recoveryAnswers;
 
     // Get the CarePackage:
     CarePackage carePackage;
-    ABC_CHECK(loginServerGetCarePackage(lobby, carePackage));
+    ABC_CHECK(loginServerGetCarePackage(store, carePackage));
 
     // Make recoveryAuth (unlocks the server):
     DataChunk recoveryAuth;
@@ -55,7 +55,7 @@ loginRecovery(std::shared_ptr<Login> &result,
     // Get the LoginPackage:
     LoginPackage loginPackage;
     JsonPtr rootKeyBox;
-    ABC_CHECK(loginServerGetLoginPackage(lobby, DataSlice(), recoveryAuth,
+    ABC_CHECK(loginServerGetLoginPackage(store, DataSlice(), recoveryAuth,
                                          loginPackage, rootKeyBox,
                                          authError));
 
@@ -69,7 +69,7 @@ loginRecovery(std::shared_ptr<Login> &result,
 
     // Create the Login object:
     std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, lobby, dataKey,
+    ABC_CHECK(Login::create(out, store, dataKey,
                             loginPackage, rootKeyBox, false));
 
     // Set up the on-disk login:
@@ -85,7 +85,7 @@ loginRecoverySet(Login &login,
                  const std::string &recoveryQuestions,
                  const std::string &recoveryAnswers)
 {
-    std::string LRA = login.lobby.username() + recoveryAnswers;
+    std::string LRA = login.store.username() + recoveryAnswers;
 
     // Load the packages:
     CarePackage carePackage;
@@ -106,7 +106,7 @@ loginRecoverySet(Login &login,
     // Make questionKey (unlocks questions):
     DataChunk questionKey;
     ABC_CHECK(carePackage.questionKeySnrp().hash(questionKey,
-              login.lobby.username()));
+              login.store.username()));
 
     // Encrypt the questions:
     JsonBox questionBox;

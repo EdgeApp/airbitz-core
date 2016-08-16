@@ -6,8 +6,8 @@
  */
 
 #include "Login.hpp"
-#include "Lobby.hpp"
 #include "LoginPackages.hpp"
+#include "LoginStore.hpp"
 #include "server/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
@@ -22,10 +22,11 @@ namespace abcd {
 const std::string infoKeyHmacKey("infoKey");
 
 Status
-Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
+Login::create(std::shared_ptr<Login> &result,
+              LoginStore &store, DataSlice dataKey,
               const LoginPackage &loginPackage, JsonBox rootKeyBox, bool offline)
 {
-    std::shared_ptr<Login> out(new Login(lobby, dataKey));
+    std::shared_ptr<Login> out(new Login(store, dataKey));
     ABC_CHECK(out->loadKeys(loginPackage, rootKeyBox, offline));
 
     result = std::move(out);
@@ -33,12 +34,12 @@ Login::create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
 }
 
 Status
-Login::createNew(std::shared_ptr<Login> &result, Lobby &lobby,
-                 const char *password)
+Login::createNew(std::shared_ptr<Login> &result,
+                 LoginStore &store, const char *password)
 {
     DataChunk dataKey;
     ABC_CHECK(randomData(dataKey, DATA_KEY_LENGTH));
-    std::shared_ptr<Login> out(new Login(lobby, dataKey));
+    std::shared_ptr<Login> out(new Login(store, dataKey));
     ABC_CHECK(out->createNew(password));
 
     result = std::move(out);
@@ -67,9 +68,9 @@ Login::passwordAuthSet(DataSlice passwordAuth)
     return Status();
 }
 
-Login::Login(Lobby &lobby, DataSlice dataKey):
-    lobby(lobby),
-    parent_(lobby.shared_from_this()),
+Login::Login(LoginStore &store, DataSlice dataKey):
+    store(store),
+    parent_(store.shared_from_this()),
     dataKey_(dataKey.begin(), dataKey.end())
 {}
 
@@ -93,7 +94,7 @@ Login::createNew(const char *password)
     // Set up passwordAuth (LP1):
     if (password)
     {
-        std::string LP = lobby.username() + password;
+        std::string LP = store.username() + password;
 
         // Generate passwordAuth:
         ABC_CHECK(usernameSnrp().hash(passwordAuth_, LP));
@@ -115,11 +116,11 @@ Login::createNew(const char *password)
     ABC_CHECK(loginPackage.passwordAuthBoxSet(passwordAuthBox));
 
     // Create the account and repo on server:
-    ABC_CHECK(loginServerCreate(lobby, passwordAuth_,
+    ABC_CHECK(loginServerCreate(store, passwordAuth_,
                                 carePackage, loginPackage, base16Encode(syncKey_)));
 
     // Set up the on-disk login:
-    ABC_CHECK(lobby.paths(paths, true));
+    ABC_CHECK(store.paths(paths, true));
     ABC_CHECK(carePackage.save(paths.carePackagePath()));
     ABC_CHECK(loginPackage.save(paths.loginPackagePath()));
     ABC_CHECK(rootKeyUpgrade());
@@ -137,7 +138,7 @@ Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox,
     ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey_, dataKey_));
     ABC_CHECK(loginPackage.passwordAuthBox().decrypt(passwordAuth_, dataKey_));
 
-    ABC_CHECK(lobby.paths(paths, true));
+    ABC_CHECK(store.paths(paths, true));
 
     // Look for an existing rootKeyBox:
     if (!rootKeyBox)
@@ -155,7 +156,7 @@ Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox,
             // The server hasn't been asked yet, so do that now:
             LoginPackage unused;
             AuthError authError;
-            ABC_CHECK(loginServerGetLoginPackage(lobby, passwordAuth_, DataChunk(),
+            ABC_CHECK(loginServerGetLoginPackage(store, passwordAuth_, DataChunk(),
                                                  unused, rootKeyBox,
                                                  authError));
 

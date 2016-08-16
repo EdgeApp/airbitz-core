@@ -154,7 +154,7 @@ static Status run(int argc, char *argv[])
                                      sizeof(seed),
                                      &error));
     }
-    if (InitLevel::lobby <= command->level())
+    if (InitLevel::store <= command->level())
     {
         if (session.username.empty())
         {
@@ -165,7 +165,7 @@ static Status run(int argc, char *argv[])
                                  helpString(*command));
         }
 
-        ABC_CHECK(cacheLobby(session.lobby, session.username.c_str()));
+        ABC_CHECK(cacheLoginStore(session.store, session.username.c_str()));
     }
     if (InitLevel::login <= command->level())
     {
@@ -190,7 +190,7 @@ static Status run(int argc, char *argv[])
                           << std::endl;
             std::cout << "No OTP token, resetting account 2-factor auth."
                       << std::endl;
-            ABC_CHECK(otpResetSet(*session.lobby, authError.otpToken));
+            ABC_CHECK(otpResetSet(*session.store, authError.otpToken));
         }
         ABC_CHECK(s);
     }

@@ -20,9 +20,9 @@
 namespace abcd {
 
 class Account;
-class Lobby;
-class Login;
 class JsonPtr;
+class Login;
+class LoginStore;
 struct CarePackage;
 struct LoginPackage;
 
@@ -49,7 +49,7 @@ loginServerGetQuestions(JsonPtr &result);
  * Creates an account on the server.
  */
 Status
-loginServerCreate(const Lobby &lobby, DataSlice LP1,
+loginServerCreate(const LoginStore &store, DataSlice LP1,
                   const CarePackage &carePackage,
                   const LoginPackage &loginPackage,
                   const std::string &syncKey);
@@ -65,7 +65,7 @@ loginServerActivate(const Login &login);
  * Queries the server to determine if a username is available.
  */
 Status
-loginServerAvailable(const Lobby &lobby);
+loginServerAvailable(const LoginStore &store);
 
 /**
  * Saves a rootKey into the account.
@@ -87,7 +87,7 @@ loginServerChangePassword(const Login &login,
                           const LoginPackage &loginPackage);
 
 Status
-loginServerGetCarePackage(const Lobby &lobby, CarePackage &result);
+loginServerGetCarePackage(const LoginStore &store, CarePackage &result);
 
 /**
  * Retrieves the LoginPackage for the account.
@@ -96,7 +96,7 @@ loginServerGetCarePackage(const Lobby &lobby, CarePackage &result);
  * but only on accounts that have already been upgraded.
  */
 Status
-loginServerGetLoginPackage(const Lobby &lobby,
+loginServerGetLoginPackage(const LoginStore &store,
                            DataSlice LP1, DataSlice LRA1,
                            LoginPackage &result, JsonPtr &rootKeyBox,
                            AuthError &authError);
@@ -151,7 +151,7 @@ loginServerOtpStatus(const Login &login, bool &on, long &timeout);
  * Request a 2-factor authentication reset.
  */
 Status
-loginServerOtpReset(const Lobby &lobby, const std::string &token);
+loginServerOtpReset(const LoginStore &store, const std::string &token);
 
 /**
  * Determine which accounts have pending 2-factor authentication resets.

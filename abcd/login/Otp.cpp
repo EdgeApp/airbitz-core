@@ -6,8 +6,8 @@
  */
 
 #include "Otp.hpp"
-#include "Lobby.hpp"
 #include "Login.hpp"
+#include "LoginStore.hpp"
 #include "server/LoginServer.hpp"
 
 namespace abcd {
@@ -22,15 +22,15 @@ Status
 otpAuthSet(Login &login, long timeout)
 {
     // Install a key if needed:
-    if (!login.lobby.otpKey())
+    if (!login.store.otpKey())
     {
         OtpKey random;
         ABC_CHECK(random.create());
-        login.lobby.otpKeySet(random);
+        login.store.otpKeySet(random);
     }
 
     ABC_CHECK(loginServerOtpEnable(login,
-                                   login.lobby.otpKey()->encodeBase32(), timeout));
+                                   login.store.otpKey()->encodeBase32(), timeout));
 
     return Status();
 }
@@ -49,9 +49,9 @@ otpResetGet(std::list<std::string> &result,
     std::list<DataChunk> userIds;
     for (const auto &i: usernames)
     {
-        std::shared_ptr<Lobby> lobby;
-        ABC_CHECK(Lobby::create(lobby, i));
-        auto userId = lobby->userId();
+        std::shared_ptr<LoginStore> store;
+        ABC_CHECK(LoginStore::create(store, i));
+        auto userId = store->userId();
         userIds.emplace_back(userId.begin(), userId.end());
     }
 
@@ -75,9 +75,9 @@ otpResetGet(std::list<std::string> &result,
 }
 
 Status
-otpResetSet(Lobby &lobby, const std::string &token)
+otpResetSet(LoginStore &store, const std::string &token)
 {
-    return loginServerOtpReset(lobby, token);
+    return loginServerOtpReset(store, token);
 }
 
 Status

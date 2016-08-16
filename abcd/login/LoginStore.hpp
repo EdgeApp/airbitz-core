@@ -5,8 +5,8 @@
  * See the LICENSE file for more information.
  */
 
-#ifndef ABCD_LOGIN_LOBBY_HPP
-#define ABCD_LOGIN_LOBBY_HPP
+#ifndef ABCD_LOGIN_LOGIN_STORE_HPP
+#define ABCD_LOGIN_LOGIN_STORE_HPP
 
 #include "../AccountPaths.hpp"
 #include "../crypto/OtpKey.hpp"
@@ -20,15 +20,16 @@ namespace abcd {
 class OtpKey;
 
 /**
- * The lobby object contains the account data that is knowable from just
+ * The store object contains the account data that is knowable from just
  * the username, without logging in.
  */
-class Lobby:
-    public std::enable_shared_from_this<Lobby>
+class LoginStore:
+    public std::enable_shared_from_this<LoginStore>
 {
 public:
     static Status
-    create(std::shared_ptr<Lobby> &result, const std::string &username);
+    create(std::shared_ptr<LoginStore> &result,
+           const std::string &username);
 
     /**
      * Obtains the normalized username for this account.
@@ -84,7 +85,7 @@ private:
     bool otpKeyOk_ = false;
     OtpKey otpKey_;
 
-    Lobby() {};
+    LoginStore() {};
 
     Status
     init(const std::string &username);

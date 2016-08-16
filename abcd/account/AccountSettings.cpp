@@ -9,9 +9,9 @@
 #include "Account.hpp"
 #include "../exchange/ExchangeSource.hpp"
 #include "../json/JsonObject.hpp"
-#include "../login/Lobby.hpp"
 #include "../login/Login.hpp"
 #include "../login/LoginPin.hpp"
+#include "../login/LoginStore.hpp"
 #include "../util/Util.hpp"
 
 namespace abcd {
@@ -216,13 +216,13 @@ accountSettingsPinSync(Login &login, tABC_AccountSettings *settings,
     if (settings->bDisablePINLogin)
     {
         // Only delete the PIN if the user *explicitly* asks for that:
-        loginPinDelete(login.lobby).log();
+        loginPinDelete(login.store).log();
     }
     else if (settings->szPIN)
     {
         // Set up a new PIN if things have changed:
         bool exists;
-        ABC_CHECK(loginPinExists(exists, login.lobby.username()));
+        ABC_CHECK(loginPinExists(exists, login.store.username()));
         if (pinChanged || !exists)
         {
             time_t expires = time(nullptr);

@@ -6,9 +6,9 @@
  */
 
 #include "LoginPassword.hpp"
-#include "Lobby.hpp"
 #include "Login.hpp"
 #include "LoginPackages.hpp"
+#include "LoginStore.hpp"
 #include "server/LoginServer.hpp"
 #include "../Context.hpp"
 #include "../json/JsonBox.hpp"
@@ -17,12 +17,12 @@ namespace abcd {
 
 static Status
 loginPasswordDisk(std::shared_ptr<Login> &result,
-                  Lobby &lobby, const std::string &password)
+                  LoginStore &store, const std::string &password)
 {
-    std::string LP = lobby.username() + password;
+    std::string LP = store.username() + password;
 
     AccountPaths paths;
-    ABC_CHECK(lobby.paths(paths));
+    ABC_CHECK(store.paths(paths));
 
     // Load the packages:
     CarePackage carePackage;
@@ -40,7 +40,7 @@ loginPasswordDisk(std::shared_ptr<Login> &result,
 
     // Create the Login object:
     std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, lobby, dataKey,
+    ABC_CHECK(Login::create(out, store, dataKey,
                             loginPackage, JsonPtr(), true));
 
     result = std::move(out);
@@ -49,14 +49,14 @@ loginPasswordDisk(std::shared_ptr<Login> &result,
 
 static Status
 loginPasswordServer(std::shared_ptr<Login> &result,
-                    Lobby &lobby, const std::string &password,
+                    LoginStore &store, const std::string &password,
                     AuthError &authError)
 {
-    std::string LP = lobby.username() + password;
+    std::string LP = store.username() + password;
 
     // Get the CarePackage:
     CarePackage carePackage;
-    ABC_CHECK(loginServerGetCarePackage(lobby, carePackage));
+    ABC_CHECK(loginServerGetCarePackage(store, carePackage));
 
     // Make the passwordAuth (unlocks the server):
     DataChunk passwordAuth;
@@ -65,7 +65,7 @@ loginPasswordServer(std::shared_ptr<Login> &result,
     // Get the LoginPackage:
     LoginPackage loginPackage;
     JsonPtr rootKeyBox;
-    ABC_CHECK(loginServerGetLoginPackage(lobby, passwordAuth, DataSlice(),
+    ABC_CHECK(loginServerGetLoginPackage(store, passwordAuth, DataSlice(),
                                          loginPackage, rootKeyBox,
                                          authError));
 
@@ -79,7 +79,7 @@ loginPasswordServer(std::shared_ptr<Login> &result,
 
     // Create the Login object:
     std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, lobby, dataKey,
+    ABC_CHECK(Login::create(out, store, dataKey,
                             loginPackage, rootKeyBox, false));
 
     // Set up the on-disk login:
@@ -92,12 +92,12 @@ loginPasswordServer(std::shared_ptr<Login> &result,
 
 Status
 loginPassword(std::shared_ptr<Login> &result,
-              Lobby &lobby, const std::string &password,
+              LoginStore &store, const std::string &password,
               AuthError &authError)
 {
     // Try the login both ways:
-    if (!loginPasswordDisk(result, lobby, password))
-        ABC_CHECK(loginPasswordServer(result, lobby, password, authError));
+    if (!loginPasswordDisk(result, store, password))
+        ABC_CHECK(loginPasswordServer(result, store, password, authError));
 
     return Status();
 }
@@ -105,7 +105,7 @@ loginPassword(std::shared_ptr<Login> &result,
 Status
 loginPasswordSet(Login &login, const std::string &password)
 {
-    std::string LP = login.lobby.username() + password;
+    std::string LP = login.store.username() + password;
 
     // Load the packages:
     CarePackage carePackage;
@@ -155,7 +155,7 @@ loginPasswordSet(Login &login, const std::string &password)
 Status
 loginPasswordOk(bool &result, Login &login, const std::string &password)
 {
-    std::string LP = login.lobby.username() + password;
+    std::string LP = login.store.username() + password;
 
     // Load the packages:
     CarePackage carePackage;
@@ -178,7 +178,7 @@ Status
 loginPasswordExists(bool &result, const std::string &username)
 {
     std::string fixed;
-    ABC_CHECK(Lobby::fixUsername(fixed, username));
+    ABC_CHECK(LoginStore::fixUsername(fixed, username));
     AccountPaths paths;
     ABC_CHECK(gContext->paths.accountDir(paths, fixed));
 

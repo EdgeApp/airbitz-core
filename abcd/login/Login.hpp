@@ -17,7 +17,7 @@
 namespace abcd {
 
 class JsonBox;
-class Lobby;
+class LoginStore;
 struct LoginPackage;
 
 /**
@@ -27,16 +27,17 @@ class Login:
     public std::enable_shared_from_this<Login>
 {
 public:
-    Lobby &lobby;
+    LoginStore &store;
     AccountPaths paths;
 
     static Status
-    create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
+    create(std::shared_ptr<Login> &result,
+           LoginStore &store, DataSlice dataKey,
            const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskBased);
 
     static Status
-    createNew(std::shared_ptr<Login> &result, Lobby &lobby,
-              const char *password);
+    createNew(std::shared_ptr<Login> &result,
+              LoginStore &store, const char *password);
 
     /**
      * Obtains the root key for the account.
@@ -70,7 +71,7 @@ public:
 
 private:
     mutable std::mutex mutex_;
-    const std::shared_ptr<Lobby> parent_;
+    const std::shared_ptr<LoginStore> parent_;
 
     // Keys:
     const DataChunk dataKey_;
@@ -78,7 +79,7 @@ private:
     DataChunk syncKey_;
     DataChunk passwordAuth_;
 
-    Login(Lobby &lobby, DataSlice dataKey);
+    Login(LoginStore &store, DataSlice dataKey);
 
     Status
     createNew(const char *password);

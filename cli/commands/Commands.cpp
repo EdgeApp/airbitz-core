@@ -31,7 +31,7 @@ COMMAND(InitLevel::login, ChangePassword, "change-password",
     return Status();
 }
 
-COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery",
+COMMAND(InitLevel::store, ChangePasswordRecovery, "change-password-recovery",
         " <ra> <new-pass>")
 {
     if (argc != 2)
@@ -41,7 +41,7 @@ COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery",
 
     AuthError authError;
     std::shared_ptr<Login> login;
-    ABC_CHECK(loginRecovery(login, *session.lobby, answers, authError));
+    ABC_CHECK(loginRecovery(login, *session.store, answers, authError));
     ABC_CHECK(loginPasswordSet(*login, newPassword));
 
     return Status();
@@ -70,7 +70,7 @@ COMMAND(InitLevel::context, CheckPassword, "check-password",
     return Status();
 }
 
-COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers",
+COMMAND(InitLevel::store, CheckRecoveryAnswers, "check-recovery-answers",
         " <answers>")
 {
     if (argc != 1)
@@ -79,7 +79,7 @@ COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers",
 
     AuthError authError;
     std::shared_ptr<Login> login;
-    ABC_CHECK(loginRecovery(login, *session.lobby, answers, authError));
+    ABC_CHECK(loginRecovery(login, *session.store, answers, authError));
 
     return Status();
 }
@@ -115,7 +115,7 @@ COMMAND(InitLevel::context, GetQuestionChoices, "get-question-choices",
     return Status();
 }
 
-COMMAND(InitLevel::lobby, GetQuestions, "get-questions",
+COMMAND(InitLevel::store, GetQuestions, "get-questions",
         "")
 {
     if (argc != 0)
@@ -129,7 +129,7 @@ COMMAND(InitLevel::lobby, GetQuestions, "get-questions",
     return Status();
 }
 
-COMMAND(InitLevel::lobby, PinLogin, "pin-login",
+COMMAND(InitLevel::store, PinLogin, "pin-login",
         " pin>")
 {
     if (argc != 1)
@@ -143,7 +143,7 @@ COMMAND(InitLevel::lobby, PinLogin, "pin-login",
     {
         AuthError authError;
         std::shared_ptr<Login> login;
-        auto s = loginPin(login, *session.lobby, pin, authError);
+        auto s = loginPin(login, *session.store, pin, authError);
         if (authError.pinWait)
             std::cout << "Please try again in " << authError.pinWait
                       << " seconds" << std::endl;

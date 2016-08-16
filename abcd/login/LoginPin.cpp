@@ -6,9 +6,9 @@
  */
 
 #include "LoginPin.hpp"
-#include "Lobby.hpp"
 #include "Login.hpp"
 #include "LoginPackages.hpp"
+#include "LoginStore.hpp"
 #include "server/LoginServer.hpp"
 #include "../Context.hpp"
 #include "../crypto/Encoding.hpp"
@@ -44,7 +44,7 @@ Status
 loginPinExists(bool &result, const std::string &username)
 {
     std::string fixed;
-    ABC_CHECK(Lobby::fixUsername(fixed, username));
+    ABC_CHECK(LoginStore::fixUsername(fixed, username));
     AccountPaths paths;
     ABC_CHECK(gContext->paths.accountDir(paths, fixed));
 
@@ -54,10 +54,10 @@ loginPinExists(bool &result, const std::string &username)
 }
 
 Status
-loginPinDelete(Lobby &lobby)
+loginPinDelete(LoginStore &store)
 {
     AccountPaths paths;
-    if (lobby.paths(paths))
+    if (store.paths(paths))
         ABC_CHECK(fileDelete(paths.pinPackagePath()));
 
     return Status();
@@ -65,13 +65,13 @@ loginPinDelete(Lobby &lobby)
 
 Status
 loginPin(std::shared_ptr<Login> &result,
-         Lobby &lobby, const std::string &pin,
+         LoginStore &store, const std::string &pin,
          AuthError &authError)
 {
-    std::string LPIN = lobby.username() + pin;
+    std::string LPIN = store.username() + pin;
 
     AccountPaths paths;
-    ABC_CHECK(lobby.paths(paths));
+    ABC_CHECK(store.paths(paths));
 
     // Load the packages:
     CarePackage carePackage;
@@ -102,7 +102,7 @@ loginPin(std::shared_ptr<Login> &result,
 
     // Create the Login object:
     std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, lobby, dataKey,
+    ABC_CHECK(Login::create(out, store, dataKey,
                             loginPackage, JsonPtr(), true));
 
     result = std::move(out);
@@ -112,7 +112,7 @@ loginPin(std::shared_ptr<Login> &result,
 Status
 loginPinSetup(Login &login, const std::string &pin, time_t expires)
 {
-    std::string LPIN = login.lobby.username() + pin;
+    std::string LPIN = login.store.username() + pin;
 
     // Get login stuff:
     CarePackage carePackage;

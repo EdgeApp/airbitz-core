@@ -18,21 +18,21 @@
 namespace abcd {
 
 class Login;
-class Lobby;
+class LoginStore;
 struct AuthError;
 
 /**
  * Obtains the recovery questions for a user.
  */
 Status
-loginRecoveryQuestions(std::string &result, Lobby &lobby);
+loginRecoveryQuestions(std::string &result, LoginStore &store);
 
 /**
  * Creates a login object using recovery answers rather than a password.
  */
 Status
 loginRecovery(std::shared_ptr<Login> &result,
-              Lobby &lobby, const std::string &recoveryAnswers,
+              LoginStore &store, const std::string &recoveryAnswers,
               AuthError &authError);
 
 /**

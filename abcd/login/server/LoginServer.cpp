@@ -7,9 +7,9 @@
 
 #include "LoginServer.hpp"
 #include "AirbitzRequest.hpp"
-#include "../Lobby.hpp"
 #include "../Login.hpp"
 #include "../LoginPackages.hpp"
+#include "../LoginStore.hpp"
 #include "../../crypto/Encoding.hpp"
 #include "../../json/JsonObject.hpp"
 #include "../../json/JsonArray.hpp"
@@ -155,28 +155,28 @@ struct ServerRequestJson:
     ABC_JSON_STRING(otp, "otp", nullptr)
 
     /**
-     * Fills in the fields using information from the lobby.
+     * Fills in the fields using information from the store.
      */
     Status
-    setup(const Lobby &lobby);
+    setup(const LoginStore &store);
 
     Status
     setup(const Login &login);
 };
 
 Status
-ServerRequestJson::setup(const Lobby &lobby)
+ServerRequestJson::setup(const LoginStore &store)
 {
-    ABC_CHECK(userIdSet(base64Encode(lobby.userId())));
-    if (lobby.otpKey())
-        ABC_CHECK(otpSet(lobby.otpKey()->totp()));
+    ABC_CHECK(userIdSet(base64Encode(store.userId())));
+    if (store.otpKey())
+        ABC_CHECK(otpSet(store.otpKey()->totp()));
     return Status();
 }
 
 Status
 ServerRequestJson::setup(const Login &login)
 {
-    ABC_CHECK(setup(login.lobby));
+    ABC_CHECK(setup(login.store));
     ABC_CHECK(passwordAuthSet(base64Encode(login.passwordAuth())));
     return Status();
 }
@@ -210,14 +210,14 @@ loginServerGetQuestions(JsonPtr &result)
 }
 
 Status
-loginServerCreate(const Lobby &lobby, DataSlice LP1,
+loginServerCreate(const LoginStore &store, DataSlice LP1,
                   const CarePackage &carePackage,
                   const LoginPackage &loginPackage,
                   const std::string &syncKey)
 {
     const auto url = ABC_SERVER_ROOT "/v1/account/create";
     ServerRequestJson json;
-    ABC_CHECK(json.setup(lobby));
+    ABC_CHECK(json.setup(store));
     ABC_CHECK(json.passwordAuthSet(base64Encode(LP1)));
     ABC_CHECK(json.set(ABC_SERVER_JSON_CARE_PACKAGE_FIELD, carePackage.encode()));
     ABC_CHECK(json.set(ABC_SERVER_JSON_LOGIN_PACKAGE_FIELD, loginPackage.encode()));
@@ -247,11 +247,11 @@ loginServerActivate(const Login &login)
 }
 
 Status
-loginServerAvailable(const Lobby &lobby)
+loginServerAvailable(const LoginStore &store)
 {
     const auto url = ABC_SERVER_ROOT "/v1/account/available";
     ServerRequestJson json;
-    ABC_CHECK(json.setup(lobby));
+    ABC_CHECK(json.setup(store));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
@@ -312,11 +312,11 @@ loginServerChangePassword(const Login &login,
 }
 
 Status
-loginServerGetCarePackage(const Lobby &lobby, CarePackage &result)
+loginServerGetCarePackage(const LoginStore &store, CarePackage &result)
 {
     const auto url = ABC_SERVER_ROOT "/v1/account/carepackage/get";
     ServerRequestJson json;
-    ABC_CHECK(json.setup(lobby));
+    ABC_CHECK(json.setup(store));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
@@ -336,14 +336,14 @@ loginServerGetCarePackage(const Lobby &lobby, CarePackage &result)
 }
 
 Status
-loginServerGetLoginPackage(const Lobby &lobby,
+loginServerGetLoginPackage(const LoginStore &store,
                            DataSlice LP1, DataSlice LRA1,
                            LoginPackage &result, JsonPtr &rootKeyBox,
                            AuthError &authError)
 {
     const auto url = ABC_SERVER_ROOT "/v1/account/loginpackage/get";
     ServerRequestJson json;
-    ABC_CHECK(json.setup(lobby));
+    ABC_CHECK(json.setup(store));
     if (LP1.size())
         ABC_CHECK(json.passwordAuthSet(base64Encode(LP1)));
     if (LRA1.size())
@@ -518,7 +518,7 @@ loginServerOtpStatus(const Login &login, bool &on, long &timeout)
 }
 
 Status
-loginServerOtpReset(const Lobby &lobby, const std::string &token)
+loginServerOtpReset(const LoginStore &store, const std::string &token)
 {
     const auto url = ABC_SERVER_ROOT "/v1/otp/reset";
     struct ResetJson:
@@ -526,7 +526,7 @@ loginServerOtpReset(const Lobby &lobby, const std::string &token)
     {
         ABC_JSON_STRING(otpResetAuth, "otp_reset_auth", nullptr)
     } json;
-    ABC_CHECK(json.setup(lobby));
+    ABC_CHECK(json.setup(store));
     ABC_CHECK(json.otpResetAuthSet(token));
 
     HttpReply reply;
