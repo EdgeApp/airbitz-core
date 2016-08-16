@@ -40,18 +40,6 @@ public:
     addressCheckDoneGet();
 
     /**
-     *
-     */
-    void
-    addressCheckDoneSave(JsonObject &json);
-
-    /**
-     *
-     */
-    void
-    addressCheckDoneLoad(JsonObject &json);
-
-    /**
      * Clears the cache in case something goes wrong.
      */
     void
@@ -76,8 +64,21 @@ public:
     save();
 
 private:
+
+    /**
+     * Save the status of addressCheckDone in the cache
+     */
+    Status
+    addressCheckDoneSave(JsonObject &json);
+
+    /**
+     * Load the status of addressCheckDone from the cache
+     */
+    void
+    addressCheckDoneLoad(JsonObject &json);
+
     const std::string path_;
-    bool bAddressCheckDone;
+    bool addressCheckDone_;
 };
 
 } // namespace abcd

@@ -16,7 +16,7 @@ Cache::Cache(const std::string &path, BlockCache &blockCache):
     blocks(blockCache),
     addresses(txs),
     path_(path),
-    bAddressCheckDone(false)
+    addressCheckDone_(false)
 {
 }
 
@@ -43,25 +43,25 @@ Cache::load()
 void
 Cache::addressCheckDoneSet()
 {
-    bAddressCheckDone = true;
+    addressCheckDone_ = true;
 }
 
 bool
 Cache::addressCheckDoneGet()
 {
-    return bAddressCheckDone;
+    return addressCheckDone_;
 }
 
 void
 Cache::addressCheckDoneLoad(JsonObject &json)
 {
-    bAddressCheckDone = json.getBoolean("addressCheckDone", false);
+    addressCheckDone_ = json.getBoolean("addressCheckDone", false);
 }
 
-void
+Status
 Cache::addressCheckDoneSave(JsonObject &json)
 {
-    json.setValue("addressCheckDone", json_boolean(bAddressCheckDone));
+    return json.setValue("addressCheckDone", json_boolean(addressCheckDone_));
 }
 
 Status
@@ -147,7 +147,7 @@ Cache::save()
     JsonObject cacheJson;
     ABC_CHECK(txs.save(cacheJson));
     ABC_CHECK(addresses.save(cacheJson));
-    addressCheckDoneSave(cacheJson);
+    ABC_CHECK(addressCheckDoneSave(cacheJson));
     ABC_CHECK(cacheJson.save(path_));
     return Status();
 }
