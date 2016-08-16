@@ -69,8 +69,8 @@ loginRecovery(std::shared_ptr<Login> &result,
 
     // Create the Login object:
     std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, store, dataKey,
-                            loginPackage, rootKeyBox, false));
+    ABC_CHECK(Login::createOnline(out, store, dataKey,
+                                  loginPackage, rootKeyBox));
 
     // Set up the on-disk login:
     ABC_CHECK(carePackage.save(out->paths.carePackagePath()));

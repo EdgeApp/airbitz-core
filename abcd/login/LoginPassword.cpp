@@ -39,11 +39,7 @@ loginPasswordDisk(std::shared_ptr<Login> &result,
     ABC_CHECK(loginPackage.passwordBox().decrypt(dataKey, passwordKey));
 
     // Create the Login object:
-    std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, store, dataKey,
-                            loginPackage, JsonPtr(), true));
-
-    result = std::move(out);
+    ABC_CHECK(Login::createOffline(result, store, dataKey));
     return Status();
 }
 
@@ -79,8 +75,8 @@ loginPasswordServer(std::shared_ptr<Login> &result,
 
     // Create the Login object:
     std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, store, dataKey,
-                            loginPackage, rootKeyBox, false));
+    ABC_CHECK(Login::createOnline(out, store, dataKey,
+                                  loginPackage, rootKeyBox));
 
     // Set up the on-disk login:
     ABC_CHECK(carePackage.save(out->paths.carePackagePath()));

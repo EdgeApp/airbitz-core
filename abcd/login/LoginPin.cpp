@@ -75,10 +75,8 @@ loginPin(std::shared_ptr<Login> &result,
 
     // Load the packages:
     CarePackage carePackage;
-    LoginPackage loginPackage;
     PinLocal local;
     ABC_CHECK(carePackage.load(paths.carePackagePath()));
-    ABC_CHECK(loginPackage.load(paths.loginPackagePath()));
     ABC_CHECK(local.load(paths.pinPackagePath()));
     DataChunk pinAuthId;
     ABC_CHECK(local.pinAuthIdDecode(pinAuthId));
@@ -101,11 +99,7 @@ loginPin(std::shared_ptr<Login> &result,
     ABC_CHECK(local.pinBox().decrypt(dataKey, pinKey));
 
     // Create the Login object:
-    std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, store, dataKey,
-                            loginPackage, JsonPtr(), true));
-
-    result = std::move(out);
+    ABC_CHECK(Login::createOffline(result, store, dataKey));
     return Status();
 }
 

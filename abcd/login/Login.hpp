@@ -31,9 +31,13 @@ public:
     AccountPaths paths;
 
     static Status
-    create(std::shared_ptr<Login> &result,
-           LoginStore &store, DataSlice dataKey,
-           const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskBased);
+    createOffline(std::shared_ptr<Login> &result,
+                  LoginStore &store, DataSlice dataKey);
+
+    static Status
+    createOnline(std::shared_ptr<Login> &result,
+                 LoginStore &store, DataSlice dataKey,
+                 const LoginPackage &loginPackage, JsonBox rootKeyBox);
 
     static Status
     createNew(std::shared_ptr<Login> &result,
@@ -86,12 +90,12 @@ private:
 
     /**
      * Unpacks the keys from the loginPackage.
-     * The server may return a rootKeyBox along with the loginPackage,
-     * so that should be passed in as well.
-     * @param diskBased true if loginPackage was loaded from disk.
      */
     Status
-    loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskBased);
+    loadOffline();
+
+    Status
+    loadOnline(const LoginPackage &loginPackage, JsonBox rootKeyBox);
 
     Status
     rootKeyUpgrade();

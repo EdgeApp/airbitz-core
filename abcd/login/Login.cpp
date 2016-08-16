@@ -22,12 +22,23 @@ namespace abcd {
 const std::string infoKeyHmacKey("infoKey");
 
 Status
-Login::create(std::shared_ptr<Login> &result,
-              LoginStore &store, DataSlice dataKey,
-              const LoginPackage &loginPackage, JsonBox rootKeyBox, bool offline)
+Login::createOffline(std::shared_ptr<Login> &result,
+                     LoginStore &store, DataSlice dataKey)
 {
     std::shared_ptr<Login> out(new Login(store, dataKey));
-    ABC_CHECK(out->loadKeys(loginPackage, rootKeyBox, offline));
+    ABC_CHECK(out->loadOffline());
+
+    result = std::move(out);
+    return Status();
+}
+
+Status
+Login::createOnline(std::shared_ptr<Login> &result,
+                    LoginStore &store, DataSlice dataKey,
+                    const LoginPackage &loginPackage, JsonBox rootKeyBox)
+{
+    std::shared_ptr<Login> out(new Login(store, dataKey));
+    ABC_CHECK(out->loadOnline(loginPackage, rootKeyBox));
 
     result = std::move(out);
     return Status();
@@ -132,43 +143,58 @@ Login::createNew(const char *password)
 }
 
 Status
-Login::loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox,
-                bool diskBased)
+Login::loadOffline()
 {
-    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey_, dataKey_));
-    ABC_CHECK(loginPackage.passwordAuthBox().decrypt(passwordAuth_, dataKey_));
-
     ABC_CHECK(store.paths(paths, true));
 
-    // Look for an existing rootKeyBox:
-    if (!rootKeyBox)
-    {
-        if (fileExists(paths.rootKeyPath()))
-        {
-            if (diskBased)
-                ABC_CHECK(rootKeyBox.load(paths.rootKeyPath()));
-            else
-                return ABC_ERROR(ABC_CC_Error,
-                                 "The account has a rootKey, but it's not on the server.");
-        }
-        else if (diskBased)
-        {
-            // The server hasn't been asked yet, so do that now:
-            LoginPackage unused;
-            AuthError authError;
-            ABC_CHECK(loginServerGetLoginPackage(store, passwordAuth_, DataChunk(),
-                                                 unused, rootKeyBox,
-                                                 authError));
+    LoginPackage loginPackage;
+    ABC_CHECK(loginPackage.load(paths.loginPackagePath()));
+    ABC_CHECK(loginPackage.passwordAuthBox().decrypt(passwordAuth_, dataKey_));
+    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey_, dataKey_));
 
-            // If the server had one, save it for the future:
-            if (rootKeyBox)
-                ABC_CHECK(rootKeyBox.save(paths.rootKeyPath()));
-        }
-        // Otherwise, there just isn't one.
+    // Look for an existing rootKeyBox:
+    JsonBox rootKeyBox;
+    if (fileExists(paths.rootKeyPath()))
+    {
+        ABC_CHECK(rootKeyBox.load(paths.rootKeyPath()));
     }
+    else
+    {
+        // Try asking the server:
+        LoginPackage unused;
+        AuthError authError;
+        ABC_CHECK(loginServerGetLoginPackage(store, passwordAuth_, DataChunk(),
+                                             unused, rootKeyBox,
+                                             authError));
+
+        // If the server had one, save it for the future:
+        if (rootKeyBox.ok())
+            ABC_CHECK(rootKeyBox.save(paths.rootKeyPath()));
+    }
+    // Otherwise, there just isn't one.
 
     // Extract the rootKey:
-    if (rootKeyBox)
+    if (rootKeyBox.ok())
+        ABC_CHECK(rootKeyBox.decrypt(rootKey_, dataKey_));
+    else
+        ABC_CHECK(rootKeyUpgrade());
+
+    return Status();
+}
+
+Status
+Login::loadOnline(const LoginPackage &loginPackage, JsonBox rootKeyBox)
+{
+    ABC_CHECK(store.paths(paths, true));
+
+    ABC_CHECK(loginPackage.passwordAuthBox().decrypt(passwordAuth_, dataKey_));
+    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey_, dataKey_));
+
+    // Extract the rootKey:
+    if (!rootKeyBox.ok() && fileExists(paths.rootKeyPath()))
+        return ABC_ERROR(ABC_CC_Error,
+                         "The account has a rootKey, but it's not on the server.");
+    if (rootKeyBox.ok())
         ABC_CHECK(rootKeyBox.decrypt(rootKey_, dataKey_));
     else
         ABC_CHECK(rootKeyUpgrade());
