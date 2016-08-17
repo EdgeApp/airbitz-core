@@ -615,7 +615,7 @@ loginServerPasswordSet(AuthJson authJson,
     ABC_CHECK(dataJson.set("passwordBox", passwordBox));
     ABC_CHECK(dataJson.set("passwordAuthBox", passwordAuthBox));
 
-    ABC_CHECK(authJson.set("password", dataJson));
+    ABC_CHECK(authJson.set("data", dataJson));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().put(reply, url, authJson.encode()));
