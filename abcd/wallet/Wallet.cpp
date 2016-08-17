@@ -8,12 +8,12 @@
 #include "Wallet.hpp"
 #include "../Context.hpp"
 #include "../account/Account.hpp"
-#include "../auth/LoginServer.hpp"
 #include "../bitcoin/cache/Cache.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
 #include "../json/JsonObject.hpp"
 #include "../login/Login.hpp"
+#include "../login/server/LoginServer.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Sync.hpp"
 #include <assert.h>

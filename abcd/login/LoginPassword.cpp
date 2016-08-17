@@ -6,23 +6,25 @@
  */
 
 #include "LoginPassword.hpp"
-#include "Lobby.hpp"
 #include "Login.hpp"
 #include "LoginPackages.hpp"
+#include "LoginStore.hpp"
+#include "server/AuthJson.hpp"
+#include "server/LoginJson.hpp"
+#include "server/LoginServer.hpp"
 #include "../Context.hpp"
-#include "../auth/LoginServer.hpp"
 #include "../json/JsonBox.hpp"
 
 namespace abcd {
 
 static Status
 loginPasswordDisk(std::shared_ptr<Login> &result,
-                  Lobby &lobby, const std::string &password)
+                  LoginStore &store, const std::string &password)
 {
-    std::string LP = lobby.username() + password;
+    const auto LP = store.username() + password;
 
     AccountPaths paths;
-    ABC_CHECK(lobby.paths(paths));
+    ABC_CHECK(store.paths(paths));
 
     // Load the packages:
     CarePackage carePackage;
@@ -32,72 +34,53 @@ loginPasswordDisk(std::shared_ptr<Login> &result,
 
     // Make passwordKey (unlocks dataKey):
     DataChunk passwordKey;
-    ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
+    ABC_CHECK(carePackage.passwordKeySnrp().hash(passwordKey, LP));
 
     // Decrypt dataKey (unlocks the account):
     DataChunk dataKey;
     ABC_CHECK(loginPackage.passwordBox().decrypt(dataKey, passwordKey));
 
     // Create the Login object:
-    std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, lobby, dataKey,
-                            loginPackage, JsonPtr(), true));
-
-    result = std::move(out);
+    ABC_CHECK(Login::createOffline(result, store, dataKey));
     return Status();
 }
 
 static Status
 loginPasswordServer(std::shared_ptr<Login> &result,
-                    Lobby &lobby, const std::string &password,
+                    LoginStore &store, const std::string &password,
                     AuthError &authError)
 {
-    std::string LP = lobby.username() + password;
+    const auto LP = store.username() + password;
 
-    // Get the CarePackage:
-    CarePackage carePackage;
-    ABC_CHECK(loginServerGetCarePackage(lobby, carePackage));
+    // Create passwordAuth:
+    DataChunk passwordAuth;
+    ABC_CHECK(usernameSnrp().hash(passwordAuth, LP));
 
-    // Make the authKey (unlocks the server):
-    DataChunk authKey;
-    ABC_CHECK(usernameSnrp().hash(authKey, LP));
+    // Grab the login information from the server:
+    AuthJson authJson;
+    LoginJson loginJson;
+    ABC_CHECK(authJson.passwordSet(store, passwordAuth));
+    ABC_CHECK(loginServerLogin(loginJson, authJson, &authError));
 
-    // Get the LoginPackage:
-    LoginPackage loginPackage;
-    JsonPtr rootKeyBox;
-    ABC_CHECK(loginServerGetLoginPackage(lobby, authKey, DataSlice(),
-                                         loginPackage, rootKeyBox,
-                                         authError));
-
-    // Make passwordKey (unlocks dataKey):
+    // Unlock passwordBox:
     DataChunk passwordKey;
-    ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
-
-    // Decrypt dataKey (unlocks the account):
     DataChunk dataKey;
-    ABC_CHECK(loginPackage.passwordBox().decrypt(dataKey, passwordKey));
+    ABC_CHECK(loginJson.passwordKeySnrp().hash(passwordKey, LP));
+    ABC_CHECK(loginJson.passwordBox().decrypt(dataKey, passwordKey));
 
     // Create the Login object:
-    std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, lobby, dataKey,
-                            loginPackage, rootKeyBox, false));
-
-    // Set up the on-disk login:
-    ABC_CHECK(carePackage.save(out->paths.carePackagePath()));
-    ABC_CHECK(loginPackage.save(out->paths.loginPackagePath()));
-
-    result = std::move(out);
+    ABC_CHECK(Login::createOnline(result, store, dataKey, loginJson));
     return Status();
 }
 
 Status
 loginPassword(std::shared_ptr<Login> &result,
-              Lobby &lobby, const std::string &password,
+              LoginStore &store, const std::string &password,
               AuthError &authError)
 {
     // Try the login both ways:
-    if (!loginPasswordDisk(result, lobby, password))
-        ABC_CHECK(loginPasswordServer(result, lobby, password, authError));
+    if (!loginPasswordDisk(result, store, password))
+        ABC_CHECK(loginPasswordServer(result, store, password, authError));
 
     return Status();
 }
@@ -105,48 +88,42 @@ loginPassword(std::shared_ptr<Login> &result,
 Status
 loginPasswordSet(Login &login, const std::string &password)
 {
-    std::string LP = login.lobby.username() + password;
+    std::string LP = login.store.username() + password;
 
-    // Load the packages:
-    CarePackage carePackage;
-    LoginPackage loginPackage;
-    ABC_CHECK(carePackage.load(login.paths.carePackagePath()));
-    ABC_CHECK(loginPackage.load(login.paths.loginPackagePath()));
-
-    // Load the old keys:
-    DataChunk authKey = login.authKey();
-    DataChunk oldLRA1;
-    if (loginPackage.ELRA1())
-    {
-        ABC_CHECK(loginPackage.ELRA1().decrypt(oldLRA1, login.dataKey()));
-    }
-
-    // Update SNRP2:
-    JsonSnrp snrp;
-    ABC_CHECK(snrp.create());
-    ABC_CHECK(carePackage.snrp2Set(snrp));
-
-    // Update EMK_LP2:
-    DataChunk passwordKey;      // Unlocks dataKey
-    ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
+    // Create passwordBox:
+    JsonSnrp passwordKeySnrp;
+    DataChunk passwordKey;
     JsonBox passwordBox;
+    ABC_CHECK(passwordKeySnrp.create());
+    ABC_CHECK(passwordKeySnrp.hash(passwordKey, LP));
     ABC_CHECK(passwordBox.encrypt(login.dataKey(), passwordKey));
-    ABC_CHECK(loginPackage.passwordBoxSet(passwordBox));
 
-    // Update ELP1:
-    DataChunk newAuthKey;       // Unlocks the server
-    ABC_CHECK(usernameSnrp().hash(newAuthKey, LP));
-    JsonBox authKeyBox;
-    ABC_CHECK(authKeyBox.encrypt(newAuthKey, login.dataKey()));
-    ABC_CHECK(loginPackage.authKeyBoxSet(authKeyBox));
+    // Create passwordAuth:
+    DataChunk passwordAuth;
+    JsonBox passwordAuthBox;
+    ABC_CHECK(usernameSnrp().hash(passwordAuth, LP));
+    ABC_CHECK(passwordAuthBox.encrypt(passwordAuth, login.dataKey()));
 
     // Change the server login:
-    ABC_CHECK(loginServerChangePassword(login, newAuthKey, oldLRA1,
-                                        carePackage, loginPackage));
+    AuthJson authJson;
+    ABC_CHECK(authJson.loginSet(login));
+    ABC_CHECK(loginServerPasswordSet(authJson,
+                                     passwordAuth, passwordKeySnrp,
+                                     passwordBox, passwordAuthBox));
+
+    // Change the in-memory login:
+    ABC_CHECK(login.passwordAuthSet(passwordAuth));
 
     // Change the on-disk login:
-    ABC_CHECK(login.authKeySet(newAuthKey));
+    CarePackage carePackage;
+    ABC_CHECK(carePackage.load(login.paths.carePackagePath()));
+    ABC_CHECK(carePackage.passwordKeySnrpSet(passwordKeySnrp));
     ABC_CHECK(carePackage.save(login.paths.carePackagePath()));
+
+    LoginPackage loginPackage;
+    ABC_CHECK(loginPackage.load(login.paths.loginPackagePath()));
+    ABC_CHECK(loginPackage.passwordBoxSet(passwordBox));
+    ABC_CHECK(loginPackage.passwordAuthBoxSet(passwordAuthBox));
     ABC_CHECK(loginPackage.save(login.paths.loginPackagePath()));
 
     return Status();
@@ -155,7 +132,7 @@ loginPasswordSet(Login &login, const std::string &password)
 Status
 loginPasswordOk(bool &result, Login &login, const std::string &password)
 {
-    std::string LP = login.lobby.username() + password;
+    std::string LP = login.store.username() + password;
 
     // Load the packages:
     CarePackage carePackage;
@@ -165,7 +142,7 @@ loginPasswordOk(bool &result, Login &login, const std::string &password)
 
     // Make passwordKey (unlocks dataKey):
     DataChunk passwordKey;
-    ABC_CHECK(carePackage.snrp2().hash(passwordKey, LP));
+    ABC_CHECK(carePackage.passwordKeySnrp().hash(passwordKey, LP));
 
     // Try to decrypt dataKey (unlocks the account):
     DataChunk dataKey;
@@ -178,7 +155,7 @@ Status
 loginPasswordExists(bool &result, const std::string &username)
 {
     std::string fixed;
-    ABC_CHECK(Lobby::fixUsername(fixed, username));
+    ABC_CHECK(LoginStore::fixUsername(fixed, username));
     AccountPaths paths;
     ABC_CHECK(gContext->paths.accountDir(paths, fixed));
 

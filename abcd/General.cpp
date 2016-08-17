@@ -15,10 +15,10 @@
 
 #include "General.hpp"
 #include "Context.hpp"
-#include "auth/LoginServer.hpp"
 #include "bitcoin/Testnet.hpp"
 #include "json/JsonObject.hpp"
 #include "json/JsonArray.hpp"
+#include "login/server/LoginServer.hpp"
 #include "util/FileIO.hpp"
 #include "util/Debug.hpp"
 #include <time.h>

@@ -12,17 +12,19 @@
 #ifndef ABCD_LOGIN_LOGIN_SERVER_HPP
 #define ABCD_LOGIN_LOGIN_SERVER_HPP
 
-#include "../util/Data.hpp"
-#include "../util/Status.hpp"
+#include "../../util/Data.hpp"
+#include "../../util/Status.hpp"
 #include <time.h>
 #include <list>
 
 namespace abcd {
 
 class Account;
-class Lobby;
-class Login;
+class AuthJson;
 class JsonPtr;
+class Login;
+class LoginJson;
+class LoginStore;
 struct CarePackage;
 struct LoginPackage;
 
@@ -49,7 +51,7 @@ loginServerGetQuestions(JsonPtr &result);
  * Creates an account on the server.
  */
 Status
-loginServerCreate(const Lobby &lobby, DataSlice LP1,
+loginServerCreate(const LoginStore &store, DataSlice LP1,
                   const CarePackage &carePackage,
                   const LoginPackage &loginPackage,
                   const std::string &syncKey);
@@ -65,7 +67,7 @@ loginServerActivate(const Login &login);
  * Queries the server to determine if a username is available.
  */
 Status
-loginServerAvailable(const Lobby &lobby);
+loginServerAvailable(const LoginStore &store);
 
 /**
  * Saves a rootKey into the account.
@@ -85,21 +87,6 @@ loginServerChangePassword(const Login &login,
                           DataSlice newLP1, DataSlice newLRA1,
                           const CarePackage &carePackage,
                           const LoginPackage &loginPackage);
-
-Status
-loginServerGetCarePackage(const Lobby &lobby, CarePackage &result);
-
-/**
- * Retrieves the LoginPackage for the account.
- * The caller must supply at least one form of credentials (LP1/LRA1).
- * @param rootKeyBox Returns the rootKey encrypted with the dataKey,
- * but only on accounts that have already been upgraded.
- */
-Status
-loginServerGetLoginPackage(const Lobby &lobby,
-                           DataSlice LP1, DataSlice LRA1,
-                           LoginPackage &result, JsonPtr &rootKeyBox,
-                           AuthError &authError);
 
 Status
 loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
@@ -151,7 +138,7 @@ loginServerOtpStatus(const Login &login, bool &on, long &timeout);
  * Request a 2-factor authentication reset.
  */
 Status
-loginServerOtpReset(const Lobby &lobby, const std::string &token);
+loginServerOtpReset(const LoginStore &store, const std::string &token);
 
 /**
  * Determine which accounts have pending 2-factor authentication resets.
@@ -170,6 +157,23 @@ loginServerOtpResetCancelPending(const Login &login);
  */
 Status
 loginServerUploadLogs(const Account *account);
+
+/**
+ * Accesses the v2 login endpoint.
+ */
+Status
+loginServerLogin(LoginJson &result, AuthJson authJson,
+                 AuthError *authError=nullptr);
+
+/**
+ * Changes the password on the server using the v2 endpoint.
+ */
+Status
+loginServerPasswordSet(AuthJson authJson,
+                       DataSlice passwordAuth,
+                       JsonPtr passwordKeySnrp,
+                       JsonPtr passwordBox,
+                       JsonPtr passwordAuthBox);
 
 } // namespace abcd
 

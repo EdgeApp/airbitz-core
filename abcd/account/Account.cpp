@@ -7,7 +7,6 @@
 
 #include "Account.hpp"
 #include "AccountSettings.hpp"
-#include "../login/Lobby.hpp"
 #include "../login/Login.hpp"
 #include "../util/Sync.hpp"
 #include "../util/AutoFree.hpp"

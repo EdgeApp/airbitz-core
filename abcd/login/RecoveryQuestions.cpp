@@ -6,8 +6,8 @@
  */
 
 #include "RecoveryQuestions.hpp"
+#include "server/LoginServer.hpp"
 #include "../Context.hpp"
-#include "../auth/LoginServer.hpp"
 #include "../json/JsonObject.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
