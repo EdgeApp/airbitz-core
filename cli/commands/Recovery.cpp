@@ -78,3 +78,16 @@ COMMAND(InitLevel::store, RecoveryChangePassword, "recovery-change-password",
 
     return Status();
 }
+
+COMMAND(InitLevel::login, RecoverySetup, "recovery-setup",
+        " <questions> <answers>")
+{
+    if (argc != 2)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto questions = argv[0];
+    const auto answers = argv[1];
+
+    ABC_CHECK(loginRecoverySet(*session.login, questions, answers));
+
+    return Status();
+}
