@@ -55,7 +55,7 @@ unpack() {
             git --git-dir="$path" --work-tree="$work_dir" reset --hard "${hash:-master}"
         elif [ $path != ${path%.tar*} -o $path != ${path%.tgz} ]; then
             echo "Unpacking $(relative $path) to $(relative $work_dir)..."
-            tar -C "$work_dir" -xf "$path"
+            tar -C "$work_dir" -xmf "$path"
         fi
     done
 }
