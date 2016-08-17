@@ -614,7 +614,33 @@ loginServerPasswordSet(AuthJson authJson,
     ABC_CHECK(dataJson.set("passwordKeySnrp", passwordKeySnrp));
     ABC_CHECK(dataJson.set("passwordBox", passwordBox));
     ABC_CHECK(dataJson.set("passwordAuthBox", passwordAuthBox));
+    ABC_CHECK(authJson.set("data", dataJson));
 
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().put(reply, url, authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    return Status();
+}
+
+Status
+loginServerRecovery2Set(AuthJson authJson,
+                        DataSlice recovery2Id, JsonPtr recovery2Auth,
+                        JsonPtr question2Box, JsonPtr recovery2Box,
+                        JsonPtr recovery2KeyBox)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/login/recovery2";
+
+    JsonSnrp passwordAuthSnrp;
+    ABC_CHECK(passwordAuthSnrp.snrpSet(usernameSnrp()));
+
+    JsonObject dataJson;
+    ABC_CHECK(dataJson.set("recovery2Id", base64Encode(recovery2Id)));
+    ABC_CHECK(dataJson.set("recovery2Auth", recovery2Auth));
+    ABC_CHECK(dataJson.set("question2Box", question2Box));
+    ABC_CHECK(dataJson.set("recovery2Box", recovery2Box));
+    ABC_CHECK(dataJson.set("recovery2KeyBox", recovery2KeyBox));
     ABC_CHECK(authJson.set("data", dataJson));
 
     HttpReply reply;

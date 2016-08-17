@@ -52,6 +52,25 @@ AuthJson::recoverySet(const LoginStore &store, DataSlice recoveryAuth)
 }
 
 Status
+AuthJson::recovery2Set(const LoginStore &store, DataSlice recovery2Id)
+{
+    ABC_CHECK(recovery2IdSet(base64Encode(recovery2Id)));
+
+    return Status();
+}
+
+Status
+AuthJson::recovery2Set(const LoginStore &store, DataSlice recovery2Id,
+                       JsonPtr recovery2Auth)
+{
+    ABC_CHECK(otpSet(store));
+    ABC_CHECK(recovery2IdSet(base64Encode(recovery2Id)));
+    ABC_CHECK(recovery2AuthSet(recovery2Auth));
+
+    return Status();
+}
+
+Status
 AuthJson::loginSet(const Login &login)
 {
     ABC_CHECK(passwordSet(login.store, login.passwordAuth()));

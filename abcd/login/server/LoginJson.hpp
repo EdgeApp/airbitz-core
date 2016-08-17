@@ -34,6 +34,10 @@ public:
     ABC_JSON_VALUE(recoveryBox, "recoveryBox", JsonBox)
     ABC_JSON_VALUE(recoveryKeySnrp, "recoveryKeySnrp", JsonSnrp)
 
+    // Recovery v2:
+    ABC_JSON_VALUE(question2Box, "question2Box", JsonBox)
+    ABC_JSON_VALUE(recovery2Box, "recovery2Box", JsonBox)
+
     // Keys:
     ABC_JSON_VALUE(passwordAuthBox, "passwordAuthBox", JsonBox)
     ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonBox)

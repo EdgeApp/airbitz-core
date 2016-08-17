@@ -175,6 +175,15 @@ loginServerPasswordSet(AuthJson authJson,
                        JsonPtr passwordBox,
                        JsonPtr passwordAuthBox);
 
+/**
+ * Sets up recovery2 questions the on the server using the v2 endpoint.
+ */
+Status
+loginServerRecovery2Set(AuthJson authJson,
+                        DataSlice recovery2Id, JsonPtr recovery2Auth,
+                        JsonPtr question2Box, JsonPtr recovery2Box,
+                        JsonPtr recovery2KeyBox);
+
 } // namespace abcd
 
 #endif

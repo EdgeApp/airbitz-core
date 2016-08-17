@@ -6,6 +6,7 @@
  */
 
 #include "Encoding.hpp"
+#include <bitcoin/bitcoin.hpp>
 #include <algorithm>
 
 namespace abcd {
@@ -166,6 +167,21 @@ Status
 base32Decode(DataChunk &result, const std::string &in)
 {
     return chunkDecode<5, 8, base32Decode>(result, in);
+}
+
+std::string
+base58Encode(DataSlice data)
+{
+    return bc::encode_base58(data);
+}
+
+Status
+base58Decode(DataChunk &result, const std::string &in)
+{
+    if (!bc::decode_base58(result, in))
+        return ABC_ERROR(ABC_CC_ParseError, "Bad encoding");
+
+    return Status();
 }
 
 std::string

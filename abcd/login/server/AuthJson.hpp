@@ -41,6 +41,13 @@ public:
     recoverySet(const LoginStore &store, DataSlice recoveryAuth);
 
     Status
+    recovery2Set(const LoginStore &store, DataSlice recovery2Id);
+
+    Status
+    recovery2Set(const LoginStore &store, DataSlice recovery2Id,
+                 JsonPtr recovery2Auth);
+
+    Status
     loginSet(const Login &login);
 
 protected:
@@ -48,6 +55,8 @@ protected:
     ABC_JSON_STRING(userId, "userId", nullptr)
     ABC_JSON_STRING(passwordAuth, "passwordAuth", nullptr)
     ABC_JSON_STRING(recoveryAuth, "recoveryAuth", nullptr)
+    ABC_JSON_VALUE(recovery2Auth, "recovery2Auth", JsonPtr)
+    ABC_JSON_STRING(recovery2Id, "recovery2Id", nullptr)
 };
 
 } // namespace abcd
