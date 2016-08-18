@@ -64,6 +64,15 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
                    AuthError &authError);
 
 /**
+ * Logs the user in with their v2 recovery answers, if necessary.
+ */
+Status
+cacheLoginRecovery2(std::shared_ptr<Login> &result,
+                    const char *szUserName, DataSlice recovery2Key,
+                    const std::list<std::string> &answers,
+                    AuthError &authError);
+
+/**
  * Logs the user in with their PIN, if necessary.
  */
 Status
