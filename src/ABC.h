@@ -739,6 +739,13 @@ tABC_CC ABC_Recovery2Setup(const char *szUserName,
                            char **pszKey,
                            tABC_Error *pError);
 
+/**
+ * Removes the recovery v2 questions from the given login.
+ */
+tABC_CC ABC_Recovery2Delete(const char *szUserName,
+                            const char *szPassword,
+                            tABC_Error *pError);
+
 /* === Login data: === */
 tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,

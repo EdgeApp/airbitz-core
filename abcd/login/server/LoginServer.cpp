@@ -648,4 +648,17 @@ loginServerRecovery2Set(AuthJson authJson,
     return Status();
 }
 
+Status
+loginServerRecovery2Delete(AuthJson authJson)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/login/recovery2";
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "DELETE", authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    return Status();
+}
+
 } // namespace abcd

@@ -60,6 +60,12 @@ loginRecovery2Set(DataChunk &result, Login &login,
                   const std::list<std::string> &questions,
                   const std::list<std::string> &answers);
 
+/**
+ * Removes the recovery v2 questions from the given login.
+ */
+Status
+loginRecovery2Delete(Login &login);
+
 } // namespace abcd
 
 #endif

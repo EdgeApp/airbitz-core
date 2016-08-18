@@ -184,6 +184,12 @@ loginServerRecovery2Set(AuthJson authJson,
                         JsonPtr question2Box, JsonPtr recovery2Box,
                         JsonPtr recovery2KeyBox);
 
+/**
+ * Deletes the recovery2 questions from the server.
+ */
+Status
+loginServerRecovery2Delete(AuthJson authJson);
+
 } // namespace abcd
 
 #endif

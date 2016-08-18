@@ -117,3 +117,14 @@ COMMAND(InitLevel::login, Recovery2Setup, "recovery2-setup",
 
     return Status();
 }
+
+COMMAND(InitLevel::login, Recovery2Delete, "recovery2-delete",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    ABC_CHECK(loginRecovery2Delete(*session.login));
+
+    return Status();
+}

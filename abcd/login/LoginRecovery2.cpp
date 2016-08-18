@@ -16,6 +16,7 @@
 #include "../crypto/Random.hpp"
 #include "../json/JsonArray.hpp"
 #include "../json/JsonBox.hpp"
+#include "../util/FileIO.hpp"
 
 namespace abcd {
 
@@ -163,6 +164,20 @@ loginRecovery2Set(DataChunk &result, Login &login,
                                       recovery2KeyBox));
 
     result = recovery2Key;
+    return Status();
+}
+
+Status
+loginRecovery2Delete(Login &login)
+{
+    // Delete the saved key:
+    fileDelete(login.paths.recovery2KeyPath());
+
+    // Change the server login:
+    AuthJson authJson;
+    ABC_CHECK(authJson.loginSet(login));
+    ABC_CHECK(loginServerRecovery2Delete(authJson));
+
     return Status();
 }
 

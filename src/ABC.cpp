@@ -469,6 +469,21 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_Recovery2Delete(const char *szUserName,
+                            const char *szPassword,
+                            tABC_Error *pError)
+{
+    ABC_PROLOG();
+
+    {
+        ABC_GET_LOGIN();
+        ABC_CHECK_NEW(loginRecovery2Delete(*login));
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_OtpKeyGet(const char *szUserName,
                       char **pszKey,
                       tABC_Error *pError)
