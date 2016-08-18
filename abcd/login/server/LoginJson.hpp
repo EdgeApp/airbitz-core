@@ -40,6 +40,7 @@ public:
 
     // Keys:
     ABC_JSON_VALUE(passwordAuthBox, "passwordAuthBox", JsonBox)
+    ABC_JSON_VALUE(recovery2KeyBox, "recovery2KeyBox", JsonBox)
     ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonBox)
     // dataKeyBox
     // mnemonicBox
@@ -50,7 +51,7 @@ public:
      * Breaks out the fields and writes them to disk.
      */
     Status
-    save(const AccountPaths &paths);
+    save(const AccountPaths &paths, DataSlice dataKey);
 };
 
 } // namespace abcd

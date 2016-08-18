@@ -19,6 +19,12 @@
 
 namespace abcd {
 
+struct Recovery2KeyJson:
+    public JsonObject
+{
+    ABC_JSON_STRING(recovery2Key, "recovery2Key", "!bad")
+};
+
 /**
  * Builds the recover2Auth JSON array.
  */
@@ -34,6 +40,26 @@ recovery2AuthBuild(JsonPtr &result, DataSlice recovery2Key,
     }
 
     result = arrayJson;
+    return Status();
+}
+
+Status
+loginRecovery2Key(DataChunk &result, const AccountPaths &paths)
+{
+    Recovery2KeyJson json;
+    ABC_CHECK(json.load(paths.recovery2KeyPath()));
+    ABC_CHECK(base58Decode(result, json.recovery2Key()));
+
+    return Status();
+}
+
+Status
+loginRecovery2KeySave(DataSlice recovery2Key, const AccountPaths &paths)
+{
+    Recovery2KeyJson json;
+    ABC_CHECK(json.recovery2KeySet(base58Encode(recovery2Key)));
+    ABC_CHECK(json.save(paths.recovery2KeyPath()));
+
     return Status();
 }
 
@@ -102,7 +128,11 @@ loginRecovery2Set(DataChunk &result, Login &login,
                   const std::list<std::string> &answers)
 {
     DataChunk recovery2Key;
-    ABC_CHECK(randomData(recovery2Key, 32));
+    if (!loginRecovery2Key(recovery2Key, login.paths))
+    {
+        ABC_CHECK(randomData(recovery2Key, 32));
+        ABC_CHECK(loginRecovery2KeySave(recovery2Key, login.paths));
+    }
 
     // Create recovery2Auth:
     JsonPtr recovery2Auth;

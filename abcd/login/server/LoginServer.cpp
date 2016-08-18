@@ -632,9 +632,6 @@ loginServerRecovery2Set(AuthJson authJson,
 {
     const auto url = ABC_SERVER_ROOT "/v2/login/recovery2";
 
-    JsonSnrp passwordAuthSnrp;
-    ABC_CHECK(passwordAuthSnrp.snrpSet(usernameSnrp()));
-
     JsonObject dataJson;
     ABC_CHECK(dataJson.set("recovery2Id", base64Encode(recovery2Id)));
     ABC_CHECK(dataJson.set("recovery2Auth", recovery2Auth));

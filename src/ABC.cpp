@@ -343,6 +343,27 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_Recovery2Key(const char *szUserName,
+                         char **pszKey,
+                         tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszKey);
+
+    {
+        ABC_GET_STORE();
+        AccountPaths paths;
+        ABC_CHECK_NEW(store->paths(paths));
+
+        DataChunk recovery2Key;
+        ABC_CHECK_NEW(loginRecovery2Key(recovery2Key, paths));
+        *pszKey = stringCopy(base58Encode(recovery2Key));
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_Recovery2Questions(const char *szUserName,
                                const char *szKey,
                                char ***paszQuestions,
@@ -2581,7 +2602,8 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         auto s = loginServerLogin(loginJson, authJson);
         if (s)
         {
-            ABC_CHECK_NEW(loginJson.save(account->login.paths));
+            ABC_CHECK_NEW(loginJson.save(account->login.paths,
+                                         account->login.dataKey()));
         }
         else if (s.value() == ABC_CC_InvalidOTP)
         {

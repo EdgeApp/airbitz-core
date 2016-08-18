@@ -7,6 +7,7 @@
 
 #include "../Command.hpp"
 #include "../../abcd/crypto/Encoding.hpp"
+#include "../../abcd/login/LoginStore.hpp"
 #include "../../abcd/login/LoginPassword.hpp"
 #include "../../abcd/login/LoginRecovery2.hpp"
 #include "../../abcd/login/server/LoginServer.hpp"
@@ -28,6 +29,22 @@ COMMAND(InitLevel::store, Recovery2Questions, "recovery2-questions",
     std::cout << "Questions:" << std::endl;
     for (const auto i: questions)
         std::cout << "  " << i << std::endl;
+
+    return Status();
+}
+
+COMMAND(InitLevel::store, Recovery2Key, "recovery2-key",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    AccountPaths paths;
+    ABC_CHECK(session.store->paths(paths));
+
+    DataChunk recovery2Key;
+    ABC_CHECK(loginRecovery2Key(recovery2Key, paths));
+    std::cout << "recovery2Key: " << base58Encode(recovery2Key) << std::endl;
 
     return Status();
 }

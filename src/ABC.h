@@ -699,6 +699,13 @@ tABC_CC ABC_ListAccounts(char **pszUserNames,
                          tABC_Error *pError);
 
 /**
+ * Attempts to look up the recovery2Key for a particular user.
+ */
+tABC_CC ABC_Recovery2Key(const char *szUserName,
+                         char **pszKey,
+                         tABC_Error *pError);
+
+/**
  * Obtains the recovery v2 questions from the server.
  * @param szKey the recovery key.
  */

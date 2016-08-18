@@ -19,9 +19,22 @@
 
 namespace abcd {
 
+class AccountPaths;
 class Login;
 class LoginStore;
 struct AuthError;
+
+/**
+ * Loads the recovery2Key from disk, if present.
+ */
+Status
+loginRecovery2Key(DataChunk &result, const AccountPaths &paths);
+
+/**
+ * Stashes a recovery2Key on disk for future reference.
+ */
+Status
+loginRecovery2KeySave(DataSlice recovery2Key, const AccountPaths &paths);
 
 /**
  * Obtains the recovery questions for a user.
