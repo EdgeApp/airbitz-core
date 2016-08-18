@@ -588,7 +588,7 @@ loginServerLogin(LoginJson &result, AuthJson authJson, AuthError *authError)
     const auto url = ABC_SERVER_ROOT "/v2/login";
 
     HttpReply reply;
-    ABC_CHECK(AirbitzRequest().get(reply, url, authJson.encode()));
+    ABC_CHECK(AirbitzRequest().request(reply, url, "GET", authJson.encode()));
     ServerReplyJson replyJson;
     ABC_CHECK(replyJson.decode(reply, authError));
 
@@ -617,7 +617,7 @@ loginServerPasswordSet(AuthJson authJson,
     ABC_CHECK(authJson.set("data", dataJson));
 
     HttpReply reply;
-    ABC_CHECK(AirbitzRequest().put(reply, url, authJson.encode()));
+    ABC_CHECK(AirbitzRequest().request(reply, url, "PUT", authJson.encode()));
     ServerReplyJson replyJson;
     ABC_CHECK(replyJson.decode(reply));
 
@@ -641,7 +641,7 @@ loginServerRecovery2Set(AuthJson authJson,
     ABC_CHECK(authJson.set("data", dataJson));
 
     HttpReply reply;
-    ABC_CHECK(AirbitzRequest().put(reply, url, authJson.encode()));
+    ABC_CHECK(AirbitzRequest().request(reply, url, "PUT", authJson.encode()));
     ServerReplyJson replyJson;
     ABC_CHECK(replyJson.decode(reply));
 
