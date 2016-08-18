@@ -11,6 +11,7 @@
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
+#include "../abcd/login/LoginRecovery2.hpp"
 #include "../abcd/login/LoginStore.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include <map>
@@ -127,6 +128,27 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
     {
         ABC_CHECK(loginRecovery(gLoginCache, *store, recoveryAnswers,
                                 authError));
+    }
+
+    result = gLoginCache;
+    return Status();
+}
+
+Status
+cacheLoginRecovery2(std::shared_ptr<Login> &result,
+                    const char *szUserName, DataSlice recovery2Key,
+                    const std::list<std::string> &answers,
+                    AuthError &authError)
+{
+    std::shared_ptr<LoginStore> store;
+    ABC_CHECK(cacheLoginStore(store, szUserName));
+
+    // Log the user in, if necessary:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+    if (!gLoginCache)
+    {
+        ABC_CHECK(loginRecovery2(gLoginCache, *store, recovery2Key, answers,
+                                 authError));
     }
 
     result = gLoginCache;

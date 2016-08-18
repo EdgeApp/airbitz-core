@@ -698,6 +698,54 @@ tABC_CC ABC_PinCheck(const char *szUserName,
 tABC_CC ABC_ListAccounts(char **pszUserNames,
                          tABC_Error *pError);
 
+/**
+ * Attempts to look up the recovery2Key for a particular user.
+ */
+tABC_CC ABC_Recovery2Key(const char *szUserName,
+                         char **pszKey,
+                         tABC_Error *pError);
+
+/**
+ * Obtains the recovery v2 questions from the server.
+ * @param szKey the recovery key.
+ */
+tABC_CC ABC_Recovery2Questions(const char *szUserName,
+                               const char *szKey,
+                               char ***paszQuestions,
+                               unsigned int *pCount,
+                               tABC_Error *pError);
+
+/**
+ * Logs the user in using their recovery v2 key and answers.
+ */
+tABC_CC ABC_Recovery2Login(const char *szUserName,
+                           const char *szKey,
+                           char **aszAnswers,
+                           unsigned int countAnswers,
+                           char **pszOtpResetToken,
+                           char **pszOtpResetDate,
+                           tABC_Error *pError);
+
+/**
+ * Installs recovery 2 questions and answers into the given login.
+ * @param pszKey The recovery 2 key. This should be stored in a safe place.
+ */
+tABC_CC ABC_Recovery2Setup(const char *szUserName,
+                           const char *szPassword,
+                           char **aszQuestions,
+                           unsigned int countQuestions,
+                           char **aszAnswers,
+                           unsigned int countAnswers,
+                           char **pszKey,
+                           tABC_Error *pError);
+
+/**
+ * Removes the recovery v2 questions from the given login.
+ */
+tABC_CC ABC_Recovery2Delete(const char *szUserName,
+                            const char *szPassword,
+                            tABC_Error *pError);
+
 /* === Login data: === */
 tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,

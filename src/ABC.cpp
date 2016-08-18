@@ -32,6 +32,7 @@
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
+#include "../abcd/login/LoginRecovery2.hpp"
 #include "../abcd/login/LoginStore.hpp"
 #include "../abcd/login/Otp.hpp"
 #include "../abcd/login/RecoveryQuestions.hpp"
@@ -336,6 +337,147 @@ tABC_CC ABC_PasswordExists(const char *szUserName,
         bool out;
         ABC_CHECK_NEW(loginPasswordExists(out, szUserName));
         *pExists = out;
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_Recovery2Key(const char *szUserName,
+                         char **pszKey,
+                         tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszKey);
+
+    {
+        ABC_GET_STORE();
+        AccountPaths paths;
+        ABC_CHECK_NEW(store->paths(paths));
+
+        DataChunk recovery2Key;
+        ABC_CHECK_NEW(loginRecovery2Key(recovery2Key, paths));
+        *pszKey = stringCopy(base58Encode(recovery2Key));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_Recovery2Questions(const char *szUserName,
+                               const char *szKey,
+                               char ***paszQuestions,
+                               unsigned int *pCount,
+                               tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szKey);
+    ABC_CHECK_NULL(paszQuestions);
+    ABC_CHECK_NULL(pCount);
+
+    {
+        ABC_GET_STORE();
+        DataChunk recovery2Key;
+        ABC_CHECK_NEW(base58Decode(recovery2Key, szKey));
+
+        std::list<std::string> questions;
+        ABC_CHECK_NEW(loginRecovery2Questions(questions, *store, recovery2Key));
+
+        ABC_ARRAY_NEW(*paszQuestions, questions.size(), char *);
+        unsigned int i = 0;
+        for (const auto &question: questions)
+            (*paszQuestions)[i++] = stringCopy(question);
+        *pCount = questions.size();
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_Recovery2Login(const char *szUserName,
+                           const char *szKey,
+                           char **aszAnswers,
+                           unsigned int countAnswers,
+                           char **pszOtpResetToken,
+                           char **pszOtpResetDate,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szKey);
+    ABC_CHECK_NULL(aszAnswers);
+    ABC_CHECK_NULL(pszOtpResetToken);
+    ABC_CHECK_NULL(pszOtpResetDate);
+
+    {
+        ABC_GET_STORE();
+        DataChunk recovery2Key;
+        ABC_CHECK_NEW(base58Decode(recovery2Key, szKey));
+
+        std::list<std::string> answers;
+        for (unsigned int i = 0; i < countAnswers; ++i)
+            answers.push_back(aszAnswers[i]);
+
+        std::shared_ptr<Login> login;
+        AuthError authError;
+        auto s = cacheLoginRecovery2(login, szUserName,
+                                     recovery2Key, answers, authError);
+        if (!authError.otpToken.empty())
+            *pszOtpResetToken = stringCopy(authError.otpToken);
+        if (!authError.otpDate.empty())
+            *pszOtpResetDate = stringCopy(authError.otpDate);
+        ABC_CHECK_NEW(s);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_Recovery2Setup(const char *szUserName,
+                           const char *szPassword,
+                           char **aszQuestions,
+                           unsigned int countQuestions,
+                           char **aszAnswers,
+                           unsigned int countAnswers,
+                           char **pszKey,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszKey);
+    ABC_CHECK_NULL(aszQuestions);
+    ABC_CHECK_NULL(aszAnswers);
+    ABC_CHECK_NULL(pszKey);
+
+    {
+        ABC_GET_LOGIN();
+
+        std::list<std::string> questions;
+        for (unsigned int i = 0; i < countQuestions; ++i)
+            questions.push_back(aszQuestions[i]);
+
+        std::list<std::string> answers;
+        for (unsigned int i = 0; i < countAnswers; ++i)
+            answers.push_back(aszAnswers[i]);
+
+        DataChunk recovery2Key;
+        ABC_CHECK_NEW(loginRecovery2Set(recovery2Key, *login,
+                                        questions, answers));
+
+        *pszKey = stringCopy(base58Encode(recovery2Key));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_Recovery2Delete(const char *szUserName,
+                            const char *szPassword,
+                            tABC_Error *pError)
+{
+    ABC_PROLOG();
+
+    {
+        ABC_GET_LOGIN();
+        ABC_CHECK_NEW(loginRecovery2Delete(*login));
     }
 
 exit:
@@ -2475,7 +2617,8 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         auto s = loginServerLogin(loginJson, authJson);
         if (s)
         {
-            ABC_CHECK_NEW(loginJson.save(account->login.paths));
+            ABC_CHECK_NEW(loginJson.save(account->login.paths,
+                                         account->login.dataKey()));
         }
         else if (s.value() == ABC_CC_InvalidOTP)
         {

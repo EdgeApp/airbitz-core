@@ -166,7 +166,7 @@ Login::loadOffline()
         LoginJson loginJson;
         ABC_CHECK(authJson.loginSet(*this));
         ABC_CHECK(loginServerLogin(loginJson, authJson));
-        ABC_CHECK(loginJson.save(paths));
+        ABC_CHECK(loginJson.save(paths, dataKey_));
         rootKeyBox = loginJson.rootKeyBox();
     }
     // Otherwise, there just isn't one.
@@ -184,7 +184,7 @@ Status
 Login::loadOnline(LoginJson loginJson)
 {
     ABC_CHECK(store.paths(paths, true));
-    ABC_CHECK(loginJson.save(paths));
+    ABC_CHECK(loginJson.save(paths, dataKey_));
 
     ABC_CHECK(loginJson.passwordAuthBox().decrypt(passwordAuth_, dataKey_));
     ABC_CHECK(loginJson.syncKeyBox().decrypt(syncKey_, dataKey_));
