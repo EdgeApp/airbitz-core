@@ -7,6 +7,7 @@
 
 #include "Account.hpp"
 #include "AccountSettings.hpp"
+#include "../Context.hpp"
 #include "../login/Login.hpp"
 #include "../util/Sync.hpp"
 #include "../util/AutoFree.hpp"
@@ -17,7 +18,7 @@ Status
 Account::create(std::shared_ptr<Account> &result, Login &login)
 {
     RepoInfo repoInfo;
-    ABC_CHECK(login.repoFind(repoInfo, repoTypeAirbitzAccount, true));
+    ABC_CHECK(login.repoFind(repoInfo, gContext->accountType(), true));
     std::shared_ptr<Account> out(new Account(login,
                                  repoInfo.dataKey,
                                  repoInfo.syncKey));

@@ -92,6 +92,7 @@ using namespace abcd;
 tABC_CC ABC_Initialize(const char               *szRootDir,
                        const char               *szCaCertPath,
                        const char               *szApiKey,
+                       const char               *szAccountType,
                        const char               *szHiddenBitsKey,
                        const unsigned char      *pSeedData,
                        unsigned int             seedLength,
@@ -105,12 +106,15 @@ tABC_CC ABC_Initialize(const char               *szRootDir,
                      "The core library has already been initalized");
     ABC_CHECK_NULL(szRootDir);
     ABC_CHECK_NULL(szApiKey);
+    ABC_CHECK_NULL(szAccountType);
     ABC_CHECK_NULL(szHiddenBitsKey);
     ABC_CHECK_NULL(pSeedData);
 
     {
         // Initialize the global context object:
-        gContext.reset(new Context(szRootDir, szCaCertPath, szApiKey,
+        gContext.reset(new Context(szRootDir, szCaCertPath,
+                                   szApiKey,
+                                   szAccountType,
                                    szHiddenBitsKey));
 
         // initialize logging
