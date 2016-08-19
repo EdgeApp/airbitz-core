@@ -746,6 +746,21 @@ tABC_CC ABC_Recovery2Delete(const char *szUserName,
                             const char *szPassword,
                             tABC_Error *pError);
 
+/**
+ * Obtains a hex-encoded decryption key that can be used for future logins.
+ */
+tABC_CC ABC_GetLoginKey(const char *szUserName,
+                        const char *szPassword,
+                        char **pszKey,
+                        tABC_Error *pError);
+
+/**
+ * Logs the user in with a decryption key.
+ */
+tABC_CC ABC_KeyLogin(const char *szUserName,
+                     const char *szKey,
+                     tABC_Error *pError);
+
 /* === Login data: === */
 tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,

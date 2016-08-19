@@ -484,6 +484,41 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_GetLoginKey(const char *szUserName,
+                        const char *szPassword,
+                        char **pszKey,
+                        tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszKey);
+
+    {
+        ABC_GET_LOGIN();
+        *pszKey = stringCopy(base16Encode(login->dataKey()));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_KeyLogin(const char *szUserName,
+                     const char *szKey,
+                     tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szKey);
+
+    {
+        std::shared_ptr<Login> login;
+        DataChunk key;
+        ABC_CHECK_NEW(base16Decode(key, szKey));
+        ABC_CHECK_NEW(cacheLoginKey(login, szUserName, key));
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_OtpKeyGet(const char *szUserName,
                       char **pszKey,
                       tABC_Error *pError)

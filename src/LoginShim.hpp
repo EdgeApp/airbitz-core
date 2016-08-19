@@ -81,6 +81,13 @@ cacheLoginPin(std::shared_ptr<Login> &result,
               AuthError &authError);
 
 /**
+ * Logs the user in with their decryption key, if necessary.
+ */
+Status
+cacheLoginKey(std::shared_ptr<Login> &result,
+              const char *szUserName, DataSlice key);
+
+/**
  * Retrieves the cached login, assuming the username still matches.
  */
 Status

@@ -175,6 +175,24 @@ cacheLoginPin(std::shared_ptr<Login> &result,
 }
 
 Status
+cacheLoginKey(std::shared_ptr<Login> &result,
+              const char *szUserName, DataSlice key)
+{
+    std::shared_ptr<LoginStore> store;
+    ABC_CHECK(cacheLoginStore(store, szUserName));
+
+    // Log the user in, if necessary:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+    if (!gLoginCache)
+    {
+        ABC_CHECK(Login::createOffline(gLoginCache, *store, key));
+    }
+
+    result = gLoginCache;
+    return Status();
+}
+
+Status
 cacheLogin(std::shared_ptr<Login> &result, const char *szUserName)
 {
     std::shared_ptr<LoginStore> store;
