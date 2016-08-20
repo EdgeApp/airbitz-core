@@ -720,8 +720,8 @@ tABC_CC ABC_Recovery2Questions(const char *szUserName,
  */
 tABC_CC ABC_Recovery2Login(const char *szUserName,
                            const char *szKey,
-                           char **aszAnswers,
-                           unsigned int countAnswers,
+                           char *aszAnswer1,
+                           char *aszAnswer2,
                            char **pszOtpResetToken,
                            char **pszOtpResetDate,
                            tABC_Error *pError);
@@ -732,10 +732,10 @@ tABC_CC ABC_Recovery2Login(const char *szUserName,
  */
 tABC_CC ABC_Recovery2Setup(const char *szUserName,
                            const char *szPassword,
-                           char **aszQuestions,
-                           unsigned int countQuestions,
-                           char **aszAnswers,
-                           unsigned int countAnswers,
+                           char *aszQuestion1,
+                           char *aszAnswer1,
+                           char *aszQuestion2,
+                           char *aszAnswer2,
                            char **pszKey,
                            tABC_Error *pError);
 

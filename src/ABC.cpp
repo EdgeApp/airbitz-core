@@ -396,15 +396,16 @@ exit:
 
 tABC_CC ABC_Recovery2Login(const char *szUserName,
                            const char *szKey,
-                           char **aszAnswers,
-                           unsigned int countAnswers,
+                           char *aszAnswer1,
+                           char *aszAnswer2,
                            char **pszOtpResetToken,
                            char **pszOtpResetDate,
                            tABC_Error *pError)
 {
     ABC_PROLOG();
     ABC_CHECK_NULL(szKey);
-    ABC_CHECK_NULL(aszAnswers);
+    ABC_CHECK_NULL(aszAnswer1);
+    ABC_CHECK_NULL(aszAnswer2);
     ABC_CHECK_NULL(pszOtpResetToken);
     ABC_CHECK_NULL(pszOtpResetDate);
 
@@ -414,8 +415,8 @@ tABC_CC ABC_Recovery2Login(const char *szUserName,
         ABC_CHECK_NEW(base58Decode(recovery2Key, szKey));
 
         std::list<std::string> answers;
-        for (unsigned int i = 0; i < countAnswers; ++i)
-            answers.push_back(aszAnswers[i]);
+        answers.push_back(aszAnswer1);
+        answers.push_back(aszAnswer2);
 
         std::shared_ptr<Login> login;
         AuthError authError;
@@ -434,29 +435,31 @@ exit:
 
 tABC_CC ABC_Recovery2Setup(const char *szUserName,
                            const char *szPassword,
-                           char **aszQuestions,
-                           unsigned int countQuestions,
-                           char **aszAnswers,
-                           unsigned int countAnswers,
+                           char *aszQuestion1,
+                           char *aszAnswer1,
+                           char *aszQuestion2,
+                           char *aszAnswer2,
                            char **pszKey,
                            tABC_Error *pError)
 {
     ABC_PROLOG();
     ABC_CHECK_NULL(pszKey);
-    ABC_CHECK_NULL(aszQuestions);
-    ABC_CHECK_NULL(aszAnswers);
+    ABC_CHECK_NULL(aszQuestion1);
+    ABC_CHECK_NULL(aszAnswer1);
+    ABC_CHECK_NULL(aszQuestion2);
+    ABC_CHECK_NULL(aszAnswer2);
     ABC_CHECK_NULL(pszKey);
 
     {
         ABC_GET_LOGIN();
 
         std::list<std::string> questions;
-        for (unsigned int i = 0; i < countQuestions; ++i)
-            questions.push_back(aszQuestions[i]);
+        questions.push_back(aszQuestion1);
+        questions.push_back(aszQuestion2);
 
         std::list<std::string> answers;
-        for (unsigned int i = 0; i < countAnswers; ++i)
-            answers.push_back(aszAnswers[i]);
+        answers.push_back(aszAnswer1);
+        answers.push_back(aszAnswer2);
 
         DataChunk recovery2Key;
         ABC_CHECK_NEW(loginRecovery2Set(recovery2Key, *login,
