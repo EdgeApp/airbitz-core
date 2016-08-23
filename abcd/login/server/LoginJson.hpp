@@ -8,6 +8,7 @@
 #ifndef ABCD_LOGIN_SERVER_LOGIN_JSON_HPP
 #define ABCD_LOGIN_SERVER_LOGIN_JSON_HPP
 
+#include "../../json/JsonArray.hpp"
 #include "../../json/JsonBox.hpp"
 #include "../../json/JsonSnrp.hpp"
 
@@ -44,8 +45,8 @@ public:
     ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonBox)
     // dataKeyBox
     // mnemonicBox
-    // repos
     ABC_JSON_VALUE(syncKeyBox, "syncKeyBox", JsonBox)
+    ABC_JSON_VALUE(repos, "repos", JsonArray)
 
     /**
      * Breaks out the fields and writes them to disk.

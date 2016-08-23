@@ -16,8 +16,11 @@ namespace abcd {
 Status
 Account::create(std::shared_ptr<Account> &result, Login &login)
 {
+    RepoInfo repoInfo;
+    ABC_CHECK(login.repoFind(repoInfo, repoTypeAirbitzAccount, true));
     std::shared_ptr<Account> out(new Account(login,
-                                 login.dataKey(), login.syncKey()));
+                                 repoInfo.dataKey,
+                                 repoInfo.syncKey));
     ABC_CHECK(out->load());
 
     result = std::move(out);

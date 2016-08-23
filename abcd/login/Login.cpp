@@ -13,6 +13,7 @@
 #include "server/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
+#include "../json/JsonArray.hpp"
 #include "../json/JsonBox.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Sync.hpp"
@@ -58,13 +59,6 @@ Login::createNew(std::shared_ptr<Login> &result,
     return Status();
 }
 
-std::string
-Login::syncKey() const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return base16Encode(syncKey_);
-}
-
 DataChunk
 Login::passwordAuth() const
 {
@@ -78,6 +72,77 @@ Login::passwordAuthSet(DataSlice passwordAuth)
     std::lock_guard<std::mutex> lock(mutex_);
     passwordAuth_ = DataChunk(passwordAuth.begin(), passwordAuth.end());
     return Status();
+}
+
+Status
+Login::repoFind(RepoInfo &result, const std::string &type, bool create)
+{
+    // Search the on-disk array:
+    JsonArray reposJson;
+    if (reposJson.load(paths.reposPath()))
+    {
+        size_t reposSize = reposJson.size();
+        for (size_t i = 0; i < reposSize; i++)
+        {
+            RepoJson repoJson(reposJson[i]);
+            ABC_CHECK(repoJson.typeOk());
+            if (type == repoJson.type())
+            {
+                ABC_CHECK(repoJson.decode(result, dataKey_));
+                return Status();
+            }
+        }
+    }
+
+    // If this is an Airbitz account, try the legacy `syncKey`:
+    if (repoTypeAirbitzAccount == type)
+    {
+        LoginPackage loginPackage;
+        ABC_CHECK(loginPackage.load(paths.loginPackagePath()));
+        if (loginPackage.syncKeyBox().ok())
+        {
+            DataChunk syncKey;
+            ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey, dataKey_));
+
+            result = RepoInfo
+            {
+                type, dataKey_, base16Encode(syncKey)
+            };
+            return Status();
+        }
+    }
+
+    // If we are still here, nothing matched:
+    if (create)
+    {
+        // Make the keys:
+        RepoInfo repoInfo;
+        DataChunk syncKey;
+        repoInfo.type = type;
+        ABC_CHECK(randomData(repoInfo.dataKey, DATA_KEY_LENGTH));
+        ABC_CHECK(randomData(syncKey, SYNC_KEY_LENGTH));
+        repoInfo.syncKey = base16Encode(syncKey);
+
+        // Push the wallet to the server:
+        AuthJson authJson;
+        RepoJson repoJson;
+        ABC_CHECK(authJson.loginSet(*this));
+        ABC_CHECK(repoJson.encode(repoInfo, dataKey_));
+        ABC_CHECK(loginServerWalletCreate(*this, repoInfo.syncKey));
+        ABC_CHECK(loginServerReposAdd(authJson, repoJson));
+        ABC_CHECK(loginServerWalletActivate(*this, repoInfo.syncKey));
+
+        // Save to disk:
+        JsonArray reposJson;
+        ABC_CHECK(reposJson.load(paths.reposPath()));
+        ABC_CHECK(reposJson.append(repoJson));
+        ABC_CHECK(reposJson.save(paths.reposPath()));
+
+        result = repoInfo;
+        return Status();
+    }
+
+    return ABC_ERROR(ABC_CC_AccountDoesNotExist, "No such repo");
 }
 
 Login::Login(LoginStore &store, DataSlice dataKey):
@@ -98,9 +163,10 @@ Login::createNew(const char *password)
     ABC_CHECK(carePackage.passwordKeySnrpSet(snrp));
 
     // Set up syncKey:
+    DataChunk syncKey;
     JsonBox syncKeyBox;
-    ABC_CHECK(randomData(syncKey_, SYNC_KEY_LENGTH));
-    ABC_CHECK(syncKeyBox.encrypt(syncKey_, dataKey_));
+    ABC_CHECK(randomData(syncKey, SYNC_KEY_LENGTH));
+    ABC_CHECK(syncKeyBox.encrypt(syncKey, dataKey_));
     ABC_CHECK(loginPackage.syncKeyBoxSet(syncKeyBox));
 
     // Set up passwordAuth (LP1):
@@ -129,7 +195,7 @@ Login::createNew(const char *password)
 
     // Create the account and repo on server:
     ABC_CHECK(loginServerCreate(store, passwordAuth_,
-                                carePackage, loginPackage, base16Encode(syncKey_)));
+                                carePackage, loginPackage, base16Encode(syncKey)));
 
     // Set up the on-disk login:
     ABC_CHECK(store.paths(paths, true));
@@ -151,7 +217,6 @@ Login::loadOffline()
     LoginPackage loginPackage;
     ABC_CHECK(loginPackage.load(paths.loginPackagePath()));
     ABC_CHECK(loginPackage.passwordAuthBox().decrypt(passwordAuth_, dataKey_));
-    ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey_, dataKey_));
 
     // Look for an existing rootKeyBox:
     JsonBox rootKeyBox;
@@ -187,7 +252,6 @@ Login::loadOnline(LoginJson loginJson)
     ABC_CHECK(loginJson.save(paths, dataKey_));
 
     ABC_CHECK(loginJson.passwordAuthBox().decrypt(passwordAuth_, dataKey_));
-    ABC_CHECK(loginJson.syncKeyBox().decrypt(syncKey_, dataKey_));
 
     // Extract the rootKey:
     auto rootKeyBox = loginJson.rootKeyBox();

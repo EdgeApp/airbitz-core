@@ -9,6 +9,7 @@
 #include "AirbitzRequest.hpp"
 #include "AuthJson.hpp"
 #include "LoginJson.hpp"
+#include "RepoJson.hpp"
 #include "../Login.hpp"
 #include "../LoginPackages.hpp"
 #include "../LoginStore.hpp"
@@ -655,6 +656,21 @@ loginServerRecovery2Delete(AuthJson authJson)
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().request(reply, url, "DELETE", authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    return Status();
+}
+
+Status
+loginServerReposAdd(AuthJson authJson, RepoJson repoJson)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/login/repos";
+
+    ABC_CHECK(authJson.set("data", repoJson));
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "POST", authJson.encode()));
     ServerReplyJson replyJson;
     ABC_CHECK(replyJson.decode(reply));
 
