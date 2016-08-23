@@ -16,7 +16,8 @@ namespace abcd {
 Status
 Account::create(std::shared_ptr<Account> &result, Login &login)
 {
-    std::shared_ptr<Account> out(new Account(login));
+    std::shared_ptr<Account> out(new Account(login,
+                                 login.dataKey(), login.syncKey()));
     ABC_CHECK(out->load());
 
     result = std::move(out);
@@ -26,17 +27,19 @@ Account::create(std::shared_ptr<Account> &result, Login &login)
 Status
 Account::sync(bool &dirty)
 {
-    ABC_CHECK(syncRepo(dir(), login.syncKey(), dirty));
+    ABC_CHECK(syncRepo(dir(), syncKey_, dirty));
     if (dirty)
         ABC_CHECK(load());
 
     return Status();
 }
 
-Account::Account(Login &login):
+Account::Account(Login &login, DataSlice dataKey, const std::string &syncKey):
     login(login),
     parent_(login.shared_from_this()),
     dir_(login.paths.syncDir()),
+    dataKey_(dataKey.begin(), dataKey.end()),
+    syncKey_(syncKey),
     wallets(*this)
 {}
 
@@ -45,7 +48,7 @@ Account::load()
 {
     // If the sync dir doesn't exist, create it:
     const auto tempPath = login.paths.dir() + "tmp/";
-    ABC_CHECK(syncEnsureRepo(dir(), tempPath, login.syncKey()));
+    ABC_CHECK(syncEnsureRepo(dir(), tempPath, syncKey_));
 
     AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
     settings.get() = accountSettingsLoad(*this);

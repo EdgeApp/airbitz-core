@@ -50,7 +50,7 @@ public:
     rootKey() const { return rootKey_; }
 
     /**
-     * Obtains the master key for the account.
+     * Obtains the encryption key for the login data.
      */
     DataSlice
     dataKey() const { return dataKey_; }

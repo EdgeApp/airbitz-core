@@ -37,7 +37,7 @@ WalletList::load()
     // Step 1: reload any wallets we already have:
     for (auto &wallet: wallets_)
         ABC_CHECK(wallet.second.load(path(wallet.first),
-                                     account_.login.dataKey()));
+                                     account_.dataKey()));
 
     // Step 2: scan the directory for new wallets:
     DIR *dir = opendir(dir_.c_str());
@@ -59,7 +59,7 @@ WalletList::load()
 
         // Try to load the wallet:
         JsonPtr json;
-        if (json.load(dir_ + de->d_name, account_.login.dataKey()))
+        if (json.load(dir_ + de->d_name, account_.dataKey()))
             wallets_[id] = std::move(json);
     }
 
@@ -97,7 +97,7 @@ WalletList::reorder(const std::string &id, unsigned index)
 
     WalletJson json(wallet->second);
     ABC_CHECK(json.sortSet(index));
-    ABC_CHECK(json.save(path(id), account_.login.dataKey()));
+    ABC_CHECK(json.save(path(id), account_.dataKey()));
     return Status();
 }
 
@@ -108,7 +108,7 @@ WalletList::insert(const std::string &id, const JsonPtr &keys)
     ABC_CHECK(json.sortSet(wallets_.size()));
     ABC_CHECK(json.archivedSet(false));
     ABC_CHECK(fileEnsureDir(dir_));
-    ABC_CHECK(json.save(path(id), account_.login.dataKey()));
+    ABC_CHECK(json.save(path(id), account_.dataKey()));
 
     // TODO: Don't add the wallet until the sync has finished!
     std::lock_guard<std::mutex> lock(mutex_);
@@ -170,7 +170,7 @@ WalletList::archivedSet(const std::string &id, bool archived)
 
     WalletJson json(wallet->second);
     ABC_CHECK(json.archivedSet(archived));
-    ABC_CHECK(json.save(path(id), account_.login.dataKey()));
+    ABC_CHECK(json.save(path(id), account_.dataKey()));
     return Status();
 }
 
