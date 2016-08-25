@@ -93,6 +93,11 @@ Login::repoFind(RepoInfo &result, const std::string &type, bool create)
             }
         }
     }
+    else if (repoTypeAirbitzAccount != type)
+    {
+        return ABC_ERROR(ABC_CC_FileDoesNotExist,
+                         "Non-Airbitz app running on an offline Airbitz account");
+    }
 
     // If this is an Airbitz account, try the legacy `syncKey`:
     if (repoTypeAirbitzAccount == type)
@@ -133,8 +138,6 @@ Login::repoFind(RepoInfo &result, const std::string &type, bool create)
         ABC_CHECK(loginServerWalletActivate(*this, repoInfo.syncKey));
 
         // Save to disk:
-        JsonArray reposJson;
-        ABC_CHECK(reposJson.load(paths.reposPath()));
         ABC_CHECK(reposJson.append(repoJson));
         ABC_CHECK(reposJson.save(paths.reposPath()));
 
