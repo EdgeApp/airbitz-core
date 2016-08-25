@@ -12,7 +12,7 @@
 
 namespace abcd {
 
-constexpr auto repoTypeAirbitzAccount = "repo:account:co.airbitz.wallet";
+constexpr auto repoTypeAirbitzAccount = "account:repo:co.airbitz.wallet";
 
 /**
  * Information about a repository attached to a login (decoded).
