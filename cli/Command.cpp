@@ -62,7 +62,7 @@ helpString(const Command &command)
     if (InitLevel::context <= command.level())
         out += " [-d <dir>]";
 
-    if (InitLevel::lobby <= command.level())
+    if (InitLevel::store <= command.level())
         out += " [-u <username>]";
 
     if (InitLevel::login <= command.level())

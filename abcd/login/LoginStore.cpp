@@ -5,10 +5,10 @@
  * See the LICENSE file for more information.
  */
 
-#include "Lobby.hpp"
+#include "LoginStore.hpp"
 #include "LoginPackages.hpp"
+#include "server/LoginServer.hpp"
 #include "../Context.hpp"
-#include "../auth/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../util/Debug.hpp"
 #include "../util/FileIO.hpp"
@@ -22,9 +22,10 @@ struct OtpFile:
 };
 
 Status
-Lobby::create(std::shared_ptr<Lobby> &result, const std::string &username)
+LoginStore::create(std::shared_ptr<LoginStore> &result,
+                   const std::string &username)
 {
-    std::shared_ptr<Lobby> out(new Lobby());
+    std::shared_ptr<LoginStore> out(new LoginStore());
     ABC_CHECK(out->init(username));
 
     result = std::move(out);
@@ -32,7 +33,7 @@ Lobby::create(std::shared_ptr<Lobby> &result, const std::string &username)
 }
 
 Status
-Lobby::paths(AccountPaths &result, bool create)
+LoginStore::paths(AccountPaths &result, bool create)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -50,7 +51,7 @@ Lobby::paths(AccountPaths &result, bool create)
 }
 
 Status
-Lobby::otpKeySet(const OtpKey &key)
+LoginStore::otpKeySet(const OtpKey &key)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -61,7 +62,7 @@ Lobby::otpKeySet(const OtpKey &key)
 }
 
 Status
-Lobby::otpKeyRemove()
+LoginStore::otpKeyRemove()
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -74,7 +75,7 @@ Lobby::otpKeyRemove()
 }
 
 Status
-Lobby::fixUsername(std::string &result, const std::string &username)
+LoginStore::fixUsername(std::string &result, const std::string &username)
 {
     std::string out;
     out.reserve(username.size());
@@ -115,7 +116,7 @@ Lobby::fixUsername(std::string &result, const std::string &username)
 }
 
 Status
-Lobby::init(const std::string &username)
+LoginStore::init(const std::string &username)
 {
     // Set up identity:
     ABC_CHECK(fixUsername(username_, username));
@@ -123,9 +124,9 @@ Lobby::init(const std::string &username)
     // Failure is acceptable:
     gContext->paths.accountDir(paths_, username_);
 
-    // Create authId:
-    ABC_CHECK(usernameSnrp().hash(authId_, username_));
-    ABC_DebugLog("authId: %s", base64Encode(authId()).c_str());
+    // Create userId:
+    ABC_CHECK(usernameSnrp().hash(userId_, username_));
+    ABC_DebugLog("userId: %s", base64Encode(userId()).c_str());
 
     // Load the OTP key, if possible:
     OtpFile file;
@@ -137,7 +138,7 @@ Lobby::init(const std::string &username)
 }
 
 Status
-Lobby::otpKeySave()
+LoginStore::otpKeySave()
 {
     if (paths_.ok() && otpKeyOk_)
     {

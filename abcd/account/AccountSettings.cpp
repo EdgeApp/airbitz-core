@@ -9,9 +9,9 @@
 #include "Account.hpp"
 #include "../exchange/ExchangeSource.hpp"
 #include "../json/JsonObject.hpp"
-#include "../login/Lobby.hpp"
 #include "../login/Login.hpp"
 #include "../login/LoginPin.hpp"
+#include "../login/LoginStore.hpp"
 #include "../util/Util.hpp"
 
 namespace abcd {
@@ -101,7 +101,7 @@ accountSettingsLoad(const Account &account)
     tABC_AccountSettings *out = structAlloc<tABC_AccountSettings>();
 
     SettingsJson json;
-    json.load(settingsPath(account), account.login.dataKey()).log();
+    json.load(settingsPath(account), account.dataKey()).log();
 
     // Account:
     out->szPIN = json.pinOk() ? stringCopy(json.pin()) : nullptr;
@@ -184,7 +184,7 @@ accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings,
     ABC_CHECK(json.languageSet(pSettings->szLanguage));
     ABC_CHECK(json.numCurrencySet(pSettings->currencyNum));
 
-    ABC_CHECK(json.save(settingsPath(account), account.login.dataKey()));
+    ABC_CHECK(json.save(settingsPath(account), account.dataKey()));
 
     // Update the PIN package to match:
     ABC_CHECK(accountSettingsPinSync(account.login, pSettings, pinChanged));
@@ -216,13 +216,13 @@ accountSettingsPinSync(Login &login, tABC_AccountSettings *settings,
     if (settings->bDisablePINLogin)
     {
         // Only delete the PIN if the user *explicitly* asks for that:
-        loginPinDelete(login.lobby).log();
+        loginPinDelete(login.store).log();
     }
     else if (settings->szPIN)
     {
         // Set up a new PIN if things have changed:
         bool exists;
-        ABC_CHECK(loginPinExists(exists, login.lobby.username()));
+        ABC_CHECK(loginPinExists(exists, login.store.username()));
         if (pinChanged || !exists)
         {
             time_t expires = time(nullptr);

@@ -22,6 +22,9 @@ namespace abcd {
 #define AES_256_BLOCK_LENGTH    16
 #define AES_256_KEY_LENGTH      32
 
+DataChunk
+hmacSha256(DataSlice data, DataSlice key);
+
 /**
  * Creates a cryptographically secure filename from a meaningful name
  * and a secret key.

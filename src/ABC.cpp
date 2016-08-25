@@ -17,7 +17,6 @@
 #include "../abcd/account/AccountSettings.hpp"
 #include "../abcd/account/AccountCategories.hpp"
 #include "../abcd/account/PluginData.hpp"
-#include "../abcd/auth/LoginServer.hpp"
 #include "../abcd/bitcoin/Testnet.hpp"
 #include "../abcd/bitcoin/Text.hpp"
 #include "../abcd/bitcoin/cache/Cache.hpp"
@@ -28,14 +27,18 @@
 #include "../abcd/http/Http.hpp"
 #include "../abcd/http/Uri.hpp"
 #include "../abcd/login/Bitid.hpp"
-#include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/login/LoginPackages.hpp"
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
+#include "../abcd/login/LoginRecovery2.hpp"
+#include "../abcd/login/LoginStore.hpp"
 #include "../abcd/login/Otp.hpp"
 #include "../abcd/login/RecoveryQuestions.hpp"
+#include "../abcd/login/server/AuthJson.hpp"
+#include "../abcd/login/server/LoginJson.hpp"
+#include "../abcd/login/server/LoginServer.hpp"
 #include "../abcd/spend/AirbitzFee.hpp"
 #include "../abcd/spend/PaymentProto.hpp"
 #include "../abcd/spend/Spend.hpp"
@@ -63,9 +66,9 @@ using namespace abcd;
     ABC_SET_ERR_CODE(pError, ABC_CC_Ok); \
     ABC_CHECK_ASSERT(gContext, ABC_CC_NotInitialized, "The core library has not been initalized")
 
-#define ABC_GET_LOBBY() \
-    std::shared_ptr<Lobby> lobby; \
-    ABC_CHECK_NEW(cacheLobby(lobby, szUserName))
+#define ABC_GET_STORE() \
+    std::shared_ptr<LoginStore> store; \
+    ABC_CHECK_NEW(cacheLoginStore(store, szUserName))
 
 #define ABC_GET_LOGIN() \
     std::shared_ptr<Login> login; \
@@ -89,6 +92,7 @@ using namespace abcd;
 tABC_CC ABC_Initialize(const char               *szRootDir,
                        const char               *szCaCertPath,
                        const char               *szApiKey,
+                       const char               *szAccountType,
                        const char               *szHiddenBitsKey,
                        const unsigned char      *pSeedData,
                        unsigned int             seedLength,
@@ -102,12 +106,15 @@ tABC_CC ABC_Initialize(const char               *szRootDir,
                      "The core library has already been initalized");
     ABC_CHECK_NULL(szRootDir);
     ABC_CHECK_NULL(szApiKey);
+    ABC_CHECK_NULL(szAccountType);
     ABC_CHECK_NULL(szHiddenBitsKey);
     ABC_CHECK_NULL(pSeedData);
 
     {
         // Initialize the global context object:
-        gContext.reset(new Context(szRootDir, szCaCertPath, szApiKey,
+        gContext.reset(new Context(szRootDir, szCaCertPath,
+                                   szApiKey,
+                                   szAccountType,
                                    szHiddenBitsKey));
 
         // initialize logging
@@ -159,7 +166,7 @@ tABC_CC ABC_FixUsername(char **pszResult,
 
     {
         std::string username;
-        ABC_CHECK_NEW(Lobby::fixUsername(username, szUserName));
+        ABC_CHECK_NEW(LoginStore::fixUsername(username, szUserName));
         *pszResult = stringCopy(username);
     }
 
@@ -203,8 +210,8 @@ tABC_CC ABC_AccountAvailable(const char *szUserName,
     ABC_PROLOG();
 
     {
-        ABC_GET_LOBBY();
-        ABC_CHECK_NEW(loginServerAvailable(*lobby));
+        ABC_GET_STORE();
+        ABC_CHECK_NEW(loginServerAvailable(*store));
     }
 
 exit:
@@ -227,7 +234,7 @@ tABC_CC ABC_CreateAccount(const char *szUserName,
 
     {
         std::string username;
-        ABC_CHECK_NEW(Lobby::fixUsername(username, szUserName));
+        ABC_CHECK_NEW(LoginStore::fixUsername(username, szUserName));
         if (username.size() < ABC_MIN_USERNAME_LENGTH)
             ABC_RET_ERROR(ABC_CC_NotSupported, "Username is too short");
 
@@ -250,7 +257,7 @@ tABC_CC ABC_AccountDelete(const char *szUserName,
 
     {
         std::string fixed;
-        ABC_CHECK_NEW(Lobby::fixUsername(fixed, szUserName));
+        ABC_CHECK_NEW(LoginStore::fixUsername(fixed, szUserName));
         AccountPaths paths;
         ABC_CHECK_NEW(gContext->paths.accountDir(paths, fixed));
 
@@ -340,6 +347,185 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_Recovery2Key(const char *szUserName,
+                         char **pszKey,
+                         tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszKey);
+
+    {
+        ABC_GET_STORE();
+        AccountPaths paths;
+        ABC_CHECK_NEW(store->paths(paths));
+
+        DataChunk recovery2Key;
+        ABC_CHECK_NEW(loginRecovery2Key(recovery2Key, paths));
+        *pszKey = stringCopy(base58Encode(recovery2Key));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_Recovery2Questions(const char *szUserName,
+                               const char *szKey,
+                               char ***paszQuestions,
+                               unsigned int *pCount,
+                               tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szKey);
+    ABC_CHECK_NULL(paszQuestions);
+    ABC_CHECK_NULL(pCount);
+
+    {
+        ABC_GET_STORE();
+        DataChunk recovery2Key;
+        ABC_CHECK_NEW(base58Decode(recovery2Key, szKey));
+
+        std::list<std::string> questions;
+        ABC_CHECK_NEW(loginRecovery2Questions(questions, *store, recovery2Key));
+
+        ABC_ARRAY_NEW(*paszQuestions, questions.size(), char *);
+        unsigned int i = 0;
+        for (const auto &question: questions)
+            (*paszQuestions)[i++] = stringCopy(question);
+        *pCount = questions.size();
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_Recovery2Login(const char *szUserName,
+                           const char *szKey,
+                           char *aszAnswer1,
+                           char *aszAnswer2,
+                           char **pszOtpResetToken,
+                           char **pszOtpResetDate,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szKey);
+    ABC_CHECK_NULL(aszAnswer1);
+    ABC_CHECK_NULL(aszAnswer2);
+    ABC_CHECK_NULL(pszOtpResetToken);
+    ABC_CHECK_NULL(pszOtpResetDate);
+
+    {
+        ABC_GET_STORE();
+        DataChunk recovery2Key;
+        ABC_CHECK_NEW(base58Decode(recovery2Key, szKey));
+
+        std::list<std::string> answers;
+        answers.push_back(aszAnswer1);
+        answers.push_back(aszAnswer2);
+
+        std::shared_ptr<Login> login;
+        AuthError authError;
+        auto s = cacheLoginRecovery2(login, szUserName,
+                                     recovery2Key, answers, authError);
+        if (!authError.otpToken.empty())
+            *pszOtpResetToken = stringCopy(authError.otpToken);
+        if (!authError.otpDate.empty())
+            *pszOtpResetDate = stringCopy(authError.otpDate);
+        ABC_CHECK_NEW(s);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_Recovery2Setup(const char *szUserName,
+                           const char *szPassword,
+                           char *aszQuestion1,
+                           char *aszAnswer1,
+                           char *aszQuestion2,
+                           char *aszAnswer2,
+                           char **pszKey,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszKey);
+    ABC_CHECK_NULL(aszQuestion1);
+    ABC_CHECK_NULL(aszAnswer1);
+    ABC_CHECK_NULL(aszQuestion2);
+    ABC_CHECK_NULL(aszAnswer2);
+    ABC_CHECK_NULL(pszKey);
+
+    {
+        ABC_GET_LOGIN();
+
+        std::list<std::string> questions;
+        questions.push_back(aszQuestion1);
+        questions.push_back(aszQuestion2);
+
+        std::list<std::string> answers;
+        answers.push_back(aszAnswer1);
+        answers.push_back(aszAnswer2);
+
+        DataChunk recovery2Key;
+        ABC_CHECK_NEW(loginRecovery2Set(recovery2Key, *login,
+                                        questions, answers));
+
+        *pszKey = stringCopy(base58Encode(recovery2Key));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_Recovery2Delete(const char *szUserName,
+                            const char *szPassword,
+                            tABC_Error *pError)
+{
+    ABC_PROLOG();
+
+    {
+        ABC_GET_LOGIN();
+        ABC_CHECK_NEW(loginRecovery2Delete(*login));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_GetLoginKey(const char *szUserName,
+                        const char *szPassword,
+                        char **pszKey,
+                        tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszKey);
+
+    {
+        ABC_GET_LOGIN();
+        *pszKey = stringCopy(base16Encode(login->dataKey()));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_KeyLogin(const char *szUserName,
+                     const char *szKey,
+                     tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szKey);
+
+    {
+        std::shared_ptr<Login> login;
+        DataChunk key;
+        ABC_CHECK_NEW(base16Decode(key, szKey));
+        ABC_CHECK_NEW(cacheLoginKey(login, szUserName, key));
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_OtpKeyGet(const char *szUserName,
                       char **pszKey,
                       tABC_Error *pError)
@@ -348,9 +534,9 @@ tABC_CC ABC_OtpKeyGet(const char *szUserName,
     ABC_CHECK_NULL(pszKey);
 
     {
-        ABC_GET_LOBBY();
+        ABC_GET_STORE();
 
-        const OtpKey *key = lobby->otpKey();
+        const OtpKey *key = store->otpKey();
         ABC_CHECK_ASSERT(key, ABC_CC_NULLPtr, "No OTP key in account.");
         *pszKey = stringCopy(key->encodeBase32());
     }
@@ -367,11 +553,11 @@ tABC_CC ABC_OtpKeySet(const char *szUserName,
     ABC_CHECK_NULL(szKey);
 
     {
-        ABC_GET_LOBBY();
+        ABC_GET_STORE();
 
         OtpKey key;
         ABC_CHECK_NEW(key.decodeBase32(szKey));
-        ABC_CHECK_NEW(lobby->otpKeySet(key));
+        ABC_CHECK_NEW(store->otpKeySet(key));
     }
 
 exit:
@@ -384,8 +570,8 @@ tABC_CC ABC_OtpKeyRemove(const char *szUserName,
     ABC_PROLOG();
 
     {
-        ABC_GET_LOBBY();
-        ABC_CHECK_NEW(lobby->otpKeyRemove());
+        ABC_GET_STORE();
+        ABC_CHECK_NEW(store->otpKeyRemove());
     }
 
 exit:
@@ -470,8 +656,8 @@ tABC_CC ABC_OtpResetSet(const char *szUserName,
     ABC_CHECK_NULL(szToken);
 
     {
-        ABC_GET_LOBBY();
-        ABC_CHECK_NEW(otpResetSet(*lobby, szToken));
+        ABC_GET_STORE();
+        ABC_CHECK_NEW(otpResetSet(*store, szToken));
     }
 
 exit:
@@ -497,6 +683,7 @@ tABC_CC ABC_BitidParseUri(const char *szUserName,
                           const char *szPassword,
                           const char *szBitidURI,
                           char **pszDomain,
+                          char **pszBitidCallbackURI,
                           tABC_Error *pError)
 {
     ABC_PROLOG();
@@ -506,6 +693,8 @@ tABC_CC ABC_BitidParseUri(const char *szUserName,
     {
         Uri callback;
         ABC_CHECK_NEW(bitidCallback(callback, trimSpace(szBitidURI)));
+        *pszBitidCallbackURI = stringCopy(callback.encode());
+
         callback.pathSet("");
         *pszDomain = stringCopy(callback.encode());
     }
@@ -525,6 +714,33 @@ tABC_CC ABC_BitidLogin(const char *szUserName,
     {
         ABC_GET_LOGIN();
         ABC_CHECK_NEW(bitidLogin(login->rootKey(), trimSpace(szBitidURI)));
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_BitidLoginMeta(const char *szUserName,
+                           const char *szPassword,
+                           const char *szBitidURI,
+                           const char *szWalletUUID,
+                           const char *szBitIDKYCURI,
+                           tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szBitidURI);
+    ABC_CHECK_NULL(szWalletUUID);
+
+    {
+        ABC_GET_LOGIN();
+        ABC_GET_WALLET();
+
+        std::string kycUri;
+        if (szBitIDKYCURI)
+            kycUri = szBitIDKYCURI;
+
+        ABC_CHECK_NEW(bitidLogin(login->rootKey(), trimSpace(szBitidURI), 0,
+                                 wallet.get(), kycUri));
     }
 
 exit:
@@ -1210,10 +1426,10 @@ tABC_CC ABC_GetRecoveryQuestions(const char *szUserName,
     ABC_CHECK_NULL(pszQuestions);
 
     {
-        ABC_GET_LOBBY();
+        ABC_GET_STORE();
 
         std::string questions;
-        ABC_CHECK_NEW(loginRecoveryQuestions(questions, *lobby));
+        ABC_CHECK_NEW(loginRecoveryQuestions(questions, *store));
         *pszQuestions = stringCopy(questions);
     }
 
@@ -2259,6 +2475,10 @@ tABC_CC ABC_ParseUri(char *szURI,
                              stringCopy(uri.message);
         pResult->szCategory = uri.category.empty() ? nullptr :
                               stringCopy(uri.category);
+        pResult->bitidPaymentAddress = uri.bitidPaymentAddress;
+        pResult->bitidKYCProvider = uri.bitidKycProvider;
+        pResult->bitidKYCRequest = uri.bitidKycRequest;
+
         pResult->szRet = uri.ret.empty() ? nullptr : stringCopy(uri.ret);
         *ppResult = pResult;
     }
@@ -2341,7 +2561,7 @@ tABC_CC ABC_AccountSyncExists(const char *szUserName,
         std::string fixed;
         AccountPaths paths;
 
-        *pResult = Lobby::fixUsername(fixed, szUserName) &&
+        *pResult = LoginStore::fixUsername(fixed, szUserName) &&
                    gContext->paths.accountDir(paths, fixed) &&
                    fileExists(paths.syncDir());
     }
@@ -2433,16 +2653,16 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         generalUpdate().log();
 
         // Has the password changed?
-        LoginPackage loginPackage;
-        JsonPtr rootKeyBox;
-        AuthError authError;
-        auto s = loginServerGetLoginPackage(account->login.lobby,
-                                            account->login.authKey(),
-                                            DataChunk(),
-                                            loginPackage, rootKeyBox,
-                                            authError);
-
-        if (s.value() == ABC_CC_InvalidOTP)
+        AuthJson authJson;
+        LoginJson loginJson;
+        ABC_CHECK_NEW(authJson.loginSet(account->login));
+        auto s = loginServerLogin(loginJson, authJson);
+        if (s)
+        {
+            ABC_CHECK_NEW(loginJson.save(account->login.paths,
+                                         account->login.dataKey()));
+        }
+        else if (s.value() == ABC_CC_InvalidOTP)
         {
             ABC_RET_ERROR(s.value(), s.message().c_str());
         }
@@ -2472,9 +2692,19 @@ tABC_CC ABC_DataSyncWallet(const char *szUserName,
 
         airbitzFeeAutoSend(*wallet).log();
 
-        bool dirty = false;
-        ABC_CHECK_NEW(wallet->sync(dirty));
-        *pbDirty = dirty;
+        bool isArchived = false;
+        ABC_CHECK_NEW(wallet->account.wallets.archived(isArchived, szWalletUUID));
+
+        // If wallet has been fully loaded in the past and is now archived, do not launch the
+        // watchers.
+        if (wallet->cache.addressCheckDoneGet() && isArchived)
+            ABC_DebugLog("Skipping ABC_DataSyncWallet for archived and address checked wallet");
+        else
+        {
+            bool dirty = false;
+            ABC_CHECK_NEW(wallet->sync(dirty));
+            *pbDirty = dirty;
+        }
     }
 
 exit:
@@ -2535,7 +2765,16 @@ tABC_CC ABC_WatcherConnect(const char *szWalletUUID, tABC_Error *pError)
 
     {
         ABC_GET_WALLET_N();
-        ABC_CHECK_NEW(bridgeWatcherConnect(*wallet));
+
+        bool isArchived = false;
+        ABC_CHECK_NEW(wallet->account.wallets.archived(isArchived, szWalletUUID));
+
+        // If wallet has been fully loaded in the past and is now archived, do not launch the
+        // watchers.
+        if (wallet->cache.addressCheckDoneGet() && isArchived)
+            ABC_DebugLog("Skipping ABC_WatcherConnect for archived and address checked wallet");
+        else
+            ABC_CHECK_NEW(bridgeWatcherConnect(*wallet));
     }
 
 exit:

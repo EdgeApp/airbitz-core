@@ -134,6 +134,8 @@ bridgeOnComplete(WatcherInfo *watcherInfo, const std::string &address,
         info.szWalletUUID = wallet.id().c_str();
         info.szTxID = nullptr;
         info.sweepSatoshi = 0;
+        wallet.cache.addressCheckDoneSet();
+        wallet.cache.save();
         fCallback(&info);
     }
 }

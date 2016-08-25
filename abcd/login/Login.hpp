@@ -8,6 +8,7 @@
 #ifndef ABCD_LOGIN_LOGIN_HPP
 #define ABCD_LOGIN_LOGIN_HPP
 
+#include "server/RepoJson.hpp"
 #include "../AccountPaths.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
@@ -16,9 +17,11 @@
 
 namespace abcd {
 
+class JsonArray;
 class JsonBox;
-class Lobby;
+class LoginStore;
 struct LoginPackage;
+class LoginJson;
 
 /**
  * Holds the keys for a logged-in account.
@@ -27,16 +30,20 @@ class Login:
     public std::enable_shared_from_this<Login>
 {
 public:
-    Lobby &lobby;
+    LoginStore &store;
     AccountPaths paths;
 
     static Status
-    create(std::shared_ptr<Login> &result, Lobby &lobby, DataSlice dataKey,
-           const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskBased);
+    createOffline(std::shared_ptr<Login> &result,
+                  LoginStore &store, DataSlice dataKey);
 
     static Status
-    createNew(std::shared_ptr<Login> &result, Lobby &lobby,
-              const char *password);
+    createOnline(std::shared_ptr<Login> &result,
+                 LoginStore &store, DataSlice dataKey, LoginJson loginJson);
+
+    static Status
+    createNew(std::shared_ptr<Login> &result,
+              LoginStore &store, const char *password);
 
     /**
      * Obtains the root key for the account.
@@ -45,49 +52,51 @@ public:
     rootKey() const { return rootKey_; }
 
     /**
-     * Obtains the master key for the account.
+     * Obtains the encryption key for the login data.
      */
     DataSlice
     dataKey() const { return dataKey_; }
 
     /**
-     * Obtains the data-sync key for the account.
-     */
-    std::string
-    syncKey() const;
-
-    /**
      * Loads the server authentication key (LP1) for the account.
      */
     DataChunk
-    authKey() const;
+    passwordAuth() const;
 
+    /**
+     * Used when changing the password for the login.
+     */
     Status
-    authKeySet(DataSlice authKey);
+    passwordAuthSet(DataSlice passwordAuth);
+
+    /**
+     * Finds (or creates) a repo with a particular type.
+     */
+    Status
+    repoFind(RepoInfo &result, const std::string &type, bool create=true);
 
 private:
     mutable std::mutex mutex_;
-    const std::shared_ptr<Lobby> parent_;
+    const std::shared_ptr<LoginStore> parent_;
 
     // Keys:
     const DataChunk dataKey_;
     DataChunk rootKey_;
-    DataChunk syncKey_;
-    DataChunk authKey_;
+    DataChunk passwordAuth_;
 
-    Login(Lobby &lobby, DataSlice dataKey);
+    Login(LoginStore &store, DataSlice dataKey);
 
     Status
     createNew(const char *password);
 
     /**
      * Unpacks the keys from the loginPackage.
-     * The server may return a rootKeyBox along with the loginPackage,
-     * so that should be passed in as well.
-     * @param diskBased true if loginPackage was loaded from disk.
      */
     Status
-    loadKeys(const LoginPackage &loginPackage, JsonBox rootKeyBox, bool diskBased);
+    loadOffline();
+
+    Status
+    loadOnline(LoginJson loginJson);
 
     Status
     rootKeyUpgrade();

@@ -62,11 +62,11 @@ public:
          const std::string body="");
 
     /**
-     * Performs an HTTP PUT operation.
+     * Performs an arbitrary HTTP operation.
      */
     Status
-    put(HttpReply &result, const std::string &url,
-        const std::string body="");
+    request(HttpReply &result, const std::string &url,
+            const char *method, const std::string body="");
 
 protected:
     Status status_;

@@ -72,7 +72,8 @@ ExchangeCache::update(Currencies currencies, const ExchangeSources &sources)
 
                 std::string code;
                 ABC_CHECK(currencyCode(code, rate.first));
-                ABC_DebugLevel(1, "ExchangeCache::update() %s %s %.2f", source.c_str(), code.c_str(), rate.second);
+                ABC_DebugLevel(1, "ExchangeCache::update() %s %s %.2f", source.c_str(),
+                               code.c_str(), rate.second);
             }
         }
 

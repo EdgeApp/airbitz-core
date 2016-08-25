@@ -6,11 +6,11 @@
  */
 
 #include "LoginPin.hpp"
-#include "Lobby.hpp"
 #include "Login.hpp"
 #include "LoginPackages.hpp"
+#include "LoginStore.hpp"
+#include "server/LoginServer.hpp"
 #include "../Context.hpp"
-#include "../auth/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
 #include "../json/JsonBox.hpp"
@@ -44,7 +44,7 @@ Status
 loginPinExists(bool &result, const std::string &username)
 {
     std::string fixed;
-    ABC_CHECK(Lobby::fixUsername(fixed, username));
+    ABC_CHECK(LoginStore::fixUsername(fixed, username));
     AccountPaths paths;
     ABC_CHECK(gContext->paths.accountDir(paths, fixed));
 
@@ -54,10 +54,10 @@ loginPinExists(bool &result, const std::string &username)
 }
 
 Status
-loginPinDelete(Lobby &lobby)
+loginPinDelete(LoginStore &store)
 {
     AccountPaths paths;
-    if (lobby.paths(paths))
+    if (store.paths(paths))
         ABC_CHECK(fileDelete(paths.pinPackagePath()));
 
     return Status();
@@ -65,20 +65,18 @@ loginPinDelete(Lobby &lobby)
 
 Status
 loginPin(std::shared_ptr<Login> &result,
-         Lobby &lobby, const std::string &pin,
+         LoginStore &store, const std::string &pin,
          AuthError &authError)
 {
-    std::string LPIN = lobby.username() + pin;
+    std::string LPIN = store.username() + pin;
 
     AccountPaths paths;
-    ABC_CHECK(lobby.paths(paths));
+    ABC_CHECK(store.paths(paths));
 
     // Load the packages:
     CarePackage carePackage;
-    LoginPackage loginPackage;
     PinLocal local;
     ABC_CHECK(carePackage.load(paths.carePackagePath()));
-    ABC_CHECK(loginPackage.load(paths.loginPackagePath()));
     ABC_CHECK(local.load(paths.pinPackagePath()));
     DataChunk pinAuthId;
     ABC_CHECK(local.pinAuthIdDecode(pinAuthId));
@@ -96,23 +94,19 @@ loginPin(std::shared_ptr<Login> &result,
     DataChunk pinKeyKey;        // Unlocks pinKey
     DataChunk pinKey;           // Unlocks dataKey
     DataChunk dataKey;          // Unlocks the account
-    ABC_CHECK(carePackage.snrp2().hash(pinKeyKey, LPIN));
+    ABC_CHECK(carePackage.passwordKeySnrp().hash(pinKeyKey, LPIN));
     ABC_CHECK(pinKeyBox.decrypt(pinKey, pinKeyKey));
     ABC_CHECK(local.pinBox().decrypt(dataKey, pinKey));
 
     // Create the Login object:
-    std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, lobby, dataKey,
-                            loginPackage, JsonPtr(), true));
-
-    result = std::move(out);
+    ABC_CHECK(Login::createOffline(result, store, dataKey));
     return Status();
 }
 
 Status
 loginPinSetup(Login &login, const std::string &pin, time_t expires)
 {
-    std::string LPIN = login.lobby.username() + pin;
+    std::string LPIN = login.store.username() + pin;
 
     // Get login stuff:
     CarePackage carePackage;
@@ -134,7 +128,7 @@ loginPinSetup(Login &login, const std::string &pin, time_t expires)
     // Put pinKey in a box:
     DataChunk pinKeyKey;        // Unlocks pinKey
     JsonBox pinKeyBox;          // Holds pinKey
-    ABC_CHECK(carePackage.snrp2().hash(pinKeyKey, LPIN));
+    ABC_CHECK(carePackage.passwordKeySnrp().hash(pinKeyKey, LPIN));
     ABC_CHECK(pinKeyBox.encrypt(pinKey, pinKeyKey));
 
     // Set up the server:

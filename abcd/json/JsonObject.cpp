@@ -32,14 +32,6 @@ JsonObject::ok()
     return Status();
 }
 
-Status
-JsonObject::setValue(const char *key, json_t *value)
-{
-    if (json_object_set_new(root_, key, value) < 0)
-        return ABC_ERROR(ABC_CC_JSONError, "Cannot set " + std::string(key));
-    return Status();
-}
-
 #define IMPLEMENT_HAS(test) \
     json_t *value = json_object_get(root_, key); \
     if (!value || !(test)) \
@@ -98,6 +90,50 @@ json_int_t
 JsonObject::getInteger(const char *key, json_int_t fallback) const
 {
     IMPLEMENT_GET(integer)
+}
+
+Status
+JsonObject::set(const char *key, JsonPtr value)
+{
+    return setRaw(key, json_incref(value.get()));
+}
+
+Status
+JsonObject::set(const char *key, const char *value)
+{
+    return setRaw(key, json_string(value));
+}
+
+Status
+JsonObject::set(const char *key, const std::string &value)
+{
+    return setRaw(key, json_string(value.c_str()));
+}
+
+Status
+JsonObject::set(const char *key, double value)
+{
+    return setRaw(key, json_real(value));
+}
+
+Status
+JsonObject::set(const char *key, bool value)
+{
+    return setRaw(key, json_boolean(value));
+}
+
+Status
+JsonObject::set(const char *key, json_int_t value)
+{
+    return setRaw(key, json_integer(value));
+}
+
+Status
+JsonObject::setRaw(const char *key, json_t *value)
+{
+    if (json_object_set_new(root_, key, value) < 0)
+        return ABC_ERROR(ABC_CC_JSONError, "Cannot set " + std::string(key));
+    return Status();
 }
 
 } // namespace abcd

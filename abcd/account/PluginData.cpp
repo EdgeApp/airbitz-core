@@ -42,7 +42,7 @@ static std::string
 pluginDirectory(const Account &account, const std::string &plugin)
 {
     return pluginsDirectory(account) +
-           cryptoFilename(account.login.dataKey(), plugin) + "/";
+           cryptoFilename(account.dataKey(), plugin) + "/";
 }
 
 static std::string
@@ -50,7 +50,7 @@ keyFilename(const Account &account, const std::string &plugin,
             const std::string &key)
 {
     return pluginDirectory(account, plugin) +
-           cryptoFilename(account.login.dataKey(), key) + ".json";
+           cryptoFilename(account.dataKey(), key) + ".json";
 }
 
 std::list<std::string>
@@ -69,7 +69,7 @@ pluginDataList(const Account &account)
         auto path = outer + de->d_name + '/' + nameFilename;
         PluginNameJson json;
         if (de->d_name[0] != '.'
-                && json.load(path, account.login.dataKey())
+                && json.load(path, account.dataKey())
                 && json.nameOk())
             out.push_back(json.name());
     }
@@ -93,7 +93,7 @@ pluginDataKeys(const Account &account, const std::string &plugin)
     {
         PluginDataFile json;
         if (fileIsJson(de->d_name)
-                && json.load(outer + de->d_name, account.login.dataKey())
+                && json.load(outer + de->d_name, account.dataKey())
                 && json.keyOk())
             out.push_back(json.key());
     }
@@ -108,7 +108,7 @@ pluginDataGet(const Account &account, const std::string &plugin,
 {
     PluginDataFile json;
     ABC_CHECK(json.load(keyFilename(account, plugin, key),
-                        account.login.dataKey()));
+                        account.dataKey()));
     ABC_CHECK(json.keyOk());
     ABC_CHECK(json.dataOk());
 
@@ -131,14 +131,14 @@ pluginDataSet(const Account &account, const std::string &plugin,
     {
         PluginNameJson json;
         ABC_CHECK(json.nameSet(plugin));
-        json.save(namePath, account.login.dataKey());
+        json.save(namePath, account.dataKey());
     }
 
     PluginDataFile json;
     json.keySet(key);
     json.dataSet(data);
     ABC_CHECK(json.save(keyFilename(account, plugin, key),
-                        account.login.dataKey()));
+                        account.dataKey()));
 
     return Status();
 }

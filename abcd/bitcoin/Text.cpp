@@ -121,6 +121,15 @@ parseUri(ParsedUri &result, const std::string &text)
         else if ("bitid" == uri.scheme())
         {
             result.bitidUri = text;
+
+            // Check for metadata requests:
+            const auto s = uri.queryDecode()["s"];
+            if (std::string::npos != s.find("a"))
+                result.bitidPaymentAddress = true;
+            if (std::string::npos != s.find("i1"))
+                result.bitidKycProvider = true;
+            if (std::string::npos != s.find("i2"))
+                result.bitidKycRequest = true;
         }
         else
         {

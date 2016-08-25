@@ -17,8 +17,8 @@
 
 namespace abcd {
 
-class Lobby;
 class Login;
+class LoginStore;
 
 /**
  * Reads the OTP configuration from the server.
@@ -29,8 +29,8 @@ otpAuthGet(Login &login, bool &enabled, long &timeout);
 /**
  * Sets up OTP authentication on the server.
  *
- * @param lobby The lobby contains the username and OTP key.
- * If the lobby has no OTP key, this function will create one.
+ * @param store The store contains the username and OTP key.
+ * If the store has no OTP key, this function will create one.
  * @param timeout Reset time, in seconds.
  */
 Status
@@ -54,7 +54,7 @@ otpResetGet(std::list<std::string> &result,
  * which will disable the OTP authentication requirement when it expires.
  */
 Status
-otpResetSet(Lobby &lobby, const std::string &token);
+otpResetSet(LoginStore &store, const std::string &token);
 
 /**
  * Cancels an OTP reset timer.

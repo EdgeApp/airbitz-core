@@ -15,6 +15,7 @@
 namespace abcd {
 
 class Uri;
+class Wallet;
 
 /**
  * Extracts the callback URI from a bitid URI.
@@ -43,7 +44,8 @@ bitidSign(DataSlice rootKey, const std::string &message,
  * Performs a BitID login to the specified URI.
  */
 Status
-bitidLogin(DataSlice rootKey, const std::string &bitidUri, uint32_t index=0);
+bitidLogin(DataSlice rootKey, const std::string &bitidUri, uint32_t index=0,
+           Wallet *wallet=nullptr, const std::string &kycUri="");
 
 } // namespace abcd
 

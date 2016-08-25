@@ -21,9 +21,9 @@
 
 namespace abcd {
 
-class Lobby;
-class Login;
 class Account;
+class Login;
+class LoginStore;
 class Wallet;
 struct AuthError;
 
@@ -34,11 +34,11 @@ void
 cacheLogout();
 
 /**
- * Loads the lobby for the given user into the cache.
+ * Loads the store for the given user into the cache.
  * If the username is null, the function returns whatever is cached.
  */
 Status
-cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName);
+cacheLoginStore(std::shared_ptr<LoginStore> &result, const char *szUserName);
 
 /**
  * Creates a new account and adds it to the cache.
@@ -64,12 +64,28 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
                    AuthError &authError);
 
 /**
+ * Logs the user in with their v2 recovery answers, if necessary.
+ */
+Status
+cacheLoginRecovery2(std::shared_ptr<Login> &result,
+                    const char *szUserName, DataSlice recovery2Key,
+                    const std::list<std::string> &answers,
+                    AuthError &authError);
+
+/**
  * Logs the user in with their PIN, if necessary.
  */
 Status
 cacheLoginPin(std::shared_ptr<Login> &result,
               const char *szUserName, const std::string pin,
               AuthError &authError);
+
+/**
+ * Logs the user in with their decryption key, if necessary.
+ */
+Status
+cacheLoginKey(std::shared_ptr<Login> &result,
+              const char *szUserName, DataSlice key);
 
 /**
  * Retrieves the cached login, assuming the username still matches.

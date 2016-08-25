@@ -18,7 +18,7 @@
 namespace abcd {
 
 class Login;
-class Lobby;
+class LoginStore;
 struct AuthError;
 
 /**
@@ -26,7 +26,7 @@ struct AuthError;
  */
 Status
 loginPassword(std::shared_ptr<Login> &result,
-              Lobby &lobby, const std::string &password,
+              LoginStore &store, const std::string &password,
               AuthError &authError);
 
 /**

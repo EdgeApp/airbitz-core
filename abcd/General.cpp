@@ -15,10 +15,10 @@
 
 #include "General.hpp"
 #include "Context.hpp"
-#include "auth/LoginServer.hpp"
 #include "bitcoin/Testnet.hpp"
 #include "json/JsonObject.hpp"
 #include "json/JsonArray.hpp"
+#include "login/server/LoginServer.hpp"
 #include "util/FileIO.hpp"
 #include "util/Debug.hpp"
 #include <time.h>
@@ -61,6 +61,11 @@ struct BitcoinFeesJson:
     ABC_JSON_INTEGER(confirmFees3, "confirmFees3", 51098)
     ABC_JSON_INTEGER(confirmFees4, "confirmFees4", 46001)
     ABC_JSON_INTEGER(confirmFees5, "confirmFees5", 31002)
+    ABC_JSON_INTEGER(confirmFees6, "confirmFees6", 26002)
+    ABC_JSON_INTEGER(highFeeBlock, "highFeeBlock", 1)
+    ABC_JSON_INTEGER(standardFeeBlockHigh, "standardFeeBlockHigh", 2)
+    ABC_JSON_INTEGER(standardFeeBlockLow, "standardFeeBlockLow", 3)
+    ABC_JSON_INTEGER(lowFeeBlock, "lowFeeBlock", 4)
     ABC_JSON_NUMBER(targetFeePercentage, "targetFeePercentage", 0.25)
 };
 
@@ -73,6 +78,7 @@ struct EstimateFeesJson:
     ABC_JSON_INTEGER(confirmFees3, "confirmFees3", 0)
     ABC_JSON_INTEGER(confirmFees4, "confirmFees4", 0)
     ABC_JSON_INTEGER(confirmFees5, "confirmFees5", 0)
+    ABC_JSON_INTEGER(confirmFees6, "confirmFees6", 0)
 };
 
 
@@ -207,30 +213,40 @@ generalBitcoinFeeInfo()
 
     BitcoinFeeInfo out;
 
-    out.confirmFees1 = estimateFeesJson.confirmFees1() ?
-                       estimateFeesJson.confirmFees1() : feeJson.confirmFees1();
-    out.confirmFees2 = estimateFeesJson.confirmFees2() ?
-                       estimateFeesJson.confirmFees2() : feeJson.confirmFees2();
-    out.confirmFees3 = estimateFeesJson.confirmFees3() ?
-                       estimateFeesJson.confirmFees3() : feeJson.confirmFees3();
-    out.confirmFees4 = estimateFeesJson.confirmFees4() ?
-                       estimateFeesJson.confirmFees4() : feeJson.confirmFees4();
-    out.confirmFees5 = estimateFeesJson.confirmFees5() ?
-                       estimateFeesJson.confirmFees5() : feeJson.confirmFees5();
-    out.targetFeePercentage = feeJson.targetFeePercentage();
+    out.confirmFees[1] = estimateFeesJson.confirmFees1() ?
+                         estimateFeesJson.confirmFees1() : feeJson.confirmFees1();
+    out.confirmFees[2] = estimateFeesJson.confirmFees2() ?
+                         estimateFeesJson.confirmFees2() : feeJson.confirmFees2();
+    out.confirmFees[3] = estimateFeesJson.confirmFees3() ?
+                         estimateFeesJson.confirmFees3() : feeJson.confirmFees3();
+    out.confirmFees[4] = estimateFeesJson.confirmFees4() ?
+                         estimateFeesJson.confirmFees4() : feeJson.confirmFees4();
+    out.confirmFees[5] = estimateFeesJson.confirmFees5() ?
+                         estimateFeesJson.confirmFees5() : feeJson.confirmFees5();
+    out.confirmFees[6] = estimateFeesJson.confirmFees6() ?
+                         estimateFeesJson.confirmFees6() : feeJson.confirmFees6();
+    out.lowFeeBlock             = feeJson.lowFeeBlock();
+    out.standardFeeBlockLow     = feeJson.standardFeeBlockLow();
+    out.standardFeeBlockHigh    = feeJson.standardFeeBlockHigh();
+    out.highFeeBlock            = feeJson.highFeeBlock();
+    out.targetFeePercentage     = feeJson.targetFeePercentage();
 
     // Fix any fees that contradict. ie. confirmFees1 < confirmFees2
-    if (out.confirmFees2 > out.confirmFees1)
-        out.confirmFees2 = out.confirmFees1;
-    if (out.confirmFees3 > out.confirmFees2)
-        out.confirmFees3 = out.confirmFees2;
-    if (out.confirmFees4 > out.confirmFees3)
-        out.confirmFees4 = out.confirmFees3;
-    if (out.confirmFees5 > out.confirmFees4)
-        out.confirmFees5 = out.confirmFees4;
+    if (out.confirmFees[2] > out.confirmFees[1])
+        out.confirmFees[2] = out.confirmFees[1];
+    if (out.confirmFees[3] > out.confirmFees[2])
+        out.confirmFees[3] = out.confirmFees[2];
+    if (out.confirmFees[4] > out.confirmFees[3])
+        out.confirmFees[4] = out.confirmFees[3];
+    if (out.confirmFees[5] > out.confirmFees[4])
+        out.confirmFees[5] = out.confirmFees[4];
+    if (out.confirmFees[6] > out.confirmFees[5])
+        out.confirmFees[6] = out.confirmFees[5];
 
-    ABC_DebugLevel(1, "generalBitcoinFeeInfo: 1:%.0f, 2:%.0f, 3:%.0f, 4:%.0f, 5:%.0f",
-                   out.confirmFees1, out.confirmFees2, out.confirmFees3, out.confirmFees4, out.confirmFees5);
+    ABC_DebugLevel(1,
+                   "generalBitcoinFeeInfo: 1:%.0f, 2:%.0f, 3:%.0f, 4:%.0f, 5:%.0f, 6:%.0f",
+                   out.confirmFees[1], out.confirmFees[2], out.confirmFees[3], out.confirmFees[4],
+                   out.confirmFees[5], out.confirmFees[6]);
 
     return out;
 }

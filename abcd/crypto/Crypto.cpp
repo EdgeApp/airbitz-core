@@ -47,6 +47,13 @@ cryptoCompare(const uint8_t *a, const uint8_t *b, size_t size)
     return !out;
 }
 
+DataChunk
+hmacSha256(DataSlice data, DataSlice key)
+{
+    const auto hash = bc::hmac_sha256_hash(data, key);
+    return DataChunk(hash.begin(), hash.end());
+}
+
 std::string
 cryptoFilename(DataSlice key, const std::string &name)
 {

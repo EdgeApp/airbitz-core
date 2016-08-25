@@ -398,6 +398,11 @@ typedef struct sABC_ParsedUri
     char *szMessage;
     char *szCategory; // Airbitz extension
     char *szRet; // Airbitz extension
+
+    // BitID metadata requests:
+    bool bitidPaymentAddress;
+    bool bitidKYCProvider;
+    bool bitidKYCRequest;
 } tABC_ParsedUri;
 
 /**
@@ -501,8 +506,8 @@ typedef void (*tABC_BitCoin_Event_Callback)(const tABC_AsyncBitCoinInfo *pInfo);
  * @param szRootDir             The root directory for all files to be saved
  * @param szCaCertPath          CA Certificate Path
  * @param szApiKey              API Key for the AirBitz login servers
- * @param szHiddenBitsKey       Private key for Hiddenbits promotion
- * @param pData                 Pointer to data to be returned back in callback
+ * @param szHiddenBitsKey       XOR key for Hiddenbits encoding
+ * @param szAccountType         The type ID for the account repo
  * @param pSeedData             Pointer to data to seed the random number generator
  * @param seedLength            Length of the seed data
  * @param pError                A pointer to the location to store the error if there is one
@@ -510,6 +515,7 @@ typedef void (*tABC_BitCoin_Event_Callback)(const tABC_AsyncBitCoinInfo *pInfo);
 tABC_CC ABC_Initialize(const char               *szRootDir,
                        const char               *szCaCertPath,
                        const char               *szApiKey,
+                       const char               *szAccountType,
                        const char               *szHiddenBitsKey,
                        const unsigned char      *pSeedData,
                        unsigned int             seedLength,
@@ -693,6 +699,69 @@ tABC_CC ABC_PinCheck(const char *szUserName,
 tABC_CC ABC_ListAccounts(char **pszUserNames,
                          tABC_Error *pError);
 
+/**
+ * Attempts to look up the recovery2Key for a particular user.
+ */
+tABC_CC ABC_Recovery2Key(const char *szUserName,
+                         char **pszKey,
+                         tABC_Error *pError);
+
+/**
+ * Obtains the recovery v2 questions from the server.
+ * @param szKey the recovery key.
+ */
+tABC_CC ABC_Recovery2Questions(const char *szUserName,
+                               const char *szKey,
+                               char ***paszQuestions,
+                               unsigned int *pCount,
+                               tABC_Error *pError);
+
+/**
+ * Logs the user in using their recovery v2 key and answers.
+ */
+tABC_CC ABC_Recovery2Login(const char *szUserName,
+                           const char *szKey,
+                           char *aszAnswer1,
+                           char *aszAnswer2,
+                           char **pszOtpResetToken,
+                           char **pszOtpResetDate,
+                           tABC_Error *pError);
+
+/**
+ * Installs recovery 2 questions and answers into the given login.
+ * @param pszKey The recovery 2 key. This should be stored in a safe place.
+ */
+tABC_CC ABC_Recovery2Setup(const char *szUserName,
+                           const char *szPassword,
+                           char *aszQuestion1,
+                           char *aszAnswer1,
+                           char *aszQuestion2,
+                           char *aszAnswer2,
+                           char **pszKey,
+                           tABC_Error *pError);
+
+/**
+ * Removes the recovery v2 questions from the given login.
+ */
+tABC_CC ABC_Recovery2Delete(const char *szUserName,
+                            const char *szPassword,
+                            tABC_Error *pError);
+
+/**
+ * Obtains a hex-encoded decryption key that can be used for future logins.
+ */
+tABC_CC ABC_GetLoginKey(const char *szUserName,
+                        const char *szPassword,
+                        char **pszKey,
+                        tABC_Error *pError);
+
+/**
+ * Logs the user in with a decryption key.
+ */
+tABC_CC ABC_KeyLogin(const char *szUserName,
+                     const char *szKey,
+                     tABC_Error *pError);
+
 /* === Login data: === */
 tABC_CC ABC_ChangePassword(const char *szUserName,
                            const char *szPassword,
@@ -804,12 +873,20 @@ tABC_CC ABC_BitidParseUri(const char *szUserName,
                           const char *szPassword,
                           const char *szBitidURI,
                           char **pszDomain,
+                          char **pszBitidCallbackURI,
                           tABC_Error *pError);
 
 tABC_CC ABC_BitidLogin(const char *szUserName,
                        const char *szPassword,
                        const char *szBitidURI,
                        tABC_Error *pError);
+
+tABC_CC ABC_BitidLoginMeta(const char *szUserName,
+                           const char *szPassword,
+                           const char *szBitidURI,
+                           const char *szWalletUUID,
+                           const char *szBitIDKYCURI,
+                           tABC_Error *pError);
 
 /**
  * Signs a message using a BitID key.

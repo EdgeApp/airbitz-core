@@ -154,14 +154,14 @@ HttpRequest::post(HttpReply &result, const std::string &url,
 }
 
 Status
-HttpRequest::put(HttpReply &result, const std::string &url,
-                 const std::string body)
+HttpRequest::request(HttpReply &result, const std::string &url,
+                     const char *method, const std::string body)
 {
     if (!status_)
         return status_;
 
-    ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_CUSTOMREQUEST, "PUT"));
-    return post(result, url);
+    ABC_CHECK_CURL(curl_easy_setopt(handle_, CURLOPT_CUSTOMREQUEST, method));
+    return post(result, url, body);
 }
 
 Status

@@ -6,32 +6,34 @@
  */
 
 #include "LoginRecovery.hpp"
-#include "Lobby.hpp"
 #include "Login.hpp"
 #include "LoginPackages.hpp"
-#include "../auth/LoginServer.hpp"
+#include "LoginStore.hpp"
+#include "server/AuthJson.hpp"
+#include "server/LoginJson.hpp"
+#include "server/LoginServer.hpp"
 #include "../json/JsonBox.hpp"
 
 namespace abcd {
 
 Status
-loginRecoveryQuestions(std::string &result, Lobby &lobby)
+loginRecoveryQuestions(std::string &result, LoginStore &store)
 {
-    // Load CarePackage:
-    CarePackage carePackage;
-    ABC_CHECK(loginServerGetCarePackage(lobby, carePackage));
+    // Grab the login information from the server:
+    AuthJson authJson;
+    LoginJson loginJson;
+    ABC_CHECK(authJson.userIdSet(store));
+    ABC_CHECK(loginServerLogin(loginJson, authJson));
 
     // Verify that the questions exist:
-    if (!carePackage.questionBox())
+    if (!loginJson.questionBox())
         return ABC_ERROR(ABC_CC_NoRecoveryQuestions, "No recovery questions");
 
-    // Create questionKey (unlocks questions):
-    DataChunk questionKey;
-    ABC_CHECK(carePackage.snrp4().hash(questionKey, lobby.username()));
-
     // Decrypt:
+    DataChunk questionKey;
     DataChunk questions;
-    ABC_CHECK(carePackage.questionBox().decrypt(questions, questionKey));
+    ABC_CHECK(loginJson.questionKeySnrp().hash(questionKey, store.username()));
+    ABC_CHECK(loginJson.questionBox().decrypt(questions, questionKey));
 
     result = toString(questions);
     return Status();
@@ -39,44 +41,29 @@ loginRecoveryQuestions(std::string &result, Lobby &lobby)
 
 Status
 loginRecovery(std::shared_ptr<Login> &result,
-              Lobby &lobby, const std::string &recoveryAnswers,
+              LoginStore &store, const std::string &recoveryAnswers,
               AuthError &authError)
 {
-    std::string LRA = lobby.username() + recoveryAnswers;
+    const auto LRA = store.username() + recoveryAnswers;
 
-    // Get the CarePackage:
-    CarePackage carePackage;
-    ABC_CHECK(loginServerGetCarePackage(lobby, carePackage));
+    // Create recoveryAuth:
+    DataChunk recoveryAuth;
+    ABC_CHECK(usernameSnrp().hash(recoveryAuth, LRA));
 
-    // Make recoveryAuthKey (unlocks the server):
-    DataChunk recoveryAuthKey;
-    ABC_CHECK(usernameSnrp().hash(recoveryAuthKey, LRA));
+    // Grab the login information from the server:
+    AuthJson authJson;
+    LoginJson loginJson;
+    ABC_CHECK(authJson.recoverySet(store, recoveryAuth));
+    ABC_CHECK(loginServerLogin(loginJson, authJson, &authError));
 
-    // Get the LoginPackage:
-    LoginPackage loginPackage;
-    JsonPtr rootKeyBox;
-    ABC_CHECK(loginServerGetLoginPackage(lobby, DataSlice(), recoveryAuthKey,
-                                         loginPackage, rootKeyBox,
-                                         authError));
-
-    // Make recoveryKey (unlocks dataKey):
+    // Unlock recoveryBox:
     DataChunk recoveryKey;
-    ABC_CHECK(carePackage.snrp3().hash(recoveryKey, LRA));
-
-    // Decrypt dataKey (unlocks the account):
     DataChunk dataKey;
-    ABC_CHECK(loginPackage.recoveryBox().decrypt(dataKey, recoveryKey));
+    ABC_CHECK(loginJson.recoveryKeySnrp().hash(recoveryKey, LRA));
+    ABC_CHECK(loginJson.recoveryBox().decrypt(dataKey, recoveryKey));
 
     // Create the Login object:
-    std::shared_ptr<Login> out;
-    ABC_CHECK(Login::create(out, lobby, dataKey,
-                            loginPackage, rootKeyBox, false));
-
-    // Set up the on-disk login:
-    ABC_CHECK(carePackage.save(out->paths.carePackagePath()));
-    ABC_CHECK(loginPackage.save(out->paths.loginPackagePath()));
-
-    result = std::move(out);
+    ABC_CHECK(Login::createOnline(result, store, dataKey, loginJson));
     return Status();
 }
 
@@ -85,7 +72,7 @@ loginRecoverySet(Login &login,
                  const std::string &recoveryQuestions,
                  const std::string &recoveryAnswers)
 {
-    std::string LRA = login.lobby.username() + recoveryAnswers;
+    std::string LRA = login.store.username() + recoveryAnswers;
 
     // Load the packages:
     CarePackage carePackage;
@@ -94,18 +81,19 @@ loginRecoverySet(Login &login,
     ABC_CHECK(loginPackage.load(login.paths.loginPackagePath()));
 
     // Load the old keys:
-    DataChunk authKey = login.authKey();
+    DataChunk passwordAuth = login.passwordAuth();
 
     // Update scrypt parameters:
     JsonSnrp snrp;
     ABC_CHECK(snrp.create());
-    ABC_CHECK(carePackage.snrp3Set(snrp));
+    ABC_CHECK(carePackage.recoveryKeySnrpSet(snrp));
     ABC_CHECK(snrp.create());
-    ABC_CHECK(carePackage.snrp4Set(snrp));
+    ABC_CHECK(carePackage.questionKeySnrpSet(snrp));
 
     // Make questionKey (unlocks questions):
     DataChunk questionKey;
-    ABC_CHECK(carePackage.snrp4().hash(questionKey, login.lobby.username()));
+    ABC_CHECK(carePackage.questionKeySnrp().hash(questionKey,
+              login.store.username()));
 
     // Encrypt the questions:
     JsonBox questionBox;
@@ -114,24 +102,19 @@ loginRecoverySet(Login &login,
 
     // Make recoveryKey (unlocks dataKey):
     DataChunk recoveryKey;
-    ABC_CHECK(carePackage.snrp3().hash(recoveryKey, LRA));
+    ABC_CHECK(carePackage.recoveryKeySnrp().hash(recoveryKey, LRA));
 
     // Encrypt dataKey:
     JsonBox recoveryBox;
     ABC_CHECK(recoveryBox.encrypt(login.dataKey(), recoveryKey));
     ABC_CHECK(loginPackage.recoveryBoxSet(recoveryBox));
 
-    // Make recoveryAuthKey (unlocks the server):
-    DataChunk recoveryAuthKey;
-    ABC_CHECK(usernameSnrp().hash(recoveryAuthKey, LRA));
-
-    // Encrypt recoveryAuthKey (needed for atomic password updates):
-    JsonBox recoveryAuthBox;
-    ABC_CHECK(recoveryAuthBox.encrypt(recoveryAuthKey, login.dataKey()));
-    ABC_CHECK(loginPackage.ELRA1Set(recoveryAuthBox));
+    // Make recoveryAuth (unlocks the server):
+    DataChunk recoveryAuth;
+    ABC_CHECK(usernameSnrp().hash(recoveryAuth, LRA));
 
     // Change the server login:
-    ABC_CHECK(loginServerChangePassword(login, authKey, recoveryAuthKey,
+    ABC_CHECK(loginServerChangePassword(login, passwordAuth, recoveryAuth,
                                         carePackage, loginPackage));
 
     // Change the on-disk login:

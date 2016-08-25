@@ -7,12 +7,10 @@
 
 #include "../Command.hpp"
 #include "../../abcd/General.hpp"
-#include "../../abcd/auth/LoginServer.hpp"
 #include "../../abcd/login/LoginPassword.hpp"
 #include "../../abcd/login/LoginPin.hpp"
-#include "../../abcd/login/LoginRecovery.hpp"
+#include "../../abcd/login/server/LoginServer.hpp"
 #include "../../abcd/util/Util.hpp"
-#include "../../abcd/wallet/Wallet.hpp"
 #include <iostream>
 
 using namespace abcd;
@@ -27,22 +25,6 @@ COMMAND(InitLevel::login, ChangePassword, "change-password",
     ABC_CHECK_OLD(ABC_ChangePassword(session.username.c_str(),
                                      session.password.c_str(),
                                      newPassword, &error));
-
-    return Status();
-}
-
-COMMAND(InitLevel::lobby, ChangePasswordRecovery, "change-password-recovery",
-        " <ra> <new-pass>")
-{
-    if (argc != 2)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-    const auto answers = argv[0];
-    const auto newPassword = argv[1];
-
-    AuthError authError;
-    std::shared_ptr<Login> login;
-    ABC_CHECK(loginRecovery(login, *session.lobby, answers, authError));
-    ABC_CHECK(loginPasswordSet(*login, newPassword));
 
     return Status();
 }
@@ -70,20 +52,6 @@ COMMAND(InitLevel::context, CheckPassword, "check-password",
     return Status();
 }
 
-COMMAND(InitLevel::lobby, CheckRecoveryAnswers, "check-recovery-answers",
-        " <answers>")
-{
-    if (argc != 1)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-    const auto answers = argv[0];
-
-    AuthError authError;
-    std::shared_ptr<Login> login;
-    ABC_CHECK(loginRecovery(login, *session.lobby, answers, authError));
-
-    return Status();
-}
-
 COMMAND(InitLevel::context, GeneralUpdate, "general-update",
         "")
 {
@@ -95,41 +63,7 @@ COMMAND(InitLevel::context, GeneralUpdate, "general-update",
     return Status();
 }
 
-COMMAND(InitLevel::context, GetQuestionChoices, "get-question-choices",
-        "")
-{
-    if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-
-    AutoFree<tABC_QuestionChoices, ABC_FreeQuestionChoices> pChoices;
-    ABC_CHECK_OLD(ABC_GetQuestionChoices(&pChoices.get(), &error));
-
-    printf("Choices:\n");
-    for (unsigned i = 0; i < pChoices->numChoices; ++i)
-    {
-        printf(" %s (%s, %d)\n", pChoices->aChoices[i]->szQuestion,
-               pChoices->aChoices[i]->szCategory,
-               pChoices->aChoices[i]->minAnswerLength);
-    }
-
-    return Status();
-}
-
-COMMAND(InitLevel::lobby, GetQuestions, "get-questions",
-        "")
-{
-    if (argc != 0)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-
-    AutoString questions;
-    ABC_CHECK_OLD(ABC_GetRecoveryQuestions(session.username.c_str(),
-                                           &questions.get(), &error));
-    printf("Questions: %s\n", questions.get());
-
-    return Status();
-}
-
-COMMAND(InitLevel::lobby, PinLogin, "pin-login",
+COMMAND(InitLevel::store, PinLogin, "pin-login",
         " pin>")
 {
     if (argc != 1)
@@ -143,7 +77,7 @@ COMMAND(InitLevel::lobby, PinLogin, "pin-login",
     {
         AuthError authError;
         std::shared_ptr<Login> login;
-        auto s = loginPin(login, *session.lobby, pin, authError);
+        auto s = loginPin(login, *session.store, pin, authError);
         if (authError.pinWait)
             std::cout << "Please try again in " << authError.pinWait
                       << " seconds" << std::endl;

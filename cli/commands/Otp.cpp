@@ -7,19 +7,19 @@
 
 #include "../Command.hpp"
 #include "../../abcd/Context.hpp"
-#include "../../abcd/login/Lobby.hpp"
+#include "../../abcd/login/LoginStore.hpp"
 #include "../../abcd/login/Otp.hpp"
 #include <iostream>
 
 using namespace abcd;
 
-COMMAND(InitLevel::lobby, OtpKeyGet, "otp-key-get",
+COMMAND(InitLevel::store, OtpKeyGet, "otp-key-get",
         "")
 {
     if (argc != 0)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
-    const OtpKey *key = session.lobby->otpKey();
+    const OtpKey *key = session.store->otpKey();
     if (key)
         std::cout << "key: " << key->encodeBase32() << std::endl;
     else
@@ -28,7 +28,7 @@ COMMAND(InitLevel::lobby, OtpKeyGet, "otp-key-get",
     return Status();
 }
 
-COMMAND(InitLevel::lobby, OtpKeySet, "otp-key-set",
+COMMAND(InitLevel::store, OtpKeySet, "otp-key-set",
         " <key>")
 {
     if (argc != 1)
@@ -37,18 +37,18 @@ COMMAND(InitLevel::lobby, OtpKeySet, "otp-key-set",
 
     OtpKey key;
     ABC_CHECK(key.decodeBase32(rawKey));
-    ABC_CHECK(session.lobby->otpKeySet(key));
+    ABC_CHECK(session.store->otpKeySet(key));
 
     return Status();
 }
 
-COMMAND(InitLevel::lobby, OtpKeyRemove, "otp-key-remove",
+COMMAND(InitLevel::store, OtpKeyRemove, "otp-key-remove",
         "")
 {
     if (argc != 0)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
-    ABC_CHECK(session.lobby->otpKeyRemove());
+    ABC_CHECK(session.store->otpKeyRemove());
 
     return Status();
 }
@@ -89,7 +89,7 @@ COMMAND(InitLevel::login, OtpAuthRemove, "otp-auth-remove",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     ABC_CHECK(otpAuthRemove(*session.login));
-    ABC_CHECK(session.lobby->otpKeyRemove());
+    ABC_CHECK(session.store->otpKeyRemove());
 
     return Status();
 }

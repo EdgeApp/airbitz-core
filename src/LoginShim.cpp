@@ -7,11 +7,12 @@
 
 #include "LoginShim.hpp"
 #include "../abcd/account/Account.hpp"
-#include "../abcd/login/Lobby.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
+#include "../abcd/login/LoginRecovery2.hpp"
+#include "../abcd/login/LoginStore.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include <map>
 #include <mutex>
@@ -25,7 +26,7 @@ namespace abcd {
 // not when using the objects inside.
 // The cached objects must provide their own thread safety.
 static std::mutex gLoginMutex;
-static std::shared_ptr<Lobby> gLobbyCache;
+static std::shared_ptr<LoginStore> gLoginStoreCache;
 static std::shared_ptr<Login> gLoginCache;
 static std::shared_ptr<Account> gAccountCache;
 static std::map<std::string, std::shared_ptr<Wallet>> gWalletCache;
@@ -37,7 +38,7 @@ static std::map<std::string, std::shared_ptr<Wallet>> gWalletCache;
 static void
 cacheClear()
 {
-    gLobbyCache.reset();
+    gLoginStoreCache.reset();
     gLoginCache.reset();
     gAccountCache.reset();
     gWalletCache.clear();
@@ -51,28 +52,28 @@ cacheLogout()
 }
 
 Status
-cacheLobby(std::shared_ptr<Lobby> &result, const char *szUserName)
+cacheLoginStore(std::shared_ptr<LoginStore> &result, const char *szUserName)
 {
     std::lock_guard<std::mutex> lock(gLoginMutex);
 
     // Clear the cache if the username has changed:
-    if (szUserName && gLobbyCache)
+    if (szUserName && gLoginStoreCache)
     {
         std::string fixed;
-        ABC_CHECK(Lobby::fixUsername(fixed, szUserName));
-        if (gLobbyCache->username() != fixed)
+        ABC_CHECK(LoginStore::fixUsername(fixed, szUserName));
+        if (gLoginStoreCache->username() != fixed)
             cacheClear();
     }
 
-    // Load the new lobby, if necessary:
-    if (!gLobbyCache)
+    // Load the new store, if necessary:
+    if (!gLoginStoreCache)
     {
         if (!szUserName)
             return ABC_ERROR(ABC_CC_NULLPtr, "No user name");
-        ABC_CHECK(Lobby::create(gLobbyCache, szUserName));
+        ABC_CHECK(LoginStore::create(gLoginStoreCache, szUserName));
     }
 
-    result = gLobbyCache;
+    result = gLoginStoreCache;
     return Status();
 }
 
@@ -80,14 +81,14 @@ Status
 cacheLoginNew(std::shared_ptr<Login> &result,
               const char *szUserName, const char *szPassword)
 {
-    std::shared_ptr<Lobby> lobby;
-    ABC_CHECK(cacheLobby(lobby, szUserName));
+    std::shared_ptr<LoginStore> store;
+    ABC_CHECK(cacheLoginStore(store, szUserName));
 
     // Log the user in, if necessary:
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK(Login::createNew(gLoginCache, *lobby, szPassword));
+        ABC_CHECK(Login::createNew(gLoginCache, *store, szPassword));
     }
 
     result = gLoginCache;
@@ -99,14 +100,14 @@ cacheLoginPassword(std::shared_ptr<Login> &result,
                    const char *szUserName, const std::string &password,
                    AuthError &authError)
 {
-    std::shared_ptr<Lobby> lobby;
-    ABC_CHECK(cacheLobby(lobby, szUserName));
+    std::shared_ptr<LoginStore> store;
+    ABC_CHECK(cacheLoginStore(store, szUserName));
 
     // Log the user in, if necessary:
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK(loginPassword(gLoginCache, *lobby, password, authError));
+        ABC_CHECK(loginPassword(gLoginCache, *store, password, authError));
     }
 
     result = gLoginCache;
@@ -118,15 +119,36 @@ cacheLoginRecovery(std::shared_ptr<Login> &result,
                    const char *szUserName, const std::string &recoveryAnswers,
                    AuthError &authError)
 {
-    std::shared_ptr<Lobby> lobby;
-    ABC_CHECK(cacheLobby(lobby, szUserName));
+    std::shared_ptr<LoginStore> store;
+    ABC_CHECK(cacheLoginStore(store, szUserName));
 
     // Log the user in, if necessary:
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK(loginRecovery(gLoginCache, *lobby, recoveryAnswers,
+        ABC_CHECK(loginRecovery(gLoginCache, *store, recoveryAnswers,
                                 authError));
+    }
+
+    result = gLoginCache;
+    return Status();
+}
+
+Status
+cacheLoginRecovery2(std::shared_ptr<Login> &result,
+                    const char *szUserName, DataSlice recovery2Key,
+                    const std::list<std::string> &answers,
+                    AuthError &authError)
+{
+    std::shared_ptr<LoginStore> store;
+    ABC_CHECK(cacheLoginStore(store, szUserName));
+
+    // Log the user in, if necessary:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+    if (!gLoginCache)
+    {
+        ABC_CHECK(loginRecovery2(gLoginCache, *store, recovery2Key, answers,
+                                 authError));
     }
 
     result = gLoginCache;
@@ -138,14 +160,32 @@ cacheLoginPin(std::shared_ptr<Login> &result,
               const char *szUserName, const std::string pin,
               AuthError &authError)
 {
-    std::shared_ptr<Lobby> lobby;
-    ABC_CHECK(cacheLobby(lobby, szUserName));
+    std::shared_ptr<LoginStore> store;
+    ABC_CHECK(cacheLoginStore(store, szUserName));
 
     // Log the user in, if necessary:
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK(loginPin(gLoginCache, *lobby, pin, authError));
+        ABC_CHECK(loginPin(gLoginCache, *store, pin, authError));
+    }
+
+    result = gLoginCache;
+    return Status();
+}
+
+Status
+cacheLoginKey(std::shared_ptr<Login> &result,
+              const char *szUserName, DataSlice key)
+{
+    std::shared_ptr<LoginStore> store;
+    ABC_CHECK(cacheLoginStore(store, szUserName));
+
+    // Log the user in, if necessary:
+    std::lock_guard<std::mutex> lock(gLoginMutex);
+    if (!gLoginCache)
+    {
+        ABC_CHECK(Login::createOffline(gLoginCache, *store, key));
     }
 
     result = gLoginCache;
@@ -155,8 +195,8 @@ cacheLoginPin(std::shared_ptr<Login> &result,
 Status
 cacheLogin(std::shared_ptr<Login> &result, const char *szUserName)
 {
-    std::shared_ptr<Lobby> lobby;
-    ABC_CHECK(cacheLobby(lobby, szUserName));
+    std::shared_ptr<LoginStore> store;
+    ABC_CHECK(cacheLoginStore(store, szUserName));
 
     // Verify that the user is logged in:
     std::lock_guard<std::mutex> lock(gLoginMutex);

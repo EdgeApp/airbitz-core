@@ -12,9 +12,9 @@
 #include <memory>
 
 namespace abcd {
-class Lobby;
-class Login;
 class Account;
+class Login;
+class LoginStore;
 class Wallet;
 }
 
@@ -25,7 +25,7 @@ enum class InitLevel
 {
     none = 0,   // Core not initialized
     context,    // Core initialized, but nothing loaded
-    lobby,      // Username, but no login
+    store,      // Username, but no login
     login,      // Fully logged-in user
     account,    // Fully logged-in user with synced data
     wallet      // Full login plus wallet id
@@ -37,7 +37,7 @@ enum class InitLevel
  */
 struct Session
 {
-    std::shared_ptr<abcd::Lobby> lobby;
+    std::shared_ptr<abcd::LoginStore> store;
     std::shared_ptr<abcd::Login> login;
     std::shared_ptr<abcd::Account> account;
     std::shared_ptr<abcd::Wallet> wallet;

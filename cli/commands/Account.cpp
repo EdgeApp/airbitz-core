@@ -15,7 +15,7 @@
 
 using namespace abcd;
 
-COMMAND(InitLevel::lobby, AccountAvailable, "account-available",
+COMMAND(InitLevel::store, AccountAvailable, "account-available",
         "")
 {
     if (argc != 0)
@@ -50,7 +50,7 @@ COMMAND(InitLevel::account, AccountDecrypt, "account-decrypt",
     ABC_CHECK(box.load(session.account->dir() + filename));
 
     DataChunk data;
-    ABC_CHECK(box.decrypt(data, session.login->dataKey()));
+    ABC_CHECK(box.decrypt(data, session.account->dataKey()));
     std::cout << toString(data) << std::endl;
 
     return Status();
@@ -68,7 +68,7 @@ COMMAND(InitLevel::account, AccountEncrypt, "account-encrypt",
     ABC_CHECK(fileLoad(contents, session.account->dir() + filename));
 
     JsonBox box;
-    ABC_CHECK(box.encrypt(contents, session.login->dataKey()));
+    ABC_CHECK(box.encrypt(contents, session.account->dataKey()));
 
     std::cout << box.encode() << std::endl;
 

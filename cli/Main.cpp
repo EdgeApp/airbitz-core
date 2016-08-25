@@ -6,9 +6,10 @@
  */
 
 #include "Command.hpp"
-#include "../abcd/auth/LoginServer.hpp"
 #include "../abcd/json/JsonObject.hpp"
 #include "../abcd/login/Otp.hpp"
+#include "../abcd/login/server/LoginServer.hpp"
+#include "../abcd/login/server/RepoJson.hpp"
 #include "../abcd/util/Util.hpp"
 #include "../src/LoginShim.hpp"
 #include <iostream>
@@ -23,6 +24,7 @@ using namespace abcd;
 struct ConfigJson:
     public JsonObject
 {
+    ABC_JSON_STRING(accountType, "accountType", repoTypeAirbitzAccount)
     ABC_JSON_STRING(apiKey, "apiKey", nullptr)
     ABC_JSON_STRING(hiddenBitsKey, "hiddenBitsKey", DEFAULT_HIDDENBITSKEY)
     ABC_JSON_STRING(workingDir, "workingDir", nullptr)
@@ -57,12 +59,14 @@ static Status run(int argc, char *argv[])
     ABC_CHECK(json.apiKeyOk());
 
     // Parse out the command-line options:
+    std::string accountType = json.accountType();
     std::string workingDir;
     Session session;
     bool wantHelp = false;
 
     static const struct option long_options[] =
     {
+        {"account-type", required_argument, nullptr, 'a'},
         {"working-dir", required_argument, nullptr, 'd'},
         {"username",    required_argument, nullptr, 'u'},
         {"password",    required_argument, nullptr, 'p'},
@@ -72,10 +76,16 @@ static Status run(int argc, char *argv[])
     };
     opterr = 0;
     int c;
-    while (-1 != (c = getopt_long(argc, argv, "d:hu:p:w:", long_options, nullptr)))
+    while (-1 != (c = getopt_long(argc, argv,
+                                  "a:d:hu:p:w:",
+                                  long_options,
+                                  nullptr)))
     {
         switch (c)
         {
+        case 'a':
+            accountType = optarg;
+            break;
         case 'd':
             workingDir = optarg;
             break;
@@ -92,7 +102,9 @@ static Status run(int argc, char *argv[])
             session.uuid = optarg;
             break;
         case '?':
-            if (optopt == 'd')
+            if (optopt == 'a')
+                return ABC_ERROR(ABC_CC_Error, std::string("-a requires an account type"));
+            else if (optopt == 'd')
                 return ABC_ERROR(ABC_CC_Error, std::string("-d requires a working directory"));
             else if (optopt == 'p')
                 return ABC_ERROR(ABC_CC_Error, std::string("-p requires a password"));
@@ -149,12 +161,13 @@ static Status run(int argc, char *argv[])
         ABC_CHECK_OLD(ABC_Initialize(workingDir.c_str(),
                                      CA_CERT,
                                      json.apiKey(),
+                                     accountType.c_str(),
                                      json.hiddenBitsKey(),
                                      seed,
                                      sizeof(seed),
                                      &error));
     }
-    if (InitLevel::lobby <= command->level())
+    if (InitLevel::store <= command->level())
     {
         if (session.username.empty())
         {
@@ -165,7 +178,7 @@ static Status run(int argc, char *argv[])
                                  helpString(*command));
         }
 
-        ABC_CHECK(cacheLobby(session.lobby, session.username.c_str()));
+        ABC_CHECK(cacheLoginStore(session.store, session.username.c_str()));
     }
     if (InitLevel::login <= command->level())
     {
@@ -190,7 +203,7 @@ static Status run(int argc, char *argv[])
                           << std::endl;
             std::cout << "No OTP token, resetting account 2-factor auth."
                       << std::endl;
-            ABC_CHECK(otpResetSet(*session.lobby, authError.otpToken));
+            ABC_CHECK(otpResetSet(*session.store, authError.otpToken));
         }
         ABC_CHECK(s);
     }

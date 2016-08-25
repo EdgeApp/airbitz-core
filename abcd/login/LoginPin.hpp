@@ -19,7 +19,7 @@
 namespace abcd {
 
 class Login;
-class Lobby;
+class LoginStore;
 struct AuthError;
 
 /**
@@ -33,14 +33,14 @@ loginPinExists(bool &result, const std::string &username);
  * Deletes the local copy of the PIN-based login data.
  */
 Status
-loginPinDelete(Lobby &lobby);
+loginPinDelete(LoginStore &store);
 
 /**
  * Assuming a PIN-based login pagage exits, log the user in.
  */
 Status
 loginPin(std::shared_ptr<Login> &result,
-         Lobby &lobby, const std::string &pin,
+         LoginStore &store, const std::string &pin,
          AuthError &authError);
 
 /**
