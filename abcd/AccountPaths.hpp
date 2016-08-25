@@ -34,6 +34,7 @@ public:
     std::string pinPackagePath() const { return dir_ + "PinPackage.json"; }
     std::string otpKeyPath() const { return dir_ + "OtpKey.json"; }
     std::string recovery2KeyPath() const { return dir_ + "Recovery2Key.json"; }
+    std::string reposPath() const { return dir_ + "Repos.json"; }
     std::string rootKeyPath() const { return dir_ + "RootKey.json"; }
 
 private:

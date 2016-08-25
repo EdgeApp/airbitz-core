@@ -20,8 +20,11 @@ Context::~Context()
 }
 
 Context::Context(const std::string &rootDir, const std::string &certPath,
-                 const std::string &apiKey, const std::string &hiddenBitsKey):
+                 const std::string &apiKey,
+                 const std::string &accountType,
+                 const std::string &hiddenBitsKey):
     apiKey_(apiKey),
+    accountType_(accountType),
     hiddenBitsKey_(hiddenBitsKey),
     paths(rootDir, certPath),
     blockCache(*new BlockCache(paths.blockCachePath())),

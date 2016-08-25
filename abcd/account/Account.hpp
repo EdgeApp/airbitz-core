@@ -28,6 +28,7 @@ public:
     create(std::shared_ptr<Account> &result, Login &login);
 
     const std::string &dir() const { return dir_; }
+    const DataChunk &dataKey() const { return dataKey_; }
 
     /**
      * Syncs the account with the file server.
@@ -39,8 +40,10 @@ public:
 private:
     const std::shared_ptr<Login> parent_;
     const std::string dir_;
+    const DataChunk dataKey_;
+    const std::string syncKey_;
 
-    Account(Login &login);
+    Account(Login &login, DataSlice dataKey, const std::string &syncKey);
 
     Status
     load();

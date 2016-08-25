@@ -8,6 +8,7 @@
 #ifndef ABCD_LOGIN_LOGIN_HPP
 #define ABCD_LOGIN_LOGIN_HPP
 
+#include "server/RepoJson.hpp"
 #include "../AccountPaths.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
@@ -16,6 +17,7 @@
 
 namespace abcd {
 
+class JsonArray;
 class JsonBox;
 class LoginStore;
 struct LoginPackage;
@@ -50,16 +52,10 @@ public:
     rootKey() const { return rootKey_; }
 
     /**
-     * Obtains the master key for the account.
+     * Obtains the encryption key for the login data.
      */
     DataSlice
     dataKey() const { return dataKey_; }
-
-    /**
-     * Obtains the data-sync key for the account.
-     */
-    std::string
-    syncKey() const;
 
     /**
      * Loads the server authentication key (LP1) for the account.
@@ -73,6 +69,12 @@ public:
     Status
     passwordAuthSet(DataSlice passwordAuth);
 
+    /**
+     * Finds (or creates) a repo with a particular type.
+     */
+    Status
+    repoFind(RepoInfo &result, const std::string &type, bool create=true);
+
 private:
     mutable std::mutex mutex_;
     const std::shared_ptr<LoginStore> parent_;
@@ -80,7 +82,6 @@ private:
     // Keys:
     const DataChunk dataKey_;
     DataChunk rootKey_;
-    DataChunk syncKey_;
     DataChunk passwordAuth_;
 
     Login(LoginStore &store, DataSlice dataKey);

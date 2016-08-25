@@ -41,6 +41,8 @@ LoginJson::save(const AccountPaths &paths, DataSlice dataKey)
         ABC_CHECK(rootKeyBox().save(paths.rootKeyPath()));
     if (syncKeyBox().ok())
         ABC_CHECK(loginPackage.syncKeyBoxSet(syncKeyBox()));
+    if (repos().ok())
+        ABC_CHECK(repos().save(paths.reposPath()));
 
     // Keys to save unencrypted:
     DataChunk recovery2Key;

@@ -37,7 +37,7 @@ accountCategoriesSave(const Account &account,
 
     CategoriesJson json;
     ABC_CHECK(json.categoriesSet(arrayJson));
-    ABC_CHECK(json.save(categoriesPath(account), account.login.dataKey()));
+    ABC_CHECK(json.save(categoriesPath(account), account.dataKey()));
 
     return Status();
 }
@@ -48,7 +48,7 @@ accountCategoriesLoad(AccountCategories &result, const Account &account)
     AccountCategories out;
 
     CategoriesJson json;
-    ABC_CHECK(json.load(categoriesPath(account), account.login.dataKey()));
+    ABC_CHECK(json.load(categoriesPath(account), account.dataKey()));
 
     auto arrayJson = json.categories();
     size_t size = arrayJson.size();

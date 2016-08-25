@@ -101,7 +101,7 @@ accountSettingsLoad(const Account &account)
     tABC_AccountSettings *out = structAlloc<tABC_AccountSettings>();
 
     SettingsJson json;
-    json.load(settingsPath(account), account.login.dataKey()).log();
+    json.load(settingsPath(account), account.dataKey()).log();
 
     // Account:
     out->szPIN = json.pinOk() ? stringCopy(json.pin()) : nullptr;
@@ -184,7 +184,7 @@ accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings,
     ABC_CHECK(json.languageSet(pSettings->szLanguage));
     ABC_CHECK(json.numCurrencySet(pSettings->currencyNum));
 
-    ABC_CHECK(json.save(settingsPath(account), account.login.dataKey()));
+    ABC_CHECK(json.save(settingsPath(account), account.dataKey()));
 
     // Update the PIN package to match:
     ABC_CHECK(accountSettingsPinSync(account.login, pSettings, pinChanged));

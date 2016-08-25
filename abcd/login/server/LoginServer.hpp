@@ -25,6 +25,7 @@ class JsonPtr;
 class Login;
 class LoginJson;
 class LoginStore;
+class RepoJson;
 struct CarePackage;
 struct LoginPackage;
 
@@ -189,6 +190,12 @@ loginServerRecovery2Set(AuthJson authJson,
  */
 Status
 loginServerRecovery2Delete(AuthJson authJson);
+
+/**
+ * Attaches a new repo to the login.
+ */
+Status
+loginServerReposAdd(AuthJson authJson, RepoJson repoJson);
 
 } // namespace abcd
 

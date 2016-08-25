@@ -506,8 +506,8 @@ typedef void (*tABC_BitCoin_Event_Callback)(const tABC_AsyncBitCoinInfo *pInfo);
  * @param szRootDir             The root directory for all files to be saved
  * @param szCaCertPath          CA Certificate Path
  * @param szApiKey              API Key for the AirBitz login servers
- * @param szHiddenBitsKey       Private key for Hiddenbits promotion
- * @param pData                 Pointer to data to be returned back in callback
+ * @param szHiddenBitsKey       XOR key for Hiddenbits encoding
+ * @param szAccountType         The type ID for the account repo
  * @param pSeedData             Pointer to data to seed the random number generator
  * @param seedLength            Length of the seed data
  * @param pError                A pointer to the location to store the error if there is one
@@ -515,6 +515,7 @@ typedef void (*tABC_BitCoin_Event_Callback)(const tABC_AsyncBitCoinInfo *pInfo);
 tABC_CC ABC_Initialize(const char               *szRootDir,
                        const char               *szCaCertPath,
                        const char               *szApiKey,
+                       const char               *szAccountType,
                        const char               *szHiddenBitsKey,
                        const unsigned char      *pSeedData,
                        unsigned int             seedLength,
