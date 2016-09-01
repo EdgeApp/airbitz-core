@@ -32,6 +32,12 @@ build_android() {
     export CXXFLAGS="-isystem${install_dir}/include -fPIC -O2"
     export LDFLAGS="-L${install_dir}/lib"
 
+    if [ $1 = "arm" ]; then
+        export CFLAGS="$CFLAGS -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16"
+        export CXXFLAGS="$CXXFLAGS -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16"
+        export LDFLAGS="$LDFLAGS -march=armv7-a -Wl,--fix-cortex-a8"
+    fi
+
     export PATH=$build_dir/ndk/$1/bin:$PATH
     export PKG_CONFIG_PATH=$install_dir/lib/pkgconfig
 
