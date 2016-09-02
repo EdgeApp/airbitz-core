@@ -60,7 +60,7 @@ helpString(const Command &command)
     std::string out = "usage: abc-cli";
 
     if (InitLevel::context <= command.level())
-        out += " [-d <dir>]";
+        out += " [-d <dir>] [-a <account-type>]";
 
     if (InitLevel::store <= command.level())
         out += " [-u <username>]";
