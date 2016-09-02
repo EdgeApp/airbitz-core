@@ -205,6 +205,8 @@ Login::createNew(const char *password)
     ABC_CHECK(carePackage.save(paths.carePackagePath()));
     ABC_CHECK(loginPackage.save(paths.loginPackagePath()));
     ABC_CHECK(rootKeyUpgrade());
+    JsonArray reposJson;
+    ABC_CHECK(reposJson.save(paths.reposPath()));
 
     // Latch the account:
     ABC_CHECK(loginServerActivate(*this));
