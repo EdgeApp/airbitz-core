@@ -629,6 +629,14 @@ tABC_CC ABC_FixUsername(char **pszResult,
                         tABC_Error *pError);
 
 /**
+ * Grabs the login packages from disks.
+ * Tbis is useful for brute-forcing forgotten passwords.
+ */
+tABC_CC ABC_GetLoginPackages(char **pszResult,
+                             const char *szUserName,
+                             tABC_Error *pError);
+
+/**
  * Logs the user in using a password.
  * @param pszOtpResetToken returned OTP reset token, if any.
  * @param pszOtpResetDate returned OTP reset date, if any.
