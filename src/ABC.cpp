@@ -174,6 +174,33 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_GetLoginPackages(char **pszResult,
+                             const char *szUserName,
+                             tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszResult);
+    ABC_CHECK_NULL(szUserName);
+
+    {
+        ABC_GET_STORE();
+        AccountPaths paths;
+        ABC_CHECK_NEW(store->paths(paths));
+
+        JsonPtr carePackage, loginPackage;
+        ABC_CHECK_NEW(carePackage.load(paths.carePackagePath()));
+        ABC_CHECK_NEW(loginPackage.load(paths.loginPackagePath()));
+
+        JsonObject out;
+        ABC_CHECK_NEW(out.set("carePackage", carePackage));
+        ABC_CHECK_NEW(out.set("loginPackage", loginPackage));
+        *pszResult = stringCopy(out.encode());
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_PasswordLogin(const char *szUserName,
                           const char *szPassword,
                           char **pszOtpResetToken,
