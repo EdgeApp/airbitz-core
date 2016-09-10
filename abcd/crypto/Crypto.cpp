@@ -100,7 +100,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(DataSlice         Data,
     {
         DataChunk r;
         ABC_CHECK_NEW(randomData(r, 1));
-        nRandomHeaderBytes = r[0];
+        nRandomHeaderBytes = r[0] & 0x0f;
     }
     //printf("rand header count: %d\n", nRandomHeaderBytes);
     ABC_CHECK_NEW(randomData(headerData, nRandomHeaderBytes));
@@ -109,7 +109,7 @@ tABC_CC ABC_CryptoEncryptAES256Package(DataSlice         Data,
     {
         DataChunk r;
         ABC_CHECK_NEW(randomData(r, 1));
-        nRandomFooterBytes = r[0];
+        nRandomFooterBytes = r[0] & 0x0f;
     }
     //printf("rand footer count: %d\n", nRandomFooterBytes);
     ABC_CHECK_NEW(randomData(footerData, nRandomFooterBytes));
