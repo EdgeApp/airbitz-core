@@ -677,4 +677,18 @@ loginServerReposAdd(AuthJson authJson, RepoJson repoJson)
     return Status();
 }
 
+Status
+loginServerLobbyGet(JsonPtr &result, const std::string &id)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/lobby/" + id;
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().get(reply, url));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    result = replyJson.results();
+    return Status();
+}
+
 } // namespace abcd

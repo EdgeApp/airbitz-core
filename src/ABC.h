@@ -617,6 +617,22 @@ tABC_CC ABC_FetchPaymentRequest(char *szRequestUri,
 
 void ABC_FreePaymentRequest(tABC_PaymentRequest *pRequest);
 
+/* === Communications lobby: === */
+
+/**
+ * Frees a lobby handle obtained from `ABC_FetchLobby`.
+ */
+void ABC_FreeLobby(int hLobby);
+
+/**
+ * Fetches the contents of a communications lobby.
+ * @param phResult A handle to the result.
+ * @param szId The lobby ID, typically parsed out of a barcode or such.
+ */
+tABC_CC ABC_FetchLobby(char *szId,
+                       int *phResult,
+                       tABC_Error *pError);
+
 /* === Login lifetime: === */
 
 /**

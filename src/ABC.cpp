@@ -6,6 +6,7 @@
  */
 
 #include "ABC.h"
+#include "HandleCache.hpp"
 #include "LoginShim.hpp"
 #include "TxDetails.hpp"
 #include "TxInfo.hpp"
@@ -154,6 +155,29 @@ void ABC_Terminate()
 void ABC_Log(const char *szMessage)
 {
     ABC_DebugLog("%s", szMessage);
+}
+
+void ABC_FreeLobby(int hLobby)
+{
+    gLobbyCache.erase(hLobby);
+}
+
+tABC_CC ABC_FetchLobby(char *szId,
+                       int *phResult,
+                       tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(szId);
+
+    {
+        auto lobby = std::make_shared<Lobby>();
+        lobby->id = szId;
+        ABC_CHECK_NEW(loginServerLobbyGet(lobby->json, szId));
+        gLobbyCache.insert(lobby);
+    }
+
+exit:
+    return cc;
 }
 
 tABC_CC ABC_FixUsername(char **pszResult,
