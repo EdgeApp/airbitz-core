@@ -633,6 +633,24 @@ tABC_CC ABC_FetchLobby(char *szId,
                        int *phResult,
                        tABC_Error *pError);
 
+/**
+ * Returns the account request contained within a lobby
+ * (or an error if there is none).
+ */
+tABC_CC ABC_GetLobbyAccountRequest(int hLobby,
+                                   char **pszType,
+                                   char **pszDisplayName,
+                                   tABC_Error *pError);
+
+/**
+ * Approves the account request contained in the given lobby,
+ * creating a repo if needed.
+ */
+tABC_CC ABC_ApproveLobbyAccountRequest(const char *szUserName,
+                                       const char *szPassword,
+                                       int hLobby,
+                                       tABC_Error *pError);
+
 /* === Login lifetime: === */
 
 /**

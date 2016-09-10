@@ -203,6 +203,13 @@ loginServerReposAdd(AuthJson authJson, RepoJson repoJson);
 Status
 loginServerLobbyGet(JsonPtr &result, const std::string &id);
 
+/**
+ * Uploads new contents to a lobby.
+ */
+Status
+loginServerLobbySet(const std::string &id, JsonPtr &lobby,
+                    unsigned expires=300);
+
 } // namespace abcd
 
 #endif

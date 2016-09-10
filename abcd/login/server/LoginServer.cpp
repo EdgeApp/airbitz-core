@@ -691,4 +691,21 @@ loginServerLobbyGet(JsonPtr &result, const std::string &id)
     return Status();
 }
 
+Status
+loginServerLobbySet(const std::string &id, JsonPtr &lobby, unsigned expires)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/lobby/" + id;
+
+    JsonObject requestJson;
+    ABC_CHECK(requestJson.set("expires", static_cast<json_int_t>(expires)));
+    ABC_CHECK(requestJson.set("data", lobby));
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "PUT", requestJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    return Status();
+}
+
 } // namespace abcd

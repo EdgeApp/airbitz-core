@@ -27,6 +27,7 @@
 #include "../abcd/exchange/ExchangeCache.hpp"
 #include "../abcd/http/Http.hpp"
 #include "../abcd/http/Uri.hpp"
+#include "../abcd/login/AccountRequest.hpp"
 #include "../abcd/login/Bitid.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/login/LoginPackages.hpp"
@@ -174,6 +175,48 @@ tABC_CC ABC_FetchLobby(char *szId,
         lobby->id = szId;
         ABC_CHECK_NEW(loginServerLobbyGet(lobby->json, szId));
         gLobbyCache.insert(lobby);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_GetLobbyAccountRequest(int hLobby,
+                                   char **pszType,
+                                   char **pszDisplayName,
+                                   tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszType);
+    ABC_CHECK_NULL(pszDisplayName);
+
+    {
+        std::shared_ptr<Lobby> lobby;
+        ABC_CHECK_NEW(gLobbyCache.find(lobby, hLobby));
+
+        AccountRequest request;
+        ABC_CHECK_NEW(accountRequest(request, lobby->json));
+        *pszType = stringCopy(request.type);
+        *pszDisplayName = stringCopy(request.displayName);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_ApproveLobbyAccountRequest(const char *szUserName,
+                                       const char *szPassword,
+                                       int hLobby,
+                                       tABC_Error *pError)
+{
+    ABC_PROLOG();
+
+    {
+        ABC_GET_LOGIN();
+        std::shared_ptr<Lobby> lobby;
+        ABC_CHECK_NEW(gLobbyCache.find(lobby, hLobby));
+
+        ABC_CHECK_NEW(accountRequestApprove(*login, lobby->id, lobby->json));
     }
 
 exit:
