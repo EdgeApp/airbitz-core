@@ -41,6 +41,7 @@ public:
     RootPaths paths;
     BlockCache &blockCache;
     ExchangeCache &exchangeCache;
+    ServerCache &serverCache;
 };
 
 /**

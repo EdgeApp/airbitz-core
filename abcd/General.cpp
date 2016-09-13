@@ -21,10 +21,8 @@
 #include "login/server/LoginServer.hpp"
 #include "util/FileIO.hpp"
 #include "util/Debug.hpp"
-#include <string.h>
 #include <time.h>
 #include <mutex>
-#include <boost/algorithm/string.hpp>
 
 namespace abcd {
 
@@ -33,7 +31,7 @@ namespace abcd {
                                     "stratum://stratum-az-wjapan.airbitz.co:50001", \
                                     "stratum://stratum-az-neuro.airbitz.co:50001" }
 #define TESTNET_BITCOIN_SERVERS {   "tcp://obelisk-testnet.airbitz.co:9091" }
-#define GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS   (2) // how many seconds old can the info file be before it should be updated
+#define GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS   (8 * 60 * 60) // how many seconds old can the info file be before it should be updated
 #define ESTIMATED_FEES_ACCEPTABLE_INFO_FILE_AGE_SECS   (3 * 60 * 60) // how many seconds old can the info file be before it should be updated
 
 struct AirbitzFeesJson:
@@ -93,15 +91,6 @@ struct GeneralJson:
     ABC_JSON_VALUE(syncServers,    "syncServers", JsonArray)
 };
 
-struct ServerScoreJson:
-    public JsonObject
-{
-    ABC_JSON_CONSTRUCTORS(ServerScoreJson, JsonObject)
-
-    ABC_JSON_STRING(serverUrl, "serverUrl", "")
-    ABC_JSON_INTEGER(serverScore, "serverScore", 0)
-};
-
 /**
  * Attempts to load the general information from disk.
  */
@@ -120,28 +109,10 @@ generalLoad()
     return out;
 }
 
-static JsonArray
-serverScoresLoad()
-{
-    JsonArray out;
-
-    if (!gContext)
-        return out;
-
-    const auto scoresPath = gContext->paths.serverScoresPath();
-
-    if (!fileExists(scoresPath))
-        return out;
-
-    out.load(scoresPath).log();
-    return out;
-}
-
 Status
 generalUpdate()
 {
     const auto path = gContext->paths.generalPath();
-    const auto scoresPath = gContext->paths.serverScoresPath();
 
     time_t lastTime;
     if (!fileTime(lastTime, path) ||
@@ -150,53 +121,10 @@ generalUpdate()
         JsonPtr infoJson;
         ABC_CHECK(loginServerGetGeneral(infoJson));
         ABC_CHECK(infoJson.save(path));
-
-        // Add any new servers
-        JsonArray serverScoresJson = serverScoresLoad();
-
-        GeneralJson generalJson;
-        generalJson.load(path).log();
-
-        auto arrayJson = generalJson.bitcoinServers();
-
-        size_t size = arrayJson.size();
-        for (size_t i = 0; i < size; i++)
-        {
-            auto stringJson = arrayJson[i];
-            std::string serverUrlNew;
-            if (json_is_string(stringJson.get()))
-            {
-                serverUrlNew = json_string_value(stringJson.get());
-            }
-            
-            size_t sizeScores = serverScoresJson.size();
-            bool serversMatch = false;
-            for (size_t j = 0; j < sizeScores; j++)
-            {
-                ServerScoreJson ssj = serverScoresJson[j];
-                std::string serverUrl(ssj.serverUrl());
-
-                if (boost::iequals(serverUrl, serverUrlNew))
-                {
-                    serversMatch = true;
-                    break;
-                }
-            }
-            if (!serversMatch)
-            {
-                // Found a new server. Add it
-                ServerScoreJson ssjNew;
-                ssjNew.serverUrlSet(serverUrlNew);
-                ssjNew.serverScoreSet(0);
-                serverScoresJson.append(ssjNew);
-            }
-        }
-        serverScoresJson.save(scoresPath);
     }
 
     return Status();
 }
-
 
 static EstimateFeesJson
 estimateFeesLoad()

@@ -26,6 +26,7 @@ Cache::clear()
     blocks.clear();
     blocks.save();
     txs.clear();
+    serverCache.clear();
     save();
 }
 
