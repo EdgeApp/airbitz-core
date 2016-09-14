@@ -14,6 +14,13 @@
 
 namespace abcd {
 
+constexpr auto LIBBITCOIN_PREFIX = "tcp://";
+constexpr auto STRATUM_PREFIX = "stratum://";
+constexpr auto LIBBITCOIN_PREFIX_LENGTH = 6;
+constexpr auto STRATUM_PREFIX_LENGTH = 10;
+constexpr auto MAX_SCORE = 100;
+constexpr auto MIN_SCORE = -100;
+
 constexpr time_t onHeaderTimeout = 5;
 
 struct ServerScoreJson:
@@ -29,6 +36,8 @@ struct ServerScoreJson:
 
 ServerCache::ServerCache(const std::string &path):
     path_(path),
+    highestScore_(0),
+    lowestScore_(0),
     dirty_(false)
 {
 }
@@ -61,7 +70,7 @@ ServerCache::load()
     std::lock_guard<std::mutex> lock(mutex_);
 
     // Add any new servers
-    JsonArray serverScoresJson = serverScoresLoad(path_);
+    JsonArray serverScoresJsonArray = serverScoresLoad(path_);
 
     std::vector<std::string> bitcoinServers = generalBitcoinServers();
 
@@ -70,11 +79,11 @@ ServerCache::load()
     {
         std::string serverUrlNew = bitcoinServers[i];
 
-        size_t sizeScores = serverScoresJson.size();
+        size_t sizeScores = serverScoresJsonArray.size();
         bool serversMatch = false;
         for (size_t j = 0; j < sizeScores; j++)
         {
-            ServerScoreJson ssj = serverScoresJson[j];
+            ServerScoreJson ssj = serverScoresJsonArray[j];
             std::string serverUrl(ssj.serverUrl());
 
             if (boost::iequals(serverUrl, serverUrlNew))
@@ -89,51 +98,110 @@ ServerCache::load()
             ServerScoreJson ssjNew;
             ssjNew.serverUrlSet(serverUrlNew);
             ssjNew.serverScoreSet(0);
-            serverScoresJson.append(ssjNew);
+            serverScoresJsonArray.append(ssjNew);
+            dirty_ = true;
         }
     }
-    serverScoresJson.save(scoresPath);
 
-    return Status();
+    // Load the servers into the servers_ map
+    servers_.clear();
+
+    size_t numServers = serverScoresJsonArray.size();
+    for (size_t j = 0; j < numServers; j++)
+    {
+        ServerScoreJson ssj = serverScoresJsonArray[j];
+        std::string serverUrl = ssj.serverUrl();
+        int serverScore = ssj.serverScore();
+        servers_[serverUrl] = serverScore;
+    }
+
+    return save();
 }
 
 Status
 ServerCache::save()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-
-
-
+    JsonArray serverScoresJsonArray;
 
     if (dirty_)
     {
         for (const auto &server: servers_)
         {
-
+            ServerScoreJson ssj;
+            ABC_CHECK(ssj.serverUrlSet(server.first));
+            ABC_CHECK(ssj.serverScoreSet(server.second));
+            ABC_CHECK(serverScoresJsonArray.append(ssj));
         }
+        ABC_CHECK(serverScoresJsonArray.save(path_);
+        dirty_ = false;
     }
-//        BlockCacheJson json;
-//        ABC_CHECK(json.heightSet(height_));
-//
-//        JsonArray headersJson;
-//        for (const auto &header: headers_)
-//        {
-//            bc::data_chunk rawHeader(satoshi_raw_size(header.second));
-//            bc::satoshi_save(header.second, rawHeader.begin());
-//
-//            BlockHeaderJson blockHeaderJson;
-//            ABC_CHECK(blockHeaderJson.heightSet(header.first));
-//            ABC_CHECK(blockHeaderJson.headerSet(base64Encode(rawHeader)));
-//            ABC_CHECK(headersJson.append(blockHeaderJson));
-//        }
-//        ABC_CHECK(json.headersSet(headersJson));
-//
-//        ABC_CHECK(json.save(path_));
-//        dirty_ = false;
-//    }
 
     return Status();
 }
 
+Status
+ServerCache::serverScoreUp(std::string serverUrl)
+{
+    for (const auto &server: servers_)
+    {
+        if (boost::iequals(server, serverUrl))
+        {
+            server.second += 2;
+            if (server.second < 0)
+                server.second = 0;
+            if (server.second > MAX_SCORE)
+                server.second = MAX_SCORE;
+            dirty_ = true;
+            break;
+        }
+    }
+}
 
+Status
+ServerCache::serverScoreDown(std::string serverUrl)
+{
+    for (const auto &server: servers_)
+    {
+        if (boost::iequals(server, serverUrl))
+        {
+            server.second--;
+            if (server.second < MIN_SCORE)
+                server.second = MIN_SCORE;
+            dirty_ = true;
+            break;
+        }
+    }
+}
+
+Status
+ServerCache::getServers(ServerType type, unsigned int numServers, std::vector<std::string> &servers)
+{
+    // Get the top [numServers] with the highest score sorted in order of score
+    for (int i = MAX_SCORE; i <= -MIN_SCORE; i++)
+    {
+        for (const auto &server: servers_)
+        {
+            if (ServerTypeStratum == type)
+            {
+                if (0 != server.first.compare(0, STRATUM_PREFIX_LENGTH, STRATUM_PREFIX))
+                    continue;
+            }
+            else if (ServerTypeLibbitcoin == type)
+            {
+                if (0 != server.first.compare(0, LIBBITCOIN_PREFIX_LENGTH, LIBBITCOIN_PREFIX))
+                    continue;
+            }
+
+            if (server.second == i)
+            {
+                servers.push_back(server.first);
+                numServers--;
+                if (numServers == 0)
+                    return Status();
+            }
+        }
+    }
+    return Status();
+}
 } // namespace abcd

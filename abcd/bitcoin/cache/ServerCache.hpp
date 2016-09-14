@@ -17,6 +17,12 @@
 
 namespace abcd {
 
+typedef enum
+{
+    ServerTypeStratum,
+    ServerTypeLibbitcoin
+} ServerType;
+
 /**
  * A block-height cache.
  */
@@ -45,6 +51,26 @@ public:
      */
     Status
     save();
+
+    /**
+     * Increase server score from a successful connection
+     */
+    Status
+    serverScoreUp(std::string serverUrl);
+
+    /**
+     * Decrease server score from a bad connection
+     */
+    Status
+    serverScoreDown(std::string serverUrl);
+
+    /**
+     * Get a vector of server URLs by type. This returns the top 'numServers' of servers with
+     * the highest connectivity score
+     */
+    Status
+    getServers(ServerType type, unsigned int numServers, std::vector<std::string> &servers)
+
 
 private:
     mutable std::mutex mutex_;
