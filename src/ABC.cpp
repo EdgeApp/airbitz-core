@@ -174,7 +174,7 @@ tABC_CC ABC_FetchLobby(char *szId,
         auto lobby = std::make_shared<Lobby>();
         lobby->id = szId;
         ABC_CHECK_NEW(loginServerLobbyGet(lobby->json, szId));
-        gLobbyCache.insert(lobby);
+        *phResult = gLobbyCache.insert(lobby);
     }
 
 exit:
