@@ -36,8 +36,6 @@ struct ServerScoreJson:
 
 ServerCache::ServerCache(const std::string &path):
     path_(path),
-    highestScore_(0),
-    lowestScore_(0),
     dirty_(false)
 {
 }
@@ -69,9 +67,10 @@ ServerCache::load()
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    // Add any new servers
+    // Load the saved server scores
     JsonArray serverScoresJsonArray = serverScoresLoad(path_);
 
+    // Add any new servers coming out of the auth server
     std::vector<std::string> bitcoinServers = generalBitcoinServers();
 
     size_t size = bitcoinServers.size();
@@ -143,6 +142,8 @@ ServerCache::save()
 Status
 ServerCache::serverScoreUp(std::string serverUrl)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     for (const auto &server: servers_)
     {
         if (boost::iequals(server, serverUrl))
@@ -161,6 +162,8 @@ ServerCache::serverScoreUp(std::string serverUrl)
 Status
 ServerCache::serverScoreDown(std::string serverUrl)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     for (const auto &server: servers_)
     {
         if (boost::iequals(server, serverUrl))
@@ -174,11 +177,14 @@ ServerCache::serverScoreDown(std::string serverUrl)
     }
 }
 
-Status
-ServerCache::getServers(ServerType type, unsigned int numServers, std::vector<std::string> &servers)
+std::vector<std::basic_string>
+ServerCache::getServers(ServerType type, unsigned int numServers)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<std::basic_string> servers;
+
     // Get the top [numServers] with the highest score sorted in order of score
-    for (int i = MAX_SCORE; i <= -MIN_SCORE; i++)
+    for (int i = MAX_SCORE; i >= MIN_SCORE; i--)
     {
         for (const auto &server: servers_)
         {
@@ -198,10 +204,10 @@ ServerCache::getServers(ServerType type, unsigned int numServers, std::vector<st
                 servers.push_back(server.first);
                 numServers--;
                 if (numServers == 0)
-                    return Status();
+                    return servers;
             }
         }
     }
-    return Status();
+    return servers;
 }
 } // namespace abcd

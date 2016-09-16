@@ -53,7 +53,7 @@ public:
     sendTx(StatusCallback status, DataSlice tx);
 
 private:
-    Status connectTo(long index);
+    Status connectTo(std::basic_string server, ServerType serverType);
 
     Cache &cache_;
     void *ctx_;
@@ -63,9 +63,11 @@ private:
     time_t cacheLastSave = 0;
 
     std::vector<IBitcoinConnection *> connections_;
-    std::vector<std::string> serverList_;
-    std::set<int> untriedLibbitcoin_;
-    std::set<int> untriedStratum_;
+//    std::vector<std::string> serverList_;
+//    std::set<int> untriedLibbitcoin_;
+//    std::set<int> untriedStratum_;
+    std::vector<std::basic_string> stratumServers_;
+    std::vector<std::basic_string> libbitcoinServers_;
 
     // Fetches currently in progress:
     AddressSet wipAddresses_;

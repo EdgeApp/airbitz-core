@@ -68,8 +68,8 @@ public:
      * Get a vector of server URLs by type. This returns the top 'numServers' of servers with
      * the highest connectivity score
      */
-    Status
-    getServers(ServerType type, unsigned int numServers, std::vector<std::string> &servers)
+    std::vector<std::basic_string>
+    getServers(ServerType type, unsigned int numServers);
 
 
 private:

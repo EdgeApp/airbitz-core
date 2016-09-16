@@ -54,39 +54,21 @@ TxUpdater::connect()
 {
     wantConnection = true;
 
-    // This happens once, and never changes:
-    if (serverList_.empty())
-        serverList_ = generalBitcoinServers();
-
-    for (int i = 0; i < serverList_.size(); i++)
-    {
-        ABC_DebugLevel(1, "serverList_[%d]=%s", i, serverList_[i].c_str());
-    }
+    // If we are out of fresh stratum servers, reload the list:
+    if (stratumServers_.empty())
+        stratumServers_ = cache_.serverCache.getServers(ServerTypeStratum, 15);
 
     // If we are out of fresh libbitcoin servers, reload the list:
-    if (untriedLibbitcoin_.empty())
-    {
-        for (size_t i = 0; i < serverList_.size(); ++i)
-        {
-            const auto &server = serverList_[i];
-            if (0 == server.compare(0, LIBBITCOIN_PREFIX_LENGTH, LIBBITCOIN_PREFIX))
-                untriedLibbitcoin_.insert(i);
-        }
-    }
+    if (libbitcoinServers_.empty())
+        libbitcoinServers_ = cache_.serverCache.getServers(ServerTypeLibbitcoin, 4);
 
-    // If we are out of fresh stratum servers, reload the list:
-    if (untriedStratum_.empty())
-    {
-        for (size_t i = 0; i < serverList_.size(); ++i)
-        {
-            const auto &server = serverList_[i];
-            if (0 == server.compare(0, STRATUM_PREFIX_LENGTH, STRATUM_PREFIX))
-                untriedStratum_.insert(i);
-        }
-    }
+    for (int i = 0; i < libbitcoinServers_.size(); i++)
+        ABC_DebugLevel(1, "libbitcoinServers_[%d]=%s", i, libbitcoinServers_[i].c_str());
+    for (int i = 0; i < stratumServers_.size(); i++)
+        ABC_DebugLevel(1, "stratumServers_[%d]=%s", i, stratumServers_[i].c_str());
 
     ABC_DebugLevel(2,"%d libbitcoin untried, %d stratrum untried",
-                   untriedLibbitcoin_.size(), untriedStratum_.size());
+                   libbitcoinServers_.size(), stratumServers_.size());
 
     // Count the number of existing connections:
     size_t stratumCount = 0;
@@ -103,23 +85,27 @@ TxUpdater::connect()
     srand(time(nullptr));
     int numConnections = 0;
     while (connections_.size() < NUM_CONNECT_SERVERS
-            && (untriedLibbitcoin_.size() || untriedStratum_.size()))
+            && (libbitcoinServers_.size() || stratumServers_.size()))
     {
-        auto *untriedPrimary = &untriedStratum_;
+        auto *untriedPrimary = &stratumServers_;
         auto *primaryCount = &stratumCount;
-        auto *untriedSecondary = &untriedLibbitcoin_;
+        auto *untriedSecondary = &libbitcoinServers_;
         auto *secondaryCount = &libbitcoinCount;
         long minPrimary = MINIMUM_STRATUM_SERVERS;
         long minSecondary = MINIMUM_LIBBITCOIN_SERVERS;
+        ServerType primaryType = ServerTypeStratum;
+        ServerType secondaryType = ServerTypeLibbitcoin;
 
         if (numConnections % 2 == 1)
         {
-            untriedPrimary = &untriedLibbitcoin_;
-            untriedSecondary = &untriedStratum_;
+            untriedPrimary = &libbitcoinServers_;
+            untriedSecondary = &stratumServers_;
             primaryCount = &libbitcoinCount;
             secondaryCount = &stratumCount;
             minPrimary = MINIMUM_LIBBITCOIN_SERVERS;
             minSecondary = MINIMUM_STRATUM_SERVERS;
+            primaryType = ServerTypeLibbitcoin;
+            secondaryType = ServerTypeStratum;
         }
 
         if (untriedPrimary->size() &&
@@ -128,11 +114,17 @@ TxUpdater::connect()
         {
             auto i = untriedPrimary->begin();
             std::advance(i, rand() % untriedPrimary->size());
-            if (connectTo(*i).log())
+            if (connectTo(*i, primaryType).log())
             {
                 (*primaryCount)++;
                 ++numConnections;
+                cache_.serverCache.serverScoreUp(*i);
             }
+            else
+            {
+                cache_.serverCache.serverScoreDown(*i);
+            }
+            untriedPrimary->erase(i);
         }
         else if (untriedSecondary->size() &&
                  ((minPrimary - *primaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
@@ -140,11 +132,17 @@ TxUpdater::connect()
         {
             auto i = untriedSecondary->begin();
             std::advance(i, rand() % untriedSecondary->size());
-            if (connectTo(*i).log())
+            if (connectTo(*i, secondaryType).log())
             {
                 (*secondaryCount)++;
                 ++numConnections;
+                cache_.serverCache.serverScoreUp(*i);
             }
+            else
+            {
+                cache_.serverCache.serverScoreDown(*i);
+            }
+            untriedSecondary->erase(i);
         }
     }
 
@@ -316,9 +314,8 @@ TxUpdater::sendTx(StatusCallback status, DataSlice tx)
 }
 
 Status
-TxUpdater::connectTo(long index)
+TxUpdater::connectTo(std::basic_string server, ServerType serverType)
 {
-    std::string server = serverList_[index];
     std::string key;
 
     // Parse out the key part:
@@ -331,18 +328,16 @@ TxUpdater::connectTo(long index)
 
     // Make the connection:
     std::unique_ptr<IBitcoinConnection> bc;
-    if (0 == server.compare(0, LIBBITCOIN_PREFIX_LENGTH, LIBBITCOIN_PREFIX))
+    if (ServerTypeLibbitcoin == serverType)
     {
         // Libbitcoin server:
-        untriedLibbitcoin_.erase(index);
         std::unique_ptr<LibbitcoinConnection> lc(new LibbitcoinConnection(ctx_));
         ABC_CHECK(lc->connect(server, key));
         bc.reset(lc.release());
     }
-    else if (0 == server.compare(0, STRATUM_PREFIX_LENGTH, STRATUM_PREFIX))
+    else if (ServerTypeStratum == serverType)
     {
         // Stratum server:
-        untriedStratum_.erase(index);
         std::unique_ptr<StratumConnection> sc(new StratumConnection());
         ABC_CHECK(sc->connect(server));
         bc.reset(sc.release());
