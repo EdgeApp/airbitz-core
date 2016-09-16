@@ -19,6 +19,8 @@
 
 namespace abcd {
 
+HandleCache<Lobby> gLobbyCache;
+
 // This mutex protects the shared_ptr caches themselves.
 // Using a reference count ensures that any objects still in use
 // on another thread will not be destroyed during a cache update.

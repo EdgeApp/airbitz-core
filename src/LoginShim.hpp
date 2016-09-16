@@ -15,6 +15,8 @@
 #ifndef ABC_LoginShim_h
 #define ABC_LoginShim_h
 
+#include "HandleCache.hpp"
+#include "../abcd/json/JsonPtr.hpp"
 #include "../abcd/util/Data.hpp"
 #include "../abcd/util/Status.hpp"
 #include <memory>
@@ -26,6 +28,17 @@ class Login;
 class LoginStore;
 class Wallet;
 struct AuthError;
+
+/**
+ * A reference to an auth-server communications lobby.
+ */
+struct Lobby
+{
+    std::string id;
+    JsonPtr json;
+};
+
+extern HandleCache<Lobby> gLobbyCache;
 
 /**
  * Clears all cached login objects.

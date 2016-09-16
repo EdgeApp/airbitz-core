@@ -16,7 +16,7 @@ build() {
     echo Patching...
     patch -p1 < $recipe_dir/ios-build.patch
     patch -p1 < $recipe_dir/timeout.patch
-    patch -p1 < $recipe_dir/pinning.patch
+    #patch -p1 < $recipe_dir/pinning.patch
 
     mkdir -p build
     cd build

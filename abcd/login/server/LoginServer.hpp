@@ -197,6 +197,19 @@ loginServerRecovery2Delete(AuthJson authJson);
 Status
 loginServerReposAdd(AuthJson authJson, RepoJson repoJson);
 
+/**
+ * Downloads the contents of a lobby.
+ */
+Status
+loginServerLobbyGet(JsonPtr &result, const std::string &id);
+
+/**
+ * Uploads new contents to a lobby.
+ */
+Status
+loginServerLobbySet(const std::string &id, JsonPtr &lobby,
+                    unsigned expires=300);
+
 } // namespace abcd
 
 #endif
