@@ -6,6 +6,8 @@
  */
 
 #include "../Command.hpp"
+#include "../../abcd/bitcoin/Text.hpp"
+#include "../../abcd/bitcoin/WatcherBridge.hpp"
 #include <unistd.h>
 #include <signal.h>
 #include <iostream>
@@ -93,6 +95,31 @@ COMMAND(InitLevel::wallet, Watcher, "watcher",
 
     WatcherThread thread;
     ABC_CHECK(thread.init(session));
+
+    // The command stops with ctrl-c:
+    signal(SIGINT, signalCallback);
+    while (running)
+        sleep(1);
+
+    return Status();
+}
+
+COMMAND(InitLevel::wallet, WatcherSweep, "watcher-sweep",
+        " <wif>")
+{
+    if (argc != 1)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto wif = argv[0];
+
+    WatcherThread thread;
+    ABC_CHECK(thread.init(session));
+
+    // Begin the sweep:
+    ParsedUri parsed;
+    ABC_CHECK(parseUri(parsed, wif));
+    if (parsed.address.empty())
+        return ABC_ERROR(ABC_CC_ParseError, "Cannot parse address");
+    ABC_CHECK(bridgeSweepKey(*session.wallet, parsed.wif, parsed.address));
 
     // The command stops with ctrl-c:
     signal(SIGINT, signalCallback);
