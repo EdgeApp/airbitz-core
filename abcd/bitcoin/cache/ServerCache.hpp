@@ -68,11 +68,14 @@ public:
      * Get a vector of server URLs by type. This returns the top 'numServers' of servers with
      * the highest connectivity score
      */
-    std::vector<std::basic_string>
+    std::vector<std::string>
     getServers(ServerType type, unsigned int numServers);
 
 
 private:
+    Status
+    save_nolock();
+
     mutable std::mutex mutex_;
     const std::string path_;
     bool dirty_;

@@ -33,7 +33,6 @@ Context::Context(const std::string &rootDir, const std::string &certPath,
     serverCache(*new ServerCache(paths.serverScoresPath()))
 {
     blockCache.load().log(); // Failure is fine
-    serverCache.load().log(); // Failure is fine
 }
 
 } // namespace abcd

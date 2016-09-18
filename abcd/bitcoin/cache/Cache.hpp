@@ -21,9 +21,9 @@ public:
     TxCache txs;
     BlockCache &blocks;
     AddressCache addresses;
-    ServerCache serverCache;
+    ServerCache &servers;
 
-    Cache(const std::string &path, BlockCache &blockCache);
+    Cache(const std::string &path, BlockCache &blockCache, ServerCache &serverCache);
 
     /**
      * Sets the address check done for this wallet meaning that

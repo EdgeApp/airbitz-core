@@ -56,11 +56,11 @@ TxUpdater::connect()
 
     // If we are out of fresh stratum servers, reload the list:
     if (stratumServers_.empty())
-        stratumServers_ = cache_.serverCache.getServers(ServerTypeStratum, 15);
+        stratumServers_ = cache_.servers.getServers(ServerTypeStratum, 15);
 
     // If we are out of fresh libbitcoin servers, reload the list:
     if (libbitcoinServers_.empty())
-        libbitcoinServers_ = cache_.serverCache.getServers(ServerTypeLibbitcoin, 4);
+        libbitcoinServers_ = cache_.servers.getServers(ServerTypeLibbitcoin, 4);
 
     for (int i = 0; i < libbitcoinServers_.size(); i++)
         ABC_DebugLevel(1, "libbitcoinServers_[%d]=%s", i, libbitcoinServers_[i].c_str());
@@ -118,11 +118,11 @@ TxUpdater::connect()
             {
                 (*primaryCount)++;
                 ++numConnections;
-                cache_.serverCache.serverScoreUp(*i);
+                cache_.servers.serverScoreUp(*i);
             }
             else
             {
-                cache_.serverCache.serverScoreDown(*i);
+                cache_.servers.serverScoreDown(*i);
             }
             untriedPrimary->erase(i);
         }
@@ -136,11 +136,11 @@ TxUpdater::connect()
             {
                 (*secondaryCount)++;
                 ++numConnections;
-                cache_.serverCache.serverScoreUp(*i);
+                cache_.servers.serverScoreUp(*i);
             }
             else
             {
-                cache_.serverCache.serverScoreDown(*i);
+                cache_.servers.serverScoreDown(*i);
             }
             untriedSecondary->erase(i);
         }
@@ -229,7 +229,7 @@ TxUpdater::wakeup()
     }
     cache_.blocks.save();
     cache_.blocks.onHeaderInvoke();
-    cache_.serverCache.save();
+    cache_.servers.save();
 
     // Save the cache if it is dirty and enough time has elapsed:
     if (cacheDirty)
@@ -314,7 +314,7 @@ TxUpdater::sendTx(StatusCallback status, DataSlice tx)
 }
 
 Status
-TxUpdater::connectTo(std::basic_string server, ServerType serverType)
+TxUpdater::connectTo(std::string server, ServerType serverType)
 {
     std::string key;
 

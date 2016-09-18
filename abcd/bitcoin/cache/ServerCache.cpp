@@ -11,6 +11,8 @@
 #include "../../json/JsonArray.hpp"
 #include "../../json/JsonObject.hpp"
 #include "../../util/Debug.hpp"
+#include "../../General.hpp"
+
 
 namespace abcd {
 
@@ -47,28 +49,16 @@ ServerCache::clear()
     servers_.clear();
 }
 
-static JsonArray
-serverScoresLoad(std::string path)
-{
-    JsonArray out;
-
-    if (!gContext)
-        return out;
-
-    if (!fileExists(path))
-        return out;
-
-    out.load(path).log();
-    return out;
-}
-
 Status
 ServerCache::load()
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    // Load the saved server scores
-    JsonArray serverScoresJsonArray = serverScoresLoad(path_);
+    // Load the saved server scores if they exist
+    JsonArray serverScoresJsonArray;
+
+    // It's ok if this fails
+    serverScoresJsonArray.load(path_).log();
 
     // Add any new servers coming out of the auth server
     std::vector<std::string> bitcoinServers = generalBitcoinServers();
@@ -85,7 +75,7 @@ ServerCache::load()
             ServerScoreJson ssj = serverScoresJsonArray[j];
             std::string serverUrl(ssj.serverUrl());
 
-            if (boost::iequals(serverUrl, serverUrlNew))
+            if (boost::equal(serverUrl, serverUrlNew))
             {
                 serversMatch = true;
                 break;
@@ -114,13 +104,12 @@ ServerCache::load()
         servers_[serverUrl] = serverScore;
     }
 
-    return save();
+    return save_nolock();
 }
 
 Status
-ServerCache::save()
+ServerCache::save_nolock()
 {
-    std::lock_guard<std::mutex> lock(mutex_);
     JsonArray serverScoresJsonArray;
 
     if (dirty_)
@@ -132,7 +121,7 @@ ServerCache::save()
             ABC_CHECK(ssj.serverScoreSet(server.second));
             ABC_CHECK(serverScoresJsonArray.append(ssj));
         }
-        ABC_CHECK(serverScoresJsonArray.save(path_);
+        ABC_CHECK(serverScoresJsonArray.save(path_));
         dirty_ = false;
     }
 
@@ -140,22 +129,26 @@ ServerCache::save()
 }
 
 Status
+ServerCache::save()
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    return save_nolock();
+}
+
+Status
 ServerCache::serverScoreUp(std::string serverUrl)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    for (const auto &server: servers_)
+    auto svr = servers_.find(serverUrl);
+    if (servers_.end() != svr)
     {
-        if (boost::iequals(server, serverUrl))
-        {
-            server.second += 2;
-            if (server.second < 0)
-                server.second = 0;
-            if (server.second > MAX_SCORE)
-                server.second = MAX_SCORE;
-            dirty_ = true;
-            break;
-        }
+        int score = svr->second;
+        score += 2;
+        if (score > MAX_SCORE)
+            score = MAX_SCORE;
+        servers_[serverUrl] = score;
+        dirty_ = true;
     }
 }
 
@@ -164,24 +157,23 @@ ServerCache::serverScoreDown(std::string serverUrl)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    for (const auto &server: servers_)
+    auto svr = servers_.find(serverUrl);
+    if (servers_.end() != svr)
     {
-        if (boost::iequals(server, serverUrl))
-        {
-            server.second--;
-            if (server.second < MIN_SCORE)
-                server.second = MIN_SCORE;
-            dirty_ = true;
-            break;
-        }
+        int score = svr->second;
+        score--;
+        if (score < MIN_SCORE)
+            score = MIN_SCORE;
+        servers_[serverUrl] = score;
+        dirty_ = true;
     }
 }
 
-std::vector<std::basic_string>
+std::vector<std::string>
 ServerCache::getServers(ServerType type, unsigned int numServers)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::vector<std::basic_string> servers;
+    std::vector<std::string> servers;
 
     // Get the top [numServers] with the highest score sorted in order of score
     for (int i = MAX_SCORE; i >= MIN_SCORE; i--)

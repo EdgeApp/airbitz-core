@@ -10,6 +10,7 @@
 
 #include "../Typedefs.hpp"
 #include "../../util/Data.hpp"
+#include "../cache/ServerCache.hpp"
 #include <zmq.h>
 #include <chrono>
 #include <map>
@@ -53,7 +54,7 @@ public:
     sendTx(StatusCallback status, DataSlice tx);
 
 private:
-    Status connectTo(std::basic_string server, ServerType serverType);
+    Status connectTo(std::string server, ServerType serverType);
 
     Cache &cache_;
     void *ctx_;
@@ -66,8 +67,8 @@ private:
 //    std::vector<std::string> serverList_;
 //    std::set<int> untriedLibbitcoin_;
 //    std::set<int> untriedStratum_;
-    std::vector<std::basic_string> stratumServers_;
-    std::vector<std::basic_string> libbitcoinServers_;
+    std::vector<std::string> stratumServers_;
+    std::vector<std::string> libbitcoinServers_;
 
     // Fetches currently in progress:
     AddressSet wipAddresses_;
