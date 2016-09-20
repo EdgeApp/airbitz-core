@@ -7,6 +7,7 @@
 
 #include "AccountRequest.hpp"
 #include "Login.hpp"
+#include "LoginStore.hpp"
 #include "server/LoginServer.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
@@ -16,13 +17,22 @@
 
 namespace abcd {
 
+struct AccountReplyJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(AccountReplyJson, JsonObject)
+
+    ABC_JSON_VALUE(info, "info", RepoInfoJson)
+    ABC_JSON_STRING(username, "username", nullptr)
+};
+
 struct AccountRequestJson:
     public JsonObject
 {
     ABC_JSON_CONSTRUCTORS(AccountRequestJson, JsonObject)
 
     ABC_JSON_STRING(displayName, "displayName", "")
-    ABC_JSON_VALUE(infoBox, "infoBox", JsonBox)
+    ABC_JSON_VALUE(replyBox, "replyBox", JsonBox)
     ABC_JSON_STRING(replyKey, "replyKey", nullptr)
     ABC_JSON_STRING(requestKey, "requestKey", nullptr)
     ABC_JSON_STRING(type, "type", nullptr)
@@ -75,7 +85,7 @@ accountRequestApprove(Login &login,
         return ABC_ERROR(ABC_CC_EncryptError, "Lobby ECDH error");
     const auto secret = DataChunk(requestKey.begin() + 1,
                                   requestKey.begin() + 33);
-    const auto infoKey = hmacSha256(std::string("infoKey"), secret);
+    const auto dataKey = hmacSha256(std::string("dataKey"), secret);
 
     // Get the repo info we need:
     RepoInfo repoInfo;
@@ -84,10 +94,15 @@ accountRequestApprove(Login &login,
     infoJson.dataKeySet(base16Encode(repoInfo.dataKey));
     infoJson.syncKeySet(repoInfo.syncKey);
 
+    // Assemble the reply JSON:
+    AccountReplyJson replyJson;
+    ABC_CHECK(replyJson.infoSet(infoJson));
+    ABC_CHECK(replyJson.usernameSet(login.store.username()));
+    JsonBox replyBox;
+    ABC_CHECK(replyBox.encrypt(replyJson.encode(), dataKey));
+
     // Update the lobby JSON:
-    JsonBox infoBox;
-    ABC_CHECK(infoBox.encrypt(infoJson.encode(), infoKey));
-    ABC_CHECK(requestJson.infoBoxSet(infoBox));
+    ABC_CHECK(requestJson.replyBoxSet(replyBox));
     ABC_CHECK(requestJson.replyKeySet(base16Encode(
                                           bc::secret_to_public_key(replyKey))));
 
