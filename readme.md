@@ -1,6 +1,6 @@
 ![AirBitz Core Library](http://airbitz.co/static/img/bitcoin-wallet/section-bitcoin-wallet-platform-bg.jpg)
 # Airbitz Wallet Core
-[https://airbitz.co/bitcoin-wallet-api-library/](https://airbitz.co/bitcoin-wallet-api-library/)
+[https://airbitz.co/developer-api-library](https://airbitz.co/developer-api-library)
 
 This library implements the core Bitcoin functionality for the AirBitz wallet.
 It manages accounts, syncing, and Bitcoin transactions.
