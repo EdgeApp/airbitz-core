@@ -7,6 +7,7 @@ source="http://curl.haxx.se/download/curl-$version.tar.gz#4dc36d2f3310585cc1f921
 build() {
     cd curl-$version
     ./configure --enable-static --disable-shared \
+        --enable-ipv6 \
         --disable-ldap --without-libssh2 --without-librtmp --without-libidn \
         --host=$cross --prefix=$install_dir
     make
