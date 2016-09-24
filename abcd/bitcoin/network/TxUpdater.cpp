@@ -118,7 +118,6 @@ TxUpdater::connect()
             {
                 (*primaryCount)++;
                 ++numConnections;
-                cache_.servers.serverScoreUp(*i);
             }
             else
             {
@@ -136,7 +135,6 @@ TxUpdater::connect()
             {
                 (*secondaryCount)++;
                 ++numConnections;
-                cache_.servers.serverScoreUp(*i);
             }
             else
             {
@@ -163,7 +161,10 @@ TxUpdater::wakeup()
             if (!sc->wakeup(sleep).log())
                 failedServers_.insert(bc->uri());
             else
+            {
+                cache_.servers.serverScoreUp(bc->uri());
                 nextWakeup = bc::client::min_sleep(nextWakeup, sleep);
+            }
         }
 
         auto *lc = dynamic_cast<LibbitcoinConnection *>(bc);
@@ -254,6 +255,7 @@ TxUpdater::wakeup()
             if (uri == bc->uri())
             {
                 ABC_DebugLog("Disconnecting from %s", bc->uri().c_str());
+                cache_.servers.serverScoreDown(bc->uri());
                 delete bc;
                 i = connections_.erase(i);
             }
@@ -412,19 +414,33 @@ TxUpdater::subscribeHeight(IBitcoinConnection *bc)
     auto onReply = [this, uri](size_t height)
     {
         ABC_DebugLog("%s: height %d returned", uri.c_str(), height);
-        cache_.blocks.heightSet(height);
+        size_t oldHeight = cache_.blocks.heightSet(height);
 
-        // Update addresses with unconfirmed txs:
-        const auto statuses = cache_.txs.statuses(cache_.addresses.txids());
-        for (const auto status: statuses)
+        if (oldHeight > height + 2)
         {
-            if (!status.second.height)
+            // This server is behind in block height. Disconnect then penalize it a lot
+            cache_.servers.serverScoreDown(uri, 10);
+        }
+        else if (oldHeight <= height)
+        {
+            cache_.servers.serverScoreUp(uri); // Point for returning a valid height
+            if (oldHeight < height)
             {
-                for (const auto &io: status.first.ios)
+                cache_.servers.serverScoreUp(uri); // Point for returning a newer height
+
+                // Update addresses with unconfirmed txs:
+                const auto statuses = cache_.txs.statuses(cache_.addresses.txids());
+                for (const auto status: statuses)
                 {
-                    ABC_DebugLog("Marking %s dirty (tx height check)",
-                                 io.address.c_str());
-                    cache_.addresses.updateStratumHash(io.address);
+                    if (!status.second.height)
+                    {
+                        for (const auto &io: status.first.ios)
+                        {
+                            ABC_DebugLog("Marking %s dirty (tx height check)",
+                                         io.address.c_str());
+                            cache_.addresses.updateStratumHash(io.address);
+                        }
+                    }
                 }
             }
         }
@@ -455,6 +471,7 @@ TxUpdater::subscribeAddress(const std::string &address, IBitcoinConnection *bc)
     {
         if (cache_.addresses.updateStratumHash(address, stateHash))
         {
+            cache_.servers.serverScoreUp(uri); // Point for returning a new hash
             addressServers_[address] = uri;
             ABC_DebugLog("%s: %s subscribe reply (dirty) %s",
                          uri.c_str(), address.c_str(), stateHash.c_str());
@@ -502,6 +519,7 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
         if (!history.empty())
         {
             cache_.addresses.update(address, txids);
+            cache_.servers.serverScoreUp(uri);
         }
         else
         {
@@ -509,13 +527,14 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
             if (hash.empty())
             {
                 cache_.addresses.update(address, txids);
+                cache_.servers.serverScoreUp(uri);
             }
             else
             {
                 ABC_DebugLog("%s: %s SERVER ERROR EMPTY TXIDs with hash %s", uri.c_str(),
                              address.c_str(), hash.c_str());
                 // Do not trust current server. Force a new server.
-                addressServers_[address] = "";
+                failedServers_.insert(uri);
             }
         }
     };
@@ -547,6 +566,7 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
         cache_.txs.insert(tx);
         cache_.addresses.update();
         cacheDirty = true;
+        cache_.servers.serverScoreUp(uri);
     };
 
     ABC_DebugLog("%s: tx %s requested", uri.c_str(), txid.c_str());
@@ -593,7 +613,9 @@ TxUpdater::blockHeaderFetch(size_t height, IBitcoinConnection *bc)
         ABC_DebugLog("%s: header %d fetched",
                      uri.c_str(), height);
 
-        cache_.blocks.headerInsert(height, header);
+        bool didInsert = cache_.blocks.headerInsert(height, header);
+        if (didInsert)
+            cache_.servers.serverScoreUp(uri);
     };
 
     bc->blockHeaderFetch(onError, onReply, height);

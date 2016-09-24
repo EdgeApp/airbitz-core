@@ -56,13 +56,13 @@ public:
      * Increase server score from a successful connection
      */
     Status
-    serverScoreUp(std::string serverUrl);
+    serverScoreUp(std::string serverUrl, int changeScore=1);
 
     /**
      * Decrease server score from a bad connection
      */
     Status
-    serverScoreDown(std::string serverUrl);
+    serverScoreDown(std::string serverUrl, int changeScore=3);
 
     /**
      * Get a vector of server URLs by type. This returns the top 'numServers' of servers with
@@ -79,6 +79,7 @@ private:
     mutable std::mutex mutex_;
     const std::string path_;
     bool dirty_;
+    time_t lastUpScoreTime_;
 
     std::map<std::string, int> servers_;
 };

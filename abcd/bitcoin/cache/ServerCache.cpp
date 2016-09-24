@@ -38,7 +38,8 @@ struct ServerScoreJson:
 
 ServerCache::ServerCache(const std::string &path):
     path_(path),
-    dirty_(false)
+    dirty_(false),
+    lastUpScoreTime_(0)
 {
 }
 
@@ -53,6 +54,7 @@ Status
 ServerCache::load()
 {
     std::lock_guard<std::mutex> lock(mutex_);
+    ABC_Debug(1, "ServerCache::load");
 
     // Load the saved server scores if they exist
     JsonArray serverScoresJsonArray;
@@ -111,6 +113,7 @@ Status
 ServerCache::save_nolock()
 {
     JsonArray serverScoresJsonArray;
+    ABC_Debug(1, "ServerCache::save");
 
     if (dirty_)
     {
@@ -136,7 +139,7 @@ ServerCache::save()
 }
 
 Status
-ServerCache::serverScoreUp(std::string serverUrl)
+ServerCache::serverScoreUp(std::string serverUrl, int changeScore)
 {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -144,29 +147,43 @@ ServerCache::serverScoreUp(std::string serverUrl)
     if (servers_.end() != svr)
     {
         int score = svr->second;
-        score += 2;
+        score += changeScore;
         if (score > MAX_SCORE)
             score = MAX_SCORE;
         servers_[serverUrl] = score;
         dirty_ = true;
+        ABC_Debug(1, "serverScoreUp:" + serverUrl + " " + std::to_string(score));
     }
+    lastUpScoreTime_ = time(nullptr);
+    return Status();
 }
 
 Status
-ServerCache::serverScoreDown(std::string serverUrl)
+ServerCache::serverScoreDown(std::string serverUrl, int changeScore)
 {
     std::lock_guard<std::mutex> lock(mutex_);
+
+    time_t currentTime = time(nullptr);
+
+    if (currentTime - lastUpScoreTime_ > 60)
+    {
+        // It has been over 1 minute since we got an upvote for any server.
+        // Assume the network is down and don't penalize anyone for now
+        return Status();
+    }
 
     auto svr = servers_.find(serverUrl);
     if (servers_.end() != svr)
     {
         int score = svr->second;
-        score--;
+        score -= changeScore;
         if (score < MIN_SCORE)
             score = MIN_SCORE;
         servers_[serverUrl] = score;
         dirty_ = true;
+        ABC_Debug(1, "serverScoreDown:" + serverUrl + " " + std::to_string(score));
     }
+    return Status();
 }
 
 std::vector<std::string>
@@ -193,6 +210,7 @@ ServerCache::getServers(ServerType type, unsigned int numServers)
 
             if (server.second == i)
             {
+                ABC_Debug(1, "ServerCache::getServers [" + std::to_string(i) + "]:" + server.first );
                 servers.push_back(server.first);
                 numServers--;
                 if (numServers == 0)

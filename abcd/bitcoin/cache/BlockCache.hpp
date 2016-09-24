@@ -59,11 +59,12 @@ public:
     /**
      * Updates the block height.
      */
-    void
+    size_t
     heightSet(size_t height);
 
     /**
      * Provides a callback to be invoked when the chain height changes.
+     * Returns the previous height before this call
      */
     void
     onHeightSet(const HeightCallback &onHeight);

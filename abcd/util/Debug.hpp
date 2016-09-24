@@ -21,6 +21,13 @@
     }                               \
 }
 
+#define ABC_Debug(level, STR)  \
+{                                   \
+    if (DEBUG_LEVEL >= level)       \
+    {                               \
+        logInfo(STR);  \
+    }                               \
+}
 namespace abcd {
 
 Status
