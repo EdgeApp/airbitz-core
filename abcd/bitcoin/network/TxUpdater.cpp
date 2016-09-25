@@ -163,6 +163,7 @@ TxUpdater::wakeup()
                 failedServers_.insert(bc->uri());
             else
             {
+                cache_.servers.serverScoreUp(bc->uri(), 0);
                 nextWakeup = bc::client::min_sleep(nextWakeup, sleep);
             }
         }

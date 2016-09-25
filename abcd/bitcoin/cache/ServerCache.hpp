@@ -69,7 +69,7 @@ public:
      * Decrease server score
      */
     Status
-    serverScoreDown(std::string serverUrl, int changeScore=5);
+    serverScoreDown(std::string serverUrl, int changeScore=10);
 
     /**
      * Set the response time seen from an interaction with this server

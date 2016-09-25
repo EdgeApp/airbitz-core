@@ -20,7 +20,7 @@ constexpr auto LIBBITCOIN_PREFIX = "tcp://";
 constexpr auto STRATUM_PREFIX = "stratum://";
 constexpr auto LIBBITCOIN_PREFIX_LENGTH = 6;
 constexpr auto STRATUM_PREFIX_LENGTH = 10;
-constexpr auto MAX_SCORE = 100;
+constexpr auto MAX_SCORE = 500;
 constexpr auto MIN_SCORE = -100;
 
 constexpr time_t onHeaderTimeout = 5;
@@ -125,7 +125,11 @@ ServerCache::load()
         unsigned long serverResponseTime = ssj.serverResponseTime();
         ServerInfo serverInfo;
         serverInfo.serverUrl = serverUrl;
-        serverInfo.score = serverScore;
+        // Level the playing field a little bit on each bootup by maxing out all scores by 100 less than MAX_SCORE
+        if (0 == cacheLastSave_)
+            serverInfo.score = serverScore > MAX_SCORE - 100 ? MAX_SCORE - 100 : serverScore;
+        else
+            serverInfo.score = serverScore;
         serverInfo.responseTime = serverResponseTime;
         serverInfo.numResponseTimes = 0;
         servers_[serverUrl] = serverInfo;
@@ -201,7 +205,7 @@ ServerCache::serverScoreUp(std::string serverUrl, int changeScore)
             serverInfo.score = MAX_SCORE;
         servers_[serverUrl] = serverInfo;
         dirty_ = true;
-        ABC_Debug(2, "serverScoreUp:" + serverUrl + " " + std::to_string(serverInfo.score));
+        ABC_Debug(1, "serverScoreUp:" + serverUrl + " " + std::to_string(serverInfo.score));
     }
     lastUpScoreTime_ = time(nullptr);
     return Status();
@@ -214,9 +218,9 @@ ServerCache::serverScoreDown(std::string serverUrl, int changeScore)
 
     time_t currentTime = time(nullptr);
 
-    if (currentTime - lastUpScoreTime_ > 20)
+    if (currentTime - lastUpScoreTime_ > 60)
     {
-        // It has been over 20 seconds since we got an upvote for any server.
+        // It has been over 1 minute since we got an upvote for any server.
         // Assume the network is down and don't penalize anyone for now
         return Status();
     }
@@ -230,7 +234,7 @@ ServerCache::serverScoreDown(std::string serverUrl, int changeScore)
             serverInfo.score = MIN_SCORE;
         servers_[serverUrl] = serverInfo;
         dirty_ = true;
-        ABC_Debug(2, "serverScoreDown:" + serverUrl + " " + std::to_string(serverInfo.score));
+        ABC_Debug(1, "serverScoreDown:" + serverUrl + " " + std::to_string(serverInfo.score));
     }
     return Status();
 }
@@ -280,7 +284,7 @@ ServerCache::setResponseTime(std::string serverUrl, unsigned long long responseT
         }
         serverInfo.responseTime = newTime;
         servers_[serverUrl] = serverInfo;
-        ABC_Debug(2, "setResponseTime:" + serverUrl + " oldTime:" + std::to_string(oldtime) + " newTime:" + std::to_string(newTime));
+        ABC_Debug(1, "setResponseTime:" + serverUrl + " oldTime:" + std::to_string(oldtime) + " newTime:" + std::to_string(newTime));
     }
 }
 
@@ -323,7 +327,7 @@ ServerCache::getServers(ServerType type, unsigned int numServersWanted)
 
     //
     // Take the top 50% of servers that have
-    // 1. A score between 20 points of the highest score
+    // 1. A score between 100 points of the highest score
     // 2. A positive score of at least 5
     // 3. A response time that is not RESPONSE_TIME_UNINITIALIZED
     //
@@ -339,7 +343,7 @@ ServerCache::getServers(ServerType type, unsigned int numServersWanted)
         ServerInfo serverInfo = *it;
         ABC_DebugLevel(1, "getServers sorted 1: %d %d ms %s",
                        serverInfo.score, serverInfo.responseTime, serverInfo.serverUrl.c_str())
-        if (serverInfo.score < startServerInfo.score - 20)
+        if (serverInfo.score < startServerInfo.score - 100)
             continue;
         if (serverInfo.score <= 5)
             continue;
