@@ -8,6 +8,7 @@
 #include "Context.hpp"
 #include "bitcoin/cache/BlockCache.hpp"
 #include "exchange/ExchangeCache.hpp"
+#include "bitcoin/cache/ServerCache.hpp"
 
 namespace abcd {
 
@@ -28,7 +29,8 @@ Context::Context(const std::string &rootDir, const std::string &certPath,
     hiddenBitsKey_(hiddenBitsKey),
     paths(rootDir, certPath),
     blockCache(*new BlockCache(paths.blockCachePath())),
-    exchangeCache(*new ExchangeCache(paths.exchangeCachePath()))
+    exchangeCache(*new ExchangeCache(paths.exchangeCachePath())),
+    serverCache(*new ServerCache(paths.serverScoresPath()))
 {
     blockCache.load().log(); // Failure is fine
 }

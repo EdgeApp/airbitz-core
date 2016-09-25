@@ -15,6 +15,7 @@ namespace abcd {
 
 class BlockCache;
 class ExchangeCache;
+class ServerCache;
 
 /**
  * An object holding app-wide information, such as paths.
@@ -41,6 +42,7 @@ public:
     RootPaths paths;
     BlockCache &blockCache;
     ExchangeCache &exchangeCache;
+    ServerCache &serverCache;
 };
 
 /**

@@ -11,6 +11,7 @@
 #include "AddressCache.hpp"
 #include "BlockCache.hpp"
 #include "TxCache.hpp"
+#include "ServerCache.hpp"
 
 namespace abcd {
 
@@ -20,8 +21,9 @@ public:
     TxCache txs;
     BlockCache &blocks;
     AddressCache addresses;
+    ServerCache &servers;
 
-    Cache(const std::string &path, BlockCache &blockCache);
+    Cache(const std::string &path, BlockCache &blockCache, ServerCache &serverCache);
 
     /**
      * Sets the address check done for this wallet meaning that
