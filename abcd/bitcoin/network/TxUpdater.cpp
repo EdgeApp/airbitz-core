@@ -63,6 +63,11 @@ TxUpdater::connect()
     if (libbitcoinServers_.empty())
         libbitcoinServers_ = cache_.servers.getServers(ServerTypeLibbitcoin, MINIMUM_LIBBITCOIN_SERVERS * 2);
 
+    for (int i = 0; i < libbitcoinServers_.size(); i++)
+        ABC_DebugLevel(1, "libbitcoinServers_[%d]=%s", i, libbitcoinServers_[i].c_str());
+    for (int i = 0; i < stratumServers_.size(); i++)
+        ABC_DebugLevel(1, "stratumServers_[%d]=%s", i, stratumServers_[i].c_str());
+
     ABC_DebugLevel(2,"%d libbitcoin untried, %d stratrum untried",
                    libbitcoinServers_.size(), stratumServers_.size());
 

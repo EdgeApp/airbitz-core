@@ -26,6 +26,25 @@ constexpr auto MIN_SCORE = -100;
 constexpr time_t onHeaderTimeout = 5;
 #define RESPONSE_TIME_UNINITIALIZED 999999999
 
+/**
+ * Utility routines
+ */
+bool sortServersByTime(ServerInfo si1, ServerInfo si2)
+{
+    return si1.responseTime < si2.responseTime;
+}
+
+bool sortServersByScore(ServerInfo si1, ServerInfo si2)
+{
+    return si1.score > si2.score;
+}
+
+int roundUpDivide(int x, int y)
+{
+    return (x % y) ? (x / y + 1) : (x / y);
+}
+
+
 struct ServerScoreJson:
         public JsonObject
 {
@@ -39,7 +58,8 @@ struct ServerScoreJson:
 ServerCache::ServerCache(const std::string &path):
     path_(path),
     dirty_(false),
-    lastUpScoreTime_(0)
+    lastUpScoreTime_(0),
+    cacheLastSave_(0)
 {
 }
 
@@ -54,7 +74,7 @@ Status
 ServerCache::load()
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    ABC_Debug(1, "ServerCache::load");
+    ABC_Debug(1, "ServerCache::load()");
 
     // Load the saved server scores if they exist
     JsonArray serverScoresJsonArray;
@@ -109,7 +129,7 @@ ServerCache::load()
         serverInfo.responseTime = serverResponseTime;
         serverInfo.numResponseTimes = 0;
         servers_[serverUrl] = serverInfo;
-        ABC_DebugLevel(1, "ServerCache::load() %d %d ms %s",
+        ABC_DebugLevel(1, "ServerCache::load %d %d ms %s",
                        serverInfo.score, serverInfo.responseTime, serverInfo.serverUrl.c_str())
 
     }
@@ -120,24 +140,41 @@ ServerCache::load()
 Status
 ServerCache::save_nolock()
 {
+    ABC_Debug(1, "ServerCache::save()");
     JsonArray serverScoresJsonArray;
-    ABC_Debug(1, "ServerCache::save");
 
     if (dirty_)
     {
-        for (const auto &server: servers_)
+        time_t now = time(nullptr);
+
+        if (10 <= now - cacheLastSave_)
         {
-            ServerScoreJson ssj;
-            ServerInfo serverInfo = server.second;
-            ABC_CHECK(ssj.serverUrlSet(server.first));
-            ABC_CHECK(ssj.serverScoreSet(serverInfo.score));
-            ABC_CHECK(ssj.serverResponseTimeSet(serverInfo.responseTime));
-            ABC_CHECK(serverScoresJsonArray.append(ssj));
-            ABC_DebugLevel(1, "ServerCache::save() %d %d ms %s",
-                           serverInfo.score, serverInfo.responseTime, serverInfo.serverUrl.c_str())
+            cacheLastSave_ = now;
+            std::vector<ServerInfo> serverInfos;
+
+            for (const auto &server: servers_)
+            {
+                // Copy from map to vector so we can sort it.
+                serverInfos.push_back(server.second);
+            }
+            std::sort(serverInfos.begin(), serverInfos.end(), sortServersByScore);
+            for (const auto &serverInfo: serverInfos)
+            {
+                ServerScoreJson ssj;
+                ABC_CHECK(ssj.serverUrlSet(serverInfo.serverUrl));
+                ABC_CHECK(ssj.serverScoreSet(serverInfo.score));
+                ABC_CHECK(ssj.serverResponseTimeSet(serverInfo.responseTime));
+                ABC_CHECK(serverScoresJsonArray.append(ssj));
+                ABC_DebugLevel(1, "ServerCache::save %d %d ms %s",
+                               serverInfo.score, serverInfo.responseTime, serverInfo.serverUrl.c_str())
+            }
+            ABC_CHECK(serverScoresJsonArray.save(path_));
+            dirty_ = false;
         }
-        ABC_CHECK(serverScoresJsonArray.save(path_));
-        dirty_ = false;
+        else
+        {
+            ABC_Debug(1, "ServerCache::save() NOT SAVED. TOO SOON");
+        }
     }
 
     return Status();
@@ -164,7 +201,7 @@ ServerCache::serverScoreUp(std::string serverUrl, int changeScore)
             serverInfo.score = MAX_SCORE;
         servers_[serverUrl] = serverInfo;
         dirty_ = true;
-        ABC_Debug(1, "serverScoreUp:" + serverUrl + " " + std::to_string(serverInfo.score));
+        ABC_Debug(2, "serverScoreUp:" + serverUrl + " " + std::to_string(serverInfo.score));
     }
     lastUpScoreTime_ = time(nullptr);
     return Status();
@@ -177,9 +214,9 @@ ServerCache::serverScoreDown(std::string serverUrl, int changeScore)
 
     time_t currentTime = time(nullptr);
 
-    if (currentTime - lastUpScoreTime_ > 60)
+    if (currentTime - lastUpScoreTime_ > 20)
     {
-        // It has been over 1 minute since we got an upvote for any server.
+        // It has been over 20 seconds since we got an upvote for any server.
         // Assume the network is down and don't penalize anyone for now
         return Status();
     }
@@ -193,7 +230,7 @@ ServerCache::serverScoreDown(std::string serverUrl, int changeScore)
             serverInfo.score = MIN_SCORE;
         servers_[serverUrl] = serverInfo;
         dirty_ = true;
-        ABC_Debug(1, "serverScoreDown:" + serverUrl + " " + std::to_string(serverInfo.score));
+        ABC_Debug(2, "serverScoreDown:" + serverUrl + " " + std::to_string(serverInfo.score));
     }
     return Status();
 }
@@ -243,26 +280,16 @@ ServerCache::setResponseTime(std::string serverUrl, unsigned long long responseT
         }
         serverInfo.responseTime = newTime;
         servers_[serverUrl] = serverInfo;
-        ABC_Debug(1, "setResponseTime:" + serverUrl + " oldTime:" + std::to_string(oldtime) + " newTime:" + std::to_string(newTime));
+        ABC_Debug(2, "setResponseTime:" + serverUrl + " oldTime:" + std::to_string(oldtime) + " newTime:" + std::to_string(newTime));
     }
 }
 
-bool sortServersByTime(ServerInfo si1, ServerInfo si2)
-{
-    return si1.responseTime < si2.responseTime;
-}
-
-bool sortServersByScore(ServerInfo si1, ServerInfo si2)
-{
-    return si1.score > si2.score;
-}
-
 std::vector<std::string>
-ServerCache::getServers(ServerType type, unsigned int numServers)
+ServerCache::getServers(ServerType type, unsigned int numServersWanted)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     std::vector<ServerInfo> serverInfos;
-    ServerInfo newServerInfo;
+    std::vector<ServerInfo> newServerInfos;
 
     // Get all the servers that match the type
     for (const auto &server: servers_)
@@ -284,7 +311,7 @@ ServerCache::getServers(ServerType type, unsigned int numServers)
         // If this is a new server, save it for use later
         if (serverInfo.responseTime == RESPONSE_TIME_UNINITIALIZED &&
                 serverInfo.score == 0)
-            newServerInfo = serverInfo;
+            newServerInfos.push_back(serverInfo);
 
         ABC_DebugLevel(1, "getServers unsorted: %d %d ms %s",
                        serverInfo.score, serverInfo.responseTime, serverInfo.serverUrl.c_str())
@@ -310,51 +337,70 @@ ServerCache::getServers(ServerType type, unsigned int numServers)
     for (auto it = serverInfos.begin(); it != serverInfos.end(); ++it)
     {
         ServerInfo serverInfo = *it;
-        if (serverInfo.score < startServerInfo.score - 20)
-            break;
-        if (serverInfo.score <= 5)
-            break;
-        if (serverInfo.responseTime >= RESPONSE_TIME_UNINITIALIZED)
-            break;
-        serverEnd = it;
-
-        numServersPass++;
         ABC_DebugLevel(1, "getServers sorted 1: %d %d ms %s",
                        serverInfo.score, serverInfo.responseTime, serverInfo.serverUrl.c_str())
-        if (numServersPass >= numServers)
-            break;
+        if (serverInfo.score < startServerInfo.score - 20)
+            continue;
+        if (serverInfo.score <= 5)
+            continue;
+        if (serverInfo.responseTime >= RESPONSE_TIME_UNINITIALIZED)
+            continue;
+
+        numServersPass++;
+        if (numServersPass >= numServersWanted)
+            continue;
         if (numServersPass >= size / 2)
-            break;
+            continue;
+        serverEnd = it;
     }
 
     std::sort(serverStart, serverEnd, sortServersByTime);
 
     std::vector<std::string> servers;
 
-    bool hasNewServer = false;
+    int numNewServers = 0;
+    int numServers = 0;
     for (auto it = serverInfos.begin(); it != serverInfos.end(); ++it)
     {
         ServerInfo serverInfo = *it;
         ABC_DebugLevel(1, "getServers sorted 2: %d %d ms %s",
                        serverInfo.score, serverInfo.responseTime, serverInfo.serverUrl.c_str())
         servers.push_back(serverInfo.serverUrl);
+        numServers++;
         if (serverInfo.responseTime == RESPONSE_TIME_UNINITIALIZED &&
             serverInfo.score == 0)
-            hasNewServer = true;
+            numNewServers++;
 
-            numServers--;
-        if (0 == numServers)
+
+        if (numServersWanted <= numServers)
             break;
+
+        // Try to fill half of the number of requested servers with new, untried servers so that
+        // we eventually try the full list of servers to score them.
+        int halfServersWanted = roundUpDivide(numServersWanted, 2);
+        if (numServers >= halfServersWanted &&
+                numNewServers == 0)
+        {
+            if (newServerInfos.size() >= (numServersWanted - numServers))
+                break;
+        }
     }
 
     // If this list does not have a new server in it, try to add one as we always want to give new
     // servers a try.
-    if (!hasNewServer)
+    if (0 == numNewServers)
     {
-        if (newServerInfo.serverUrl.size() > 2)
+        for (auto it = newServerInfos.begin(); it != newServerInfos.end(); ++it)
         {
-            auto it = servers.begin();
-            servers.insert(it, newServerInfo.serverUrl);
+            ServerInfo serverInfo = *it;
+            auto it2 = servers.begin();
+            servers.insert(it2, serverInfo.serverUrl);
+            ABC_DebugLevel(1, "getServers sorted 2+: %d %d ms %s",
+                           serverInfo.score, serverInfo.responseTime, serverInfo.serverUrl.c_str())
+
+            numServers++;
+            if (numServers >= numServersWanted)
+                break;
         }
     }
     return servers;

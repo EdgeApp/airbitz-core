@@ -95,6 +95,7 @@ private:
     const std::string path_;
     bool dirty_;
     time_t lastUpScoreTime_;
+    time_t cacheLastSave_;
 
     std::map<std::string, ServerInfo> servers_;
 };
