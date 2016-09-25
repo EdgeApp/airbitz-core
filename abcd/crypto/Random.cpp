@@ -14,6 +14,7 @@
 #endif
 #include <sys/time.h>
 #include <unistd.h>
+#include "Scrypt.hpp"
 
 namespace abcd {
 
@@ -72,6 +73,17 @@ randomInitialize(DataSlice seed)
 
     // seed it
     RAND_seed(NewSeed.data(), NewSeed.size());
+
+    // XXX Remove for production. Used to test performance of scrypt on various devices on startup
+    ScryptSnrp snrp;
+//    snrp.createSnrpFromTime(90000);
+//    snrp.createSnrpFromTime(45000);
+//    snrp.createSnrpFromTime(20000);
+//    snrp.createSnrpFromTime(10000);
+//    snrp.createSnrpFromTime(5000);
+//    snrp.createSnrpFromTime(2000);
+//    snrp.createSnrpFromTime(1000);
+    snrp.create();
 
     return Status();
 }

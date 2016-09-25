@@ -29,6 +29,44 @@ namespace abcd {
 
 #define SCRYPT_DEFAULT_SALT_LENGTH 32
 
+void
+ScryptSnrp::createSnrpFromTime(unsigned long totalTime)
+{
+    ABC_DebugLevel(1, "ScryptSnrp::create target:%d timing:%d", SCRYPT_TARGET_USECONDS,
+                   totalTime);
+
+    double fN = 1.0;
+    double fR = SCRYPT_DEFAULT_CLIENT_R;
+    double fP = SCRYPT_DEFAULT_CLIENT_P;
+
+    double fEstTargetTimeElapsed = (double) totalTime;
+    double maxNShift = 1 + SCRYPT_MAX_CLIENT_N_SHIFT - SCRYPT_DEFAULT_CLIENT_N_SHIFT;
+
+    fR = (SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
+    if (fR > SCRYPT_MAX_CLIENT_R) {
+        fR = SCRYPT_MAX_CLIENT_R;
+
+        fEstTargetTimeElapsed *= SCRYPT_MAX_CLIENT_R;
+        fN = (SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
+
+        if (fN > maxNShift) {
+            fN = maxNShift;
+
+            fEstTargetTimeElapsed *= maxNShift;
+            fP = (SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
+        }
+    } else {
+        fR = SCRYPT_MAX_CLIENT_R;
+    }
+    fN = fN >= 1.0 ? fN : 1.0;
+
+    n = 1 << ((SCRYPT_DEFAULT_CLIENT_N_SHIFT - 1) + (unsigned long) fN);
+    r = (unsigned long) fR;
+    p = (unsigned long) fP;
+
+    ABC_DebugLevel(1, "ScryptSnrp::create time=%d NRp=%d %d %d",totalTime, n, r, p);
+}
+
 Status
 ScryptSnrp::create()
 {
@@ -47,60 +85,11 @@ ScryptSnrp::create()
     gettimeofday(&timerEnd, nullptr);
 
     // Find the time in microseconds:
-    int totalTime = 1000000 * (timerEnd.tv_sec - timerStart.tv_sec);
+    unsigned long totalTime = 1000000 * (timerEnd.tv_sec - timerStart.tv_sec);
     totalTime += timerEnd.tv_usec;
     totalTime -= timerStart.tv_usec;
-    int diffShift = 0;
 
-    ABC_DebugLevel(1, "Scrypt target:%d timing:%d", SCRYPT_TARGET_USECONDS,
-                   totalTime);
-
-    if (totalTime >= SCRYPT_TARGET_USECONDS)
-    {
-        ABC_DebugLevel(1, "Scrypt timing: Slow device");
-        // Very slow device.
-        // Do nothing, use default scrypt settings which are lowest we'll go
-    }
-    else if (totalTime >= SCRYPT_TARGET_USECONDS / SCRYPT_MAX_CLIENT_R)
-    {
-        // Medium speed device.
-        // Scale R between 1 to 8 assuming linear effect on hashing time.
-        // Don't touch N.
-        ABC_DebugLevel(1, "Scrypt timing: Medium device");
-        r = SCRYPT_TARGET_USECONDS / totalTime;
-    }
-    else if (totalTime > 0)
-    {
-        // Very fast device.
-        r = SCRYPT_MAX_CLIENT_R;
-
-        // Need to adjust scryptN to make scrypt even stronger:
-        unsigned int numShifts = (SCRYPT_TARGET_USECONDS / SCRYPT_MAX_CLIENT_R) /
-                                 totalTime;
-        numShifts--;
-
-        if (SCRYPT_MAX_CLIENT_N_SHIFT < numShifts + SCRYPT_DEFAULT_CLIENT_N_SHIFT)
-        {
-            diffShift = numShifts + SCRYPT_DEFAULT_CLIENT_N_SHIFT -
-                        SCRYPT_MAX_CLIENT_N_SHIFT;
-            n = (1 << SCRYPT_MAX_CLIENT_N_SHIFT);
-        }
-        else
-        {
-            n = (1 << (numShifts + SCRYPT_DEFAULT_CLIENT_N_SHIFT));
-        }
-
-        ABC_DebugLevel(1, "Scrypt timing: Fast device diffShift:%d n:%d", diffShift, n);
-    }
-
-    if (diffShift)
-    {
-        int addP = diffShift;
-        ABC_DebugLevel(1, "Scrypt timing: Fast device addP:%d", addP);
-        p += addP;
-    }
-
-    ABC_DebugLevel(1, "NRp = %d %d %d", n, r, p);
+    createSnrpFromTime(totalTime);
 
     return Status();
 }
