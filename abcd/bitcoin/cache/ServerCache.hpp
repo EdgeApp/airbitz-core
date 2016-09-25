@@ -23,6 +23,13 @@ typedef enum
     ServerTypeLibbitcoin
 } ServerType;
 
+typedef struct {
+    std::string serverUrl;
+    int score;
+    unsigned long responseTime;
+    unsigned long numResponseTimes;
+} ServerInfo;
+
 /**
  * A block-height cache.
  */
@@ -53,16 +60,22 @@ public:
     save();
 
     /**
-     * Increase server score from a successful connection
+     * Increase server score
      */
     Status
     serverScoreUp(std::string serverUrl, int changeScore=1);
 
     /**
-     * Decrease server score from a bad connection
+     * Decrease server score
      */
     Status
-    serverScoreDown(std::string serverUrl, int changeScore=3);
+    serverScoreDown(std::string serverUrl, int changeScore=5);
+
+    /**
+     * Set the response time seen from an interaction with this server
+     */
+    void
+    setResponseTime(std::string serverUrl, unsigned long long responseTimeMilliseconds);
 
     /**
      * Get a vector of server URLs by type. This returns the top 'numServers' of servers with
@@ -71,6 +84,8 @@ public:
     std::vector<std::string>
     getServers(ServerType type, unsigned int numServers);
 
+    static
+    unsigned long long getCurrentTimeMilliSeconds();
 
 private:
     Status
@@ -81,7 +96,7 @@ private:
     bool dirty_;
     time_t lastUpScoreTime_;
 
-    std::map<std::string, int> servers_;
+    std::map<std::string, ServerInfo> servers_;
 };
 
 } // namespace abcd

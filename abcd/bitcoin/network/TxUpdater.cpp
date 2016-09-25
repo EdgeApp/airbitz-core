@@ -11,6 +11,7 @@
 #include "../cache/Cache.hpp"
 #include "../../General.hpp"
 #include "../../util/Debug.hpp"
+#include <sys/time.h>
 
 namespace abcd {
 
@@ -56,16 +57,11 @@ TxUpdater::connect()
 
     // If we are out of fresh stratum servers, reload the list:
     if (stratumServers_.empty())
-        stratumServers_ = cache_.servers.getServers(ServerTypeStratum, 15);
+        stratumServers_ = cache_.servers.getServers(ServerTypeStratum, MINIMUM_STRATUM_SERVERS * 2);
 
     // If we are out of fresh libbitcoin servers, reload the list:
     if (libbitcoinServers_.empty())
-        libbitcoinServers_ = cache_.servers.getServers(ServerTypeLibbitcoin, 4);
-
-    for (int i = 0; i < libbitcoinServers_.size(); i++)
-        ABC_DebugLevel(1, "libbitcoinServers_[%d]=%s", i, libbitcoinServers_[i].c_str());
-    for (int i = 0; i < stratumServers_.size(); i++)
-        ABC_DebugLevel(1, "stratumServers_[%d]=%s", i, stratumServers_[i].c_str());
+        libbitcoinServers_ = cache_.servers.getServers(ServerTypeLibbitcoin, MINIMUM_LIBBITCOIN_SERVERS * 2);
 
     ABC_DebugLevel(2,"%d libbitcoin untried, %d stratrum untried",
                    libbitcoinServers_.size(), stratumServers_.size());
@@ -162,7 +158,6 @@ TxUpdater::wakeup()
                 failedServers_.insert(bc->uri());
             else
             {
-                cache_.servers.serverScoreUp(bc->uri());
                 nextWakeup = bc::client::min_sleep(nextWakeup, sleep);
             }
         }
@@ -411,15 +406,21 @@ TxUpdater::subscribeHeight(IBitcoinConnection *bc)
         failedServers_.insert(uri);
     };
 
-    auto onReply = [this, uri](size_t height)
+    unsigned long long queryTime = ServerCache::getCurrentTimeMilliSeconds();
+
+    auto onReply = [this, uri, queryTime](size_t height)
     {
-        ABC_DebugLog("%s: height %d returned", uri.c_str(), height);
+        // Set the response time in the cache
+        unsigned long long responseTime = ServerCache::getCurrentTimeMilliSeconds();
+        cache_.servers.setResponseTime(uri, responseTime - queryTime);
+
+        ABC_DebugLog("%s: height %d returned %d ms", uri.c_str(), height, responseTime - queryTime);
         size_t oldHeight = cache_.blocks.heightSet(height);
 
         if (oldHeight > height + 2)
         {
             // This server is behind in block height. Disconnect then penalize it a lot
-            cache_.servers.serverScoreDown(uri, 10);
+            cache_.servers.serverScoreDown(uri, 20);
         }
         else if (oldHeight <= height)
         {
@@ -427,6 +428,7 @@ TxUpdater::subscribeHeight(IBitcoinConnection *bc)
             if (oldHeight < height)
             {
                 cache_.servers.serverScoreUp(uri); // Point for returning a newer height
+
 
                 // Update addresses with unconfirmed txs:
                 const auto statuses = cache_.txs.statuses(cache_.addresses.txids());
@@ -502,10 +504,15 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
         wipAddresses_.erase(address);
     };
 
-    auto onReply = [this, address, uri](const AddressHistory &history)
+    unsigned long long queryTime = ServerCache::getCurrentTimeMilliSeconds();
+
+    auto onReply = [this, address, uri, queryTime](const AddressHistory &history)
     {
-        ABC_DebugLog("%s: %s fetched %d TXIDs", uri.c_str(), address.c_str(),
-                     history.size());
+        unsigned long long responseTime = ServerCache::getCurrentTimeMilliSeconds();
+        cache_.servers.setResponseTime(uri, responseTime - queryTime);
+
+        ABC_DebugLog("%s: %s fetched %d TXIDs %d ms", uri.c_str(), address.c_str(),
+                     history.size(), responseTime - queryTime);
         wipAddresses_.erase(address);
         addressServers_[address] = uri;
 
@@ -520,12 +527,14 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
         {
             cache_.addresses.update(address, txids);
             cache_.servers.serverScoreUp(uri);
+
         }
         else
         {
             std::string hash = cache_.addresses.getStratumHash(address);
             if (hash.empty())
             {
+
                 cache_.addresses.update(address, txids);
                 cache_.servers.serverScoreUp(uri);
             }
@@ -535,6 +544,7 @@ TxUpdater::fetchAddress(const std::string &address, IBitcoinConnection *bc)
                              address.c_str(), hash.c_str());
                 // Do not trust current server. Force a new server.
                 failedServers_.insert(uri);
+                cache_.servers.serverScoreDown(uri, 20);
             }
         }
     };
@@ -558,8 +568,13 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
         wipTxids_.erase(txid);
     };
 
-    auto onReply = [this, txid, uri](const bc::transaction_type &tx)
+    unsigned long long queryTime = ServerCache::getCurrentTimeMilliSeconds();
+
+    auto onReply = [this, txid, uri, queryTime](const bc::transaction_type &tx)
     {
+        unsigned long long responseTime = ServerCache::getCurrentTimeMilliSeconds();
+        cache_.servers.setResponseTime(uri, responseTime - queryTime);
+
         ABC_DebugLog("%s: tx %s fetched", uri.c_str(), txid.c_str());
         wipTxids_.erase(txid);
 
@@ -583,10 +598,14 @@ TxUpdater::fetchFeeEstimate(size_t blocks, StratumConnection *sc)
                      uri.c_str(), blocks, s.message().c_str());
     };
 
-    auto onReply = [this, blocks, uri](double fee)
+    unsigned long long queryTime = ServerCache::getCurrentTimeMilliSeconds();
+    auto onReply = [this, blocks, uri, queryTime](double fee)
     {
-        ABC_DebugLog("%s: returned fee %lf for %d blocks",
-                     uri.c_str(), fee, blocks);
+        unsigned long long responseTime = ServerCache::getCurrentTimeMilliSeconds();
+        cache_.servers.setResponseTime(uri, responseTime - queryTime);
+
+        ABC_DebugLog("%s: returned fee %lf for %d blocks %d ms",
+                     uri.c_str(), fee, blocks, responseTime - queryTime);
 
         if (fee > 0)
         {
@@ -608,10 +627,14 @@ TxUpdater::blockHeaderFetch(size_t height, IBitcoinConnection *bc)
         failedServers_.insert(uri);
     };
 
-    auto onReply = [this, height, uri](const bc::block_header_type &header)
+    unsigned long long queryTime = ServerCache::getCurrentTimeMilliSeconds();
+    auto onReply = [this, height, uri, queryTime](const bc::block_header_type &header)
     {
-        ABC_DebugLog("%s: header %d fetched",
-                     uri.c_str(), height);
+        unsigned long long responseTime = ServerCache::getCurrentTimeMilliSeconds();
+        cache_.servers.setResponseTime(uri, responseTime - queryTime);
+
+        ABC_DebugLog("%s: header %d fetched %d ms",
+                     uri.c_str(), height, responseTime - queryTime);
 
         bool didInsert = cache_.blocks.headerInsert(height, header);
         if (didInsert)
