@@ -22,6 +22,7 @@ namespace abcd {
 #define SCRYPT_DEFAULT_CLIENT_N         (1 << SCRYPT_DEFAULT_CLIENT_N_SHIFT) //16384
 #define SCRYPT_DEFAULT_CLIENT_R         1
 #define SCRYPT_DEFAULT_CLIENT_P         1
+#define SCRYPT_MIN_CLIENT_R             8
 #define SCRYPT_MAX_CLIENT_N_SHIFT       17
 #define SCRYPT_MAX_CLIENT_N             (1 << SCRYPT_MAX_CLIENT_N_SHIFT)
 #define SCRYPT_MAX_CLIENT_R             8
@@ -36,27 +37,27 @@ ScryptSnrp::createSnrpFromTime(unsigned long totalTime)
                    totalTime);
 
     double fN = 1.0;
-    double fR = SCRYPT_DEFAULT_CLIENT_R;
-    double fP = SCRYPT_DEFAULT_CLIENT_P;
+    double fR = (double) SCRYPT_DEFAULT_CLIENT_R;
+    double fP = (double) SCRYPT_DEFAULT_CLIENT_P;
 
     double fEstTargetTimeElapsed = (double) totalTime;
     double maxNShift = 1 + SCRYPT_MAX_CLIENT_N_SHIFT - SCRYPT_DEFAULT_CLIENT_N_SHIFT;
 
-    fR = (SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
-    if (fR > SCRYPT_MAX_CLIENT_R) {
-        fR = SCRYPT_MAX_CLIENT_R;
+    fR = ((double) SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
+    if (fR > (double) SCRYPT_MAX_CLIENT_R) {
+        fR = (double) SCRYPT_MAX_CLIENT_R;
 
-        fEstTargetTimeElapsed *= SCRYPT_MAX_CLIENT_R;
-        fN = (SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
+        fEstTargetTimeElapsed *= (double) SCRYPT_MAX_CLIENT_R;
+        fN = ((double) SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
 
         if (fN > maxNShift) {
             fN = maxNShift;
 
             fEstTargetTimeElapsed *= maxNShift;
-            fP = (SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
+            fP = ((double) SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
         }
     } else {
-        fR = SCRYPT_MAX_CLIENT_R;
+        fR = (double) SCRYPT_MIN_CLIENT_R;
     }
     fN = fN >= 1.0 ? fN : 1.0;
 
@@ -98,6 +99,7 @@ Status
 ScryptSnrp::hash(DataChunk &result, DataSlice data, size_t size) const
 {
     DataChunk out(size);
+    ABC_DebugLevel(1, "ScryptSnrp::hash NRp=%d %d %d", n, r, p);
 
     int rc = crypto_scrypt(data.data(), data.size(),
                            salt.data(), salt.size(), n, r, p, out.data(), size);
