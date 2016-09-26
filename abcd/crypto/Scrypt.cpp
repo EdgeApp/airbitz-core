@@ -65,7 +65,7 @@ ScryptSnrp::createSnrpFromTime(unsigned long totalTime)
     r = (unsigned long) fR;
     p = (unsigned long) fP;
 
-    ABC_DebugLevel(1, "ScryptSnrp::create time=%d NRp=%d %d %d",totalTime, n, r, p);
+    ABC_DebugLevel(1, "ScryptSnrp::create time=%d Nrp=%llu %lu %lu",totalTime, n, r, p);
 }
 
 Status
@@ -99,7 +99,7 @@ Status
 ScryptSnrp::hash(DataChunk &result, DataSlice data, size_t size) const
 {
     DataChunk out(size);
-    ABC_DebugLevel(1, "ScryptSnrp::hash NRp=%d %d %d", n, r, p);
+    ABC_DebugLevel(1, "ScryptSnrp::hash Nrp=%llu %lu %lu", n, r, p);
 
     int rc = crypto_scrypt(data.data(), data.size(),
                            salt.data(), salt.size(), n, r, p, out.data(), size);
