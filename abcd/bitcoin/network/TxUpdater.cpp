@@ -57,14 +57,17 @@ TxUpdater::connect()
 
     // If we are out of fresh stratum servers, reload the list:
     if (stratumServers_.empty())
-        stratumServers_ = cache_.servers.getServers(ServerTypeStratum, MINIMUM_STRATUM_SERVERS * 2);
+        stratumServers_ = cache_.servers.getServers(ServerTypeStratum,
+                          MINIMUM_STRATUM_SERVERS * 2);
 
     // If we are out of fresh libbitcoin servers, reload the list:
     if (libbitcoinServers_.empty())
-        libbitcoinServers_ = cache_.servers.getServers(ServerTypeLibbitcoin, MINIMUM_LIBBITCOIN_SERVERS * 2);
+        libbitcoinServers_ = cache_.servers.getServers(ServerTypeLibbitcoin,
+                             MINIMUM_LIBBITCOIN_SERVERS * 2);
 
     for (int i = 0; i < libbitcoinServers_.size(); i++)
-        ABC_DebugLevel(1, "libbitcoinServers_[%d]=%s", i, libbitcoinServers_[i].c_str());
+        ABC_DebugLevel(1, "libbitcoinServers_[%d]=%s", i,
+                       libbitcoinServers_[i].c_str());
     for (int i = 0; i < stratumServers_.size(); i++)
         ABC_DebugLevel(1, "stratumServers_[%d]=%s", i, stratumServers_[i].c_str());
 
@@ -420,7 +423,8 @@ TxUpdater::subscribeHeight(IBitcoinConnection *bc)
         unsigned long long responseTime = ServerCache::getCurrentTimeMilliSeconds();
         cache_.servers.setResponseTime(uri, responseTime - queryTime);
 
-        ABC_DebugLog("%s: height %d returned %d ms", uri.c_str(), height, responseTime - queryTime);
+        ABC_DebugLog("%s: height %d returned %d ms", uri.c_str(), height,
+                     responseTime - queryTime);
         size_t oldHeight = cache_.blocks.heightSet(height);
 
         if (oldHeight > height + 2)
@@ -634,7 +638,8 @@ TxUpdater::blockHeaderFetch(size_t height, IBitcoinConnection *bc)
     };
 
     unsigned long long queryTime = ServerCache::getCurrentTimeMilliSeconds();
-    auto onReply = [this, height, uri, queryTime](const bc::block_header_type &header)
+    auto onReply = [this, height, uri,
+                    queryTime](const bc::block_header_type &header)
     {
         unsigned long long responseTime = ServerCache::getCurrentTimeMilliSeconds();
         cache_.servers.setResponseTime(uri, responseTime - queryTime);

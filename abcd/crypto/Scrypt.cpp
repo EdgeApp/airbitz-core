@@ -33,7 +33,8 @@ namespace abcd {
 void
 ScryptSnrp::createSnrpFromTime(unsigned long totalTime)
 {
-    ABC_DebugLevel(1, "ScryptSnrp::create target:%d timing:%d", SCRYPT_TARGET_USECONDS,
+    ABC_DebugLevel(1, "ScryptSnrp::create target:%d timing:%d",
+                   SCRYPT_TARGET_USECONDS,
                    totalTime);
 
     double fN = 1.0;
@@ -41,22 +42,27 @@ ScryptSnrp::createSnrpFromTime(unsigned long totalTime)
     double fP = (double) SCRYPT_DEFAULT_CLIENT_P;
 
     double fEstTargetTimeElapsed = (double) totalTime;
-    double maxNShift = 1 + SCRYPT_MAX_CLIENT_N_SHIFT - SCRYPT_DEFAULT_CLIENT_N_SHIFT;
+    double maxNShift = 1 + SCRYPT_MAX_CLIENT_N_SHIFT -
+                       SCRYPT_DEFAULT_CLIENT_N_SHIFT;
 
     fR = ((double) SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
-    if (fR > (double) SCRYPT_MAX_CLIENT_R) {
+    if (fR > (double) SCRYPT_MAX_CLIENT_R)
+    {
         fR = (double) SCRYPT_MAX_CLIENT_R;
 
         fEstTargetTimeElapsed *= (double) SCRYPT_MAX_CLIENT_R;
         fN = ((double) SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
 
-        if (fN > maxNShift) {
+        if (fN > maxNShift)
+        {
             fN = maxNShift;
 
             fEstTargetTimeElapsed *= maxNShift;
             fP = ((double) SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
         }
-    } else {
+    }
+    else
+    {
         fR = (double) SCRYPT_MIN_CLIENT_R;
     }
     fN = fN >= 1.0 ? fN : 1.0;
@@ -65,7 +71,8 @@ ScryptSnrp::createSnrpFromTime(unsigned long totalTime)
     r = (unsigned long) fR;
     p = (unsigned long) fP;
 
-    ABC_DebugLevel(1, "ScryptSnrp::create time=%d Nrp=%llu %lu %lu",totalTime, n, r, p);
+    ABC_DebugLevel(1, "ScryptSnrp::create time=%d Nrp=%llu %lu %lu",totalTime, n, r,
+                   p);
 }
 
 Status

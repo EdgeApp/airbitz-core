@@ -23,7 +23,8 @@ public:
     AddressCache addresses;
     ServerCache &servers;
 
-    Cache(const std::string &path, BlockCache &blockCache, ServerCache &serverCache);
+    Cache(const std::string &path, BlockCache &blockCache,
+          ServerCache &serverCache);
 
     /**
      * Sets the address check done for this wallet meaning that

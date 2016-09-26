@@ -11,7 +11,8 @@
 
 namespace abcd {
 
-Cache::Cache(const std::string &path, BlockCache &blockCache, ServerCache &serverCache):
+Cache::Cache(const std::string &path, BlockCache &blockCache,
+             ServerCache &serverCache):
     txs(blockCache),
     blocks(blockCache),
     addresses(txs),

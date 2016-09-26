@@ -180,7 +180,8 @@ Wallet::Wallet(Account &account, const std::string &id):
     balanceDirty_(true),
     addresses(*this),
     txs(*this),
-    cache(*new Cache(paths.cachePath(), gContext->blockCache, gContext->serverCache))
+    cache(*new Cache(paths.cachePath(), gContext->blockCache,
+                     gContext->serverCache))
 {}
 
 Status

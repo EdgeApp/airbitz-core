@@ -46,13 +46,14 @@ int roundUpDivide(int x, int y)
 
 
 struct ServerScoreJson:
-        public JsonObject
+    public JsonObject
 {
     ABC_JSON_CONSTRUCTORS(ServerScoreJson, JsonObject)
 
     ABC_JSON_STRING(serverUrl, "serverUrl", "")
     ABC_JSON_INTEGER(serverScore, "serverScore", 0)
-    ABC_JSON_INTEGER(serverResponseTime, "serverResponseTime", RESPONSE_TIME_UNINITIALIZED)
+    ABC_JSON_INTEGER(serverResponseTime, "serverResponseTime",
+                     RESPONSE_TIME_UNINITIALIZED)
 };
 
 ServerCache::ServerCache(const std::string &path):
@@ -127,7 +128,8 @@ ServerCache::load()
         serverInfo.serverUrl = serverUrl;
         // Level the playing field a little bit on each bootup by maxing out all scores by 100 less than MAX_SCORE
         if (0 == cacheLastSave_)
-            serverInfo.score = serverScore > MAX_SCORE - 100 ? MAX_SCORE - 100 : serverScore;
+            serverInfo.score = serverScore > MAX_SCORE - 100 ? MAX_SCORE - 100 :
+                               serverScore;
         else
             serverInfo.score = serverScore;
         serverInfo.responseTime = serverResponseTime;
@@ -205,7 +207,8 @@ ServerCache::serverScoreUp(std::string serverUrl, int changeScore)
             serverInfo.score = MAX_SCORE;
         servers_[serverUrl] = serverInfo;
         dirty_ = true;
-        ABC_Debug(1, "serverScoreUp:" + serverUrl + " " + std::to_string(serverInfo.score));
+        ABC_Debug(1, "serverScoreUp:" + serverUrl + " " + std::to_string(
+                      serverInfo.score));
     }
     lastUpScoreTime_ = time(nullptr);
     return Status();
@@ -234,7 +237,8 @@ ServerCache::serverScoreDown(std::string serverUrl, int changeScore)
             serverInfo.score = MIN_SCORE;
         servers_[serverUrl] = serverInfo;
         dirty_ = true;
-        ABC_Debug(1, "serverScoreDown:" + serverUrl + " " + std::to_string(serverInfo.score));
+        ABC_Debug(1, "serverScoreDown:" + serverUrl + " " + std::to_string(
+                      serverInfo.score));
     }
     return Status();
 }
@@ -247,14 +251,15 @@ ServerCache::getCurrentTimeMilliSeconds()
     gettimeofday(&tv, NULL);
 
     unsigned long long millisecondsSinceEpoch =
-            (unsigned long long)(tv.tv_sec) * 1000 +
-            (unsigned long long)(tv.tv_usec) / 1000;
+        (unsigned long long)(tv.tv_sec) * 1000 +
+        (unsigned long long)(tv.tv_usec) / 1000;
 
     return millisecondsSinceEpoch;
 }
 
 void
-ServerCache::setResponseTime(std::string serverUrl, unsigned long long responseTimeMilliseconds)
+ServerCache::setResponseTime(std::string serverUrl,
+                             unsigned long long responseTimeMilliseconds)
 {
     // Collects that last 10 response time values to provide an average response time.
     // This is used in weighting the score of a particular server
@@ -284,7 +289,8 @@ ServerCache::setResponseTime(std::string serverUrl, unsigned long long responseT
         }
         serverInfo.responseTime = newTime;
         servers_[serverUrl] = serverInfo;
-        ABC_Debug(1, "setResponseTime:" + serverUrl + " oldTime:" + std::to_string(oldtime) + " newTime:" + std::to_string(newTime));
+        ABC_Debug(1, "setResponseTime:" + serverUrl + " oldTime:" + std::to_string(
+                      oldtime) + " newTime:" + std::to_string(newTime));
     }
 }
 
@@ -378,7 +384,7 @@ ServerCache::getServers(ServerType type, unsigned int numServersWanted)
         servers.push_back(serverInfo.serverUrl);
         numServers++;
         if (serverInfo.responseTime == RESPONSE_TIME_UNINITIALIZED &&
-            serverInfo.score == 0)
+                serverInfo.score == 0)
             numNewServers++;
 
 

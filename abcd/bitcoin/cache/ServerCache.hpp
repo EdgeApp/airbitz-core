@@ -23,7 +23,8 @@ typedef enum
     ServerTypeLibbitcoin
 } ServerType;
 
-typedef struct {
+typedef struct
+{
     std::string serverUrl;
     int score;
     unsigned long responseTime;
@@ -75,7 +76,8 @@ public:
      * Set the response time seen from an interaction with this server
      */
     void
-    setResponseTime(std::string serverUrl, unsigned long long responseTimeMilliseconds);
+    setResponseTime(std::string serverUrl,
+                    unsigned long long responseTimeMilliseconds);
 
     /**
      * Get a vector of server URLs by type. This returns the top 'numServers' of servers with
