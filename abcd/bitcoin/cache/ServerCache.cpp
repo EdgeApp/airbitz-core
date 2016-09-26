@@ -294,8 +294,15 @@ ServerCache::getServers(ServerType type, unsigned int numServersWanted)
     std::lock_guard<std::mutex> lock(mutex_);
     std::vector<ServerInfo> serverInfos;
     std::vector<ServerInfo> newServerInfos;
+    std::vector<std::string> servers;
+
+    servers.clear();
 
     // Get all the servers that match the type
+
+    if (servers_.empty())
+        return servers;
+
     for (const auto &server: servers_)
     {
         if (ServerTypeStratum == type)
@@ -360,7 +367,6 @@ ServerCache::getServers(ServerType type, unsigned int numServersWanted)
 
     std::sort(serverStart, serverEnd, sortServersByTime);
 
-    std::vector<std::string> servers;
 
     int numNewServers = 0;
     int numServers = 0;
