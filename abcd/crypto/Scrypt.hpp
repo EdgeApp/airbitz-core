@@ -43,7 +43,7 @@ struct ScryptSnrp
      * The scrypt hash function.
      */
     Status
-    hash(DataChunk &result, DataSlice data, size_t size=scryptDefaultSize) const;
+    hash(DataChunk &result, DataSlice data, unsigned long *time=nullptr, size_t size=scryptDefaultSize) const;
 };
 
 /**
