@@ -57,6 +57,9 @@ ScryptSnrp::createSnrpFromTime(unsigned long totalTime)
         fEstTargetTimeElapsed *= (double) SCRYPT_MIN_CLIENT_R;
         fN = ((double) SCRYPT_TARGET_USECONDS / fEstTargetTimeElapsed);
 
+        if (fN < 2.0)
+            fR += rRemainder;
+
         if (fN > maxNShift)
         {
             fN = maxNShift;
@@ -71,9 +74,6 @@ ScryptSnrp::createSnrpFromTime(unsigned long totalTime)
         fR = (double) SCRYPT_MIN_CLIENT_R;
     }
     fN = fN >= 1.0 ? fN : 1.0;
-
-    if (fN < 2.0)
-        fR += rRemainder;
 
     unsigned long nShift = ((SCRYPT_DEFAULT_CLIENT_N_SHIFT - 1) + (unsigned long) fN);
     r = (unsigned long) fR;
