@@ -5,6 +5,7 @@ source="www.digip.org/jansson/releases/jansson-$version.tar.bz2#51cd3b57f152132d
 
 build() {
     cd jansson-$version
+    autoreconf -i
     ./configure --enable-static --disable-shared --host=$cross --prefix=$install_dir
     make
     make install
