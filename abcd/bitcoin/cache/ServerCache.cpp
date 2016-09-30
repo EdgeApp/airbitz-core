@@ -123,6 +123,29 @@ ServerCache::load()
         ServerScoreJson ssj = serverScoresJsonArray[j];
         std::string serverUrl = ssj.serverUrl();
         int serverScore = ssj.serverScore();
+
+        // If there is a cached server that is not on the auth server list, then set it's score to -1
+        // to reduce chances of using it.
+        bool serversMatch = false;
+        size_t size = bitcoinServers.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            std::string serverUrlNew = bitcoinServers[i];
+            if (boost::equal(serverUrl, serverUrlNew))
+            {
+                serversMatch = true;
+                break;
+            }
+        }
+        if (!serversMatch)
+        {
+            ABC_Debug(1, "ServerCache::load Missing from auth " + serverUrl);
+            if (serverScore >= 0)
+            {
+                serverScore = -1;
+            }
+        }
+
         unsigned long serverResponseTime = ssj.serverResponseTime();
         ServerInfo serverInfo;
         serverInfo.serverUrl = serverUrl;
