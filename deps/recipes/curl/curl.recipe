@@ -6,6 +6,11 @@ source="http://curl.haxx.se/download/curl-$version.tar.gz#be0065afc76a3d8568f5f7
 
 build() {
     cd curl-$version
+
+    case $target in
+    ios-*) export CFLAGS="$CFLAGS -Werror=partial-availability" ;;
+    esac
+
     ./configure --enable-static --disable-shared \
         --enable-ipv6 \
         --disable-ldap --without-libssh2 --without-librtmp --without-libidn \
