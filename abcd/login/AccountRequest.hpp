@@ -34,6 +34,7 @@ accountRequest(AccountRequest &result, JsonPtr lobby);
 Status
 accountRequestApprove(Login &login,
                       const std::string &id,
+                      const std::string &pin,
                       JsonPtr lobby);
 
 } // namespace abcd

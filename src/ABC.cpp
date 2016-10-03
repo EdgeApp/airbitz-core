@@ -213,10 +213,15 @@ tABC_CC ABC_ApproveLobbyAccountRequest(const char *szUserName,
 
     {
         ABC_GET_LOGIN();
+        ABC_GET_ACCOUNT();
+
         std::shared_ptr<Lobby> lobby;
         ABC_CHECK_NEW(gLobbyCache.find(lobby, hLobby));
 
-        ABC_CHECK_NEW(accountRequestApprove(*login, lobby->id, lobby->json));
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
+
+        ABC_CHECK_NEW(accountRequestApprove(*login, lobby->id, settings->szPIN, lobby->json));
     }
 
 exit:

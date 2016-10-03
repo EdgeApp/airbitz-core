@@ -43,7 +43,7 @@ COMMAND(InitLevel::login, LobbyApproveEdge, "lobby-approve-edge",
 
     JsonPtr lobbyJson;
     ABC_CHECK(loginServerLobbyGet(lobbyJson, id));
-    ABC_CHECK(accountRequestApprove(*session.login, id, lobbyJson));
+    ABC_CHECK(accountRequestApprove(*session.login, id, "", lobbyJson));
 
     return Status();
 }

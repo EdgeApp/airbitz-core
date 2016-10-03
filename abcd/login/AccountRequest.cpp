@@ -24,6 +24,7 @@ struct AccountReplyJson:
 
     ABC_JSON_VALUE(info, "info", RepoInfoJson)
     ABC_JSON_STRING(username, "username", nullptr)
+    ABC_JSON_STRING(pinString, "pinString", nullptr)
 };
 
 struct AccountRequestJson:
@@ -62,6 +63,7 @@ accountRequest(AccountRequest &result, JsonPtr lobby)
 Status
 accountRequestApprove(Login &login,
                       const std::string &id,
+                      const std::string &pin,
                       JsonPtr lobby)
 {
     auto requestJson = LobbyJson(lobby).accountRequest();
@@ -98,6 +100,10 @@ accountRequestApprove(Login &login,
     AccountReplyJson replyJson;
     ABC_CHECK(replyJson.infoSet(infoJson));
     ABC_CHECK(replyJson.usernameSet(login.store.username()));
+    if (pin.length() == 4)
+    {
+        ABC_CHECK(replyJson.pinStringSet(pin));
+    }
     JsonBox replyBox;
     ABC_CHECK(replyBox.encrypt(replyJson.encode(), dataKey));
 
