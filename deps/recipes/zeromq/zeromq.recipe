@@ -11,6 +11,14 @@ build() {
     echo Patching...
     patch -p1 < $recipe_dir/ios-crash.patch
 
+    # The `clock_gettime` function only works on iOS 10, so we can't use it:
+    case $target in
+    ios-*)
+        sed -e s/clock_gettime/clock_gettime_xxx/ configure.ac > configure2.ac
+        cp configure2.ac configure.ac
+        ;;
+    esac
+
     echo Building...
     ./autogen.sh
     ./configure --disable-eventfd \
