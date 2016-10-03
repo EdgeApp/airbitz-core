@@ -1,9 +1,9 @@
 depends="libsodium"
 inherit lib
 
-version="4.1.3"
+version="4.1.5"
 source="https://github.com/zeromq/cppzmq.git#ac705f604701e2ca1643fa31bae240f9da8b9b9a
-        http://download.openpkg.org/components/cache/zmq/zeromq-4.1.3.tar.gz#b7185724f2fd56d0face50047757ac2a04d26ca4"
+        http://download.openpkg.org/components/cache/zmq/zeromq-$version.tar.gz#2b7490b77860be3060b1b1f92cd73184d309ca69"
 
 build() {
     cd zeromq-$version
