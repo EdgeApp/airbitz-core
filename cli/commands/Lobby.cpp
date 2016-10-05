@@ -28,6 +28,7 @@ COMMAND(InitLevel::context, LobbyGet, "lobby-get",
     {
         std::cout << "  Account request:" << std::endl;
         std::cout << "    Name:\t" << request.displayName << std::endl;
+        std::cout << "    Name:\t" << request.displayImageUrl << std::endl;
         std::cout << "    Type:\t" << request.type << std::endl;
     }
 

@@ -184,6 +184,7 @@ exit:
 tABC_CC ABC_GetLobbyAccountRequest(int hLobby,
                                    char **pszType,
                                    char **pszDisplayName,
+                                   char **pszDisplayImageUrl,
                                    tABC_Error *pError)
 {
     ABC_PROLOG();
@@ -198,6 +199,7 @@ tABC_CC ABC_GetLobbyAccountRequest(int hLobby,
         ABC_CHECK_NEW(accountRequest(request, lobby->json));
         *pszType = stringCopy(request.type);
         *pszDisplayName = stringCopy(request.displayName);
+        *pszDisplayImageUrl = stringCopy(request.displayImageUrl);
     }
 
 exit:

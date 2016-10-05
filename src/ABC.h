@@ -640,6 +640,7 @@ tABC_CC ABC_FetchLobby(char *szId,
 tABC_CC ABC_GetLobbyAccountRequest(int hLobby,
                                    char **pszType,
                                    char **pszDisplayName,
+                                   char **pszDisplayImageUrl,
                                    tABC_Error *pError);
 
 /**

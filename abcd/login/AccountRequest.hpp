@@ -19,6 +19,7 @@ class Login;
 struct AccountRequest
 {
     std::string displayName;
+    std::string displayImageUrl;
     std::string type;
 };
 

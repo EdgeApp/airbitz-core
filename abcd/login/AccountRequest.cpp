@@ -33,6 +33,7 @@ struct AccountRequestJson:
     ABC_JSON_CONSTRUCTORS(AccountRequestJson, JsonObject)
 
     ABC_JSON_STRING(displayName, "displayName", "")
+    ABC_JSON_STRING(displayImageUrl, "displayImageUrl", "")
     ABC_JSON_VALUE(replyBox, "replyBox", JsonBox)
     ABC_JSON_STRING(replyKey, "replyKey", nullptr)
     ABC_JSON_STRING(requestKey, "requestKey", nullptr)
@@ -56,6 +57,7 @@ accountRequest(AccountRequest &result, JsonPtr lobby)
     ABC_CHECK(requestJson.typeOk());
 
     result.displayName = requestJson.displayName();
+    result.displayImageUrl = requestJson.displayImageUrl();
     result.type = requestJson.type();
     return Status();
 }
