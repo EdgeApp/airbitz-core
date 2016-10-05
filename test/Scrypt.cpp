@@ -71,7 +71,8 @@ TEST_CASE("Scrypt RFC test vectors", "[crypto][scrypt]")
             test.N, test.r, test.p
         };
         abcd::DataChunk out;
-        CHECK(snrp.hash(out, test.password, test.dklen));
+        unsigned long totalTime;
+        CHECK(snrp.hash(out, test.password, &totalTime, test.dklen));
         CHECK(abcd::base16Encode(out) == test.result);
     }
 }
