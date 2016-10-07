@@ -47,8 +47,6 @@ public:
     Watcher &operator=(const Watcher &copy) = delete;
 
 private:
-    zmq::context_t ctx_;
-
     // Socket for talking to the thread:
     std::mutex socket_mutex_;
     std::string socket_name_;
