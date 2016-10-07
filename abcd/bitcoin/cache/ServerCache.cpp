@@ -23,7 +23,6 @@ constexpr auto STRATUM_PREFIX_LENGTH = 10;
 constexpr auto MAX_SCORE = 500;
 constexpr auto MIN_SCORE = -100;
 
-constexpr time_t onHeaderTimeout = 5;
 #define RESPONSE_TIME_UNINITIALIZED 999999999
 
 /**

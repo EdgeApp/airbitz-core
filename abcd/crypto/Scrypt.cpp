@@ -48,7 +48,8 @@ ScryptSnrp::createSnrpFromTime(unsigned long totalTime)
 
     double rRemainder = (double) ((unsigned long) fR % SCRYPT_MIN_CLIENT_R);
 
-    ABC_DebugLevel(1, "ScryptSnrp::createSnrpFromTime fR=%f rRemainder=%f",fR,rRemainder);
+    ABC_DebugLevel(1, "ScryptSnrp::createSnrpFromTime fR=%f rRemainder=%f",fR,
+                   rRemainder);
 
     if (fR > (double) SCRYPT_MIN_CLIENT_R)
     {
@@ -75,7 +76,8 @@ ScryptSnrp::createSnrpFromTime(unsigned long totalTime)
     }
     fN = fN >= 1.0 ? fN : 1.0;
 
-    unsigned long nShift = ((SCRYPT_DEFAULT_CLIENT_N_SHIFT - 1) + (unsigned long) fN);
+    unsigned long nShift = ((SCRYPT_DEFAULT_CLIENT_N_SHIFT - 1) +
+                            (unsigned long) fN);
     r = (unsigned long) fR;
     p = (unsigned long) fP;
 
@@ -100,7 +102,8 @@ ScryptSnrp::createSnrpFromTime(unsigned long totalTime)
         }
         if (breakout)
             break;
-        ABC_DebugLevel(1, "ScryptSnrp::createSnrpFromTime N*r too high. lowering nShift=%ul",
+        ABC_DebugLevel(1,
+                       "ScryptSnrp::createSnrpFromTime N*r too high. lowering nShift=%ul",
                        (unsigned long) nShift);
     }
 
@@ -161,7 +164,8 @@ ScryptSnrp::create()
 }
 
 Status
-ScryptSnrp::hash(DataChunk &result, DataSlice data, unsigned long *time, size_t size) const
+ScryptSnrp::hash(DataChunk &result, DataSlice data, unsigned long *time,
+                 size_t size) const
 {
     DataChunk out(size);
 
@@ -177,7 +181,8 @@ ScryptSnrp::hash(DataChunk &result, DataSlice data, unsigned long *time, size_t 
     totalTime += timerEnd.tv_usec;
     totalTime -= timerStart.tv_usec;
 
-    ABC_DebugLevel(1, "ScryptSnrp::hash Nrp=%llu %lu %lu time=%lu", (unsigned long long) n, (unsigned long) r, (unsigned long) p, totalTime);
+    ABC_DebugLevel(1, "ScryptSnrp::hash Nrp=%llu %lu %lu time=%lu",
+                   (unsigned long long) n, (unsigned long) r, (unsigned long) p, totalTime);
 
     if (time)
         *time = totalTime;

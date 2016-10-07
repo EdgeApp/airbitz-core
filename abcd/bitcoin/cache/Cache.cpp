@@ -16,8 +16,8 @@ Cache::Cache(const std::string &path, BlockCache &blockCache,
     txs(blockCache),
     blocks(blockCache),
     addresses(txs),
-    path_(path),
     servers(serverCache),
+    path_(path),
     addressCheckDone_(false)
 {
 }
