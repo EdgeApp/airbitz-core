@@ -33,10 +33,18 @@ struct ScryptSnrp
     create();
 
     /**
+     * Initialize the parameters based on a time elapsed (in microseconds)
+     * from a 16-1-1 hash. Used to determine final hashing parameters
+     */
+    void
+    createSnrpFromTime(unsigned long totalTime);
+
+    /**
      * The scrypt hash function.
      */
     Status
-    hash(DataChunk &result, DataSlice data, size_t size=scryptDefaultSize) const;
+    hash(DataChunk &result, DataSlice data, unsigned long *time=nullptr,
+         size_t size=scryptDefaultSize) const;
 };
 
 /**

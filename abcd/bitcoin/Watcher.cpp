@@ -12,6 +12,18 @@
 
 namespace abcd {
 
+zmq::context_t &zmqContext()
+{
+    static std::mutex mutex;
+    static std::unique_ptr<zmq::context_t> ctx;
+
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!ctx)
+        ctx.reset(new zmq::context_t);
+
+    return *ctx;
+}
+
 using std::placeholders::_1;
 using std::placeholders::_2;
 
@@ -27,8 +39,8 @@ enum
 };
 
 Watcher::Watcher(Cache &cache):
-    socket_(ctx_, ZMQ_PAIR),
-    txu_(cache, ctx_)
+    socket_(zmqContext(), ZMQ_PAIR),
+    txu_(cache, zmqContext())
 {
     std::stringstream name;
     name << "inproc://watcher-" << watcher_id++;
@@ -104,7 +116,7 @@ void throw_intr()
 
 void Watcher::loop()
 {
-    zmq::socket_t socket(ctx_, ZMQ_PAIR);
+    zmq::socket_t socket(zmqContext(), ZMQ_PAIR);
     socket.connect(socket_name_.c_str());
     int linger = 0;
     socket.setsockopt(ZMQ_LINGER, &linger, sizeof(linger));

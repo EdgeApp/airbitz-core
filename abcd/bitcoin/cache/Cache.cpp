@@ -11,10 +11,12 @@
 
 namespace abcd {
 
-Cache::Cache(const std::string &path, BlockCache &blockCache):
+Cache::Cache(const std::string &path, BlockCache &blockCache,
+             ServerCache &serverCache):
     txs(blockCache),
     blocks(blockCache),
     addresses(txs),
+    servers(serverCache),
     path_(path),
     addressCheckDone_(false)
 {
@@ -26,6 +28,7 @@ Cache::clear()
     blocks.clear();
     blocks.save();
     txs.clear();
+    servers.clear();
     save();
 }
 
@@ -33,6 +36,7 @@ Status
 Cache::load()
 {
     JsonObject cacheJson;
+    servers.load();
     ABC_CHECK(cacheJson.load(path_));
     ABC_CHECK(txs.load(cacheJson));
     ABC_CHECK(addresses.load(cacheJson));

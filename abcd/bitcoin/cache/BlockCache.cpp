@@ -115,11 +115,11 @@ BlockCache::height() const
     return height_;
 }
 
-void
+size_t
 BlockCache::heightSet(size_t height)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-
+    size_t heightBefore = height_;
     if (height_ < height)
     {
         height_ = height;
@@ -128,6 +128,7 @@ BlockCache::heightSet(size_t height)
         if (onHeight_)
             onHeight_(height_);
     }
+    return heightBefore;
 }
 
 void

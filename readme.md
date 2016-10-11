@@ -32,26 +32,27 @@ The following command will install the necessary dependencies on Ubuntu:
     apt-get install autoconf automake cmake git libtool pkg-config protobuf-compiler clang
 
 Assuming your system has the necessary command-line tools installed, it should
-be possible to build an Android or iOS-compatible version of ABC by doing
-something like:
+be possible to build ABC by doing something like:
 
     cd deps
     make
 
-This will automatically guess the type of build you want to do. If you would
-like to build for a specific platform, use one of the following inside the
-'deps' directory:
+This will build a core and cli that can run your current system.
+If you would like to cross-compile for another platform,
+following commands are available inside the `deps` directory:
 
     make abc.build-android-arm
-    make abc.build-ios-universal (only works on a Mac)
+    make abc.build-android-x86
+    make abc.ios-universal (only available on Mac)
+    make abc.osx-universal (only available on Mac)
     make abc.build-native
 
 The 'deps' system automatically downloads and builds the various open-source
 libraries that the AirBitz core depends on. If you want to bypass the deps
-system and run 'make' directly from the top-level directory, you need to
-manually compile all these dependencies and install them on your system. This
-approach is a lot of work, but it makes sense if you often find yourself
-modifying the dependencies.
+system and run 'make' directly from the top-level directory,
+you will need to manually pre-install these libraries on your system.
+This approach makes the most sense for heavy day-to-day development,
+even if it requires more up-front setup work.
 
 ## Directory structure
 

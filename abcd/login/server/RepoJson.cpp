@@ -13,10 +13,10 @@ namespace abcd {
 Status
 RepoJson::decode(RepoInfo &result, DataSlice dataKey)
 {
-    DataChunk rawInfo;
+    DataChunk infoBytes;
     RepoInfoJson infoJson;
-    ABC_CHECK(info().decrypt(rawInfo, dataKey));
-    ABC_CHECK(infoJson.decode(toString(rawInfo)));
+    ABC_CHECK(infoBox().decrypt(infoBytes, dataKey));
+    ABC_CHECK(infoJson.decode(toString(infoBytes)));
     ABC_CHECK(typeOk());
 
     DataChunk repoDataKey;
@@ -38,9 +38,9 @@ RepoJson::encode(const RepoInfo &info, DataSlice dataKey)
     ABC_CHECK(infoJson.dataKeySet(base16Encode(info.dataKey)));
     ABC_CHECK(infoJson.syncKeySet(info.syncKey));
 
-    JsonBox box;
-    ABC_CHECK(box.encrypt(infoJson.encode(), dataKey));
-    ABC_CHECK(infoSet(box));
+    JsonBox infoBox;
+    ABC_CHECK(infoBox.encrypt(infoJson.encode(), dataKey));
+    ABC_CHECK(infoBoxSet(infoBox));
     ABC_CHECK(typeSet(info.type));
 
     return Status();

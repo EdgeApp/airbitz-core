@@ -30,6 +30,7 @@ namespace abcd {
 
 // Server strings:
 #define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api"
+//#define ABC_SERVER_ROOT                     "https://test-auth.airbitz.co/api"
 
 #define ABC_SERVER_JSON_NEW_LP1_FIELD       "new_lp1"
 #define ABC_SERVER_JSON_NEW_LRA1_FIELD      "new_lra1"
@@ -671,6 +672,37 @@ loginServerReposAdd(AuthJson authJson, RepoJson repoJson)
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().request(reply, url, "POST", authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    return Status();
+}
+
+Status
+loginServerLobbyGet(JsonPtr &result, const std::string &id)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/lobby/" + id;
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().get(reply, url));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    result = replyJson.results();
+    return Status();
+}
+
+Status
+loginServerLobbySet(const std::string &id, JsonPtr &lobby, unsigned expires)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/lobby/" + id;
+
+    JsonObject requestJson;
+    ABC_CHECK(requestJson.set("expires", static_cast<json_int_t>(expires)));
+    ABC_CHECK(requestJson.set("data", lobby));
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "PUT", requestJson.encode()));
     ServerReplyJson replyJson;
     ABC_CHECK(replyJson.decode(reply));
 

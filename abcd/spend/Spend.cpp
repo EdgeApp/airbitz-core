@@ -115,6 +115,7 @@ Spend::calculateMax(uint64_t &maxSatoshi)
     // We can't send anything to an empty list:
     if (outputs.empty())
     {
+        logInfo("Aborting max calculation due to empty output list.");
         maxSatoshi = 0;
         return Status();
     }
@@ -125,6 +126,11 @@ Spend::calculateMax(uint64_t &maxSatoshi)
     for (const auto utxo: utxos)
         max += utxo.value;
     max += 1; // Make this a non-inclusive maximum
+
+    logInfo("Max spend search: min: " + std::to_string(min) +
+            ", max: " + std::to_string(max) +
+            ", utxo count: " + std::to_string(utxos.size()) +
+            ", address count: " + std::to_string(addresses.size()));
 
     // Do the binary search:
     while (min + 1 < max)

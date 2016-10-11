@@ -33,8 +33,8 @@ class RepoJson:
 {
 public:
     ABC_JSON_CONSTRUCTORS(RepoJson, JsonObject)
+    ABC_JSON_VALUE(infoBox, "info", JsonBox)
     ABC_JSON_STRING(type, "type", nullptr)
-    ABC_JSON_VALUE(info, "info", JsonBox)
 
     /**
      * Decodes and decrypts this JSON into a `RepoInfo` structure.
