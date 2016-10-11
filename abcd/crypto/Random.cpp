@@ -18,6 +18,7 @@
 
 namespace abcd {
 
+#define DO_STARTUP_SCRYPT_TIMING 0
 #define UUID_BYTE_COUNT         16
 #define UUID_STR_LENGTH         (UUID_BYTE_COUNT * 2) + 4
 
@@ -75,27 +76,29 @@ randomInitialize(DataSlice seed)
     RAND_seed(NewSeed.data(), NewSeed.size());
 
     // XXX Remove for production. Used to test performance of scrypt on various devices on startup
+#if DO_STARTUP_SCRYPT_TIMING
     ScryptSnrp snrp;
-//    snrp.createSnrpFromTime(90000);
-//    snrp.createSnrpFromTime(60000);
-//    snrp.createSnrpFromTime(45000);
-//    snrp.createSnrpFromTime(30000);
-//    snrp.createSnrpFromTime(25000);
-//    snrp.createSnrpFromTime(20000);
-//    snrp.createSnrpFromTime(15000);
-//    snrp.createSnrpFromTime(10000);
-//    snrp.createSnrpFromTime(5000);
-//    snrp.createSnrpFromTime(2000);
-//    snrp.createSnrpFromTime(1000);
-//    snrp.createSnrpFromTime(500);
-//    snrp.createSnrpFromTime(250);
-//    snrp.createSnrpFromTime(100);
-//    snrp.createSnrpFromTime(50);
-//    snrp.createSnrpFromTime(25);
-//    snrp.createSnrpFromTime(10);
-//    snrp.createSnrpFromTime(5);
-//    snrp.createSnrpFromTime(1);
+    snrp.createSnrpFromTime(90000);
+    snrp.createSnrpFromTime(60000);
+    snrp.createSnrpFromTime(45000);
+    snrp.createSnrpFromTime(30000);
+    snrp.createSnrpFromTime(25000);
+    snrp.createSnrpFromTime(20000);
+    snrp.createSnrpFromTime(15000);
+    snrp.createSnrpFromTime(10000);
+    snrp.createSnrpFromTime(5000);
+    snrp.createSnrpFromTime(2000);
+    snrp.createSnrpFromTime(1000);
+    snrp.createSnrpFromTime(500);
+    snrp.createSnrpFromTime(250);
+    snrp.createSnrpFromTime(100);
+    snrp.createSnrpFromTime(50);
+    snrp.createSnrpFromTime(25);
+    snrp.createSnrpFromTime(10);
+    snrp.createSnrpFromTime(5);
+    snrp.createSnrpFromTime(1);
     snrp.create();
+#endif
 
     return Status();
 }
