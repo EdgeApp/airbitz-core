@@ -223,7 +223,10 @@ tABC_CC ABC_ApproveLobbyAccountRequest(const char *szUserName,
         AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
         settings.get() = accountSettingsLoad(*account);
 
-        ABC_CHECK_NEW(accountRequestApprove(*login, lobby->id, settings->szPIN,
+        std::string pin = "";
+        if (nullptr != settings->szPIN)
+            pin = settings->szPIN;
+        ABC_CHECK_NEW(accountRequestApprove(*login, lobby->id, pin,
                                             lobby->json));
     }
 
