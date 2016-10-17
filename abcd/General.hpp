@@ -20,6 +20,8 @@
 #include <map>
 #include <vector>
 
+#define MAX_FEES_BLOCKS 10
+
 namespace abcd {
 
 /**
@@ -36,7 +38,7 @@ struct BitcoinFeeInfo
      * Fee per KB aimed at getting approved within n confirmations,
      * where n is the index into this array. Index 0 is unused
      */
-    double confirmFees[7];
+    double confirmFees[MAX_FEES_BLOCKS];
 
     /**
      * Target number of blocks to get transaction confirmed when set to Low

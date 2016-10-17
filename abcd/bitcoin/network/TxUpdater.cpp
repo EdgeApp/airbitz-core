@@ -360,6 +360,8 @@ TxUpdater::connectTo(std::string server, ServerType serverType)
         fetchFeeEstimate(3, sc);
         fetchFeeEstimate(4, sc);
         fetchFeeEstimate(5, sc);
+        fetchFeeEstimate(6, sc);
+        fetchFeeEstimate(7, sc);
     }
 
     connections_.push_back(bc.release());
