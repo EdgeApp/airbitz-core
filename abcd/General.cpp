@@ -181,6 +181,25 @@ generalEstimateFeesUpdate(size_t blocks, double fee)
         estimatedFeesInitialized = true;
     }
 
+    // If the passed in fee is negative (commonly -1) then use the fee
+    // of one larger block delay
+    if (fee < 0)
+    {
+        if (estimatedFeesNumResponses[blocks] == 0)
+        {
+            if (blocks < 7)
+            {
+                if (estimatedFees[blocks + 1] > 0)
+                {
+                    fee = estimatedFees[blocks + 1] / 100000000.0;
+                }
+            }
+        }
+    }
+
+    if (fee < 0)
+        return Status();
+
     // Take the average of all the responses for a given block target
     uint64_t tempFee = (estimatedFees[blocks] * estimatedFeesNumResponses[blocks])
                        + (uint64_t) (fee * 100000000.0);

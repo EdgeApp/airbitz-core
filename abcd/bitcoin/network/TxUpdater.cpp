@@ -613,11 +613,7 @@ TxUpdater::fetchFeeEstimate(size_t blocks, StratumConnection *sc)
 
         ABC_DebugLog("%s: returned fee %lf for %d blocks %d ms",
                      uri.c_str(), fee, blocks, responseTime - queryTime);
-
-        if (fee > 0)
-        {
-            generalEstimateFeesUpdate(blocks, fee);
-        }
+        generalEstimateFeesUpdate(blocks, fee);
     };
 
     sc->feeEstimateFetch(onError, onReply, blocks);
