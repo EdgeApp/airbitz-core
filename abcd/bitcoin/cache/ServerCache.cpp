@@ -229,7 +229,7 @@ ServerCache::serverScoreUp(std::string serverUrl, int changeScore)
             serverInfo.score = MAX_SCORE;
         servers_[serverUrl] = serverInfo;
         dirty_ = true;
-        ABC_Debug(1, "serverScoreUp:" + serverUrl + " " + std::to_string(
+        ABC_Debug(2, "serverScoreUp:" + serverUrl + " " + std::to_string(
                       serverInfo.score));
     }
     lastUpScoreTime_ = time(nullptr);
