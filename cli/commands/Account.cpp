@@ -7,6 +7,7 @@
 
 #include "../Command.hpp"
 #include "../../abcd/account/Account.hpp"
+#include "../../abcd/crypto/Encoding.hpp"
 #include "../../abcd/json/JsonBox.hpp"
 #include "../../abcd/login/Login.hpp"
 #include "../../abcd/util/FileIO.hpp"
@@ -34,6 +35,17 @@ COMMAND(InitLevel::context, AccountCreate, "account-create",
     const auto password = argv[1];
 
     ABC_CHECK_OLD(ABC_CreateAccount(username, password, &error));
+
+    return Status();
+}
+
+COMMAND(InitLevel::login, AccountKey, "account-key",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    std::cout << base16Encode(session.login->dataKey()) << std::endl;
 
     return Status();
 }
