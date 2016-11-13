@@ -123,6 +123,8 @@ Wallet::nameSet(const std::string &name)
     std::lock_guard<std::mutex> lock(mutex_);
 
     name_ = name;
+    name_.erase(std::remove(name_.begin(), name_.end(), '\''), name_.end());
+
     NameJson json;
     ABC_CHECK(json.nameSet(name));
     ABC_CHECK(json.save(paths.namePath(), dataKey()));
