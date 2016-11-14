@@ -627,6 +627,41 @@ loginServerPasswordSet(AuthJson authJson,
 }
 
 Status
+loginServerPin2Set(AuthJson authJson,
+                   DataSlice pin2Id, DataSlice pin2Auth,
+                   JsonPtr pin2Box, JsonPtr pin2KeyBox)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/login/pin2";
+
+    JsonObject dataJson;
+    ABC_CHECK(dataJson.set("pin2Id", base64Encode(pin2Id)));
+    ABC_CHECK(dataJson.set("pin2Auth", base64Encode(pin2Auth)));
+    ABC_CHECK(dataJson.set("pin2Box", pin2Box));
+    ABC_CHECK(dataJson.set("pin2KeyBox", pin2KeyBox));
+    ABC_CHECK(authJson.set("data", dataJson));
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "PUT", authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    return Status();
+}
+
+Status
+loginServerPin2Delete(AuthJson authJson)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/login/pin2";
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "DELETE", authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    return Status();
+}
+
+Status
 loginServerRecovery2Set(AuthJson authJson,
                         DataSlice recovery2Id, JsonPtr recovery2Auth,
                         JsonPtr question2Box, JsonPtr recovery2Box,

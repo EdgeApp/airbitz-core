@@ -7,6 +7,7 @@
 
 #include "LoginJson.hpp"
 #include "../LoginPackages.hpp"
+#include "../LoginPin2.hpp"
 #include "../LoginRecovery2.hpp"
 #include "../../AccountPaths.hpp"
 
@@ -49,6 +50,11 @@ LoginJson::save(const AccountPaths &paths, DataSlice dataKey)
     if (recovery2KeyBox().decrypt(recovery2Key, dataKey))
         ABC_CHECK(loginRecovery2KeySave(recovery2Key, paths));
 
+    DataChunk pin2Key;
+    if (pin2KeyBox().decrypt(pin2Key, dataKey))
+        ABC_CHECK(loginPin2KeySave(pin2Key, paths));
+
+    // Write to disk:
     ABC_CHECK(carePackage.save(paths.carePackagePath()));
     ABC_CHECK(loginPackage.save(paths.loginPackagePath()));
 

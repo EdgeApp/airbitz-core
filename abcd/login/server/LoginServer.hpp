@@ -177,6 +177,20 @@ loginServerPasswordSet(AuthJson authJson,
                        JsonPtr passwordAuthBox);
 
 /**
+ * Sets up PIN v2 login on the server.
+ */
+Status
+loginServerPin2Set(AuthJson authJson,
+                   DataSlice pin2Id, DataSlice pin2Auth,
+                   JsonPtr pin2Box, JsonPtr pin2KeyBox);
+
+/**
+ * Deletes the PIN v2 login from the server.
+ */
+Status
+loginServerPin2Delete(AuthJson authJson);
+
+/**
  * Sets up recovery2 questions the on the server using the v2 endpoint.
  */
 Status
