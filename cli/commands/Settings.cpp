@@ -35,7 +35,8 @@ COMMAND(InitLevel::account, SettingsGet, "settings-get",
     printf("Language: %s\n", pSettings->szLanguage);
     printf("Currency num: %d\n", pSettings->currencyNum);
     printf("Advanced features: %s\n", pSettings->bAdvancedFeatures ? "yes" : "no");
-    printf("Denomination satoshi: %ld\n", pSettings->bitcoinDenomination.satoshi);
+    std::cout << "Denomination satoshi: " << pSettings->bitcoinDenomination.satoshi
+              << std::endl;
     printf("Denomination id: %d\n",
            pSettings->bitcoinDenomination.denominationType);
     printf("Daily Spend Enabled: %d\n", pSettings->bDailySpendLimit);
