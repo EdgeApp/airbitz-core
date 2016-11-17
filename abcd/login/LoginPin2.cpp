@@ -106,13 +106,13 @@ loginPin2Set(DataChunk &result, Login &login,
 Status
 loginPin2Delete(Login &login)
 {
-    // Delete the saved key:
-    fileDelete(login.paths.pin2KeyPath());
-
     // Change the server login:
     AuthJson authJson;
     ABC_CHECK(authJson.loginSet(login));
     ABC_CHECK(loginServerPin2Delete(authJson));
+
+    // Delete the saved key:
+    fileDelete(login.paths.pin2KeyPath());
 
     return Status();
 }

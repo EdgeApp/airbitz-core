@@ -170,13 +170,13 @@ loginRecovery2Set(DataChunk &result, Login &login,
 Status
 loginRecovery2Delete(Login &login)
 {
-    // Delete the saved key:
-    fileDelete(login.paths.recovery2KeyPath());
-
     // Change the server login:
     AuthJson authJson;
     ABC_CHECK(authJson.loginSet(login));
     ABC_CHECK(loginServerRecovery2Delete(authJson));
+
+    // Delete the saved key:
+    fileDelete(login.paths.recovery2KeyPath());
 
     return Status();
 }
