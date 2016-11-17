@@ -50,6 +50,10 @@ private:
 
 public:
     WalletList wallets;
+
+    // Set to the current PIN when the settings are loaded.
+    // Used to detect changes to the PIN.
+    std::string pin;
 };
 
 } // namespace abcd

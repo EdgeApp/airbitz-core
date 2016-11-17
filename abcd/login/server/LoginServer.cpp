@@ -342,33 +342,6 @@ loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
 }
 
 Status
-loginServerUpdatePinPackage(const Login &login,
-                            DataSlice DID, DataSlice LPIN1,
-                            const std::string &pinPackage, time_t ali)
-{
-    const auto url = ABC_SERVER_ROOT "/v1/account/pinpackage/update";
-
-    // format the ali
-    char szALI[DATETIME_LENGTH];
-    strftime(szALI, DATETIME_LENGTH, "%Y-%m-%dT%H:%M:%S", gmtime(&ali));
-
-    // Encode those:
-    ServerRequestJson json;
-    ABC_CHECK(json.setup(login));
-    ABC_CHECK(json.set(ABC_SERVER_JSON_DID_FIELD, base64Encode(DID)));
-    ABC_CHECK(json.set(ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1)));
-    ABC_CHECK(json.set(JSON_ACCT_PIN_PACKAGE, pinPackage));
-    ABC_CHECK(json.set(ABC_SERVER_JSON_ALI_FIELD, szALI));
-
-    HttpReply reply;
-    ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
-    ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply));
-
-    return Status();
-}
-
-Status
 loginServerWalletCreate(const Login &login, const std::string &syncKey)
 {
     const auto url = ABC_SERVER_ROOT "/v1/wallet/create";

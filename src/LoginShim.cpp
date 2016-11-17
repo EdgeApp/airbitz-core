@@ -10,6 +10,7 @@
 #include "../abcd/login/Login.hpp"
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
+#include "../abcd/login/LoginPin2.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginRecovery2.hpp"
 #include "../abcd/login/LoginStore.hpp"
@@ -169,7 +170,21 @@ cacheLoginPin(std::shared_ptr<Login> &result,
     std::lock_guard<std::mutex> lock(gLoginMutex);
     if (!gLoginCache)
     {
-        ABC_CHECK(loginPin(gLoginCache, *store, pin, authError));
+        AccountPaths paths;
+        ABC_CHECK(store->paths(paths));
+        DataChunk pin2Key;
+        if (loginPin2Key(pin2Key, paths))
+        {
+            // Always use PIN login v2 if we have it:
+            ABC_CHECK(loginPin2(gLoginCache, *store, pin2Key, pin, authError));
+        }
+        else
+        {
+            // Otherwise try PIN login v1:
+            ABC_CHECK(loginPin(gLoginCache, *store, pin, authError));
+            ABC_CHECK(loginPin2Set(pin2Key, *gLoginCache, pin));
+            ABC_CHECK(loginPinDelete(*store));
+        }
     }
 
     result = gLoginCache;

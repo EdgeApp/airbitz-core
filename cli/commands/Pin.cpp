@@ -6,8 +6,8 @@
  */
 
 #include "../Command.hpp"
-#include "../../abcd/login/LoginPin.hpp"
 #include "../../abcd/login/server/LoginServer.hpp"
+#include "../../src/LoginShim.hpp"
 #include <iostream>
 
 using namespace abcd;
@@ -19,23 +19,21 @@ COMMAND(InitLevel::store, PinLogin, "pin-login",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto pin = argv[0];
 
-    bool bExists;
+    bool exists;
     ABC_CHECK_OLD(ABC_PinLoginExists(session.username.c_str(),
-                                     &bExists, &error));
-    if (bExists)
-    {
-        AuthError authError;
-        std::shared_ptr<Login> login;
-        auto s = loginPin(login, *session.store, pin, authError);
-        if (authError.pinWait)
-            std::cout << "Please try again in " << authError.pinWait
-                      << " seconds" << std::endl;
-        ABC_CHECK(s);
-    }
-    else
-    {
-        printf("Login expired\n");
-    }
+                                     &exists, &error));
+    if (!exists)
+        return ABC_ERROR(ABC_CC_PinExpired, "PIN login is not present");
+
+    AuthError authError;
+    auto s = cacheLoginPin(session.login,
+                           session.username.c_str(),
+                           pin,
+                           authError);
+    if (authError.pinWait)
+        std::cout << "Please try again in " << authError.pinWait
+                  << " seconds" << std::endl;
+    ABC_CHECK(s);
 
     return Status();
 }

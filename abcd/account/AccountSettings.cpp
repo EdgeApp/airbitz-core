@@ -10,7 +10,7 @@
 #include "../exchange/ExchangeSource.hpp"
 #include "../json/JsonObject.hpp"
 #include "../login/Login.hpp"
-#include "../login/LoginPin.hpp"
+#include "../login/LoginPin2.hpp"
 #include "../login/LoginStore.hpp"
 #include "../util/Util.hpp"
 
@@ -95,8 +95,35 @@ label(tABC_AccountSettings *pSettings)
     return out;
 }
 
+static Status
+accountSettingsPinSync(Login &login, tABC_AccountSettings *settings,
+                       bool pinChanged)
+{
+    DataChunk pin2Key;
+    bool pinExists = !!loginPin2Key(pin2Key, login.paths);
+
+    if (settings->bDisablePINLogin)
+    {
+        // Only delete the PIN if the user *explicitly* asks for that:
+        if (pinExists)
+        {
+            loginPin2Delete(login).log();
+        }
+    }
+    else
+    {
+        if ((!pinExists || pinChanged) && settings->szPIN)
+        {
+            DataChunk pin2Key;
+            ABC_CHECK(loginPin2Set(pin2Key, login, settings->szPIN));
+        }
+    }
+
+    return Status();
+}
+
 tABC_AccountSettings *
-accountSettingsLoad(const Account &account)
+accountSettingsLoad(Account &account)
 {
     tABC_AccountSettings *out = structAlloc<tABC_AccountSettings>();
 
@@ -136,12 +163,14 @@ accountSettingsLoad(const Account &account)
 
     out->szFullName = stringCopy(label(out));
 
+    if (out->szPIN)
+        account.pin = out->szPIN;
+
     return out;
 }
 
 Status
-accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings,
-                    bool pinChanged)
+accountSettingsSave(Account &account, tABC_AccountSettings *pSettings)
 {
     SettingsJson json;
 
@@ -187,7 +216,10 @@ accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings,
     ABC_CHECK(json.save(settingsPath(account), account.dataKey()));
 
     // Update the PIN package to match:
+    bool pinChanged = pSettings->szPIN && pSettings->szPIN != account.pin;
     ABC_CHECK(accountSettingsPinSync(account.login, pSettings, pinChanged));
+    if (pSettings->szPIN)
+        account.pin = pSettings->szPIN;
 
     return Status();
 }
@@ -207,31 +239,6 @@ accountSettingsFree(tABC_AccountSettings *pSettings)
 
         ABC_CLEAR_FREE(pSettings, sizeof(tABC_AccountSettings));
     }
-}
-
-Status
-accountSettingsPinSync(Login &login, tABC_AccountSettings *settings,
-                       bool pinChanged)
-{
-    if (settings->bDisablePINLogin)
-    {
-        // Only delete the PIN if the user *explicitly* asks for that:
-        loginPinDelete(login.store).log();
-    }
-    else if (settings->szPIN)
-    {
-        // Set up a new PIN if things have changed:
-        bool exists;
-        ABC_CHECK(loginPinExists(exists, login.store.username()));
-        if (pinChanged || !exists)
-        {
-            time_t expires = time(nullptr);
-            expires += settings->secondsAutoLogout;
-            ABC_CHECK(loginPinSetup(login, settings->szPIN, expires));
-        }
-    }
-
-    return Status();
 }
 
 } // namespace abcd

@@ -103,47 +103,4 @@ loginPin(std::shared_ptr<Login> &result,
     return Status();
 }
 
-Status
-loginPinSetup(Login &login, const std::string &pin, time_t expires)
-{
-    std::string LPIN = login.store.username() + pin;
-
-    // Get login stuff:
-    CarePackage carePackage;
-    ABC_CHECK(carePackage.load(login.paths.carePackagePath()));
-
-    // Set up DID:
-    DataChunk pinAuthId;
-    PinLocal local;
-    if (!local.load(login.paths.pinPackagePath()) ||
-            !local.pinAuthIdDecode(pinAuthId))
-        ABC_CHECK(randomData(pinAuthId, KEY_LENGTH));
-
-    // Put dataKey in a box:
-    DataChunk pinKey;           // Unlocks dataKey
-    JsonBox pinBox;             // Holds dataKey
-    ABC_CHECK(randomData(pinKey, KEY_LENGTH));
-    ABC_CHECK(pinBox.encrypt(login.dataKey(), pinKey));
-
-    // Put pinKey in a box:
-    DataChunk pinKeyKey;        // Unlocks pinKey
-    JsonBox pinKeyBox;          // Holds pinKey
-    ABC_CHECK(carePackage.passwordKeySnrp().hash(pinKeyKey, LPIN));
-    ABC_CHECK(pinKeyBox.encrypt(pinKey, pinKeyKey));
-
-    // Set up the server:
-    DataChunk pinAuthKey;       // Unlocks the server
-    ABC_CHECK(usernameSnrp().hash(pinAuthKey, LPIN));
-    ABC_CHECK(loginServerUpdatePinPackage(login, pinAuthId, pinAuthKey,
-                                          pinKeyBox.encode(), expires));
-
-    // Save the local file:
-    ABC_CHECK(local.pinBoxSet(pinBox));
-    ABC_CHECK(local.pinAuthIdSet(base64Encode(pinAuthId)));
-    ABC_CHECK(local.expiresSet(expires));
-    ABC_CHECK(local.save(login.paths.pinPackagePath()));
-
-    return Status();
-}
-
 } // namespace abcd

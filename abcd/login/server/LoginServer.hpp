@@ -94,17 +94,6 @@ loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
                          AuthError &authError);
 
 /**
- * Uploads the pin package.
- * @param DID           Device id
- * @param LPIN1         Hashed pin
- * @param ali           Auto-logout interval
- */
-Status
-loginServerUpdatePinPackage(const Login &login,
-                            DataSlice DID, DataSlice LPIN1,
-                            const std::string &pinPackage, time_t ali);
-
-/**
  * Create a git repository on the server, suitable for holding a wallet.
  */
 Status

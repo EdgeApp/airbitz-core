@@ -20,27 +20,19 @@ class Login;
  * Returns default settings if anything goes wrong.
  */
 tABC_AccountSettings *
-accountSettingsLoad(const Account &account);
+accountSettingsLoad(Account &account);
 
 /**
  * Saves the settings for an account.
  */
 Status
-accountSettingsSave(const Account &account, tABC_AccountSettings *pSettings,
-                    bool pinChanged=false);
+accountSettingsSave(Account &account, tABC_AccountSettings *pSettings);
 
 /**
  * Frees the account settings structure, along with its contents.
  */
 void
 accountSettingsFree(tABC_AccountSettings *pSettings);
-
-/**
- * Updates the local PIN package to match the settings.
- */
-Status
-accountSettingsPinSync(Login &login, tABC_AccountSettings *settings,
-                       bool pinChanged);
 
 } // namespace abcd
 
