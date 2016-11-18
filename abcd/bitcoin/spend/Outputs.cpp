@@ -7,8 +7,8 @@
 
 #include "Outputs.hpp"
 #include "PaymentProto.hpp"
-#include "../General.hpp"
-#include "../bitcoin/Testnet.hpp"
+#include "../Testnet.hpp"
+#include "../../General.hpp"
 #include <iterator>
 
 #define MINIMUM_DUST_THRESHOLD 4000 // was 546

@@ -8,9 +8,9 @@
 #ifndef ABCD_SPEND_PAYMENT_PROTO_HPP
 #define ABCD_SPEND_PAYMENT_PROTO_HPP
 
-#include "../util/Data.hpp"
-#include "../util/Status.hpp"
-#include "../../codegen/paymentrequest.pb.h"
+#include "../../util/Data.hpp"
+#include "../../util/Status.hpp"
+#include "../../../codegen/paymentrequest.pb.h"
 
 #include <list>
 

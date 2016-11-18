@@ -7,9 +7,9 @@
 
 #include "../Command.hpp"
 #include "../../abcd/bitcoin/Text.hpp"
-#include "../../abcd/spend/AirbitzFee.hpp"
-#include "../../abcd/spend/PaymentProto.hpp"
-#include "../../abcd/spend/Spend.hpp"
+#include "../../abcd/bitcoin/spend/AirbitzFee.hpp"
+#include "../../abcd/bitcoin/spend/PaymentProto.hpp"
+#include "../../abcd/bitcoin/spend/Spend.hpp"
 #include "../../abcd/util/Util.hpp"
 #include "../../abcd/wallet/Wallet.hpp"
 #include <iostream>

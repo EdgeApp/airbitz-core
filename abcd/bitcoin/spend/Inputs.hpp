@@ -8,7 +8,7 @@
 #ifndef ABCD_BITCOIN_INPUTS_HPP
 #define ABCD_BITCOIN_INPUTS_HPP
 
-#include "../util/Status.hpp"
+#include "../../util/Status.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <map>
 #include <unordered_map>

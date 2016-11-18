@@ -7,10 +7,10 @@
 
 #include "Inputs.hpp"
 #include "Outputs.hpp"
-#include "../General.hpp"
-#include "../bitcoin/cache/TxCache.hpp"
-#include "../bitcoin/Utility.hpp"
-#include "../wallet/Wallet.hpp"
+#include "../Utility.hpp"
+#include "../cache/TxCache.hpp"
+#include "../../General.hpp"
+#include "../../wallet/Wallet.hpp"
 #include <unistd.h>
 #include <bitcoin/bitcoin.hpp>
 

@@ -147,7 +147,7 @@ include $(wildcard $(WORK_DIR)/*/*.d $(WORK_DIR)/*/*/*.d $(WORK_DIR)/*/*/*/*.d)
 %.hpp: ;
 
 # Protobuf files:
-codegen/paymentrequest.pb.h codegen/paymentrequest.pb.cc: abcd/spend/paymentrequest.proto
+codegen/paymentrequest.pb.h codegen/paymentrequest.pb.cc: abcd/bitcoin/spend/paymentrequest.proto
 	@mkdir -p $(dir $@)
 	$(RUN) protoc --cpp_out=$(dir $@) --proto_path=$(dir $<) $<
 

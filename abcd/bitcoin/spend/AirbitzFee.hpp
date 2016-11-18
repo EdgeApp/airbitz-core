@@ -8,7 +8,7 @@
 #ifndef ABCD_SPEND_AIRBITZ_FEE_HPP
 #define ABCD_SPEND_AIRBITZ_FEE_HPP
 
-#include "../util/Status.hpp"
+#include "../../util/Status.hpp"
 
 namespace abcd {
 

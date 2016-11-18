@@ -6,13 +6,13 @@
  */
 
 #include "Broadcast.hpp"
-#include "../bitcoin/Testnet.hpp"
-#include "../bitcoin/WatcherBridge.hpp"
-#include "../Context.hpp"
-#include "../crypto/Encoding.hpp"
-#include "../http/HttpRequest.hpp"
-#include "../json/JsonObject.hpp"
-#include "../util/Debug.hpp"
+#include "../Testnet.hpp"
+#include "../WatcherBridge.hpp"
+#include "../../Context.hpp"
+#include "../../crypto/Encoding.hpp"
+#include "../../http/HttpRequest.hpp"
+#include "../../json/JsonObject.hpp"
+#include "../../util/Debug.hpp"
 #include <condition_variable>
 #include <memory>
 #include <mutex>

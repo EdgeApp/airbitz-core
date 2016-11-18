@@ -8,7 +8,7 @@
 #include "../abcd/bitcoin/cache/BlockCache.hpp"
 #include "../abcd/bitcoin/cache/TxCache.hpp"
 #include "../abcd/bitcoin/Utility.hpp"
-#include "../abcd/spend/Outputs.hpp"
+#include "../abcd/bitcoin/spend/Outputs.hpp"
 #include "../minilibs/catch/catch.hpp"
 
 namespace abcd {

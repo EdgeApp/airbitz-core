@@ -11,13 +11,13 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "PaymentProto.hpp"
-#include "../Context.hpp"
-#include "../General.hpp"
-#include "../bitcoin/cache/Cache.hpp"
-#include "../bitcoin/Utility.hpp"
-#include "../exchange/ExchangeCache.hpp"
-#include "../util/Debug.hpp"
-#include "../wallet/Wallet.hpp"
+#include "../Utility.hpp"
+#include "../cache/Cache.hpp"
+#include "../../Context.hpp"
+#include "../../General.hpp"
+#include "../../exchange/ExchangeCache.hpp"
+#include "../../util/Debug.hpp"
+#include "../../wallet/Wallet.hpp"
 
 namespace abcd {
 
