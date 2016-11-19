@@ -342,33 +342,6 @@ loginServerGetPinPackage(DataSlice DID, DataSlice LPIN1, std::string &result,
 }
 
 Status
-loginServerUpdatePinPackage(const Login &login,
-                            DataSlice DID, DataSlice LPIN1,
-                            const std::string &pinPackage, time_t ali)
-{
-    const auto url = ABC_SERVER_ROOT "/v1/account/pinpackage/update";
-
-    // format the ali
-    char szALI[DATETIME_LENGTH];
-    strftime(szALI, DATETIME_LENGTH, "%Y-%m-%dT%H:%M:%S", gmtime(&ali));
-
-    // Encode those:
-    ServerRequestJson json;
-    ABC_CHECK(json.setup(login));
-    ABC_CHECK(json.set(ABC_SERVER_JSON_DID_FIELD, base64Encode(DID)));
-    ABC_CHECK(json.set(ABC_SERVER_JSON_LPIN1_FIELD, base64Encode(LPIN1)));
-    ABC_CHECK(json.set(JSON_ACCT_PIN_PACKAGE, pinPackage));
-    ABC_CHECK(json.set(ABC_SERVER_JSON_ALI_FIELD, szALI));
-
-    HttpReply reply;
-    ABC_CHECK(AirbitzRequest().post(reply, url, json.encode()));
-    ServerReplyJson replyJson;
-    ABC_CHECK(replyJson.decode(reply));
-
-    return Status();
-}
-
-Status
 loginServerWalletCreate(const Login &login, const std::string &syncKey)
 {
     const auto url = ABC_SERVER_ROOT "/v1/wallet/create";
@@ -620,6 +593,41 @@ loginServerPasswordSet(AuthJson authJson,
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().request(reply, url, "PUT", authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    return Status();
+}
+
+Status
+loginServerPin2Set(AuthJson authJson,
+                   DataSlice pin2Id, DataSlice pin2Auth,
+                   JsonPtr pin2Box, JsonPtr pin2KeyBox)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/login/pin2";
+
+    JsonObject dataJson;
+    ABC_CHECK(dataJson.set("pin2Id", base64Encode(pin2Id)));
+    ABC_CHECK(dataJson.set("pin2Auth", base64Encode(pin2Auth)));
+    ABC_CHECK(dataJson.set("pin2Box", pin2Box));
+    ABC_CHECK(dataJson.set("pin2KeyBox", pin2KeyBox));
+    ABC_CHECK(authJson.set("data", dataJson));
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "PUT", authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    return Status();
+}
+
+Status
+loginServerPin2Delete(AuthJson authJson)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/login/pin2";
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "DELETE", authJson.encode()));
     ServerReplyJson replyJson;
     ABC_CHECK(replyJson.decode(reply));
 

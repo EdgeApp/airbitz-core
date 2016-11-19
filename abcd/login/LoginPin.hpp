@@ -43,12 +43,6 @@ loginPin(std::shared_ptr<Login> &result,
          LoginStore &store, const std::string &pin,
          AuthError &authError);
 
-/**
- * Sets up a PIN login package, both on-disk and on the server.
- */
-Status
-loginPinSetup(Login &login, const std::string &pin, time_t expires);
-
 } // namespace abcd
 
 #endif

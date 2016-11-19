@@ -33,6 +33,7 @@
 #include "../abcd/login/LoginPackages.hpp"
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
+#include "../abcd/login/LoginPin2.hpp"
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginRecovery2.hpp"
 #include "../abcd/login/LoginStore.hpp"
@@ -1256,7 +1257,18 @@ tABC_CC ABC_PinLoginExists(const char *szUserName,
     ABC_CHECK_NULL(szUserName);
     ABC_CHECK_NULL(pbExists);
 
-    ABC_CHECK_NEW(loginPinExists(*pbExists, szUserName));
+    {
+        ABC_GET_STORE();
+        AccountPaths paths;
+        ABC_CHECK_NEW(store->paths(paths));
+
+        DataChunk pin2Key;
+        bool exists = !!loginPin2Key(pin2Key, paths);
+        if (!exists)
+            ABC_CHECK_NEW(loginPinExists(exists, szUserName));
+
+        *pbExists = exists;
+    }
 
 exit:
     return cc;
@@ -1290,8 +1302,12 @@ tABC_CC ABC_PinSetup(const char *szUserName,
 {
     ABC_PROLOG();
 
+    // Note: For now, there is no difference between calling this function
+    // and manually updating the PIN in the settings.
+    // All PIN changes run through the settings.
+    // This is hardly ideal, but is necessary for API compatibility.
+
     {
-        ABC_GET_LOGIN();
         ABC_GET_ACCOUNT();
 
         // Validate the PIN:
@@ -1307,7 +1323,7 @@ tABC_CC ABC_PinSetup(const char *szUserName,
         settings.get() = accountSettingsLoad(*account);
         ABC_FREE_STR(settings->szPIN);
         settings->szPIN = stringCopy(szPin);
-        ABC_CHECK_NEW(accountSettingsSave(*account, settings, true));
+        ABC_CHECK_NEW(accountSettingsSave(*account, settings));
     }
 
 exit:
@@ -1566,13 +1582,8 @@ tABC_CC ABC_ChangePassword(const char *szUserName,
                      "No new password provided");
 
     {
-        ABC_GET_ACCOUNT();
-        ABC_CHECK_NEW(loginPasswordSet(account->login, szNewPassword));
-
-        // Force an update of the PIN, since the SNRP has changed:
-        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
-        settings.get() = accountSettingsLoad(*account);
-        ABC_CHECK_NEW(accountSettingsSave(*account, settings, true));
+        ABC_GET_LOGIN();
+        ABC_CHECK_NEW(loginPasswordSet(*login, szNewPassword));
     }
 
 exit:
