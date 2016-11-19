@@ -42,6 +42,17 @@ AuthJson::passwordSet(const LoginStore &store, DataSlice passwordAuth)
 }
 
 Status
+AuthJson::pin2Set(const LoginStore &store, DataSlice pin2Id,
+                  DataSlice pin2Auth)
+{
+    ABC_CHECK(otpSet(store));
+    ABC_CHECK(pin2IdSet(base64Encode(pin2Id)));
+    ABC_CHECK(pin2AuthSet(base64Encode(pin2Auth)));
+
+    return Status();
+}
+
+Status
 AuthJson::recoverySet(const LoginStore &store, DataSlice recoveryAuth)
 {
     ABC_CHECK(otpSet(store));

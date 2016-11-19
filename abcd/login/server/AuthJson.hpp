@@ -38,6 +38,10 @@ public:
     passwordSet(const LoginStore &store, DataSlice passwordAuth);
 
     Status
+    pin2Set(const LoginStore &store, DataSlice pin2Id,
+            DataSlice pin2Auth);
+
+    Status
     recoverySet(const LoginStore &store, DataSlice recoveryAuth);
 
     Status
@@ -54,6 +58,8 @@ protected:
     ABC_JSON_STRING(otp, "otp", nullptr)
     ABC_JSON_STRING(userId, "userId", nullptr)
     ABC_JSON_STRING(passwordAuth, "passwordAuth", nullptr)
+    ABC_JSON_STRING(pin2Auth, "pin2Auth", nullptr)
+    ABC_JSON_STRING(pin2Id, "pin2Id", nullptr)
     ABC_JSON_STRING(recoveryAuth, "recoveryAuth", nullptr)
     ABC_JSON_VALUE(recovery2Auth, "recovery2Auth", JsonPtr)
     ABC_JSON_STRING(recovery2Id, "recovery2Id", nullptr)

@@ -29,6 +29,10 @@ public:
     ABC_JSON_VALUE(passwordBox, "passwordBox", JsonBox)
     ABC_JSON_VALUE(passwordKeySnrp, "passwordKeySnrp", JsonSnrp)
 
+    // PIN v2 login:
+    ABC_JSON_VALUE(pin2Box, "pin2Box", JsonBox)
+    ABC_JSON_VALUE(pin2KeyBox, "pin2KeyBox", JsonBox)
+
     // Recovery v1:
     ABC_JSON_VALUE(questionBox, "questionBox", JsonBox)
     ABC_JSON_VALUE(questionKeySnrp, "questionKeySnrp", JsonSnrp)
