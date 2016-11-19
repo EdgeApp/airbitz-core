@@ -56,16 +56,17 @@ struct BitcoinFeesJson:
     public JsonObject
 {
     ABC_JSON_CONSTRUCTORS(BitcoinFeesJson, JsonObject)
-    ABC_JSON_INTEGER(confirmFees1, "confirmFees1", 73210)
-    ABC_JSON_INTEGER(confirmFees2, "confirmFees2", 62110)
-    ABC_JSON_INTEGER(confirmFees3, "confirmFees3", 51098)
+    ABC_JSON_INTEGER(confirmFees1, "confirmFees1", 73001)
+    ABC_JSON_INTEGER(confirmFees2, "confirmFees2", 62001)
+    ABC_JSON_INTEGER(confirmFees3, "confirmFees3", 51001)
     ABC_JSON_INTEGER(confirmFees4, "confirmFees4", 46001)
-    ABC_JSON_INTEGER(confirmFees5, "confirmFees5", 31002)
-    ABC_JSON_INTEGER(confirmFees6, "confirmFees6", 26002)
+    ABC_JSON_INTEGER(confirmFees5, "confirmFees5", 39001)
+    ABC_JSON_INTEGER(confirmFees6, "confirmFees6", 35001)
+    ABC_JSON_INTEGER(confirmFees7, "confirmFees7", 30001)
     ABC_JSON_INTEGER(highFeeBlock, "highFeeBlock", 1)
     ABC_JSON_INTEGER(standardFeeBlockHigh, "standardFeeBlockHigh", 2)
-    ABC_JSON_INTEGER(standardFeeBlockLow, "standardFeeBlockLow", 3)
-    ABC_JSON_INTEGER(lowFeeBlock, "lowFeeBlock", 4)
+    ABC_JSON_INTEGER(standardFeeBlockLow, "standardFeeBlockLow", 5)
+    ABC_JSON_INTEGER(lowFeeBlock, "lowFeeBlock", 7)
     ABC_JSON_NUMBER(targetFeePercentage, "targetFeePercentage", 0.25)
 };
 
@@ -79,6 +80,7 @@ struct EstimateFeesJson:
     ABC_JSON_INTEGER(confirmFees4, "confirmFees4", 0)
     ABC_JSON_INTEGER(confirmFees5, "confirmFees5", 0)
     ABC_JSON_INTEGER(confirmFees6, "confirmFees6", 0)
+    ABC_JSON_INTEGER(confirmFees7, "confirmFees7", 0)
 };
 
 
@@ -158,8 +160,8 @@ generalEstimateFeesNeedUpdate()
 }
 
 static bool estimatedFeesInitialized = 0;
-static double estimatedFees[6];
-static size_t estimatedFeesNumResponses[6];
+static double estimatedFees[MAX_FEES_BLOCKS];
+static size_t estimatedFeesNumResponses[MAX_FEES_BLOCKS];
 static std::mutex mutex_;
 
 Status
@@ -174,8 +176,29 @@ generalEstimateFeesUpdate(size_t blocks, double fee)
         estimatedFees[3] = estimatedFeesNumResponses[3] = 0;
         estimatedFees[4] = estimatedFeesNumResponses[4] = 0;
         estimatedFees[5] = estimatedFeesNumResponses[5] = 0;
+        estimatedFees[6] = estimatedFeesNumResponses[6] = 0;
+        estimatedFees[7] = estimatedFeesNumResponses[7] = 0;
         estimatedFeesInitialized = true;
     }
+
+    // If the passed in fee is negative (commonly -1) then use the fee
+    // of one larger block delay
+    if (fee < 0)
+    {
+        if (estimatedFeesNumResponses[blocks] == 0)
+        {
+            if (blocks < 7)
+            {
+                if (estimatedFees[blocks + 1] > 0)
+                {
+                    fee = estimatedFees[blocks + 1] / 100000000.0;
+                }
+            }
+        }
+    }
+
+    if (fee < 0)
+        return Status();
 
     // Take the average of all the responses for a given block target
     uint64_t tempFee = (estimatedFees[blocks] * estimatedFeesNumResponses[blocks])
@@ -187,7 +210,9 @@ generalEstimateFeesUpdate(size_t blocks, double fee)
             estimatedFees[2] > 0 &&
             estimatedFees[3] > 0 &&
             estimatedFees[4] > 0 &&
-            estimatedFees[5] > 0)
+            estimatedFees[5] > 0 &&
+            estimatedFees[6] > 0 &&
+            estimatedFees[7] > 0)
     {
         // Save the fees in a Json file
         EstimateFeesJson feesJson;
@@ -196,6 +221,8 @@ generalEstimateFeesUpdate(size_t blocks, double fee)
         feesJson.confirmFees3Set(estimatedFees[3]);
         feesJson.confirmFees4Set(estimatedFees[4]);
         feesJson.confirmFees5Set(estimatedFees[5]);
+        feesJson.confirmFees6Set(estimatedFees[6]);
+        feesJson.confirmFees7Set(estimatedFees[7]);
 
         const auto path = gContext->paths.feeCachePath();
 
@@ -225,6 +252,8 @@ generalBitcoinFeeInfo()
                          estimateFeesJson.confirmFees5() : feeJson.confirmFees5();
     out.confirmFees[6] = estimateFeesJson.confirmFees6() ?
                          estimateFeesJson.confirmFees6() : feeJson.confirmFees6();
+    out.confirmFees[7] = estimateFeesJson.confirmFees7() ?
+                         estimateFeesJson.confirmFees7() : feeJson.confirmFees7();
     out.lowFeeBlock             = feeJson.lowFeeBlock();
     out.standardFeeBlockLow     = feeJson.standardFeeBlockLow();
     out.standardFeeBlockHigh    = feeJson.standardFeeBlockHigh();
@@ -242,11 +271,13 @@ generalBitcoinFeeInfo()
         out.confirmFees[5] = out.confirmFees[4];
     if (out.confirmFees[6] > out.confirmFees[5])
         out.confirmFees[6] = out.confirmFees[5];
+    if (out.confirmFees[7] > out.confirmFees[6])
+        out.confirmFees[7] = out.confirmFees[6];
 
     ABC_DebugLevel(1,
-                   "generalBitcoinFeeInfo: 1:%.0f, 2:%.0f, 3:%.0f, 4:%.0f, 5:%.0f, 6:%.0f",
+                   "generalBitcoinFeeInfo: 1:%.0f, 2:%.0f, 3:%.0f, 4:%.0f, 5:%.0f, 6:%.0f, 7:%.0f",
                    out.confirmFees[1], out.confirmFees[2], out.confirmFees[3], out.confirmFees[4],
-                   out.confirmFees[5], out.confirmFees[6]);
+                   out.confirmFees[5], out.confirmFees[6], out.confirmFees[7]);
 
     return out;
 }

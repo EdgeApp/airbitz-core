@@ -70,6 +70,10 @@ Wallet::createNew(std::shared_ptr<Wallet> &result, Account &account,
     std::shared_ptr<Wallet> out(new Wallet(account, id));
     ABC_CHECK(out->createNew(name, currency));
 
+    // Load the transaction cache (failure is fine):
+    if (!out->cache.load().log())
+        out->cache.loadLegacy(out->paths.cachePathOld());
+
     result = std::move(out);
     return Status();
 }

@@ -360,6 +360,8 @@ TxUpdater::connectTo(std::string server, ServerType serverType)
         fetchFeeEstimate(3, sc);
         fetchFeeEstimate(4, sc);
         fetchFeeEstimate(5, sc);
+        fetchFeeEstimate(6, sc);
+        fetchFeeEstimate(7, sc);
     }
 
     connections_.push_back(bc.release());
@@ -611,11 +613,7 @@ TxUpdater::fetchFeeEstimate(size_t blocks, StratumConnection *sc)
 
         ABC_DebugLog("%s: returned fee %lf for %d blocks %d ms",
                      uri.c_str(), fee, blocks, responseTime - queryTime);
-
-        if (fee > 0)
-        {
-            generalEstimateFeesUpdate(blocks, fee);
-        }
+        generalEstimateFeesUpdate(blocks, fee);
     };
 
     sc->feeEstimateFetch(onError, onReply, blocks);
