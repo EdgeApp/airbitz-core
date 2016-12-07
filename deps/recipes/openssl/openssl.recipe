@@ -22,9 +22,7 @@ build() {
         ios-x86_64) type=darwin64-x86_64-cc ;;
         ios-i386)   type=debug-darwin-i386-cc ;;
         ios-*)      type=BSD-generic32 ;;
-        android-arm)type=android-armv7 ;;
-        android-x86)type=android-x86 ;;
-        *)          type=linux-generic32 ;;
+        *)          type=gcc ;;
         esac
         ./Configure --prefix=$install_dir no-shared zlib $type "$CFLAGS"
     fi
