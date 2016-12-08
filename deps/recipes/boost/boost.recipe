@@ -1,7 +1,7 @@
 inherit lib
 
-version="1_58_0"
-source="http://downloads.sourceforge.net/project/boost/boost/1.58.0/boost_1_58_0.tar.bz2?r=&ts=1474952853&use_mirror=heanet#2fc96c1651ac6fe9859b678b165bd78dc211e881"
+version="1_62_0"
+source="https://sourceforge.net/projects/boost/files/boost/1.62.0/boost_$version.tar.bz2#5fd97433c3f859d8cbab1eaed4156d3068ae3648"
 
 build() {
     LIBRARIES=--with-libraries=chrono,date_time,filesystem,locale,program_options,regex,system,thread
