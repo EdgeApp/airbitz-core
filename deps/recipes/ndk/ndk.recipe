@@ -1,16 +1,16 @@
 # This recipe contains the setup tasks for unpacking and installing the NDK
 inherit common
 
-version="r10d"
+version="r13b"
 
 # Select the correct NDK version for the host system:
 case $(uname -sm) in
 "Linux x86_64")
     system=linux-x86_64
-    source="https://dl.google.com/android/ndk/android-ndk-$version-$system.bin#618f998d1893b234eef7458f95893b0dc70bcf74" ;;
+    source="https://dl.google.com/android/repository/android-ndk-$version-$system.zip#0600157c4ddf50ec15b8a037cfc474143f718fd0" ;;
 "Darwin x86_64")
     system=darwin-x86_64
-    source="https://dl.google.com/android/ndk/android-ndk-$version-$system.bin#6b89cb0c84e2d2bd802a5b78540327c1b3c2d7b8" ;;
+    source="https://dl.google.com/android/repository/android-ndk-$version-$system.zip#71fe653a7bf5db08c3af154735b6ccbc12f0add5" ;;
 *)
     echo "Unknown host platform!"
     exit 1;;
@@ -21,17 +21,15 @@ esac
 # $2 NDK toolchain name.
 setup() {
     echo Unpacking NDK...
-    archive="$download_dir/android-ndk-$version-$system.bin"
-    chmod +x "$archive"
-    $archive -o"$work_dir" -y
+    archive="$download_dir/android-ndk-$version-$system.zip"
+    unzip -o -d"$work_dir" $archive
 
     echo Unpacking toolchain...
     cd android-ndk-$version
-    ./build/tools/make-standalone-toolchain.sh --toolchain=$2-4.8 --platform=android-9 --install-dir=$work_dir/$1 --system=$system --verbose
+    python build/tools/make_standalone_toolchain.py --verbose --arch $1 --api 14 --stl libc++ --force --install-dir $work_dir/$1
 
     echo Patching headers...
-    cat $recipe_dir/to_string.h >> $work_dir/$1/include/c++/4.8/bits/basic_string.h
-    echo '#include <limits.h>' >> $work_dir/$1/sysroot/usr/include/stdint.h
+    cat $recipe_dir/langinfo.h >> $work_dir/$1/sysroot/usr/local/include/langinfo.h
 }
 setup_arm() {
     setup arm arm-linux-androideabi

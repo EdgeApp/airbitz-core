@@ -16,10 +16,10 @@ build_android() {
     cross=$2
     export AR="${cross}-ar"
     export AS="${cross}-as"
-    export CC="${cross}-gcc"
-    export CCLD="${cross}-gcc"
-    export CPP="${cross}-gcc -E"
-    export CXX="${cross}-g++"
+    export CC="${cross}-clang"
+    export CCLD="${cross}-clang"
+    export CPP="${cross}-clang -E"
+    export CXX="${cross}-clang++"
     export LD="${cross}-ld"
     export NM="${cross}-nm"
     export OBJCOPY="${cross}-objcopy"
@@ -30,11 +30,11 @@ build_android() {
 
     export CFLAGS="-isystem${install_dir}/include -fPIC -O2"
     export CXXFLAGS="-isystem${install_dir}/include -fPIC -O2"
-    export LDFLAGS="-L${install_dir}/lib"
+    export LDFLAGS="-L${install_dir}/lib -fPIC"
 
     if [ $1 = "arm" ]; then
-        export CFLAGS="$CFLAGS -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16"
-        export CXXFLAGS="$CXXFLAGS -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16"
+        export CFLAGS="$CFLAGS -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -mthumb"
+        export CXXFLAGS="$CXXFLAGS -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -mthumb"
         export LDFLAGS="$LDFLAGS -march=armv7-a -Wl,--fix-cortex-a8"
     fi
 
