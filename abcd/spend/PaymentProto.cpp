@@ -210,16 +210,12 @@ PaymentRequest::merchant(const std::string &fallback) const
     if (!details_.has_memo())
         return fallback;
 
-#ifdef ANDROID
-    return fallback;
-#else
     std::regex re("Payment request for BitPay invoice [^ ]* for merchant (.*)");
     std::smatch match;
     if (!std::regex_match(details_.memo(), match, re))
         return fallback;
 
     return match[1];
-#endif
 }
 
 bool
