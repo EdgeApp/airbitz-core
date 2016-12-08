@@ -33,8 +33,8 @@ build_android() {
     export LDFLAGS="-L${install_dir}/lib -fPIC"
 
     if [ $1 = "arm" ]; then
-        export CFLAGS="$CFLAGS -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16"
-        export CXXFLAGS="$CXXFLAGS -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16"
+        export CFLAGS="$CFLAGS -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -mthumb"
+        export CXXFLAGS="$CXXFLAGS -march=armv7-a -mfloat-abi=softfp -mfpu=vfpv3-d16 -mthumb"
         export LDFLAGS="$LDFLAGS -march=armv7-a -Wl,--fix-cortex-a8"
     fi
 
