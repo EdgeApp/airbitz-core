@@ -19,6 +19,7 @@ build() {
     else
         # We are cross-compiling, so specify the target manually:
         case $target in
+        osx-x86_64) type=darwin64-x86_64-cc ;;
         ios-x86_64) type=darwin64-x86_64-cc ;;
         ios-i386)   type=debug-darwin-i386-cc ;;
         ios-*)      type=BSD-generic32 ;;
