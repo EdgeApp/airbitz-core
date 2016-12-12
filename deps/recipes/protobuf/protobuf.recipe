@@ -1,7 +1,7 @@
 inherit lib
 
-version="2.6.1"
-source="https://github.com/google/protobuf/releases/download/v$version/protobuf-$version.tar.gz#375765455ad49e45e4e10364f91aaf2831d3e905"
+version="3.1.0"
+source="https://github.com/google/protobuf/releases/download/v$version/protobuf-cpp-$version.tar.gz#b7b7275405ac18784965b02bea7d62f836873564"
 
 build() {
     cd protobuf-$version
