@@ -14,6 +14,9 @@
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginRecovery2.hpp"
 #include "../abcd/login/LoginStore.hpp"
+#include "../abcd/login/server/AuthJson.hpp"
+#include "../abcd/login/server/LoginJson.hpp"
+#include "../abcd/login/server/LoginServer.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include <map>
 #include <mutex>
@@ -182,6 +185,16 @@ cacheLoginPin(std::shared_ptr<Login> &result,
         {
             // Otherwise try PIN login v1:
             ABC_CHECK(loginPin(gLoginCache, *store, pin, authError));
+
+            // Fetch the current pin2Key, if any:
+            AuthJson authJson;
+            LoginJson loginJson;
+            ABC_CHECK(authJson.loginSet(*gLoginCache));
+            ABC_CHECK(loginServerLogin(loginJson, authJson));
+            ABC_CHECK(loginJson.save(gLoginCache->paths,
+                                     gLoginCache->dataKey()));
+
+            // Upgrade to PIN login v2:
             ABC_CHECK(loginPin2Set(pin2Key, *gLoginCache, pin));
             ABC_CHECK(loginPinDelete(*store));
         }
