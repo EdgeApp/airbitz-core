@@ -100,7 +100,7 @@ COMMAND(InitLevel::context, AccountList, "account-list",
     return Status();
 }
 
-COMMAND(InitLevel::wallet, CliAccountSync, "account-sync",
+COMMAND(InitLevel::account, CliAccountSync, "account-sync",
         "")
 {
     if (argc != 0)
