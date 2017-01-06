@@ -68,14 +68,14 @@ COMMAND(InitLevel::wallet, CliWalletDecrypt, "wallet-decrypt",
 
 COMMAND(InitLevel::wallet, CliWalletEncrypt, "wallet-encrypt",
         " <filename>\n"
-        "note: The filename is relative to the wallet sync directory.")
+        "note: The filename is absolute.")
 {
     if (argc != 1)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto filename = argv[0];
 
     DataChunk contents;
-    ABC_CHECK(fileLoad(contents, session.wallet->paths.syncDir() + filename));
+    ABC_CHECK(fileLoad(contents, filename));
 
     JsonBox box;
     ABC_CHECK(box.encrypt(contents, session.wallet->dataKey()));
