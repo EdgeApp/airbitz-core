@@ -240,9 +240,9 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     // Calculate amountCurrency if necessary:
     if (!meta.metadata.amountCurrency)
     {
-        ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                      meta.metadata.amountCurrency, balance,
-                      static_cast<Currency>(wallet_.currency())));
+        gContext->exchangeCache.satoshiToCurrency(
+                meta.metadata.amountCurrency, balance,
+                static_cast<Currency>(wallet_.currency())).log();
     }
 
     // Save the transaction:
