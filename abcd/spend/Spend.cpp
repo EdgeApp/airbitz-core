@@ -241,8 +241,8 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     if (!meta.metadata.amountCurrency)
     {
         gContext->exchangeCache.satoshiToCurrency(
-                meta.metadata.amountCurrency, balance,
-                static_cast<Currency>(wallet_.currency())).log();
+            meta.metadata.amountCurrency, balance,
+            static_cast<Currency>(wallet_.currency())).log();
     }
 
     // Save the transaction:
