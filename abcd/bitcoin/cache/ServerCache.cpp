@@ -201,7 +201,7 @@ ServerCache::save_nolock()
         }
         else
         {
-            ABC_Debug(1, "ServerCache::save() NOT SAVED. TOO SOON");
+            ABC_Debug(2, "ServerCache::save() NOT SAVED. TOO SOON");
         }
     }
 
