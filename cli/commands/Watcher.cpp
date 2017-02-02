@@ -8,6 +8,8 @@
 #include "../Command.hpp"
 #include "../../abcd/bitcoin/Text.hpp"
 #include "../../abcd/bitcoin/WatcherBridge.hpp"
+#include "../../abcd/bitcoin/cache/Cache.hpp"
+#include "../../abcd/wallet/Wallet.hpp"
 #include <unistd.h>
 #include <signal.h>
 #include <iostream>
@@ -44,6 +46,41 @@ watcherThread(const char *uuid)
 {
     tABC_Error error;
     ABC_WatcherLoop(uuid, eventCallback, nullptr, &error);
+}
+
+static void showReport(Wallet &wallet)
+{
+    time_t sleepTime;
+    const auto statuses = wallet.cache.addresses.statuses(sleepTime);
+    const auto progress = wallet.cache.addresses.progress();
+
+    std::cout << "Finished " << progress.first << " out of " <<
+              progress.second << " addresses." << std::endl;
+    for (const auto &status: statuses)
+    {
+        const auto missing = status.missingTxids.size();
+
+        // Basic address information:
+        std::cout << "Address " << status.address << " incomplete.";
+        if (status.dirty)
+            std::cout << " Dirty.";
+        if (status.needsCheck)
+            std::cout << " Unsubscribed.";
+        if (missing)
+            std::cout << " Missing " << missing << " txids:";
+        std::cout << std::endl;
+
+        // Txid list:
+        if (missing < 10)
+        {
+            for (const auto &txid: status.missingTxids)
+                std::cout << "   " << txid << std::endl;
+        }
+        else
+        {
+            std::cout << "  <list too long>" << std::endl;
+        }
+    }
 }
 
 /**
@@ -99,7 +136,10 @@ COMMAND(InitLevel::wallet, Watcher, "watcher",
     // The command stops with ctrl-c:
     signal(SIGINT, signalCallback);
     while (running)
-        sleep(1);
+    {
+        showReport(*session.wallet);
+        sleep(5);
+    }
 
     return Status();
 }
