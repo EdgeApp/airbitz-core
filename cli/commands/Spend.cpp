@@ -137,7 +137,7 @@ COMMAND(InitLevel::wallet, SpendGetMax, "spend-get-max",
 
     uint64_t max;
     ABC_CHECK(spend.calculateMax(max));
-    std::cout << "max: " << max << std::endl;
+    std::cout << "{\"max\": " << max << "}" << std::endl;
 
     return Status();
 }

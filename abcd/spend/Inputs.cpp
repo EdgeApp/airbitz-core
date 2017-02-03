@@ -129,6 +129,8 @@ inputsPickOptimal(uint64_t &resultFee, uint64_t &resultChange,
         auto chosen = select_outputs(utxos, totalOut + fee);
         if (!chosen.points.size())
             return ABC_ERROR(ABC_CC_InsufficientFunds, "Insufficient funds");
+        if (248 <= chosen.points.size())
+            return ABC_ERROR(ABC_CC_InsufficientFunds, "Too many inputs");
         sourced = totalOut + fee + chosen.change;
 
         // Calculate the fees for this input combination:
