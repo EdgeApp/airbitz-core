@@ -144,6 +144,29 @@ COMMAND(InitLevel::wallet, Watcher, "watcher",
     return Status();
 }
 
+COMMAND(InitLevel::wallet, WatcherUpdate, "watcher-update",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    WatcherThread thread;
+    ABC_CHECK(thread.init(session));
+
+    // The command stops with ctrl-c, or when progress is 100%:
+    signal(SIGINT, signalCallback);
+    while (running)
+    {
+        showReport(*session.wallet);
+        const auto progress = session.wallet->cache.addresses.progress();
+        if (progress.first == progress.second)
+            break;
+        sleep(5);
+    }
+
+    return Status();
+}
+
 COMMAND(InitLevel::wallet, WatcherSweep, "watcher-sweep",
         " <wif>")
 {
