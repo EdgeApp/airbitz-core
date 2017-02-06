@@ -23,7 +23,7 @@ tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
 
 Status
 exportFormatQBO(std::string &result, tABC_TxInfo **pTransactions,
-                unsigned int iTransactionCount);
+                unsigned int iTransactionCount, std::string currency);
 
 } // namespace abcd
 
