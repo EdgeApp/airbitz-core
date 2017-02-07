@@ -107,8 +107,8 @@ minerFee(const bc::transaction_type &tx, uint64_t amountSatoshi,
     out += 99;
     out -= out % 100;
 
-    // Cap the fee at 0.01 BTC to guard against any potential insanity:
-    out = std::min<uint64_t>(1000000, out);
+    // Cap the fee at 0.05 BTC to guard against any potential insanity:
+    out = std::min<uint64_t>(5000000, out);
 
     return out;
 }
