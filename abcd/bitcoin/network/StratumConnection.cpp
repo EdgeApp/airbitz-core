@@ -17,7 +17,7 @@
 namespace abcd {
 
 constexpr std::chrono::seconds keepaliveTime(60);
-constexpr std::chrono::seconds timeout(10);
+constexpr std::chrono::seconds timeout(30);
 
 struct RequestJson:
     public JsonObject
