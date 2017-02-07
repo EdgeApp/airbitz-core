@@ -64,7 +64,7 @@ namespace abcd {
 
 typedef ABC_CSV(char) tABC_CSV;
 
-tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
+tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError, std::string currency)
 {
     tABC_CC cc = ABC_CC_Ok;
     char **out = szCsvRec;
@@ -74,7 +74,7 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
     const char *szTimeCreation = "TIME";
     const char *szName = "PAYEE_PAYER_NAME"; /* payee or payer */
     const char *szAmtBTC = "AMT_BTC";
-    const char *szCurrency = "FIAT";
+    const char *szCurrency = currency.c_str();
     const char *szCategory = "CATEGORY";
     const char *szNotes = "NOTES";
     const char *szAmtAirbitzBTC = "AMT_BTC_FEES_AB";
@@ -125,8 +125,7 @@ tABC_CC ABC_ExportGetAddresses(tABC_TxInfo *pData,
         strcpy(*szAddresses, "");
     }
 
-    for (i = 0; i < pData->countOutputs; i++)
-    {
+    for (i = 0; i < pData->countOutputs; i++) {
         bool doCopy = false;
         if (pData->aOutputs[i]->input)
         {
@@ -303,14 +302,15 @@ exit:
 tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
                             unsigned int iTransactionCount,
                             char **szCsvData,
-                            tABC_Error *pError)
+                            tABC_Error *pError,
+                            std::string currency)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     std::string out;
     {
         AutoString szCurrRec;
-        ABC_CHECK_RET(ABC_ExportGenerateHeader(&szCurrRec.get(), pError));
+        ABC_CHECK_RET(ABC_ExportGenerateHeader(&szCurrRec.get(), pError, currency));
         out += szCurrRec;
     }
 
@@ -438,8 +438,9 @@ exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data, std::string curr
     exchangeRate = buffExRate;
 
     // Memo
+    std::string memoField = "// Rate=%s " + currency + "=%.2f category=\"%s\" memo=\"%s\"";
     snprintf(buffMemo, sizeof(buffMemo),
-             "// Rate=%s FIAT=%.2f category=\"%s\" memo=\"%s\"",
+             memoField.c_str(),
              exchangeRate.c_str(), fabs(pDetails->amountCurrency), pDetails->szCategory,
              pDetails->szNotes);
     std::string memo(buffMemo);

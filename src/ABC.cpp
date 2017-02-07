@@ -3252,7 +3252,11 @@ tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
                                             &paTransactions, &count, pError));
         ABC_CHECK_ASSERT(0 != count, ABC_CC_NoTransaction, "No transactions to export");
 
-        ABC_CHECK_RET(ABC_ExportFormatCsv(paTransactions, count, szCsvData, pError));
+        std::string currency;
+        ABC_CHECK_NEW(currencyCode(currency,
+                                   static_cast<Currency>(wallet->currency())));
+
+        ABC_CHECK_RET(ABC_ExportFormatCsv(paTransactions, count, szCsvData, pError, currency));
     }
 
 exit:

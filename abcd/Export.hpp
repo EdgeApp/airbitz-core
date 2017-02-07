@@ -19,7 +19,8 @@ namespace abcd {
 tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
                             unsigned int iTransactionCount,
                             char **szCsvData,
-                            tABC_Error *pError);
+                            tABC_Error *pError,
+                            std::string currency);
 
 Status
 exportFormatQBO(std::string &result, tABC_TxInfo **pTransactions,
