@@ -11,6 +11,7 @@
 #include "../../abcd/exchange/Currency.hpp"
 #include "../../abcd/json/JsonBox.hpp"
 #include "../../abcd/util/FileIO.hpp"
+#include "../../abcd/util/Util.hpp"
 #include "../../abcd/wallet/Wallet.hpp"
 #include "../../src/LoginShim.hpp"
 #include <iostream>
@@ -45,6 +46,24 @@ COMMAND(InitLevel::account, CliWalletCreate, "wallet-create",
                              static_cast<int>(currency)));
     std::cout << "Created wallet " << wallet->id() << std::endl;
 
+    return Status();
+}
+
+COMMAND(InitLevel::wallet, CliWalletExport, "wallet-csv",
+        " <filename>")
+{
+    if (argc != 1)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto filename = argv[0];
+
+    AutoString csvFile;
+    ABC_CHECK_OLD(ABC_CsvExport(session.username.c_str(),
+                                session.password.c_str(),
+                                session.uuid.c_str(),
+                                0, 0,
+                                &csvFile.get(),
+                                &error));
+    ABC_CHECK(fileSave(std::string(csvFile), filename));
     return Status();
 }
 

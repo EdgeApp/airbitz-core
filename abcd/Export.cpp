@@ -64,7 +64,7 @@ namespace abcd {
 
 typedef ABC_CSV(char) tABC_CSV;
 
-tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
+tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError, std::string currency)
 {
     tABC_CC cc = ABC_CC_Ok;
     char **out = szCsvRec;
@@ -74,7 +74,7 @@ tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError)
     const char *szTimeCreation = "TIME";
     const char *szName = "PAYEE_PAYER_NAME"; /* payee or payer */
     const char *szAmtBTC = "AMT_BTC";
-    const char *szCurrency = "USD";
+    const char *szCurrency = currency.c_str();
     const char *szCategory = "CATEGORY";
     const char *szNotes = "NOTES";
     const char *szAmtAirbitzBTC = "AMT_BTC_FEES_AB";
@@ -125,8 +125,7 @@ tABC_CC ABC_ExportGetAddresses(tABC_TxInfo *pData,
         strcpy(*szAddresses, "");
     }
 
-    for (i = 0; i < pData->countOutputs; i++)
-    {
+    for (i = 0; i < pData->countOutputs; i++) {
         bool doCopy = false;
         if (pData->aOutputs[i]->input)
         {
@@ -303,14 +302,15 @@ exit:
 tABC_CC ABC_ExportFormatCsv(tABC_TxInfo **pTransactions,
                             unsigned int iTransactionCount,
                             char **szCsvData,
-                            tABC_Error *pError)
+                            tABC_Error *pError,
+                            std::string currency)
 {
     tABC_CC cc = ABC_CC_Ok;
 
     std::string out;
     {
         AutoString szCurrRec;
-        ABC_CHECK_RET(ABC_ExportGenerateHeader(&szCurrRec.get(), pError));
+        ABC_CHECK_RET(ABC_ExportGenerateHeader(&szCurrRec.get(), pError, currency));
         out += szCurrRec;
     }
 
@@ -336,7 +336,7 @@ Status escapeOFXString(std::string &string)
     return Status();
 }
 static Status
-exportQBOGenerateHeader(std::string &result, std::string date_today)
+exportQBOGenerateHeader(std::string &result, std::string date_today, std::string currency)
 {
 
     result = "OFXHEADER:100\n"
@@ -369,7 +369,7 @@ exportQBOGenerateHeader(std::string &result, std::string date_today)
              "<MESSAGE>OK\n"
              "</STATUS>\n"
              "<STMTRS>\n"
-             "<CURDEF>USD\n"
+             "<CURDEF>" + currency + "\n"
              "<BANKACCTFROM>\n"
              "<BANKID>999999999\n"
              "<ACCTID>999999999999\n"
@@ -385,7 +385,7 @@ exportQBOGenerateHeader(std::string &result, std::string date_today)
 #define MAX_MEMO_SIZE 253
 
 static Status
-exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data)
+exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data, std::string currency)
 {
     tABC_TxDetails *pDetails = data->pDetails;
 
@@ -438,8 +438,9 @@ exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data)
     exchangeRate = buffExRate;
 
     // Memo
+    std::string memoField = "// Rate=%s " + currency + "=%.2f category=\"%s\" memo=\"%s\"";
     snprintf(buffMemo, sizeof(buffMemo),
-             "// Rate=%s USD=%.2f category=\"%s\" memo=\"%s\"",
+             memoField.c_str(),
              exchangeRate.c_str(), fabs(pDetails->amountCurrency), pDetails->szCategory,
              pDetails->szNotes);
     std::string memo(buffMemo);
@@ -454,7 +455,7 @@ exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data)
                   "  <MEMO>" + memo + "\n"
                   "  <CURRENCY>" + "\n"
                   "    <CURRATE>" + exchangeRate + "\n"
-                  "    <CURSYM>USD" + "\n"
+                  "    <CURSYM>" + currency + "\n"
                   "  </CURRENCY>" + "\n"
                   "</STMTTRN>\n";
 
@@ -464,7 +465,7 @@ exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data)
 
 Status
 exportFormatQBO(std::string &result, tABC_TxInfo **pTransactions,
-                unsigned int iTransactionCount)
+                unsigned int iTransactionCount, std::string currency)
 {
     time_t rawtime = time(nullptr);
     tm *timeinfo = localtime(&rawtime);
@@ -476,14 +477,14 @@ exportFormatQBO(std::string &result, tABC_TxInfo **pTransactions,
     std::string out;
     {
         std::string header;
-        ABC_CHECK(exportQBOGenerateHeader(header, date_today));
+        ABC_CHECK(exportQBOGenerateHeader(header, date_today, currency));
         out += header;
     }
 
     for (unsigned i = 0; i < iTransactionCount; i++)
     {
         std::string transactions;
-        ABC_CHECK(exportQBOGenerateRecord(transactions, pTransactions[i]));
+        ABC_CHECK(exportQBOGenerateRecord(transactions, pTransactions[i], currency));
         out += transactions;
     }
 
