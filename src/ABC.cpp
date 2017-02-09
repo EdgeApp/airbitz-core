@@ -3256,7 +3256,8 @@ tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
         ABC_CHECK_NEW(currencyCode(currency,
                                    static_cast<Currency>(wallet->currency())));
 
-        ABC_CHECK_RET(ABC_ExportFormatCsv(paTransactions, count, szCsvData, pError, currency));
+        ABC_CHECK_RET(ABC_ExportFormatCsv(paTransactions, count, szCsvData, pError,
+                                          currency));
     }
 
 exit:

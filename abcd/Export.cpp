@@ -64,7 +64,8 @@ namespace abcd {
 
 typedef ABC_CSV(char) tABC_CSV;
 
-tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError, std::string currency)
+tABC_CC ABC_ExportGenerateHeader(char **szCsvRec, tABC_Error *pError,
+                                 std::string currency)
 {
     tABC_CC cc = ABC_CC_Ok;
     char **out = szCsvRec;
@@ -125,7 +126,8 @@ tABC_CC ABC_ExportGetAddresses(tABC_TxInfo *pData,
         strcpy(*szAddresses, "");
     }
 
-    for (i = 0; i < pData->countOutputs; i++) {
+    for (i = 0; i < pData->countOutputs; i++)
+    {
         bool doCopy = false;
         if (pData->aOutputs[i]->input)
         {
@@ -336,7 +338,8 @@ Status escapeOFXString(std::string &string)
     return Status();
 }
 static Status
-exportQBOGenerateHeader(std::string &result, std::string date_today, std::string currency)
+exportQBOGenerateHeader(std::string &result, std::string date_today,
+                        std::string currency)
 {
 
     result = "OFXHEADER:100\n"
@@ -385,7 +388,8 @@ exportQBOGenerateHeader(std::string &result, std::string date_today, std::string
 #define MAX_MEMO_SIZE 253
 
 static Status
-exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data, std::string currency)
+exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data,
+                        std::string currency)
 {
     tABC_TxDetails *pDetails = data->pDetails;
 
@@ -438,7 +442,8 @@ exportQBOGenerateRecord(std::string &result, tABC_TxInfo *data, std::string curr
     exchangeRate = buffExRate;
 
     // Memo
-    std::string memoField = "// Rate=%s " + currency + "=%.2f category=\"%s\" memo=\"%s\"";
+    std::string memoField = "// Rate=%s " + currency +
+                            "=%.2f category=\"%s\" memo=\"%s\"";
     snprintf(buffMemo, sizeof(buffMemo),
              memoField.c_str(),
              exchangeRate.c_str(), fabs(pDetails->amountCurrency), pDetails->szCategory,
