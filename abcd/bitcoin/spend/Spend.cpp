@@ -222,6 +222,11 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     ABC_CHECK(wallet_.cache.txs.info(info, tx));
     auto balance = wallet_.addresses.balance(info);
 
+    // Update the transaction cache:
+    wallet_.cache.txs.insert(tx);
+    wallet_.cache.addresses.updateSpend(info);
+    wallet_.cache.save().log(); // Failure is fine
+
     // Create Airbitz metadata:
     TxMeta meta;
     meta.ntxid = info.ntxid;
@@ -255,11 +260,6 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
         meta.metadata = transfer.second;
         transfer.first->txs.save(meta, -balance, info.fee);
     }
-
-    // Update the transaction cache:
-    wallet_.cache.txs.insert(tx);
-    wallet_.cache.addresses.updateSpend(info);
-    wallet_.cache.save().log(); // Failure is fine
 
     txidOut = info.txid;
     return Status();
