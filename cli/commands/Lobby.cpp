@@ -6,8 +6,7 @@
  */
 
 #include "../Command.hpp"
-#include "../../abcd/login/AccountRequest.hpp"
-#include "../../abcd/login/server/LoginServer.hpp"
+#include "../../abcd/login/Sharing.hpp"
 #include <iostream>
 
 using namespace abcd;
@@ -19,17 +18,21 @@ COMMAND(InitLevel::context, LobbyGet, "lobby-get",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
     auto id = argv[0];
 
-    JsonPtr lobbyJson;
-    ABC_CHECK(loginServerLobbyGet(lobbyJson, id));
+    Lobby lobby;
+    ABC_CHECK(lobbyFetch(lobby, id));
 
     std::cout << "Contents:" << std::endl;
-    AccountRequest request;
-    if (accountRequest(request, lobbyJson))
+    LoginRequest request;
+    if (loginRequestLoad(request, lobby))
     {
         std::cout << "  Account request:" << std::endl;
         std::cout << "    Name:\t" << request.displayName << std::endl;
-        std::cout << "    Name:\t" << request.displayImageUrl << std::endl;
+        std::cout << "    Image:\t" << request.displayImageUrl << std::endl;
         std::cout << "    Type:\t" << request.type << std::endl;
+    }
+    else
+    {
+        std::cout << "  " << lobby.json.encode() << std::endl;
     }
 
     return Status();
@@ -42,9 +45,9 @@ COMMAND(InitLevel::login, LobbyApproveEdge, "lobby-approve-edge",
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
     auto id = argv[0];
 
-    JsonPtr lobbyJson;
-    ABC_CHECK(loginServerLobbyGet(lobbyJson, id));
-    ABC_CHECK(accountRequestApprove(*session.login, id, "", lobbyJson));
+    Lobby lobby;
+    ABC_CHECK(lobbyFetch(lobby, id));
+    ABC_CHECK(loginRequestApprove(*session.login, lobby));
 
     return Status();
 }

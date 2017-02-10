@@ -5,7 +5,7 @@
  * See the LICENSE file for more information.
  */
 
-#include "AccountRequest.hpp"
+#include "Sharing.hpp"
 #include "Login.hpp"
 #include "LoginStore.hpp"
 #include "server/LoginServer.hpp"
@@ -40,7 +40,6 @@ struct AccountRequestJson:
     ABC_JSON_STRING(type, "type", nullptr)
 };
 
-
 struct LobbyJson:
     public JsonObject
 {
@@ -50,9 +49,20 @@ struct LobbyJson:
 };
 
 Status
-accountRequest(AccountRequest &result, JsonPtr lobby)
+lobbyFetch(Lobby &result, const std::string &id)
 {
-    auto requestJson = LobbyJson(lobby).accountRequest();
+    Lobby out;
+    out.id = id;
+    ABC_CHECK(loginServerLobbyGet(out.json, id));
+
+    result = out;
+    return Status();
+}
+
+Status
+loginRequestLoad(LoginRequest &result, const Lobby &lobby)
+{
+    auto requestJson = LobbyJson(lobby.json).accountRequest();
     ABC_CHECK(requestJson.requestKeyOk());
     ABC_CHECK(requestJson.typeOk());
 
@@ -63,12 +73,11 @@ accountRequest(AccountRequest &result, JsonPtr lobby)
 }
 
 Status
-accountRequestApprove(Login &login,
-                      const std::string &id,
-                      const std::string &pin,
-                      JsonPtr lobby)
+loginRequestApprove(Login &login,
+                    Lobby &lobby,
+                    const std::string &pin)
 {
-    auto requestJson = LobbyJson(lobby).accountRequest();
+    auto requestJson = LobbyJson(lobby.json).accountRequest();
     ABC_CHECK(requestJson.requestKeyOk());
     ABC_CHECK(requestJson.typeOk());
 
@@ -115,7 +124,7 @@ accountRequestApprove(Login &login,
                                           bc::secret_to_public_key(replyKey))));
 
     // Upload:
-    ABC_CHECK(loginServerLobbySet(id, lobby));
+    ABC_CHECK(loginServerLobbySet(lobby.id, lobby.json));
 
     return Status();
 }

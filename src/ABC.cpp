@@ -30,7 +30,7 @@
 #include "../abcd/exchange/ExchangeCache.hpp"
 #include "../abcd/http/Http.hpp"
 #include "../abcd/http/Uri.hpp"
-#include "../abcd/login/AccountRequest.hpp"
+#include "../abcd/login/Sharing.hpp"
 #include "../abcd/login/Bitid.hpp"
 #include "../abcd/login/Login.hpp"
 #include "../abcd/login/LoginPackages.hpp"
@@ -173,8 +173,7 @@ tABC_CC ABC_FetchLobby(char *szId,
 
     {
         auto lobby = std::make_shared<Lobby>();
-        lobby->id = szId;
-        ABC_CHECK_NEW(loginServerLobbyGet(lobby->json, szId));
+        ABC_CHECK_NEW(lobbyFetch(*lobby, szId));
         *phResult = gLobbyCache.insert(lobby);
     }
 
@@ -196,8 +195,8 @@ tABC_CC ABC_GetLobbyAccountRequest(int hLobby,
         std::shared_ptr<Lobby> lobby;
         ABC_CHECK_NEW(gLobbyCache.find(lobby, hLobby));
 
-        AccountRequest request;
-        ABC_CHECK_NEW(accountRequest(request, lobby->json));
+        LoginRequest request;
+        ABC_CHECK_NEW(loginRequestLoad(request, *lobby));
         *pszType = stringCopy(request.type);
         *pszDisplayName = stringCopy(request.displayName);
         *pszDisplayImageUrl = stringCopy(request.displayImageUrl);
@@ -227,8 +226,7 @@ tABC_CC ABC_ApproveLobbyAccountRequest(const char *szUserName,
         std::string pin = "";
         if (nullptr != settings->szPIN)
             pin = settings->szPIN;
-        ABC_CHECK_NEW(accountRequestApprove(*login, lobby->id, pin,
-                                            lobby->json));
+        ABC_CHECK_NEW(loginRequestApprove(*login, *lobby, pin));
     }
 
 exit:

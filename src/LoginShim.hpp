@@ -28,15 +28,7 @@ class Login;
 class LoginStore;
 class Wallet;
 struct AuthError;
-
-/**
- * A reference to an auth-server communications lobby.
- */
-struct Lobby
-{
-    std::string id;
-    JsonPtr json;
-};
+struct Lobby;
 
 extern HandleCache<Lobby> gLobbyCache;
 
