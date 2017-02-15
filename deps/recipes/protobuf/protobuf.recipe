@@ -1,9 +1,14 @@
 inherit lib
 
-version="3.1.0"
-source="https://github.com/google/protobuf/releases/download/v$version/protobuf-cpp-$version.tar.gz#b7b7275405ac18784965b02bea7d62f836873564"
+version="3.2.0"
+source="https://github.com/google/protobuf/releases/download/v$version/protobuf-cpp-$version.tar.gz#7518aef2471e7398ebd0d85a53836d6a076222d5"
 
 build() {
+    # See https://github.com/google/protobuf/issues/2719
+    case $target in
+    android-*) export LDFLAGS="$LDFLAGS -llog" ;;
+    esac
+
     cd protobuf-$version
     autoreconf -i
     ./configure --enable-static --disable-shared \
