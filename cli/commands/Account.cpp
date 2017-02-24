@@ -6,10 +6,12 @@
  */
 
 #include "../Command.hpp"
+#include "../../abcd/Context.hpp"
 #include "../../abcd/account/Account.hpp"
 #include "../../abcd/crypto/Encoding.hpp"
 #include "../../abcd/json/JsonBox.hpp"
 #include "../../abcd/login/Login.hpp"
+#include "../../abcd/login/server/LoginServer.hpp"
 #include "../../abcd/util/FileIO.hpp"
 #include "../../abcd/util/Util.hpp"
 #include <iostream>
@@ -113,6 +115,19 @@ COMMAND(InitLevel::account, CliAccountSync, "account-sync",
         std::cout << "Contents changed" << std::endl;
     else
         std::cout << "No changes" << std::endl;
+
+    return Status();
+}
+
+COMMAND(InitLevel::context, CliAccountMessages, "account-messages",
+        "")
+{
+    if (argc != 0)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
+    JsonPtr reply;
+    ABC_CHECK(loginServerMessages(reply, gContext->paths.accountList()));
+    std::cout << reply.encode() << std::endl;
 
     return Status();
 }

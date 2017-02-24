@@ -201,6 +201,12 @@ Status
 loginServerReposAdd(AuthJson authJson, RepoJson repoJson);
 
 /**
+ * Checks a collection of usernames for pending messages.
+ */
+Status
+loginServerMessages(JsonPtr &result, const std::list<std::string> &usernames);
+
+/**
  * Downloads the contents of a lobby.
  */
 Status

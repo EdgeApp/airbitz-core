@@ -664,6 +664,14 @@ tABC_CC ABC_FixUsername(char **pszResult,
                         tABC_Error *pError);
 
 /**
+ * Grabs an array of message JSON objects from the auth server.
+ * These objects contain status flags the user should be informed about.
+ * @param pszJsonResult A string holding the JSON results.
+ */
+tABC_CC ABC_GetLoginMessages(char **pszJsonResult,
+                             tABC_Error *pError);
+
+/**
  * Grabs the login packages from disks.
  * Tbis is useful for brute-forcing forgotten passwords.
  */

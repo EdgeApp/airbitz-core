@@ -253,6 +253,24 @@ exit:
     return cc;
 }
 
+tABC_CC ABC_GetLoginMessages(char **pszJsonResult,
+                             tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszJsonResult);
+
+    {
+        const auto usernames = gContext->paths.accountList();
+
+        JsonPtr reply;
+        ABC_CHECK_NEW(loginServerMessages(reply, usernames));
+        *pszJsonResult = stringCopy(reply.encode());
+    }
+
+exit:
+    return cc;
+}
+
 tABC_CC ABC_GetLoginPackages(char **pszResult,
                              const char *szUserName,
                              tABC_Error *pError)

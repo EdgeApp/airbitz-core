@@ -686,6 +686,49 @@ loginServerReposAdd(AuthJson authJson, RepoJson repoJson)
 }
 
 Status
+loginServerMessages(JsonPtr &result, const std::list<std::string> &usernames)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/messages";
+
+    // Compute all userIds:
+    JsonArray userIds;
+    std::map<std::string, std::string> userIdMap;
+    for (const auto &username: usernames)
+    {
+        std::shared_ptr<LoginStore> store;
+        ABC_CHECK(LoginStore::create(store, username));
+        const auto userId = base64Encode(store->userId());
+        userIds.append(json_string(userId.c_str()));
+        userIdMap[userId] = username;
+    }
+
+    JsonObject request;
+    ABC_CHECK(request.set("userIds", userIds));
+
+    // Make the request:
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "POST", request.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    // Insert the original usernames into the results:
+    JsonArray arrayJson(replyJson.results());
+    size_t size = arrayJson.size();
+    for (size_t i = 0; i < size; i++)
+    {
+        JsonObject objectJson(arrayJson[i]);
+        const auto userId = objectJson.getString("userId", nullptr);
+        if (!userId) continue;
+        const auto username = userIdMap.find(userId);
+        if (username == userIdMap.end()) continue;
+        ABC_CHECK(objectJson.set("username", username->second));
+    }
+
+    result = arrayJson;
+    return Status();
+}
+
+Status
 loginServerLobbyGet(JsonPtr &result, const std::string &id)
 {
     const auto url = ABC_SERVER_ROOT "/v2/lobby/" + id;
