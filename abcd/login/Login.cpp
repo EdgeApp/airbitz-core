@@ -37,7 +37,7 @@ Login::createOffline(std::shared_ptr<Login> &result,
 
 Status
 Login::createOnline(std::shared_ptr<Login> &result,
-                    LoginStore &store, DataSlice dataKey, LoginJson loginJson)
+                    LoginStore &store, DataSlice dataKey, LoginReplyJson loginJson)
 {
     std::shared_ptr<Login> out(new Login(store, dataKey));
     ABC_CHECK(out->loadOnline(loginJson));
@@ -233,7 +233,7 @@ Login::loadOffline()
     {
         // Try asking the server:
         AuthJson authJson;
-        LoginJson loginJson;
+        LoginReplyJson loginJson;
         ABC_CHECK(authJson.loginSet(*this));
         ABC_CHECK(loginServerLogin(loginJson, authJson));
         ABC_CHECK(loginJson.save(paths, dataKey_));
@@ -251,7 +251,7 @@ Login::loadOffline()
 }
 
 Status
-Login::loadOnline(LoginJson loginJson)
+Login::loadOnline(LoginReplyJson loginJson)
 {
     ABC_CHECK(store.paths(paths, true));
     ABC_CHECK(loginJson.save(paths, dataKey_));

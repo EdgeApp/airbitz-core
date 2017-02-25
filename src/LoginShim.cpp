@@ -189,7 +189,7 @@ cacheLoginPin(std::shared_ptr<Login> &result,
 
             // Fetch the current pin2Key, if any:
             AuthJson authJson;
-            LoginJson loginJson;
+            LoginReplyJson loginJson;
             ABC_CHECK(authJson.loginSet(*gLoginCache));
             ABC_CHECK(loginServerLogin(loginJson, authJson));
             ABC_CHECK(loginJson.save(gLoginCache->paths,

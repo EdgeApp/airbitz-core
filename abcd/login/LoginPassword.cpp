@@ -58,7 +58,7 @@ loginPasswordServer(std::shared_ptr<Login> &result,
 
     // Grab the login information from the server:
     AuthJson authJson;
-    LoginJson loginJson;
+    LoginReplyJson loginJson;
     ABC_CHECK(authJson.passwordSet(store, passwordAuth));
     ABC_CHECK(loginServerLogin(loginJson, authJson, &authError));
 

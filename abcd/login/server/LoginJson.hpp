@@ -19,11 +19,11 @@ class AccountPaths;
 /**
  * Login information returned by the server.
  */
-class LoginJson:
+class LoginReplyJson:
     public JsonObject
 {
 public:
-    ABC_JSON_CONSTRUCTORS(LoginJson, JsonObject)
+    ABC_JSON_CONSTRUCTORS(LoginReplyJson, JsonObject)
 
     // Password login:
     ABC_JSON_VALUE(passwordBox, "passwordBox", JsonBox)

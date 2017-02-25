@@ -23,7 +23,7 @@ class Account;
 class AuthJson;
 class JsonPtr;
 class Login;
-class LoginJson;
+class LoginReplyJson;
 class LoginStore;
 class RepoJson;
 struct CarePackage;
@@ -152,7 +152,7 @@ loginServerUploadLogs(const Account *account);
  * Accesses the v2 login endpoint.
  */
 Status
-loginServerLogin(LoginJson &result, AuthJson authJson,
+loginServerLogin(LoginReplyJson &result, AuthJson authJson,
                  AuthError *authError=nullptr);
 
 /**

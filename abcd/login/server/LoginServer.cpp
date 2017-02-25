@@ -557,7 +557,8 @@ loginServerUploadLogs(const Account *account)
 }
 
 Status
-loginServerLogin(LoginJson &result, AuthJson authJson, AuthError *authError)
+loginServerLogin(LoginReplyJson &result, AuthJson authJson,
+                 AuthError *authError)
 {
     const auto url = ABC_SERVER_ROOT "/v2/login";
 

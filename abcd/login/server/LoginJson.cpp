@@ -14,7 +14,7 @@
 namespace abcd {
 
 Status
-LoginJson::save(const AccountPaths &paths, DataSlice dataKey)
+LoginReplyJson::save(const AccountPaths &paths, DataSlice dataKey)
 {
     CarePackage carePackage;
     LoginPackage loginPackage;

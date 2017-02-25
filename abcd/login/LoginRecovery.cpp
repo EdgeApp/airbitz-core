@@ -21,7 +21,7 @@ loginRecoveryQuestions(std::string &result, LoginStore &store)
 {
     // Grab the login information from the server:
     AuthJson authJson;
-    LoginJson loginJson;
+    LoginReplyJson loginJson;
     ABC_CHECK(authJson.userIdSet(store));
     ABC_CHECK(loginServerLogin(loginJson, authJson));
 
@@ -52,7 +52,7 @@ loginRecovery(std::shared_ptr<Login> &result,
 
     // Grab the login information from the server:
     AuthJson authJson;
-    LoginJson loginJson;
+    LoginReplyJson loginJson;
     ABC_CHECK(authJson.recoverySet(store, recoveryAuth));
     ABC_CHECK(loginServerLogin(loginJson, authJson, &authError));
 

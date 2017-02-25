@@ -21,7 +21,7 @@ class JsonArray;
 class JsonBox;
 class LoginStore;
 struct LoginPackage;
-class LoginJson;
+class LoginReplyJson;
 
 /**
  * Holds the keys for a logged-in account.
@@ -39,7 +39,7 @@ public:
 
     static Status
     createOnline(std::shared_ptr<Login> &result,
-                 LoginStore &store, DataSlice dataKey, LoginJson loginJson);
+                 LoginStore &store, DataSlice dataKey, LoginReplyJson loginJson);
 
     static Status
     createNew(std::shared_ptr<Login> &result,
@@ -96,7 +96,7 @@ private:
     loadOffline();
 
     Status
-    loadOnline(LoginJson loginJson);
+    loadOnline(LoginReplyJson loginJson);
 
     Status
     rootKeyUpgrade();

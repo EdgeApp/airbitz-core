@@ -56,7 +56,7 @@ loginPin2(std::shared_ptr<Login> &result,
 
     // Grab the login information from the server:
     AuthJson authJson;
-    LoginJson loginJson;
+    LoginReplyJson loginJson;
     ABC_CHECK(authJson.pin2Set(store, pin2Id, pin2Auth));
     ABC_CHECK(loginServerLogin(loginJson, authJson, &authError));
 

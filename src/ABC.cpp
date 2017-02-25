@@ -2786,7 +2786,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
 
         // Has the password changed?
         AuthJson authJson;
-        LoginJson loginJson;
+        LoginReplyJson loginJson;
         ABC_CHECK_NEW(authJson.loginSet(account->login));
         auto s = loginServerLogin(loginJson, authJson);
         if (s)
