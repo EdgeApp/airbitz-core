@@ -17,21 +17,35 @@
 using namespace abcd;
 
 COMMAND(InitLevel::wallet, SpendAddress, "spend-address",
-        " <address> <amount> <no-unconfirmed>")
+        " [-- --no-unconfirmed] [<address> <amount>]...")
 {
-    if (argc != 2 && argc != 3)
-        return ABC_ERROR(ABC_CC_Error, helpString(*this));
-    const auto address = argv[0];
-    const auto amount = atol(argv[1]);
+    // Search for --no-unconfirmed:
     bool skipUnconfirmed = false;
-    if (argc == 3)
-        skipUnconfirmed = true;
+    std::list<std::string> args;
+    for (unsigned i = 0; i < argc; ++i)
+    {
+        std::string arg = argv[i];
+        if (arg == "--no-unconfirmed")
+            skipUnconfirmed = true;
+        else
+            args.push_back(argv[i]);
+    }
+    if (args.size() % 2)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
+    // Build the spend:
     Spend spend(*session.wallet);
-    ABC_CHECK(spend.addAddress(address, amount));
-    std::cout << "Sending " << amount << " satoshis to " << address
-              << std::endl;
+    auto i = args.begin();
+    while (i != args.end())
+    {
+        const auto address = *i++;
+        const auto amount = atol((*i++).c_str());
+        ABC_CHECK(spend.addAddress(address, amount));
+        std::cout << "Sending " << amount << " satoshis to " << address
+                  << std::endl;
+    }
 
+    // Send the spend:
     DataChunk rawTx;
     std::string txid;
     ABC_CHECK(spend.signTx(rawTx, skipUnconfirmed));
