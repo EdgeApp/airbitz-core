@@ -17,10 +17,11 @@ host system:
 * libtool
 * pkgconfig
 * protobuf
+* astyle
 
 To install these on the Mac, please use [Homebrew](http://brew.sh/):
 
-    brew install autoconf automake cmake git libtool pkgconfig protobuf
+    brew install autoconf automake cmake git libtool pkgconfig protobuf astyle
 
 The 'wget' and 'cmake' that come from MacPorts are known to be broken.
 If you are building for iOS or Mac native, you also need a working installation
@@ -29,13 +30,17 @@ of the XCode command-line tools.
 For Linux native builds, you need the clang compiler.
 The following command will install the necessary dependencies on Ubuntu:
 
-    apt-get install autoconf automake cmake git libtool pkg-config protobuf-compiler clang
+    apt-get install autoconf automake cmake git libtool pkg-config protobuf-compiler clang astyle
 
 Assuming your system has the necessary command-line tools installed, it should
 be possible to build ABC by doing something like:
 
     cd deps
     make
+
+For faster build, compile with multiple cores
+
+    make  -j {{number_of_cores}}
 
 This will build a core and cli that can run your current system.
 If you would like to cross-compile for another platform,
@@ -75,3 +80,9 @@ The "test" directory contains unit tests.
 
 The "util" directory contains ancillary utilities,
 such as a script for generating private keys from an exported wallet seed.
+
+## Git
+
+In order to check code style before checking in any commits, add the git hooks
+
+    cp util/git-hooks/pre-commit .git/hooks
