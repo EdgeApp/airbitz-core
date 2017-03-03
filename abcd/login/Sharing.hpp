@@ -23,6 +23,7 @@ struct Lobby
 {
     std::string id;
     JsonPtr json;
+    DataChunk requestPubkey;
 };
 
 /**
@@ -36,9 +37,9 @@ lobbyFetch(Lobby &result, const std::string &id);
  */
 struct LoginRequest
 {
+    std::string appId;
     std::string displayName;
     std::string displayImageUrl;
-    std::string type;
 };
 
 /**

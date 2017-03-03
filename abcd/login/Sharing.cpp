@@ -12,49 +12,70 @@
 #include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
+#include "../json/JsonArray.hpp"
 #include "../json/JsonBox.hpp"
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {
 
-struct AccountReplyJson:
+/**
+ * A request for a login store.
+ */
+struct LoginRequestJson:
     public JsonObject
 {
-    ABC_JSON_CONSTRUCTORS(AccountReplyJson, JsonObject)
+    ABC_JSON_CONSTRUCTORS(LoginRequestJson, JsonObject)
 
-    ABC_JSON_VALUE(info, "info", JsonPtr)
-    ABC_JSON_STRING(username, "username", nullptr)
-    ABC_JSON_STRING(pinString, "pinString", nullptr)
-};
+    ABC_JSON_STRING(appId, "appId", nullptr)
 
-struct AccountRequestJson:
-    public JsonObject
-{
-    ABC_JSON_CONSTRUCTORS(AccountRequestJson, JsonObject)
-
+    // These are a spoofing security flaw, but we keep them for now:
     ABC_JSON_STRING(displayName, "displayName", "")
     ABC_JSON_STRING(displayImageUrl, "displayImageUrl", "")
-    ABC_JSON_VALUE(replyBox, "replyBox", JsonBox)
-    ABC_JSON_STRING(replyKey, "replyKey", nullptr)
-    ABC_JSON_STRING(requestKey, "requestKey", nullptr)
-    ABC_JSON_STRING(type, "type", nullptr)
 };
 
+/**
+ * A generic lobby request.
+ */
+struct LobbyRequestJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(LobbyRequestJson, JsonObject)
+
+    ABC_JSON_INTEGER(timeout, "timeout", 600)
+    ABC_JSON_STRING(publicKey, "publicKey", "!bad") // base64
+    ABC_JSON_VALUE(loginRequest, "loginRequest", LoginRequestJson)
+    // ABC_JSON_VALUE(walletRequest, "walletRequest", WalletRequestJson)
+};
+
+/**
+ * A generic reply to a lobby request.
+ */
+struct LobbyReplyJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(LobbyReplyJson, JsonObject)
+
+    ABC_JSON_STRING(publicKey, "publicKey", "!bad") // base64
+    ABC_JSON_VALUE(box, "box", JsonBox)
+};
+
+/**
+ * The top-level lobby JSON format returned by the server.
+ */
 struct LobbyJson:
     public JsonObject
 {
     ABC_JSON_CONSTRUCTORS(LobbyJson, JsonObject)
 
-    ABC_JSON_VALUE(accountRequest, "accountRequest", AccountRequestJson)
+    ABC_JSON_VALUE(request, "request", LobbyRequestJson)
+    ABC_JSON_VALUE(replies, "replies", JsonArray)
 };
 
 /**
- * Given the request's public key,
- * create an encryption key and corresponding public key.
+ * Encrypts a lobby reply.
  */
 static Status
-makeKeys(DataChunk &result, std::string &replyPubkey,
-         const std::string &requestPubkey)
+encryptReply(LobbyReplyJson &result, JsonPtr &replyJson, const Lobby &lobby)
 {
     // Make an ephemeral private key:
     bc::ec_secret replyKey;
@@ -65,24 +86,32 @@ makeKeys(DataChunk &result, std::string &replyPubkey,
         std::copy(random.begin(), random.end(), replyKey.begin());
     }
     while (!bc::verify_private_key(replyKey));
+    const auto replyPubkey = bc::secret_to_public_key(replyKey);
 
     // Derive the secret X coordinate via ECDH:
-    bc::ec_point requestKey;
-    ABC_CHECK(base16Decode(requestKey, requestPubkey));
-    if (!bc::ec_multiply(requestKey, replyKey))
+    bc::ec_point secretPoint = lobby.requestPubkey;
+    if (!bc::ec_multiply(secretPoint, replyKey))
         return ABC_ERROR(ABC_CC_EncryptError, "Lobby ECDH error");
 
     // The secret X coordinate, in big-endian format:
-    const auto secretX = DataChunk(requestKey.begin() + 1,
-                                   requestKey.begin() + 33);
+    const auto secretX = DataSlice(secretPoint.data() + 1,
+                                   secretPoint.data() + 33);
 
-    // We could have used the KDF from NIST.SP.800-56Ar2 section 5.8.1,
-    // `hmac(0x00 | 0x00 | 0x00 | 0x01 | x | otherInfo, salt)`,
-    // but this is similar, and we are alredy using it:
-    const auto dataKey = hmacSha256(std::string("dataKey"), secretX);
+    // From NIST.SP.800-56Ar2 section 5.8.1:
+    uint32_t counter = 1;
+    const auto kdfInput = bc::build_data({bc::to_big_endian(counter), secretX});
+    const auto dataKey = hmacSha256(kdfInput, std::string("dataKey"));
 
-    replyPubkey = base16Encode(bc::secret_to_public_key(replyKey));
-    result = dataKey;
+    // Encrypt the reply:
+    JsonBox replyBox;
+    ABC_CHECK(replyBox.encrypt(replyJson.encode(), dataKey));
+
+    // Assemble result:
+    LobbyReplyJson out;
+    ABC_CHECK(out.boxSet(replyBox));
+    ABC_CHECK(out.publicKeySet(base64Encode(replyPubkey)));
+
+    result = out;
     return Status();
 }
 
@@ -93,6 +122,22 @@ lobbyFetch(Lobby &result, const std::string &id)
     out.id = id;
     ABC_CHECK(loginServerLobbyGet(out.json, id));
 
+    // Grab the public key:
+    LobbyJson lobbyJson(out.json);
+    ABC_CHECK(base64Decode(out.requestPubkey, lobbyJson.request().publicKey()));
+    if (!bc::verify_public_key(out.requestPubkey))
+        return ABC_ERROR(ABC_CC_ParseError, "Invalid lobby public key");
+
+    // Verify the public key:
+    auto checksum = bc::sha256_hash(bc::sha256_hash(out.requestPubkey));
+    DataChunk idBytes;
+    ABC_CHECK(base58Decode(idBytes, id));
+    for (unsigned i = 0; i < idBytes.size(); ++i)
+    {
+        if (idBytes[i] != checksum[i])
+            return ABC_ERROR(ABC_CC_DecryptError, "Lobby ECDH integrity error");
+    }
+
     result = out;
     return Status();
 }
@@ -100,13 +145,12 @@ lobbyFetch(Lobby &result, const std::string &id)
 Status
 loginRequestLoad(LoginRequest &result, const Lobby &lobby)
 {
-    auto requestJson = LobbyJson(lobby.json).accountRequest();
-    ABC_CHECK(requestJson.requestKeyOk());
-    ABC_CHECK(requestJson.typeOk());
+    auto requestJson = LobbyJson(lobby.json).request().loginRequest();
+    ABC_CHECK(requestJson.appIdOk());
 
+    result.appId = requestJson.appId();
     result.displayName = requestJson.displayName();
     result.displayImageUrl = requestJson.displayImageUrl();
-    result.type = requestJson.type();
     return Status();
 }
 
@@ -115,36 +159,16 @@ loginRequestApprove(Login &login,
                     Lobby &lobby,
                     const std::string &pin)
 {
-    auto requestJson = LobbyJson(lobby.json).accountRequest();
-    ABC_CHECK(requestJson.requestKeyOk());
-    ABC_CHECK(requestJson.typeOk());
+    LoginRequest loginRequest;
+    ABC_CHECK(loginRequestLoad(loginRequest, lobby));
 
-    // Create the encryption key:
-    DataChunk dataKey;
-    std::string replyPubkey;
-    ABC_CHECK(makeKeys(dataKey, replyPubkey, requestJson.requestKey()));
-
-    // Get the repo info we need:
-    JsonPtr keysJson;
-    ABC_CHECK(login.repoFind(keysJson, requestJson.type(), true));
-
-    // Assemble the reply JSON:
-    AccountReplyJson replyJson;
-    ABC_CHECK(replyJson.infoSet(keysJson));
-    ABC_CHECK(replyJson.usernameSet(login.store.username()));
-    if (pin.length() == 4)
-    {
-        ABC_CHECK(replyJson.pinStringSet(pin));
-    }
-    JsonBox replyBox;
-    ABC_CHECK(replyBox.encrypt(replyJson.encode(), dataKey));
-
-    // Update the lobby JSON:
-    ABC_CHECK(requestJson.replyBoxSet(replyBox));
-    ABC_CHECK(requestJson.replyKeySet(replyPubkey));
+    JsonPtr edgeLogin;
+    ABC_CHECK(login.makeEdgeLogin(edgeLogin, loginRequest.appId, pin));
 
     // Upload:
-    ABC_CHECK(loginServerLobbySet(lobby.id, lobby.json));
+    LobbyReplyJson replyJson;
+    ABC_CHECK(encryptReply(replyJson, edgeLogin, lobby));
+    ABC_CHECK(loginServerLobbyReply(lobby.id, replyJson));
 
     return Status();
 }

@@ -221,8 +221,7 @@ loginServerLobbyGet(JsonPtr &result, const std::string &id);
  * Uploads new contents to a lobby.
  */
 Status
-loginServerLobbySet(const std::string &id, JsonPtr &lobby,
-                    unsigned expires=300);
+loginServerLobbyReply(const std::string &id, JsonPtr &lobbyReplyJson);
 
 } // namespace abcd
 

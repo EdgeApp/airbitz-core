@@ -195,7 +195,7 @@ tABC_CC ABC_GetLobbyAccountRequest(int hLobby,
 
         LoginRequest request;
         ABC_CHECK_NEW(loginRequestLoad(request, *lobby));
-        *pszType = stringCopy(request.type);
+        *pszType = stringCopy(request.appId);
         *pszDisplayName = stringCopy(request.displayName);
         *pszDisplayImageUrl = stringCopy(request.displayImageUrl);
     }
