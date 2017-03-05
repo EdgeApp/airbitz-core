@@ -347,7 +347,7 @@ Spend::makeTx(libbitcoin::transaction_type &result,
         ABC_CHECK(inputsPickOptimal(fee, change, tx, filterOutputs(utxos),
                                     feeLevel_, customFeeSatoshi_));
     }
-    else
+    else if (!s)
     {
         return s;
     }
