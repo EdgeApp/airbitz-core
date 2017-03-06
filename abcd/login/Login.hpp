@@ -8,7 +8,6 @@
 #ifndef ABCD_LOGIN_LOGIN_HPP
 #define ABCD_LOGIN_LOGIN_HPP
 
-#include "json/RepoJson.hpp"
 #include "../AccountPaths.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"
@@ -17,8 +16,7 @@
 
 namespace abcd {
 
-class JsonArray;
-class JsonBox;
+class JsonPtr;
 class LoginStore;
 struct LoginPackage;
 class LoginReplyJson;
@@ -79,7 +77,7 @@ public:
      * Finds (or creates) a repo with a particular type.
      */
     Status
-    repoFind(RepoInfo &result, const std::string &type, bool create=true);
+    repoFind(JsonPtr &result, const std::string &type, bool create=true);
 
 private:
     mutable std::mutex mutex_;

@@ -22,7 +22,7 @@ struct AccountReplyJson:
 {
     ABC_JSON_CONSTRUCTORS(AccountReplyJson, JsonObject)
 
-    ABC_JSON_VALUE(info, "info", RepoInfoJson)
+    ABC_JSON_VALUE(info, "info", JsonPtr)
     ABC_JSON_STRING(username, "username", nullptr)
     ABC_JSON_STRING(pinString, "pinString", nullptr)
 };
@@ -125,15 +125,12 @@ loginRequestApprove(Login &login,
     ABC_CHECK(makeKeys(dataKey, replyPubkey, requestJson.requestKey()));
 
     // Get the repo info we need:
-    RepoInfo repoInfo;
-    ABC_CHECK(login.repoFind(repoInfo, requestJson.type(), true));
-    RepoInfoJson infoJson;
-    infoJson.dataKeySet(base16Encode(repoInfo.dataKey));
-    infoJson.syncKeySet(repoInfo.syncKey);
+    JsonPtr keysJson;
+    ABC_CHECK(login.repoFind(keysJson, requestJson.type(), true));
 
     // Assemble the reply JSON:
     AccountReplyJson replyJson;
-    ABC_CHECK(replyJson.infoSet(infoJson));
+    ABC_CHECK(replyJson.infoSet(keysJson));
     ABC_CHECK(replyJson.usernameSet(login.store.username()));
     if (pin.length() == 4)
     {

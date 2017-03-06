@@ -60,7 +60,7 @@ public:
     ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonBox)
     // dataKeyBox
     ABC_JSON_VALUE(syncKeyBox, "syncKeyBox", JsonBox)
-    ABC_JSON_VALUE(repos, "repos", JsonArray)
+    ABC_JSON_VALUE(keyBoxes, "keyBoxes", JsonArray)
 
     /**
      * Breaks out the fields and writes them to disk.
@@ -117,7 +117,7 @@ public:
     ABC_JSON_VALUE(mnemonicBox, "mnemonicBox", JsonBox)
     ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonBox)
     ABC_JSON_VALUE(syncKeyBox, "syncKeyBox", JsonBox)
-    ABC_JSON_VALUE(repos, "repos", JsonArray)
+    ABC_JSON_VALUE(keyBoxes, "keyBoxes", JsonArray)
 };
 
 } // namespace abcd

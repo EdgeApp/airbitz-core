@@ -8,6 +8,7 @@
 #include "Login.hpp"
 #include "LoginStore.hpp"
 #include "json/AuthJson.hpp"
+#include "json/KeyJson.hpp"
 #include "json/LoginJson.hpp"
 #include "json/LoginPackages.hpp"
 #include "server/LoginServer.hpp"
@@ -87,20 +88,26 @@ Login::passwordAuthSet(DataSlice passwordAuth)
 }
 
 Status
-Login::repoFind(RepoInfo &result, const std::string &type, bool create)
+Login::repoFind(JsonPtr &result, const std::string &type, bool create)
 {
     // Search the on-disk array:
-    JsonArray reposJson;
-    if (reposJson.load(paths.reposPath()))
+    LoginStashJson stashJson;
+    if (stashJson.load(paths.stashPath()))
     {
-        size_t reposSize = reposJson.size();
-        for (size_t i = 0; i < reposSize; i++)
+        auto keyBoxesJson = stashJson.keyBoxes();
+        size_t keyBoxesSize = keyBoxesJson.size();
+        for (size_t i = 0; i < keyBoxesSize; i++)
         {
-            RepoJson repoJson(reposJson[i]);
-            ABC_CHECK(repoJson.typeOk());
-            if (type == repoJson.type())
+            JsonBox boxJson(keyBoxesJson[i]);
+
+            DataChunk keyBytes;
+            KeyJson keyJson;
+            ABC_CHECK(boxJson.decrypt(keyBytes, dataKey_));
+            ABC_CHECK(keyJson.decode(toString(keyBytes)));
+
+            if (keyJson.typeOk() && type == keyJson.type())
             {
-                ABC_CHECK(repoJson.decode(result, dataKey_));
+                result = keyJson.keys();
                 return Status();
             }
         }
@@ -114,17 +121,16 @@ Login::repoFind(RepoInfo &result, const std::string &type, bool create)
     // If this is an Airbitz account, try the legacy `syncKey`:
     if (repoTypeAirbitzAccount == type)
     {
-        LoginPackage loginPackage;
-        ABC_CHECK(loginPackage.load(paths.loginPackagePath()));
-        if (loginPackage.syncKeyBox().ok())
+        if (stashJson.syncKeyBox().ok())
         {
             DataChunk syncKey;
-            ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey, dataKey_));
+            ABC_CHECK(stashJson.syncKeyBox().decrypt(syncKey, dataKey_));
 
-            result = RepoInfo
-            {
-                type, dataKey_, base16Encode(syncKey)
-            };
+            AccountRepoJson repoJson;
+            ABC_CHECK(repoJson.syncKeySet(base64Encode(syncKey)));
+            ABC_CHECK(repoJson.dataKeySet(base64Encode(dataKey_)));
+
+            result = repoJson;
             return Status();
         }
     }
@@ -133,27 +139,38 @@ Login::repoFind(RepoInfo &result, const std::string &type, bool create)
     if (create)
     {
         // Make the keys:
-        RepoInfo repoInfo;
+        DataChunk dataKey;
         DataChunk syncKey;
-        repoInfo.type = type;
-        ABC_CHECK(randomData(repoInfo.dataKey, DATA_KEY_LENGTH));
+        ABC_CHECK(randomData(dataKey, DATA_KEY_LENGTH));
         ABC_CHECK(randomData(syncKey, SYNC_KEY_LENGTH));
-        repoInfo.syncKey = base16Encode(syncKey);
+        AccountRepoJson repoJson;
+        ABC_CHECK(repoJson.syncKeySet(base64Encode(syncKey)));
+        ABC_CHECK(repoJson.dataKeySet(base64Encode(dataKey_)));
+
+        // Make the metadata:
+        DataChunk id;
+        ABC_CHECK(randomData(id, keyIdLength));
+        KeyJson keyJson;
+        ABC_CHECK(keyJson.idSet(base64Encode(id)));
+        ABC_CHECK(keyJson.typeSet(type));
+        ABC_CHECK(keyJson.keysSet(repoJson));
+
+        // Encrypt the metadata:
+        JsonBox keyBox;
+        ABC_CHECK(keyBox.encrypt(keyJson.encode(), dataKey_));
 
         // Push the wallet to the server:
         AuthJson authJson;
-        RepoJson repoJson;
         ABC_CHECK(authJson.loginSet(*this));
-        ABC_CHECK(repoJson.encode(repoInfo, dataKey_));
-        ABC_CHECK(loginServerWalletCreate(*this, repoInfo.syncKey));
-        ABC_CHECK(loginServerReposAdd(authJson, repoJson));
-        ABC_CHECK(loginServerWalletActivate(*this, repoInfo.syncKey));
+        ABC_CHECK(loginServerKeyAdd(authJson, keyBox, base16Encode(syncKey)));
 
         // Save to disk:
-        ABC_CHECK(reposJson.append(repoJson));
-        ABC_CHECK(reposJson.save(paths.reposPath()));
+        if (!stashJson.keyBoxes().ok())
+            ABC_CHECK(stashJson.keyBoxesSet(JsonArray()));
+        ABC_CHECK(stashJson.keyBoxes().append(keyBox));
+        ABC_CHECK(stashJson.save(paths.stashPath()));
 
-        result = repoInfo;
+        result = repoJson;
         return Status();
     }
 
@@ -217,8 +234,12 @@ Login::createNew(const char *password)
     ABC_CHECK(carePackage.save(paths.carePackagePath()));
     ABC_CHECK(loginPackage.save(paths.loginPackagePath()));
     ABC_CHECK(rootKeyUpgrade());
-    JsonArray reposJson;
-    ABC_CHECK(reposJson.save(paths.reposPath()));
+
+    // Save the bare minimum needed to access the Airbitz account:
+    LoginStashJson stashJson;
+    ABC_CHECK(stashJson.loginIdSet(base64Encode(store.userId())));
+    ABC_CHECK(stashJson.syncKeyBoxSet(syncKeyBox));
+    stashJson.save(paths.stashPath());
 
     // Latch the account:
     ABC_CHECK(loginServerActivate(*this));

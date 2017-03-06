@@ -43,7 +43,7 @@ private:
     const DataChunk dataKey_;
     const std::string syncKey_;
 
-    Account(Login &login, DataSlice dataKey, const std::string &syncKey);
+    Account(Login &login, DataSlice dataKey, DataSlice syncKey);
 
     Status
     load();

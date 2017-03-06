@@ -12,7 +12,6 @@
 #include "../json/AuthJson.hpp"
 #include "../json/LoginJson.hpp"
 #include "../json/LoginPackages.hpp"
-#include "../json/RepoJson.hpp"
 #include "../../crypto/Encoding.hpp"
 #include "../../json/JsonObject.hpp"
 #include "../../json/JsonArray.hpp"
@@ -672,11 +671,24 @@ loginServerRecovery2Delete(AuthJson authJson)
 }
 
 Status
-loginServerReposAdd(AuthJson authJson, RepoJson repoJson)
+loginServerKeyAdd(AuthJson authJson, JsonPtr keyBox, std::string syncKey)
 {
-    const auto url = ABC_SERVER_ROOT "/v2/login/repos";
+    const auto url = ABC_SERVER_ROOT "/v2/login/keys";
 
-    ABC_CHECK(authJson.set("data", repoJson));
+    // Repos to create (optional):
+    JsonArray newSyncKeys;
+    if (syncKey.size())
+        ABC_CHECK(newSyncKeys.append(json_string(syncKey.c_str())));
+
+    // Key boxes to upload:
+    JsonArray keyBoxes;
+    ABC_CHECK(keyBoxes.append(keyBox));
+
+    /// Assemble request:
+    JsonObject requestJson;
+    ABC_CHECK(requestJson.set("newSyncKeys", newSyncKeys));
+    ABC_CHECK(requestJson.set("keyBoxes", keyBoxes));
+    ABC_CHECK(authJson.set("data", requestJson));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().request(reply, url, "POST", authJson.encode()));

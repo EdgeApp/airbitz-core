@@ -25,7 +25,6 @@ class JsonPtr;
 class Login;
 class LoginReplyJson;
 class LoginStore;
-class RepoJson;
 struct CarePackage;
 struct LoginPackage;
 
@@ -198,7 +197,7 @@ loginServerRecovery2Delete(AuthJson authJson);
  * Attaches a new repo to the login.
  */
 Status
-loginServerReposAdd(AuthJson authJson, RepoJson repoJson);
+loginServerKeyAdd(AuthJson authJson, JsonPtr keyBox, std::string syncKey="");
 
 /**
  * Checks a collection of usernames for pending messages.

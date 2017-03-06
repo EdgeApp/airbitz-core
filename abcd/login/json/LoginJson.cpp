@@ -44,8 +44,6 @@ LoginReplyJson::save(const Login &login)
         ABC_CHECK(rootKeyBox().save(login.paths.rootKeyPath()));
     if (syncKeyBox().ok())
         ABC_CHECK(loginPackage.syncKeyBoxSet(syncKeyBox()));
-    if (repos().ok())
-        ABC_CHECK(repos().save(login.paths.reposPath()));
 
     // Keys to save unencrypted:
     DataChunk pin2Key;
@@ -92,7 +90,7 @@ LoginReplyJson::makeLoginStashJson(LoginStashJson &result, DataSlice dataKey,
         "mnemonicBox",
         "rootKeyBox",
         "syncKeyBox",
-        "repos"
+        "keyBoxes"
     };
     ABC_CHECK(out.pick(*this, keys));
 
