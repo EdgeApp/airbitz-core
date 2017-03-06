@@ -9,11 +9,11 @@
 #include "Broadcast.hpp"
 #include "Inputs.hpp"
 #include "Outputs.hpp"
-#include "../Context.hpp"
-#include "../bitcoin/cache/Cache.hpp"
-#include "../exchange/ExchangeCache.hpp"
-#include "../util/Debug.hpp"
-#include "../wallet/Wallet.hpp"
+#include "../cache/Cache.hpp"
+#include "../../Context.hpp"
+#include "../../exchange/ExchangeCache.hpp"
+#include "../../util/Debug.hpp"
+#include "../../wallet/Wallet.hpp"
 
 namespace abcd {
 

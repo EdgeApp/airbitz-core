@@ -8,7 +8,7 @@
 #ifndef ABCD_SPEND_SPEND_HPP
 #define ABCD_SPEND_SPEND_HPP
 
-#include "../util/Status.hpp"
+#include "../../util/Status.hpp"
 
 namespace abcd {
 

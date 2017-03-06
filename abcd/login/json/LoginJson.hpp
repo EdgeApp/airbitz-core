@@ -19,17 +19,18 @@ class AccountPaths;
 /**
  * Login information returned by the server.
  */
-class LoginJson:
+class LoginReplyJson:
     public JsonObject
 {
 public:
-    ABC_JSON_CONSTRUCTORS(LoginJson, JsonObject)
+    ABC_JSON_CONSTRUCTORS(LoginReplyJson, JsonObject)
 
-    // Password login:
+    // Password:
+    ABC_JSON_VALUE(passwordAuthBox, "passwordAuthBox", JsonBox)
     ABC_JSON_VALUE(passwordBox, "passwordBox", JsonBox)
     ABC_JSON_VALUE(passwordKeySnrp, "passwordKeySnrp", JsonSnrp)
 
-    // PIN v2 login:
+    // PIN v2:
     ABC_JSON_VALUE(pin2Box, "pin2Box", JsonBox)
     ABC_JSON_VALUE(pin2KeyBox, "pin2KeyBox", JsonBox)
 
@@ -42,10 +43,9 @@ public:
     // Recovery v2:
     ABC_JSON_VALUE(question2Box, "question2Box", JsonBox)
     ABC_JSON_VALUE(recovery2Box, "recovery2Box", JsonBox)
+    ABC_JSON_VALUE(recovery2KeyBox, "recovery2KeyBox", JsonBox)
 
     // Keys:
-    ABC_JSON_VALUE(passwordAuthBox, "passwordAuthBox", JsonBox)
-    ABC_JSON_VALUE(recovery2KeyBox, "recovery2KeyBox", JsonBox)
     ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonBox)
     // dataKeyBox
     // mnemonicBox

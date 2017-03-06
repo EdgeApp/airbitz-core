@@ -11,13 +11,13 @@
 #include "Inputs.hpp"
 #include "Outputs.hpp"
 #include "PaymentProto.hpp"
-#include "../Context.hpp"
-#include "../General.hpp"
-#include "../bitcoin/cache/Cache.hpp"
-#include "../bitcoin/Utility.hpp"
-#include "../exchange/ExchangeCache.hpp"
-#include "../util/Debug.hpp"
-#include "../wallet/Wallet.hpp"
+#include "../Utility.hpp"
+#include "../cache/Cache.hpp"
+#include "../../Context.hpp"
+#include "../../General.hpp"
+#include "../../exchange/ExchangeCache.hpp"
+#include "../../util/Debug.hpp"
+#include "../../wallet/Wallet.hpp"
 
 namespace abcd {
 
@@ -78,13 +78,13 @@ Spend::feeSet(tABC_SpendFeeLevel feeLevel, uint64_t customFeeSatoshi)
 }
 
 Status
-Spend::calculateFees(uint64_t &totalFees)
+Spend::calculateFees(uint64_t &totalFees, bool skipUnconfirmede)
 {
     // Make an unsigned transaction:
     AddressMeta changeAddress;
     ABC_CHECK(wallet_.addresses.getNew(changeAddress));
     bc::transaction_type tx;
-    ABC_CHECK(makeTx(tx, changeAddress.address));
+    ABC_CHECK(makeTx(tx, changeAddress.address, skipUnconfirmede));
 
     // Calculate the miner fee:
     TxInfo info;
@@ -95,7 +95,7 @@ Spend::calculateFees(uint64_t &totalFees)
 }
 
 Status
-Spend::calculateMax(uint64_t &maxSatoshi)
+Spend::calculateMax(uint64_t &maxSatoshi, bool skipUnconfirmed)
 {
     const auto addresses = wallet_.addresses.list();
     const auto utxos = wallet_.cache.txs.utxos(addresses);
@@ -141,7 +141,7 @@ Spend::calculateMax(uint64_t &maxSatoshi)
         ABC_CHECK(addAirbitzFeeOutput(tx.outputs, info));
 
         uint64_t fee, change;
-        if (inputsPickOptimal(fee, change, tx, filterOutputs(utxos),
+        if (inputsPickOptimal(fee, change, tx, filterOutputs(utxos, skipUnconfirmed),
                               feeLevel_, customFeeSatoshi_))
             min = guess;
         else
@@ -153,13 +153,13 @@ Spend::calculateMax(uint64_t &maxSatoshi)
 }
 
 Status
-Spend::signTx(DataChunk &result)
+Spend::signTx(DataChunk &result, bool skipUnconfirmed)
 {
     // Make an unsigned transaction:
     AddressMeta changeAddress;
     ABC_CHECK(wallet_.addresses.getNew(changeAddress));
     bc::transaction_type tx;
-    ABC_CHECK(makeTx(tx, changeAddress.address));
+    ABC_CHECK(makeTx(tx, changeAddress.address, skipUnconfirmed));
 
     // Sign the transaction:
     KeyTable keys = wallet_.addresses.keyTable();
@@ -222,6 +222,11 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     ABC_CHECK(wallet_.cache.txs.info(info, tx));
     auto balance = wallet_.addresses.balance(info);
 
+    // Update the transaction cache:
+    wallet_.cache.txs.insert(tx);
+    wallet_.cache.addresses.updateSpend(info);
+    wallet_.cache.save().log(); // Failure is fine
+
     // Create Airbitz metadata:
     TxMeta meta;
     meta.ntxid = info.ntxid;
@@ -240,9 +245,9 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     // Calculate amountCurrency if necessary:
     if (!meta.metadata.amountCurrency)
     {
-        ABC_CHECK(gContext->exchangeCache.satoshiToCurrency(
-                      meta.metadata.amountCurrency, balance,
-                      static_cast<Currency>(wallet_.currency())));
+        gContext->exchangeCache.satoshiToCurrency(
+            meta.metadata.amountCurrency, balance,
+            static_cast<Currency>(wallet_.currency())).log();
     }
 
     // Save the transaction:
@@ -255,11 +260,6 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
         meta.metadata = transfer.second;
         transfer.first->txs.save(meta, -balance, info.fee);
     }
-
-    // Update the transaction cache:
-    wallet_.cache.txs.insert(tx);
-    wallet_.cache.addresses.updateSpend(info);
-    wallet_.cache.save().log(); // Failure is fine
 
     txidOut = info.txid;
     return Status();
@@ -326,7 +326,7 @@ Spend::addAirbitzFeeOutput(bc::transaction_output_list &outputs,
 
 Status
 Spend::makeTx(libbitcoin::transaction_type &result,
-              const std::string &changeAddress)
+              const std::string &changeAddress, bool skipUnconfirmed)
 {
     bc::transaction_type tx;
     tx.version = 1;
@@ -335,15 +335,21 @@ Spend::makeTx(libbitcoin::transaction_type &result,
     const auto info = generalAirbitzFeeInfo();
     ABC_CHECK(addAirbitzFeeOutput(tx.outputs, info));
 
-    // Check if enough confirmed inputs are available,
-    // otherwise use unconfirmed inputs too:
+    // Check if enough confirmed inputs are available:
     uint64_t fee, change;
     auto utxos = wallet_.cache.txs.utxos(wallet_.addresses.list());
-    if (!inputsPickOptimal(fee, change, tx, filterOutputs(utxos, true),
-                           feeLevel_, customFeeSatoshi_))
+    const auto s = inputsPickOptimal(fee, change, tx, filterOutputs(utxos, true),
+                                     feeLevel_, customFeeSatoshi_);
+
+    // Otherwise use unconfirmed inputs too:
+    if (!s && !skipUnconfirmed)
     {
         ABC_CHECK(inputsPickOptimal(fee, change, tx, filterOutputs(utxos),
                                     feeLevel_, customFeeSatoshi_));
+    }
+    else if (!s)
+    {
+        return s;
     }
 
     ABC_CHECK(outputsFinalize(tx.outputs, change, changeAddress));

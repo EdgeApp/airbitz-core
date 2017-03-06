@@ -1,7 +1,7 @@
 inherit lib
 
-version="1.2.8"
-source="http://zlib.net/zlib-$version.tar.gz#a4d316c404ff54ca545ea71a27af7dbc29817088"
+version="1.2.11"
+source="http://zlib.net/zlib-$version.tar.gz#e6d119755acdf9104d7ba236b1242696940ed6dd"
 
 build() {
     cd zlib-$version

@@ -7,10 +7,10 @@
 
 #include "LoginPassword.hpp"
 #include "Login.hpp"
-#include "LoginPackages.hpp"
 #include "LoginStore.hpp"
-#include "server/AuthJson.hpp"
-#include "server/LoginJson.hpp"
+#include "json/AuthJson.hpp"
+#include "json/LoginJson.hpp"
+#include "json/LoginPackages.hpp"
 #include "server/LoginServer.hpp"
 #include "../Context.hpp"
 #include "../json/JsonBox.hpp"
@@ -58,7 +58,7 @@ loginPasswordServer(std::shared_ptr<Login> &result,
 
     // Grab the login information from the server:
     AuthJson authJson;
-    LoginJson loginJson;
+    LoginReplyJson loginJson;
     ABC_CHECK(authJson.passwordSet(store, passwordAuth));
     ABC_CHECK(loginServerLogin(loginJson, authJson, &authError));
 

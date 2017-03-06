@@ -8,8 +8,8 @@
 #ifndef ABCD_BITCOIN_BROADCAST_HPP
 #define ABCD_BITCOIN_BROADCAST_HPP
 
-#include "../util/Data.hpp"
-#include "../util/Status.hpp"
+#include "../../util/Data.hpp"
+#include "../../util/Status.hpp"
 
 namespace abcd {
 

@@ -6,11 +6,11 @@
  */
 
 #include "PaymentProto.hpp"
-#include "../Context.hpp"
-#include "../bitcoin/Testnet.hpp"
-#include "../http/HttpRequest.hpp"
-#include "../http/Uri.hpp"
-#include "../util/AutoFree.hpp"
+#include "../Testnet.hpp"
+#include "../../Context.hpp"
+#include "../../http/HttpRequest.hpp"
+#include "../../http/Uri.hpp"
+#include "../../util/AutoFree.hpp"
 #include <regex>
 
 #include <openssl/ssl.h>

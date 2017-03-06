@@ -8,8 +8,8 @@
 #include "Command.hpp"
 #include "../abcd/json/JsonObject.hpp"
 #include "../abcd/login/Otp.hpp"
+#include "../abcd/login/json/RepoJson.hpp"
 #include "../abcd/login/server/LoginServer.hpp"
-#include "../abcd/login/server/RepoJson.hpp"
 #include "../abcd/util/Util.hpp"
 #include "../src/LoginShim.hpp"
 #include <iostream>
@@ -113,7 +113,7 @@ static Status run(int argc, char *argv[])
             else if (optopt == 'w')
                 return ABC_ERROR(ABC_CC_Error, std::string("-w requires a wallet id"));
             else
-                return ABC_ERROR(ABC_CC_Error, std::string("Unknown option '-%c'.", optopt));
+                return ABC_ERROR(ABC_CC_Error, "Unknown command-line option");
         default:
             abort();
         }

@@ -23,7 +23,7 @@ class Account;
 class AuthJson;
 class JsonPtr;
 class Login;
-class LoginJson;
+class LoginReplyJson;
 class LoginStore;
 class RepoJson;
 struct CarePackage;
@@ -152,7 +152,7 @@ loginServerUploadLogs(const Account *account);
  * Accesses the v2 login endpoint.
  */
 Status
-loginServerLogin(LoginJson &result, AuthJson authJson,
+loginServerLogin(LoginReplyJson &result, AuthJson authJson,
                  AuthError *authError=nullptr);
 
 /**
@@ -199,6 +199,12 @@ loginServerRecovery2Delete(AuthJson authJson);
  */
 Status
 loginServerReposAdd(AuthJson authJson, RepoJson repoJson);
+
+/**
+ * Checks a collection of usernames for pending messages.
+ */
+Status
+loginServerMessages(JsonPtr &result, const std::list<std::string> &usernames);
 
 /**
  * Downloads the contents of a lobby.

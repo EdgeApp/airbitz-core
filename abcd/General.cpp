@@ -30,7 +30,8 @@ namespace abcd {
                                     "stratum://stratum-az-wusa.airbitz.co:50001", \
                                     "stratum://stratum-az-wjapan.airbitz.co:50001", \
                                     "stratum://stratum-az-neuro.airbitz.co:50001" }
-#define TESTNET_BITCOIN_SERVERS {   "tcp://obelisk-testnet.airbitz.co:9091" }
+#define TESTNET_BITCOIN_SERVERS {   "tcp://obelisk-testnet.airbitz.co:9091", \
+                                    "stratum://stratum-az-neuro.airbitz.co:50001" }
 #define GENERAL_ACCEPTABLE_INFO_FILE_AGE_SECS   (8 * 60 * 60) // how many seconds old can the info file be before it should be updated
 #define ESTIMATED_FEES_ACCEPTABLE_INFO_FILE_AGE_SECS   (3 * 60 * 60) // how many seconds old can the info file be before it should be updated
 

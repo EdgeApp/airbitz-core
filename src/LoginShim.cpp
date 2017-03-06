@@ -14,8 +14,9 @@
 #include "../abcd/login/LoginRecovery.hpp"
 #include "../abcd/login/LoginRecovery2.hpp"
 #include "../abcd/login/LoginStore.hpp"
-#include "../abcd/login/server/AuthJson.hpp"
-#include "../abcd/login/server/LoginJson.hpp"
+#include "../abcd/login/Sharing.hpp"
+#include "../abcd/login/json/AuthJson.hpp"
+#include "../abcd/login/json/LoginJson.hpp"
 #include "../abcd/login/server/LoginServer.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include <map>
@@ -188,7 +189,7 @@ cacheLoginPin(std::shared_ptr<Login> &result,
 
             // Fetch the current pin2Key, if any:
             AuthJson authJson;
-            LoginJson loginJson;
+            LoginReplyJson loginJson;
             ABC_CHECK(authJson.loginSet(*gLoginCache));
             ABC_CHECK(loginServerLogin(loginJson, authJson));
             ABC_CHECK(loginJson.save(gLoginCache->paths,

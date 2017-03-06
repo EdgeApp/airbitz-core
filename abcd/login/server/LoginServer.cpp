@@ -7,12 +7,12 @@
 
 #include "LoginServer.hpp"
 #include "AirbitzRequest.hpp"
-#include "AuthJson.hpp"
-#include "LoginJson.hpp"
-#include "RepoJson.hpp"
 #include "../Login.hpp"
-#include "../LoginPackages.hpp"
 #include "../LoginStore.hpp"
+#include "../json/AuthJson.hpp"
+#include "../json/LoginJson.hpp"
+#include "../json/LoginPackages.hpp"
+#include "../json/RepoJson.hpp"
 #include "../../crypto/Encoding.hpp"
 #include "../../json/JsonObject.hpp"
 #include "../../json/JsonArray.hpp"
@@ -29,8 +29,7 @@ namespace abcd {
 #define DATETIME_LENGTH 20
 
 // Server strings:
-#define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api"
-//#define ABC_SERVER_ROOT                     "https://test-auth.airbitz.co/api"
+#define ABC_SERVER_ROOT                     "https://test-auth.airbitz.co/api"
 
 #define ABC_SERVER_JSON_NEW_LP1_FIELD       "new_lp1"
 #define ABC_SERVER_JSON_NEW_LRA1_FIELD      "new_lra1"
@@ -558,7 +557,8 @@ loginServerUploadLogs(const Account *account)
 }
 
 Status
-loginServerLogin(LoginJson &result, AuthJson authJson, AuthError *authError)
+loginServerLogin(LoginReplyJson &result, AuthJson authJson,
+                 AuthError *authError)
 {
     const auto url = ABC_SERVER_ROOT "/v2/login";
 
@@ -683,6 +683,49 @@ loginServerReposAdd(AuthJson authJson, RepoJson repoJson)
     ServerReplyJson replyJson;
     ABC_CHECK(replyJson.decode(reply));
 
+    return Status();
+}
+
+Status
+loginServerMessages(JsonPtr &result, const std::list<std::string> &usernames)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/messages";
+
+    // Compute all userIds:
+    JsonArray userIds;
+    std::map<std::string, std::string> userIdMap;
+    for (const auto &username: usernames)
+    {
+        std::shared_ptr<LoginStore> store;
+        ABC_CHECK(LoginStore::create(store, username));
+        const auto userId = base64Encode(store->userId());
+        userIds.append(json_string(userId.c_str()));
+        userIdMap[userId] = username;
+    }
+
+    JsonObject request;
+    ABC_CHECK(request.set("userIds", userIds));
+
+    // Make the request:
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "POST", request.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    // Insert the original usernames into the results:
+    JsonArray arrayJson(replyJson.results());
+    size_t size = arrayJson.size();
+    for (size_t i = 0; i < size; i++)
+    {
+        JsonObject objectJson(arrayJson[i]);
+        const auto userId = objectJson.getString("userId", nullptr);
+        if (!userId) continue;
+        const auto username = userIdMap.find(userId);
+        if (username == userIdMap.end()) continue;
+        ABC_CHECK(objectJson.set("username", username->second));
+    }
+
+    result = arrayJson;
     return Status();
 }
 

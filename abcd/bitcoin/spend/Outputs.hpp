@@ -8,7 +8,7 @@
 #ifndef ABCD_SPEND_OUTPUTS_HPP
 #define ABCD_SPEND_OUTPUTS_HPP
 
-#include "../util/Status.hpp"
+#include "../../util/Status.hpp"
 #include <bitcoin/bitcoin.hpp>
 
 namespace abcd {

@@ -8,8 +8,8 @@
 #include "LoginRecovery2.hpp"
 #include "Login.hpp"
 #include "LoginStore.hpp"
-#include "server/AuthJson.hpp"
-#include "server/LoginJson.hpp"
+#include "json/AuthJson.hpp"
+#include "json/LoginJson.hpp"
 #include "server/LoginServer.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
@@ -72,7 +72,7 @@ loginRecovery2Questions(std::list<std::string> &result,
 
     // Grab the login information from the server:
     AuthJson authJson;
-    LoginJson loginJson;
+    LoginReplyJson loginJson;
     ABC_CHECK(authJson.recovery2Set(store, recovery2Id));
     ABC_CHECK(loginServerLogin(loginJson, authJson));
 
@@ -110,7 +110,7 @@ loginRecovery2(std::shared_ptr<Login> &result,
 
     // Grab the login information from the server:
     AuthJson authJson;
-    LoginJson loginJson;
+    LoginReplyJson loginJson;
     ABC_CHECK(authJson.recovery2Set(store, recovery2Id, recovery2Auth));
     ABC_CHECK(loginServerLogin(loginJson, authJson, &authError));
 

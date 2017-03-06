@@ -10,8 +10,8 @@
 #include "../Context.hpp"
 #include "../General.hpp"
 #include "../bitcoin/cache/Cache.hpp"
+#include "../bitcoin/spend/AirbitzFee.hpp"
 #include "../exchange/ExchangeCache.hpp"
-#include "../spend/AirbitzFee.hpp"
 #include "../util/Debug.hpp"
 
 namespace abcd {

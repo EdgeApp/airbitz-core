@@ -119,7 +119,7 @@ void ABC_DebugLog(const char *format, ...)
 #ifdef ANDROID
     __android_log_print(ANDROID_LOG_DEBUG, "ABC", "%s", out.c_str());
 #else
-    printf("%s", out.c_str());
+    fprintf(stderr, "%s", out.c_str());
 #endif
 
     std::lock_guard<std::mutex> lock(gDebugMutex);

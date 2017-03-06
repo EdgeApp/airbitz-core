@@ -6,7 +6,7 @@
  */
 
 #include "LoginStore.hpp"
-#include "LoginPackages.hpp"
+#include "json/LoginPackages.hpp"
 #include "server/LoginServer.hpp"
 #include "../Context.hpp"
 #include "../crypto/Encoding.hpp"

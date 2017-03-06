@@ -19,7 +19,6 @@ build() {
     # Native builds include unit tests and utilities:
     if [ $target = native ]; then
         make all V=1
-        make tar
     fi
 
     # Install:
@@ -33,6 +32,13 @@ clean() {
     export WORK_DIR=$work_dir
     make clean
 }
+
+tar() {
+    cd $base_dir/..
+    export WORK_DIR=$work_dir/native
+    make tar V=1
+}
+task tar build-native
 
 lib="lib/libabc.a"
 include="include/ABC.h"

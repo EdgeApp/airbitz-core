@@ -6,7 +6,7 @@
  */
 
 #include "LoginJson.hpp"
-#include "../LoginPackages.hpp"
+#include "LoginPackages.hpp"
 #include "../LoginPin2.hpp"
 #include "../LoginRecovery2.hpp"
 #include "../../AccountPaths.hpp"
@@ -14,18 +14,20 @@
 namespace abcd {
 
 Status
-LoginJson::save(const AccountPaths &paths, DataSlice dataKey)
+LoginReplyJson::save(const AccountPaths &paths, DataSlice dataKey)
 {
     CarePackage carePackage;
     LoginPackage loginPackage;
 
-    // Password login:
+    // Password:
+    if (passwordAuthBox().ok())
+        ABC_CHECK(loginPackage.passwordAuthBoxSet(passwordAuthBox()));
     if (passwordBox().ok())
         ABC_CHECK(loginPackage.passwordBoxSet(passwordBox()));
     if (passwordKeySnrp().ok())
         ABC_CHECK(carePackage.passwordKeySnrpSet(passwordKeySnrp()));
 
-    // Recovery:
+    // Recovery v1:
     if (questionBox().ok())
         ABC_CHECK(carePackage.questionBoxSet(questionBox()));
     if (questionKeySnrp().ok())
@@ -36,8 +38,6 @@ LoginJson::save(const AccountPaths &paths, DataSlice dataKey)
         ABC_CHECK(carePackage.recoveryKeySnrpSet(recoveryKeySnrp()));
 
     // Keys:
-    if (passwordAuthBox().ok())
-        ABC_CHECK(loginPackage.passwordAuthBoxSet(passwordAuthBox()));
     if (rootKeyBox().ok())
         ABC_CHECK(rootKeyBox().save(paths.rootKeyPath()));
     if (syncKeyBox().ok())
@@ -46,13 +46,13 @@ LoginJson::save(const AccountPaths &paths, DataSlice dataKey)
         ABC_CHECK(repos().save(paths.reposPath()));
 
     // Keys to save unencrypted:
-    DataChunk recovery2Key;
-    if (recovery2KeyBox().decrypt(recovery2Key, dataKey))
-        ABC_CHECK(loginRecovery2KeySave(recovery2Key, paths));
-
     DataChunk pin2Key;
     if (pin2KeyBox().decrypt(pin2Key, dataKey))
         ABC_CHECK(loginPin2KeySave(pin2Key, paths));
+
+    DataChunk recovery2Key;
+    if (recovery2KeyBox().decrypt(recovery2Key, dataKey))
+        ABC_CHECK(loginRecovery2KeySave(recovery2Key, paths));
 
     // Write to disk:
     ABC_CHECK(carePackage.save(paths.carePackagePath()));

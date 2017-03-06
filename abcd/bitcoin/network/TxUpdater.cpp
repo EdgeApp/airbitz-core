@@ -632,7 +632,7 @@ TxUpdater::blockHeaderFetch(size_t height, IBitcoinConnection *bc)
 
     unsigned long long queryTime = ServerCache::getCurrentTimeMilliSeconds();
     auto onReply = [this, height, uri,
-                    queryTime](const bc::block_header_type &header)
+                          queryTime](const bc::block_header_type &header)
     {
         unsigned long long responseTime = ServerCache::getCurrentTimeMilliSeconds();
         cache_.servers.setResponseTime(uri, responseTime - queryTime);

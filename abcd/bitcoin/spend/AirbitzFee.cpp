@@ -7,8 +7,8 @@
 
 #include "AirbitzFee.hpp"
 #include "Spend.hpp"
-#include "../General.hpp"
-#include "../wallet/Wallet.hpp"
+#include "../../General.hpp"
+#include "../../wallet/Wallet.hpp"
 
 namespace abcd {
 

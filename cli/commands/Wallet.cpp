@@ -11,6 +11,7 @@
 #include "../../abcd/exchange/Currency.hpp"
 #include "../../abcd/json/JsonBox.hpp"
 #include "../../abcd/util/FileIO.hpp"
+#include "../../abcd/util/Util.hpp"
 #include "../../abcd/wallet/Wallet.hpp"
 #include "../../src/LoginShim.hpp"
 #include <iostream>
@@ -48,6 +49,24 @@ COMMAND(InitLevel::account, CliWalletCreate, "wallet-create",
     return Status();
 }
 
+COMMAND(InitLevel::wallet, CliWalletExport, "wallet-csv",
+        " <filename>")
+{
+    if (argc != 1)
+        return ABC_ERROR(ABC_CC_Error, helpString(*this));
+    const auto filename = argv[0];
+
+    AutoString csvFile;
+    ABC_CHECK_OLD(ABC_CsvExport(session.username.c_str(),
+                                session.password.c_str(),
+                                session.uuid.c_str(),
+                                0, 0,
+                                &csvFile.get(),
+                                &error));
+    ABC_CHECK(fileSave(std::string(csvFile), filename));
+    return Status();
+}
+
 COMMAND(InitLevel::wallet, CliWalletDecrypt, "wallet-decrypt",
         " <filename>\n"
         "note: The filename is relative to the wallet sync directory.")
@@ -68,14 +87,14 @@ COMMAND(InitLevel::wallet, CliWalletDecrypt, "wallet-decrypt",
 
 COMMAND(InitLevel::wallet, CliWalletEncrypt, "wallet-encrypt",
         " <filename>\n"
-        "note: The filename is relative to the wallet sync directory.")
+        "note: The filename is absolute.")
 {
     if (argc != 1)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
     const auto filename = argv[0];
 
     DataChunk contents;
-    ABC_CHECK(fileLoad(contents, session.wallet->paths.syncDir() + filename));
+    ABC_CHECK(fileLoad(contents, filename));
 
     JsonBox box;
     ABC_CHECK(box.encrypt(contents, session.wallet->dataKey()));

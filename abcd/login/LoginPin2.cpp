@@ -8,8 +8,8 @@
 #include "LoginPin2.hpp"
 #include "Login.hpp"
 #include "LoginStore.hpp"
-#include "server/AuthJson.hpp"
-#include "server/LoginJson.hpp"
+#include "json/AuthJson.hpp"
+#include "json/LoginJson.hpp"
 #include "server/LoginServer.hpp"
 #include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
@@ -56,7 +56,7 @@ loginPin2(std::shared_ptr<Login> &result,
 
     // Grab the login information from the server:
     AuthJson authJson;
-    LoginJson loginJson;
+    LoginReplyJson loginJson;
     ABC_CHECK(authJson.pin2Set(store, pin2Id, pin2Auth));
     ABC_CHECK(loginServerLogin(loginJson, authJson, &authError));
 

@@ -1,3 +1,4 @@
 #!/bin/sh
 build_dir=${BUILD_DIR:-$(pwd)/build}
+touch ./recipes/abc/abc.recipe
 make abc.build-native && ( cd ..; $build_dir/abc/native/abc-cli "$@" )

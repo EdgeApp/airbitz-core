@@ -8,9 +8,9 @@
 #ifndef ABCD_SPEND_SPEND_HPP
 #define ABCD_SPEND_SPEND_HPP
 
-#include "../util/Data.hpp"
-#include "../util/Status.hpp"
-#include "../wallet/Metadata.hpp"
+#include "../../util/Data.hpp"
+#include "../../util/Status.hpp"
+#include "../../wallet/Metadata.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <map>
 #include <set>
@@ -64,19 +64,19 @@ public:
      * Calculate the fees that will be required to perform this send.
      */
     Status
-    calculateFees(uint64_t &totalFees);
+    calculateFees(uint64_t &totalFees, bool skipUnconfirmed=false);
 
     /**
      * Calculate the total amount that could be sent to these outputs.
      */
     Status
-    calculateMax(uint64_t &maxSatoshi);
+    calculateMax(uint64_t &maxSatoshi, bool skipUnconfirmed=false);
 
     /**
      * Builds a signed transaction.
      */
     Status
-    signTx(DataChunk &result);
+    signTx(DataChunk &result, bool skipUnconfirmed=false);
 
     /**
      * Broadcasts a transaction to the bitcoin network,
@@ -114,7 +114,7 @@ private:
 
     Status
     makeTx(libbitcoin::transaction_type &result,
-           const std::string &changeAddress);
+           const std::string &changeAddress, bool skipUnconfirmed=false);
 };
 
 } // namespace abcd

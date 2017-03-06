@@ -22,15 +22,17 @@
 #include "../abcd/bitcoin/Text.hpp"
 #include "../abcd/bitcoin/cache/Cache.hpp"
 #include "../abcd/bitcoin/WatcherBridge.hpp"
+#include "../abcd/bitcoin/spend/AirbitzFee.hpp"
+#include "../abcd/bitcoin/spend/PaymentProto.hpp"
+#include "../abcd/bitcoin/spend/Spend.hpp"
 #include "../abcd/crypto/Encoding.hpp"
 #include "../abcd/crypto/Random.hpp"
 #include "../abcd/exchange/ExchangeCache.hpp"
 #include "../abcd/http/Http.hpp"
 #include "../abcd/http/Uri.hpp"
-#include "../abcd/login/AccountRequest.hpp"
+#include "../abcd/login/Sharing.hpp"
 #include "../abcd/login/Bitid.hpp"
 #include "../abcd/login/Login.hpp"
-#include "../abcd/login/LoginPackages.hpp"
 #include "../abcd/login/LoginPassword.hpp"
 #include "../abcd/login/LoginPin.hpp"
 #include "../abcd/login/LoginPin2.hpp"
@@ -39,12 +41,10 @@
 #include "../abcd/login/LoginStore.hpp"
 #include "../abcd/login/Otp.hpp"
 #include "../abcd/login/RecoveryQuestions.hpp"
-#include "../abcd/login/server/AuthJson.hpp"
-#include "../abcd/login/server/LoginJson.hpp"
+#include "../abcd/login/json/AuthJson.hpp"
+#include "../abcd/login/json/LoginJson.hpp"
+#include "../abcd/login/json/LoginPackages.hpp"
 #include "../abcd/login/server/LoginServer.hpp"
-#include "../abcd/spend/AirbitzFee.hpp"
-#include "../abcd/spend/PaymentProto.hpp"
-#include "../abcd/spend/Spend.hpp"
 #include "../abcd/util/Debug.hpp"
 #include "../abcd/util/FileIO.hpp"
 #include "../abcd/util/Sync.hpp"
@@ -173,8 +173,7 @@ tABC_CC ABC_FetchLobby(char *szId,
 
     {
         auto lobby = std::make_shared<Lobby>();
-        lobby->id = szId;
-        ABC_CHECK_NEW(loginServerLobbyGet(lobby->json, szId));
+        ABC_CHECK_NEW(lobbyFetch(*lobby, szId));
         *phResult = gLobbyCache.insert(lobby);
     }
 
@@ -196,8 +195,8 @@ tABC_CC ABC_GetLobbyAccountRequest(int hLobby,
         std::shared_ptr<Lobby> lobby;
         ABC_CHECK_NEW(gLobbyCache.find(lobby, hLobby));
 
-        AccountRequest request;
-        ABC_CHECK_NEW(accountRequest(request, lobby->json));
+        LoginRequest request;
+        ABC_CHECK_NEW(loginRequestLoad(request, *lobby));
         *pszType = stringCopy(request.type);
         *pszDisplayName = stringCopy(request.displayName);
         *pszDisplayImageUrl = stringCopy(request.displayImageUrl);
@@ -227,8 +226,7 @@ tABC_CC ABC_ApproveLobbyAccountRequest(const char *szUserName,
         std::string pin = "";
         if (nullptr != settings->szPIN)
             pin = settings->szPIN;
-        ABC_CHECK_NEW(accountRequestApprove(*login, lobby->id, pin,
-                                            lobby->json));
+        ABC_CHECK_NEW(loginRequestApprove(*login, *lobby, pin));
     }
 
 exit:
@@ -247,6 +245,24 @@ tABC_CC ABC_FixUsername(char **pszResult,
         std::string username;
         ABC_CHECK_NEW(LoginStore::fixUsername(username, szUserName));
         *pszResult = stringCopy(username);
+    }
+
+exit:
+    return cc;
+}
+
+tABC_CC ABC_GetLoginMessages(char **pszJsonResult,
+                             tABC_Error *pError)
+{
+    ABC_PROLOG();
+    ABC_CHECK_NULL(pszJsonResult);
+
+    {
+        const auto usernames = gContext->paths.accountList();
+
+        JsonPtr reply;
+        ABC_CHECK_NEW(loginServerMessages(reply, usernames));
+        *pszJsonResult = stringCopy(reply.encode());
     }
 
 exit:
@@ -2770,7 +2786,7 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
 
         // Has the password changed?
         AuthJson authJson;
-        LoginJson loginJson;
+        LoginReplyJson loginJson;
         ABC_CHECK_NEW(authJson.loginSet(account->login));
         auto s = loginServerLogin(loginJson, authJson);
         if (s)
@@ -3252,7 +3268,12 @@ tABC_CC ABC_CsvExport(const char *szUserName, /* DEPRECATED */
                                             &paTransactions, &count, pError));
         ABC_CHECK_ASSERT(0 != count, ABC_CC_NoTransaction, "No transactions to export");
 
-        ABC_CHECK_RET(ABC_ExportFormatCsv(paTransactions, count, szCsvData, pError));
+        std::string currency;
+        ABC_CHECK_NEW(currencyCode(currency,
+                                   static_cast<Currency>(wallet->currency())));
+
+        ABC_CHECK_RET(ABC_ExportFormatCsv(paTransactions, count, szCsvData, pError,
+                                          currency));
     }
 
 exit:
@@ -3279,8 +3300,11 @@ tABC_CC ABC_QBOExport(const char *szUserName, /* DEPRECATED */
                                             &paTransactions, &count, pError));
         ABC_CHECK_ASSERT(0 != count, ABC_CC_NoTransaction, "No transactions to export");
 
+        std::string currency;
+        ABC_CHECK_NEW(currencyCode(currency,
+                                   static_cast<Currency>(wallet->currency())));
         std::string out;
-        ABC_CHECK_NEW(exportFormatQBO(out, paTransactions, count));
+        ABC_CHECK_NEW(exportFormatQBO(out, paTransactions, count, currency));
         *szQBOData = stringCopy(out);
     }
 
