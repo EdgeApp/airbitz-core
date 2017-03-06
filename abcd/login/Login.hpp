@@ -8,7 +8,7 @@
 #ifndef ABCD_LOGIN_LOGIN_HPP
 #define ABCD_LOGIN_LOGIN_HPP
 
-#include "server/RepoJson.hpp"
+#include "json/RepoJson.hpp"
 #include "../AccountPaths.hpp"
 #include "../util/Data.hpp"
 #include "../util/Status.hpp"

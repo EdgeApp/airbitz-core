@@ -15,8 +15,8 @@
 #include "../abcd/login/LoginRecovery2.hpp"
 #include "../abcd/login/LoginStore.hpp"
 #include "../abcd/login/Sharing.hpp"
-#include "../abcd/login/server/AuthJson.hpp"
-#include "../abcd/login/server/LoginJson.hpp"
+#include "../abcd/login/json/AuthJson.hpp"
+#include "../abcd/login/json/LoginJson.hpp"
 #include "../abcd/login/server/LoginServer.hpp"
 #include "../abcd/wallet/Wallet.hpp"
 #include <map>

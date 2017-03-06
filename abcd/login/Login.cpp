@@ -6,10 +6,10 @@
  */
 
 #include "Login.hpp"
-#include "LoginPackages.hpp"
 #include "LoginStore.hpp"
-#include "server/AuthJson.hpp"
-#include "server/LoginJson.hpp"
+#include "json/AuthJson.hpp"
+#include "json/LoginJson.hpp"
+#include "json/LoginPackages.hpp"
 #include "server/LoginServer.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
