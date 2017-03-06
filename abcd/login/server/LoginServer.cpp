@@ -571,6 +571,21 @@ loginServerLogin(LoginReplyJson &result, AuthJson authJson,
 }
 
 Status
+loginServerCreateChildLogin(AuthJson authJson, JsonPtr loginJson)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/login/create";
+
+    ABC_CHECK(authJson.set("data", loginJson));
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "PUT", authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    return Status();
+}
+
+Status
 loginServerPasswordSet(AuthJson authJson,
                        DataSlice passwordAuth,
                        JsonPtr passwordKeySnrp,

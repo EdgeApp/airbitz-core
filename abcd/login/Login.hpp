@@ -79,6 +79,15 @@ public:
     Status
     repoFind(JsonPtr &result, const std::string &type, bool create=true);
 
+    /**
+     * Forms a login tree suitable for edge login.
+     * Will prune away irrelevant logins and keys,
+     * and will create a new login object if necessary.
+     */
+    Status
+    makeEdgeLogin(JsonPtr &result, const std::string &appId,
+                  const std::string &pin);
+
 private:
     mutable std::mutex mutex_;
     const std::shared_ptr<LoginStore> parent_;
@@ -89,6 +98,9 @@ private:
     DataChunk passwordAuth_;
 
     Login(LoginStore &store, DataSlice dataKey);
+
+    Status
+    makeEdgeLoginLocal(JsonPtr &result, const std::string &appId);
 
     Status
     createNew(const char *password);

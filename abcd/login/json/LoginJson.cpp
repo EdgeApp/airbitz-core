@@ -127,4 +127,71 @@ LoginReplyJson::makeLoginStashJson(LoginStashJson &result, DataSlice dataKey,
     return Status();
 }
 
+Status
+LoginStashJson::makeEdgeLogin(LoginStashJson &result, const std::string &appId)
+{
+    // If this is the login we are looking for, just return as-is:
+    if (this->appId() == appId)
+    {
+        result = *this;
+        return Status();
+    }
+
+    // Do any children apply to the appId?
+    LoginStashJson relevantChild = JsonPtr();
+    auto childrenJson = children();
+    size_t childrenSize = childrenJson.size();
+    for (size_t i = 0; i < childrenSize; i++)
+    {
+        LoginStashJson childJson(childrenJson[i]);
+
+        ABC_CHECK(childJson.makeEdgeLogin(relevantChild, appId));
+        if (relevantChild)
+            break;
+    }
+
+    // If we don't have relevant children, then we are irrelevant:
+    if (!relevantChild)
+    {
+        result = JsonPtr();
+        return Status();
+    }
+
+    // Trim down this node:
+    LoginStashJson out;
+    ABC_CHECK(out.pick(*this, {"username", "appId", "loginId"}));
+    ABC_CHECK(out.childrenSet(JsonArray()));
+    ABC_CHECK(out.children().append(relevantChild));
+
+    result = out;
+    return Status();
+}
+
+Status
+LoginStashJson::findLoginKey(DataChunk &result, DataSlice dataKey,
+                             const std::string &appId)
+{
+    // If this is the login we are looking for, attach the dataKey:
+    if (this->appId() == appId)
+    {
+        result = DataChunk(dataKey.begin(), dataKey.end());
+        return Status();
+    }
+
+    // Do any children apply to the appId?
+    LoginStashJson relevantChild = JsonPtr();
+    auto childrenJson = children();
+    size_t childrenSize = childrenJson.size();
+    for (size_t i = 0; i < childrenSize; i++)
+    {
+        LoginStashJson childJson(childrenJson[i]);
+        DataChunk childDataKey;
+        ABC_CHECK(childJson.parentBox().decrypt(childDataKey, dataKey));
+        if (childJson.findLoginKey(result, childDataKey, appId))
+            return Status();
+    }
+
+    return ABC_ERROR(ABC_CC_AccountDoesNotExist, "Cannot find appId");
+}
+
 } // namespace abcd

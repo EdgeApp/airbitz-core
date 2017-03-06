@@ -118,6 +118,19 @@ public:
     ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonBox)
     ABC_JSON_VALUE(syncKeyBox, "syncKeyBox", JsonBox)
     ABC_JSON_VALUE(keyBoxes, "keyBoxes", JsonArray)
+
+    /**
+     * Prunes a the tree down to just the items needed for a specific app.
+     * Returns a null JSON if this whole branch is irrlelevant.
+     */
+    Status
+    makeEdgeLogin(LoginStashJson &result, const std::string &appId);
+
+    /**
+     * Finds the loginKey for the particular appId.
+     */
+    Status
+    findLoginKey(DataChunk &result, DataSlice dataKey, const std::string &appId);
 };
 
 } // namespace abcd

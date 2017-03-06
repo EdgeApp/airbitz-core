@@ -12,6 +12,7 @@
 #include "json/LoginJson.hpp"
 #include "json/LoginPackages.hpp"
 #include "server/LoginServer.hpp"
+#include "../crypto/Crypto.hpp"
 #include "../crypto/Encoding.hpp"
 #include "../crypto/Random.hpp"
 #include "../json/JsonArray.hpp"
@@ -175,6 +176,105 @@ Login::repoFind(JsonPtr &result, const std::string &type, bool create)
     }
 
     return ABC_ERROR(ABC_CC_AccountDoesNotExist, "No such repo");
+}
+
+Status
+Login::makeEdgeLogin(JsonPtr &result, const std::string &appId,
+                     const std::string &pin)
+{
+    result = JsonPtr();
+
+    // Try 1: Use what we have:
+    makeEdgeLoginLocal(result, appId).log(); // Failure is fine
+    if (result) return Status();
+
+    // Try 2: Sync with the server:
+    ABC_CHECK(update());
+    makeEdgeLoginLocal(result, appId).log(); // Failure is fine
+    if (result) return Status();
+
+    // Try 3: Make a new login:
+    {
+        DataChunk loginKey;
+        ABC_CHECK(randomData(loginKey, DATA_KEY_LENGTH));
+        JsonBox parentBox;
+        ABC_CHECK(parentBox.encrypt(loginKey, dataKey_));
+
+        // Make the access credentials:
+        DataChunk loginId;
+        DataChunk loginAuth;
+        ABC_CHECK(randomData(loginId, scryptDefaultSize));
+        ABC_CHECK(randomData(loginAuth, scryptDefaultSize));
+        JsonBox loginAuthBox;
+        ABC_CHECK(loginAuthBox.encrypt(loginAuth, loginKey));
+
+        // Set up the outgoing Login object:
+        LoginReplyJson outgoing;
+        ABC_CHECK(outgoing.appIdSet(appId));
+        ABC_CHECK(outgoing.loginIdSet(base64Encode(loginId)));
+        ABC_CHECK(outgoing.set("loginAuth", base64Encode(loginAuth)));
+        ABC_CHECK(outgoing.loginAuthBoxSet(loginAuthBox));
+        ABC_CHECK(outgoing.parentBoxSet(parentBox));
+
+        // Set up the PIN, if we have one:
+        if (pin.size())
+        {
+            DataChunk pin2Key;
+            ABC_CHECK(randomData(pin2Key, 32));
+            const auto pin2Id = hmacSha256(store.username(), pin2Key);
+            const auto pin2Auth = hmacSha256(pin, pin2Key);
+
+            // Create pin2Box:
+            JsonBox pin2Box;
+            ABC_CHECK(pin2Box.encrypt(loginKey, pin2Key));
+
+            // Create pin2KeyBox:
+            JsonBox pin2KeyBox;
+            ABC_CHECK(pin2KeyBox.encrypt(pin2Key, loginKey));
+
+            // Set up the server login:
+            ABC_CHECK(outgoing.set("pin2Id", base64Encode(pin2Id)));
+            ABC_CHECK(outgoing.set("pin2Auth", base64Encode(pin2Id)));
+            ABC_CHECK(outgoing.pin2BoxSet(pin2Box));
+            ABC_CHECK(outgoing.pin2KeyBoxSet(pin2KeyBox));
+        }
+
+        // Write to server:
+        AuthJson authJson;
+        ABC_CHECK(authJson.loginSet(*this));
+        ABC_CHECK(loginServerCreateChildLogin(authJson, outgoing));
+
+        // Save to disk:
+        LoginStashJson stashJson;
+        ABC_CHECK(stashJson.load(paths.stashPath()));
+        if (!stashJson.children().ok())
+            ABC_CHECK(stashJson.childrenSet(JsonArray()));
+        ABC_CHECK(stashJson.children().append(outgoing));
+        ABC_CHECK(stashJson.save(paths.stashPath()));
+    }
+
+    ABC_CHECK(makeEdgeLoginLocal(result, appId).log());
+    if (!result)
+        return ABC_ERROR(ABC_CC_Error, "Empty edge login after creation.");
+    return Status();
+}
+
+Status
+Login::makeEdgeLoginLocal(JsonPtr &result, const std::string &appId)
+{
+    LoginStashJson stashJson, pruned;
+    ABC_CHECK(stashJson.load(paths.stashPath()));
+    ABC_CHECK(stashJson.makeEdgeLogin(pruned, appId));
+    DataChunk loginKey;
+    ABC_CHECK(stashJson.findLoginKey(loginKey, dataKey_, appId));
+
+    JsonObject out;
+    ABC_CHECK(out.set("appId", appId));
+    ABC_CHECK(out.set("loginKey", base64Encode(loginKey)));
+    ABC_CHECK(out.set("loginStash", pruned));
+
+    result = out;
+    return Status();
 }
 
 Login::Login(LoginStore &store, DataSlice dataKey):

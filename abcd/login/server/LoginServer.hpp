@@ -155,6 +155,12 @@ loginServerLogin(LoginReplyJson &result, AuthJson authJson,
                  AuthError *authError=nullptr);
 
 /**
+ * Creates a child login.
+ */
+Status
+loginServerCreateChildLogin(AuthJson authJson, JsonPtr loginJson);
+
+/**
  * Changes the password on the server using the v2 endpoint.
  */
 Status
