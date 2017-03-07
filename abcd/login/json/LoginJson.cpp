@@ -7,14 +7,14 @@
 
 #include "LoginJson.hpp"
 #include "LoginPackages.hpp"
+#include "../Login.hpp"
 #include "../LoginPin2.hpp"
 #include "../LoginRecovery2.hpp"
-#include "../../AccountPaths.hpp"
 
 namespace abcd {
 
 Status
-LoginReplyJson::save(const AccountPaths &paths, DataSlice dataKey)
+LoginReplyJson::save(const Login &login)
 {
     CarePackage carePackage;
     LoginPackage loginPackage;
@@ -39,24 +39,24 @@ LoginReplyJson::save(const AccountPaths &paths, DataSlice dataKey)
 
     // Keys:
     if (rootKeyBox().ok())
-        ABC_CHECK(rootKeyBox().save(paths.rootKeyPath()));
+        ABC_CHECK(rootKeyBox().save(login.paths.rootKeyPath()));
     if (syncKeyBox().ok())
         ABC_CHECK(loginPackage.syncKeyBoxSet(syncKeyBox()));
     if (repos().ok())
-        ABC_CHECK(repos().save(paths.reposPath()));
+        ABC_CHECK(repos().save(login.paths.reposPath()));
 
     // Keys to save unencrypted:
     DataChunk pin2Key;
-    if (pin2KeyBox().decrypt(pin2Key, dataKey))
-        ABC_CHECK(loginPin2KeySave(pin2Key, paths));
+    if (pin2KeyBox().decrypt(pin2Key, login.dataKey()))
+        ABC_CHECK(loginPin2KeySave(pin2Key, login.paths));
 
     DataChunk recovery2Key;
-    if (recovery2KeyBox().decrypt(recovery2Key, dataKey))
-        ABC_CHECK(loginRecovery2KeySave(recovery2Key, paths));
+    if (recovery2KeyBox().decrypt(recovery2Key, login.dataKey()))
+        ABC_CHECK(loginRecovery2KeySave(recovery2Key, login.paths));
 
     // Write to disk:
-    ABC_CHECK(carePackage.save(paths.carePackagePath()));
-    ABC_CHECK(loginPackage.save(paths.loginPackagePath()));
+    ABC_CHECK(carePackage.save(login.paths.carePackagePath()));
+    ABC_CHECK(loginPackage.save(login.paths.loginPackagePath()));
 
     return Status();
 }

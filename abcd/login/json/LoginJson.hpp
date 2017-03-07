@@ -14,7 +14,7 @@
 
 namespace abcd {
 
-class AccountPaths;
+class Login;
 
 /**
  * Login information returned by the server.
@@ -56,7 +56,7 @@ public:
      * Breaks out the fields and writes them to disk.
      */
     Status
-    save(const AccountPaths &paths, DataSlice dataKey);
+    save(const Login &login);
 };
 
 } // namespace abcd
