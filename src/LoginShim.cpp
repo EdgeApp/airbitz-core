@@ -187,15 +187,8 @@ cacheLoginPin(std::shared_ptr<Login> &result,
             // Otherwise try PIN login v1:
             ABC_CHECK(loginPin(gLoginCache, *store, pin, authError));
 
-            // Fetch the current pin2Key, if any:
-            AuthJson authJson;
-            LoginReplyJson loginJson;
-            ABC_CHECK(authJson.loginSet(*gLoginCache));
-            ABC_CHECK(loginServerLogin(loginJson, authJson));
-            ABC_CHECK(loginJson.save(gLoginCache->paths,
-                                     gLoginCache->dataKey()));
-
             // Upgrade to PIN login v2:
+            ABC_CHECK(gLoginCache->update());
             ABC_CHECK(loginPin2Set(pin2Key, *gLoginCache, pin));
             ABC_CHECK(loginPinDelete(*store));
         }

@@ -41,8 +41,6 @@
 #include "../abcd/login/LoginStore.hpp"
 #include "../abcd/login/Otp.hpp"
 #include "../abcd/login/RecoveryQuestions.hpp"
-#include "../abcd/login/json/AuthJson.hpp"
-#include "../abcd/login/json/LoginJson.hpp"
 #include "../abcd/login/json/LoginPackages.hpp"
 #include "../abcd/login/server/LoginServer.hpp"
 #include "../abcd/util/Debug.hpp"
@@ -2785,25 +2783,21 @@ tABC_CC ABC_DataSyncAccount(const char *szUserName,
         generalUpdate().log();
 
         // Has the password changed?
-        AuthJson authJson;
-        LoginReplyJson loginJson;
-        ABC_CHECK_NEW(authJson.loginSet(account->login));
-        auto s = loginServerLogin(loginJson, authJson);
-        if (s)
+        bool passwordChanged = false;
+        auto s = account->login.update();
+        switch (s.value())
         {
-            ABC_CHECK_NEW(loginJson.save(account->login.paths,
-                                         account->login.dataKey()));
+        case ABC_CC_InvalidOTP:
+            ABC_CHECK_NEW(s); // Re-raise the error.
+            break;
+        case ABC_CC_BadPassword:
+            passwordChanged = true;
+            break;
+        default:
+            s.log(); // Failure is fine
         }
-        else if (s.value() == ABC_CC_InvalidOTP)
-        {
-            ABC_RET_ERROR(s.value(), s.message().c_str());
-        }
-        else if (s.value() == ABC_CC_BadPassword)
-        {
-            *pbPasswordChanged = true;
-            goto exit;
-        }
-        *pbPasswordChanged = false;
+
+        *pbPasswordChanged = passwordChanged;
     }
 
 exit:

@@ -59,6 +59,18 @@ Login::createNew(std::shared_ptr<Login> &result,
     return Status();
 }
 
+Status
+Login::update()
+{
+    AuthJson authJson;
+    LoginReplyJson loginJson;
+    ABC_CHECK(authJson.loginSet(*this));
+    ABC_CHECK(loginServerLogin(loginJson, authJson));
+    ABC_CHECK(loginJson.save(paths, dataKey_));
+
+    return Status();
+}
+
 DataChunk
 Login::passwordAuth() const
 {

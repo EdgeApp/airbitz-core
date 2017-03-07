@@ -46,6 +46,12 @@ public:
               LoginStore &store, const char *password);
 
     /**
+     * Fetches the latest login resources from the server.
+     */
+    Status
+    update();
+
+    /**
      * Obtains the root key for the account.
      */
     DataSlice
