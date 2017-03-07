@@ -15,6 +15,7 @@
 namespace abcd {
 
 class Login;
+class LoginStashJson;
 
 /**
  * Login information returned by the server.
@@ -24,6 +25,15 @@ class LoginReplyJson:
 {
 public:
     ABC_JSON_CONSTRUCTORS(LoginReplyJson, JsonObject)
+
+    // Identity:
+    ABC_JSON_STRING(appId, "appId", "")
+    ABC_JSON_STRING(loginId, "loginId", nullptr)
+    ABC_JSON_VALUE(loginAuthBox, "loginAuthBox", JsonBox)
+    ABC_JSON_VALUE(children, "children", JsonArray)
+
+    // Parent:
+    ABC_JSON_VALUE(parentBox, "parentBox", JsonBox)
 
     // Password:
     ABC_JSON_VALUE(passwordAuthBox, "passwordAuthBox", JsonBox)
@@ -46,9 +56,9 @@ public:
     ABC_JSON_VALUE(recovery2KeyBox, "recovery2KeyBox", JsonBox)
 
     // Keys:
+    ABC_JSON_VALUE(mnemonicBox, "mnemonicBox", JsonBox)
     ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonBox)
     // dataKeyBox
-    // mnemonicBox
     ABC_JSON_VALUE(syncKeyBox, "syncKeyBox", JsonBox)
     ABC_JSON_VALUE(repos, "repos", JsonArray)
 
@@ -57,6 +67,57 @@ public:
      */
     Status
     save(const Login &login);
+
+    /**
+     * Filters the server reply down to the on-disk storage format.
+     */
+    Status
+    makeLoginStashJson(LoginStashJson &result, DataSlice dataKey,
+                       const std::string &username);
+};
+
+/**
+ * Login information saved to disk (new format).
+ */
+class LoginStashJson:
+    public JsonObject
+{
+public:
+    ABC_JSON_CONSTRUCTORS(LoginStashJson, JsonObject)
+
+    ABC_JSON_STRING(username, "username", nullptr)
+
+    // Identity:
+    ABC_JSON_STRING(appId, "appId", "")
+    ABC_JSON_STRING(loginId, "loginId", nullptr)
+    ABC_JSON_VALUE(loginAuthBox, "loginAuthBox", JsonBox)
+    ABC_JSON_VALUE(children, "children", JsonArray)
+
+    // Parent:
+    ABC_JSON_VALUE(parentBox, "parentBox", JsonBox)
+
+    // Password:
+    ABC_JSON_VALUE(passwordBox, "passwordBox", JsonBox)
+    ABC_JSON_VALUE(passwordKeySnrp, "passwordKeySnrp", JsonSnrp)
+    ABC_JSON_VALUE(passwordAuthBox, "passwordAuthBox", JsonBox)
+
+    // PIN v2:
+    ABC_JSON_STRING(pin2Key, "pin2Key", nullptr)
+
+    // Recovery v1:
+    ABC_JSON_VALUE(questionBox, "questionBox", JsonBox)
+    ABC_JSON_VALUE(questionKeySnrp, "questionKeySnrp", JsonSnrp)
+    ABC_JSON_VALUE(recoveryBox, "recoveryBox", JsonBox)
+    ABC_JSON_VALUE(recoveryKeySnrp, "recoveryKeySnrp", JsonSnrp)
+
+    // Recovery v2:
+    ABC_JSON_STRING(recovery2Key, "recovery2Key", nullptr)
+
+    // Keys:
+    ABC_JSON_VALUE(mnemonicBox, "mnemonicBox", JsonBox)
+    ABC_JSON_VALUE(rootKeyBox, "rootKeyBox", JsonBox)
+    ABC_JSON_VALUE(syncKeyBox, "syncKeyBox", JsonBox)
+    ABC_JSON_VALUE(repos, "repos", JsonArray)
 };
 
 } // namespace abcd
