@@ -42,6 +42,7 @@ public:
     double      getNumber (const char *key, double fallback) const;
     bool        getBoolean(const char *key, bool fallback) const;
     json_int_t  getInteger(const char *key, json_int_t fallback) const;
+    JsonPtr     getValue  (const char *key) const;
 
     // Set helpers:
     Status set(const char *key, JsonPtr value);
@@ -50,6 +51,12 @@ public:
     Status set(const char *key, double value);
     Status set(const char *key, bool value);
     Status set(const char *key, json_int_t value);
+
+    /**
+     * Copies the selected fields from the provided object into this object.
+     */
+    Status
+    pick(JsonObject in, const std::vector<std::string> &keys);
 
 private:
     /**
