@@ -68,7 +68,7 @@ struct BitcoinFeesJson:
     ABC_JSON_INTEGER(standardFeeBlockHigh, "standardFeeBlockHigh", 2)
     ABC_JSON_INTEGER(standardFeeBlockLow, "standardFeeBlockLow", 5)
     ABC_JSON_INTEGER(lowFeeBlock, "lowFeeBlock", 7)
-    ABC_JSON_NUMBER(targetFeePercentage, "targetFeePercentage", 0.25)
+    ABC_JSON_NUMBER(targetFeePercentage, "targetFeePercentage", 1.0)
 };
 
 struct EstimateFeesJson:
