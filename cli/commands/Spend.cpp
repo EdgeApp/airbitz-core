@@ -148,9 +148,17 @@ COMMAND(InitLevel::wallet, SpendGetMax, "spend-get-max",
 {
     if (argc != 0 && argc != 1)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
+
     bool skipUnconfirmed = false;
-    if (argc == 3)
-        skipUnconfirmed = true;
+    std::list<std::string> args;
+    for (unsigned i = 0; i < argc; ++i)
+    {
+        std::string arg = argv[i];
+        if (arg == "--no-unconfirmed")
+            skipUnconfirmed = true;
+        else
+            args.push_back(argv[i]);
+    }
 
     Spend spend(*session.wallet);
     ABC_CHECK(spend.addAddress("1111111111111111111114oLvT2", 0));
