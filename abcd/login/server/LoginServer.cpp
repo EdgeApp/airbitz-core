@@ -719,19 +719,19 @@ loginServerMessages(JsonPtr &result, const std::list<std::string> &usernames)
     const auto url = ABC_SERVER_ROOT "/v2/messages";
 
     // Compute all userIds:
-    JsonArray userIds;
-    std::map<std::string, std::string> userIdMap;
+    JsonArray loginIds;
+    std::map<std::string, std::string> loginIdMap;
     for (const auto &username: usernames)
     {
         std::shared_ptr<LoginStore> store;
         ABC_CHECK(LoginStore::create(store, username));
-        const auto userId = base64Encode(store->userId());
-        userIds.append(json_string(userId.c_str()));
-        userIdMap[userId] = username;
+        const auto loginId = base64Encode(store->userId());
+        loginIds.append(json_string(loginId.c_str()));
+        loginIdMap[loginId] = username;
     }
 
     JsonObject request;
-    ABC_CHECK(request.set("userIds", userIds));
+    ABC_CHECK(request.set("loginIds", loginIds));
 
     // Make the request:
     HttpReply reply;
@@ -745,10 +745,10 @@ loginServerMessages(JsonPtr &result, const std::list<std::string> &usernames)
     for (size_t i = 0; i < size; i++)
     {
         JsonObject objectJson(arrayJson[i]);
-        const auto userId = objectJson.getString("userId", nullptr);
-        if (!userId) continue;
-        const auto username = userIdMap.find(userId);
-        if (username == userIdMap.end()) continue;
+        const auto loginId = objectJson.getString("loginId", nullptr);
+        if (!loginId) continue;
+        const auto username = loginIdMap.find(loginId);
+        if (username == loginIdMap.end()) continue;
         ABC_CHECK(objectJson.set("username", username->second));
     }
 
