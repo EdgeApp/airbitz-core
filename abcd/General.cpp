@@ -193,6 +193,8 @@ generalEstimateFeesUpdate(size_t blocks, double fee)
                 if (estimatedFees[blocks + 1] > 0)
                 {
                     fee = estimatedFees[blocks + 1] / 100000000.0;
+                    if (blocks == 1)
+                        fee *= 1.2;
                 }
             }
         }
