@@ -26,9 +26,9 @@ COMMAND(InitLevel::context, LobbyGet, "lobby-get",
     if (loginRequestLoad(request, lobby))
     {
         std::cout << "  Account request:" << std::endl;
-        std::cout << "    Name:\t" << request.displayName << std::endl;
-        std::cout << "    Image:\t" << request.displayImageUrl << std::endl;
-        std::cout << "    Type:\t" << request.type << std::endl;
+        std::cout << "    appId:\t" << request.appId << std::endl;
+        std::cout << "    name:\t" << request.displayName << std::endl;
+        std::cout << "    image:\t" << request.displayImageUrl << std::endl;
     }
     else
     {

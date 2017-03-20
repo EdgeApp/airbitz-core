@@ -8,7 +8,7 @@
 #include "Command.hpp"
 #include "../abcd/json/JsonObject.hpp"
 #include "../abcd/login/Otp.hpp"
-#include "../abcd/login/json/RepoJson.hpp"
+#include "../abcd/login/json/KeyJson.hpp"
 #include "../abcd/login/server/LoginServer.hpp"
 #include "../abcd/util/Util.hpp"
 #include "../src/LoginShim.hpp"

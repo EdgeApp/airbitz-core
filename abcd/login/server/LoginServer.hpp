@@ -25,7 +25,6 @@ class JsonPtr;
 class Login;
 class LoginReplyJson;
 class LoginStore;
-class RepoJson;
 struct CarePackage;
 struct LoginPackage;
 
@@ -156,6 +155,12 @@ loginServerLogin(LoginReplyJson &result, AuthJson authJson,
                  AuthError *authError=nullptr);
 
 /**
+ * Creates a child login.
+ */
+Status
+loginServerCreateChildLogin(AuthJson authJson, JsonPtr loginJson);
+
+/**
  * Changes the password on the server using the v2 endpoint.
  */
 Status
@@ -198,7 +203,7 @@ loginServerRecovery2Delete(AuthJson authJson);
  * Attaches a new repo to the login.
  */
 Status
-loginServerReposAdd(AuthJson authJson, RepoJson repoJson);
+loginServerKeyAdd(AuthJson authJson, JsonPtr keyBox, std::string syncKey="");
 
 /**
  * Checks a collection of usernames for pending messages.
@@ -216,8 +221,7 @@ loginServerLobbyGet(JsonPtr &result, const std::string &id);
  * Uploads new contents to a lobby.
  */
 Status
-loginServerLobbySet(const std::string &id, JsonPtr &lobby,
-                    unsigned expires=300);
+loginServerLobbyReply(const std::string &id, JsonPtr &lobbyReplyJson);
 
 } // namespace abcd
 
