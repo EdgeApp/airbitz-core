@@ -209,12 +209,13 @@ Login::makeEdgeLogin(JsonPtr &result, const std::string &appId,
         ABC_CHECK(loginAuthBox.encrypt(loginAuth, loginKey));
 
         // Set up the outgoing Login object:
-        LoginReplyJson outgoing;
-        ABC_CHECK(outgoing.appIdSet(appId));
-        ABC_CHECK(outgoing.loginIdSet(base64Encode(loginId)));
-        ABC_CHECK(outgoing.set("loginAuth", base64Encode(loginAuth)));
-        ABC_CHECK(outgoing.loginAuthBoxSet(loginAuthBox));
-        ABC_CHECK(outgoing.parentBoxSet(parentBox));
+        LoginReplyJson server;
+        ABC_CHECK(server.appIdSet(appId));
+        ABC_CHECK(server.loginIdSet(base64Encode(loginId)));
+        ABC_CHECK(server.loginAuthBoxSet(loginAuthBox));
+        ABC_CHECK(server.parentBoxSet(parentBox));
+        LoginStashJson stash = server.clone();
+        ABC_CHECK(server.set("loginAuth", base64Encode(loginAuth)));
 
         // Set up the PIN, if we have one:
         if (pin.size())
@@ -233,23 +234,24 @@ Login::makeEdgeLogin(JsonPtr &result, const std::string &appId,
             ABC_CHECK(pin2KeyBox.encrypt(pin2Key, loginKey));
 
             // Set up the server login:
-            ABC_CHECK(outgoing.set("pin2Id", base64Encode(pin2Id)));
-            ABC_CHECK(outgoing.set("pin2Auth", base64Encode(pin2Id)));
-            ABC_CHECK(outgoing.pin2BoxSet(pin2Box));
-            ABC_CHECK(outgoing.pin2KeyBoxSet(pin2KeyBox));
+            ABC_CHECK(server.set("pin2Id", base64Encode(pin2Id)));
+            ABC_CHECK(server.set("pin2Auth", base64Encode(pin2Auth)));
+            ABC_CHECK(server.pin2BoxSet(pin2Box));
+            ABC_CHECK(server.pin2KeyBoxSet(pin2KeyBox));
+            ABC_CHECK(stash.pin2KeySet(base64Encode(pin2Key)));
         }
 
         // Write to server:
         AuthJson authJson;
         ABC_CHECK(authJson.loginSet(*this));
-        ABC_CHECK(loginServerCreateChildLogin(authJson, outgoing));
+        ABC_CHECK(loginServerCreateChildLogin(authJson, server));
 
         // Save to disk:
         LoginStashJson stashJson;
         ABC_CHECK(stashJson.load(paths.stashPath()));
         if (!stashJson.children().ok())
             ABC_CHECK(stashJson.childrenSet(JsonArray()));
-        ABC_CHECK(stashJson.children().append(outgoing));
+        ABC_CHECK(stashJson.children().append(stash));
         ABC_CHECK(stashJson.save(paths.stashPath()));
     }
 
