@@ -91,52 +91,18 @@ Login::passwordAuthSet(DataSlice passwordAuth)
 Status
 Login::repoFind(JsonPtr &result, const std::string &type, bool create)
 {
-    // Search the on-disk array:
-    LoginStashJson stashJson;
-    if (stashJson.load(paths.stashPath()))
-    {
-        auto keyBoxesJson = stashJson.keyBoxes();
-        size_t keyBoxesSize = keyBoxesJson.size();
-        for (size_t i = 0; i < keyBoxesSize; i++)
-        {
-            JsonBox boxJson(keyBoxesJson[i]);
+    result = JsonPtr();
 
-            DataChunk keyBytes;
-            KeyJson keyJson;
-            ABC_CHECK(boxJson.decrypt(keyBytes, dataKey_));
-            ABC_CHECK(keyJson.decode(toString(keyBytes)));
+    // Try 1: Use what we have:
+    repoFindLocal(result, type).log(); // Failure is fine
+    if (result) return Status();
 
-            if (keyJson.typeOk() && type == keyJson.type())
-            {
-                result = keyJson.keys();
-                return Status();
-            }
-        }
-    }
-    else if (repoTypeAirbitzAccount != type)
-    {
-        return ABC_ERROR(ABC_CC_FileDoesNotExist,
-                         "Non-Airbitz app running on an offline Airbitz account");
-    }
+    // Try 2: Sync with the server:
+    ABC_CHECK(update());
+    repoFindLocal(result, type).log(); // Failure is fine
+    if (result) return Status();
 
-    // If this is an Airbitz account, try the legacy `syncKey`:
-    if (repoTypeAirbitzAccount == type)
-    {
-        if (stashJson.syncKeyBox().ok())
-        {
-            DataChunk syncKey;
-            ABC_CHECK(stashJson.syncKeyBox().decrypt(syncKey, dataKey_));
-
-            AccountRepoJson repoJson;
-            ABC_CHECK(repoJson.syncKeySet(base64Encode(syncKey)));
-            ABC_CHECK(repoJson.dataKeySet(base64Encode(dataKey_)));
-
-            result = repoJson;
-            return Status();
-        }
-    }
-
-    // If we are still here, nothing matched:
+    // Try 3: Make a new repo:
     if (create)
     {
         // Make the keys:
@@ -166,6 +132,8 @@ Login::repoFind(JsonPtr &result, const std::string &type, bool create)
         ABC_CHECK(loginServerKeyAdd(authJson, keyBox, base16Encode(syncKey)));
 
         // Save to disk:
+        LoginStashJson stashJson;
+        ABC_CHECK(stashJson.load(paths.stashPath()));
         if (!stashJson.keyBoxes().ok())
             ABC_CHECK(stashJson.keyBoxesSet(JsonArray()));
         ABC_CHECK(stashJson.keyBoxes().append(keyBox));
@@ -259,6 +227,54 @@ Login::makeEdgeLogin(JsonPtr &result, const std::string &appId,
     if (!result)
         return ABC_ERROR(ABC_CC_Error, "Empty edge login after creation.");
     return Status();
+}
+
+Status
+Login::repoFindLocal(JsonPtr &result, const std::string &type)
+{
+    // If this is an Airbitz account, try the legacy `syncKey`:
+    if (repoTypeAirbitzAccount == type)
+    {
+        LoginPackage loginPackage;
+        ABC_CHECK(loginPackage.load(paths.loginPackagePath()));
+        if (loginPackage.syncKeyBox().ok())
+        {
+            DataChunk syncKey;
+            ABC_CHECK(loginPackage.syncKeyBox().decrypt(syncKey, dataKey_));
+
+            AccountRepoJson repoJson;
+            ABC_CHECK(repoJson.syncKeySet(base64Encode(syncKey)));
+            ABC_CHECK(repoJson.dataKeySet(base64Encode(dataKey_)));
+
+            result = repoJson;
+            return Status();
+        }
+    }
+
+    // Search the on-disk array:
+    LoginStashJson stashJson;
+    if (stashJson.load(paths.stashPath()))
+    {
+        auto keyBoxesJson = stashJson.keyBoxes();
+        size_t keyBoxesSize = keyBoxesJson.size();
+        for (size_t i = 0; i < keyBoxesSize; i++)
+        {
+            JsonBox boxJson(keyBoxesJson[i]);
+
+            DataChunk keyBytes;
+            KeyJson keyJson;
+            ABC_CHECK(boxJson.decrypt(keyBytes, dataKey_));
+            ABC_CHECK(keyJson.decode(toString(keyBytes)));
+
+            if (keyJson.typeOk() && type == keyJson.type())
+            {
+                result = keyJson.keys();
+                return Status();
+            }
+        }
+    }
+
+    return ABC_ERROR(ABC_CC_AccountDoesNotExist, "No such repo");
 }
 
 Status
