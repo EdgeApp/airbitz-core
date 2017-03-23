@@ -122,6 +122,15 @@ TEST_CASE("JsonObject manipulation", "[util][json]")
         REQUIRE(test.valueSet(value));
         REQUIRE(2 == value.get()->refcount);
     }
+    SECTION("pick")
+    {
+        TestJson out;
+        REQUIRE(test.stringSet("copyMe"));
+        REQUIRE(out.pick(test, {"string", "boolean"}));
+        REQUIRE(out.stringOk());
+        REQUIRE_FALSE(out.booleanOk());
+        REQUIRE(out.string() == std::string("copyMe"));
+    }
 }
 
 TEST_CASE("JsonPtr encoding", "[util][json]")

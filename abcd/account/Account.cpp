@@ -7,7 +7,9 @@
 
 #include "Account.hpp"
 #include "../Context.hpp"
+#include "../crypto/Encoding.hpp"
 #include "../login/Login.hpp"
+#include "../login/json/KeyJson.hpp"
 #include "../util/Sync.hpp"
 
 namespace abcd {
@@ -15,11 +17,13 @@ namespace abcd {
 Status
 Account::create(std::shared_ptr<Account> &result, Login &login)
 {
-    RepoInfo repoInfo;
-    ABC_CHECK(login.repoFind(repoInfo, gContext->accountType(), true));
-    std::shared_ptr<Account> out(new Account(login,
-                                 repoInfo.dataKey,
-                                 repoInfo.syncKey));
+    AccountRepoJson repoJson;
+    ABC_CHECK(login.repoFind(repoJson, gContext->accountType(), true));
+    DataChunk dataKey;
+    DataChunk syncKey;
+    ABC_CHECK(base64Decode(dataKey, repoJson.dataKey()));
+    ABC_CHECK(base64Decode(syncKey, repoJson.syncKey()));
+    std::shared_ptr<Account> out(new Account(login, dataKey, syncKey));
     ABC_CHECK(out->load());
 
     result = std::move(out);
@@ -36,12 +40,12 @@ Account::sync(bool &dirty)
     return Status();
 }
 
-Account::Account(Login &login, DataSlice dataKey, const std::string &syncKey):
+Account::Account(Login &login, DataSlice dataKey, DataSlice syncKey):
     login(login),
     parent_(login.shared_from_this()),
     dir_(login.paths.syncDir()),
     dataKey_(dataKey.begin(), dataKey.end()),
-    syncKey_(syncKey),
+    syncKey_(base16Encode(syncKey)),
     wallets(*this)
 {}
 

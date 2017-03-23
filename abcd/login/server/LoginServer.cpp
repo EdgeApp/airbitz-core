@@ -12,7 +12,6 @@
 #include "../json/AuthJson.hpp"
 #include "../json/LoginJson.hpp"
 #include "../json/LoginPackages.hpp"
-#include "../json/RepoJson.hpp"
 #include "../../crypto/Encoding.hpp"
 #include "../../json/JsonObject.hpp"
 #include "../../json/JsonArray.hpp"
@@ -573,6 +572,21 @@ loginServerLogin(LoginReplyJson &result, AuthJson authJson,
 }
 
 Status
+loginServerCreateChildLogin(AuthJson authJson, JsonPtr loginJson)
+{
+    const auto url = ABC_SERVER_ROOT "/v2/login/create";
+
+    ABC_CHECK(authJson.set("data", loginJson));
+
+    HttpReply reply;
+    ABC_CHECK(AirbitzRequest().request(reply, url, "PUT", authJson.encode()));
+    ServerReplyJson replyJson;
+    ABC_CHECK(replyJson.decode(reply));
+
+    return Status();
+}
+
+Status
 loginServerPasswordSet(AuthJson authJson,
                        DataSlice passwordAuth,
                        JsonPtr passwordKeySnrp,
@@ -673,11 +687,24 @@ loginServerRecovery2Delete(AuthJson authJson)
 }
 
 Status
-loginServerReposAdd(AuthJson authJson, RepoJson repoJson)
+loginServerKeyAdd(AuthJson authJson, JsonPtr keyBox, std::string syncKey)
 {
-    const auto url = ABC_SERVER_ROOT "/v2/login/repos";
+    const auto url = ABC_SERVER_ROOT "/v2/login/keys";
 
-    ABC_CHECK(authJson.set("data", repoJson));
+    // Repos to create (optional):
+    JsonArray newSyncKeys;
+    if (syncKey.size())
+        ABC_CHECK(newSyncKeys.append(json_string(syncKey.c_str())));
+
+    // Key boxes to upload:
+    JsonArray keyBoxes;
+    ABC_CHECK(keyBoxes.append(keyBox));
+
+    /// Assemble request:
+    JsonObject requestJson;
+    ABC_CHECK(requestJson.set("newSyncKeys", newSyncKeys));
+    ABC_CHECK(requestJson.set("keyBoxes", keyBoxes));
+    ABC_CHECK(authJson.set("data", requestJson));
 
     HttpReply reply;
     ABC_CHECK(AirbitzRequest().request(reply, url, "POST", authJson.encode()));
@@ -693,19 +720,19 @@ loginServerMessages(JsonPtr &result, const std::list<std::string> &usernames)
     const auto url = ABC_SERVER_ROOT "/v2/messages";
 
     // Compute all userIds:
-    JsonArray userIds;
-    std::map<std::string, std::string> userIdMap;
+    JsonArray loginIds;
+    std::map<std::string, std::string> loginIdMap;
     for (const auto &username: usernames)
     {
         std::shared_ptr<LoginStore> store;
         ABC_CHECK(LoginStore::create(store, username));
-        const auto userId = base64Encode(store->userId());
-        userIds.append(json_string(userId.c_str()));
-        userIdMap[userId] = username;
+        const auto loginId = base64Encode(store->userId());
+        loginIds.append(json_string(loginId.c_str()));
+        loginIdMap[loginId] = username;
     }
 
     JsonObject request;
-    ABC_CHECK(request.set("userIds", userIds));
+    ABC_CHECK(request.set("loginIds", loginIds));
 
     // Make the request:
     HttpReply reply;
@@ -719,10 +746,10 @@ loginServerMessages(JsonPtr &result, const std::list<std::string> &usernames)
     for (size_t i = 0; i < size; i++)
     {
         JsonObject objectJson(arrayJson[i]);
-        const auto userId = objectJson.getString("userId", nullptr);
-        if (!userId) continue;
-        const auto username = userIdMap.find(userId);
-        if (username == userIdMap.end()) continue;
+        const auto loginId = objectJson.getString("loginId", nullptr);
+        if (!loginId) continue;
+        const auto username = loginIdMap.find(loginId);
+        if (username == loginIdMap.end()) continue;
         ABC_CHECK(objectJson.set("username", username->second));
     }
 
@@ -745,16 +772,15 @@ loginServerLobbyGet(JsonPtr &result, const std::string &id)
 }
 
 Status
-loginServerLobbySet(const std::string &id, JsonPtr &lobby, unsigned expires)
+loginServerLobbyReply(const std::string &id, JsonPtr &lobbyReplyJson)
 {
     const auto url = ABC_SERVER_ROOT "/v2/lobby/" + id;
 
     JsonObject requestJson;
-    ABC_CHECK(requestJson.set("expires", static_cast<json_int_t>(expires)));
-    ABC_CHECK(requestJson.set("data", lobby));
+    ABC_CHECK(requestJson.set("data", lobbyReplyJson));
 
     HttpReply reply;
-    ABC_CHECK(AirbitzRequest().request(reply, url, "PUT", requestJson.encode()));
+    ABC_CHECK(AirbitzRequest().request(reply, url, "POST", requestJson.encode()));
     ServerReplyJson replyJson;
     ABC_CHECK(replyJson.decode(reply));
 

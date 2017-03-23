@@ -92,6 +92,12 @@ JsonObject::getInteger(const char *key, json_int_t fallback) const
     IMPLEMENT_GET(integer)
 }
 
+JsonPtr
+JsonObject::getValue(const char *key) const
+{
+    return json_incref(json_object_get(root_, key));
+}
+
 Status
 JsonObject::set(const char *key, JsonPtr value)
 {
@@ -126,6 +132,18 @@ Status
 JsonObject::set(const char *key, json_int_t value)
 {
     return setRaw(key, json_integer(value));
+}
+
+Status
+JsonObject::pick(JsonObject in, const std::vector<std::string> &keys)
+{
+    for (const auto key: keys)
+    {
+        const auto value = in.getValue(key.c_str());
+        if (value)
+            ABC_CHECK(set(key.c_str(), value));
+    }
+    return Status();
 }
 
 Status
