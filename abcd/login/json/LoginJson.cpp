@@ -100,11 +100,11 @@ LoginReplyJson::makeLoginStashJson(LoginStashJson &result, DataSlice dataKey,
     // Decrypt keys:
     DataChunk pin2Key;
     if (pin2KeyBox().decrypt(pin2Key, dataKey))
-        ABC_CHECK(out.pin2KeySet(base58Encode(pin2Key)));
+        ABC_CHECK(out.pin2KeySet(base64Encode(pin2Key)));
 
     DataChunk recovery2Key;
     if (recovery2KeyBox().decrypt(recovery2Key, dataKey))
-        ABC_CHECK(out.recovery2KeySet(base58Encode(recovery2Key)));
+        ABC_CHECK(out.recovery2KeySet(base64Encode(recovery2Key)));
 
     // Recurse into children:
     auto childrenJson = children();
