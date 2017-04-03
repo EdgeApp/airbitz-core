@@ -221,6 +221,11 @@ accountSettingsSave(Account &account, tABC_AccountSettings *pSettings)
     ABC_CHECK(json.languageSet(pSettings->szLanguage));
     ABC_CHECK(json.numCurrencySet(pSettings->currencyNum));
 
+    // Server override
+    ABC_CHECK(json.overrideBitcoinServersSet(pSettings->bOverrideBitcoinServers));
+    if (pSettings->szOverrideBitcoinServerList)
+        ABC_CHECK(json.overrideBitcoinServerListSet(pSettings->szOverrideBitcoinServerList));
+
     ABC_CHECK(json.save(settingsPath(account), account.dataKey()));
 
     // Update the PIN package to match:
@@ -228,11 +233,6 @@ accountSettingsSave(Account &account, tABC_AccountSettings *pSettings)
     ABC_CHECK(accountSettingsPinSync(account.login, pSettings, pinChanged));
     if (pSettings->szPIN)
         account.pin = pSettings->szPIN;
-
-    // Server override
-    ABC_CHECK(json.overrideBitcoinServersSet(pSettings->bOverrideBitcoinServers));
-    if (pSettings->szOverrideBitcoinServerList)
-        ABC_CHECK(json.overrideBitcoinServerListSet(pSettings->szOverrideBitcoinServerList));
 
     return Status();
 }
