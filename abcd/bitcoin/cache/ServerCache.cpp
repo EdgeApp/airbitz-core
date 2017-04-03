@@ -71,7 +71,7 @@ ServerCache::clear()
 }
 
 Status
-ServerCache::load()
+ServerCache::serverCacheLoad()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     ABC_Debug(2, "ServerCache::load()");
@@ -209,7 +209,7 @@ ServerCache::save_nolock()
 }
 
 Status
-ServerCache::save()
+ServerCache::serverCacheSave()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     return save_nolock();

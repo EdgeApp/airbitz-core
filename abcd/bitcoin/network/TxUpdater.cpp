@@ -229,7 +229,7 @@ TxUpdater::wakeup()
     }
     cache_.blocks.save();
     cache_.blocks.onHeaderInvoke();
-    cache_.servers.save();
+    cache_.servers.serverCacheSave();
 
     // Save the cache if it is dirty and enough time has elapsed:
     if (cacheDirty)

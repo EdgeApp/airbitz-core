@@ -52,13 +52,13 @@ public:
      * Reads the database contents from disk.
      */
     Status
-    load();
+    serverCacheLoad();
 
     /**
      * Saves the database contents to disk, but only if there are changes.
      */
     Status
-    save();
+    serverCacheSave();
 
     /**
      * Increase server score

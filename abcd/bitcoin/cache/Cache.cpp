@@ -36,7 +36,7 @@ Status
 Cache::load()
 {
     JsonObject cacheJson;
-    servers.load();
+    servers.serverCacheLoad();
     ABC_CHECK(cacheJson.load(path_));
     ABC_CHECK(txs.load(cacheJson));
     ABC_CHECK(addresses.load(cacheJson));
