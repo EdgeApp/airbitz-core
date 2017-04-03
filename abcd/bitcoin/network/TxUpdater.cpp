@@ -16,17 +16,20 @@
 namespace abcd {
 
 constexpr auto NUM_CONNECT_SERVERS = 5;
-constexpr auto MINIMUM_LIBBITCOIN_SERVERS = 1;
+constexpr auto MINIMUM_AIRBITZ_SERVERS = 1;
 constexpr auto MINIMUM_STRATUM_SERVERS = 4;
+constexpr auto AIRBITZ_DOMAIN = ".airbitz.co:";
 
 TxUpdater::~TxUpdater()
 {
     disconnect();
 }
 
-TxUpdater::TxUpdater(Cache &cache, void *ctx):
-    cache_(cache),
-    ctx_(ctx)
+TxUpdater::TxUpdater(Wallet &wallet, void *ctx):
+    cache_(wallet.cache),
+    ctx_(ctx),
+    overrideBitcoinServers_(wallet.bOverrideBitcoinServers),
+    overrideBitcoinServerList_(wallet.overrideBitcoinServerList)
 {
 }
 
@@ -45,102 +48,96 @@ TxUpdater::disconnect()
     ABC_DebugLog("Disconnected from all servers.");
 }
 
+bool
+checkIfAirbitzServer(std::string str)
+{
+    std::string suffix = AIRBITZ_DOMAIN;
+
+    if (str.find(suffix) != std::string::npos) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 Status
 TxUpdater::connect()
 {
     wantConnection = true;
+    int numConnectedAirbitzServers = 0;
 
-    // If we are out of fresh stratum servers, reload the list:
-    if (stratumServers_.empty())
-        stratumServers_ = cache_.servers.getServers(ServerTypeStratum,
-                          MINIMUM_STRATUM_SERVERS * 2);
+    if (overrideBitcoinServers_)
+    {
+        stratumServers_ = overrideBitcoinServerList_;
+    }
+    else
+    {
+        // If we are out of fresh stratum servers, reload the list:
+        if (stratumServers_.empty())
+            stratumServers_ = cache_.servers.getServers(ServerTypeStratum,
+                                                        MINIMUM_STRATUM_SERVERS * 2);
+        if (airbitzServers_.empty())
+            airbitzServers_ = cache_.servers.getServers(ServerTypeAirbitz,
+                                                        MINIMUM_AIRBITZ_SERVERS * 2);
+    }
 
-    // If we are out of fresh libbitcoin servers, reload the list:
-    if (libbitcoinServers_.empty())
-        libbitcoinServers_ = cache_.servers.getServers(ServerTypeLibbitcoin,
-                             MINIMUM_LIBBITCOIN_SERVERS * 2);
-
-    for (int i = 0; i < libbitcoinServers_.size(); i++)
-        ABC_DebugLevel(1, "libbitcoinServers_[%d]=%s", i,
-                       libbitcoinServers_[i].c_str());
     for (int i = 0; i < stratumServers_.size(); i++)
         ABC_DebugLevel(1, "stratumServers_[%d]=%s", i, stratumServers_[i].c_str());
 
-    ABC_DebugLevel(2,"%d libbitcoin untried, %d stratrum untried",
-                   libbitcoinServers_.size(), stratumServers_.size());
-
     // Count the number of existing connections:
     size_t stratumCount = 0;
-    size_t libbitcoinCount = 0;
+    size_t airbitzCount = 0;
     for (auto *bc: connections_)
     {
         if (dynamic_cast<StratumConnection *>(bc))
             ++stratumCount;
-        if (dynamic_cast<LibbitcoinConnection *>(bc))
-            ++libbitcoinCount;
+        if (checkIfAirbitzServer(bc->uri()))
+            ++airbitzCount;
     }
 
     // Let's make some connections:
     srand(time(nullptr));
-    int numConnections = 0;
-    while (connections_.size() < NUM_CONNECT_SERVERS
-            && (libbitcoinServers_.size() || stratumServers_.size()))
+    while (connections_.size() < NUM_CONNECT_SERVERS && (stratumServers_.size() || airbitzServers_.size()))
     {
-        auto *untriedPrimary = &stratumServers_;
-        auto *primaryCount = &stratumCount;
-        auto *untriedSecondary = &libbitcoinServers_;
-        auto *secondaryCount = &libbitcoinCount;
-        long minPrimary = MINIMUM_STRATUM_SERVERS;
-        long minSecondary = MINIMUM_LIBBITCOIN_SERVERS;
-        ServerType primaryType = ServerTypeStratum;
-        ServerType secondaryType = ServerTypeLibbitcoin;
+        auto *serverList = &stratumServers_;
 
-        if (numConnections % 2 == 1)
+        if (stratumServers_.size())
         {
-            untriedPrimary = &libbitcoinServers_;
-            untriedSecondary = &stratumServers_;
-            primaryCount = &libbitcoinCount;
-            secondaryCount = &stratumCount;
-            minPrimary = MINIMUM_LIBBITCOIN_SERVERS;
-            minSecondary = MINIMUM_STRATUM_SERVERS;
-            primaryType = ServerTypeLibbitcoin;
-            secondaryType = ServerTypeStratum;
+            // Already assigned above
+        }
+        else if (airbitzServers_.size())
+        {
+            serverList = &airbitzServers_;
         }
 
-        if (untriedPrimary->size() &&
-                ((minSecondary - *secondaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
-                 (rand() & 8)))
-        {
-            auto i = untriedPrimary->begin();
-            std::advance(i, rand() % untriedPrimary->size());
-            if (connectTo(*i, primaryType).log())
+        auto i = serverList->begin();
+        std::advance(i, rand() % serverList->size());
+
+        bool bAirbitzServer = checkIfAirbitzServer(*i);
+
+        // If the number of Airbitz servers we need equals the number of server slots left, then do not connect
+        // to non-Airbitz servers (only have this restriction if overrideBitcoinServers_ is false.
+        if (!overrideBitcoinServers_) {
+            if (NUM_CONNECT_SERVERS - connections_.size() <= (MINIMUM_AIRBITZ_SERVERS - airbitzCount))
             {
-                (*primaryCount)++;
-                ++numConnections;
+                if (!bAirbitzServer)
+                {
+                    serverList->erase(i);
+                    continue;
+                }
             }
-            else
-            {
-                cache_.servers.serverScoreDown(*i);
-            }
-            untriedPrimary->erase(i);
         }
-        else if (untriedSecondary->size() &&
-                 ((minPrimary - *primaryCount < NUM_CONNECT_SERVERS - connections_.size()) ||
-                  (rand() & 8)))
+        if (connectTo(*i, ServerTypeStratum).log())
         {
-            auto i = untriedSecondary->begin();
-            std::advance(i, rand() % untriedSecondary->size());
-            if (connectTo(*i, secondaryType).log())
-            {
-                (*secondaryCount)++;
-                ++numConnections;
-            }
-            else
-            {
-                cache_.servers.serverScoreDown(*i);
-            }
-            untriedSecondary->erase(i);
+            stratumCount++;
+            if (bAirbitzServer)
+                airbitzCount++;
         }
+        else
+        {
+            cache_.servers.serverScoreDown(*i);
+        }
+        serverList->erase(i);
     }
 
     return Status();
@@ -329,14 +326,7 @@ TxUpdater::connectTo(std::string server, ServerType serverType)
 
     // Make the connection:
     std::unique_ptr<IBitcoinConnection> bc;
-    if (ServerTypeLibbitcoin == serverType)
-    {
-        // Libbitcoin server:
-        std::unique_ptr<LibbitcoinConnection> lc(new LibbitcoinConnection(ctx_));
-        ABC_CHECK(lc->connect(server, key));
-        bc.reset(lc.release());
-    }
-    else if (ServerTypeStratum == serverType)
+    if (ServerTypeStratum == serverType)
     {
         // Stratum server:
         std::unique_ptr<StratumConnection> sc(new StratumConnection());

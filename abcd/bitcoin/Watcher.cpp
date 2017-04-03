@@ -7,6 +7,7 @@
 
 #include "Watcher.hpp"
 #include "../util/Debug.hpp"
+#include "../wallet/Wallet.hpp"
 #include <bitcoin/bitcoin.hpp>
 #include <sstream>
 
@@ -38,9 +39,9 @@ enum
     msg_send
 };
 
-Watcher::Watcher(Cache &cache):
+Watcher::Watcher(Wallet &wallet):
     socket_(zmqContext(), ZMQ_PAIR),
-    txu_(cache, zmqContext())
+    txu_(wallet, zmqContext())
 {
     std::stringstream name;
     name << "inproc://watcher-" << watcher_id++;

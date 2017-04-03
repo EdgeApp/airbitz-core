@@ -9,6 +9,7 @@
 #define ABCD_BITCOIN_WATCHER_HPP
 
 #include "network/TxUpdater.hpp"
+#include "../wallet/Wallet.hpp"
 #include <zmq.hpp>
 #include <mutex>
 
@@ -20,7 +21,7 @@ namespace abcd {
 class Watcher
 {
 public:
-    Watcher(Cache &cache);
+    Watcher(Wallet &wallet);
 
     // - Updater messages: -------------
     void sendWakeup();

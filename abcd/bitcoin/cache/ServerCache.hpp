@@ -14,13 +14,14 @@
 #include <map>
 #include <mutex>
 #include <set>
+#include <vector>
 
 namespace abcd {
 
 typedef enum
 {
     ServerTypeStratum,
-    ServerTypeLibbitcoin
+    ServerTypeAirbitz
 } ServerType;
 
 typedef struct

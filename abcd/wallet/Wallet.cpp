@@ -16,7 +16,10 @@
 #include "../login/server/LoginServer.hpp"
 #include "../util/FileIO.hpp"
 #include "../util/Sync.hpp"
+#include "../account/AccountSettings.hpp"
+#include "../util/AutoFree.hpp"
 #include <assert.h>
+#include <sstream>
 
 namespace abcd {
 
@@ -45,6 +48,42 @@ Wallet::~Wallet()
     delete &cache;
 }
 
+std::vector<std::string>
+split(std::string str, char delimiter)
+{
+    std::vector<std::string> internal;
+    std::stringstream ss(str); // Turn the string into a stream.
+    std::string tok;
+
+    while (getline(ss, tok, delimiter))
+    {
+        internal.push_back(tok);
+    }
+
+    return internal;
+}
+
+void
+overrideServers(Account &account, std::shared_ptr<Wallet> &wallet)
+{
+    bool bOverrideBitcoinServers = false;
+    std::vector<std::string> serversVector;
+
+    AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+    settings.get() = accountSettingsLoad(account);
+
+    if (settings->bOverrideBitcoinServers && settings->overrideBitcoinServerList != NULL)
+    {
+        std::string serversString(settings->overrideBitcoinServerList);
+        serversVector = split(serversString, '\n');
+        bOverrideBitcoinServers = true;
+    }
+
+    wallet->bOverrideBitcoinServers = bOverrideBitcoinServers;
+    wallet->overrideBitcoinServerList = serversVector;
+
+}
+
 Status
 Wallet::create(std::shared_ptr<Wallet> &result, Account &account,
                const std::string &id)
@@ -58,6 +97,8 @@ Wallet::create(std::shared_ptr<Wallet> &result, Account &account,
         out->cache.loadLegacy(out->paths.cachePathOld());
 
     result = std::move(out);
+
+    overrideServers(account, result);
     return Status();
 }
 
@@ -75,6 +116,8 @@ Wallet::createNew(std::shared_ptr<Wallet> &result, Account &account,
         out->cache.loadLegacy(out->paths.cachePathOld());
 
     result = std::move(out);
+
+    overrideServers(account, result);
     return Status();
 }
 

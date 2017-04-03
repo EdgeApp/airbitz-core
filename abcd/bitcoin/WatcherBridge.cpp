@@ -30,7 +30,7 @@ private:
 public:
     WatcherInfo(Wallet &wallet):
         parent_(wallet.shared_from_this()),
-        watcher(wallet.cache),
+        watcher(wallet),
         wallet(wallet)
     {
     }

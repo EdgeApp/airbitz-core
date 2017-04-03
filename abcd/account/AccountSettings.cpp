@@ -59,6 +59,10 @@ struct SettingsJson:
     ABC_JSON_INTEGER(numCurrency, "numCurrency",
                      static_cast<int>(Currency::USD)) // Required
 
+    // Servers
+    ABC_JSON_BOOLEAN(overrideBitcoinServers, "overrideBitcoinServers", false)
+    ABC_JSON_STRING(overrideBitcoinServerList, "overrideBitcoinServerList", "")
+
     // TODO: Use a string for the currency. Not all currencies have codes.
 };
 
