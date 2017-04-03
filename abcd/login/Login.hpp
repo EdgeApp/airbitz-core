@@ -100,6 +100,9 @@ private:
     Login(LoginStore &store, DataSlice dataKey);
 
     Status
+    repoFindLocal(JsonPtr &result, const std::string &type);
+
+    Status
     makeEdgeLoginLocal(JsonPtr &result, const std::string &appId);
 
     Status

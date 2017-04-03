@@ -222,7 +222,7 @@ tABC_CC ABC_ApproveLobbyAccountRequest(const char *szUserName,
         settings.get() = accountSettingsLoad(*account);
 
         std::string pin = "";
-        if (nullptr != settings->szPIN)
+        if (nullptr != settings->szPIN && !settings->bDisablePINLogin)
             pin = settings->szPIN;
         ABC_CHECK_NEW(loginRequestApprove(*login, *lobby, pin));
     }
@@ -382,6 +382,7 @@ tABC_CC ABC_AccountDelete(const char *szUserName,
         ABC_CHECK_NEW(gContext->paths.accountDir(paths, fixed));
 
         ABC_CHECK_NEW(fileDelete(paths.dir()));
+        cacheLogout();
     }
 
 exit:
