@@ -491,7 +491,7 @@ typedef struct sABC_AccountSettings
     /** Should use user override bitcoin servers */
     bool                        bOverrideBitcoinServers;
     /** List of override bitcoin servers */
-    char                        *overrideBitcoinServerList;
+    char                        *szOverrideBitcoinServerList;
 } tABC_AccountSettings;
 
 /**

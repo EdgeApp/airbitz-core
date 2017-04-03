@@ -167,6 +167,10 @@ accountSettingsLoad(Account &account)
 
     out->szFullName = stringCopy(label(out));
 
+    // Server override
+    out->szOverrideBitcoinServerList = stringCopy(json.overrideBitcoinServerList());
+    out->bOverrideBitcoinServers = json.overrideBitcoinServers();
+
     if (out->szPIN)
         account.pin = out->szPIN;
 
@@ -224,6 +228,11 @@ accountSettingsSave(Account &account, tABC_AccountSettings *pSettings)
     ABC_CHECK(accountSettingsPinSync(account.login, pSettings, pinChanged));
     if (pSettings->szPIN)
         account.pin = pSettings->szPIN;
+
+    // Server override
+    ABC_CHECK(json.overrideBitcoinServersSet(pSettings->bOverrideBitcoinServers));
+    if (pSettings->szOverrideBitcoinServerList)
+        ABC_CHECK(json.overrideBitcoinServerListSet(pSettings->szOverrideBitcoinServerList));
 
     return Status();
 }
