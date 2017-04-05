@@ -42,7 +42,7 @@ int roundUpDivide(int x, int y)
     return (x % y) ? (x / y + 1) : (x / y);
 }
 
-bool
+static bool
 checkIfAirbitzServer(std::string str)
 {
     std::string suffix = AIRBITZ_DOMAIN;

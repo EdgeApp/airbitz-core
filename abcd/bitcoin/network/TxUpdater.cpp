@@ -48,7 +48,7 @@ TxUpdater::disconnect()
     ABC_DebugLog("Disconnected from all servers.");
 }
 
-bool
+static bool
 checkIfAirbitzServer(std::string str)
 {
     std::string suffix = AIRBITZ_DOMAIN;
