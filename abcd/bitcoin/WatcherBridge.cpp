@@ -18,6 +18,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <mutex>
 
 namespace abcd {
 
@@ -42,7 +43,25 @@ public:
     tABC_BitCoin_Event_Callback fCallback;
     void *pData;
 };
-static std::map<std::string, std::unique_ptr<WatcherInfo>> watchers_;
+
+static std::mutex watchersMutex_;
+static std::map<std::string, std::shared_ptr<WatcherInfo>> watchers_;
+
+/**
+ * Returns a list of all watchers currently running.
+ */
+static std::list<std::shared_ptr<WatcherInfo> >
+listWatchers()
+{
+    std::list<std::shared_ptr<WatcherInfo>> out;
+    std::lock_guard<std::mutex> lock(watchersMutex_);
+
+    for (auto &watcher: watchers_)
+    {
+        out.push_back(watcher.second);
+    }
+    return out;
+}
 
 /**
  * Tells all running watchers that height has changed.
@@ -51,20 +70,20 @@ static std::map<std::string, std::unique_ptr<WatcherInfo>> watchers_;
 static void
 onHeight(size_t height)
 {
-    for (auto &watcher: watchers_)
+    for (auto &watcher: listWatchers())
     {
-        if (watcher.second->fCallback)
+        if (watcher->fCallback)
         {
             ABC_DebugLog("BlockHeightChange callback: wallet %s",
-                         watcher.second->wallet.id().c_str());
+                         watcher->wallet.id().c_str());
             tABC_AsyncBitCoinInfo info;
-            info.pData = watcher.second->pData;
+            info.pData = watcher->pData;
             info.eventType = ABC_AsyncEventType_BlockHeightChange;
             Status().toError(info.status, ABC_HERE());
-            info.szWalletUUID = watcher.second->wallet.id().c_str();
+            info.szWalletUUID = watcher->wallet.id().c_str();
             info.szTxID = nullptr;
             info.sweepSatoshi = 0;
-            watcher.second->fCallback(&info);
+            watcher->fCallback(&info);
         }
     }
 }
@@ -76,24 +95,24 @@ onHeight(size_t height)
 static void
 onHeader(void)
 {
-    for (auto &watcher: watchers_)
+    for (auto &watcher: listWatchers())
     {
-        if (watcher.second->fCallback)
+        if (watcher->fCallback)
         {
             ABC_DebugLog("BlockHeader callback: wallet %s",
-                         watcher.second->wallet.id().c_str());
+                         watcher->wallet.id().c_str());
             tABC_AsyncBitCoinInfo info;
-            info.pData = watcher.second->pData;
+            info.pData = watcher->pData;
             info.eventType = ABC_AsyncEventType_TransactionUpdate;
             Status().toError(info.status, ABC_HERE());
-            info.szWalletUUID = watcher.second->wallet.id().c_str();
+            info.szWalletUUID = watcher->wallet.id().c_str();
 
             // XXX Todo: Look up TxIDs that actually have a matching height and
             // send a notification for each one OR send one notification with all
             // affected TxIDs in a std::set.
             info.szTxID = nullptr;
             info.sweepSatoshi = 0;
-            watcher.second->fCallback(&info);
+            watcher->fCallback(&info);
 
             break;
         }
@@ -104,7 +123,8 @@ onHeader(void)
  * Called when an address is completely loaded into the cache.
  */
 static void
-bridgeOnComplete(WatcherInfo *watcherInfo, const std::string &address,
+bridgeOnComplete(std::shared_ptr<WatcherInfo> watcherInfo,
+                 const std::string &address,
                  tABC_BitCoin_Event_Callback fCallback, void *pData)
 {
     auto &wallet = watcherInfo->wallet;
@@ -141,24 +161,15 @@ bridgeOnComplete(WatcherInfo *watcherInfo, const std::string &address,
 }
 
 static Status
-watcherFind(WatcherInfo *&result, const Wallet &self)
+watcherFind(std::shared_ptr<WatcherInfo> &result, const Wallet &self)
 {
+    std::lock_guard<std::mutex> lock(watchersMutex_);
     std::string id = self.id();
     auto row = watchers_.find(id);
     if (row == watchers_.end())
         return ABC_ERROR(ABC_CC_Synchronizing, "Cannot find watcher for " + id);
 
-    result = row->second.get();
-    return Status();
-}
-
-static Status
-watcherFind(Watcher *&result, const Wallet &self)
-{
-    WatcherInfo *watcherInfo = nullptr;
-    ABC_CHECK(watcherFind(watcherInfo, self));
-
-    result = &watcherInfo->watcher;
+    result = row->second;
     return Status();
 }
 
@@ -166,7 +177,7 @@ Status
 bridgeSweepKey(Wallet &self, const std::string &wif,
                const std::string &address)
 {
-    WatcherInfo *watcherInfo = nullptr;
+    std::shared_ptr<WatcherInfo> watcherInfo;
     ABC_CHECK(watcherFind(watcherInfo, self));
 
     // Start the sweep:
@@ -179,6 +190,7 @@ bridgeSweepKey(Wallet &self, const std::string &wif,
 Status
 bridgeWatcherStart(Wallet &self)
 {
+    std::lock_guard<std::mutex> lock(watchersMutex_);
     if (watchers_.end() != watchers_.find(self.id()))
         return ABC_ERROR(ABC_CC_Error,
                          "Watcher already exists for " + self.id());
@@ -193,7 +205,7 @@ bridgeWatcherLoop(Wallet &self,
                   tABC_BitCoin_Event_Callback fCallback,
                   void *pData)
 {
-    WatcherInfo *watcherInfo = nullptr;
+    std::shared_ptr<WatcherInfo> watcherInfo;
     ABC_CHECK(watcherFind(watcherInfo, self));
 
     // Set up new-block callback:
@@ -247,10 +259,10 @@ bridgeWatcherLoop(Wallet &self,
 Status
 bridgeWatcherConnect(Wallet &self)
 {
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
+    std::shared_ptr<WatcherInfo> watcherInfo;
+    ABC_CHECK(watcherFind(watcherInfo, self));
 
-    watcher->connect();
+    watcherInfo->watcher.connect();
 
     return Status();
 }
@@ -258,10 +270,10 @@ bridgeWatcherConnect(Wallet &self)
 Status
 watcherSend(Wallet &self, StatusCallback status, DataSlice tx)
 {
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
+    std::shared_ptr<WatcherInfo> watcherInfo;
+    ABC_CHECK(watcherFind(watcherInfo, self));
 
-    watcher->sendTx(status, tx);
+    watcherInfo->watcher.sendTx(status, tx);
 
     return Status();
 }
@@ -269,10 +281,10 @@ watcherSend(Wallet &self, StatusCallback status, DataSlice tx)
 Status
 bridgeWatcherDisconnect(Wallet &self)
 {
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
+    std::shared_ptr<WatcherInfo> watcherInfo;
+    ABC_CHECK(watcherFind(watcherInfo, self));
 
-    watcher->disconnect();
+    watcherInfo->watcher.disconnect();
 
     return Status();
 }
@@ -280,10 +292,10 @@ bridgeWatcherDisconnect(Wallet &self)
 Status
 bridgeWatcherStop(Wallet &self)
 {
-    Watcher *watcher = nullptr;
-    ABC_CHECK(watcherFind(watcher, self));
+    std::shared_ptr<WatcherInfo> watcherInfo;
+    ABC_CHECK(watcherFind(watcherInfo, self));
 
-    watcher->stop();
+    watcherInfo->watcher.stop();
 
     return Status();
 }
@@ -292,6 +304,8 @@ Status
 bridgeWatcherDelete(Wallet &self)
 {
     self.cache.save().log(); // Failure is fine
+
+    std::lock_guard<std::mutex> lock(watchersMutex_);
     watchers_.erase(self.id());
 
     return Status();
