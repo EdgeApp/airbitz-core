@@ -25,7 +25,7 @@ build() {
         ios-*)      type=BSD-generic32 ;;
         *)          type=gcc ;;
         esac
-        ./Configure --prefix=$install_dir no-shared zlib $type "$CFLAGS"
+        ./Configure --prefix=$install_dir no-shared zlib $type -DOPENSSL_THREADS "$CFLAGS"
     fi
 
     make
