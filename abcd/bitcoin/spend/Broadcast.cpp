@@ -13,6 +13,7 @@
 #include "../../http/HttpRequest.hpp"
 #include "../../json/JsonObject.hpp"
 #include "../../util/Debug.hpp"
+#include "../../wallet/Wallet.hpp"
 #include <condition_variable>
 #include <memory>
 #include <mutex>
@@ -105,8 +106,12 @@ broadcastTx(Wallet &self, DataSlice rawTx)
 
     // Launch the broadcasts:
     DataChunk tx(rawTx.begin(), rawTx.end());
-    std::thread(broadcastTask<blockchainPostTx>, syncer, s1, tx).detach();
-    std::thread(broadcastTask<insightPostTx>, syncer, s2, tx).detach();
+
+    if (!self.bOverrideBitcoinServers)
+    {
+        std::thread(broadcastTask<blockchainPostTx>, syncer, s1, tx).detach();
+        std::thread(broadcastTask<insightPostTx>, syncer, s2, tx).detach();
+    }
 
     // Queue up an async broadcast over the TxUpdater:
     auto updaterDone = [syncer, s3](Status s)
