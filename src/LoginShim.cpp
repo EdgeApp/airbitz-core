@@ -320,4 +320,21 @@ cacheWalletRemove(const char *szUserName, const char *szUUID)
     return Status();
 }
 
+std::shared_ptr<Wallet>
+cacheWalletSoft(const std::string &id)
+{
+    // Try to return the wallet from the cache:
+    {
+        std::lock_guard<std::mutex> lock(gLoginMutex);
+        auto i = gWalletCache.find(id);
+        if (i != gWalletCache.end())
+        {
+            return i->second;
+        }
+    }
+
+    // Nothing matched:
+    return nullptr;
+}
+
 } // namespace abcd

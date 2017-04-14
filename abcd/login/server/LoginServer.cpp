@@ -22,6 +22,8 @@
 #include "../../WalletPaths.hpp"
 #include "../../account/Account.hpp"
 #include "../../util/FileIO.hpp"
+#include "../../wallet/Wallet.hpp"
+#include "../../../src/LoginShim.hpp"
 
 namespace abcd {
 
@@ -536,6 +538,14 @@ loginServerUploadLogs(const Account *account)
         auto ids = account->wallets.list();
         for (const auto &id: ids)
         {
+            std::shared_ptr<Wallet> wallet = cacheWalletSoft(id);
+            if (wallet)
+            {
+                const auto name = wallet->name();
+                const auto xpub = wallet->bitcoinXPub();
+                logInfo("Wallet " + name + " xpub " + xpub);
+            }
+
             DataChunk watchData;
             if (fileLoad(watchData, WalletPaths(id).cachePath()))
             {

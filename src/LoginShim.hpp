@@ -125,6 +125,12 @@ cacheWallet(std::shared_ptr<Wallet> &result, const char *szUserName,
 Status
 cacheWalletRemove(const char *szUserName, const char *szUUID);
 
+/**
+ * Grabs a wallet from the cache, if it's already there.
+ */
+std::shared_ptr<Wallet>
+cacheWalletSoft(const std::string &id);
+
 } // namespace abcd
 
 #endif
