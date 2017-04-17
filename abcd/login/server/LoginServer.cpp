@@ -542,8 +542,11 @@ loginServerUploadLogs(const Account *account)
             if (wallet)
             {
                 const auto name = wallet->name();
-                const auto xpub = wallet->bitcoinXPub();
-                logInfo("Wallet " + name + " xpub " + xpub);
+                logInfo("Wallet '" + name + "' " + id);
+
+                const auto addresses = wallet->addresses.list();
+                for (const auto &address: addresses)
+                    logInfo(address);
             }
 
             DataChunk watchData;
