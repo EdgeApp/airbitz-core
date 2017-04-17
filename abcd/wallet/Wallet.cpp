@@ -72,7 +72,8 @@ overrideServers(Account &account, std::shared_ptr<Wallet> &wallet)
     AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
     settings.get() = accountSettingsLoad(account);
 
-    if (settings->bOverrideBitcoinServers && settings->szOverrideBitcoinServerList != NULL)
+    if (settings->bOverrideBitcoinServers
+            && settings->szOverrideBitcoinServerList != NULL)
     {
         std::string serversString(settings->szOverrideBitcoinServerList);
         serversVector = split(serversString, '\n');

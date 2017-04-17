@@ -58,7 +58,6 @@ private:
     Status connectTo(std::string server, ServerType serverType);
 
     Cache &cache_;
-    void *ctx_;
 
     bool wantConnection = false;
     bool cacheDirty = false;

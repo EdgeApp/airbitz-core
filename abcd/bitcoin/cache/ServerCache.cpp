@@ -47,9 +47,12 @@ checkIfAirbitzServer(std::string str)
 {
     std::string suffix = AIRBITZ_DOMAIN;
 
-    if (str.find(suffix) != std::string::npos) {
+    if (str.find(suffix) != std::string::npos)
+    {
         return true;
-    } else {
+    }
+    else
+    {
         return false;
     }
 }

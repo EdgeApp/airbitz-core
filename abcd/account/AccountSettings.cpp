@@ -224,7 +224,8 @@ accountSettingsSave(Account &account, tABC_AccountSettings *pSettings)
     // Server override
     ABC_CHECK(json.overrideBitcoinServersSet(pSettings->bOverrideBitcoinServers));
     if (pSettings->szOverrideBitcoinServerList)
-        ABC_CHECK(json.overrideBitcoinServerListSet(pSettings->szOverrideBitcoinServerList));
+        ABC_CHECK(json.overrideBitcoinServerListSet(
+                      pSettings->szOverrideBitcoinServerList));
 
     ABC_CHECK(json.save(settingsPath(account), account.dataKey()));
 

@@ -27,7 +27,6 @@ TxUpdater::~TxUpdater()
 
 TxUpdater::TxUpdater(Wallet &wallet, void *ctx):
     cache_(wallet.cache),
-    ctx_(ctx),
     overrideBitcoinServers_(wallet.bOverrideBitcoinServers),
     overrideBitcoinServerList_(wallet.overrideBitcoinServerList)
 {
@@ -53,9 +52,12 @@ checkIfAirbitzServer(std::string str)
 {
     std::string suffix = AIRBITZ_DOMAIN;
 
-    if (str.find(suffix) != std::string::npos) {
+    if (str.find(suffix) != std::string::npos)
+    {
         return true;
-    } else {
+    }
+    else
+    {
         return false;
     }
 }
@@ -64,7 +66,6 @@ Status
 TxUpdater::connect()
 {
     wantConnection = true;
-    int numConnectedAirbitzServers = 0;
 
     if (overrideBitcoinServers_)
     {
@@ -75,10 +76,10 @@ TxUpdater::connect()
         // If we are out of fresh stratum servers, reload the list:
         if (stratumServers_.empty())
             stratumServers_ = cache_.servers.getServers(ServerTypeStratum,
-                                                        MINIMUM_STRATUM_SERVERS * 2);
+                              MINIMUM_STRATUM_SERVERS * 2);
         if (airbitzServers_.empty())
             airbitzServers_ = cache_.servers.getServers(ServerTypeAirbitz,
-                                                        MINIMUM_AIRBITZ_SERVERS * 2);
+                              MINIMUM_AIRBITZ_SERVERS * 2);
     }
 
     for (int i = 0; i < stratumServers_.size(); i++)
@@ -97,7 +98,8 @@ TxUpdater::connect()
 
     // Let's make some connections:
     srand(time(nullptr));
-    while (connections_.size() < NUM_CONNECT_SERVERS && (stratumServers_.size() || airbitzServers_.size()))
+    while (connections_.size() < NUM_CONNECT_SERVERS && (stratumServers_.size()
+            || airbitzServers_.size()))
     {
         auto *serverList = &stratumServers_;
 
@@ -117,8 +119,10 @@ TxUpdater::connect()
 
         // If the number of Airbitz servers we need equals the number of server slots left, then do not connect
         // to non-Airbitz servers (only have this restriction if overrideBitcoinServers_ is false.
-        if (!overrideBitcoinServers_) {
-            if (NUM_CONNECT_SERVERS - connections_.size() <= (MINIMUM_AIRBITZ_SERVERS - airbitzCount))
+        if (!overrideBitcoinServers_)
+        {
+            if (NUM_CONNECT_SERVERS - connections_.size() <= (MINIMUM_AIRBITZ_SERVERS -
+                    airbitzCount))
             {
                 if (!bAirbitzServer)
                 {
