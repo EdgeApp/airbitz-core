@@ -73,6 +73,8 @@ Status
 loginPin2Set(DataChunk &result, Login &login,
              const std::string &pin)
 {
+    ABC_CHECK(login.update());
+
     DataChunk pin2Key;
     if (!loginPin2Key(pin2Key, login.paths))
     {

@@ -188,7 +188,6 @@ cacheLoginPin(std::shared_ptr<Login> &result,
             ABC_CHECK(loginPin(gLoginCache, *store, pin, authError));
 
             // Upgrade to PIN login v2:
-            ABC_CHECK(gLoginCache->update());
             ABC_CHECK(loginPin2Set(pin2Key, *gLoginCache, pin));
             ABC_CHECK(loginPinDelete(*store));
         }
