@@ -89,7 +89,7 @@ public:
 
     // Identity:
     ABC_JSON_STRING(appId, "appId", "")
-    ABC_JSON_STRING(loginId, "loginId", nullptr)
+    ABC_JSON_STRING(loginId, "loginId", "!bad")
     ABC_JSON_VALUE(loginAuthBox, "loginAuthBox", JsonBox)
     ABC_JSON_VALUE(children, "children", JsonArray)
 
