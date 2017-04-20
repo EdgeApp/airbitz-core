@@ -11,6 +11,7 @@
 #include "../Typedefs.hpp"
 #include "../../util/Data.hpp"
 #include "../cache/ServerCache.hpp"
+#include "../../wallet/Wallet.hpp"
 #include <zmq.h>
 #include <chrono>
 #include <map>
@@ -28,7 +29,7 @@ class TxUpdater
 {
 public:
     ~TxUpdater();
-    TxUpdater(Cache &cache, void *ctx);
+    TxUpdater(Wallet &wallet, void *ctx);
 
     void disconnect();
     Status connect();
@@ -57,18 +58,20 @@ private:
     Status connectTo(std::string server, ServerType serverType);
 
     Cache &cache_;
-    void *ctx_;
 
     bool wantConnection = false;
     bool cacheDirty = false;
     time_t cacheLastSave = 0;
+
+    bool overrideBitcoinServers_;
+    std::vector<std::string> overrideBitcoinServerList_;
 
     std::vector<IBitcoinConnection *> connections_;
 //    std::vector<std::string> serverList_;
 //    std::set<int> untriedLibbitcoin_;
 //    std::set<int> untriedStratum_;
     std::vector<std::string> stratumServers_;
-    std::vector<std::string> libbitcoinServers_;
+    std::vector<std::string> airbitzServers_;
 
     // Fetches currently in progress:
     AddressSet wipAddresses_;

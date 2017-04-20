@@ -6,6 +6,7 @@
  */
 
 #include "AuthJson.hpp"
+#include "LoginJson.hpp"
 #include "../Login.hpp"
 #include "../LoginStore.hpp"
 #include "../../crypto/Encoding.hpp"
@@ -85,6 +86,20 @@ Status
 AuthJson::loginSet(const Login &login)
 {
     ABC_CHECK(passwordSet(login.store, login.passwordAuth()));
+
+    return Status();
+}
+
+Status
+AuthJson::stashSet(const LoginStashJson &stashJson, DataSlice loginKey)
+{
+    DataChunk loginId;
+    DataChunk loginAuth;
+    ABC_CHECK(stashJson.loginAuthBox().decrypt(loginAuth, loginKey));
+    ABC_CHECK(base64Decode(loginId, stashJson.loginId()));
+
+    ABC_CHECK(loginIdSet(base64Encode(loginId)));
+    ABC_CHECK(loginAuthSet(base64Encode(loginAuth)));
 
     return Status();
 }

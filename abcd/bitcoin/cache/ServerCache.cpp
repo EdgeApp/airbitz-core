@@ -16,9 +16,8 @@
 
 namespace abcd {
 
-constexpr auto LIBBITCOIN_PREFIX = "tcp://";
+constexpr auto AIRBITZ_DOMAIN = ".airbitz.co:";
 constexpr auto STRATUM_PREFIX = "stratum://";
-constexpr auto LIBBITCOIN_PREFIX_LENGTH = 6;
 constexpr auto STRATUM_PREFIX_LENGTH = 10;
 constexpr auto MAX_SCORE = 500;
 constexpr auto MIN_SCORE = -100;
@@ -41,6 +40,21 @@ bool sortServersByScore(ServerInfo si1, ServerInfo si2)
 int roundUpDivide(int x, int y)
 {
     return (x % y) ? (x / y + 1) : (x / y);
+}
+
+static bool
+checkIfAirbitzServer(std::string str)
+{
+    std::string suffix = AIRBITZ_DOMAIN;
+
+    if (str.find(suffix) != std::string::npos)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 
@@ -71,7 +85,7 @@ ServerCache::clear()
 }
 
 Status
-ServerCache::load()
+ServerCache::serverCacheLoad()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     ABC_Debug(2, "ServerCache::load()");
@@ -209,7 +223,7 @@ ServerCache::save_nolock()
 }
 
 Status
-ServerCache::save()
+ServerCache::serverCacheSave()
 {
     std::lock_guard<std::mutex> lock(mutex_);
     return save_nolock();
@@ -338,9 +352,11 @@ ServerCache::getServers(ServerType type, unsigned int numServersWanted)
             if (0 != server.first.compare(0, STRATUM_PREFIX_LENGTH, STRATUM_PREFIX))
                 continue;
         }
-        else if (ServerTypeLibbitcoin == type)
+        else if (ServerTypeAirbitz == type)
         {
-            if (0 != server.first.compare(0, LIBBITCOIN_PREFIX_LENGTH, LIBBITCOIN_PREFIX))
+            if (0 != server.first.compare(0, STRATUM_PREFIX_LENGTH, STRATUM_PREFIX))
+                continue;
+            if (!checkIfAirbitzServer(server.first))
                 continue;
         }
 
@@ -356,6 +372,9 @@ ServerCache::getServers(ServerType type, unsigned int numServersWanted)
                        serverInfo.score, serverInfo.responseTime, serverInfo.serverUrl.c_str())
 
     }
+
+    if (serverInfos.size() == 0)
+        return servers;
 
     // Sort by score
     std::sort(serverInfos.begin(), serverInfos.end(), sortServersByScore);

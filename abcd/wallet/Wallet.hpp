@@ -54,6 +54,10 @@ public:
     Status balance(int64_t &result);
     void balanceDirty();
 
+    // Override Servers
+    bool bOverrideBitcoinServers;
+    std::vector<std::string> overrideBitcoinServerList;
+
     /**
      * Return the XPub of this wallet
      */
