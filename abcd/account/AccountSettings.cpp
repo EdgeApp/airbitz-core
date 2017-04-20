@@ -59,6 +59,10 @@ struct SettingsJson:
     ABC_JSON_INTEGER(numCurrency, "numCurrency",
                      static_cast<int>(Currency::USD)) // Required
 
+    // Servers
+    ABC_JSON_BOOLEAN(overrideBitcoinServers, "overrideBitcoinServers", false)
+    ABC_JSON_STRING(overrideBitcoinServerList, "overrideBitcoinServerList", "")
+
     // TODO: Use a string for the currency. Not all currencies have codes.
 };
 
@@ -163,6 +167,10 @@ accountSettingsLoad(Account &account)
 
     out->szFullName = stringCopy(label(out));
 
+    // Server override
+    out->szOverrideBitcoinServerList = stringCopy(json.overrideBitcoinServerList());
+    out->bOverrideBitcoinServers = json.overrideBitcoinServers();
+
     if (out->szPIN)
         account.pin = out->szPIN;
 
@@ -212,6 +220,12 @@ accountSettingsSave(Account &account, tABC_AccountSettings *pSettings)
     ABC_CHECK(json.exchangeRateSourceSet(pSettings->szExchangeRateSource));
     ABC_CHECK(json.languageSet(pSettings->szLanguage));
     ABC_CHECK(json.numCurrencySet(pSettings->currencyNum));
+
+    // Server override
+    ABC_CHECK(json.overrideBitcoinServersSet(pSettings->bOverrideBitcoinServers));
+    if (pSettings->szOverrideBitcoinServerList)
+        ABC_CHECK(json.overrideBitcoinServerListSet(
+                      pSettings->szOverrideBitcoinServerList));
 
     ABC_CHECK(json.save(settingsPath(account), account.dataKey()));
 

@@ -14,13 +14,14 @@
 #include <map>
 #include <mutex>
 #include <set>
+#include <vector>
 
 namespace abcd {
 
 typedef enum
 {
     ServerTypeStratum,
-    ServerTypeLibbitcoin
+    ServerTypeAirbitz
 } ServerType;
 
 typedef struct
@@ -52,13 +53,13 @@ public:
      * Reads the database contents from disk.
      */
     Status
-    load();
+    serverCacheLoad();
 
     /**
      * Saves the database contents to disk, but only if there are changes.
      */
     Status
-    save();
+    serverCacheSave();
 
     /**
      * Increase server score

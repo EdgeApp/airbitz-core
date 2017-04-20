@@ -18,6 +18,7 @@ namespace abcd {
 
 class Login;
 class LoginStore;
+class LoginStashJson;
 
 /**
  * A proof of a user's identity for the login server.
@@ -54,9 +55,14 @@ public:
     Status
     loginSet(const Login &login);
 
+    Status
+    stashSet(const LoginStashJson &stashJson, DataSlice loginKey);
+
 protected:
     ABC_JSON_STRING(otp, "otp", nullptr)
     ABC_JSON_STRING(userId, "userId", nullptr)
+    ABC_JSON_STRING(loginId, "loginId", nullptr)
+    ABC_JSON_STRING(loginAuth, "loginAuth", nullptr)
     ABC_JSON_STRING(passwordAuth, "passwordAuth", nullptr)
     ABC_JSON_STRING(pin2Auth, "pin2Auth", nullptr)
     ABC_JSON_STRING(pin2Id, "pin2Id", nullptr)

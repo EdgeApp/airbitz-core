@@ -382,6 +382,7 @@ tABC_CC ABC_AccountDelete(const char *szUserName,
         ABC_CHECK_NEW(gContext->paths.accountDir(paths, fixed));
 
         ABC_CHECK_NEW(fileDelete(paths.dir()));
+        cacheLogout();
     }
 
 exit:
