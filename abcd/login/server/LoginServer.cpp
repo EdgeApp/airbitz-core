@@ -22,13 +22,16 @@
 #include "../../WalletPaths.hpp"
 #include "../../account/Account.hpp"
 #include "../../util/FileIO.hpp"
+#include "../../wallet/Wallet.hpp"
+#include "../../../src/LoginShim.hpp"
 
 namespace abcd {
 
 #define DATETIME_LENGTH 20
 
 // Server strings:
-#define ABC_SERVER_ROOT                     "https://test-auth.airbitz.co/api"
+#define ABC_SERVER_ROOT                     "https://app.auth.airbitz.co/api"
+//#define ABC_SERVER_ROOT                     "https://test-auth.airbitz.co/api"
 
 #define ABC_SERVER_JSON_NEW_LP1_FIELD       "new_lp1"
 #define ABC_SERVER_JSON_NEW_LRA1_FIELD      "new_lra1"
@@ -536,6 +539,17 @@ loginServerUploadLogs(const Account *account)
         auto ids = account->wallets.list();
         for (const auto &id: ids)
         {
+            std::shared_ptr<Wallet> wallet = cacheWalletSoft(id);
+            if (wallet)
+            {
+                const auto name = wallet->name();
+                logInfo("Wallet '" + name + "' " + id);
+
+                const auto addresses = wallet->addresses.list();
+                for (const auto &address: addresses)
+                    logInfo(address);
+            }
+
             DataChunk watchData;
             if (fileLoad(watchData, WalletPaths(id).cachePath()))
             {
