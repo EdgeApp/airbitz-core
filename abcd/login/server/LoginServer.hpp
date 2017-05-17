@@ -145,7 +145,7 @@ loginServerOtpResetCancelPending(const Login &login);
  * Upload files to auth server for debugging.
  */
 Status
-loginServerUploadLogs(const Account *account);
+loginServerUploadLogs(Account *account);
 
 /**
  * Accesses the v2 login endpoint.

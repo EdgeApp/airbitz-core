@@ -16,6 +16,8 @@
 #include "../../json/JsonObject.hpp"
 #include "../../json/JsonArray.hpp"
 #include "../../util/Debug.hpp"
+#include "../../util/AutoFree.hpp"
+#include "../../account/AccountSettings.hpp"
 #include <map>
 
 // For debug upload:
@@ -526,7 +528,7 @@ loginServerOtpResetCancelPending(const Login &login)
 }
 
 Status
-loginServerUploadLogs(const Account *account)
+loginServerUploadLogs(Account *account)
 {
     const auto url = ABC_SERVER_ROOT "/v1/account/debug";
     ServerRequestJson json;
@@ -558,6 +560,14 @@ loginServerUploadLogs(const Account *account)
             }
         }
         json.set("watchers", jsonArray); // Failure is fine
+                
+        AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
+        settings.get() = accountSettingsLoad(*account);
+        std::string servers(settings->szOverrideBitcoinServerList);
+        std::string strOverride = (settings->bOverrideBitcoinServers ? "true" : "false");
+
+        logInfo("bOverrideBitcoinServers:" + strOverride);
+        logInfo("szOverrideBitcoinServerList:" + servers);
     }
 
     DataChunk logData = debugLogLoad();
