@@ -9,6 +9,7 @@
 #include "TxDetails.hpp"
 #include "../abcd/bitcoin/cache/Cache.hpp"
 #include "../abcd/wallet/Wallet.hpp"
+#include "../abcd/wallet/TxDb.hpp"
 #include "../abcd/util/Util.hpp"
 
 namespace abcd {
@@ -75,6 +76,39 @@ makeTxInfo(Wallet &self, const TxInfo &info, const TxStatus &status)
     return out;
 }
 
+tABC_TxInfo *
+makeTxInfoMetaOnly(Wallet &self, const TxMeta &meta)
+{
+    auto out = structAlloc<tABC_TxInfo>();
+
+    // Basic information:
+    out->szID = stringCopy(meta.txid);
+    out->balance = 0;
+    out->minerFee = 0;
+
+    // Outputs array:
+    out->countOutputs = 0;
+    out->aOutputs = NULL;
+
+    // Details:
+    out->timeCreation = meta.timeCreation;
+    out->airbitzFeeWanted = meta.airbitzFeeWanted;
+    out->airbitzFeeSent = meta.airbitzFeeSent;
+    out->pDetails = meta.metadata.toDetails();
+
+    out->pDetails->amountSatoshi = out->balance;
+    out->pDetails->amountFeesMinersSatoshi = out->minerFee;
+    out->pDetails->amountFeesAirbitzSatoshi = out->airbitzFeeSent;
+
+    // Status:
+    out->height = -1;
+    out->bDoubleSpent = FALSE;
+    out->bReplaceByFee = FALSE;
+
+    return out;
+}
+
+
 /**
  * Gets the transactions associated with the given wallet.
  *
@@ -98,9 +132,19 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
     unsigned int count = 0;
 
     const auto infos = self.cache.txs.statuses(self.cache.addresses.txids());
+
+    std::map<std::string, TxMeta> txsMap = self.txs.getTxs();
+    std::map<std::string, TxMeta>::iterator it;
+
     for (const auto &info: infos)
     {
         pTransaction = makeTxInfo(self, info.first, info.second);
+
+        std::string ntxidStr = info.first.ntxid;
+        it = txsMap.find(info.first.ntxid);
+        std::string findStr = it->first;
+        if (it != txsMap.end())
+            txsMap.erase(it);
 
         if ((endTime == ABC_GET_TX_ALL_TIMES) ||
                 (pTransaction->timeCreation >= startTime &&
@@ -124,6 +168,29 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
         }
     }
 
+    // Add transactions that only have metadata and assume they are dropped
+    for (const auto &tx: txsMap)
+    {
+        pTransaction = makeTxInfoMetaOnly(self, tx.second);
+
+        // create space for new entry
+        if (aTransactions == NULL)
+        {
+            ABC_ARRAY_NEW(aTransactions, 1, tABC_TxInfo *);
+            count = 1;
+        }
+        else
+        {
+            count++;
+            ABC_ARRAY_RESIZE(aTransactions, count, tABC_TxInfo *);
+        }
+
+        // add it to the array
+        aTransactions[count - 1] = pTransaction;
+        pTransaction = NULL;
+    }
+    
+    
     // if we have more than one, then let's sort them
     if (count > 1)
     {
