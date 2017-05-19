@@ -25,8 +25,8 @@ AirbitzRequest::AirbitzRequest()
     if (!status_)
         return;
 
-    if (curl_easy_setopt(handle_, CURLOPT_SSL_CTX_FUNCTION, curlSslCallback))
-        status_ = ABC_ERROR(ABC_CC_Error, "cURL failed to set SSL pinning");
+    // if (curl_easy_setopt(handle_, CURLOPT_SSL_CTX_FUNCTION, curlSslCallback))
+    //     status_ = ABC_ERROR(ABC_CC_Error, "cURL failed to set SSL pinning");
     header("Content-Type", "application/json");
     header("Authorization", "Token " + gContext->apiKey());
 }
