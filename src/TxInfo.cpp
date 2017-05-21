@@ -102,8 +102,8 @@ makeTxInfoMetaOnly(Wallet &self, const TxMeta &meta)
 
     // Status:
     out->height = -1;
-    out->bDoubleSpent = FALSE;
-    out->bReplaceByFee = FALSE;
+    out->bDoubleSpent = false;
+    out->bReplaceByFee = false;
 
     return out;
 }
