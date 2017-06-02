@@ -10,6 +10,11 @@
 
 #include "../util/Status.hpp"
 
+#define DEFAULT_SERVER_LIST "stratum://electrum.airbitz.co\nstratum://electrum-bu-az-weuro.airbitz.co:50001\nstratum://electrum-bu-az-wjapan.airbitz.co:50001\nstratum://electrum-bc-az-eusa.airbitz.co:50001"
+
+// Miminum possible server string. ie. "stratum://e.c:1"
+#define SERVER_STRING_LEN_MINIMUM 15
+
 namespace abcd {
 
 class Account;

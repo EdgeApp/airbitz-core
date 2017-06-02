@@ -69,6 +69,12 @@ public:
     time_t
     airbitzFeeLastSent();
 
+    /**
+     * Get all known txs
+     */
+    std::map<std::string, TxMeta> 
+    getTxs();
+    
 private:
     mutable std::mutex mutex_;
     const Wallet &wallet_;
