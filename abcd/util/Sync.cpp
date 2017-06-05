@@ -22,6 +22,7 @@ std::recursive_mutex gSyncMutex;
 static bool gbInitialized = false;
 static int syncServerIndex;
 static std::string syncServerName;
+static std::vector<std::string> syncServers;
 
 typedef std::lock_guard<std::recursive_mutex> AutoSyncLock;
 
@@ -54,17 +55,18 @@ syncGitError(int e)
 static Status
 syncUrl(std::string &result, const std::string &syncKey, bool rotate=false)
 {
+    if (syncServers.size() == 0)
+    {
+        syncServers = generalSyncServers();
+    }
     if (rotate || syncServerName.empty())
     {
-        auto servers = generalSyncServers();
-
         syncServerIndex++;
-        syncServerIndex %= servers.size();
-        syncServerName = fileSlashify(servers[syncServerIndex]);
+        syncServerIndex %= syncServers.size();
+        syncServerName = fileSlashify(syncServers[syncServerIndex]);
     }
 
     result = syncServerName + syncKey;
-    ABC_DebugLog("Syncing to: %s", result.c_str());
     return Status();
 }
 
@@ -146,13 +148,23 @@ syncRepo(const std::string &syncDir, const std::string &syncKey, bool &dirty)
     ABC_CHECK_GIT(git_repository_open(&repo.get(), syncDir.c_str()));
 
     std::string url;
+
     ABC_CHECK(syncUrl(url, syncKey));
-    if (sync_fetch(repo, url.c_str()) < 0)
+
+    for (int i = 0; i < syncServers.size(); i++)
     {
         ABC_CHECK(syncUrl(url, syncKey, true));
-        ABC_CHECK_GIT(sync_fetch(repo, url.c_str()));
+        if (sync_fetch(repo, url.c_str()) >= 0)
+        {
+            ABC_DebugLog("Syncing to: %s", url.c_str());
+            break;
+        }
+        else
+        {
+            ABC_DebugLog("FAIlED Syncing to: %s", url.c_str());
+        }
     }
-
+    
     int files_changed, need_push;
     ABC_CHECK_GIT(sync_master(repo, &files_changed, &need_push));
 
