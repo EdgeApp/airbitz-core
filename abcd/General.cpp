@@ -374,7 +374,15 @@ generalSyncServers()
     }
 
     if (!out.size())
-        out.push_back("https://git.sync.airbitz.co/repos");
+    {
+        out.push_back("https://git.airbitz.co/repos");
+        out.push_back("https://git1.airbitz.co/repos");
+        out.push_back("https://git2.airbitz.co/repos");
+        out.push_back("https://git4.airbitz.co/repos");
+    }
+
+    std::random_shuffle(out.begin(), out.end());
+
     return out;
 }
 
