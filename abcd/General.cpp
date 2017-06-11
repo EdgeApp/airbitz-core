@@ -21,6 +21,7 @@
 #include "login/server/LoginServer.hpp"
 #include "util/FileIO.hpp"
 #include "util/Debug.hpp"
+#include "http/HttpRequest.hpp"
 #include <time.h>
 #include <mutex>
 
@@ -84,6 +85,26 @@ struct EstimateFeesJson:
     ABC_JSON_INTEGER(confirmFees7, "confirmFees7", 0)
 };
 
+struct TwentyOneFeesJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(TwentyOneFeesJson, JsonObject)
+    ABC_JSON_VALUE(fees, "fees", JsonArray)    
+};
+
+struct TwentyOneFeeJson:
+    public JsonObject
+{
+    ABC_JSON_CONSTRUCTORS(TwentyOneFeeJson, JsonObject)
+    ABC_JSON_INTEGER(minFee, "minFee", 0)  
+    ABC_JSON_INTEGER(maxFee, "maxFee", 0)  
+    ABC_JSON_INTEGER(dayCount, "dayCount", 0)  
+    ABC_JSON_INTEGER(memCount, "memCount", 0)  
+    ABC_JSON_INTEGER(minDelay, "minDelay", 0)  
+    ABC_JSON_INTEGER(maxDelay, "maxDelay", 0)  
+    ABC_JSON_INTEGER(minMinutes, "minMinutes", 0)  
+    ABC_JSON_INTEGER(maxMinutes, "maxMinutes", 0)  
+};
 
 struct GeneralJson:
     public JsonObject
@@ -113,6 +134,24 @@ generalLoad()
 }
 
 Status
+general21FeesUpdate()
+{
+    HttpReply reply;
+    const auto url = "https://bitcoinfees.21.co/api/v1/fees/list";
+    const auto path = gContext->paths.twentyOneFeeCachePath();
+
+    ABC_CHECK(HttpRequest()
+              .get(reply, url));
+    ABC_CHECK(reply.codeOk());
+
+    TwentyOneFeesJson feesJson;
+    ABC_CHECK(feesJson.decode(reply.body));
+    ABC_CHECK(feesJson.save(path));
+
+    return Status();
+}
+
+Status
 generalUpdate()
 {
     const auto path = gContext->paths.generalPath();
@@ -125,6 +164,7 @@ generalUpdate()
         ABC_CHECK(loginServerGetGeneral(infoJson));
         ABC_CHECK(infoJson.save(path));
     }
+    general21FeesUpdate();
 
     return Status();
 }
@@ -144,6 +184,20 @@ estimateFeesLoad()
     return out;
 }
 
+static TwentyOneFeesJson
+twentyOneFeesLoad()
+{
+    if (!gContext)
+        return TwentyOneFeesJson();
+
+    const auto path = gContext->paths.twentyOneFeeCachePath();
+    if (!fileExists(path))
+        return TwentyOneFeesJson();
+
+    TwentyOneFeesJson out;
+    out.load(path).log();
+    return out;
+}
 
 bool
 generalEstimateFeesNeedUpdate()
@@ -234,34 +288,123 @@ generalEstimateFeesUpdate(size_t blocks, double fee)
     return Status();
 }
 
+const double MAX_FEE = 999999999.0;
 
 BitcoinFeeInfo
 generalBitcoinFeeInfo()
 {
     BitcoinFeesJson feeJson = generalLoad().bitcoinFees();
     EstimateFeesJson estimateFeesJson = estimateFeesLoad();
+    TwentyOneFeesJson twentyOneFeesJson = twentyOneFeesLoad();
+
+    auto arrayJson = twentyOneFeesJson.fees();
+    size_t size = arrayJson.size();
+
+    int highDelay = 999999;
+    int lowDelay = 0;
+    double highFee = MAX_FEE;
+    double standardFeeHigh = 0;
+    double standardFeeLow = MAX_FEE;
+    double lowFee = MAX_FEE;
+
+    //
+    // Grab 21.co fee info and see if we have a complete set from the last update
+    //
+    for (size_t i = 0; i < size; i++)
+    {
+        // Iterate over all the fee estimates
+        TwentyOneFeeJson twentyOneFeeJson(arrayJson[i]);
+
+        // Set the lowFee if the delay in blocks and minutes is less that 10000. 
+        // 21.co uses 10000 to mean infinite
+        if (twentyOneFeeJson.maxDelay() < 10000 && twentyOneFeeJson.maxMinutes() < 10000)
+            if (twentyOneFeeJson.maxFee() < lowFee)
+            {
+                // Set the low fee if the current fee estimate is lower than the previously set low fee
+                lowDelay = twentyOneFeeJson.maxDelay();
+                lowFee = (double) twentyOneFeeJson.maxFee();
+            }
+
+        // Set the high fee only if the delay is 0
+        if (twentyOneFeeJson.maxDelay() == 0)
+            if (twentyOneFeeJson.maxFee() < highFee)
+            {
+                // Set the low fee if the current fee estimate is lower than the previously set high fee
+                highFee = (double) twentyOneFeeJson.maxFee();
+                highDelay = twentyOneFeeJson.maxDelay();
+            }
+    }
+
+    // Now find the standard fee range. We want the range to be within a maxDelay of
+    // 3 to 18 blocks (about 30 mins to 3 hours). The standard fee at the low end should
+    // have a delay less than the lowFee from above. The standard fee at the high end 
+    // should have a delay that's greater than the highFee from above.
+    for (size_t i = 0; i < size; i++)
+    {
+        TwentyOneFeeJson twentyOneFeeJson(arrayJson[i]);
+        ABC_DebugLevel(1, "minFee:%d,maxFee:%d,minDelay:%d,maxDelay:%d,minMinutes:%d,maxMinutes:%d",
+            twentyOneFeeJson.minFee(), twentyOneFeeJson.maxFee(), twentyOneFeeJson.minDelay(),
+            twentyOneFeeJson.maxDelay(), twentyOneFeeJson.minMinutes(), twentyOneFeeJson.maxMinutes());
+
+        if (twentyOneFeeJson.maxDelay() < lowDelay && 
+            twentyOneFeeJson.maxDelay() <= 18)
+            if (standardFeeLow > twentyOneFeeJson.minFee())
+                standardFeeLow = (double) twentyOneFeeJson.minFee();
+
+        if (twentyOneFeeJson.maxDelay() > highDelay &&
+            twentyOneFeeJson.maxDelay() >= 3)
+            if (standardFeeHigh < twentyOneFeeJson.minFee())
+                standardFeeHigh = (double) twentyOneFeeJson.minFee();
+
+    }
 
     BitcoinFeeInfo out;
 
-    out.confirmFees[1] = estimateFeesJson.confirmFees1() ?
-                         estimateFeesJson.confirmFees1() : feeJson.confirmFees1();
-    out.confirmFees[2] = estimateFeesJson.confirmFees2() ?
-                         estimateFeesJson.confirmFees2() : feeJson.confirmFees2();
-    out.confirmFees[3] = estimateFeesJson.confirmFees3() ?
-                         estimateFeesJson.confirmFees3() : feeJson.confirmFees3();
-    out.confirmFees[4] = estimateFeesJson.confirmFees4() ?
-                         estimateFeesJson.confirmFees4() : feeJson.confirmFees4();
-    out.confirmFees[5] = estimateFeesJson.confirmFees5() ?
-                         estimateFeesJson.confirmFees5() : feeJson.confirmFees5();
-    out.confirmFees[6] = estimateFeesJson.confirmFees6() ?
-                         estimateFeesJson.confirmFees6() : feeJson.confirmFees6();
-    out.confirmFees[7] = estimateFeesJson.confirmFees7() ?
-                         estimateFeesJson.confirmFees7() : feeJson.confirmFees7();
-    out.lowFeeBlock             = feeJson.lowFeeBlock();
-    out.standardFeeBlockLow     = feeJson.standardFeeBlockLow();
-    out.standardFeeBlockHigh    = feeJson.standardFeeBlockHigh();
-    out.highFeeBlock            = feeJson.highFeeBlock();
-    out.targetFeePercentage     = feeJson.targetFeePercentage();
+    out.targetFeePercentage = feeJson.targetFeePercentage();
+
+    //
+    // Check if we have a complete set of fee info.
+    //
+    if (highFee < MAX_FEE &&
+        lowFee  < MAX_FEE &&
+        standardFeeHigh < MAX_FEE &&
+        standardFeeLow < MAX_FEE)
+    {
+        // Complete set found. Assign the confirmFees array based on the 21.co fees
+        out.confirmFees[1] = highFee * 1000;
+        out.confirmFees[2] = standardFeeHigh * 1000;
+        out.confirmFees[3] = standardFeeLow * 1000;
+        out.confirmFees[4] = lowFee * 1000;
+        out.confirmFees[5] = lowFee * 1000;
+        out.confirmFees[6] = lowFee * 1000;
+        out.confirmFees[7] = lowFee * 1000;
+        out.highFeeBlock            = 1;
+        out.standardFeeBlockHigh    = 2;
+        out.standardFeeBlockLow     = 3;
+        out.lowFeeBlock             = 4;
+    }
+    else
+    {
+        // Complete set not found. Use the bitcoind/stratum fee estimates
+        out.confirmFees[1] = estimateFeesJson.confirmFees1() ?
+                            estimateFeesJson.confirmFees1() : feeJson.confirmFees1();
+        out.confirmFees[2] = estimateFeesJson.confirmFees2() ?
+                            estimateFeesJson.confirmFees2() : feeJson.confirmFees2();
+        out.confirmFees[3] = estimateFeesJson.confirmFees3() ?
+                            estimateFeesJson.confirmFees3() : feeJson.confirmFees3();
+        out.confirmFees[4] = estimateFeesJson.confirmFees4() ?
+                            estimateFeesJson.confirmFees4() : feeJson.confirmFees4();
+        out.confirmFees[5] = estimateFeesJson.confirmFees5() ?
+                            estimateFeesJson.confirmFees5() : feeJson.confirmFees5();
+        out.confirmFees[6] = estimateFeesJson.confirmFees6() ?
+                            estimateFeesJson.confirmFees6() : feeJson.confirmFees6();
+        out.confirmFees[7] = estimateFeesJson.confirmFees7() ?
+                            estimateFeesJson.confirmFees7() : feeJson.confirmFees7();
+        out.lowFeeBlock             = feeJson.lowFeeBlock();
+        out.standardFeeBlockLow     = feeJson.standardFeeBlockLow();
+        out.standardFeeBlockHigh    = feeJson.standardFeeBlockHigh();
+        out.highFeeBlock            = feeJson.highFeeBlock();
+    }
 
     // Fix any fees that contradict. ie. confirmFees1 < confirmFees2
     if (out.confirmFees[2] > out.confirmFees[1])
