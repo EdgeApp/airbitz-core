@@ -142,7 +142,6 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
 
         std::string ntxidStr = info.first.ntxid;
         it = txsMap.find(info.first.ntxid);
-        std::string findStr = it->first;
         if (it != txsMap.end())
             txsMap.erase(it);
 
