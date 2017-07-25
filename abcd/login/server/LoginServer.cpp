@@ -561,11 +561,12 @@ loginServerUploadLogs(Account *account)
             }
         }
         json.set("watchers", jsonArray); // Failure is fine
-                
+
         AutoFree<tABC_AccountSettings, accountSettingsFree> settings;
         settings.get() = accountSettingsLoad(*account);
         std::string servers(settings->szOverrideBitcoinServerList);
-        std::string strOverride = (settings->bOverrideBitcoinServers ? "true" : "false");
+        std::string strOverride = (settings->bOverrideBitcoinServers ? "true" :
+                                   "false");
 
         logInfo("bOverrideBitcoinServers:" + strOverride);
         logInfo("szOverrideBitcoinServerList:" + servers);

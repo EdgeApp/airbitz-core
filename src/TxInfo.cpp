@@ -108,7 +108,6 @@ makeTxInfoMetaOnly(Wallet &self, const TxMeta &meta)
     return out;
 }
 
-
 /**
  * Gets the transactions associated with the given wallet.
  *
@@ -188,8 +187,7 @@ tABC_CC ABC_TxGetTransactions(Wallet &self,
         aTransactions[count - 1] = pTransaction;
         pTransaction = NULL;
     }
-    
-    
+
     // if we have more than one, then let's sort them
     if (count > 1)
     {

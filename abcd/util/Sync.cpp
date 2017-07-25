@@ -164,7 +164,7 @@ syncRepo(const std::string &syncDir, const std::string &syncKey, bool &dirty)
             ABC_DebugLog("FAIlED Syncing to: %s", url.c_str());
         }
     }
-    
+
     int files_changed, need_push;
     ABC_CHECK_GIT(sync_master(repo, &files_changed, &need_push));
 

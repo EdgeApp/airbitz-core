@@ -61,7 +61,8 @@ struct SettingsJson:
 
     // Servers
     ABC_JSON_BOOLEAN(overrideBitcoinServers, "overrideBitcoinServers", false)
-    ABC_JSON_STRING(overrideBitcoinServerList, "overrideBitcoinServerList", DEFAULT_SERVER_LIST)
+    ABC_JSON_STRING(overrideBitcoinServerList, "overrideBitcoinServerList",
+                    DEFAULT_SERVER_LIST)
 
     // TODO: Use a string for the currency. Not all currencies have codes.
 };
@@ -223,7 +224,8 @@ accountSettingsSave(Account &account, tABC_AccountSettings *pSettings)
 
     // Server override
     ABC_CHECK(json.overrideBitcoinServersSet(pSettings->bOverrideBitcoinServers));
-    if (pSettings->szOverrideBitcoinServerList && strlen(pSettings->szOverrideBitcoinServerList) > SERVER_STRING_LEN_MINIMUM)
+    if (pSettings->szOverrideBitcoinServerList
+            && strlen(pSettings->szOverrideBitcoinServerList) > SERVER_STRING_LEN_MINIMUM)
     {
         ABC_CHECK(json.overrideBitcoinServerListSet(
                       pSettings->szOverrideBitcoinServerList));
