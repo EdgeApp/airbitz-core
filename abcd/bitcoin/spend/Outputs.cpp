@@ -15,6 +15,17 @@
 
 namespace abcd {
 
+bc::script_type
+outputScriptForCash()
+{
+    const std::string message = "Bitcoin: A Peer-to-Peer Electronic Cash System";
+
+    bc::script_type result;
+    result.push_operation({bc::opcode::return_});
+    result.push_operation({bc::opcode::special, bc::data_chunk(message.begin(), message.end())});
+    return result;
+}
+
 static bc::script_type
 outputScriptForPubkey(const bc::short_hash &hash)
 {

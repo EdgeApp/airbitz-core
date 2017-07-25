@@ -14,6 +14,12 @@
 namespace abcd {
 
 /**
+ * Creates an output script for keeping Bitcoin Cash funds safe.
+ */
+bc::script_type
+outputScriptForCash();
+
+/**
  * Creates an output script for sending money to an address.
  */
 Status

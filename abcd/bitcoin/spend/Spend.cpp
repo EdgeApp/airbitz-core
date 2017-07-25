@@ -291,6 +291,11 @@ Spend::makeOutputs(bc::transaction_output_list &result)
         }
     }
 
+    bc::transaction_output_type output;
+    output.value = 0;
+    output.script = outputScriptForCash();
+    out.push_back(output);
+
     result = std::move(out);
     return Status();
 }
