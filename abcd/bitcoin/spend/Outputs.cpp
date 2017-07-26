@@ -15,6 +15,15 @@
 
 namespace abcd {
 
+static bool
+scriptIsReturn(const bc::script_type &script)
+{
+    const auto ops = script.operations();
+    return ops.size() == 2 &&
+           ops[0].code == bc::opcode::return_ &&
+           ops[1].code == bc::opcode::special;
+}
+
 static bc::script_type
 outputScriptForPubkey(const bc::short_hash &hash)
 {
@@ -83,7 +92,7 @@ outputsFinalize(bc::transaction_output_list &outputs,
 
     // Check for dust:
     for (const auto &output: outputs)
-        if (outputIsDust(output.value))
+        if (outputIsDust(output.value) && !scriptIsReturn(output.script))
             return ABC_ERROR(ABC_CC_SpendDust, "Trying to send dust");
 
     return Status();
