@@ -15,9 +15,9 @@
 
 namespace abcd {
 
-constexpr auto NUM_CONNECT_SERVERS = 5;
+constexpr auto NUM_CONNECT_SERVERS = 1;
 constexpr auto MINIMUM_AIRBITZ_SERVERS = 1;
-constexpr auto MINIMUM_STRATUM_SERVERS = 4;
+constexpr auto MINIMUM_STRATUM_SERVERS = 1;
 constexpr auto AIRBITZ_DOMAIN = ".airbitz.co:";
 
 TxUpdater::~TxUpdater()

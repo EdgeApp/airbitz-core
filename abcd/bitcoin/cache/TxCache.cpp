@@ -300,7 +300,8 @@ TxCache::infoInternal(TxInfo &result, const bc::transaction_type &tx) const
         const auto txid = bc::encode_hash(input.previous_output.hash);
         auto i = txs_.find(txid);
         if (txs_.end() == i)
-            return ABC_ERROR(ABC_CC_Synchronizing, "Missing input " + txid);
+            break;
+            // return ABC_ERROR(ABC_CC_Synchronizing, "Missing input " + txid);
         if (i->second.outputs.size() <= input.previous_output.index)
             return ABC_ERROR(ABC_CC_Error, "Impossible input on " + txid);
         auto &output = i->second.outputs[input.previous_output.index];
@@ -337,12 +338,12 @@ TxCache::missing(const std::string &txid) const
         return true;
 
     // Check the inputs:
-    for (const auto &input: i->second.inputs)
-    {
-        const auto txid = bc::encode_hash(input.previous_output.hash);
-        if (!txs_.count(txid))
-            return true;
-    }
+    // for (const auto &input: i->second.inputs)
+    // {
+    //     const auto txid = bc::encode_hash(input.previous_output.hash);
+    //     if (!txs_.count(txid))
+    //         return true;
+    // }
 
     return false;
 }
@@ -364,12 +365,12 @@ TxCache::missingTxids(const TxidSet &txids) const
         }
 
         // Check the inputs:
-        for (const auto &input: i->second.inputs)
-        {
-            const auto txid = bc::encode_hash(input.previous_output.hash);
-            if (!txs_.count(txid))
-                out.insert(txid);
-        }
+        // for (const auto &input: i->second.inputs)
+        // {
+        //     const auto txid = bc::encode_hash(input.previous_output.hash);
+        //     if (!txs_.count(txid))
+        //         out.insert(txid);
+        // }
     }
 
     return out;
