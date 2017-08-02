@@ -315,6 +315,13 @@ generalBitcoinFeeInfo()
         // Iterate over all the fee estimates
         TwentyOneFeeJson twentyOneFeeJson(arrayJson[i]);
 
+        ABC_DebugLevel(1,
+                "minFee:%d,maxFee:%d,minDelay:%d,maxDelay:%d,minMinutes:%d,maxMinutes:%d",
+                twentyOneFeeJson.minFee(), twentyOneFeeJson.maxFee(),
+                twentyOneFeeJson.minDelay(),
+                twentyOneFeeJson.maxDelay(), twentyOneFeeJson.minMinutes(),
+                twentyOneFeeJson.maxMinutes());
+                
         // Set the lowFee if the delay in blocks and minutes is less that 10000.
         // 21.co uses 10000 to mean infinite
         if (twentyOneFeeJson.maxDelay() < 10000
@@ -343,12 +350,6 @@ generalBitcoinFeeInfo()
     for (size_t i = 0; i < size; i++)
     {
         TwentyOneFeeJson twentyOneFeeJson(arrayJson[i]);
-        ABC_DebugLevel(1,
-                       "minFee:%d,maxFee:%d,minDelay:%d,maxDelay:%d,minMinutes:%d,maxMinutes:%d",
-                       twentyOneFeeJson.minFee(), twentyOneFeeJson.maxFee(),
-                       twentyOneFeeJson.minDelay(),
-                       twentyOneFeeJson.maxDelay(), twentyOneFeeJson.minMinutes(),
-                       twentyOneFeeJson.maxMinutes());
 
         if (twentyOneFeeJson.maxDelay() < lowDelay &&
                 twentyOneFeeJson.maxDelay() <= 18)
@@ -423,6 +424,12 @@ generalBitcoinFeeInfo()
         out.confirmFees[6] = out.confirmFees[5];
     if (out.confirmFees[7] > out.confirmFees[6])
         out.confirmFees[7] = out.confirmFees[6];
+
+    for (int i = 1; i < 7; i++) {
+        if (out.confirmFees[i] == 0) {
+            out.confirmFees[i] = 1000;
+        }
+    }
 
     ABC_DebugLevel(1,
                    "generalBitcoinFeeInfo: 1:%.0f, 2:%.0f, 3:%.0f, 4:%.0f, 5:%.0f, 6:%.0f, 7:%.0f",
