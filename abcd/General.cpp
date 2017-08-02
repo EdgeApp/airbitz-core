@@ -89,21 +89,21 @@ struct TwentyOneFeesJson:
     public JsonObject
 {
     ABC_JSON_CONSTRUCTORS(TwentyOneFeesJson, JsonObject)
-    ABC_JSON_VALUE(fees, "fees", JsonArray)    
+    ABC_JSON_VALUE(fees, "fees", JsonArray)
 };
 
 struct TwentyOneFeeJson:
     public JsonObject
 {
     ABC_JSON_CONSTRUCTORS(TwentyOneFeeJson, JsonObject)
-    ABC_JSON_INTEGER(minFee, "minFee", 0)  
-    ABC_JSON_INTEGER(maxFee, "maxFee", 0)  
-    ABC_JSON_INTEGER(dayCount, "dayCount", 0)  
-    ABC_JSON_INTEGER(memCount, "memCount", 0)  
-    ABC_JSON_INTEGER(minDelay, "minDelay", 0)  
-    ABC_JSON_INTEGER(maxDelay, "maxDelay", 0)  
-    ABC_JSON_INTEGER(minMinutes, "minMinutes", 0)  
-    ABC_JSON_INTEGER(maxMinutes, "maxMinutes", 0)  
+    ABC_JSON_INTEGER(minFee, "minFee", 0)
+    ABC_JSON_INTEGER(maxFee, "maxFee", 0)
+    ABC_JSON_INTEGER(dayCount, "dayCount", 0)
+    ABC_JSON_INTEGER(memCount, "memCount", 0)
+    ABC_JSON_INTEGER(minDelay, "minDelay", 0)
+    ABC_JSON_INTEGER(maxDelay, "maxDelay", 0)
+    ABC_JSON_INTEGER(minMinutes, "minMinutes", 0)
+    ABC_JSON_INTEGER(maxMinutes, "maxMinutes", 0)
 };
 
 struct GeneralJson:
@@ -315,9 +315,17 @@ generalBitcoinFeeInfo()
         // Iterate over all the fee estimates
         TwentyOneFeeJson twentyOneFeeJson(arrayJson[i]);
 
-        // Set the lowFee if the delay in blocks and minutes is less that 10000. 
+        ABC_DebugLevel(1,
+                "minFee:%d,maxFee:%d,minDelay:%d,maxDelay:%d,minMinutes:%d,maxMinutes:%d",
+                twentyOneFeeJson.minFee(), twentyOneFeeJson.maxFee(),
+                twentyOneFeeJson.minDelay(),
+                twentyOneFeeJson.maxDelay(), twentyOneFeeJson.minMinutes(),
+                twentyOneFeeJson.maxMinutes());
+                
+        // Set the lowFee if the delay in blocks and minutes is less that 10000.
         // 21.co uses 10000 to mean infinite
-        if (twentyOneFeeJson.maxDelay() < 10000 && twentyOneFeeJson.maxMinutes() < 10000)
+        if (twentyOneFeeJson.maxDelay() < 10000
+                && twentyOneFeeJson.maxMinutes() < 10000)
             if (twentyOneFeeJson.maxFee() < lowFee)
             {
                 // Set the low fee if the current fee estimate is lower than the previously set low fee
@@ -337,22 +345,19 @@ generalBitcoinFeeInfo()
 
     // Now find the standard fee range. We want the range to be within a maxDelay of
     // 3 to 18 blocks (about 30 mins to 3 hours). The standard fee at the low end should
-    // have a delay less than the lowFee from above. The standard fee at the high end 
+    // have a delay less than the lowFee from above. The standard fee at the high end
     // should have a delay that's greater than the highFee from above.
     for (size_t i = 0; i < size; i++)
     {
         TwentyOneFeeJson twentyOneFeeJson(arrayJson[i]);
-        ABC_DebugLevel(1, "minFee:%d,maxFee:%d,minDelay:%d,maxDelay:%d,minMinutes:%d,maxMinutes:%d",
-            twentyOneFeeJson.minFee(), twentyOneFeeJson.maxFee(), twentyOneFeeJson.minDelay(),
-            twentyOneFeeJson.maxDelay(), twentyOneFeeJson.minMinutes(), twentyOneFeeJson.maxMinutes());
 
-        if (twentyOneFeeJson.maxDelay() < lowDelay && 
-            twentyOneFeeJson.maxDelay() <= 18)
+        if (twentyOneFeeJson.maxDelay() < lowDelay &&
+                twentyOneFeeJson.maxDelay() <= 18)
             if (standardFeeLow > twentyOneFeeJson.minFee())
                 standardFeeLow = (double) twentyOneFeeJson.minFee();
 
         if (twentyOneFeeJson.maxDelay() > highDelay &&
-            twentyOneFeeJson.maxDelay() >= 3)
+                twentyOneFeeJson.maxDelay() >= 3)
             if (standardFeeHigh < twentyOneFeeJson.minFee())
                 standardFeeHigh = (double) twentyOneFeeJson.minFee();
 
@@ -366,9 +371,9 @@ generalBitcoinFeeInfo()
     // Check if we have a complete set of fee info.
     //
     if (highFee < MAX_FEE &&
-        lowFee  < MAX_FEE &&
-        standardFeeHigh < MAX_FEE &&
-        standardFeeLow < MAX_FEE)
+            lowFee  < MAX_FEE &&
+            standardFeeHigh < MAX_FEE &&
+            standardFeeLow < MAX_FEE)
     {
         // Complete set found. Assign the confirmFees array based on the 21.co fees
         out.confirmFees[1] = highFee * 1000;
@@ -387,19 +392,19 @@ generalBitcoinFeeInfo()
     {
         // Complete set not found. Use the bitcoind/stratum fee estimates
         out.confirmFees[1] = estimateFeesJson.confirmFees1() ?
-                            estimateFeesJson.confirmFees1() : feeJson.confirmFees1();
+                             estimateFeesJson.confirmFees1() : feeJson.confirmFees1();
         out.confirmFees[2] = estimateFeesJson.confirmFees2() ?
-                            estimateFeesJson.confirmFees2() : feeJson.confirmFees2();
+                             estimateFeesJson.confirmFees2() : feeJson.confirmFees2();
         out.confirmFees[3] = estimateFeesJson.confirmFees3() ?
-                            estimateFeesJson.confirmFees3() : feeJson.confirmFees3();
+                             estimateFeesJson.confirmFees3() : feeJson.confirmFees3();
         out.confirmFees[4] = estimateFeesJson.confirmFees4() ?
-                            estimateFeesJson.confirmFees4() : feeJson.confirmFees4();
+                             estimateFeesJson.confirmFees4() : feeJson.confirmFees4();
         out.confirmFees[5] = estimateFeesJson.confirmFees5() ?
-                            estimateFeesJson.confirmFees5() : feeJson.confirmFees5();
+                             estimateFeesJson.confirmFees5() : feeJson.confirmFees5();
         out.confirmFees[6] = estimateFeesJson.confirmFees6() ?
-                            estimateFeesJson.confirmFees6() : feeJson.confirmFees6();
+                             estimateFeesJson.confirmFees6() : feeJson.confirmFees6();
         out.confirmFees[7] = estimateFeesJson.confirmFees7() ?
-                            estimateFeesJson.confirmFees7() : feeJson.confirmFees7();
+                             estimateFeesJson.confirmFees7() : feeJson.confirmFees7();
         out.lowFeeBlock             = feeJson.lowFeeBlock();
         out.standardFeeBlockLow     = feeJson.standardFeeBlockLow();
         out.standardFeeBlockHigh    = feeJson.standardFeeBlockHigh();
@@ -419,6 +424,12 @@ generalBitcoinFeeInfo()
         out.confirmFees[6] = out.confirmFees[5];
     if (out.confirmFees[7] > out.confirmFees[6])
         out.confirmFees[7] = out.confirmFees[6];
+
+    for (int i = 1; i <= 7; i++) {
+        if (out.confirmFees[i] == 0) {
+            out.confirmFees[i] = 1000;
+        }
+    }
 
     ABC_DebugLevel(1,
                    "generalBitcoinFeeInfo: 1:%.0f, 2:%.0f, 3:%.0f, 4:%.0f, 5:%.0f, 6:%.0f, 7:%.0f",

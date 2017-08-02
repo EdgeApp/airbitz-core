@@ -230,7 +230,7 @@ TxDb::path(const TxMeta &tx)
            (tx.internal ? "-int.json" : "-ext.json");
 }
 
-std::map<std::string,TxMeta> 
+std::map<std::string,TxMeta>
 TxDb::getTxs()
 {
     return txs_;
