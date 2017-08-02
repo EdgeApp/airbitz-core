@@ -425,7 +425,7 @@ generalBitcoinFeeInfo()
     if (out.confirmFees[7] > out.confirmFees[6])
         out.confirmFees[7] = out.confirmFees[6];
 
-    for (int i = 1; i < 7; i++) {
+    for (int i = 1; i <= 7; i++) {
         if (out.confirmFees[i] == 0) {
             out.confirmFees[i] = 1000;
         }
