@@ -289,6 +289,8 @@ generalEstimateFeesUpdate(size_t blocks, double fee)
 }
 
 const double MAX_FEE = 999999999.0;
+const int MAX_STANDARD_DELAY = 12;
+const int MIN_STANDARD_DELAY = 3;
 
 BitcoinFeeInfo
 generalBitcoinFeeInfo()
@@ -322,6 +324,13 @@ generalBitcoinFeeInfo()
                 twentyOneFeeJson.maxDelay(), twentyOneFeeJson.minMinutes(),
                 twentyOneFeeJson.maxMinutes());
                 
+        // If this is a zero fee estimate, then skip
+        if (twentyOneFeeJson.maxFee() == 0 ||
+            twentyOneFeeJson.minFee() == 0) 
+        {
+            continue;
+        }
+        
         // Set the lowFee if the delay in blocks and minutes is less that 10000.
         // 21.co uses 10000 to mean infinite
         if (twentyOneFeeJson.maxDelay() < 10000
@@ -351,16 +360,47 @@ generalBitcoinFeeInfo()
     {
         TwentyOneFeeJson twentyOneFeeJson(arrayJson[i]);
 
+        // If this is a zero fee estimate, then skip
+        if (twentyOneFeeJson.maxFee() == 0 ||
+            twentyOneFeeJson.minFee() == 0) 
+        {
+            continue;
+        }
+
         if (twentyOneFeeJson.maxDelay() < lowDelay &&
-                twentyOneFeeJson.maxDelay() <= 18)
+                twentyOneFeeJson.maxDelay() <= MAX_STANDARD_DELAY)
             if (standardFeeLow > twentyOneFeeJson.minFee())
                 standardFeeLow = (double) twentyOneFeeJson.minFee();
+    }
 
-        if (twentyOneFeeJson.maxDelay() > highDelay &&
-                twentyOneFeeJson.maxDelay() >= 3)
-            if (standardFeeHigh < twentyOneFeeJson.minFee())
-                standardFeeHigh = (double) twentyOneFeeJson.minFee();
+    // Go backwards looking for lowest standardFeeHigh that:
+    // 1. Is < highFee
+    // 2. Has a blockdelay > highDelay
+    // 3. Has a delay that is > MIN_STANDARD_DELAY
+    // Use the highFee as the default standardHighFee 
+    standardFeeHigh = highFee;
+    for (size_t i = size - 1; i >= 0; i--)
+    {
+        TwentyOneFeeJson twentyOneFeeJson(arrayJson[i]);
 
+        // If this is a zero fee estimate, then skip
+        if (twentyOneFeeJson.maxFee() == 0 ||
+            twentyOneFeeJson.minFee() == 0) 
+        {
+            continue;
+        }
+
+        // Dont ever go below standardFeeLow
+        if (twentyOneFeeJson.maxFee() <= standardFeeLow)
+            break;
+        
+        if (twentyOneFeeJson.maxDelay() > highDelay)
+            standardFeeHigh = (double) twentyOneFeeJson.maxFee();
+
+        // If we have a delay that's greater than MIN_STANDARD_DELAY, then we're done.
+        // Otherwise we'd be getting bigger delays and further reducing fees. 
+        if (twentyOneFeeJson.maxDelay() > MIN_STANDARD_DELAY)
+            break;
     }
 
     BitcoinFeeInfo out;
@@ -371,9 +411,9 @@ generalBitcoinFeeInfo()
     // Check if we have a complete set of fee info.
     //
     if (highFee < MAX_FEE &&
-            lowFee  < MAX_FEE &&
-            standardFeeHigh < MAX_FEE &&
-            standardFeeLow < MAX_FEE)
+        lowFee  < MAX_FEE &&
+        standardFeeHigh > 0 &&
+        standardFeeLow < MAX_FEE)
     {
         // Complete set found. Assign the confirmFees array based on the 21.co fees
         out.confirmFees[1] = highFee * 1000;
