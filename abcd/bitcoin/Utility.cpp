@@ -6,6 +6,7 @@
  */
 
 #include "Utility.hpp"
+#include "../util/Data.hpp"
 
 namespace abcd {
 
@@ -51,6 +52,16 @@ decodeTx(bc::transaction_type &result, bc::data_slice rawTx)
     bc::transaction_type out;
     try
     {
+        // Fix segwit-format transactions to something we can understand:
+        if (rawTx.data()[4] == 0x00)
+        {
+            rawTx = buildData(
+            {
+                DataSlice(rawTx.begin(), rawTx.begin() + 4),
+                DataSlice(rawTx.begin() + 6, rawTx.end())
+            });
+        }
+
         auto deserial = bc::make_deserializer(rawTx.begin(), rawTx.end());
         bc::satoshi_load(deserial.iterator(), deserial.end(), out);
     }
