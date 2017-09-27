@@ -23,6 +23,7 @@
 #include "util/Debug.hpp"
 #include "http/HttpRequest.hpp"
 #include <time.h>
+#include <algorithm>
 #include <mutex>
 
 namespace abcd {
