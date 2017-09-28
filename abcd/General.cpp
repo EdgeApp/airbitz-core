@@ -23,6 +23,7 @@
 #include "util/Debug.hpp"
 #include "http/HttpRequest.hpp"
 #include <time.h>
+#include <algorithm>
 #include <mutex>
 
 namespace abcd {
@@ -318,19 +319,19 @@ generalBitcoinFeeInfo()
         TwentyOneFeeJson twentyOneFeeJson(arrayJson[i]);
 
         ABC_DebugLevel(1,
-                "minFee:%d,maxFee:%d,minDelay:%d,maxDelay:%d,minMinutes:%d,maxMinutes:%d",
-                twentyOneFeeJson.minFee(), twentyOneFeeJson.maxFee(),
-                twentyOneFeeJson.minDelay(),
-                twentyOneFeeJson.maxDelay(), twentyOneFeeJson.minMinutes(),
-                twentyOneFeeJson.maxMinutes());
-                
+                       "minFee:%d,maxFee:%d,minDelay:%d,maxDelay:%d,minMinutes:%d,maxMinutes:%d",
+                       twentyOneFeeJson.minFee(), twentyOneFeeJson.maxFee(),
+                       twentyOneFeeJson.minDelay(),
+                       twentyOneFeeJson.maxDelay(), twentyOneFeeJson.minMinutes(),
+                       twentyOneFeeJson.maxMinutes());
+
         // If this is a zero fee estimate, then skip
         if (twentyOneFeeJson.maxFee() == 0 ||
-            twentyOneFeeJson.minFee() == 0) 
+                twentyOneFeeJson.minFee() == 0)
         {
             continue;
         }
-        
+
         // Set the lowFee if the delay in blocks and minutes is less that 10000.
         // 21.co uses 10000 to mean infinite
         if (twentyOneFeeJson.maxDelay() < 10000
@@ -362,7 +363,7 @@ generalBitcoinFeeInfo()
 
         // If this is a zero fee estimate, then skip
         if (twentyOneFeeJson.maxFee() == 0 ||
-            twentyOneFeeJson.minFee() == 0) 
+                twentyOneFeeJson.minFee() == 0)
         {
             continue;
         }
@@ -377,7 +378,7 @@ generalBitcoinFeeInfo()
     // 1. Is < highFee
     // 2. Has a blockdelay > highDelay
     // 3. Has a delay that is > MIN_STANDARD_DELAY
-    // Use the highFee as the default standardHighFee 
+    // Use the highFee as the default standardHighFee
     standardFeeHigh = highFee;
     for (size_t i = size - 1; i >= 0; i--)
     {
@@ -385,7 +386,7 @@ generalBitcoinFeeInfo()
 
         // If this is a zero fee estimate, then skip
         if (twentyOneFeeJson.maxFee() == 0 ||
-            twentyOneFeeJson.minFee() == 0) 
+                twentyOneFeeJson.minFee() == 0)
         {
             continue;
         }
@@ -393,12 +394,12 @@ generalBitcoinFeeInfo()
         // Dont ever go below standardFeeLow
         if (twentyOneFeeJson.maxFee() <= standardFeeLow)
             break;
-        
+
         if (twentyOneFeeJson.maxDelay() > highDelay)
             standardFeeHigh = (double) twentyOneFeeJson.maxFee();
 
         // If we have a delay that's greater than MIN_STANDARD_DELAY, then we're done.
-        // Otherwise we'd be getting bigger delays and further reducing fees. 
+        // Otherwise we'd be getting bigger delays and further reducing fees.
         if (twentyOneFeeJson.maxDelay() > MIN_STANDARD_DELAY)
             break;
     }
@@ -411,9 +412,9 @@ generalBitcoinFeeInfo()
     // Check if we have a complete set of fee info.
     //
     if (highFee < MAX_FEE &&
-        lowFee  < MAX_FEE &&
-        standardFeeHigh > 0 &&
-        standardFeeLow < MAX_FEE)
+            lowFee  < MAX_FEE &&
+            standardFeeHigh > 0 &&
+            standardFeeLow < MAX_FEE)
     {
         // Complete set found. Assign the confirmFees array based on the 21.co fees
         out.confirmFees[1] = highFee * 1000;
@@ -465,8 +466,10 @@ generalBitcoinFeeInfo()
     if (out.confirmFees[7] > out.confirmFees[6])
         out.confirmFees[7] = out.confirmFees[6];
 
-    for (int i = 1; i <= 7; i++) {
-        if (out.confirmFees[i] == 0) {
+    for (int i = 1; i <= 7; i++)
+    {
+        if (out.confirmFees[i] == 0)
+        {
             out.confirmFees[i] = 1000;
         }
     }
