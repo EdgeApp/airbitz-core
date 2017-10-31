@@ -138,7 +138,7 @@ Status
 general21FeesUpdate()
 {
     HttpReply reply;
-    const auto url = "https://bitcoinfees.21.co/api/v1/fees/list";
+    const auto url = "https://bitcoinfees.earn.com/api/v1/fees/list";
     const auto path = gContext->paths.twentyOneFeeCachePath();
 
     ABC_CHECK(HttpRequest()
@@ -382,6 +382,8 @@ generalBitcoinFeeInfo()
     standardFeeHigh = highFee;
     for (size_t i = size - 1; i >= 0; i--)
     {
+        if (size == 0) break;
+
         TwentyOneFeeJson twentyOneFeeJson(arrayJson[i]);
 
         // If this is a zero fee estimate, then skip
