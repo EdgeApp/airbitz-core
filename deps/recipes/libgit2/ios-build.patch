@@ -13,7 +13,7 @@ index 73c9630..bb92e34 100644
  OPTION( VALGRIND			"Configure build for valgrind"			OFF )
  OPTION( CURL			"User curl for HTTP if available" ON)
 +OPTION( USE_OPENSSL			"Link with and use openssl library"		ON )
- 
+
  IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
  	SET( USE_ICONV ON )
 +ENDIF()
@@ -25,7 +25,7 @@ index 73c9630..bb92e34 100644
 @@ -76,10 +80,6 @@ IF(MSVC)
  	OPTION(MSVC_CRTDBG "Enable CRTDBG memory leak reporting" OFF)
  ENDIF()
- 
+
 -IF (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 -	OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
 -ENDIF()
@@ -33,8 +33,18 @@ index 73c9630..bb92e34 100644
  # This variable will contain the libraries we need to put into
  # libgit2.pc's Requires.private. That is, what we're linking to or
  # what someone who's statically linking us needs to link to.
-@@ -501,8 +501,10 @@ ENDIF()
- 
+@@ -459,7 +459,8 @@
+ ENDIF()
+
+ CHECK_FUNCTION_EXISTS(futimens HAVE_FUTIMENS)
+-IF (HAVE_FUTIMENS)
++
++IF (HAVE_FUTIMENS AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+ 	ADD_DEFINITIONS(-DHAVE_FUTIMENS)
+ ENDIF ()
+
+@@ -534,8 +535,10 @@
+
  # Compile and link libgit2
  ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
 -TARGET_LINK_LIBRARIES(git2 ${SECURITY_DIRS})
