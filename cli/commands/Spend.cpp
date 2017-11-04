@@ -17,18 +17,29 @@
 using namespace abcd;
 
 COMMAND(InitLevel::wallet, SpendAddress, "spend-address",
-        " [-- --no-unconfirmed] [<address> <amount>]...")
+        " [--no-unconfirmed] [--custom-fee <amountFeeSatoshi>] [<address> <amount>]...")
 {
     // Search for --no-unconfirmed:
     bool skipUnconfirmed = false;
+    uint64_t customFee = 0;
+
     std::list<std::string> args;
     for (unsigned i = 0; i < argc; ++i)
     {
         std::string arg = argv[i];
         if (arg == "--no-unconfirmed")
+        {
             skipUnconfirmed = true;
+        }
+        else if (arg == "--custom-fee")
+        {
+            customFee = atol(argv[i+1]);
+            i++;
+        }
         else
+        {
             args.push_back(argv[i]);
+        }
     }
     if (args.size() % 2)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
@@ -48,6 +59,8 @@ COMMAND(InitLevel::wallet, SpendAddress, "spend-address",
     // Send the spend:
     DataChunk rawTx;
     std::string txid;
+    if (customFee > 0)
+        ABC_CHECK(spend.feeSet(ABC_SpendFeeLevelCustom, customFee));
     ABC_CHECK(spend.signTx(rawTx, skipUnconfirmed));
     ABC_CHECK(spend.broadcastTx(rawTx));
     ABC_CHECK(spend.saveTx(rawTx, txid));
@@ -144,9 +157,11 @@ COMMAND(InitLevel::wallet, SpendGetFee, "spend-get-fee",
 }
 
 COMMAND(InitLevel::wallet, SpendGetMax, "spend-get-max",
-        " <no-unconfirmed>")
+        " [--no-unconfirmed] [--custom-fee <amountFeeSatoshi>] ")
 {
-    if (argc != 0 && argc != 1)
+    uint64_t customFee = 0;
+
+    if (argc > 4)
         return ABC_ERROR(ABC_CC_Error, helpString(*this));
 
     bool skipUnconfirmed = false;
@@ -155,12 +170,23 @@ COMMAND(InitLevel::wallet, SpendGetMax, "spend-get-max",
     {
         std::string arg = argv[i];
         if (arg == "--no-unconfirmed")
+        {
             skipUnconfirmed = true;
+        }
+        else if (arg == "--custom-fee")
+        {
+            customFee = atol(argv[i+1]);
+            i++;
+        }
         else
+        {
             args.push_back(argv[i]);
+        }
     }
 
     Spend spend(*session.wallet);
+    if (customFee > 0)
+        ABC_CHECK(spend.feeSet(ABC_SpendFeeLevelCustom, customFee));
     ABC_CHECK(spend.addAddress("1111111111111111111114oLvT2", 0));
 
     uint64_t max;
