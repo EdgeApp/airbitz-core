@@ -3,8 +3,8 @@ inherit lib
 # When changing this, also edit abcd/bitcoin/spend/paymentrequest.proto
 # to force a re-build.
 
-version="3.4.1"
-source="https://github.com/google/protobuf/releases/download/v$version/protobuf-cpp-$version.tar.gz#f5a62fa19d590525aa4338df42da375ea8912091"
+version="3.5.1"
+source="https://github.com/google/protobuf/releases/download/v$version/protobuf-cpp-$version.tar.gz#c63ba5e9c737abf83aa2b3f86229d2d65f682c56"
 
 build() {
     # See https://github.com/google/protobuf/issues/2719
