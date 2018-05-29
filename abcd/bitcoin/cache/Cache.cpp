@@ -124,7 +124,7 @@ Cache::loadLegacy(const std::string &path)
                 height = 0;
 
             txids.insert(txid);
-            txs.insert(tx);
+            txs.insert(tx, txid);
             txs.confirmed(txid, height, timestamp);
         }
     }

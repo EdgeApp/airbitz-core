@@ -172,7 +172,7 @@ public:
      * @return true if the callback should be fired.
      */
     bool
-    insert(const bc::transaction_type &tx);
+    insert(const bc::transaction_type &tx, std::string txid="");
 
     /**
      * Mark a transaction as confirmed.
