@@ -579,7 +579,7 @@ TxUpdater::fetchTx(const std::string &txid, IBitcoinConnection *bc)
         ABC_DebugLog("%s: tx %s fetched", uri.c_str(), txid.c_str());
         wipTxids_.erase(txid);
 
-        cache_.txs.insert(tx);
+        cache_.txs.insert(tx, txid);
         cache_.addresses.update();
         cacheDirty = true;
         cache_.servers.serverScoreUp(uri);
