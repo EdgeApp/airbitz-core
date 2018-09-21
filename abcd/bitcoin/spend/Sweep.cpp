@@ -95,7 +95,7 @@ sweepSend(Wallet &wallet,
     ABC_CHECK(wallet.txs.save(meta, balance, info.fee));
 
     // Update the transaction cache:
-    wallet.cache.txs.insert(tx);
+    wallet.cache.txs.insert(tx, info.txid);
     wallet.cache.addresses.updateSpend(info);
     wallet.cache.save().log(); // Failure is fine
 

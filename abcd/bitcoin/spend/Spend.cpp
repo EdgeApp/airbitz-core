@@ -223,7 +223,7 @@ Spend::saveTx(DataSlice rawTx, std::string &txidOut)
     auto balance = wallet_.addresses.balance(info);
 
     // Update the transaction cache:
-    wallet_.cache.txs.insert(tx);
+    wallet_.cache.txs.insert(tx, info.txid);
     wallet_.cache.addresses.updateSpend(info);
     wallet_.cache.save().log(); // Failure is fine
 

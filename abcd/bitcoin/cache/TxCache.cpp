@@ -471,12 +471,14 @@ TxCache::drop(const std::string &txid, time_t now)
 }
 
 bool
-TxCache::insert(const bc::transaction_type &tx)
+TxCache::insert(const bc::transaction_type &tx, std::string txid)
 {
     std::unique_lock<std::mutex> lock(mutex_);
 
     // Do not stomp existing tx's:
-    auto txid = bc::encode_hash(bc::hash_transaction(tx));
+    if (txid == "")
+        txid = bc::encode_hash(bc::hash_transaction(tx));
+
     if (txs_.find(txid) == txs_.end())
     {
         txs_[txid] = tx;
