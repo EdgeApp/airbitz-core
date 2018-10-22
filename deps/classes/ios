@@ -14,6 +14,9 @@ build_ios() {
     target=ios-$1
     install_dir=$build_dir/prefix/ios/$1
 
+    cd $work_dir
+    bootstrap
+
     case $1 in
     arm*)   cross=arm-apple-darwin10 ;;
     i386)   cross=i386-apple-darwin10 ;;
@@ -31,7 +34,7 @@ build_ios() {
     export CXX="clang++"
 
     platform_sdk="$platform_dir/SDKs/${2}.sdk"
-    sdk_flags="-arch $1 -isysroot $platform_sdk -miphoneos-version-min=9.0 -O2"
+    sdk_flags="-v -arch $1 -isysroot $platform_sdk -miphoneos-version-min=9.0 -O2"
     export CFLAGS="$sdk_flags -isystem${install_dir}/include -Werror=partial-availability"
     export CXXFLAGS="$sdk_flags -isystem${install_dir}/include -Werror=partial-availability"
     export LDFLAGS="$sdk_flags -L${install_dir}/lib"
@@ -39,7 +42,6 @@ build_ios() {
     export PATH=$xcode_dir/Toolchains/XcodeDefault.xctoolchain/usr/bin:$xcode_dir/usr/bin:$PATH
     export PKG_CONFIG_PATH=$install_dir/lib/pkgconfig
 
-    cd $work_dir
     build
 
     # File lists:

@@ -70,6 +70,11 @@ write_deps() {
 }
 task write-deps $(for dep in $depends; do echo $dep.write-deps; done)
 
+bootstrap() {
+    :
+}
+task bootstrap
+
 clean() {
     rm -rf $work_dir
 }
