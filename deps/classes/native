@@ -23,6 +23,7 @@ build_native() {
     export PKG_CONFIG_PATH="$install_dir/lib/pkgconfig:$install_dir/lib64/pkgconfig"
 
     cd $work_dir
+    bootstrap
     build
 }
 
