@@ -1,6 +1,6 @@
 BUILD_DIR ?= build
 
-default: abc
+default: libbitcoin.ios-universal
 
 $(BUILD_DIR)/%/tasks.mk: recipes/%
 	@ ./run.sh $* write-tasks

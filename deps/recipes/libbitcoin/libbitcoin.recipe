@@ -1,11 +1,12 @@
 depends="boost libsecp256k1"
 inherit lib
 
-source="https://github.com/libbitcoin/libbitcoin.git#7a1a9d43"
+# 2018-10-23
+source="https://github.com/libbitcoin/libbitcoin.git#5db6742cff390415f2a9ca28b48cf05a4fe810bc"
 
 build() {
-    echo Patching...
-    patch -p1 < $recipe_dir/config.patch
+    #echo Patching...
+    #patch -p1 < $recipe_dir/config.patch
 
     echo Building...
     autoreconf -i
