@@ -1,0 +1,36 @@
+depends="libsecp256k1"
+inherit lib
+
+# 2019-02-12
+source="https://github.com/breadwallet/breadwallet-core.git#7294202aed241bdc977cc6dba8c635140934b456"
+
+build() {
+    #echo Dirs...
+    #echo pwd `pwd`
+    #echo recipe_dir $recipe_dir
+    #echo target $target
+    #echo cross $cross
+    #echo arch $arch
+    #echo sysroot $sysroot
+    #echo install_dir $install_dir
+
+    echo Patching...
+    echo `pwd`
+    echo $recipe_dir/source.patch
+    patch -p1 < $recipe_dir/source.patch
+    #git apply -v --no-index $recipe_dir/source.patch
+
+    echo Copying Makefile...
+    cp $recipe_dir/Makefile .
+
+    echo Building...
+    # set
+    make clean
+    export TARGET=${target}
+    export INSTALL_DIR=${install_dir}
+    make
+    make install
+}
+
+include="include/breadwalletcore/*"
+lib="lib/breadwalletcore.a"
