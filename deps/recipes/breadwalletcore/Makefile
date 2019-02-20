@@ -55,7 +55,7 @@ INSTALL_LIB = $(INSTALL_DIR)/lib
 .PHONY: install
 install: build check-install-env
 	mkdir -p $(INSTALL_INCLUDE)
-	cp *.h $(ETH)/*.h $(RLP)/*.h $(UTIL)/*.h $(EVENT)/*.h $(LES)/*.h $(INSTALL_INCLUDE)/
+	cp *.h $(ETH)/BR*.h $(RLP)/BR*.h $(UTIL)/BR*.h $(EVENT)/BR*.h $(LES)/BR*.h $(INSTALL_INCLUDE)/
 	mkdir -p $(INSTALL_LIB)
 	cp breadwalletcore.a $(INSTALL_LIB)/
 
