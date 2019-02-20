@@ -1,0 +1,26 @@
+inherit lib
+
+# 2019-02-12
+source="https://github.com/dsprenkels/sss.git#f676ec64bfee4610cf5e52bf6fc6c8ce51a30672"
+
+build() {
+    echo Copying randombytes...
+    cp $recipe_dir/randombytes.h .
+    cp $recipe_dir/randombytes.c .
+
+    echo Copying Makefile...
+    cp $recipe_dir/Makefile .
+
+    echo Building...
+    make clean
+    make
+
+    echo Installing...
+    mkdir -p $install_dir/include/libsss
+    cp *.h $install_dir/include/libsss/
+    mkdir -p $install_dir/lib
+    cp libsss.a $install_dir/lib/
+}
+
+include="include/libsss/*.h"
+lib="lib/libsss.a"
