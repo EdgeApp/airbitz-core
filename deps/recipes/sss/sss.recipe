@@ -1,7 +1,10 @@
 inherit lib
 
+# 2019-03-02
+source="https://github.com/WebOfTrustInfo/sss.git#bffd2afded3abae377b180ddc3efb97e6b37b3d1"
+
 # 2019-02-12
-source="https://github.com/dsprenkels/sss.git#f676ec64bfee4610cf5e52bf6fc6c8ce51a30672"
+# source="https://github.com/dsprenkels/sss.git#f676ec64bfee4610cf5e52bf6fc6c8ce51a30672"
 
 build() {
     echo Copying randombytes...
