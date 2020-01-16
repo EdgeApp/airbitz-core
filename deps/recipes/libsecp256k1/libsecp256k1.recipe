@@ -1,7 +1,7 @@
 inherit lib
 
 # 2018-10-23
-source="https://github.com/libbitcoin/secp256k1.git#2bdb30782ba14e481983f664495370aee7048762"
+source="https://github.com/libbitcoin/secp256k1.git#89a20a894595117cf4f82a48871c5d26830ad72e"
 
 build() {
     # Optimize:
